@@ -12816,6 +12816,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `foldOpRecords`
               - `groupByOpId`
+              - `openWaitOf`
               - `orphanedOps`
               - `sumWaits`
           - Cross-plugin:
@@ -12830,6 +12831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createOpProfiler`
               - `finalizeOrphanedOps`
               - `OP_LOG_FILE`
+              - `readOpenWait`
               - `readOpRecords`
         - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
           - Web:
@@ -15482,6 +15484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `AcquireCheckoutLockOptions`
               - `EnsureDepsOptions`
               - `EnsureDepsResult`
+              - `HolderObservation`
               - `InstallOutcome`
               - `ReexecOptions`
               - `ReexecOutcome`
@@ -15500,6 +15503,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/bootstrap.acquireCheckoutLock`
               - `framework/cli/bootstrap.adaptiveTimeoutMs`
               - `framework/cli/bootstrap.ensureDeps`
+              - `framework/cli/bootstrap.HolderObservation`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/cli/migrations.generateMigration`
               - `framework/cli/migrations.MigrationAnswer`

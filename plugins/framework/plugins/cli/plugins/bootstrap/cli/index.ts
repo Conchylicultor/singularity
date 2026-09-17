@@ -16,9 +16,9 @@
  * are reached directly by the bootstrap. Nothing else belongs here — a module
  * that only *some* command needs goes in `op-runtime`, whose closure is free.
  *
- * `checkout-lock` therefore does NOT read `op-runtime`'s build-progress log to say
- * what a lock holder is stuck in — `acquireCheckoutLock` takes a
- * `describeHolderActivity` hook and the build passes one in. A dynamic import
+ * `checkout-lock` therefore does NOT read `op-runtime`'s build-progress log (or
+ * the op log) to see what a lock holder is doing — `acquireCheckoutLock` takes an
+ * `observeHolder` hook and the build passes one in. A dynamic import
  * would also have kept this closure clean, but it hid a real cross-plugin edge
  * from the boundary system (R9 `inline-import`); inverting it means the edge
  * does not exist.
@@ -41,6 +41,9 @@ export {
 } from "./orphan-guard";
 
 export { acquireCheckoutLock } from "./checkout-lock";
-export type { AcquireCheckoutLockOptions } from "./checkout-lock";
+export type {
+  AcquireCheckoutLockOptions,
+  HolderObservation,
+} from "./checkout-lock";
 
 export { adaptiveTimeoutMs } from "./adaptive-timeout";

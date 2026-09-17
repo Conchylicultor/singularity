@@ -1,5 +1,5 @@
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
-import type { OpRecord, OpWait, RawOpRecord } from "./types";
+import type { OpenWait, OpRecord, OpWait, RawOpRecord } from "./types";
 
 // The fold: many append-only raw lines → one record per op. Pure and
 // `now`-injected, so the live-bar synthesis is testable without a clock.
@@ -52,6 +52,21 @@ export function groupByOpId(raw: RawOpRecord[]): Map<string, OpGroup> {
     byId.set(r.opId, g);
   }
   return byId;
+}
+
+/**
+ * The wait an op is parked in RIGHT NOW, or `null` when it is doing its own
+ * work — or has ended (a terminal line closes every wait, whatever the last
+ * `requested` stamp said). Read from the freshest `requested` stamp, which is
+ * re-written on every wait open/close.
+ *
+ * Kept off the folded `OpRecord` on purpose: the read model clocks an open wait
+ * into `waits[]` for the Gantt, while this answers the live question a lock
+ * waiter asks of its holder — "blocked, or working?".
+ */
+export function openWaitOf(group: OpGroup): OpenWait | null {
+  if (group.terminal) return null;
+  return group.requested?.openWait ?? null;
 }
 
 // Identity fields live on the `requested` record (written up-front) and are

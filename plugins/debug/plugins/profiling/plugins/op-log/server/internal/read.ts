@@ -1,6 +1,9 @@
 import {
   foldOpRecords,
+  groupByOpId,
+  openWaitOf,
   orphanedOps,
+  type OpenWait,
   type OpRecord,
   type RawOpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
@@ -34,6 +37,17 @@ function readRawOpRecords(): RawOpRecord[] {
  */
 export function readOpRecords(): OpRecord[] {
   return foldOpRecords(readRawOpRecords(), Date.now());
+}
+
+/**
+ * The declared wait op `opId` is parked in right now (`host-grant`,
+ * `duress-valve`, …), or `null` when it is working, has ended, or is not in the
+ * live log at all. Lets a process waiting BEHIND that op tell a holder that is
+ * queued from one that is stuck.
+ */
+export function readOpenWait(opId: string): OpenWait | null {
+  const group = groupByOpId(readRawOpRecords()).get(opId);
+  return group ? openWaitOf(group) : null;
 }
 
 /**

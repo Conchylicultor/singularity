@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { foldOpRecords, sumWaits } from "./internal/fold";
+import {
+  foldOpRecords,
+  groupByOpId,
+  openWaitOf,
+  sumWaits,
+} from "./internal/fold";
 import type { RawOpRecord } from "./internal/types";
 
 // `now` is injected into every fold, so these tests pin the live-bar synthesis
@@ -666,5 +671,39 @@ describe("foldOpRecords — the op-kind vocabulary", () => {
       T0,
     );
     expect(out[0]?.kind).toBe("build");
+  });
+});
+
+describe("openWaitOf — is the op parked right now?", () => {
+  const hostGrant = {
+    kind: "host-grant" as const,
+    startMs: 500,
+    startedAt: at(500),
+  };
+
+  test("the freshest requested stamp's open wait", () => {
+    const g = groupByOpId([
+      requested({
+        openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
+      }),
+      requested({ openWait: hostGrant }),
+    ]).get("op-1")!;
+    expect(openWaitOf(g)).toEqual(hostGrant);
+  });
+
+  test("a closed wait re-stamps null: the op is working", () => {
+    const g = groupByOpId([
+      requested({ openWait: hostGrant }),
+      requested({ openWait: null }),
+    ]).get("op-1")!;
+    expect(openWaitOf(g)).toBeNull();
+  });
+
+  test("a terminal line closes every wait", () => {
+    const g = groupByOpId([
+      requested({ openWait: hostGrant }),
+      { phase: "completed", opId: "op-1", outcome: "error" },
+    ]).get("op-1")!;
+    expect(openWaitOf(g)).toBeNull();
   });
 });

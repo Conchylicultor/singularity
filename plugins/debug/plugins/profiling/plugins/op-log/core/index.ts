@@ -15,6 +15,7 @@ export type { OpGroup } from "./internal/fold";
 export {
   foldOpRecords,
   groupByOpId,
+  openWaitOf,
   orphanedOps,
   sumWaits,
 } from "./internal/fold";

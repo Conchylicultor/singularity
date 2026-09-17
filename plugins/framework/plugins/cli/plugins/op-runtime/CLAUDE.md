@@ -47,8 +47,8 @@ import graph has to stay a DAG, and this is the node everything else hangs off.
 It does not import `bootstrap` either, and `bootstrap` does not import it.
 Keeping the two apart is what lets the bootstrap closure stay npm-free while this
 one is unconstrained. The one place they nearly met is the build lock's
-"still waiting" diagnostic, which wants this plugin's build-progress log:
-`acquireCheckoutLock` takes a `describeHolderActivity` hook instead, and
+wait policy, which wants this plugin's build-progress log:
+`acquireCheckoutLock` takes an `observeHolder` hook instead, and
 `app-artifacts` — which already has the log loaded — supplies it. There is no
 edge between the two plugins in either direction.
 

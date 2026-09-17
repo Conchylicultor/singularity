@@ -253,6 +253,14 @@ export interface BuildRunProgress {
   buildId: string | null;
   startedAt: string;
   lastActivityAt: string;
+  /**
+   * The last time the run demonstrably MOVED: its `run` record or a span
+   * `enter`/`leave`. Unlike `lastActivityAt`, a `pending` heartbeat does not
+   * advance it — the heartbeat is a timer, so it proves only that the process
+   * exists, never that the build is getting anywhere (a build wedged on a hung
+   * child keeps heartbeating).
+   */
+  lastAdvanceAt: string;
   /** Peak RSS seen across this run's markers/heartbeats. */
   peakRssMb: number;
   /** `enter − leave`: empty for a healthy run, the culprit set for a hung one. */
@@ -280,14 +288,23 @@ export function readBuildProgress(): BuildRunProgress[] {
     maxBytes: 8 * 1024 * 1024,
   });
   if (result.kind === "missing") return [];
+  return foldBuildProgress(result.records);
+}
 
+/**
+ * The pure half of `readBuildProgress`: fold raw progress records (in file
+ * order) into runs, newest activity first.
+ */
+export function foldBuildProgress(
+  records: readonly BuildProgressRecord[],
+): BuildRunProgress[] {
   const runs = new Map<string, BuildRunProgress>();
   const openByRun = new Map<
     string,
     Map<number, { label: string; at: string; rssMb: number }>
   >();
 
-  for (const record of result.records) {
+  for (const record of records) {
     if (record.phase === "run") {
       runs.set(record.runId, {
         runId: record.runId,
@@ -296,6 +313,7 @@ export function readBuildProgress(): BuildRunProgress[] {
         buildId: record.buildId,
         startedAt: record.t,
         lastActivityAt: record.t,
+        lastAdvanceAt: record.t,
         peakRssMb: record.rssMb,
         outstanding: [],
         done: null,
@@ -308,6 +326,9 @@ export function readBuildProgress(): BuildRunProgress[] {
     run.lastActivityAt = record.t;
     const open = openByRun.get(record.runId);
     if (!open) continue;
+    if (record.phase === "enter" || record.phase === "leave") {
+      run.lastAdvanceAt = record.t;
+    }
     if (record.phase === "enter") {
       if (record.rssMb > run.peakRssMb) run.peakRssMb = record.rssMb;
       open.set(record.token, {

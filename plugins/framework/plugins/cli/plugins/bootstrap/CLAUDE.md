@@ -27,11 +27,16 @@ adaptive-timeout`, plus `orphan-guard` and `reexec` which `bin/index.ts` reaches
 directly. A module only *some* command needs belongs in `op-runtime`, whose
 closure carries no such constraint.
 
-`checkout-lock` says which span a lock holder is stuck in, and the authority on
-that is `op-runtime`'s build-progress reader — which this barrel may not import,
-static or dynamic. So it does not: `acquireCheckoutLock` takes a
-`describeHolderActivity` hook and the caller that HAS the progress log
-(`app-artifacts`, deep in the build) passes it in.
+`checkout-lock` needs to know what a lock holder is doing — both to say so and
+to decide how long to wait: a holder queued for a host CPU grant is blocked, not
+stuck, so it pauses the waiter's clock, while a working holder that stops
+entering or leaving steps eventually times the waiter out. The authority on that
+is `op-runtime`'s build-progress reader plus the op log's open waits — which
+this barrel may not import, static or dynamic. So it does not:
+`acquireCheckoutLock` takes an `observeHolder` hook returning a
+`HolderObservation`, and the caller that HAS the logs (`app-artifacts`, deep in
+the build) passes it in. With no observer (the install lock) the wait keeps its
+plain `capMs` limit.
 
 That inversion replaced a dynamic `import()`. The dynamic edge kept the closure
 npm-free, but it made a real cross-plugin dependency invisible to the boundary
@@ -62,6 +67,7 @@ the build lock.
     - `AcquireCheckoutLockOptions`
     - `EnsureDepsOptions`
     - `EnsureDepsResult`
+    - `HolderObservation`
     - `InstallOutcome`
     - `ReexecOptions`
     - `ReexecOutcome`

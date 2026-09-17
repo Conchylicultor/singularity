@@ -3,7 +3,11 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { OP_LOG_FILE } from "./internal/jsonl";
 export { createOpProfiler } from "./internal/profiler";
 export type { OpProfiler, OpProfilerOptions } from "./internal/profiler";
-export { finalizeOrphanedOps, readOpRecords } from "./internal/read";
+export {
+  finalizeOrphanedOps,
+  readOpenWait,
+  readOpRecords,
+} from "./internal/read";
 // The pure types + fold live in `../core` (both runtimes share them); consumers
 // import them from there. Only the fs/process-touching writer, reader, and
 // reconciler live here.

@@ -56,7 +56,13 @@ import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugin
 import {
   acquireCheckoutLock,
   ensureDeps,
+  type HolderObservation,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
+import {
+  OP_LOG_FILE,
+  readOpenWait,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import { buildHolderObservation } from "./build-holder";
 import {
   generateMigration,
   type MigrationAnswer,
@@ -282,35 +288,33 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
   // is exactly what build does today — so the closure is dropped here too.
   await acquireCheckoutLock(resolve(webDir, ".build.lock"), {
     what: "build",
-    describeHolderActivity: describeBuildHolder,
+    observeHolder: observeBuildHolder,
   });
 }
 
 /**
- * What the current lock holder is in the middle of, for the lock's "still
- * waiting" line — read from the durable build-progress log.
+ * What the current lock holder is doing, for the lock's wait policy and its
+ * "still waiting" lines — read from the two durable host-global logs a build
+ * writes: build-progress (its steps, keyed by pid) and the op log (its declared
+ * waits, keyed by build id).
  *
  * Passed IN rather than read by `checkout-lock` itself, because that module is
  * statically reachable from `bin/index.ts` and so loads before `bun install`;
- * the progress log reaches the file-sink primitive and a data-dir declaration,
- * neither of which the pre-install closure can afford. Here, deep inside a
- * build, both are already loaded.
+ * both logs reach the file-sink primitive and a data-dir declaration, neither
+ * of which the pre-install closure can afford. Here, deep inside a build, both
+ * are already loaded.
  *
- * `null` — not an empty string — when the holder has no live recorded run, so
- * the lock prints the bare pid instead of an authoritative-looking blank.
+ * `unknown` when the holder has no live recorded run — a release's hermetic
+ * build writes none — so the lock keeps its plain wait limit rather than
+ * trusting a holder it cannot see.
  */
-function describeBuildHolder(pid: number): string | null {
+function observeBuildHolder(pid: number): HolderObservation {
   const run = readBuildProgress().find((r) => r.pid === pid && r.done === null);
-  const stuck = run?.outstanding.at(-1);
-  if (!stuck) return null;
-  // Against the wall clock, not the run's last-activity stamp: a run that has
-  // gone silent is exactly the interesting case, and `outstanding[].elapsedMs`
-  // would understate it by however long the silence has lasted.
-  const inSpan = Math.round((Date.now() - Date.parse(stuck.startedAt)) / 1000);
-  return (
-    `pid ${pid} has been in "${stuck.label}" for ${inSpan}s. ` +
-    `Full history: ${PROGRESS_FILE}`
-  );
+  const openWait = run?.buildId == null ? null : readOpenWait(run.buildId);
+  return buildHolderObservation(run, openWait, {
+    progress: PROGRESS_FILE,
+    opLog: OP_LOG_FILE,
+  });
 }
 
 /**
