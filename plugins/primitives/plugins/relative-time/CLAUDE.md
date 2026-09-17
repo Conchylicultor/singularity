@@ -10,6 +10,7 @@
     - `active-data/commit-link`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`

@@ -75,6 +75,7 @@ Shared (both paths):
     - `apps-core/surface/floating/wallpaper`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
+    - `apps/deploy/analytics/dashboard`
     - `apps/sonata/library`
     - `apps/website/landing/contact`
     - `apps/website/landing/hero`

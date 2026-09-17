@@ -6,6 +6,12 @@ import { handleForgetHostKey } from "./internal/handle-forget-host-key";
 import { checkServerSsh, forgetServerHostKey } from "../shared/endpoints";
 
 export { serverHealth } from "./internal/tables";
+export { resolveServerSshTarget } from "./internal/ssh-target";
+export type {
+  DeployServerRow,
+  HostKeyPolicy,
+  ServerSshTargetResult,
+} from "./internal/ssh-target";
 export { serverHealthServerResource } from "./internal/resource";
 export { serverHealthResource, ServerHealthRowSchema } from "../shared";
 export type { ServerHealthRow } from "../shared";

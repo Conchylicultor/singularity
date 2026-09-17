@@ -599,6 +599,225 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
+        - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
+          - Plugins:
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts, 90-day visits and hits, forever daily totals at every single-filter level), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+              - Server:
+                - Contributes:
+                  - `change-feed-exclusion` "analytics_visits"
+                  - `change-feed-exclusion` "analytics_hits"
+                - Uses:
+                  - `apps/deploy/analytics/host-only.hostOnly`
+                  - `apps/deploy/analytics/host-only.requestClientIp`
+                  - `database.db`
+                  - `database/change-feed.ExcludeFromChangeFeed`
+                  - `database/sql-column.parsedJson`
+                  - `database/sql-column.parsedText`
+                  - `infra/endpoints.implement`
+                  - `infra/jobs.defineJob`
+                  - `infra/retention.defineRetention`
+                  - `infra/retention.markCascadeBounded`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
+                - Register:
+                  - `defineJob('analytics.rollup')`
+                  - `defineJob('retention.analytics_visits')`
+                - Routes:
+                  - `POST /api/analytics/collect`
+                  - `GET /api/host-only/analytics/query`
+              - Web:
+                - Uses:
+                  - `infra/endpoints.fetchEndpoint`
+                  - `primitives/pane.currentRoutePath`
+                  - `primitives/pane.usePathname`
+                - Exports (values):
+                  - `AnalyticsTracker`
+                  - `track`
+              - Core:
+                - Uses:
+                  - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
+                  - `infra/endpoints.defineEndpoint`
+                - Exports (types):
+                  - `AnalyticsFilter`
+                  - `AnalyticsQuery`
+                  - `AnalyticsQueryResult`
+                  - `AnalyticsRange`
+                  - `AnalyticsReport`
+                  - `BrowserFamily`
+                  - `Channel`
+                  - `CollectBody`
+                  - `CollectResponse`
+                  - `DailyDimension`
+                  - `DeviceFamily`
+                  - `Dimension`
+                  - `EngagementBody`
+                  - `EventBody`
+                  - `FilterLevel`
+                  - `Granularity`
+                  - `HitDimension`
+                  - `Metrics`
+                  - `OsFamily`
+                  - `PageviewBody`
+                  - `PeriodReport`
+                  - `RecordedColumn`
+                  - `RecordedField`
+                  - `ReportPeriod`
+                  - `ReportRow`
+                  - `ReportSource`
+                  - `SeriesPoint`
+                  - `UtmTags`
+                  - `VisitDimension`
+                - Exports (values):
+                  - `addDays`
+                  - `addMetrics`
+                  - `addMonths`
+                  - `ANALYTICS_RANGES`
+                  - `AnalyticsFilterSchema`
+                  - `analyticsQueryEndpoint`
+                  - `AnalyticsQueryParamSchema`
+                  - `analyticsQueryPath`
+                  - `AnalyticsQueryResultSchema`
+                  - `AnalyticsQuerySchema`
+                  - `AnalyticsRangeSchema`
+                  - `AnalyticsReportSchema`
+                  - `averageTimeOnPageMs`
+                  - `averageVisitDurationMs`
+                  - `BASE64URL_PATTERN`
+                  - `bounceRate`
+                  - `BROWSER_FAMILIES`
+                  - `BrowserFamilySchema`
+                  - `bucketOf`
+                  - `channelOf`
+                  - `CHANNELS`
+                  - `ChannelSchema`
+                  - `CollectBodySchema`
+                  - `collectEndpoint`
+                  - `CollectResponseSchema`
+                  - `conversionRate`
+                  - `DailyDimensionSchema`
+                  - `DAY_PATTERN`
+                  - `DaySchema`
+                  - `decodeAnalyticsQueryJson`
+                  - `DEVICE_FAMILIES`
+                  - `DeviceFamilySchema`
+                  - `DIMENSIONS`
+                  - `DimensionSchema`
+                  - `encodeAnalyticsQuery`
+                  - `EngagementBodySchema`
+                  - `EVENT_NAME_PATTERN`
+                  - `EventBodySchema`
+                  - `EventPropsSchema`
+                  - `FilterLevelSchema`
+                  - `firstRawDay`
+                  - `GRANULARITIES`
+                  - `GranularitySchema`
+                  - `HIT_DIMENSIONS`
+                  - `MAX_COLLECT_BODY_BYTES`
+                  - `MAX_ENGAGED_MS`
+                  - `MAX_EVENT_PROP_KEY_LENGTH`
+                  - `MAX_EVENT_PROP_VALUE_LENGTH`
+                  - `MAX_EVENT_PROPS`
+                  - `MAX_FILTERS`
+                  - `MAX_HOST_LENGTH`
+                  - `MAX_PATH_LENGTH`
+                  - `MAX_REFERRER_LENGTH`
+                  - `MAX_TOTALS_FILTERS`
+                  - `MAX_UTM_LENGTH`
+                  - `MetricsSchema`
+                  - `NEVER_RECORDED`
+                  - `NONE_VALUE`
+                  - `normalizeHost`
+                  - `OS_FAMILIES`
+                  - `OsFamilySchema`
+                  - `PagePathSchema`
+                  - `PageviewBodySchema`
+                  - `PeriodReportSchema`
+                  - `planPeriods`
+                  - `RAW_RETENTION_DAYS`
+                  - `RECORDED_COLUMNS`
+                  - `RECORDED_FIELDS`
+                  - `REPORT_ROWS_PER_DIMENSION`
+                  - `REPORT_SOURCES`
+                  - `ReportRowSchema`
+                  - `reportSourceFor`
+                  - `SeriesPointSchema`
+                  - `SiteHostSchema`
+                  - `stripQuery`
+                  - `TOTAL_DIMENSION`
+                  - `UNFILTERED_LEVEL`
+                  - `utcDay`
+                  - `UtmTagsSchema`
+                  - `viewsPerVisit`
+                  - `VISIT_DIMENSIONS`
+                  - `visitorShare`
+                  - `ZERO_METRICS`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/deploy/analytics/dashboard`
+                  - `apps/website/improve`
+                  - `apps/website/shell`
+                - Endpoint callers: `host-only`
+            - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+              - Web:
+                - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
+                - Uses:
+                  - `apps/deploy/deployments.DeploymentDetail`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `infra/endpoints.getEndpointErrorMessage`
+                  - `plugin-meta/composition.useCompositionIncludes`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/card.Card`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/grid.Grid`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/placeholder.Placeholder`
+                  - `primitives/css/row.Row`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/switch.Switch`
+                  - `primitives/css/text.SectionLabel`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.ResourceResult`
+                  - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
+                  - `primitives/relative-time.RelativeTime`
+              - Server:
+                - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/health.resolveServerSshTarget`
+                  - `database.db`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/ssh.sshRun`
+                - Routes: `POST /api/deploy/analytics/query`
+              - Core:
+                - Uses:
+                  - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
+                  - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
+                  - `infra/endpoints.defineEndpoint`
+                  - `infra/ssh.SshFailureKindSchema`
+                - Exports (types):
+                  - `DeploymentAnalyticsBody`
+                  - `DeploymentAnalyticsResult`
+                - Exports (values):
+                  - `CURL_EXIT`
+                  - `DeploymentAnalyticsBodySchema`
+                  - `DeploymentAnalyticsResultSchema`
+                  - `queryDeploymentAnalytics`
+            - **`host-only`** — hostOnly(handler) 404s a /api/host-only/ route unless the request made exactly the gateway's own proxy hop (it came from the box); requestClientIp(req) reads the visitor address Caddy wrote into X-Forwarded-For.
+              - Cross-plugin:
+                - Imported by: `apps/deploy/analytics/collect`
+              - Server:
+                - Exports (values):
+                  - `hostOnly`
+                  - `requestClientIp`
+              - Core:
+                - Exports (values): `HOST_ONLY_PREFIX`
         - **`composition`** — Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -650,7 +869,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
-              - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+              - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
               - `Deployments.Fields` ← `apps.deploy.remote-deploy`
               - `DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
               - `deploymentDetailPane.Actions` ← `primitives.pane`
@@ -819,6 +1038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UpdateDeploymentBodySchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments/runs-arm`
@@ -895,8 +1115,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/ssh.sshRun`
             - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
             - Entity extension of: `apps/deploy/servers` (table `deploy_servers_ext_health`)
-            - Exports (types): `ServerHealthRow`
+            - Exports (types):
+              - `DeployServerRow`
+              - `HostKeyPolicy`
+              - `ServerHealthRow`
+              - `ServerSshTargetResult`
             - Exports (values):
+              - `resolveServerSshTarget`
               - `serverHealth`
               - `serverHealthResource`
               - `ServerHealthRowSchema`
@@ -907,6 +1132,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/deploy/servers/:id/forget-host-key`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
@@ -5253,6 +5479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
             - Uses:
+              - `apps/deploy/analytics/collect.track`
               - `apps/website/shell.WebsiteHeader`
               - `apps/website/shell.WebsiteNavLink`
               - `primitives/action-presentation.useActionForm`
@@ -5423,6 +5650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
+              - `apps/deploy/analytics/collect.AnalyticsTracker`
               - `layouts/full-pane.FullPane`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/coords.Placed`
@@ -11109,6 +11337,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
+      - `apps/deploy/analytics/collect`
+      - `apps/deploy/analytics/dashboard`
       - `apps/deploy/deployments`
       - `apps/deploy/health`
       - `apps/deploy/servers`
@@ -11291,6 +11521,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `routeChange`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/collect`
           - `database/live-state-snapshot`
           - `debug/slow-ops`
           - `debug/trace/engine`
@@ -11559,6 +11790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/collect`
           - `backup`
           - `conversations/conversation-category`
           - `fields/json/storage`
@@ -16603,6 +16835,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/deploy/analytics/collect`
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
@@ -17533,6 +17767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
           - `apps/events/reanchor`
           - `apps/events/refresh`
@@ -18116,6 +18351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markCascadeBounded`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
           - `apps/events/refresh`
           - `apps/pages/agent-origin`
@@ -18337,7 +18573,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/outbox`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
-        - Imported by: `apps/deploy/health`
+        - Imported by:
+          - `apps/deploy/analytics/dashboard`
+          - `apps/deploy/health`
       - Server:
         - Exports (types):
           - `SshFailure`
@@ -20995,6 +21233,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `AppExclusions`
           - `CompositionDataResult`
+          - `CompositionInclusion`
           - `DiffState`
           - `ImpactResult`
           - `ManifestActions`
@@ -21009,6 +21248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useAppExclusions`
           - `useCompareComposition`
           - `useCompositionData`
+          - `useCompositionIncludes`
           - `useDiffMap`
           - `useEnsureCompositionData`
           - `useGraph`
@@ -21060,6 +21300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serveModeLabel`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deployments`
           - `apps/deploy/local-serve`
@@ -22265,6 +22506,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/layout`
               - `apps-core/surface/floating`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
@@ -22434,6 +22676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/task`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
+              - `apps/deploy/analytics/dashboard`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
@@ -22616,6 +22859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/remote-deploy`
@@ -22818,6 +23062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `placedStyle`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/sonata/notation`
               - `apps/sonata/pedal/lane`
               - `apps/sonata/piano-roll`
@@ -22857,6 +23102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/servers`
@@ -22977,6 +23223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
+              - `apps/deploy/analytics/dashboard`
               - `apps/sonata/library`
               - `apps/website/landing/contact`
               - `apps/website/landing/hero`
@@ -23029,6 +23276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Inline`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/ssh-setup`
               - `apps/events/shell`
               - `apps/mail/reading-pane`
@@ -23205,6 +23453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/agent-manager/shell`
               - `apps/browser/shell`
+              - `apps/deploy/analytics/dashboard`
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
@@ -23416,6 +23665,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deployments`
               - `apps/deploy/local-serve`
@@ -23627,6 +23877,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
+              - `apps/deploy/analytics/dashboard`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/content-search`
@@ -23838,6 +24089,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
@@ -24291,6 +24543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SwitchIndicator`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/website/improve`
               - `config_v2/fields`
@@ -24328,6 +24581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
@@ -24662,6 +24916,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
+              - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
               - `apps/prototypes/compare`
@@ -24857,6 +25112,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
               - `apps/deploy/remote-deploy`
@@ -26626,6 +26882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/proxy`
           - `apps/browser/tabs`
           - `apps/browser/webview`
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history/investigate-failure`
           - `apps/deploy/deployments`
           - `apps/deploy/local-serve`
@@ -27031,6 +27288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
@@ -27213,6 +27471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task`
           - `apps-core/layout`
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deployments`
           - `apps/deploy/local-serve`
@@ -28149,6 +28408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/welcome`
           - `apps/browser/shell`
           - `apps/debug/shell`
+          - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/deploy/shell`
@@ -28455,6 +28715,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/commit-link`
           - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
+          - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`

@@ -1,0 +1,470 @@
+/**
+ * Real-Postgres suite for the collect pipeline: ingest → visits → nightly
+ * rollup → report (raw and totals) → retention guard. Runs the real migration
+ * chain on a throwaway database (db-test-fixture), so the SQL under test is the
+ * SQL production runs.
+ *
+ * The parity test is the load-bearing one: for a seeded day, every level of
+ * `analytics_daily` (unfiltered and each single filter) must equal the same
+ * breakdown computed from raw rows. That equality is what lets a 12-month
+ * report read totals while a 30-day report reads raw rows and still agree.
+ */
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import {
+  createTestDb,
+  type TestDb,
+} from "@plugins/database/plugins/db-test-fixture/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  DimensionSchema,
+  UNFILTERED_LEVEL,
+  type AnalyticsFilter,
+  CollectBodySchema,
+  type CollectResponse,
+} from "../../core";
+import { rawDailyRows, dailyTotalsRows, type KeyedRow } from "./aggregate-sql";
+import { recordCollect } from "./collect";
+import { runAnalyticsQuery } from "./report";
+import { assertDaysRolledUp } from "./retention";
+import { runRollup } from "./rollup";
+import {
+  analyticsDaily,
+  analyticsHits,
+  analyticsSalts,
+  analyticsVisits,
+} from "./tables";
+
+const DAY = "2026-09-10";
+const NEXT = "2026-09-11";
+const at = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00Z`);
+
+const UA = {
+  chromeMac:
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  safariIphone:
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+  firefoxLinux:
+    "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0",
+};
+
+let t: TestDb;
+
+async function hit(
+  body: z.input<typeof CollectBodySchema>,
+  who: { ip: string; ua: string; lang?: string },
+  now: Date,
+): Promise<CollectResponse> {
+  // Decode exactly as the route does, so the schema's server-side guards
+  // (query-string stripping included) are part of what is under test.
+  return recordCollect(t.db, CollectBodySchema.parse(body), {
+    ip: who.ip,
+    userAgent: who.ua,
+    acceptLanguage: who.lang ?? "en-US,en;q=0.9",
+    now,
+  });
+}
+
+function pageviewId(res: CollectResponse): string {
+  if (res.outcome !== "pageview")
+    throw new Error(`expected a pageview, got ${res.outcome}`);
+  return res.pageviewId;
+}
+
+const A = { ip: "203.0.113.1", ua: UA.chromeMac };
+const B = { ip: "203.0.113.2", ua: UA.safariIphone, lang: "fr-FR,fr;q=0.9" };
+const C = { ip: "203.0.113.3", ua: UA.firefoxLinux };
+const host = "equin.dev";
+
+beforeAll(async () => {
+  t = await createTestDb({ prefix: "analytics_test" });
+  await runMigrations(t.db);
+
+  // Visitor A, visit 1: HN → / → /harness, opens Improve, reads /harness a minute.
+  await hit(
+    {
+      kind: "pageview",
+      host,
+      path: "/",
+      referrer: "https://news.ycombinator.com/item?id=1",
+    },
+    A,
+    at(DAY, "10:00"),
+  );
+  const harness = pageviewId(
+    await hit(
+      { kind: "pageview", host, path: "/harness?x=1" },
+      A,
+      at(DAY, "10:05"),
+    ),
+  );
+  await hit(
+    {
+      kind: "event",
+      host,
+      path: "/harness",
+      name: "improve_open",
+      props: { from: "nav" },
+    },
+    A,
+    at(DAY, "10:06"),
+  );
+  await hit(
+    { kind: "engagement", pageviewId: harness, engagedMs: 60_000 },
+    A,
+    at(DAY, "10:07"),
+  );
+  // A repeated, smaller cumulative beacon changes nothing.
+  await hit(
+    { kind: "engagement", pageviewId: harness, engagedMs: 20_000 },
+    A,
+    at(DAY, "10:08"),
+  );
+
+  // Visitor A, visit 2 (more than 30 minutes later): a direct bounce.
+  await hit({ kind: "pageview", host, path: "/" }, A, at(DAY, "11:00"));
+
+  // Visitor B: a campaign landing on /apps, from a phone, in French.
+  const apps = pageviewId(
+    await hit(
+      {
+        kind: "pageview",
+        host,
+        path: "/apps",
+        utm: { source: "newsletter", campaign: "launch" },
+      },
+      B,
+      at(DAY, "10:30"),
+    ),
+  );
+  await hit(
+    { kind: "engagement", pageviewId: apps, engagedMs: 5_000 },
+    B,
+    at(DAY, "10:31"),
+  );
+
+  // Visitor C: Google → / → /story, and opens Improve too.
+  await hit(
+    { kind: "pageview", host, path: "/", referrer: "https://www.google.com/" },
+    C,
+    at(DAY, "12:00"),
+  );
+  await hit({ kind: "pageview", host, path: "/story" }, C, at(DAY, "12:10"));
+  await hit(
+    { kind: "event", host, path: "/story", name: "improve_open" },
+    C,
+    at(DAY, "12:11"),
+  );
+  await hit(
+    { kind: "event", host, path: "/story", name: "improve_show_me" },
+    C,
+    at(DAY, "12:12"),
+  );
+});
+
+afterAll(async () => {
+  await t.drop();
+});
+
+describe("collect", () => {
+  test("bots are ignored before touching the database", async () => {
+    const res = await hit(
+      { kind: "pageview", host, path: "/" },
+      { ip: "1.1.1.1", ua: "curl/8.5.0" },
+      at(DAY, "13:00"),
+    );
+    expect(res).toEqual({ outcome: "ignored", reason: "bot" });
+  });
+
+  test("an engagement for an unknown pageview is ignored", async () => {
+    const res = await hit(
+      {
+        kind: "engagement",
+        pageviewId: "00000000-0000-4000-8000-000000000000",
+        engagedMs: 1,
+      },
+      A,
+      at(DAY, "13:00"),
+    );
+    expect(res).toEqual({ outcome: "ignored", reason: "unknown-pageview" });
+  });
+
+  test("a 30-minute gap splits visits; source attributes come from the first hit", async () => {
+    const visits = await t.db
+      .select()
+      .from(analyticsVisits)
+      .orderBy(analyticsVisits.startedAt);
+    expect(visits).toHaveLength(4);
+    const [a1, b, a2, c] = visits;
+    expect(a1).toMatchObject({
+      entryPath: "/",
+      exitPath: "/harness",
+      pageviews: 2,
+      events: 1,
+      referrerHost: "news.ycombinator.com",
+      referrerPath: "/item",
+      channel: "Social",
+      device: "Desktop",
+      browser: "Chrome",
+      os: "macOS",
+      language: "en",
+      engagedMs: 60_000,
+      exitEngagedMs: 60_000,
+      country: null,
+    });
+    expect(a2).toMatchObject({ pageviews: 1, channel: "Direct" });
+    expect(a1!.visitorHash).toBe(a2!.visitorHash);
+    expect(b).toMatchObject({
+      channel: "Campaign",
+      utmCampaign: "launch",
+      device: "Mobile",
+      os: "iOS",
+      language: "fr",
+      exitEngagedMs: 5_000,
+    });
+    expect(c).toMatchObject({
+      channel: "Search",
+      referrerHost: "google.com",
+      events: 2,
+    });
+  });
+
+  test("the query string never reaches storage", async () => {
+    const paths = await t.db
+      .select({ path: analyticsHits.path })
+      .from(analyticsHits);
+    expect(paths.every((p) => !p.path.includes("?"))).toBe(true);
+  });
+});
+
+describe("rollup", () => {
+  let rolled: string[];
+
+  beforeAll(async () => {
+    ({ days: rolled } = await runRollup(t.db, at(NEXT, "00:15")));
+  });
+
+  test("sums the completed day and deletes salts before today", async () => {
+    expect(rolled).toContain(DAY);
+    const salts = await t.db.select().from(analyticsSalts);
+    expect(salts.filter((s) => s.day < NEXT)).toEqual([]);
+  });
+
+  test("the unfiltered summary line", async () => {
+    const [total] = await t.db
+      .select()
+      .from(analyticsDaily)
+      .where(
+        sql`${analyticsDaily.day} = ${DAY} AND ${analyticsDaily.filterDim} = 'none' AND ${analyticsDaily.dimension} = 'total'`,
+      );
+    expect(total).toMatchObject({
+      visitors: 3,
+      visits: 4,
+      pageviews: 6,
+      bounces: 2, // A's second visit and B's single page
+      events: 3,
+    });
+  });
+
+  test("rerunning is idempotent", async () => {
+    const before = await t.db.select().from(analyticsDaily);
+    await runRollup(t.db, at(NEXT, "00:15"));
+    const after = await t.db.select().from(analyticsDaily);
+    expect(after.length).toBe(before.length);
+  });
+
+  test("parity: every stored level equals the same breakdown from raw rows", async () => {
+    const levels = await executeRows(t.db, {
+      label: "test.levels",
+      row: z.object({ filterDim: z.string(), filterValue: z.string() }),
+      query: sql`SELECT DISTINCT filter_dim AS "filterDim", filter_value AS "filterValue" FROM analytics_daily WHERE day = ${DAY}`,
+    });
+    expect(levels.length).toBeGreaterThan(10);
+    const canonical = (rows: KeyedRow[]) =>
+      [...rows].sort((a, b) =>
+        `${a.dimension}\t${a.value}`.localeCompare(
+          `${b.dimension}\t${b.value}`,
+        ),
+      );
+    for (const level of levels) {
+      const filters: AnalyticsFilter[] =
+        level.filterDim === UNFILTERED_LEVEL
+          ? []
+          : [
+              {
+                dimension: DimensionSchema.parse(level.filterDim),
+                value: level.filterValue,
+              },
+            ];
+      const stored = await dailyTotalsRows(t.db, {
+        from: DAY,
+        to: DAY,
+        level: filters[0]
+          ? { kind: "filter", filter: filters[0] }
+          : { kind: "unfiltered" },
+        dimensions: "all",
+      });
+      const raw = await rawDailyRows(t.db, {
+        from: DAY,
+        to: DAY,
+        filters,
+        onlyNotRolledUp: false,
+      });
+      expect({ level, rows: canonical(stored) }).toEqual({
+        level,
+        rows: canonical(raw),
+      });
+    }
+  });
+});
+
+describe("report", () => {
+  const now = at(NEXT, "09:00");
+
+  test("raw: a source filter narrows the pages to where its visitors went", async () => {
+    const result = await runAnalyticsQuery(
+      t.db,
+      {
+        range: "7d",
+        compare: true,
+        filters: [{ dimension: "channel", value: "Search" }],
+      },
+      now,
+    );
+    if (result.kind !== "report") throw new Error("expected a report");
+    const { report } = result;
+    expect(report.source).toBe("raw");
+    expect(report.current.summary).toMatchObject({
+      visitors: 1,
+      visits: 1,
+      pageviews: 2,
+    });
+    expect(report.rows.page.map((r) => r.value).sort()).toEqual([
+      "/",
+      "/story",
+    ]);
+    expect(report.rows.event.map((r) => [r.value, r.events])).toEqual([
+      ["improve_open", 1],
+      ["improve_show_me", 1],
+    ]);
+    expect(report.current.series).toHaveLength(7);
+    expect(report.previous?.series).toHaveLength(7);
+  });
+
+  test("raw: stacked filters intersect", async () => {
+    const result = await runAnalyticsQuery(
+      t.db,
+      {
+        range: "30d",
+        compare: false,
+        filters: [
+          { dimension: "event", value: "improve_open" },
+          { dimension: "browser", value: "Chrome" },
+        ],
+      },
+      now,
+    );
+    if (result.kind !== "report") throw new Error("expected a report");
+    expect(result.report.current.summary).toMatchObject({
+      visitors: 1,
+      visits: 1,
+    });
+    expect(result.report.previous).toBeNull();
+  });
+
+  test("totals agrees with raw on the same days, and refuses a second filter", async () => {
+    const filter = { dimension: "page", value: "/" } as const;
+    const raw = await runAnalyticsQuery(
+      t.db,
+      { range: "30d", compare: false, filters: [filter] },
+      now,
+    );
+    const totals = await runAnalyticsQuery(
+      t.db,
+      { range: "12m", compare: false, filters: [filter] },
+      now,
+    );
+    if (raw.kind !== "report" || totals.kind !== "report")
+      throw new Error("expected reports");
+    expect(totals.report.source).toBe("totals");
+    expect(totals.report.current.summary).toEqual(raw.report.current.summary);
+    expect(totals.report.rows).toEqual(raw.report.rows);
+    expect(totals.report.current.series).toHaveLength(12);
+
+    const refused = await runAnalyticsQuery(
+      t.db,
+      {
+        range: "12m",
+        compare: false,
+        filters: [filter, { dimension: "os", value: "macOS" }],
+      },
+      now,
+    );
+    expect(refused).toEqual({
+      kind: "refused",
+      reason: "stacked-filters-beyond-raw-window",
+      maxFilters: 1,
+      rawWindowDays: 90,
+    });
+  });
+
+  test("totals includes today's not-yet-rolled-up visits from raw rows", async () => {
+    await hit({ kind: "pageview", host, path: "/" }, C, at(NEXT, "08:00"));
+    const result = await runAnalyticsQuery(
+      t.db,
+      { range: "12m", compare: false, filters: [] },
+      now,
+    );
+    if (result.kind !== "report") throw new Error("expected a report");
+    expect(result.report.current.summary.visits).toBe(5);
+  });
+
+  test("today is hourly, and the hours add up to the day's visits", async () => {
+    const result = await runAnalyticsQuery(
+      t.db,
+      { range: "today", compare: false, filters: [] },
+      at(DAY, "23:00"),
+    );
+    if (result.kind !== "report") throw new Error("expected a report");
+    const { current } = result.report;
+    expect(current.series).toHaveLength(24);
+    expect(current.series.reduce((n, p) => n + p.metrics.visits, 0)).toBe(
+      current.summary.visits,
+    );
+    expect(
+      current.series.find((p) => p.bucket === `${DAY}T10:00:00Z`)?.metrics
+        .visits,
+    ).toBe(2);
+  });
+});
+
+describe("retention guard", () => {
+  test("passes for rolled-up days", async () => {
+    await assertDaysRolledUp(t.db, [DAY, DAY]);
+  });
+
+  test("throws for a day with no totals, naming it", async () => {
+    const outcome = await assertDaysRolledUp(t.db, [DAY, NEXT]).then(
+      () => "resolved",
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    );
+    expect(outcome).toContain(NEXT);
+    expect(outcome).not.toContain(DAY);
+  });
+
+  test("deleting a visit reclaims its hits", async () => {
+    const [visit] = await t.db
+      .select({ id: analyticsVisits.id })
+      .from(analyticsVisits)
+      .where(eq(analyticsVisits.day, NEXT));
+    if (!visit) throw new Error("expected today's visit");
+    await t.db.delete(analyticsVisits).where(eq(analyticsVisits.id, visit.id));
+    const hits = await t.db
+      .select()
+      .from(analyticsHits)
+      .where(eq(analyticsHits.visitId, visit.id));
+    expect(hits).toEqual([]);
+  });
+});

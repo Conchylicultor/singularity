@@ -453,6 +453,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`

@@ -1,4 +1,4 @@
-// @hash bb52ac58dff9
+// @hash 49160d2ee583
 {
   // Reading order is the working order: WHAT this deployment is (the
   // composition), then where it is served, then the rehearsal you can run on
@@ -12,12 +12,17 @@
   // History sits after Output rather than between it and the Deploy button: the
   // output IS the running deploy's own tail, and splitting the two would put a
   // ledger between an action and its result.
+  //
+  // Analytics comes last: it is about who uses the site once it is live, not
+  // about getting it there, and its dashboard is tall enough that anywhere
+  // earlier would push the deploy workflow below the fold.
   "items": [
     "apps.deploy.composition:composition",
     "apps.deploy.deployments:overview",
     "apps.deploy.local-serve:serve",
     "apps.deploy.remote-deploy:deploy",
     "apps.deploy.remote-deploy:output",
-    "apps.deploy.deploy-history:history"
+    "apps.deploy.deploy-history:history",
+    "apps.deploy.analytics.dashboard:analytics"
   ]
 }

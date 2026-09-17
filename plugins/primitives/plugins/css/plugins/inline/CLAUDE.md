@@ -52,6 +52,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
   - Exports (values): `Inline`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/ssh-setup`
     - `apps/events/shell`
     - `apps/mail/reading-pane`

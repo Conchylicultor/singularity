@@ -38,6 +38,7 @@ import {
   listenAddress,
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 
 /** Shell single-quote one value for safe interpolation into the script. */
 export function sq(value: string): string {
@@ -178,8 +179,15 @@ export function caddySite(hostnames: string[], loopbackPort: number): string {
   // filenames, so a changed file is a changed URL. Everything else (the HTML
   // shell, the unhashed root icons) is deliberately left revalidating — caching
   // index.html for a year would pin visitors to a stale build forever.
+  //
+  // `respond <HOST_ONLY_PREFIX>* 404` refuses the box-only routes (analytics
+  // reports, read over SSH from the local deploy app) before they reach the
+  // gateway. Caddy's fixed directive order runs `respond` ahead of
+  // `reverse_proxy`, so its position in the block is not what makes it win.
+  // `hostOnly()` on the backend is the second, independent guard.
   return `${hostnames.join(", ")} {
 \tencode zstd gzip
+\trespond ${HOST_ONLY_PREFIX}* 404
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy ${listenAddress(loopbackPort)}
 }

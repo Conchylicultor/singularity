@@ -22,6 +22,7 @@ import {
 } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPicker } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 import { SOURCE_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { buildIssueUrl } from "../../core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
 
@@ -98,6 +99,7 @@ export function ImprovePanel({
   const showMe = () => {
     const text = draft.text.trim();
     if (text === "") return;
+    track("improve_show_me");
     setView({
       kind: "replay",
       replay: {
@@ -188,6 +190,7 @@ function ComposeView({
 
   const onPick = (meta: UiContextMeta) => {
     pickedRef.current = true;
+    track("improve_element_picked");
     // Un-hide FIRST, committed now: the insert focuses the field, and a focus
     // inside a still-hidden popover fails without a word. The picker reports
     // `onArmedChange(false)` too, but from an effect after this handler, which

@@ -36,6 +36,7 @@ attribute type carries.
     - `apps-core/tab-bar`
     - `apps/agent-manager/shell`
     - `apps/browser/shell`
+    - `apps/deploy/analytics/dashboard`
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`

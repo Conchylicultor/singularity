@@ -1,47 +1,23 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { sshRun } from "@plugins/infra/plugins/ssh/server";
 import { platformTagFromUname } from "@plugins/release/core";
-import {
-  _deployServers,
-  getServerSshPrivateKey,
-} from "@plugins/apps/plugins/deploy/plugins/servers/server";
 import { checkServerSsh } from "../../shared/endpoints";
 import { serverHealth } from "./tables";
+import { resolveServerSshTarget } from "./ssh-target";
 
 export const handleCheckSsh = implement(checkServerSsh, async ({ params }) => {
-  const [row] = await db
-    .select()
-    .from(_deployServers)
-    .where(eq(_deployServers.id, params.id));
-  if (!row) throw new HttpError(404, "Not found");
-
-  // The private key is asked of `servers` by name; the `deploy-ssh` secret
-  // namespace stays that plugin's own.
-  const secret = await getServerSshPrivateKey(params.id);
-  if (!secret.configured) {
+  const resolved = await resolveServerSshTarget(params.id, "learn-if-unpinned");
+  if (resolved.kind === "not-found") throw new HttpError(404, "Not found");
+  if (resolved.kind === "no-key") {
     throw new HttpError(
       409,
       "No SSH key is configured for this server. Generate one first.",
     );
   }
-
-  const existing = await serverHealth.get(params.id);
-  const pinnedHostKey = existing?.hostKeyLine ?? null;
+  const { server: row, target, pinnedHostKey } = resolved;
 
   const result = await sshRun(
-    {
-      host: row.host,
-      port: row.port,
-      user: row.sshUser,
-      privateKey: secret.privateKey,
-      // Trust-on-first-use: learn the host key on the first successful check,
-      // then require an exact match forever after.
-      hostKey: pinnedHostKey
-        ? { mode: "pinned", knownHostsLine: pinnedHostKey }
-        : { mode: "learn" },
-    },
+    target,
     // `uname -sm` is deliberate: like the bare `true` it replaced, it cannot
     // fail on its own on a reachable POSIX host, so ANY non-zero exit is still
     // an SSH-layer problem. That removes the exit-255 ambiguity between "ssh

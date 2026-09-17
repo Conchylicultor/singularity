@@ -72,6 +72,7 @@ hover.
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
+    - `apps/deploy/analytics/collect.AnalyticsTracker`
     - `layouts/full-pane.FullPane`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/coords.Placed`

@@ -1,4 +1,6 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { AnalyticsTracker } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
+import { websiteApp } from "../../core";
 
 /**
  * The website's app surface. A pure full-surface app (like Sonata): the
@@ -7,10 +9,16 @@ import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
  * persistent site header is NOT a layout concern: it is the shared
  * `WebsiteHeader` pane-header slot every website pane borrows, so navigation
  * chrome and pane chrome are one bar.
+ *
+ * The visit tracker is mounted here, beside the pane renderer rather than inside
+ * any pane's chrome: this component is the app's surface, which stays mounted
+ * while the visitor moves between pages, whereas each page's `WebsiteChrome`
+ * is replaced with the pane it wraps.
  */
 export function WebsiteLayout() {
   return (
     <div className="h-full min-h-0">
+      <AnalyticsTracker app={websiteApp} />
       <FullPane />
     </div>
   );

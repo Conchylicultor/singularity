@@ -48,8 +48,13 @@
     - `infra/ssh.sshRun`
   - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
   - Entity extension of: `apps/deploy/servers` (table `deploy_servers_ext_health`)
-  - Exports (types): `ServerHealthRow`
+  - Exports (types):
+    - `DeployServerRow`
+    - `HostKeyPolicy`
+    - `ServerHealthRow`
+    - `ServerSshTargetResult`
   - Exports (values):
+    - `resolveServerSshTarget`
     - `serverHealth`
     - `serverHealthResource`
     - `ServerHealthRowSchema`
@@ -60,6 +65,7 @@
     - `POST /api/deploy/servers/:id/forget-host-key`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`

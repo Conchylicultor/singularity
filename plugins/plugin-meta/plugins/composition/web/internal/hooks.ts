@@ -245,3 +245,69 @@ export function useImpact(node: PluginNode): ImpactResult | null {
     };
   }, [active, graph, registry, node.id]);
 }
+
+/**
+ * Whether the composition named `name` ships plugin `pluginId`, resolved IN THE
+ * BROWSER from the edge graph and the manifests — the same derivation as
+ * {@link useAppExclusions}, for any composition rather than main's.
+ *
+ * Three states, none of them a guess:
+ * - `pending` — the graph has not arrived; nothing is known yet.
+ * - `unknown-composition` — no manifest answers to `name` (renamed or removed).
+ * - `ready` — `included` is membership in the resolved bundle, `extends` and
+ *   the base exclusions folded in.
+ *
+ * Lets a surface show a section only when the software it is about actually
+ * ships the plugin behind it, without naming any composition.
+ */
+export type CompositionInclusion =
+  | { kind: "pending" }
+  | { kind: "unknown-composition" }
+  | { kind: "ready"; included: boolean };
+
+const PENDING_INCLUSION: CompositionInclusion = { kind: "pending" };
+
+// One resolved bundle per (graph, manifest config, composition name): every
+// caller asking about the same composition shares the closure walk.
+let bundleForGraph: EdgeGraph | null = null;
+let bundleForItems: CompositionManifestItem[] | null = null;
+const bundleCache = new Map<string, Set<PluginId> | null>();
+
+function bundleOf(
+  graph: EdgeGraph,
+  items: CompositionManifestItem[],
+  name: string,
+): Set<PluginId> | null {
+  if (bundleForGraph !== graph || bundleForItems !== items) {
+    bundleCache.clear();
+    bundleForGraph = graph;
+    bundleForItems = items;
+  }
+  const cached = bundleCache.get(name);
+  if (cached !== undefined) return cached;
+  const registry = items.map(manifestItemToManifest);
+  const manifest = registry.find((m) => m.name === name);
+  const bundle = manifest
+    ? resolveComposition(graph, flattenManifest(manifest, registry)).bundle
+    : null;
+  bundleCache.set(name, bundle);
+  return bundle;
+}
+
+/**
+ * `name` is `null` while the caller does not know WHICH composition to ask
+ * about yet (its own read is still loading) — answered as `pending`, so a hook
+ * that must run unconditionally never has to invent a placeholder name.
+ */
+export function useCompositionIncludes(
+  name: string | null,
+  pluginId: PluginId,
+): CompositionInclusion {
+  const { data } = useEndpoint(getCompositionData, {});
+  const graph = graphFor(data);
+  const items = useManifestItems();
+  if (name === null || !graph) return PENDING_INCLUSION;
+  const bundle = bundleOf(graph, items, name);
+  if (!bundle) return { kind: "unknown-composition" };
+  return { kind: "ready", included: bundle.has(pluginId) };
+}

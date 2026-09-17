@@ -4,6 +4,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { EMPTY_DRAFT, ImprovePanel, type ImproveDraft } from "./improve-panel";
 
 /**
@@ -45,7 +46,10 @@ export function ImproveNavItem() {
   return (
     <InlinePopover
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        if (next && !open) track("improve_open");
+        setOpen(next);
+      }}
       align="end"
       width="2xl"
       padding="lg"

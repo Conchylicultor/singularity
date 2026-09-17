@@ -580,6 +580,7 @@ sweeper will reclaim it.
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/collect`
     - `apps/deploy/deployments`
     - `apps/events/reanchor`
     - `apps/events/refresh`

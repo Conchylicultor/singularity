@@ -46,6 +46,7 @@ padding on the track that a flex direction could reinterpret.
     - `SwitchIndicator`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
     - `apps/website/improve`
     - `config_v2/fields`

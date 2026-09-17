@@ -84,6 +84,7 @@ primitive exists to name.
     - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
     - `apps/browser/shell`
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`

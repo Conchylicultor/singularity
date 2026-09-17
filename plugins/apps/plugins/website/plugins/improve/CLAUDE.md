@@ -85,6 +85,7 @@ Verify with `e2e/improve-verify.ts` after `./singularity build`.
 - Web:
   - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
   - Uses:
+    - `apps/deploy/analytics/collect.track`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `primitives/action-presentation.useActionForm`

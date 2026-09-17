@@ -6,12 +6,14 @@ export {
   useCompositionData,
   useEnsureCompositionData,
   useAppExclusions,
+  useCompositionIncludes,
   useInclusion,
   useImpact,
 } from "./internal/hooks";
 export type {
   AppExclusions,
   CompositionDataResult,
+  CompositionInclusion,
   ImpactResult,
 } from "./internal/hooks";
 export {

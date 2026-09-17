@@ -930,6 +930,7 @@ See "Open questions" in the design doc.
     - `apps/agent-manager/welcome`
     - `apps/browser/shell`
     - `apps/debug/shell`
+    - `apps/deploy/analytics/collect`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/deploy/shell`

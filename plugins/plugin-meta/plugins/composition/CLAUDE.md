@@ -250,6 +250,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
   - Exports (types):
     - `AppExclusions`
     - `CompositionDataResult`
+    - `CompositionInclusion`
     - `DiffState`
     - `ImpactResult`
     - `ManifestActions`
@@ -264,6 +265,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `useAppExclusions`
     - `useCompareComposition`
     - `useCompositionData`
+    - `useCompositionIncludes`
     - `useDiffMap`
     - `useEnsureCompositionData`
     - `useGraph`
@@ -315,6 +317,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `serveModeLabel`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deployments`
     - `apps/deploy/local-serve`

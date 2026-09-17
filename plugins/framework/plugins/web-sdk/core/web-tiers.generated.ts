@@ -14,6 +14,7 @@
 // The `eager-tier-in-sync` check fails on drift.
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
+//   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
@@ -37,6 +38,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/browser/plugins/start-page",
   "apps/plugins/browser/plugins/tabs",
   "apps/plugins/browser/plugins/webview",
+  "apps/plugins/deploy/plugins/analytics/plugins/dashboard",
   "apps/plugins/deploy/plugins/composition",
   "apps/plugins/deploy/plugins/deploy-history",
   "apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure",

@@ -59,6 +59,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
   - Imported by:
     - `apps-core/layout`
     - `apps-core/surface/floating`
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`

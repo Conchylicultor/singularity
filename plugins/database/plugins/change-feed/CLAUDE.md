@@ -142,6 +142,7 @@ contribution/registry sets:
     - `routeChange`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/collect`
     - `database/live-state-snapshot`
     - `debug/slow-ops`
     - `debug/trace/engine`

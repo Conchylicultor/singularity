@@ -1,0 +1,158 @@
+/**
+ * The dashboard's body for every answer: a loading state while the report is
+ * asked for, and an explicit, named error for every failure — never KPI tiles
+ * or panels over an unknown or failed read.
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
+
+const answer = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+
+vi.mock("../internal/use-deployment-analytics", () => ({
+  useDeploymentAnalytics: () => answer.current,
+}));
+// Recharts measures a real layout jsdom does not have; the chart is not what
+// these states are about.
+vi.mock("../components/trend-chart", () => ({
+  TrendChart: () => <div data-testid="trend-chart" />,
+}));
+
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import type { DeploymentAnalyticsResult } from "../../core";
+import { AnalyticsDashboard } from "../components/analytics-dashboard";
+import { report } from "./fixtures";
+
+afterEach(cleanup);
+
+const refetch = vi.fn(() => Promise.resolve());
+
+function settled(data: DeploymentAnalyticsResult) {
+  answer.current = {
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    data,
+    refetch,
+  };
+}
+
+function renderDashboard() {
+  return render(<AnalyticsDashboard deploymentId="dep-1" />);
+}
+
+function expectNoDashboard() {
+  expect(screen.queryByRole("radiogroup", { name: "Chart metric" })).toBeNull();
+  expect(screen.queryByTestId("trend-chart")).toBeNull();
+}
+
+describe("AnalyticsDashboard states", () => {
+  it("shows a loading state, not an empty dashboard, while pending", () => {
+    answer.current = {
+      isPending: true,
+      isError: false,
+      isFetching: true,
+      data: undefined,
+      refetch,
+    };
+    renderDashboard();
+    expectNoDashboard();
+    expect(screen.queryByRole("alert")).toBeNull();
+    // The controls and the recorded-field list do not depend on the answer.
+    expect(screen.getByRole("radio", { name: "30 days" })).toBeTruthy();
+    expect(screen.getByText("What one visit records")).toBeTruthy();
+  });
+
+  it("names a failed request", () => {
+    answer.current = {
+      isPending: false,
+      isError: true,
+      isFetching: false,
+      error: new EndpointError(404, "This deployment no longer exists."),
+      data: undefined,
+      refetch,
+    };
+    renderDashboard();
+    expectNoDashboard();
+    expect(screen.getByText(/This deployment no longer exists\./)).toBeTruthy();
+  });
+
+  it.each<[string, DeploymentAnalyticsResult, RegExp]>([
+    ["no key", { kind: "no-ssh-key" }, /has no SSH key yet/],
+    ["unverified", { kind: "unverified" }, /never verified/],
+    [
+      "ssh failure",
+      {
+        kind: "ssh-failed",
+        failure: "auth",
+        message: "auth failed",
+        stderr: "Permission denied (publickey).",
+      },
+      /rejected this app's SSH key/,
+    ],
+    [
+      "site down",
+      { kind: "request-failed", exitCode: 7, stderr: "" },
+      /not running/,
+    ],
+    [
+      "site error",
+      { kind: "request-failed", exitCode: 22, stderr: "404" },
+      /deploy it again/,
+    ],
+    [
+      "unreadable",
+      { kind: "unreadable-answer", detail: "Not JSON" },
+      /not with an analytics report/,
+    ],
+    [
+      "refused",
+      {
+        kind: "refused",
+        reason: "stacked-filters-beyond-raw-window",
+        maxFilters: 1,
+        rawWindowDays: 90,
+      },
+      /last 90 days/,
+    ],
+  ])("renders %s as an explicit error state", (_name, data, text) => {
+    settled(data);
+    renderDashboard();
+    expectNoDashboard();
+    expect(screen.getByRole("alert").textContent).toMatch(text);
+  });
+
+  it("shows the SSH diagnostic verbatim", () => {
+    settled({
+      kind: "ssh-failed",
+      failure: "unknown",
+      message: "?",
+      stderr: "kex_exchange_identification: boom",
+    });
+    renderDashboard();
+    expect(screen.getByText("kex_exchange_identification: boom")).toBeTruthy();
+  });
+
+  it("renders a report as tiles, chart and panels", () => {
+    settled({ kind: "report", report: report() });
+    renderDashboard();
+    expect(
+      screen.getByRole("radiogroup", { name: "Chart metric" }),
+    ).toBeTruthy();
+    expect(screen.getByTestId("trend-chart")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Search/ })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("refreshes only when asked", () => {
+    settled({ kind: "report", report: report() });
+    refetch.mockClear();
+    renderDashboard();
+    expect(refetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});

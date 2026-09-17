@@ -24,9 +24,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deriveInstall } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import {
   PUT_HELPER_SH,
   RESTART_GATE_SH,
+  caddySite,
   convergeScript,
 } from "./converge-script";
 
@@ -59,6 +61,26 @@ async function bash(
   ]);
   return { code, stdout, stderr };
 }
+
+describe("caddySite", () => {
+  test("refuses the host-only routes publicly, ahead of the proxy", () => {
+    expect(caddySite(["equin.dev", "www.equin.dev"], 9100)).toBe(
+      `equin.dev, www.equin.dev {
+\tencode zstd gzip
+\trespond /api/host-only/* 404
+\theader /assets/* Cache-Control "public, max-age=31536000, immutable"
+\treverse_proxy 127.0.0.1:9100
+}
+`,
+    );
+  });
+
+  test("the refused path is the prefix hostOnly() guards", () => {
+    expect(caddySite(["a.example"], 9100)).toContain(
+      `respond ${HOST_ONLY_PREFIX}* 404`,
+    );
+  });
+});
 
 describe("convergeScript (shell syntax)", () => {
   for (const [label, hostnames] of [
