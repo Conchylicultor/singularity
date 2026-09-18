@@ -24,13 +24,19 @@ export interface TabIconProps {
  * a small, padding-less anchor, so the dot rides just past the corner rather than
  * landing on the glyph. `decorative` makes the badge click-through so it never
  * eats the tab's activate/close/drag.
+ *
+ * The glyph is a fixed `size-4` (16px), the same box `Button` gives every icon
+ * button's glyph — NOT `icon-auto`. The tab's label text size is set on the
+ * label leaf only, so an em-relative icon would scale off the strip's inherited
+ * 16px and render at 18.4px, visibly bigger than the `+` and the action-bar
+ * buttons sharing the same chrome row.
  */
 export function TabIcon({ icon: Icon, badge: Badge }: TabIconProps) {
   if (!Icon) return null;
-  if (!Badge) return <Icon className="icon-auto" />;
+  if (!Badge) return <Icon className="size-4" />;
   return (
     <Center as="span" className="relative">
-      <Icon className="icon-auto" />
+      <Icon className="size-4" />
       <Pin to="top-right" offset="2xs" outset decorative>
         <Badge />
       </Pin>
