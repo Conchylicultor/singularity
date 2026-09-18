@@ -14,14 +14,19 @@ export function wrapPreprompt(text: string): string {
 }
 
 /** Lift the first preprompt block out of `text`. Returns the inner text (or null) + the remainder. */
-export function extractPreprompt(text: string): { preprompt: string | null; rest: string } {
+export function extractPreprompt(text: string): {
+  preprompt: string | null;
+  rest: string;
+} {
   // Local regex (no `g` flag) — first match only; the preprompt is only ever
   // injected into the first user turn.
   const re = new RegExp(`<${PREPROMPT_TAG}>([\\s\\S]*?)</${PREPROMPT_TAG}>`);
   const m = re.exec(text);
   if (!m) return { preprompt: null, rest: text };
   const inner = m[1]!.trim();
-  const rest = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
+  const rest = (
+    text.slice(0, m.index) + text.slice(m.index + m[0].length)
+  ).trim();
   return { preprompt: inner ? inner : null, rest };
 }
 
@@ -52,6 +57,13 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     at: z.string(),
     text: z.string(),
     segments: z.array(UserTextSegmentSchema).optional(),
+    /**
+     * The transcript line's uuid — present exactly when the row is a message
+     * the user typed (`userPromptText`), which is what a rewind can cut at.
+     * Absent on text that merely arrived in a user-role line (the remainder of
+     * a delivered background report, a relayed message).
+     */
+    uuid: z.string().optional(),
   }),
   z.object({
     kind: z.literal("user-image"),

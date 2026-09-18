@@ -1,5 +1,7 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { existsSync } from "node:fs";
+import { rename } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import {
   createTask,
   createAttempt,
@@ -45,6 +47,9 @@ import type {
   ResumeBlockedReason,
   ResumeOutcome,
 } from "../../core/resume-outcome";
+import { serializeTranscript } from "./claude-transcript";
+import { locateTranscriptCut, type LocateCutRefusal } from "./locate-cut";
+import type { RewindOutcome, RewindPreview } from "../../core/rewind";
 
 const DEFAULT_RUNTIME = "tmux";
 
@@ -67,6 +72,12 @@ export interface CreateConversationOpts {
   spawnedBy?: string;
   kind?: ConversationKind;
   forkFromConversationId?: string;
+  /**
+   * With `forkFromConversationId`: fork from just BEFORE this user message (its
+   * transcript line uuid) instead of from the end. The new conversation resumes
+   * a truncated copy of the source's transcript; the source is untouched.
+   */
+  forkAtMessageUuid?: string;
   prepromptId?: string;
   effort?: EffortLevel;
 }
@@ -79,6 +90,31 @@ interface SpawnCreate {
   effort?: EffortLevel;
   resumeSessionId?: string;
   forkSession: boolean;
+}
+
+// A session file "fork from here" writes: the source transcript cut just before
+// the chosen message, relabelled with a fresh session id. It lands in the SAME
+// `~/.claude/projects/<dir>/` as the source — both conversations share one
+// worktree, and a session resolving to another directory is what the
+// foreign-session check refuses.
+interface TranscriptCopy {
+  destPath: string;
+  content: string;
+}
+
+// A cut the transcript refuses ("fork from here" on a message that cannot be cut
+// at). A client mistake, not a server fault — the create handler answers 409.
+export class TranscriptCutError extends Error {
+  constructor(
+    readonly reason: LocateCutRefusal,
+    conversationId: string,
+    userMessageUuid: string,
+  ) {
+    super(
+      `Cannot cut conversation ${conversationId} at message ${userMessageUuid}: ${reason}`,
+    );
+    this.name = "TranscriptCutError";
+  }
 }
 
 // Everything a conversation launch needs to know, resolved BEFORE any write.
@@ -97,7 +133,9 @@ export interface PreparedConversation {
   create: SpawnCreate;
   target:
     // Reuse an existing attempt's worktree (fork / +Sonnet / fork-session).
-    | { kind: "reuse"; attemptId: string }
+    // `transcriptCopy` is the "fork from here" case: a session file to write
+    // before the spawn, which `create.resumeSessionId` then plain-resumes.
+    | { kind: "reuse"; attemptId: string; transcriptCopy?: TranscriptCopy }
     // Mint a new attempt (and a new task when `taskId` is absent).
     | { kind: "new"; attemptId: string; taskId: string | undefined };
 }
@@ -119,6 +157,10 @@ export async function prepareConversation(
   let resumeSessionId: string | undefined;
   let attemptId = opts.attemptId;
   let inheritedModel: ConversationModel | undefined;
+  let transcriptCopy: TranscriptCopy | undefined;
+  if (opts.forkAtMessageUuid && !opts.forkFromConversationId) {
+    throw new Error("forkAtMessageUuid requires forkFromConversationId");
+  }
   if (opts.forkFromConversationId) {
     const source = await getConversation(opts.forkFromConversationId);
     if (!source) {
@@ -139,6 +181,36 @@ export async function prepareConversation(
     attemptId = source.attemptId;
     resumeSessionId = source.claudeSessionId;
     inheritedModel = normalizeModel(source.model);
+
+    if (opts.forkAtMessageUuid) {
+      // Fork from a chosen message: resume OUR truncated copy rather than let
+      // the CLI copy the whole history. Still reads only — the file is written
+      // in `finishConversation`, after the row has committed.
+      const located = await locateTranscriptCut(
+        source.id,
+        opts.forkAtMessageUuid,
+      );
+      if (!located.ok) {
+        throw new TranscriptCutError(
+          located.reason,
+          source.id,
+          opts.forkAtMessageUuid,
+        );
+      }
+      const newSessionId = crypto.randomUUID();
+      transcriptCopy = {
+        destPath: join(dirname(located.path), `${newSessionId}.jsonl`),
+        // Every line names its session (`sessionId` / `session_id`); a copy that
+        // still named the source would be the source's history under a new
+        // filename.
+        content: serializeTranscript(
+          located.cut.keptLines.map((line) =>
+            line.replaceAll(located.sessionId, newSessionId),
+          ),
+        ),
+      };
+      resumeSessionId = newSessionId;
+    }
   }
   // Normalize on write too: callers like the auto-start job pass a model read
   // straight from a side-table that may still hold a legacy ("opus") value
@@ -164,7 +236,7 @@ export async function prepareConversation(
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
     effectiveTaskId = attempt.taskId;
-    target = { kind: "reuse", attemptId };
+    target = { kind: "reuse", attemptId, transcriptCopy };
   } else {
     effectiveTaskId = opts.taskId;
     const newId = newAttemptId();
@@ -227,7 +299,9 @@ export async function prepareConversation(
       model,
       effort,
       resumeSessionId,
-      forkSession: !!opts.forkFromConversationId,
+      // `--fork-session` asks the CLI to copy the whole history under a new id.
+      // A fork at a message already has its own (truncated) copy to resume.
+      forkSession: !!opts.forkFromConversationId && !transcriptCopy,
     },
   };
 }
@@ -348,6 +422,12 @@ export async function finishConversation(
   // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
   // synchronous — no job-pickup latency for the interactive fork buttons.
   try {
+    if (p.target.transcriptCopy) {
+      await Bun.write(
+        p.target.transcriptCopy.destPath,
+        p.target.transcriptCopy.content,
+      );
+    }
     await Runtime.get(p.runtimeId).create(
       p.conversationId,
       p.worktreePath,
@@ -512,4 +592,97 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   await respawnResume(row);
   await setConversationHibernated(id, null);
   return { kind: "resumed" };
+}
+
+const REWIND_REFUSAL_MESSAGE: Record<LocateCutRefusal | "not-in-tail", string> =
+  {
+    "no-transcript": "This conversation has no transcript on disk to rewind.",
+    "not-found": "That message is no longer in the transcript.",
+    "not-a-live-user-prompt":
+      "A conversation can only be rewound to one of your own messages.",
+    "nothing-before":
+      "This is the first message — there is nothing before it to go back to. Start a new conversation instead.",
+    "not-in-tail":
+      "This message predates a fork, so the conversation cannot be rewound to it in place. Fork from it instead.",
+  };
+
+function refuseRewind(reason: LocateCutRefusal | "not-in-tail") {
+  return {
+    ok: false as const,
+    reason,
+    message: REWIND_REFUSAL_MESSAGE[reason],
+  };
+}
+
+export async function previewRewind(
+  id: string,
+  userMessageUuid: string,
+): Promise<RewindPreview> {
+  const row = await getConversation(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  const located = await locateTranscriptCut(id, userMessageUuid);
+  if (!located.ok) return refuseRewind(located.reason);
+  return {
+    ok: true,
+    messageText: located.cut.messageText,
+    losses: located.cut.losses,
+    inPlace: located.isTail,
+    turnRunning: row.status === "working",
+  };
+}
+
+/**
+ * "Rewind to here": continue THIS conversation from just before one of the
+ * user's messages, handing that message's text back for the prompt editor.
+ *
+ * The CLI's own `/rewind` lives behind an interactive menu, and its
+ * `--resume-session-at` flag is honoured in print mode only — so instead of
+ * driving either, this restarts the process on a shorter transcript. The CLI
+ * sees an ordinary `claude --resume` of the same session id, which is why the
+ * session chain, the CLI's file checkpoints and the prompt cache (the kept
+ * history is byte-identical) all carry over untouched. Design and the
+ * experiments behind it: `research/2026-09-18-conversations-rewind-conversation.md`.
+ *
+ * `backupPath` receives the full original transcript. The file is MOVED there,
+ * not copied, and a fresh file takes its place: the running CLI holds the old
+ * file open, so anything it still appends on its way down follows the moved
+ * file instead of landing after the cut. That is also why it must be on the
+ * same filesystem as `~/.claude` — a cross-device rename throws, before anything
+ * has been changed.
+ *
+ * Everything that can refuse runs first, and reads only.
+ */
+export async function rewindConversationAt(
+  id: string,
+  userMessageUuid: string,
+  backupPath: string,
+): Promise<RewindOutcome> {
+  const row = await getConversation(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+
+  const preflight = preflightResume(row);
+  if (preflight.kind === "blocked") {
+    return { ok: false, reason: preflight.reason, message: preflight.message };
+  }
+  const located = await locateTranscriptCut(id, userMessageUuid);
+  if (!located.ok) return refuseRewind(located.reason);
+  if (!located.isTail) return refuseRewind("not-in-tail");
+
+  // The user is continuing this conversation, not closing it: a close requested
+  // earlier must not turn the pane restart below into "pane gone → done".
+  await updateConversation(id, { closeRequested: false });
+
+  await rename(located.path, backupPath);
+  await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
+
+  // Kills the pane — a running turn and any background work with it — and
+  // resumes the same session id on the shortened file.
+  await respawnResume(row);
+  await setConversationHibernated(id, null);
+  // Rewinding a closed conversation re-opens it, exactly like the Resume button.
+  if (row.status === "gone" || row.status === "done") {
+    await updateTask(row.taskId, { drop: false, hold: false });
+  }
+
+  return { ok: true, rewindText: located.cut.messageText };
 }

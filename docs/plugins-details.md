@@ -8541,11 +8541,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `getConversationRow`
       - `interruptConversation`
       - `maybeLaunchTaskJob`
+      - `previewRewind`
       - `readConversationTurns`
       - `ResumeBlockedError`
       - `resumeConversation`
+      - `rewindConversationAt`
       - `Runtime`
       - `sendTurn`
+      - `TranscriptCutError`
       - `userTurnSent`
     - Register:
       - `defineJob('tasks.maybe-launch')`
@@ -8576,8 +8579,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.defineRoute`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
+      - `BackgroundWork`
       - `ConversationEntry`
       - `CreateConversationBody`
+      - `CutLosses`
+      - `CutRefusal`
       - `DeleteConversationQuery`
       - `ListGoneQuery`
       - `ListTurnsQuery`
@@ -8585,11 +8591,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ResumeBlocked`
       - `ResumeBlockedReason`
       - `ResumeOutcome`
+      - `RewindOutcome`
+      - `RewindPreview`
+      - `RewindRefusal`
     - Exports (values):
+      - `BackgroundWorkSchema`
       - `closeConversation`
       - `conversationRoute`
       - `createConversation`
       - `CreateConversationBodySchema`
+      - `CutLossesSchema`
+      - `CutRefusalSchema`
       - `deleteConversation`
       - `DeleteConversationQuerySchema`
       - `getConversation`
@@ -8605,6 +8617,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `PostTurnBodySchema`
       - `ResumeBlockedReasonSchema`
       - `ResumeOutcomeSchema`
+      - `RewindOutcomeSchema`
+      - `RewindPreviewSchema`
+      - `RewindRefusalSchema`
       - `stopConversation`
   - Cross-plugin:
     - Imported by:
@@ -8642,6 +8657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversation-view/push-profiling`
       - `conversations/conversation-view/resume`
+      - `conversations/conversation-view/rewind`
       - `conversations/conversation-view/status`
       - `conversations/conversation-view/tasks-panel`
       - `conversations/conversation-view/terminal-pane`
@@ -9275,6 +9291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/prompt-templates`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/push-profiling`
+          - `conversations/conversation-view/rewind`
           - `conversations/conversation-view/status`
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/terminal-pane`
@@ -10326,7 +10343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
             - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
               - Web:
-                - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
+                - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`, `conversations.conversation-view.rewind`
                 - Uses:
                   - `primitives/copy-to-clipboard.useCopyToClipboard`
                   - `primitives/css/ui-kit.Button`
@@ -10351,6 +10368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call`
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
+                  - `conversations/conversation-view/rewind`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -10982,8 +11000,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/persistent-draft.writeDraft`
               - `primitives/prompt-editor.PromptEditor`
               - `shell/notifications.toast`
+            - Exports (values):
+              - `CONVERSATION_PROMPT_DRAFT_KEY`
+              - `setConversationPromptDraft`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/push-and-exit`
+              - `conversations/conversation-view/rewind`
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
@@ -11033,6 +11059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.defineTurnDelivery`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
+              - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -11108,6 +11135,44 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `resumeConversationEndpoint`
+        - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.
+          - Web:
+            - Contributes: `JsonlRowActions.Item` "rewind" → `RewindAction`
+            - Uses:
+              - `conversations.useConversationById`
+              - `conversations/conversation-view.conversationPane`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+              - `conversations/conversation-view/prompt-input.setConversationPromptDraft`
+              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.DropdownMenu`
+              - `primitives/css/ui-kit.DropdownMenuContent`
+              - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/css/ui-kit.DropdownMenuTrigger`
+              - `primitives/launch.useLaunchConversation`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `shell/notifications.toast`
+          - Server:
+            - Uses:
+              - `conversations.previewRewind`
+              - `conversations.rewindConversationAt`
+              - `infra/endpoints.implement`
+              - `infra/jobs.defineJob`
+              - `primitives/log-channels.Log`
+            - Register: `defineJob('conversations.rewind-backup-sweep')`
+            - Routes:
+              - `POST /api/conversations/:id/rewind/preview`
+              - `POST /api/conversations/:id/rewind`
+          - Core:
+            - Uses:
+              - `conversations.RewindOutcomeSchema`
+              - `conversations.RewindPreviewSchema`
+              - `infra/endpoints.defineEndpoint`
+            - Exports (values):
+              - `previewRewindEndpoint`
+              - `rewindConversationEndpoint`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
             - Contributes: `Conversation.Header` → `StatusBadge`
@@ -11774,6 +11839,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stripRelayBoilerplate`
           - `TokenUsageSchema`
           - `unwrapRelayEnvelopes`
+          - `userPromptText`
           - `wrapPreprompt`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
@@ -16814,6 +16880,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/prompt-templates`
+              - `conversations/conversation-view/rewind`
               - `conversations/conversations-view/data-view/queue`
               - `database/admin`
               - `debug/live-state-churn/emit`
@@ -17609,6 +17676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
+          - `conversations/conversation-view/rewind`
           - `conversations/conversations-view`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
@@ -18476,6 +18544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversation-view/rewind`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
@@ -25093,6 +25162,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
+              - `conversations/conversation-view/rewind`
               - `conversations/conversation-view/turn-summary`
               - `conversations/recover`
               - `conversations/summary`
@@ -26089,6 +26159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
+              - `conversations/conversation-view/rewind`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/conversation-view/turn-summary`
@@ -28061,6 +28132,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/fork-session`
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
+          - `conversations/conversation-view/rewind`
           - `conversations/conversations-view`
           - `debug/reports`
           - `page/annotations/todo/task-link`
@@ -28563,6 +28635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/release/release-logs`
           - `backup`
           - `build`
+          - `conversations/conversation-view/rewind`
           - `conversations/transcript-retention`
           - `database`
           - `database/change-feed`
@@ -28966,6 +29039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/prototypes/gallery`
                   - `build/serve-composition`
+                  - `conversations/conversation-view/rewind`
                   - `ui/theme-engine/theme-gallery`
         - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
           - Web:
@@ -32090,6 +32164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/resume`
+          - `conversations/conversation-view/rewind`
           - `conversations/summary`
           - `database/fork`
           - `debug/boot-profile`

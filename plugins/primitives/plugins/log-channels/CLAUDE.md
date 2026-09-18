@@ -178,6 +178,7 @@ count accumulates across drops.
     - `apps/studio/compositions/release/release-logs`
     - `backup`
     - `build`
+    - `conversations/conversation-view/rewind`
     - `conversations/transcript-retention`
     - `database`
     - `database/change-feed`

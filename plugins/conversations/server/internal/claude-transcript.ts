@@ -1,8 +1,6 @@
-import {
-  activeLineUuids,
-  isInterruptContent,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+import { activeLineUuids } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { readChainLines } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { cutTranscriptAtUnansweredPrompt } from "./transcript-cut";
 
 export type TurnRole = "user" | "assistant";
 
@@ -23,54 +21,21 @@ export interface Turn {
  * turn can restore it to the prompt editor. Returns the text (and truncates the
  * file from that turn onward) or null when there is nothing to rewind.
  *
- * The prompt is rarely the literal last line: Claude Code appends
- * non-conversation lines (`file-history-snapshot` / `system` / `ai-title` / …)
- * and an interrupt sentinel (`[Request interrupted by user]`) after it. So scan
- * backwards over the live conversation — ignoring abandoned rewind branches via
- * the active-path set — skipping that trailing noise. Stop without rewinding at
- * an assistant turn or a tool result: a prompt the agent has already begun
- * answering must not be popped back.
+ * Which prompt, and what is kept, is `cutTranscriptAtUnansweredPrompt`'s call —
+ * the same cut "Rewind to here" and "Fork from here" make at a chosen message.
  */
 export async function rewindLastUserTurn(path: string): Promise<string | null> {
   const file = Bun.file(path);
   if (!(await file.exists())) return null;
-  const raw = await file.text();
-  const lines = raw.split("\n");
+  const cut = cutTranscriptAtUnansweredPrompt((await file.text()).split("\n"));
+  if (!cut) return null;
+  await Bun.write(path, serializeTranscript(cut.keptLines));
+  return cut.messageText;
+}
 
-  // Parse every non-blank line, keeping its file-line index for truncation.
-  const parsed: { index: number; obj: Record<string, unknown> }[] = [];
-  lines.forEach((line, index) => {
-    if (!line.trim()) return;
-    try {
-      parsed.push({ index, obj: JSON.parse(line) as Record<string, unknown> });
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-    }
-  });
-
-  const active = activeLineUuids(parsed.map((p) => p.obj));
-
-  for (let i = parsed.length - 1; i >= 0; i--) {
-    const { index, obj } = parsed[i]!;
-    const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
-    if (uuid && !active.has(uuid)) continue; // abandoned rewind branch
-
-    if (obj.type === "assistant") return null; // agent already responding
-    if (obj.type !== "user") continue; // file-history-snapshot / system / ai-title / …
-
-    const msg = obj.message as { role?: string; content?: unknown } | undefined;
-    if (msg?.role !== "user" || typeof msg.content !== "string" || !msg.content) {
-      // Array content = tool result → the agent is mid-turn; nothing to pop.
-      if (Array.isArray(msg?.content)) return null;
-      continue;
-    }
-    if (isInterruptContent(msg.content)) continue; // "[Request interrupted by user]"
-
-    // Drop this user turn and any trailing metadata, then hand the text back.
-    await Bun.write(path, lines.slice(0, index).join("\n") + "\n");
-    return msg.content;
-  }
-  return null;
+/** Transcript lines → file content. One home so every writer ends the file the same way. */
+export function serializeTranscript(lines: readonly string[]): string {
+  return lines.length === 0 ? "" : lines.join("\n") + "\n";
 }
 
 export function readTurns(path: string, sinceIso?: string): Promise<Turn[]> {
@@ -124,7 +89,10 @@ export async function readTurnsFromChain(
     if (obj.type === "assistant" && msg?.role === "assistant") {
       const texts: string[] = [];
       if (Array.isArray(msg.content)) {
-        for (const c of msg.content as Array<{ type?: string; text?: string }>) {
+        for (const c of msg.content as Array<{
+          type?: string;
+          text?: string;
+        }>) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (c?.type === "text" && typeof c.text === "string") {
             texts.push(c.text);

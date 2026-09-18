@@ -114,11 +114,14 @@
     - `getConversationRow`
     - `interruptConversation`
     - `maybeLaunchTaskJob`
+    - `previewRewind`
     - `readConversationTurns`
     - `ResumeBlockedError`
     - `resumeConversation`
+    - `rewindConversationAt`
     - `Runtime`
     - `sendTurn`
+    - `TranscriptCutError`
     - `userTurnSent`
   - Register:
     - `defineJob('tasks.maybe-launch')`
@@ -149,8 +152,11 @@
     - `primitives/pane.defineRoute`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
+    - `BackgroundWork`
     - `ConversationEntry`
     - `CreateConversationBody`
+    - `CutLosses`
+    - `CutRefusal`
     - `DeleteConversationQuery`
     - `ListGoneQuery`
     - `ListTurnsQuery`
@@ -158,11 +164,17 @@
     - `ResumeBlocked`
     - `ResumeBlockedReason`
     - `ResumeOutcome`
+    - `RewindOutcome`
+    - `RewindPreview`
+    - `RewindRefusal`
   - Exports (values):
+    - `BackgroundWorkSchema`
     - `closeConversation`
     - `conversationRoute`
     - `createConversation`
     - `CreateConversationBodySchema`
+    - `CutLossesSchema`
+    - `CutRefusalSchema`
     - `deleteConversation`
     - `DeleteConversationQuerySchema`
     - `getConversation`
@@ -178,6 +190,9 @@
     - `PostTurnBodySchema`
     - `ResumeBlockedReasonSchema`
     - `ResumeOutcomeSchema`
+    - `RewindOutcomeSchema`
+    - `RewindPreviewSchema`
+    - `RewindRefusalSchema`
     - `stopConversation`
 - Cross-plugin:
   - Imported by:
@@ -215,6 +230,7 @@
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/resume`
+    - `conversations/conversation-view/rewind`
     - `conversations/conversation-view/status`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
@@ -314,6 +330,7 @@
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+      - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.
       - **`status`** — Displays the conversation status as a colored badge in the toolbar.
       - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
       - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.

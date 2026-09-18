@@ -46,6 +46,9 @@ export {
   resumeConversation,
   ensureResumed,
   ResumeBlockedError,
+  previewRewind,
+  rewindConversationAt,
+  TranscriptCutError,
 } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export {

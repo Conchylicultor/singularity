@@ -37,6 +37,8 @@ export type LaunchRequest = {
   taskId?: string;
   attemptId?: string;
   forkFromConversationId?: string;
+  /** With `forkFromConversationId`: fork from just before this user message. */
+  forkAtMessageUuid?: string;
   prepromptId?: string;
 };
 

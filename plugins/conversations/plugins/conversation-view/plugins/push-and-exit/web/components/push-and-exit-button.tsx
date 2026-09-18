@@ -40,6 +40,7 @@ import { exitConversation } from "@plugins/conversations/plugins/conversation-vi
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { CONVERSATION_PROMPT_DRAFT_KEY } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import {
   useResource,
   useCombinedResources,
@@ -131,9 +132,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const conversation = useConversationById(convId);
   const live = useConversation(convId) ?? conversation;
 
-  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", {
-    scope: convId,
-  });
+  const [draft, setDraft, clearDraft] = useDraft(
+    CONVERSATION_PROMPT_DRAFT_KEY,
+    "",
+    {
+      scope: convId,
+    },
+  );
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
   // Client-side read of the very prompt the server injects for Push & Close —

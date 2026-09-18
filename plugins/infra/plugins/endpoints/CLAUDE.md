@@ -312,6 +312,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/resume`
+    - `conversations/conversation-view/rewind`
     - `conversations/conversations-view`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`

@@ -69,6 +69,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
+    - `conversations/conversation-view/rewind`
     - `conversations/conversations-view`
     - `debug/reports`
     - `page/annotations/todo/task-link`

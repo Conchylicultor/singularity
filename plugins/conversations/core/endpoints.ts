@@ -6,21 +6,31 @@ import { ConversationModelSchema } from "@plugins/conversations/plugins/model-pr
 
 // --- Body schemas ---
 
-export const CreateConversationBodySchema = z.object({
-  taskId: z.string().optional(),
-  attemptId: z.string().optional(),
-  prompt: z.string().optional(),
-  runtime: z.string().optional(),
-  // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
-  // boundary (400) rather than silently coerced to DEFAULT_MODEL. This is an
-  // *input* schema; stored model fields read back from the DB stay tolerant via
-  // StoredModelSchema / normalizeModel.
-  model: ConversationModelSchema.optional(),
-  forkFromConversationId: z.string().optional(),
-  prepromptId: z.string().optional(),
-  effort: EffortLevelSchema.optional(),
-});
-export type CreateConversationBody = z.infer<typeof CreateConversationBodySchema>;
+export const CreateConversationBodySchema = z
+  .object({
+    taskId: z.string().optional(),
+    attemptId: z.string().optional(),
+    prompt: z.string().optional(),
+    runtime: z.string().optional(),
+    // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
+    // boundary (400) rather than silently coerced to DEFAULT_MODEL. This is an
+    // *input* schema; stored model fields read back from the DB stay tolerant via
+    // StoredModelSchema / normalizeModel.
+    model: ConversationModelSchema.optional(),
+    forkFromConversationId: z.string().optional(),
+    // With `forkFromConversationId`: fork from just before this user message (its
+    // transcript line uuid, carried by the `user-text` row) rather than the end.
+    forkAtMessageUuid: z.string().optional(),
+    prepromptId: z.string().optional(),
+    effort: EffortLevelSchema.optional(),
+  })
+  .refine((b) => !b.forkAtMessageUuid || !!b.forkFromConversationId, {
+    message: "forkAtMessageUuid requires forkFromConversationId",
+    path: ["forkAtMessageUuid"],
+  });
+export type CreateConversationBody = z.infer<
+  typeof CreateConversationBodySchema
+>;
 
 export const PostTurnBodySchema = z.object({
   text: z.string().min(1),
@@ -43,7 +53,9 @@ export type ListTurnsQuery = z.infer<typeof ListTurnsQuerySchema>;
 export const DeleteConversationQuerySchema = z.object({
   name: z.string(),
 });
-export type DeleteConversationQuery = z.infer<typeof DeleteConversationQuerySchema>;
+export type DeleteConversationQuery = z.infer<
+  typeof DeleteConversationQuerySchema
+>;
 
 // --- Endpoint definitions ---
 

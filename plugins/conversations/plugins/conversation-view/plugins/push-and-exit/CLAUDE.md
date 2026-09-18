@@ -21,6 +21,7 @@
     - `conversations/conversation-view/pending-turn.defineTurnDelivery`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `conversations/conversation-view/pending-turn.usePendingTurns`
+    - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`

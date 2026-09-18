@@ -85,6 +85,7 @@
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/resume`
+    - `conversations/conversation-view/rewind`
     - `conversations/summary`
     - `database/fork`
     - `debug/boot-profile`

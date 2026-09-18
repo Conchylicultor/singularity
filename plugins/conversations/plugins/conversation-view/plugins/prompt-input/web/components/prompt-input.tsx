@@ -10,14 +10,27 @@ import { sendConversationTurn } from "@plugins/conversations/plugins/conversatio
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { CONVERSATION_PROMPT_DRAFT_KEY } from "../internal/draft";
 
-export function PromptInput({ conversation }: { conversation: ConversationRecord }) {
+export function PromptInput({
+  conversation,
+}: {
+  conversation: ConversationRecord;
+}) {
   const live = useConversation(conversation.id) ?? conversation;
-  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", {
-    scope: conversation.id,
-  });
+  const [draft, setDraft, clearDraft] = useDraft(
+    CONVERSATION_PROMPT_DRAFT_KEY,
+    "",
+    {
+      scope: conversation.id,
+    },
+  );
 
-  const disabled = live.status === "gone" || live.status === "done" || live.status === "starting" || !!live.waitingFor;
+  const disabled =
+    live.status === "gone" ||
+    live.status === "done" ||
+    live.status === "starting" ||
+    !!live.waitingFor;
 
   const insertRef = useRef<((text: string) => void) | null>(null);
   const promptInsert = usePromptInsert();

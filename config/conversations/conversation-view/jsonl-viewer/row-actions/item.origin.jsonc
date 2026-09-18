@@ -1,4 +1,4 @@
-// @hash 7fb0ce2f98ed
+// @hash 823a0d834b6d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -14,6 +14,7 @@
     "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
     "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
-    "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle"
+    "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
+    "conversations.conversation-view.rewind:rewind"
   ]
 }

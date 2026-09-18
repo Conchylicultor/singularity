@@ -1,4 +1,4 @@
-// @hash 7fb0ce2f98ed
+// @hash 823a0d834b6d
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,8 +6,9 @@
   //
   // Left-to-right order of the hover strip at a row's right edge. Reads as
   // metadata → inspection → view toggles → copy → launch-an-agent actions, so
-  // the two consequential (conversation-creating) actions sit last, furthest
-  // from the pointer's resting position.
+  // the consequential actions sit last, furthest from the pointer's resting
+  // position: the two that create a conversation, then rewind — which can also
+  // remove messages from this one — at the very end.
   "items": [
     "conversations.conversation-view.jsonl-viewer:timestamp",
     "conversations.conversation-view.jsonl-viewer:raw-json",
@@ -17,6 +18,7 @@
     "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
     "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
-    "conversations.conversation-view.fork-session:fork-session"
+    "conversations.conversation-view.fork-session:fork-session",
+    "conversations.conversation-view.rewind:rewind"
   ]
 }

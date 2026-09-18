@@ -21,6 +21,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/prototypes/plugins/thumbnails", id: "apps.prototypes.thumbnails", loader: () => import("@plugins/apps/plugins/prototypes/plugins/thumbnails/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata", id: "apps.sonata", loader: () => import("@plugins/apps/plugins/sonata/data-dirs"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/data-dirs"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/conversation-view/plugins/rewind", id: "conversations.conversation-view.rewind", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/rewind/data-dirs"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/data-dirs"), dependsOn: [] },
   { pluginPath: "database/plugins/embedded", id: "database.embedded", loader: () => import("@plugins/database/plugins/embedded/data-dirs"), dependsOn: [] },
   { pluginPath: "database/plugins/zero/plugins/cache-service", id: "database.zero.cache-service", loader: () => import("@plugins/database/plugins/zero/plugins/cache-service/data-dirs"), dependsOn: [] },

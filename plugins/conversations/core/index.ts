@@ -12,6 +12,22 @@ export type {
   ResumeBlocked,
 } from "./resume-outcome";
 export {
+  BackgroundWorkSchema,
+  CutLossesSchema,
+  CutRefusalSchema,
+  RewindRefusalSchema,
+  RewindPreviewSchema,
+  RewindOutcomeSchema,
+} from "./rewind";
+export type {
+  BackgroundWork,
+  CutLosses,
+  CutRefusal,
+  RewindRefusal,
+  RewindPreview,
+  RewindOutcome,
+} from "./rewind";
+export {
   listConversations,
   listGoneConversations,
   getConversation,

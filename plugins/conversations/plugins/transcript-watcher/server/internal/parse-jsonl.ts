@@ -5,6 +5,7 @@ import {
   unwrapRelayEnvelopes,
   extractTeammateMessages,
   stripRelayBoilerplate,
+  userPromptText,
 } from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
@@ -101,6 +102,7 @@ async function pushTextWithImages(
   text: string,
   at: string,
   out: JsonlEvent[],
+  uuid: string | undefined,
 ): Promise<void> {
   // Local regex instance — the g flag stores match state in lastIndex, so a
   // shared module-level regex gets corrupted when concurrent async calls
@@ -150,7 +152,7 @@ async function pushTextWithImages(
   if (segments.length === 0) return;
 
   if (!hasImages) {
-    if (text.trim()) out.push({ kind: "user-text", at, text });
+    if (text.trim()) out.push({ kind: "user-text", at, text, uuid });
     return;
   }
 
@@ -159,7 +161,7 @@ async function pushTextWithImages(
     .map((s) => s.value)
     .join("");
 
-  out.push({ kind: "user-text", at, text: plainText, segments });
+  out.push({ kind: "user-text", at, text: plainText, segments, uuid });
 }
 
 interface RawBlock {
@@ -330,6 +332,7 @@ async function buildEvents(
   const processUserText = async (
     rawText: string,
     ts: string,
+    promptUuid: string | undefined,
   ): Promise<void> => {
     let body = rawText;
     if (!seenPreprompt) {
@@ -358,7 +361,7 @@ async function buildEvents(
         : afterTeammates;
     const remaining = extractTaskNotifications(body, ts, events);
     if (remaining.length > 0) {
-      await pushTextWithImages(remaining, ts, events);
+      await pushTextWithImages(remaining, ts, events, promptUuid);
     }
   };
 
@@ -434,9 +437,13 @@ async function buildEvents(
         continue;
       }
 
+      // The line's uuid rides on the row only when the line is a message the
+      // user typed — the same predicate a rewind applies to its cut point.
+      const promptUuid =
+        uuid && userPromptText(obj) !== null ? uuid : undefined;
       const content = msg.content;
       if (typeof content === "string") {
-        await processUserText(content, ts);
+        await processUserText(content, ts, promptUuid);
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
@@ -456,7 +463,7 @@ async function buildEvents(
             }
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
-            await processUserText(block.text, ts);
+            await processUserText(block.text, ts, promptUuid);
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&

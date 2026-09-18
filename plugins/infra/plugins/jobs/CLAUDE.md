@@ -637,6 +637,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/rewind`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
