@@ -20,6 +20,20 @@ The Prototypes app's two panes:
   strictly after the list had painted — a guaranteed swatch-then-screenshot
   swap on every load. Side by side they prime in parallel, and the cover is
   right the first time it is painted.
+  **Done.** A third resource joins them: `files`' `prototypes.statuses`. The
+  gallery maps it onto the rows (`PrototypeGalleryRow = PrototypeMeta & { done }`)
+  so everything reads one value: a hidden `status` field (the gallery groups by
+  it by default — see `config/apps/prototypes/gallery/prototypes.gallery.jsonc`
+  — and can be filtered on it; no card body cell, the checkbox already shows
+  it), a muted title on Done cards (`rowTone`), and the Done checkbox, which is
+  a `persistent` contribution to `PrototypeCardActions` (painted at rest in the
+  card footer; its click never opens the card). The detail header has the same
+  toggle (`done` action, `done-toggle.tsx`) — a fixed "Done" label so ticking
+  it never changes the header's width.
+
+  `status` is an enum of two ("In progress" / "Done") rather than the `done`
+  bool it projects: the field is read as SECTION HEADINGS and as filter values,
+  where the bool type's own "No" / "Yes" says nothing about what it is No of.
 - **Detail pane** (`proto/:name/:stage?`) — a switcher over **stages**, each a
   scaled live iframe surface.
   - **Nothing in it shows `name`.** `name` is a minted id
@@ -240,13 +254,14 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
+- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
     - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
     - `PrototypeVersionActions` ← `apps.prototypes.compare.version`, `apps.prototypes.gallery`
+    - `PrototypeCardActions` ← `apps.prototypes.gallery`
     - `PrototypeDetailScope` ← `apps.prototypes.compare`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
@@ -254,6 +269,8 @@ honest — the prototype does exist — and it self-corrects.
     - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
     - `prototypeDetailPane.Actions` "version" → `VersionStepper`
     - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
+    - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
+    - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeStages.Stage` "Focus" → `FocusStage`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
   - Uses:
@@ -262,6 +279,7 @@ honest — the prototype does exist — and it self-corrects.
     - `apps/prototypes/thumbnails.usePrototypeThumbnails`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
@@ -314,12 +332,14 @@ honest — the prototype does exist — and it self-corrects.
     - `FrameSizeChoice`
     - `PicksRead`
     - `PrototypeDetailContextValue`
+    - `PrototypeGalleryRow`
     - `PrototypeStage`
     - `PrototypeStageContribution`
     - `PrototypeStageProps`
   - Exports (values):
     - `FrameSizeProvider`
     - `OptionsPicker`
+    - `PrototypeCardActions`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
     - `PrototypeDetailScope`

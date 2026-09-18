@@ -7,6 +7,7 @@ import {
 } from "../../core";
 import { HISTORY_DIR_NAME } from "../../shared/history/store";
 import { PICKS_DIR_NAME } from "../../shared/picks";
+import { STATUS_DIR_NAME } from "../../shared/status";
 import { mintPrototype } from "../../shared/mint";
 import { listPrototypeMetas } from "./list";
 import { contentTypeForPath, resolvePrototypeFile } from "./paths";
@@ -95,14 +96,18 @@ export async function handlePrototypeAsset(
 }
 
 /**
- * `_history/` and `_picks/` sit in the served tree beside the prototypes:
- * each one's private git repo, and each one's option picks. Their internals are
- * never served — a version's files are, through the versions route, which
- * reads them out of git; the picks are, through the `prototypes.picks`
- * resource.
+ * `_history/`, `_picks/` and `_status/` sit in the served tree beside the
+ * prototypes: each one's private git repo, option picks and status. Their
+ * internals are never served — a version's files are, through the versions
+ * route, which reads them out of git; the picks and statuses are, through the
+ * `prototypes.picks` and `prototypes.statuses` resources.
  */
 function isInternalDir(name: string): boolean {
-  return name === HISTORY_DIR_NAME || name === PICKS_DIR_NAME;
+  return (
+    name === HISTORY_DIR_NAME ||
+    name === PICKS_DIR_NAME ||
+    name === STATUS_DIR_NAME
+  );
 }
 
 function internalNotServed(): Response {

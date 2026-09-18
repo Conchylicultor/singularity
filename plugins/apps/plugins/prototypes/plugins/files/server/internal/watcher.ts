@@ -10,6 +10,7 @@ import {
   prototypeHistoryLiveResource,
 } from "./history";
 import { prototypePicksLiveResource } from "./picks";
+import { prototypeStatusesLiveResource } from "./status";
 import { seedTemplate } from "./seed";
 import {
   prototypesResource,
@@ -106,20 +107,24 @@ async function refresh(): Promise<void> {
  * history and nothing else: the prototype's bytes did not move, so nothing may
  * reload. Picks written under `_picks/` likewise re-read that one prototype's
  * picks and bump nothing — the frames follow on their own, because their `src`
- * carries the picks. Everything else goes through the signature gate.
+ * carries the picks. A status written under `_status/` re-reads the statuses,
+ * and likewise reloads nothing. Everything else goes through the signature gate.
  */
 function onTreeEvents(paths: string[]): void {
   let treeMoved = false;
   const recorded = new Set<string>();
   const picked = new Set<string>();
+  let statusMoved = false;
   for (const path of paths) {
     const kind = classifyTreePath(prototypesDir.path, path);
     if (kind.kind === "version-recorded") recorded.add(kind.id);
     else if (kind.kind === "picks-recorded") picked.add(kind.id);
+    else if (kind.kind === "status-recorded") statusMoved = true;
     else if (kind.kind === "tree") treeMoved = true;
   }
   for (const id of recorded) notifyHistory(id);
   for (const name of picked) prototypePicksLiveResource.notify({ name });
+  if (statusMoved) prototypeStatusesLiveResource.notify();
   if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
 }
 
@@ -159,7 +164,8 @@ export async function startPrototypesWatcher(): Promise<void> {
     // check rejects such a script tag, so an external .jsx cannot exist).
     // `.json` also passes each history's `latest.json` stamp — git's own
     // files carry no extension, so they never reach `onChange` — and each
-    // `_picks/<id>.json` (their `.lock` and `.json.tmp` do not pass).
+    // `_picks/<id>.json` and `_status/<id>.json` (their `.lock` and
+    // `.json.tmp` do not pass).
     extensions: [
       ".html",
       ".css",

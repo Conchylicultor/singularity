@@ -1,4 +1,4 @@
-// @hash 1a2c6aa50d26
+// @hash 1efa7ecba71f
 // A horizontal pane header, read left to right. The pane's own title comes
 // first, then `view-mode` — which stage you are looking at is a choice about
 // the prototype itself, so it leads, beside the title. (It used to sit there
@@ -28,6 +28,10 @@
 // it. (The seeded order had these reversed, purely because it followed
 // contribution registration order.)
 //
+// `done` (the Done toggle) leads the trailing cluster: it is a fact about the
+// prototype you record, not a way of looking at it. Its label and glyph size
+// are the same in both states, so ticking it never changes the header's width.
+//
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 // Hide: { "item": "<key>", "hidden": true }
@@ -41,6 +45,7 @@
     "apps.prototypes.gallery:view-mode",
     "apps.prototypes.gallery:version",
     { "type": "spacer", "id": "spacer-1" },
+    "apps.prototypes.gallery:done",
     "apps.prototypes.present:present",
     "apps.prototypes.gallery:improve"
   ]

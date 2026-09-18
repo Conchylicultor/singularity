@@ -4,7 +4,9 @@ import {
   HISTORY_DIR_NAME,
   LATEST_STAMP_FILE,
 } from "../../shared/history/store";
-import { PICKS_DIR_NAME, PICKS_FILE_EXT } from "../../shared/picks";
+import { PICKS_DIR_NAME } from "../../shared/picks";
+import { RECORD_FILE_EXT } from "../../shared/record-store";
+import { STATUS_DIR_NAME } from "../../shared/status";
 
 /**
  * What a path the watcher reported is, as far as the tree's consumers care:
@@ -18,6 +20,9 @@ import { PICKS_DIR_NAME, PICKS_FILE_EXT } from "../../shared/picks";
  *   this backend or any other. Re-reads that one record; nothing reloads on
  *   its account (the frames' `src` carries the picks, so they follow).
  * - `picks-internal` — anything else under `_picks/`: nothing to react to.
+ * - `status-recorded` — `_status/<id>.json`: `id`'s status changed, by this
+ *   backend or any other. Re-reads the statuses; nothing reloads.
+ * - `status-internal` — anything else under `_status/`: nothing to react to.
  * - `tree` — everything else: a prototype's own files, `_template/`. Goes
  *   through the signature gate like before.
  */
@@ -26,12 +31,25 @@ export type TreePath =
   | { kind: "history-internal" }
   | { kind: "picks-recorded"; id: string }
   | { kind: "picks-internal" }
+  | { kind: "status-recorded"; id: string }
+  | { kind: "status-internal" }
   | { kind: "tree" };
 
 export function classifyTreePath(root: string, path: string): TreePath {
   const segments = relative(root, path).split(sep);
   if (segments[0] === HISTORY_DIR_NAME) return classifyHistory(segments);
-  if (segments[0] === PICKS_DIR_NAME) return classifyPicks(segments);
+  if (segments[0] === PICKS_DIR_NAME) {
+    const id = recordId(segments);
+    return id === null
+      ? { kind: "picks-internal" }
+      : { kind: "picks-recorded", id };
+  }
+  if (segments[0] === STATUS_DIR_NAME) {
+    const id = recordId(segments);
+    return id === null
+      ? { kind: "status-internal" }
+      : { kind: "status-recorded", id };
+  }
   return { kind: "tree" };
 }
 
@@ -48,13 +66,11 @@ function classifyHistory(segments: string[]): TreePath {
   return { kind: "history-internal" };
 }
 
-function classifyPicks(segments: string[]): TreePath {
+/** The prototype id a `_<kind>/<id>.json` record path names, or `null` for anything else in the dir. */
+function recordId(segments: string[]): string | null {
   const [, file] = segments;
-  const id = file?.endsWith(PICKS_FILE_EXT)
-    ? file.slice(0, -PICKS_FILE_EXT.length)
+  const id = file?.endsWith(RECORD_FILE_EXT)
+    ? file.slice(0, -RECORD_FILE_EXT.length)
     : "";
-  if (segments.length === 2 && isPrototypeId(id)) {
-    return { kind: "picks-recorded", id };
-  }
-  return { kind: "picks-internal" };
+  return segments.length === 2 && isPrototypeId(id) ? id : null;
 }

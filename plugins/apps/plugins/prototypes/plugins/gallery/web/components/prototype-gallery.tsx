@@ -26,7 +26,9 @@ import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   createPrototype,
+  prototypeStatusesResource,
   prototypesResource,
+  statusOf,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -35,6 +37,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
 import { OPTIONS_RULE } from "./launch-rules";
 import { prototypeDetailPane } from "../panes";
+import { PrototypeCardActions, type PrototypeGalleryRow } from "../slots";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
@@ -159,6 +162,9 @@ export function PrototypeGallery() {
   const result = useCombinedResources({
     prototypes: useResource(prototypesResource),
     thumbnails: usePrototypeThumbnails(),
+    // Whether each prototype is marked Done — joined onto the rows below, and
+    // awaited with the list so a Done card never paints as not done first.
+    statuses: useResource(prototypeStatusesResource),
   });
   const openPane = useOpenPane();
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
@@ -166,7 +172,7 @@ export function PrototypeGallery() {
   // `title` is what the author named the prototype (its `<title>`), so it is the
   // display field; `name` is the minted id the URL and the row key use — opaque,
   // so it is a searchable column and never the label.
-  const fields: FieldDef<PrototypeMeta>[] = [
+  const fields: FieldDef<PrototypeGalleryRow>[] = [
     {
       id: "title",
       label: "Title",
@@ -176,6 +182,21 @@ export function PrototypeGallery() {
     },
     { id: "blurb", label: "Blurb", type: "text", value: (p) => p.blurb },
     { id: "name", label: "Folder", type: "text", value: (p) => p.name },
+    // Filter / group-by only — the card already shows it, as its checkbox.
+    // An enum of two rather than a bool, because this field is READ as section
+    // headings (the gallery groups by it by default) and as filter values, and
+    // "In progress" / "Done" say there what "No" / "Yes" cannot.
+    {
+      id: "status",
+      label: "Status",
+      type: "enum",
+      options: [
+        { value: "in-progress", label: "In progress" },
+        { value: "done", label: "Done" },
+      ],
+      value: (p) => (p.done ? "done" : "in-progress"),
+      visible: false,
+    },
   ];
 
   const newButton = (
@@ -211,11 +232,11 @@ export function PrototypeGallery() {
   );
 
   const renderList = (
-    rows: PrototypeMeta[],
+    rows: PrototypeGalleryRow[],
     thumbnails: Record<string, ThumbnailState>,
     loading: boolean,
   ) => (
-    <DataView<PrototypeMeta>
+    <DataView<PrototypeGalleryRow>
       rows={rows}
       fields={fields}
       rowKey={(p) => p.name}
@@ -224,6 +245,8 @@ export function PrototypeGallery() {
       storageKey={PROTOTYPES_VIEW}
       loading={loading}
       selectedRowId={selectedName}
+      itemActions={PrototypeCardActions}
+      rowTone={(p) => (p.done ? "muted" : "default")}
       onRowActivate={(p) =>
         openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
       }
@@ -236,7 +259,7 @@ export function PrototypeGallery() {
           // id-tinted swatch stays as what a prototype looks like before its
           // picture exists (or when rendering it failed) — the thumbnail owns
           // the picture, this pane owns the stand-in.
-          cover: (p: PrototypeMeta) => ({
+          cover: (p: PrototypeGalleryRow) => ({
             kind: "node",
             node: (
               <PrototypeThumbnail
@@ -253,7 +276,14 @@ export function PrototypeGallery() {
   return matchResource(result, {
     pending: () => renderList([], {}, true),
     error: () => renderList([], {}, true),
-    ready: ({ prototypes, thumbnails }) =>
-      renderList(prototypes, thumbnails, false),
+    ready: ({ prototypes, thumbnails, statuses }) =>
+      renderList(
+        prototypes.map((p) => ({
+          ...p,
+          done: statusOf(statuses, p.name).done,
+        })),
+        thumbnails,
+        false,
+      ),
   });
 }

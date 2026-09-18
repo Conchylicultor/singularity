@@ -69,6 +69,19 @@ export const PrototypeStages = {
 };
 
 /**
+ * One gallery card: the prototype as listed, joined with whether the user has
+ * marked it Done (`files`' `prototypes.statuses`). Joined once, in the gallery,
+ * so the `done` field, the muted tone and every card action read the same value.
+ */
+export type PrototypeGalleryRow = PrototypeMeta & { done: boolean };
+
+/**
+ * Per-card actions in the gallery. The gallery ships one — the Done checkbox,
+ * painted at rest — and anything else a card grows is a contribution.
+ */
+export const PrototypeCardActions = defineItemActions<PrototypeGalleryRow>();
+
+/**
  * Per-row actions on the version list (the popover behind the stepper's
  * `v3 of 7` label). The gallery ships one — open the conversation whose turn
  * recorded the version — and anything else a version grows is a contribution,

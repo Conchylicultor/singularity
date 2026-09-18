@@ -1,4 +1,14 @@
 // @hash 6ec84829688d
+// The gallery is grouped by `status`: the prototypes still being worked on come
+// first ("In progress"), the finished ones after ("Done"). Done cards also read
+// muted, so the second section is visibly a pile you are finished with rather
+// than more of the same.
 {
-  "views": [{ "id": "gallery", "name": "Gallery", "view": { "type": "gallery" } }]
+  "views": [
+    {
+      "id": "gallery",
+      "name": "Gallery",
+      "view": { "type": "gallery", "groupBy": { "fieldId": "status", "groupingId": "value" } }
+    }
+  ]
 }

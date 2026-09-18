@@ -170,6 +170,35 @@ defaults) and gave each `*.localhost:9000` origin its own picks. Design:
 - `_picks/` is `_`-prefixed, so it is never listed as a prototype and never
   enters the reload signature; the file routes refuse it (404) like `_history/`.
 
+## Per-prototype records (`shared/record-store.ts`)
+
+The picks above are one kind of **record**: a small JSON file per prototype in
+a `_`-prefixed dir beside the folders (`_<kind>/<id>.json`), never inside the
+folder (it would churn the reload signature, the thumbnail and the history).
+`openRecordStore(root, kind)` owns everything the kinds share — the id-checked
+path, the per-prototype flock, the temp-then-rename write, "the empty record is
+no file", `readAll()`, snapshot `restore()` for the agent-write ledger, and
+"a malformed file throws". A kind supplies its dir, schema, empty value, fold
+and equality. A new kind is a `shared/<kind>.ts` of that shape, plus its
+server resource/PUT, a `tree-path.ts` arm, a watcher notify and its dir in
+`isInternalDir`.
+
+## Status (`shared/status.ts`)
+
+Whether the user marked a prototype **Done**: `_status/<id>.json`
+(`{ "done": true }`; no file = not done), shared by every surface exactly like
+the picks.
+
+- `prototypes.statuses` (push, no params) — every recorded status keyed by id;
+  a prototype missing from the map is not done (`statusOf`). One small record
+  per prototype, so it is bounded by the list it annotates, which the gallery
+  holds whole anyway.
+- `PUT /api/prototypes/:name/status` (`setPrototypeStatus`, body `{ done }`),
+  404 for an unknown prototype. Notifies at once; other backends hear it through
+  the watcher (`status-recorded`). Automated sessions are undone through the
+  `prototype-status` agent-write ledger, like picks.
+- `prototype list` prints `[done]` after a Done prototype's title.
+
 ## `./singularity prototype`
 
 Six verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
@@ -386,13 +415,14 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.version"
     - `resource.declare` "prototypes.history"
     - `resource.declare` "prototypes.picks"
+    - `resource.declare` "prototypes.statuses"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -408,12 +438,14 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypes.history` (push)
     - `prototypes.list` (push)
     - `prototypes.picks` (push)
+    - `prototypes.statuses` (push)
     - `prototypes.version` (push)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
     - `POST /api/prototypes/:name/versions/:sha/restore`
     - `PUT /api/prototypes/:name/picks`
+    - `PUT /api/prototypes/:name/status`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -431,11 +463,14 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeMeta`
     - `PrototypeOption`
     - `PrototypeProblem`
+    - `PrototypeStatus`
+    - `PrototypeStatusChange`
     - `PrototypeVersion`
     - `PrototypeVersionKind`
     - `StoredPicks`
   - Exports (values):
     - `applyPicksChange`
+    - `applyPrototypeStatusChange`
     - `createPrototype`
     - `foldOptions`
     - `humanizeToken`
@@ -447,6 +482,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `MocksDeclarationSchema`
     - `mocksProblemDetail`
     - `newPrototypeId`
+    - `NO_PROTOTYPE_STATUS`
     - `parseMocks`
     - `parseOptionDeclaration`
     - `pickedValue`
@@ -466,6 +502,9 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
     - `prototypesResource`
+    - `PrototypeStatusChangeSchema`
+    - `prototypeStatusesResource`
+    - `PrototypeStatusSchema`
     - `prototypesVersionResource`
     - `prototypeUrl`
     - `PrototypeVersionSchema`
@@ -475,6 +514,8 @@ for the `checkpoints` plugin's end-of-turn job.
     - `resolvePicks`
     - `restorePrototypeVersion`
     - `setPrototypePicks`
+    - `setPrototypeStatus`
+    - `statusOf`
     - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`

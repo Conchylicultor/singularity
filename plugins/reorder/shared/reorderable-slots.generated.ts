@@ -74,6 +74,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.pages.shell.sidebar", pluginId: "apps.pages.shell", configName: "sidebar" },
   { slotId: "apps.pages.welcome.pages-root.actions", pluginId: "apps.pages.welcome", configName: "pages-root.actions" },
   { slotId: "apps.pages.welcome.section", pluginId: "apps.pages.welcome", configName: "section" },
+  { slotId: "apps.prototypes.gallery.card-actions", pluginId: "apps.prototypes.gallery", configName: "card-actions" },
   { slotId: "apps.prototypes.gallery.prototypes-detail.actions", pluginId: "apps.prototypes.gallery", configName: "prototypes-detail.actions" },
   { slotId: "apps.prototypes.gallery.prototypes-gallery.actions", pluginId: "apps.prototypes.gallery", configName: "prototypes-gallery.actions" },
   { slotId: "apps.prototypes.gallery.version-actions", pluginId: "apps.prototypes.gallery", configName: "version-actions" },
