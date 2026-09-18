@@ -46,6 +46,7 @@
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`
+    - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/overlay/popover`
     - `primitives/pane`
     - `primitives/search`

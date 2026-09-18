@@ -37,6 +37,7 @@
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`
+    - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/undo-redo`
     - `reorder/edit-mode`
     - `tasks/task-draft-form`

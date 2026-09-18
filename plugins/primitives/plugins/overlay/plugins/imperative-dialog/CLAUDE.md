@@ -8,8 +8,8 @@ A reusable "open a modal dialog from any imperative callback" primitive.
 `onSelect`, an event handler, a non-React callback — without the caller owning a
 JSX `<Dialog>` host or an `open` state ref. `render` receives a `close` callback
 to dismiss the dialog from inside its own content; `openDialog` returns a promise
-that resolves when the dialog closes (via `close()`, Escape, or backdrop press),
-so a caller can `await` the dialog's lifetime.
+that resolves when the dialog closes (via `close()`, Escape, or a press outside
+the panel), so a caller can `await` the dialog's lifetime.
 
 ```ts
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
@@ -18,12 +18,39 @@ await openDialog((close) => <MyForm onClose={close} />, { size: "md" });
 // resolves once the dialog is dismissed
 ```
 
-The second arg is the panel `{ size, className }` — forwarded straight to
-`DialogContent`, which owns the panel chrome (see ui-kit's "Dialog owns the
-panel"). Padding is **not** among them: the panel always opens its own inset
+The second arg is `{ size, className, dismissible }`. `size`/`className` go
+straight to `DialogContent`, which owns the panel chrome (see ui-kit's "Dialog
+owns the panel"). Padding is **not** among them: the panel always opens its own inset
 region, and content that must reach the panel edge says so itself with
 `rail-bleed`. For a yes/no guard, reach for `confirmDialog` (`plugins/confirm`)
 instead of hand-rolling a confirm body.
+
+## `dismissible` — the one dialog that should not close on an outside press
+
+A press outside the panel closes the dialog, because that is what a person
+expects a modal to do and taking it away costs them the obvious way out. The
+exception is a dialog holding **text the user typed and has not committed** — a
+password, a half-filled form. There a misclick throws the typing away with no
+warning and no undo, so those pass `dismissible: false` and close only via
+Cancel or Escape.
+
+It is not a rank: "this dialog is important" is not a reason. A destructive
+confirm holds nothing the user would lose by closing it, so it stays
+dismissible.
+
+## `confirmDialog` and the keyboard
+
+Focus opens on **Cancel**. Every action behind this dialog is destructive, and a
+destructive choice must not be the one a reflex reaches — so the safe button is
+where Return lands.
+
+That is also why the accelerator is **⌘/Ctrl+Enter** rather than a bare Enter.
+A bare Enter would confirm whatever a person was already mid-keystroke on when
+the dialog appeared, with no undo behind it. Held modifier + Enter confirms from
+anywhere in the dialog; Enter on its own keeps its plain meaning, which is
+"press the focused button" — Cancel. The label is spelled for the machine it is
+shown on (`formatShortcutLabel`), and it lives in a tooltip on the confirm
+button rather than printed inside it, so the destructive control stays one word.
 
 ## How it works (the Core.Root global-host pattern)
 

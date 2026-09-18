@@ -98,7 +98,10 @@ export function CommandPaletteDialog({
         if (!o) onClose();
       }}
     >
-      <DialogContent size="md">
+      {/* No corner ✕: the footer already spells out `esc close`, so the button
+          would be a second way to say the same thing in a surface whose whole
+          point is that your hands stay on the keyboard. */}
+      <DialogContent size="md" showCloseButton={false}>
         {open && <CommandPaletteBody onClose={onClose} items={items} />}
       </DialogContent>
     </Dialog>

@@ -4,6 +4,18 @@ import type { ReactNode } from "react";
 export interface DialogOptions {
   size?: "sm" | "md" | "lg";
   className?: string;
+  /**
+   * Whether a press outside the panel closes the dialog. Default `true` — a
+   * modal the user can leave the way they expect to.
+   *
+   * Set `false` for the one case where that is wrong: a dialog holding text the
+   * user typed and has not committed (a password, a form being filled). Closing
+   * such a dialog by a stray click throws the typing away with no warning, so
+   * those ask for Cancel or Escape instead. It is NOT for merely important
+   * dialogs — a destructive confirm holds nothing the user would lose, so it
+   * stays dismissible.
+   */
+  dismissible?: boolean;
 }
 
 /**
@@ -51,8 +63,9 @@ export function closeDialog(id: number): void {
  * Mount a modal dialog imperatively from any callback (no JSX host, no ref).
  * `render` receives a `close` callback to dismiss the dialog from inside its
  * content; the returned promise resolves once the dialog closes (via `close`,
- * Escape, or backdrop). Mirrors the toaster's global-host pattern: a single
- * `ImperativeDialogHost` (Core.Root) renders whatever is pushed here.
+ * Escape, or a press outside the panel — unless `dismissible: false`). Mirrors
+ * the toaster's global-host pattern: a single `ImperativeDialogHost` (Core.Root)
+ * renders whatever is pushed here.
  */
 export function openDialog(
   render: (close: () => void) => ReactNode,

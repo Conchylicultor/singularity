@@ -181,7 +181,9 @@ function AccountControls({
           close={close}
         />
       ),
-      { size: "sm" },
+      // Not dismissible by an outside press: the user is part-way through typing
+      // a username and password, and a stray click would discard both silently.
+      { size: "sm", dismissible: false },
     );
   }
 

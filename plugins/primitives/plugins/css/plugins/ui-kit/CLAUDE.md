@@ -264,14 +264,32 @@ Composing it through base-ui's `render` has three rules:
 
 ## Dialog: pass content, never chrome
 
-`DialogContent` is an `OverlayPanel` inside the full-viewport
-`DialogPrimitive.Popup` positioner. Pass content only —
-`<DialogContent size="md">…`.
+`DialogContent` is an `OverlayPanel` inside the `DialogPrimitive.Popup`. Pass
+content only — `<DialogContent size="md">…`.
+
+**The popup's box is the panel's box.** base-ui decides an outside press by
+asking whether the press target is inside the *floating element*, which is the
+popup. So the popup carries the width tier (`inset-x-0 top-[20vh] mx-auto
+max-w-*`) and the panel merely fills it (`w-full`) — there is no full-viewport
+wrapper in between. A `fixed inset-0` popup with the panel centred inside it
+(what this shipped as until it was fixed) answers "inside" to every press in the
+window, so the dialog can only be dismissed with Escape. Any future
+centring/offset change must keep the popup hugging the visible panel.
 
 - `size`: `sm` (28rem, confirms) · `md` (32rem, default) · `lg` (56rem, two-pane).
   The three widths in use; no free-form width. Safe against the panel's own width
   role because the default `POPOVER_WIDTH.content` is the empty string.
   `className` lands on the panel (e.g. `h-[32rem]`).
+- **`showCloseButton` defaults to `true`.** Escape and the outside press are
+  both invisible, so without the corner ✕ a dialog can present no exit the user
+  can SEE. Pass `false` only when the content already shows one — the command
+  palette's `esc close` footer is the case it exists for. Never pass it because
+  the dialog matters: a dialog that should survive a stray press says that with
+  `dismissible`, and then needs this button MORE, since it is the only visible
+  way out. The button is a SIBLING of the panel, not a child — the panel is the
+  scroller, so a child would scroll away and be clipped — and it is the same
+  corner `Close` the sheet ships, with the same caveat: a title long enough to
+  reach the corner runs under it.
 - **Padding is not a prop.** The panel always opens the region at `lg`; there is
   no `padded` escape to switch it off, the same way `ControlPanelPopover` has no
   `width` escape — an escape absent from the type cannot be reached for. A child
@@ -290,10 +308,20 @@ Composing it through base-ui's `render` has three rules:
     bleeds itself against a rail that is now zero. Bleed the child, never the
     panel.
 - A dialog is **centered, not anchored**, so no positioner publishes
-  `--available-height` for it — it injects `style={{"--available-height":"75vh"}}`
-  itself, which is how the panel's unconditional clamp reproduces this surface's
-  historical `max-h-[75vh]`. It only bites past 20vh top + 75vh, so a caller's
-  inner `<ScrollArea>` stays the only active scroller.
+  `--available-height` for it. The popup declares one **from its own offset**:
+  `calc(100dvh - <top> - <bottom gap>)`, where the top is `min(20vh, 8rem)`. Two
+  things follow, and both were bugs before. A bare `20vh` grows without limit, so
+  on a tall display the dialog drifted further and further down the screen —
+  hence the cap. And a height picked independently of the offset (it was a flat
+  `75vh`) only *happens* to fit: at 20vh + 75vh the panel came within 5vh of the
+  bottom edge, which on a short window is a few pixels. Deriving one from the
+  other means the box cannot run past the bottom, whatever the window. `dvh`,
+  because on a phone `vh` is the address-bar-less height. A caller's inner
+  `<ScrollArea>` stays the only active scroller.
+- **Horizontal margin is `inset-x`, never padding.** At phone width the panel is
+  narrower than its tier's cap, so the box would otherwise run edge to edge.
+  Padding on the popup would put dead area *inside* the dialog's own box — the
+  full-viewport-wrapper bug in miniature, and it would swallow presses again.
 
 **Never wrap your own `<Surface>`/`<Clip>` inside `<DialogContent>`** — doubles the
 ring/shadow/bg. Imperative twin: `openDialog(render, { size, className })`; yes/no

@@ -40,9 +40,14 @@ export function openAddSourceDialog(
   type: EventSourceTypeContribution,
   onCreated: (sourceId: string) => void,
 ): void {
-  void openDialog((close) => (
-    <AddSourceDialog type={type} onCreated={onCreated} onClose={close} />
-  ));
+  void openDialog(
+    (close) => (
+      <AddSourceDialog type={type} onCreated={onCreated} onClose={close} />
+    ),
+    // Not dismissible by an outside press: the form holds a part-filled set of
+    // source fields (often a pasted URL or token) that a stray click would drop.
+    { dismissible: false },
+  );
 }
 
 function AddSourceDialog({

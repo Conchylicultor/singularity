@@ -28614,6 +28614,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.DialogDescription`
                   - `primitives/css/ui-kit.DialogTitle`
                   - `primitives/overlay/imperative-dialog.openDialog`
+                  - `primitives/overlay/tooltip.Kbd`
+                  - `primitives/overlay/tooltip.WithTooltip`
+                  - `primitives/shortcuts.formatShortcutLabel`
                 - Exports (types): `ConfirmDialogOptions`
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
@@ -28747,6 +28750,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button`
               - `primitives/launch`
               - `primitives/overlay/image-viewer`
+              - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/overlay/popover`
               - `primitives/pane`
               - `primitives/search`
@@ -29607,6 +29611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/overlay/image-viewer`
+          - `primitives/overlay/imperative-dialog/confirm`
           - `primitives/undo-redo`
           - `reorder/edit-mode`
           - `tasks/task-draft-form`

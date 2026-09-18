@@ -1,7 +1,9 @@
 import type * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { MdClose } from "react-icons/md";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
@@ -45,11 +47,40 @@ function DialogOverlay({
   );
 }
 
+/**
+ * Width tiers, applied to the POPUP — not to the panel inside it. The popup's
+ * box is what base-ui treats as "inside the dialog" for outside-press dismissal
+ * (see `DialogContent`), so it must be the width of the visible panel and no
+ * wider. The panel then fills it (`w-full`).
+ */
 const DIALOG_SIZES = {
-  sm: "w-full max-w-md",
-  md: "w-full max-w-lg",
-  lg: "w-full max-w-4xl",
+  sm: "max-w-md",
+  md: "max-w-lg",
+  lg: "max-w-4xl",
 } as const;
+
+/**
+ * How far below the top of the window the dialog sits, and the clearance it
+ * keeps above the bottom.
+ *
+ * The offset was a bare `20vh`, which is a fraction of the window and so grows
+ * without limit: on a tall display the dialog drifts ever further down the
+ * screen, away from where the eye is. Capping it at `8rem` keeps the
+ * proportional behaviour where it helps — a short window, where a fixed inset
+ * would eat the room the dialog needs — and stops it where it stops helping.
+ *
+ * The bottom gap is the other half, and it is what makes the height HONEST: the
+ * panel's `--available-height` is derived from both numbers, so the box can
+ * never run past the bottom edge of the window. It used to be a separate `75vh`
+ * that happened to leave 5vh under a 20vh offset — two numbers that had to be
+ * kept in agreement by hand, and on a short window left the panel almost
+ * touching the bottom.
+ *
+ * `dvh`, not `vh`: on a phone `vh` is the address-bar-less height, so a dialog
+ * sized in `vh` is taller than the screen until the bar retracts.
+ */
+const DIALOG_TOP = "min(20vh, 8rem)";
+const DIALOG_BOTTOM_GAP = "2rem";
 
 type DialogContentProps = Omit<DialogPrimitive.Popup.Props, "className"> & {
   /**
@@ -62,34 +93,70 @@ type DialogContentProps = Omit<DialogPrimitive.Popup.Props, "className"> & {
   className?: string;
   /** Panel width tier. Default "md". */
   size?: keyof typeof DIALOG_SIZES;
+  /**
+   * The ✕ in the corner. Default `true`, because Escape and the outside press
+   * are both invisible — without it a dialog can offer the user no way out they
+   * can SEE, which is exactly what a dialog must never do.
+   *
+   * Pass `false` only when the content already shows its own way out (the
+   * command palette's "esc close" footer). Never because the dialog is
+   * important: a dialog that must not be dismissed by a stray press says that
+   * with `dismissible`, and needs this button MORE, not less, since it is then
+   * the only visible exit.
+   */
+  showCloseButton?: boolean;
 };
 
 function DialogContent({
   className,
   children,
   size = "md",
+  showCloseButton = true,
   ...props
 }: DialogContentProps) {
   const forwarded = usePortalForwardedAttrs();
   return (
     <DialogPortal>
       <DialogOverlay />
+      {/* The popup's box IS the panel's box — never a full-viewport wrapper.
+          base-ui dismisses on an outside press by asking "is the press target
+          inside the floating element?", and the floating element is THIS node.
+          A `fixed inset-0` popup with the panel centred inside it therefore
+          answers yes to every press in the window, which is why this dialog
+          used to be dismissable only with Escape. Centring is done with the
+          box itself (`inset-x-*` + `mx-auto` against the width tier) so there
+          is no wrapper left to swallow the press. */}
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         {...forwarded}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- pt-[20vh] is a viewport-relative dialog offset the density ramp can't express
-        className="fixed inset-0 z-popover flex items-start justify-center pt-[20vh] outline-none"
+        // `inset-x-(--space-md)` rather than `inset-x-0`: at phone width the
+        // panel is narrower than its tier's cap, so without it the box runs
+        // edge to edge and the dialog reads as a page rather than as something
+        // laid over one. The margin is inset, never padding — padding on the
+        // popup would be dead area INSIDE the dialog's own box, which is the
+        // full-viewport-wrapper bug in miniature.
+        className={cn(
+          "fixed inset-x-(--space-md) top-(--dialog-top) z-popover mx-auto outline-none",
+          DIALOG_SIZES[size],
+        )}
+        style={
+          {
+            "--dialog-top": DIALOG_TOP,
+            // Declared here, with the offset it is derived from, so the two can
+            // no longer drift apart (see DIALOG_TOP). The panel inherits it.
+            "--available-height": `calc(100dvh - ${DIALOG_TOP} - ${DIALOG_BOTTOM_GAP})`,
+          } as React.CSSProperties
+        }
         {...props}
       >
         {/* The dialog's box IS the shared panel — see `overlay-panel.tsx`. A
-            dialog is CENTERED rather than anchored, so it publishes no
-            `--available-height` of its own; injecting one turns the panel's
-            unconditional clamp into exactly this surface's historical
-            `max-h-[75vh]`, instead of leaving it at the `100vh` fallback. The
-            cap only ever bites past 20vh top + 75vh = 95vh, so a caller's inner
-            ScrollArea stays the only active scroller. `POPOVER_WIDTH.content`
-            (the default role) is the empty string, so `DIALOG_SIZES` owns width
-            unopposed.
+            dialog is CENTERED rather than anchored, so nothing positions it and
+            no positioner publishes an `--available-height` for it; the popup
+            above declares one from its own offset, which is what turns the
+            panel's unconditional clamp into "as tall as the room actually
+            left". Width comes from the popup too (`DIALOG_SIZES`) and the panel
+            simply fills it: `POPOVER_WIDTH.content` (the default role) is the
+            empty string, so the `w-full` here is unopposed.
 
             `padding="lg"` is FIXED, and there is no `padded` prop to switch it
             off: the panel owns the region's edge, so it owns the rail (see the
@@ -114,11 +181,34 @@ function DialogContent({
         <OverlayPanel
           data-slot="dialog-panel"
           padding="lg"
-          style={{ "--available-height": "75vh" } as React.CSSProperties}
-          className={cn(DIALOG_SIZES[size], className)}
+          className={cn("w-full", className)}
         >
           {children}
         </OverlayPanel>
+        {showCloseButton && (
+          // A SIBLING of the panel, not a child: the panel is the scroller, so a
+          // button inside it would scroll away with the content and be clipped
+          // by its overflow. As a sibling of a `fixed` popup it resolves against
+          // the popup — which is now exactly the panel's box, so "the panel's
+          // top-right corner" and "the popup's top-right corner" are one place.
+          //
+          // `z-popover` matches the panel rather than beating it: equal layers
+          // paint in tree order and this comes second, so it lands on top
+          // without claiming a rung above the whole popover layer.
+          <DialogPrimitive.Close
+            data-slot="dialog-close-corner"
+            render={
+              <Button
+                variant="ghost"
+                aspect="icon"
+                className="absolute top-3 right-3 z-popover"
+              />
+            }
+          >
+            <MdClose />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Popup>
     </DialogPortal>
   );

@@ -10,7 +10,11 @@ import { subscribe, getOpenDialogs, closeDialog } from "../internal/store";
  * dialog pushed through `openDialog()` in a controlled modal `Dialog`.
  * `DialogContent` portals to document.body and carries the forwarded theme
  * scope, so a dialog opened from anywhere paints correctly. Closing (Escape /
- * backdrop / the render's `close()`) settles the `openDialog()` promise.
+ * outside press / the render's `close()`) settles the `openDialog()` promise.
+ *
+ * `dismissible` is the one option that belongs on the ROOT rather than on the
+ * panel — base-ui decides the outside press, so it is split off here and the
+ * rest of the options spread onto `DialogContent` as presentation.
  */
 export function ImperativeDialogHost() {
   const dialogs = useSyncExternalStore(
@@ -20,17 +24,21 @@ export function ImperativeDialogHost() {
   );
   return (
     <>
-      {dialogs.map((d) => (
-        <Dialog
-          key={d.id}
-          open
-          onOpenChange={(open: boolean) => {
-            if (!open) closeDialog(d.id);
-          }}
-        >
-          <DialogContent {...d.options}>{d.node}</DialogContent>
-        </Dialog>
-      ))}
+      {dialogs.map((d) => {
+        const { dismissible = true, ...content } = d.options ?? {};
+        return (
+          <Dialog
+            key={d.id}
+            open
+            disablePointerDismissal={!dismissible}
+            onOpenChange={(open: boolean) => {
+              if (!open) closeDialog(d.id);
+            }}
+          >
+            <DialogContent {...content}>{d.node}</DialogContent>
+          </Dialog>
+        );
+      })}
     </>
   );
 }
