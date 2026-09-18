@@ -6,7 +6,25 @@ export type DenyVerdict = { kind: "deny"; reason: string; fatal?: boolean };
  * a false positive, and staying silent leaves the model to keep guessing.
  */
 export type InformVerdict = { kind: "inform"; context: string };
-export type Verdict = AllowVerdict | DenyVerdict | InformVerdict;
+/**
+ * Let the call through with some of its input replaced — for a guard whose fix
+ * is mechanical and changes nothing the agent meant, so denying and asking for
+ * a retype would only cost a turn.
+ *
+ * A PATCH, not the new input: Claude Code's `updatedInput` replaces the tool
+ * input wholesale, and a guard's input type names only the fields it reads. The
+ * runner merges the patch over the full payload, so the fields a guard never
+ * declared (`description`, `timeout`, …) cannot be dropped by one.
+ *
+ * It does not approve the call: the rewritten input still goes through the
+ * normal permission flow.
+ */
+export type RewriteVerdict = {
+  kind: "rewrite";
+  patch: Readonly<Record<string, unknown>>;
+};
+export type Verdict =
+  AllowVerdict | DenyVerdict | InformVerdict | RewriteVerdict;
 
 /**
  * The session transcript, or the reason there isn't one.
@@ -64,6 +82,7 @@ export interface GuardContext {
   deny(reason: string): DenyVerdict;
   fatal(reason: string): DenyVerdict;
   inform(context: string): InformVerdict;
+  rewrite(patch: Readonly<Record<string, unknown>>): RewriteVerdict;
 }
 
 export interface BashInput {

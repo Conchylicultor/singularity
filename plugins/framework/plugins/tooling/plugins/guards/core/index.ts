@@ -3,6 +3,7 @@ export type {
   AllowVerdict,
   DenyVerdict,
   InformVerdict,
+  RewriteVerdict,
   Guard,
   GuardContext,
   Verdict,

@@ -9,6 +9,7 @@ import { mainEditsGuard } from "./guards/main-edits";
 import { mainWritesGuard } from "./guards/main-writes";
 import { noMemoryGuard } from "./guards/no-memory";
 import { migrationsGuard } from "./guards/migrations";
+import { pipefailGuard } from "./guards/pipefail";
 import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
 import { rgReplaceGuard } from "./guards/rg-replace";
@@ -27,6 +28,8 @@ export const GUARDS: Guard<any>[] = [
   postgresGuard,
   backgroundOpsGuard,
   pollLoopGuard,
+  // Rewrites run after every judging guard, so those see what the agent typed.
+  pipefailGuard,
   // File writes
   mainEditsGuard,
   // Bash + file writes

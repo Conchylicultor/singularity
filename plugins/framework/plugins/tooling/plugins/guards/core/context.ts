@@ -5,6 +5,7 @@ import type {
   DenyVerdict,
   GuardContext,
   InformVerdict,
+  RewriteVerdict,
   TranscriptRead,
 } from "./types";
 
@@ -75,6 +76,9 @@ export function createContext(
     },
     inform(context: string): InformVerdict {
       return { kind: "inform", context };
+    },
+    rewrite(patch: Readonly<Record<string, unknown>>): RewriteVerdict {
+      return { kind: "rewrite", patch };
     },
   };
 }

@@ -16728,6 +16728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `KnownCommand`
               - `ParsedArgv`
               - `PollDecision`
+              - `RewriteVerdict`
               - `TaskReport`
               - `ToolMatcher`
               - `TranscriptRead`

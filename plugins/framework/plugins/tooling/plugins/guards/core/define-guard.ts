@@ -22,12 +22,17 @@ export interface Inform {
   inform: string;
 }
 
+/** Let the call through with these fields of its input replaced. */
+export interface Rewrite<I> {
+  rewrite: Partial<I>;
+}
+
 export interface GuardDef<I> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
   /** File token checked via ctx.hasBypass() before check() runs */
   bypassToken?: string;
-  check(input: I, ctx: GuardContext): Denial | Inform | null;
+  check(input: I, ctx: GuardContext): Denial | Inform | Rewrite<I> | null;
 }
 
 function formatEpilogue(bypassToken?: string): string {
@@ -56,6 +61,7 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
       const result = def.check(input, ctx);
       if (!result) return ctx.allow();
       if ("inform" in result) return ctx.inform(result.inform);
+      if ("rewrite" in result) return ctx.rewrite(result.rewrite);
       const message = formatDenyMessage(result, def.bypassToken);
       return result.fatal ? ctx.fatal(message) : ctx.deny(message);
     },

@@ -16,6 +16,13 @@ export interface ShellCall {
    * `kind: "file"` one against `cwd`; the others name no file at all.
    */
   redirections: ShellRedirection[];
+  /**
+   * True when this call reads the previous pipeline stage's output on stdin —
+   * the `tail` of `cmd | tail`, the `head` of `cmd |& head`. A wrapper and
+   * the command it wraps (`cmd | timeout 5 tail`) both carry it; a call nested
+   * in a `$( … )` or a loop body inside that stage does not.
+   */
+  pipedIn: boolean;
 }
 
 /**
@@ -125,11 +132,13 @@ function collect(
   let cwd = baseCwd;
   /** One entry per segment, so a heredoc body can be attributed to its owner. */
   const segs: Segment[] = [];
+  let pipedIn = false;
   for (const part of splitOnOperators(code)) {
     const from = out.length;
     const segCwd = cwd;
     const seg = part.text.trim();
-    if (seg) cwd = collectSegment(seg, cwd, out, depth);
+    if (seg) cwd = collectSegment(seg, cwd, out, depth, pipedIn);
+    pipedIn = isPipe(part.sep);
     segs.push({
       end: part.end,
       sep: part.sep,
@@ -154,12 +163,18 @@ interface Segment {
   cwd: string;
 }
 
+/** A separator that hands the left side's stdout to the right side's stdin. */
+function isPipe(sep: string): boolean {
+  return sep === "|" || sep === "|&";
+}
+
 /** Emit the calls of one already-split segment; returns the cwd after it. */
 function collectSegment(
   seg: string,
   cwd: string,
   out: ShellCall[],
   depth: number,
+  pipedIn: boolean,
 ): string {
   // Pull `$( … )` / backtick bodies out FIRST, so their contents are parsed as
   // commands rather than swallowed as opaque argument text — and so the
@@ -193,7 +208,7 @@ function collectSegment(
     const args = toks.slice(1);
     // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
     // `cd` only moves the directory for the calls that follow it.
-    out.push({ name, args, raw: seg, cwd: cur, redirections });
+    out.push({ name, args, raw: seg, cwd: cur, redirections, pipedIn });
     if (name === "cd") cur = applyCd(cur, args);
     if (!WRAPPERS.has(name)) break;
     const wrapped = dropWrapperOptions(args);
@@ -483,7 +498,8 @@ function attachDoc(
   const cwd = owner?.cwd ?? baseCwd;
   const interpreter = (s: Segment | undefined) =>
     !!s && out.slice(s.from, s.to).some((c) => SHELL_INTERPRETERS.has(c.name));
-  const piped = owner?.sep === "|" && i !== -1 ? segs[i + 1] : undefined;
+  const piped =
+    owner && isPipe(owner.sep) && i !== -1 ? segs[i + 1] : undefined;
 
   if (interpreter(owner) || interpreter(piped)) {
     collect(doc.body, cwd, out, depth + 1);
@@ -831,7 +847,13 @@ function splitOnOperators(s: string): ShellPart[] {
         prev = c;
         continue;
       }
-      if ((c === "&" && next === "&") || (c === "|" && next === "|")) {
+      // `|&` is ONE operator (a pipe carrying stderr too). Split as `|` then `&`
+      // it would leave an empty segment between the two sides, and the right
+      // side would no longer read as piped into.
+      if (
+        (c === "&" && next === "&") ||
+        (c === "|" && (next === "|" || next === "&"))
+      ) {
         parts.push({ text: cur, end: i, sep: c + next });
         cur = "";
         prev = "";

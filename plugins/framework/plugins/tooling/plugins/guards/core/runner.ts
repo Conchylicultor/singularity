@@ -78,10 +78,19 @@ export async function runHook(
   // Facts contributed by guards that let the call through. Collected rather than
   // returned early, so one guard's answer never suppresses another's denial.
   const informs: string[] = [];
+  // The input as rewritten so far. Every guard after a rewrite judges THIS —
+  // what will actually run — and a later denial still wins over the rewrite.
+  let current = toolInput;
+  let rewritten = false;
   for (const guard of guards) {
-    const verdict = await guard.check(toolInput as never, ctx);
+    const verdict = await guard.check(current as never, ctx);
     if (verdict.kind === "inform") {
       informs.push(verdict.context);
+      continue;
+    }
+    if (verdict.kind === "rewrite") {
+      current = { ...current, ...verdict.patch };
+      rewritten = true;
       continue;
     }
     if (verdict.kind === "deny") {
@@ -101,13 +110,19 @@ export async function runHook(
     }
   }
 
-  const extra = [...informs, ...collectHints(tool, toolInput, cwd)];
-  if (extra.length > 0) {
+  const extra = [...informs, ...collectHints(tool, current, cwd)];
+  if (extra.length > 0 || rewritten) {
     process.stdout.write(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
-          additionalContext: extra.join("\n\n"),
+          // Without a `permissionDecision`, Claude Code applies `updatedInput`
+          // and still defers to the permission system — a rewrite never
+          // approves a call on its own.
+          ...(rewritten ? { updatedInput: current } : {}),
+          ...(extra.length > 0
+            ? { additionalContext: extra.join("\n\n") }
+            : {}),
         },
       }),
     );

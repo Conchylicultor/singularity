@@ -541,3 +541,55 @@ describe("a redirection reports a file, or nothing at all", () => {
     });
   });
 });
+
+describe("pipedIn marks the calls reading a pipe", () => {
+  const piped = (cmd: string) =>
+    parseShell(cmd).calls.map((c) => [c.name, c.pipedIn]);
+
+  test("each stage after a `|` reads a pipe; the first does not", () => {
+    expect(piped("a | b | c")).toEqual([
+      ["a", false],
+      ["b", true],
+      ["c", true],
+    ]);
+  });
+
+  test("`|&` is one operator, and the right side reads it", () => {
+    expect(piped("a |& b")).toEqual([
+      ["a", false],
+      ["b", true],
+    ]);
+  });
+
+  test("`||`, `&&`, `;` and `2>&1` are not pipes", () => {
+    expect(piped("a || b && c; d 2>&1 >| out")).toEqual([
+      ["a", false],
+      ["b", false],
+      ["c", false],
+      ["d", false],
+    ]);
+  });
+
+  test("a wrapper and what it wraps both read the pipe", () => {
+    expect(piped("a | timeout 5 tail -3")).toEqual([
+      ["a", false],
+      ["timeout", true],
+      ["tail", true],
+    ]);
+  });
+
+  test("a substitution inside a piped stage does not inherit it", () => {
+    expect(piped("a | b $(c)")).toEqual([
+      ["a", false],
+      ["b", true],
+      ["c", false],
+    ]);
+  });
+
+  test("a pipe inside a loop body is seen", () => {
+    expect(piped("for f in x; do a | tail -1; done")).toContainEqual([
+      "tail",
+      true,
+    ]);
+  });
+});

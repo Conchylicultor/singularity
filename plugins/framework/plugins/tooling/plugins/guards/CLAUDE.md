@@ -60,6 +60,26 @@ exempt it as harmless — agents told not to `sleep` wait on `echo w1`, `echo w2
 `no-report`: "the harness has not said it finished" justifies a block, "I could
 not look" does not.
 
+## A guard can rewrite, too
+
+Besides allow / deny / inform, a guard may return `{ rewrite: { … } }`: the
+call goes through with those input fields replaced. Use it only when the fix is
+mechanical and changes nothing the agent meant — otherwise deny and let the
+agent retype. The runner merges the patch over the FULL tool input (Claude
+Code's `updatedInput` replaces the input wholesale), emits it without a
+`permissionDecision` so the normal permission flow still applies, and every
+guard after a rewrite judges the rewritten input. Rewriters sit at the end of
+the registry so the judging guards see what the agent typed.
+
+`pipefail` is the one rewriter: `cmd | tail -20` exits with tail's status, so a
+failing `cmd` read as a pass. It prefixes `set -o pipefail; ` when a pipe feeds
+`tail` or `tee`, and backs off when any piped stage may stop reading early
+(`head`, `grep -q/-m/-l`, a `sed` script with `q`, `awk … exit`): pipefail is
+command-wide, and that reader's SIGPIPE would surface as a false exit 141. The
+reader list errs toward backing off, since a miss only leaves the command as
+typed. A reader it does not know, or a piped stage that never reads stdin
+(`cmd | true`), can still produce a false 141.
+
 ## Measuring, not asserting
 
 `e2e/replay-transcripts.ts` runs the guards over recorded transcripts and reports
@@ -90,6 +110,7 @@ can blind or deafen all of them at once.
     - `KnownCommand`
     - `ParsedArgv`
     - `PollDecision`
+    - `RewriteVerdict`
     - `TaskReport`
     - `ToolMatcher`
     - `TranscriptRead`
