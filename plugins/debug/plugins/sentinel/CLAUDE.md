@@ -138,8 +138,10 @@ proto-1789664064-nr56).
 - **`sentinel.status` carries the latch**: its value is `{watch, duress}`, with
   `duress: {since}` read by `readFreshDuress()` (unmemoized — a watcher woken by
   a latch change must not answer from `isUnderDuress()`'s memo). Running +
-  duress turns the row `critical`: "Under duress since 6:02 PM · builds held
-  back". The summary never subscribes to the 5 s vitals.
+  duress turns the row a steady `attention` (not `critical`: red is kept for a
+  broken watcher; under duress the watcher is working and already holding
+  builds back): "Under duress since 6:02 PM · builds held back". The summary
+  never subscribes to the 5 s vitals.
 - **Web**: the row's `glance` (load per core · GB free · builds, plus a banner
   naming what tripped it or saying the numbers are old) and `component` (one
   line per signal with a bar and "X of LIMIT", amber from ⅔ of the limit, red at
@@ -272,7 +274,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the machine is under duress, attention while it restarts, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts or the machine is under duress, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sentinel"

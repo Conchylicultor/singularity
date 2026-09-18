@@ -34,8 +34,10 @@ export function clockTime(at: number): string {
  * - turned off in config → `attention`;
  * - the process that wrote the status is gone → `critical`, whatever it said;
  * - `down` → `critical`; `starting` / `respawning` / `stopped` → `attention`,
- *   pulsing; `running` → `ok`, or `critical` while the duress latch is up (the
- *   watcher is doing its job, and the machine is in trouble).
+ *   pulsing; `running` → `ok`, or steady `attention` while the duress latch is
+ *   up. Red means the watcher is broken and needs you; duress is the machine
+ *   under load with the watcher already handling it (builds held back), so it
+ *   asks for a look, not an intervention.
  */
 export function machineWatcherVerdict(
   result: ResourceResult<SentinelStatusValue>,
@@ -82,7 +84,7 @@ export function machineWatcherVerdict(
     case "running":
       if (duress !== null) {
         return {
-          state: "critical",
+          state: "attention",
           summary: `Under duress since ${clockTime(duress.since)} · builds held back`,
         };
       }

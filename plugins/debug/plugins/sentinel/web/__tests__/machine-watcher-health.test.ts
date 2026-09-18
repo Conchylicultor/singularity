@@ -56,12 +56,13 @@ describe("Machine watcher health row", () => {
     ).toBe("ok");
   });
 
-  it("is critical while running under duress, saying since when", () => {
+  it("asks for attention while running under duress, saying since when", () => {
     const since = new Date(2026, 8, 17, 18, 2).getTime();
     const verdict = machineWatcherVerdict(
       recorded({ state: "running", since: since - 60_000 }, true, { since }),
     );
-    expect(verdict.state).toBe("critical");
+    expect(verdict.state).toBe("attention");
+    expect("transitioning" in verdict && verdict.transitioning).toBeFalsy();
     expect("summary" in verdict && verdict.summary).toMatch(
       /^Under duress since .*02.* · builds held back$/,
     );
