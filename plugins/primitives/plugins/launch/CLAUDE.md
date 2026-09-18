@@ -28,6 +28,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ButtonGroup`
@@ -48,6 +49,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `LaunchAgentPopoverProps`
     - `LaunchControlProps`
     - `LaunchRequest`
+    - `LaunchToggle`
   - Exports (values):
     - `LaunchAgentForm`
     - `LaunchAgentPopover`
@@ -59,6 +61,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `active-data/task`
     - `apps/agent-manager/welcome`
     - `apps/deploy/deploy-history/investigate-failure`
+    - `apps/home/app-cards`
     - `apps/prototypes/gallery`
     - `build/build-fix`
     - `config_v2/settings/conflict-agent`

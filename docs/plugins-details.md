@@ -2351,13 +2351,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.useCurrentAppId`
               - `apps-core/tabs.useTabs`
               - `apps/home/shell.Home`
+              - `apps/prototypes/gallery.mintPrototypeFolder`
+              - `apps/prototypes/gallery.newPrototypePrompt`
               - `fields/avatar/table.avatarFieldDef`
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view/capsule-toolbar.capsuleToolbar`
+              - `primitives/launch.LaunchAgentForm`
+              - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/scope/surface-id.useSurfaceTabId`
+              - `shell/notifications.toast`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
@@ -3512,6 +3517,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `documentOptions`
               - `FrameSizeProvider`
+              - `mintPrototypeFolder`
+              - `newPrototypePrompt`
               - `OptionRows`
               - `OptionsPicker`
               - `PrototypeCardActions`
@@ -3534,6 +3541,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
+              - `apps/home/app-cards`
               - `apps/prototypes/compare`
               - `apps/prototypes/compare/version`
               - `apps/prototypes/present`
@@ -25182,6 +25190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/improve`
               - `config_v2/fields`
               - `primitives/css/control-panel`
+              - `primitives/launch`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
             - Uses:
@@ -27773,6 +27782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ButtonGroup`
@@ -27793,6 +27803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LaunchAgentPopoverProps`
           - `LaunchControlProps`
           - `LaunchRequest`
+          - `LaunchToggle`
         - Exports (values):
           - `LaunchAgentForm`
           - `LaunchAgentPopover`
@@ -27804,6 +27815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task`
           - `apps/agent-manager/welcome`
           - `apps/deploy/deploy-history/investigate-failure`
+          - `apps/home/app-cards`
           - `apps/prototypes/gallery`
           - `build/build-fix`
           - `config_v2/settings/conflict-agent`
@@ -28685,6 +28697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
+              - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
               - `auth`
               - `primitives/overlay/imperative-dialog/confirm`
@@ -31809,6 +31822,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deploy-history/investigate-failure`
+          - `apps/home/app-cards`
           - `apps/prototypes/gallery`
           - `apps/studio/compositions/release/release-logs`
           - `auth`

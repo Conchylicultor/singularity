@@ -5,16 +5,37 @@ import type { PopoverWidth } from "@plugins/primitives/plugins/css/plugins/ui-ki
 import type { PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
 import type { LaunchRequest } from "./launch-control";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
+/**
+ * An on/off choice the caller adds to the form. The form draws it and hands
+ * its current value to `getRequest`; what it means (usually a paragraph added
+ * to the prompt) is the caller's.
+ */
+export type LaunchToggle = {
+  /** Key of this toggle's value in `getRequest`'s `toggles` argument. */
+  id: string;
+  label: string;
+  /** Muted second line under the label. */
+  description?: string;
+  /** Starting value. Defaults to `false`. */
+  defaultValue?: boolean;
+};
+
 export type LaunchAgentFormProps = {
   title: string;
   description: React.ReactNode;
   placeholder?: string;
-  getRequest: (userText: string) => LaunchRequest | Promise<LaunchRequest>;
+  /** Receives the typed text and every toggle's value, keyed by its `id`. */
+  getRequest: (
+    userText: string,
+    toggles: Readonly<Record<string, boolean>>,
+  ) => LaunchRequest | Promise<LaunchRequest>;
+  toggles?: readonly LaunchToggle[];
   disabled?: boolean;
   onLaunched?: (conversation: Conversation) => void;
   /** Whether to show the preprompt picker. Defaults to `true`. */
@@ -45,6 +66,7 @@ export function LaunchAgentForm({
   description,
   placeholder = "Extra context (optional)…",
   getRequest,
+  toggles = [],
   disabled,
   onLaunched,
   showPreprompt = true,
@@ -53,6 +75,10 @@ export function LaunchAgentForm({
 }: LaunchAgentFormProps) {
   const [text, setText] = useState("");
   const [prepromptId, setPrepromptId] = useState<string | null>(null);
+  const [toggleValues, setToggleValues] = useState<Record<string, boolean>>(
+    () =>
+      Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
+  );
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
 
@@ -75,6 +101,16 @@ export function LaunchAgentForm({
         maxHeight="16rem"
         namespace={`launch-agent-form-${editorId}`}
       />
+      {toggles.map((t) => (
+        <LaunchToggleRow
+          key={t.id}
+          toggle={t}
+          checked={toggleValues[t.id] ?? false}
+          onCheckedChange={(checked) =>
+            setToggleValues((prev) => ({ ...prev, [t.id]: checked }))
+          }
+        />
+      ))}
       {showPreprompt && (
         <PrepromptSelect
           value={prepromptId}
@@ -88,11 +124,44 @@ export function LaunchAgentForm({
         openAfterLaunch={openAfterLaunch}
         openMode={openMode}
         getRequest={async () => {
-          const req = await getRequest(text);
+          const req = await getRequest(text, toggleValues);
           return prepromptId ? { ...req, prepromptId } : req;
         }}
         onLaunched={onLaunched}
       />
+    </Stack>
+  );
+}
+
+function LaunchToggleRow({
+  toggle,
+  checked,
+  onCheckedChange,
+}: {
+  toggle: LaunchToggle;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  const switchId = useId();
+  return (
+    <Stack direction="row" gap="sm" align="start">
+      <Switch
+        id={switchId}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+      />
+      {/* A `<label for>` names the switch with both lines, and clicking either
+          line flips it. */}
+      <label htmlFor={switchId} className="cursor-pointer select-none">
+        <Stack as="span" gap="none">
+          <Text variant="label">{toggle.label}</Text>
+          {toggle.description ? (
+            <Text variant="caption" tone="muted">
+              {toggle.description}
+            </Text>
+          ) : null}
+        </Stack>
+      </label>
     </Stack>
   );
 }

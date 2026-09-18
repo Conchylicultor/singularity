@@ -339,6 +339,8 @@ honest — the prototype does exist — and it self-corrects.
   - Exports (values):
     - `documentOptions`
     - `FrameSizeProvider`
+    - `mintPrototypeFolder`
+    - `newPrototypePrompt`
     - `OptionRows`
     - `OptionsPicker`
     - `PrototypeCardActions`
@@ -361,6 +363,7 @@ honest — the prototype does exist — and it self-corrects.
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/home/app-cards`
     - `apps/prototypes/compare`
     - `apps/prototypes/compare/version`
     - `apps/prototypes/present`

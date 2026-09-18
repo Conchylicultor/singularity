@@ -63,6 +63,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-history/investigate-failure`
+    - `apps/home/app-cards`
     - `apps/prototypes/gallery`
     - `apps/studio/compositions/release/release-logs`
     - `auth`

@@ -93,6 +93,7 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
+    - `apps/home/app-cards`
     - `apps/sonata/sources/ultimate-guitar`
     - `auth`
     - `primitives/overlay/imperative-dialog/confirm`

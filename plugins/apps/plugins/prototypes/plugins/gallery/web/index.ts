@@ -20,6 +20,10 @@ export {
   OptionsPicker,
   summarizePicks,
 } from "./components/options-picker";
+export {
+  mintPrototypeFolder,
+  newPrototypePrompt,
+} from "./components/new-prototype";
 export { VersionStepShortcuts } from "./components/version-stepper";
 export { FrameSizeProvider, useFrameSizeState } from "./frame-size";
 export type { FrameSize, FrameSizeChoice } from "./frame-size";
