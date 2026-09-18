@@ -3241,7 +3241,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-            - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options. Never declared by a page: offered as "Latest version" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
+            - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options — or the version on screen itself as another variant, with option picks of its own (version:shown). Never declared by a page: offered as "Latest version" and "Another variant" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
               - Web:
                 - Contributes:
                   - `Counterpart.Kind` "Prototype version" → `VersionCounterpart`
@@ -3252,15 +3252,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/prototypes/compare.CounterpartResolution`
                   - `apps/prototypes/compare.MockFrame`
                   - `apps/prototypes/compare.useCompareAgainst`
+                  - `apps/prototypes/gallery.documentOptions`
+                  - `apps/prototypes/gallery.OptionRows`
+                  - `apps/prototypes/gallery.prototypeDocumentSrc`
                   - `apps/prototypes/gallery.PrototypeVersionActions`
+                  - `apps/prototypes/gallery.summarizePicks`
                   - `apps/prototypes/gallery.useCloseVersionList`
                   - `apps/prototypes/gallery.usePrototypeDetail`
                   - `apps/prototypes/gallery.usePrototypeDocumentSrc`
                   - `primitives/css/badge.Badge`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.matchResource`
                   - `primitives/live-state.useCombinedResources`
                   - `primitives/live-state.useResource`
+                  - `primitives/overlay/popover.InlinePopover`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
@@ -3454,16 +3462,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeStageContribution`
               - `PrototypeStageProps`
             - Exports (values):
+              - `documentOptions`
               - `FrameSizeProvider`
+              - `OptionRows`
               - `OptionsPicker`
               - `PrototypeCardActions`
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
               - `PrototypeDetailScope`
+              - `prototypeDocumentSrc`
               - `prototypesGalleryPane`
               - `PrototypeStages`
               - `PrototypeVersionActions`
               - `ScaledIframe`
+              - `summarizePicks`
               - `useCloseVersionList`
               - `useFrameSizeState`
               - `usePrototypeDetail`
@@ -24686,6 +24698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/compare`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
@@ -25179,6 +25192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/compare`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
@@ -25696,6 +25710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
@@ -28664,6 +28679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `InlinePopover`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/entry-points`

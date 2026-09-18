@@ -246,7 +246,7 @@ export function usePrototypeOptions(
 }
 
 /** The options `version` declares — the live page's (`meta`) for `null`. */
-function documentOptions(
+export function documentOptions(
   meta: PrototypeMeta,
   version: PrototypeVersion | null,
 ): readonly PrototypeOption[] {
@@ -310,11 +310,28 @@ export function usePrototypeDocumentSrc(
   const { picks } = usePrototypeDetail();
   return useMemo<PicksRead<string>>(() => {
     if (picks.pending) return picks;
-    const resolved = resolvePicks(documentOptions(meta, version), picks.data);
-    const src =
-      version === null
-        ? prototypeUrl(meta.name, { v: cacheBust, picks: resolved })
-        : prototypeVersionUrl(meta.name, version.sha, { picks: resolved });
-    return { pending: false, data: src };
+    return {
+      pending: false,
+      data: prototypeDocumentSrc(meta, version, cacheBust, picks.data),
+    };
   }, [meta, version, cacheBust, picks]);
+}
+
+/**
+ * The url of one document of the prototype under picks OTHER than the shared
+ * record — for a frame that holds its own variant (Compare's "another variant"
+ * half). `stored` is judged against the options `version` declares, exactly as
+ * {@link usePrototypeDocumentSrc} judges the shared picks, so the two frames
+ * can differ by the picks alone.
+ */
+export function prototypeDocumentSrc(
+  meta: PrototypeMeta,
+  version: PrototypeVersion | null,
+  cacheBust: number,
+  stored: StoredPicks,
+): string {
+  const resolved = resolvePicks(documentOptions(meta, version), stored);
+  return version === null
+    ? prototypeUrl(meta.name, { v: cacheBust, picks: resolved })
+    : prototypeVersionUrl(meta.name, version.sha, { picks: resolved });
 }

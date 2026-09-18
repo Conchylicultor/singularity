@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import {
   matchResource,
   useCombinedResources,
@@ -8,11 +8,24 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   prototypeHistoryResource,
   prototypesVersionResource,
+  resolvePicks,
   type PrototypeHistory,
   type PrototypeMeta,
   type PrototypeVersion,
+  type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { usePrototypeDocumentSrc } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import {
+  documentOptions,
+  OptionRows,
+  prototypeDocumentSrc,
+  summarizePicks,
+  usePrototypeDetail,
+  usePrototypeDocumentSrc,
+} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   MockFrame,
   type CounterpartKindProps,
@@ -21,6 +34,12 @@ import {
 
 /** The ref naming the live folder — the newest state of the prototype. */
 const LATEST = "latest";
+
+/**
+ * The ref naming the version on screen — the mock half's own document — with
+ * option picks of its own: the same version as another variant.
+ */
+const SHOWN = "shown";
 
 /**
  * The `version:` kind: another version of the same prototype — `version:latest`
@@ -52,6 +71,13 @@ export function VersionCounterpart({
             detail: err.message,
           }),
         ready: ({ history, cacheBust }) => {
+          if (target === SHOWN) {
+            return (
+              <ShownVariant meta={meta} cacheBust={cacheBust}>
+                {children}
+              </ShownVariant>
+            );
+          }
           const found = findVersion(history, target);
           if (found === undefined) {
             return children({
@@ -61,7 +87,7 @@ export function VersionCounterpart({
                   This prototype has no version <Badge mono>{target}</Badge>.
                 </>
               ),
-              detail: `A version is named by its sha, or "${LATEST}" for the live folder.`,
+              detail: `A version is named by its sha, "${LATEST}" for the live folder, or "${SHOWN}" for the version on screen.`,
             });
           }
           return (
@@ -129,4 +155,94 @@ function latestCaption(history: PrototypeHistory): string {
   const newest = history.versions.at(-1);
   if (history.dirty || newest === undefined) return "Live · unsaved";
   return `v${String(newest.n)} · Latest`;
+}
+
+/**
+ * `version:shown` — the version on screen, beside itself as another variant.
+ *
+ * It follows the mock half's version (the stepper moves both), but its option
+ * picks are its OWN, held here rather than in the prototype's shared record:
+ * picking a variant for this half changes nothing any other surface shows, and
+ * the pane's options picker keeps driving the mock half alone. They start as
+ * the shared picks, so the two halves open identical and differ by whatever the
+ * reader then changes; they are forgotten when the comparison is.
+ */
+function ShownVariant({
+  meta,
+  cacheBust,
+  children,
+}: {
+  meta: PrototypeMeta;
+  cacheBust: number;
+  children: (resolution: CounterpartResolution) => ReactNode;
+}): ReactNode {
+  const { picks } = usePrototypeDetail();
+  if (picks.pending) {
+    return children({
+      status: "loading",
+      label: "Loading the picked options…",
+    });
+  }
+  return (
+    <HeldVariant meta={meta} cacheBust={cacheBust} initial={picks.data}>
+      {children}
+    </HeldVariant>
+  );
+}
+
+/** {@link ShownVariant} once the shared picks are known to start from. */
+function HeldVariant({
+  meta,
+  cacheBust,
+  initial,
+  children,
+}: {
+  meta: PrototypeMeta;
+  cacheBust: number;
+  initial: StoredPicks;
+  children: (resolution: CounterpartResolution) => ReactNode;
+}): ReactNode {
+  const { shownVersion } = usePrototypeDetail();
+  const [held, setHeld] = useState<StoredPicks>(initial);
+  const options = documentOptions(meta, shownVersion);
+  if (options.length === 0) {
+    return children({
+      status: "unresolved",
+      title: "This version declares no options.",
+      detail:
+        'A variant is a value of a <meta name="prototype-option"> the page declares; with none, every variant is the same page.',
+    });
+  }
+  const summary = summarizePicks(options, resolvePicks(options, held));
+  return children({
+    status: "found",
+    widths: [meta.viewport.w],
+    title: "Another variant",
+    subtitle: summary,
+    controls: (
+      <InlinePopover
+        trigger={<Button variant="outline">{`Variant: ${summary}`}</Button>}
+      >
+        <Stack direction="col" gap="md">
+          <Text variant="caption" tone="muted">
+            The right half only. The options picker drives the left.
+          </Text>
+          <OptionRows
+            options={options}
+            picks={resolvePicks(options, held)}
+            onPick={(option, value) =>
+              setHeld((h) => ({ ...h, [option]: value }))
+            }
+          />
+        </Stack>
+      </InlinePopover>
+    ),
+    render: () => (
+      <MockFrame
+        meta={meta}
+        src={prototypeDocumentSrc(meta, shownVersion, cacheBust, held)}
+        height={meta.viewport.h}
+      />
+    ),
+  });
 }

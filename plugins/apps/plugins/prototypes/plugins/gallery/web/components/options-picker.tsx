@@ -12,6 +12,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   humanizeToken,
   pickedValue,
+  type OptionPicks,
   type PrototypeMeta,
   type PrototypeOption,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -88,7 +89,7 @@ export function OptionsPicker({
   }
   const picks = read.data;
   const summary = [
-    ...options.map((o) => humanizeToken(pickedValue(o, picks))),
+    ...(options.length > 0 ? [summarizePicks(options, picks)] : []),
     ...(frameSize ? [FRAME_SIZE_LABELS[frameSize.size]] : []),
   ].join(" · ");
 
@@ -123,20 +124,9 @@ export function OptionsPicker({
         <Clip className="max-h-0 max-w-0 transition-[max-width,max-height] duration-200 group-data-open/fa:max-h-[40rem] group-data-open/fa:max-w-[28rem]">
           <Stack direction="col" gap="md">
             {withVersion ? <VersionRow /> : null}
-            {options.map((option) => (
-              <OptionRow
-                key={option.name}
-                option={option}
-                value={pickedValue(option, picks)}
-                onPick={(value) => {
-                  // The chip already on screen: nothing to write, and a write
-                  // would reach every surface showing this prototype.
-                  if (value !== pickedValue(option, picks)) {
-                    setPick(option.name, value);
-                  }
-                }}
-              />
-            ))}
+            {/* The chip already on screen writes nothing: a write would
+                reach every surface showing this prototype. */}
+            <OptionRows options={options} picks={picks} onPick={setPick} />
             {frameSize ? <SizeRow choice={frameSize} /> : null}
             {Object.keys(picks).length > 0 ? (
               <Button variant="ghost" onClick={resetPicks}>
@@ -147,6 +137,49 @@ export function OptionsPicker({
         </Clip>
       </FloatingActionFadeIn>
     </FloatingAction>
+  );
+}
+
+/**
+ * What `picks` shows of `options`, in the pill's words: "Azure · Soft tray".
+ * Empty for no options.
+ */
+export function summarizePicks(
+  options: readonly PrototypeOption[],
+  picks: OptionPicks,
+): string {
+  return options.map((o) => humanizeToken(pickedValue(o, picks))).join(" · ");
+}
+
+/**
+ * One chip row per option, controlled: `picks` says which chip is on, and
+ * `onPick` hears a chip that is not on already. The rows of the options picker,
+ * exported for a surface that holds picks of its own rather than the
+ * prototype's shared record (Compare's "another variant" half).
+ */
+export function OptionRows({
+  options,
+  picks,
+  onPick,
+}: {
+  options: readonly PrototypeOption[];
+  picks: OptionPicks;
+  onPick: (option: string, value: string) => void;
+}) {
+  return (
+    <>
+      {options.map((option) => (
+        <OptionRow
+          key={option.name}
+          option={option}
+          value={pickedValue(option, picks)}
+          onPick={(value) => {
+            if (value !== pickedValue(option, picks))
+              onPick(option.name, value);
+          }}
+        />
+      ))}
+    </>
   );
 }
 

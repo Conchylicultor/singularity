@@ -15,6 +15,7 @@
   - Exports (values): `InlinePopover`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/compare/version`
     - `apps/prototypes/gallery`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/entry-points`

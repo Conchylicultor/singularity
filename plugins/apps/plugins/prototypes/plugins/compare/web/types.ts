@@ -30,6 +30,12 @@ export type CounterpartResolution =
       subtitle?: string;
       /** Identifier chip for the header (the ref, as declared). */
       badge?: string;
+      /**
+       * Controls that belong to this counterpart alone, shown in the stage's
+       * bar — e.g. the option picks of a variant half, which the pane's own
+       * options picker (the mock half's) does not reach.
+       */
+      controls?: ReactNode;
       /** Paint the counterpart at `width`. Called inside a PluginErrorBoundary. */
       render: (width: number) => ReactNode;
     };

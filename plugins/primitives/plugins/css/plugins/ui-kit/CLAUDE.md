@@ -501,6 +501,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/compare/version`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/library`

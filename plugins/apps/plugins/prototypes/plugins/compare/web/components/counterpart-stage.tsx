@@ -135,6 +135,7 @@ export function CounterpartStage({
               value={zoom}
               onChange={setZoom}
             />
+            {resolution.status === "found" ? resolution.controls : null}
             {/* The ref is an identifier, which is what Badge's `mono` is for. */}
             {resolution.status === "found" && resolution.badge !== undefined ? (
               <Badge mono>{resolution.badge}</Badge>

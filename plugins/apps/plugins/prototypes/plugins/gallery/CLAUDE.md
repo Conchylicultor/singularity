@@ -337,16 +337,20 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeStageContribution`
     - `PrototypeStageProps`
   - Exports (values):
+    - `documentOptions`
     - `FrameSizeProvider`
+    - `OptionRows`
     - `OptionsPicker`
     - `PrototypeCardActions`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
     - `PrototypeDetailScope`
+    - `prototypeDocumentSrc`
     - `prototypesGalleryPane`
     - `PrototypeStages`
     - `PrototypeVersionActions`
     - `ScaledIframe`
+    - `summarizePicks`
     - `useCloseVersionList`
     - `useFrameSizeState`
     - `usePrototypeDetail`
