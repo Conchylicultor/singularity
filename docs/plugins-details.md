@@ -3483,6 +3483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldOption`
               - `primitives/data-view.ItemActionProps`
               - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/launch.LaunchAgentPopover`

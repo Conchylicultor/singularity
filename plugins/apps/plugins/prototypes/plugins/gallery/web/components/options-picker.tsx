@@ -51,8 +51,9 @@ import { VersionRow, VersionSummary } from "./version-row";
  * pick.
  *
  * Under the declared options sits one row the app owns rather than the page:
- * **Size** — fixed (the declared viewport), mobile, or full (the frame fills
- * the stage and the page's own responsive layout shows). It is offered only
+ * **Size** — fixed (the declared viewport), whole page (the declared width,
+ * as tall as the whole document, zoomed out to fit), mobile, or full (the frame
+ * fills the stage and the page's own responsive layout shows). It is offered only
  * where a frame renders through the nearest frame-size scope
  * (`useFrameSizeChoice`), and the pill's summary ends with it.
  *

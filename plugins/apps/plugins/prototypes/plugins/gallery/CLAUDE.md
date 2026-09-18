@@ -71,9 +71,18 @@ The Prototypes app's two panes:
     `transform: scale()`, never upscaling past 1; the container owns the scaling
     box, the iframe is a rigid leaf), under a banner listing what is wrong with
     its folder. **Frame size**: the canvas is the declared viewport (`fixed`,
-    the default), a phone (`mobile`, 390×844) or none at all (`full` — the
+    the default), the declared width at the page's whole height (`page`,
+    "Whole page" — a scrolling page shown entire, zoomed out, nothing to
+    scroll), a phone (`mobile`, 390×844) or none at all (`full` — the
     frame fills the stage at scale 1, so the page's own responsive layout
-    shows). The choice is pane state on the provider (`frameSize`, survives
+    shows). `page` measures the document at the DECLARED viewport height
+    (`usePageHeight`: the frame is set back to it, `scrollHeight` read, and
+    restored in one task), re-measuring on every resize or DOM change inside
+    it. Measuring at the frame's own height would never converge on a page
+    that sizes something in `vh`. Such a page still shows its `vh` blocks
+    stretched to the whole height (the frame IS its viewport); a page that
+    scrolls inside its own container rather than the document has nothing
+    more to show, so it looks as it does at `fixed`. The choice is pane state on the provider (`frameSize`, survives
     stage switches, not remembered across visits) and reaches a stage through
     a `FrameSizeProvider` scope (`frame-size.tsx`) — only a stage that declares
     `usesFrameSize` gets one, so Compare (which sizes frames with its own width
@@ -178,7 +187,7 @@ The Prototypes app's two panes:
     does not declare drop), so a palette picked on v3 carries to the live page
     wherever the live page still has it. The picker renders nothing until the
     picks are known. Below the declared options it adds one app-owned row,
-    **Size** (Fixed / Mobile / Full), whenever it sits inside a frame-size
+    **Size** (Fixed / Whole page / Mobile / Full), whenever it sits inside a frame-size
     scope — never written to the picks record or the frame URL, since it
     changes the box the page renders in, not the page.
     A presentation asks for one more app-owned row, first: **Version**
@@ -305,6 +314,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/data-view.FieldOption`
     - `primitives/data-view.ItemActionProps`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/launch.LaunchAgentPopover`

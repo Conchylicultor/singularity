@@ -10,18 +10,27 @@ import {
  * How big the frame a prototype renders in is:
  *
  * - `fixed` — the prototype's declared `prototype-viewport`, scaled to fit.
+ * - `page` — the declared viewport's width, and as tall as the page's whole
+ *   document, scaled to fit — so all of a scrolling page shows zoomed out, with
+ *   nothing to scroll.
  * - `mobile` — a phone-sized canvas ({@link MOBILE_VIEWPORT}), scaled to fit.
  * - `full` — the frame is exactly the space it is given, at scale 1, so the
  *   prototype's own responsive layout decides what it looks like.
  */
-export type FrameSize = "fixed" | "mobile" | "full";
+export type FrameSize = "fixed" | "page" | "mobile" | "full";
 
 /** Every size, in picker order. */
-export const FRAME_SIZES: readonly FrameSize[] = ["fixed", "mobile", "full"];
+export const FRAME_SIZES: readonly FrameSize[] = [
+  "fixed",
+  "page",
+  "mobile",
+  "full",
+];
 
 /** What each size's chip reads. */
 export const FRAME_SIZE_LABELS: Record<FrameSize, string> = {
   fixed: "Fixed",
+  page: "Whole page",
   mobile: "Mobile",
   full: "Full",
 };

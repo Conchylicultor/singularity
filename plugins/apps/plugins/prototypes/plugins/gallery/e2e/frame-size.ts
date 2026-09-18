@@ -1,6 +1,8 @@
 // Verifies the options picker's Size row on a prototype's Focus stage: Fixed
-// sizes the frame to the declared viewport, Mobile to a phone, Full to the
-// whole stage at scale 1; and presenting opens at Full.
+// sizes the frame to the declared viewport, Whole page to the declared width
+// at the document's full height (nothing left to scroll, zoomed out to fit the
+// stage), Mobile to a phone, Full to the whole stage at scale 1; and presenting
+// opens at Full.
 // Manual only — nothing runs this automatically.
 //
 // Usage:
@@ -50,6 +52,21 @@ async function frameViewport(page: Page): Promise<string | null> {
     });
 }
 
+/** The inner document's full height and its viewport height, as it sees them. */
+async function frameFill(
+  page: Page,
+): Promise<{ w: number; h: number; doc: number } | null> {
+  const frame = page
+    .frames()
+    .find((f) => f.url().includes(`/api/prototypes/${meta.name}/index.html`));
+  if (!frame) return null;
+  return frame.evaluate(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
+    doc: document.documentElement.scrollHeight,
+  }));
+}
+
 async function pickSize(page: Page, label: string) {
   await page.getByLabel("Prototype options").hover();
   const group = page.getByRole("radiogroup", { name: "Size" });
@@ -79,6 +96,39 @@ await withBrowser(async (h) => {
   );
   r.ok("opens at the declared viewport", atFixed.ok, String(atFixed.value));
   await snap(page, out, "fixed");
+
+  await pickSize(page, "Whole page");
+  const atPage = await waitFor(
+    () => frameFill(page),
+    (v) =>
+      v !== null &&
+      v.w === meta.viewport.w &&
+      v.h >= meta.viewport.h &&
+      v.doc <= v.h,
+    { timeoutMs: 10_000 },
+  );
+  const pageBox = await page.locator("iframe").first().boundingBox();
+  const stageBox = await page
+    .locator("iframe")
+    .first()
+    .evaluate((el) => {
+      const r = el.parentElement!.parentElement!.getBoundingClientRect();
+      return { width: r.width, height: r.height };
+    });
+  r.ok(
+    "Whole page lays the page out at its full height, with nothing to scroll",
+    atPage.ok,
+    JSON.stringify(atPage.value),
+  );
+  r.ok(
+    "Whole page is zoomed out to fit the stage",
+    pageBox !== null &&
+      pageBox.width <= stageBox.width + 1 &&
+      pageBox.height <= stageBox.height + 1,
+    `frame ${JSON.stringify(pageBox)} stage ${JSON.stringify(stageBox)}`,
+  );
+  await page.waitForTimeout(500);
+  await snap(page, out, "page");
 
   await pickSize(page, "Mobile");
   const atMobile = await waitFor(

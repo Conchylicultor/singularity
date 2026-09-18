@@ -3,6 +3,7 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { MOBILE_VIEWPORT, type FrameSize } from "../frame-size";
+import { usePageHeight } from "../internal/use-page-height";
 
 /**
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
@@ -25,7 +26,8 @@ import { MOBILE_VIEWPORT, type FrameSize } from "../frame-size";
  * shrunk via `transform: scale()` (the old `Stage`). The inner wrapper reserves
  * the scaled-down layout box so the iframe sits flush at the top-left.
  *
- * `size` picks the canvas: the declared `viewport` (`fixed`), a phone
+ * `size` picks the canvas: the declared `viewport` (`fixed`), the declared
+ * width at the page's whole height (`page` — see `usePageHeight`), a phone
  * (`mobile`), or no canvas at all (`full`) — the frame then simply fills the
  * container at scale 1, so the prototype's own responsive layout is what shows.
  *
@@ -58,6 +60,12 @@ export function ScaledIframe({
   // The document on screen. `src` differing from it means a new one is loading.
   const [shownSrc, setShownSrc] = useState(src);
   const frames = shownSrc === src ? [src] : [shownSrc, src];
+  // The document on screen once it has loaded — what `page` measures.
+  const [ready, setReady] = useState<{
+    frame: HTMLIFrameElement;
+    doc: Document;
+  } | null>(null);
+  const pageHeight = usePageHeight(ready, meta.viewport.h, size === "page");
   // Default to 1 (not 0): the iframe must ALWAYS mount so it loads, even before
   // the container is measured — gating it behind a measured scale meant a 0-size
   // mount (a ResizeObserver timing race) left the frame permanently absent. The
@@ -67,9 +75,11 @@ export function ScaledIframe({
   const canvas =
     size === "fixed"
       ? meta.viewport
-      : size === "mobile"
-        ? MOBILE_VIEWPORT
-        : null;
+      : size === "page"
+        ? { w: meta.viewport.w, h: pageHeight ?? meta.viewport.h }
+        : size === "mobile"
+          ? MOBILE_VIEWPORT
+          : null;
   const canvasW = canvas?.w;
   const canvasH = canvas?.h;
   const scale = useMemo(() => {
@@ -120,7 +130,16 @@ export function ScaledIframe({
               // tree until it has loaded; `load` then makes it the one shown.
               aria-hidden={loading || undefined}
               tabIndex={loading ? -1 : undefined}
-              onLoad={loading ? () => setShownSrc(frameSrc) : undefined}
+              // Every load (the first frame's included) is the document on
+              // screen from then on: an incoming frame is promoted by it.
+              onLoad={(e) => {
+                const frame = e.currentTarget;
+                const doc = frame.contentDocument;
+                // allow-same-origin (below) is what makes this readable.
+                if (!doc) throw new Error("prototype frame is not same-origin");
+                setShownSrc(frameSrc);
+                setReady({ frame, doc });
+              }}
               // The frame on screen sits in flow; the incoming one is a layer
               // over it (anchored top-left — its own width/height win over the
               // inset), and drops back into flow when promoted. A class/style

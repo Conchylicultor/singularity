@@ -44,7 +44,7 @@ export interface PrototypeStageContribution {
   order?: number;
   /**
    * The stage renders the prototype through the pane's frame size
-   * (`useFrameSize()` — fixed / mobile / full). Only then does the options
+   * (`useFrameSize()` — fixed / page / mobile / full). Only then does the options
    * picker offer its Size row: a stage that sizes its frames some other way
    * (Compare's shared width) would otherwise show a control that does nothing.
    */
