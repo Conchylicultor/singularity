@@ -45,7 +45,7 @@ keeps reading the old location until then.
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.studio.shell`, `apps.website.shell`
+    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.chord.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.studio.shell`, `apps.website.shell`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBar` ← `apps-core.tab-bar`
@@ -88,6 +88,7 @@ keeps reading the old location until then.
     - `apps-core/theme-scope`
     - `apps/agent-manager/shell`
     - `apps/browser/shell`
+    - `apps/chord/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
     - `apps/events/shell`

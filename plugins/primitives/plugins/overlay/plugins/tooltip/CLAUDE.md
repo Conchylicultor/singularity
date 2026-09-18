@@ -24,6 +24,7 @@
     - `apps-core/app-rail`
     - `apps-core/surface/floating`
     - `apps-core/tab-bar`
+    - `apps/chord/trainer`
     - `apps/events/sources`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/primitives/toolbar-control`

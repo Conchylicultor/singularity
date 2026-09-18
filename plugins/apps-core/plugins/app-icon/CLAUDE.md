@@ -71,6 +71,7 @@ app-level descriptor and the author-time helper on top.
     - `apps-core/tab-bar`
     - `apps/agent-manager/shell`
     - `apps/browser/shell`
+    - `apps/chord/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
     - `apps/events/shell`

@@ -25,6 +25,7 @@ stability-independent and is suppressed at the site with an inline disable.)
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/tabs`
+    - `apps/chord/trainer`
     - `apps/prototypes/gallery`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/live-play`
@@ -41,6 +42,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
     - `debug/slow-ops`
+    - `integrations/youtube`
     - `layouts/miller`
     - `page/code-block`
     - `page/editor`

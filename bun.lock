@@ -238,6 +238,10 @@
       "name": "@singularity/plugin-apps-chord",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/chord/plugins/progress": {
+      "name": "@singularity/plugin-apps-chord-progress",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/chord/plugins/shell": {
       "name": "@singularity/plugin-apps-chord-shell",
       "version": "0.0.1",
@@ -249,8 +253,16 @@
         "@streamparser/json": "^0.0.26",
       },
     },
+    "plugins/apps/plugins/chord/plugins/trainer": {
+      "name": "@singularity/plugin-apps-chord-trainer",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/chord/plugins/video-availability": {
       "name": "@singularity/plugin-apps-chord-video-availability",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/chord/plugins/vocabulary": {
+      "name": "@singularity/plugin-apps-chord-vocabulary",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/debug": {
@@ -3347,6 +3359,10 @@
         "@streamparser/json": "^0.0.26",
       },
     },
+    "plugins/integrations/plugins/youtube": {
+      "name": "@singularity/plugin-integrations-youtube",
+      "version": "0.0.1",
+    },
     "plugins/layouts": {
       "name": "@singularity/plugin-layouts",
       "version": "0.0.1",
@@ -6103,11 +6119,17 @@
 
     "@singularity/plugin-apps-chord": ["@singularity/plugin-apps-chord@workspace:plugins/apps/plugins/chord"],
 
+    "@singularity/plugin-apps-chord-progress": ["@singularity/plugin-apps-chord-progress@workspace:plugins/apps/plugins/chord/plugins/progress"],
+
     "@singularity/plugin-apps-chord-shell": ["@singularity/plugin-apps-chord-shell@workspace:plugins/apps/plugins/chord/plugins/shell"],
 
     "@singularity/plugin-apps-chord-song-index": ["@singularity/plugin-apps-chord-song-index@workspace:plugins/apps/plugins/chord/plugins/song-index"],
 
+    "@singularity/plugin-apps-chord-trainer": ["@singularity/plugin-apps-chord-trainer@workspace:plugins/apps/plugins/chord/plugins/trainer"],
+
     "@singularity/plugin-apps-chord-video-availability": ["@singularity/plugin-apps-chord-video-availability@workspace:plugins/apps/plugins/chord/plugins/video-availability"],
+
+    "@singularity/plugin-apps-chord-vocabulary": ["@singularity/plugin-apps-chord-vocabulary@workspace:plugins/apps/plugins/chord/plugins/vocabulary"],
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 
@@ -7628,6 +7650,8 @@
     "@singularity/plugin-integrations-google-maps-places-api": ["@singularity/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
 
     "@singularity/plugin-integrations-hooktheory": ["@singularity/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
+
+    "@singularity/plugin-integrations-youtube": ["@singularity/plugin-integrations-youtube@workspace:plugins/integrations/plugins/youtube"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 

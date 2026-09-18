@@ -45,6 +45,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
+    - `apps/chord/trainer`
     - `apps/mail/reading-pane`
     - `apps/pages/page-tree`
     - `apps/pages/trash`

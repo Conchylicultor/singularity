@@ -39,6 +39,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/browser/plugins/tabs",
   "apps/plugins/browser/plugins/webview",
   "apps/plugins/chord/plugins/song-index",
+  "apps/plugins/chord/plugins/trainer",
   "apps/plugins/deploy/plugins/analytics/plugins/dashboard",
   "apps/plugins/deploy/plugins/composition",
   "apps/plugins/deploy/plugins/deploy-history",

@@ -79,6 +79,12 @@
       "parent": "build"
     },
     {
+      "paneId": "chord-trainer",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "claude-cli-calls",
       "segment": "claude-cli-calls",
       "appIndex": false,

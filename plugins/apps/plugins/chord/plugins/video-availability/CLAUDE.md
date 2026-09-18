@@ -25,8 +25,10 @@ GET /api/chord/videos/summary → { videos, byStatus: { unknown, ok, gone, not-e
 ```
 
 `VideoStatus` is `unknown` | `ok` | `gone` | `not-embeddable`;
-`UNPLAYABLE_STATUSES` is the last two. Nothing calls the playback endpoint yet:
-the player belongs to the training-loop step.
+`UNPLAYABLE_STATUSES` is the last two. The trainer's player (`trainer/web`)
+calls the playback endpoint: `playing` the first time a video plays in a
+visit, and every player error with its code (after which the trainer moves to
+the next loop).
 
 ## Two sources, one row per video
 

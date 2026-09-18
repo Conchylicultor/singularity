@@ -69,6 +69,8 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
     - `apps/browser/shell`
+    - `apps/chord/shell`
+    - `apps/chord/trainer`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
     - `apps/sonata/sources/midi`

@@ -1,0 +1,15 @@
+// @hash 229102bb7c88
+{
+  // The chord trainer paints its own designed theme, `chord` (the mockup's
+  // onyx blacks, the seven chord colours, Schibsted Grotesk and Bodoni Moda),
+  // contributed by the chord shell
+  // (`plugins/apps/plugins/chord/plugins/shell/web/internal/theme.ts`) — never
+  // the desktop's runtime choice. This one selection is the whole per-app
+  // theme: a group `chord` does not mention paints its schema defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true. The theme is dark only
+  // by writing the same values for both modes instead.
+  "theme": "chord"
+}

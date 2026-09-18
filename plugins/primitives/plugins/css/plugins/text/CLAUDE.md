@@ -180,6 +180,9 @@ fixed raw size escapes per-site via
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/chord/shell`
+    - `apps/chord/song-index`
+    - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`

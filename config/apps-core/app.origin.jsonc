@@ -1,4 +1,4 @@
-// @hash fe50134575e2
+// @hash 0223718468c9
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "apps.agent-manager.shell:agent-manager",
     "apps.browser.shell:browser",
+    "apps.chord.shell:chord",
     "apps.debug.shell:debug",
     "apps.deploy.shell:deploy",
     "apps.events.shell:events",

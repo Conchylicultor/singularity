@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-chord-shell",
-  "description": "The Chord app's identity (defineApp: id, name, base path, icon). No pane or rail entry yet.",
+  "description": "The Chord app's identity (defineApp: id, name, base path, icon), its rail entry and frame (a thin header above the full-pane renderer), and its dark-only theme.",
   "private": true,
   "version": "0.0.1"
 }

@@ -486,6 +486,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/chord/song-index`
+    - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
@@ -631,6 +633,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `infra/events-test`
     - `integrations/gmail`
     - `integrations/google-maps`
+    - `integrations/youtube`
     - `layouts/miller`
     - `layouts/route-fallback`
     - `page/attachment-block`

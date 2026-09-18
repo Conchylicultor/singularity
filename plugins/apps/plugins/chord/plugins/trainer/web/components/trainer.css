@@ -1,0 +1,305 @@
+/* The trainer's bespoke paint — the chord tiles, the answer boxes and their
+ * marks, the chord buttons, the meters. Layout stays with the layout
+ * primitives (Stack, Line, Placed, Grid…); this file only paints, as the
+ * mockup does (proto-1789461303-updb, palette onyx, chords classic, tiles
+ * solid).
+ *
+ * Every colour READS the chord theme (`chordTheme`, shell): surfaces and ink
+ * from the colour palette, the chord colours from `--categorical-N`. No hex
+ * lives here; black and white appear only as the ends a chord colour is mixed
+ * toward. */
+
+/* ── A chord's colours ─────────────────────────────────────────────────────
+ * `--fn` (the degree's colour) and `--fn-depth` come from `chordToneStyle`.
+ * The solid tile deepens the colour in OKLCH so it keeps its strength; the
+ * numeral on it is the colour washed almost to white. */
+.chord-tone {
+  --fn-bg: color-mix(in oklch, var(--fn, var(--categorical-10)) var(--fn-depth, 74%), black);
+  --fn-ink: color-mix(in srgb, var(--fn, var(--categorical-10)) 10%, white);
+}
+
+/* The mockup's "sunk" black, a step below the page. */
+.chord-trainer {
+  --chord-sunk: color-mix(in srgb, var(--background) 40%, black);
+}
+
+/* ── The numeral ──────────────────────────────────────────────────────────── */
+.chord-num {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--fn, var(--foreground));
+}
+.chord-num-mark {
+  font-family: var(--font-sans);
+  font-size: 0.42em;
+  vertical-align: 0.9em;
+  margin-left: 0.05em;
+}
+
+/* ── The song card ──────────────────────────────────────────────────────── */
+.chord-play {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 1px solid var(--input);
+  color: var(--foreground);
+  cursor: pointer;
+}
+.chord-play:hover {
+  border-color: var(--faint-foreground);
+}
+.chord-play:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chord-play svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── The answer strip ─────────────────────────────────────────────────────── */
+.chord-strip-boxes {
+  height: 92px;
+}
+.chord-box {
+  container-type: inline-size;
+  border-radius: 10px;
+  border: 1.5px dashed var(--input);
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    transform 0.12s;
+}
+.chord-box:hover {
+  border-color: var(--faint-foreground);
+}
+.chord-box:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.chord-box .chord-num {
+  font-size: clamp(22px, 38cqi, 44px);
+}
+.chord-box[data-filled] {
+  border: 1.5px solid transparent;
+  background: var(--fn-bg);
+}
+.chord-box[data-filled] .chord-num {
+  color: var(--fn-ink);
+}
+.chord-box[data-selected] {
+  border: 2px solid var(--muted-foreground);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.chord-box[data-mark="ok"] {
+  border: 2px solid var(--success);
+}
+.chord-box[data-mark="bad"] {
+  border: 2px solid var(--destructive);
+}
+.chord-box[data-now] {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px var(--fn, var(--categorical-10));
+}
+.chord-box[data-pop] {
+  animation: chord-pop 0.22s ease-out;
+}
+@keyframes chord-pop {
+  0% {
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The ✓ / ✗ in a checked box's corner. */
+.chord-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  color: var(--chord-sunk);
+}
+.chord-badge[data-mark="ok"] {
+  background: var(--success);
+}
+.chord-badge[data-mark="bad"] {
+  background: var(--destructive);
+}
+.chord-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* "you: IV" under a wrong box: plays the answer on the piano. */
+.chord-yours {
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--destructive);
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent);
+  border-radius: 99px;
+  padding: 2px 8px 2px 6px;
+  cursor: pointer;
+}
+.chord-yours:hover {
+  background: color-mix(in srgb, var(--destructive) 16%, var(--card));
+}
+.chord-yours svg {
+  width: 11px;
+  height: 11px;
+}
+.chord-yours s {
+  text-decoration-thickness: 1.5px;
+}
+
+/* The playhead line, over the box that is sounding. */
+.chord-playhead {
+  width: 2px;
+  border-radius: 1px;
+  background: var(--foreground);
+  opacity: 0.75;
+}
+
+/* The ruler: a tick per beat, taller on the bar lines. */
+.chord-ruler {
+  height: 13px;
+}
+.chord-tick {
+  width: 0;
+  height: 5px;
+  border-left: 1.5px solid var(--input);
+}
+.chord-tick[data-bar] {
+  height: 9px;
+  border-color: var(--faint-foreground);
+}
+.chord-tick[data-on] {
+  border-color: var(--foreground);
+}
+
+/* ── The chord buttons ────────────────────────────────────────────────────── */
+.chord-pad {
+  height: 90px;
+  border-radius: 14px;
+  background: var(--muted);
+  border: 1px solid var(--input);
+  box-shadow: 0 3px 0 var(--chord-sunk);
+  padding: 11px 13px 10px 24px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s,
+    border-color 0.15s,
+    background-color 0.15s;
+}
+/* The chord's colour: a short bar set inside the pad, clear of the corners. */
+.chord-pad::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--fn, var(--categorical-10));
+}
+.chord-pad:hover {
+  border-color: var(--faint-foreground);
+}
+.chord-pad:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--chord-sunk);
+}
+.chord-pad:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.chord-pad .chord-num {
+  font-size: 38px;
+}
+.chord-pad-fn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--faint-foreground);
+}
+/* The chord sounding right now — only once the round is checked, so a lit
+ * button never gives an answer away. */
+.chord-pad[data-lit] {
+  background: var(--fn-bg);
+  border-color: var(--fn, var(--categorical-10));
+}
+.chord-pad[data-lit] .chord-num,
+.chord-pad[data-lit] .chord-pad-fn {
+  color: var(--fn-ink);
+}
+
+/* ── The side panel ───────────────────────────────────────────────────────── */
+.chord-chip {
+  height: 30px;
+  border-radius: 8px;
+  background: var(--fn-bg);
+}
+.chord-chip .chord-num {
+  font-size: 18px;
+  color: var(--fn-ink);
+}
+.chord-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--chord-sunk);
+}
+.chord-meter-fill {
+  border-radius: 3px;
+  background: var(--fn, var(--categorical-10));
+  transition: width 0.4s ease;
+}
+/* The 90 % mark a chord must reach. */
+.chord-meter-target {
+  width: 1.5px;
+  background: var(--foreground);
+  opacity: 0.5;
+}
+.chord-mastery {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--input);
+}
+.chord-mastery[data-mastered] {
+  border: 0;
+  background: var(--success);
+  color: var(--chord-sunk);
+}
+.chord-mastery svg {
+  width: 10px;
+  height: 10px;
+}
+.chord-figure {
+  font-variant-numeric: tabular-nums;
+}
+.chord-figure[data-slow] {
+  color: var(--destructive);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-box,
+  .chord-pad,
+  .chord-meter-fill {
+    transition: none;
+  }
+  .chord-box[data-pop] {
+    animation: none;
+  }
+}

@@ -30,6 +30,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.browser.shell.sub-bar", pluginId: "apps.browser.shell", configName: "sub-bar" },
   { slotId: "apps.browser.shell.tab-strip", pluginId: "apps.browser.shell", configName: "tab-strip" },
   { slotId: "apps.browser.shell.viewport", pluginId: "apps.browser.shell", configName: "viewport" },
+  { slotId: "apps.chord.trainer.chord-trainer.actions", pluginId: "apps.chord.trainer", configName: "chord-trainer.actions" },
   { slotId: "apps.debug.shell.sidebar", pluginId: "apps.debug.shell", configName: "sidebar" },
   { slotId: "apps.debug.shell.toolbar", pluginId: "apps.debug.shell", configName: "toolbar" },
   { slotId: "apps.deploy.deploy-history.item-actions", pluginId: "apps.deploy.deploy-history", configName: "item-actions" },

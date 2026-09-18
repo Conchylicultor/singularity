@@ -51,6 +51,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `active-data/task`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
+    - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`

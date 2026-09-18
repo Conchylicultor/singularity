@@ -52,6 +52,7 @@ declared on the pane.**
   - Exports (values): `FullPane`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/shell`
     - `apps/sonata/shell`
     - `apps/website/shell`
     - `layouts/host`

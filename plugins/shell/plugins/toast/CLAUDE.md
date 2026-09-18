@@ -21,6 +21,7 @@
   - Exports (values): `showToast`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/trainer`
     - `apps/events/sources/refresh-all`
     - `apps/pages/page-tree`
     - `build/serve-composition`

@@ -47,6 +47,7 @@ the slot; it registers no instrument itself.
   - Exports (values): `SonataAudio`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/trainer`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/live-play`
     - `apps/sonata/audio/piano`
