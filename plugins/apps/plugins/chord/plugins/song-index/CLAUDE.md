@@ -14,7 +14,8 @@ build).
 // Open the index (idempotent). Starts a load when it is missing, stale or failed.
 POST /api/chord/index/ensure                → IndexStatus
 
-// Loops made only of `unlocked`, containing `target` (random order).
+// Loops made only of `unlocked`, containing `target` (random order), on a video
+// not known to be unplayable. At most `limit` — possibly fewer.
 POST /api/chord/loops/find  { unlocked, target, shape?="bars-4", modes?, requireFeatures?,
                               forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
   → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] }
@@ -32,16 +33,31 @@ sections, windows }` | `failed { error }`. Reading it never starts work; only
 
 Both reads answer `not-ready` until the status is `ready` — never an empty list,
 which would read as "no song fits". A `LoopCandidate` carries the section's
-display names, `videoId`, `videoDurationSeconds`, `alignment`, the window's
-fields and the section's chords overlapping the window (every Hookpad field plus
-its token).
+display names, `videoId`, `videoDurationSeconds`, `videoStatus` (`ok`, or
+`unknown` when nobody could tell yet), `alignment`, the window's fields and the
+section's chords overlapping the window (every Hookpad field plus its token).
+
+**Video availability** (`research/2026-09-18-apps-chord-video-availability.md`;
+the evidence and the verdict live in the `video-availability` plugin). About 1
+video in 6 in the dump no longer plays. `find` left-joins the video status and
+leaves out the videos known `gone` or `not-embeddable` — failing open, so a
+video nobody has checked is still offered. It fetches 3 × `limit` rows, checks
+their unchecked videos over oEmbed in one wave (`ensureVideoStatus`), drops the
+ones that just came back dead, and returns up to `limit`. Fewer than `limit` is
+a legal answer: there is no second query to top it up.
 
 The two reads answer about the same windows:
 
 - A chord's `windows` count is every window of the shape with exactly one chord
   outside the unlocked set — that chord — so unlocking it makes all of them
-  `find` answers. It counts windows sharing nothing with the set (a vamp on one
-  chord), which is why it scans rather than starting from the GIN index.
+  `find` answers, except those on a video known to be unplayable. It counts
+  windows sharing nothing with the set (a vamp on one chord), which is why it
+  scans rather than starting from the GIN index.
+- **The count ignores the videos, deliberately.** It only ranks chords, the
+  dead videos fall roughly evenly across them, and with checks on demand most
+  videos are `unknown` — so a filter would remove almost nothing, for a join
+  over 183k windows. If the count ever becomes a number the user reads as a
+  promise, it needs that join and a swept corpus.
 - A candidate's chords are the ones its window was derived from: both sides call
   `chordOverlapsWindow`, so a payload can never carry a token the window's
   `chord_tokens` — what "every chord is unlocked" filtered on — does not list.
@@ -148,7 +164,9 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   fields a load counts its total with (`readSnapshotHeads`) — so a load decodes
   it once, not twice.
 - `find` on the full index: p95 31 ms over 100 random unlocked sets, inside the
-  < 50 ms target (`e2e/song-index-verify.ts`).
+  < 50 ms target (`e2e/song-index-verify.ts`). Measured before the video check;
+  a cold batch adds one oEmbed wave (~150 ms expected), still to re-measure
+  (`e2e/video-availability-verify.ts` reports a cold and a warm call).
 - `next-chords` on the full index (a scan of the 183,270 windows): 87 ms for one
   unlocked chord, 119 ms for eight (median of 6).
 - Still to measure after a deploy: load time into Postgres and table sizes
@@ -176,6 +194,8 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `change-feed-exclusion` "chord_sections"
     - `change-feed-exclusion` "chord_loop_windows"
   - Uses:
+    - `apps/chord/video-availability.chordVideoStatus`
+    - `apps/chord/video-availability.ensureVideoStatus`
     - `backup.BackupSource`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
@@ -197,6 +217,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `POST /api/chord/loops/next-chords`
 - Core:
   - Uses:
+    - `apps/chord/video-availability.VideoStatusSchema`
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.HookpadChord`
     - `integrations/hooktheory.HookpadChordRule`

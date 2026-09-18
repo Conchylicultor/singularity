@@ -130,6 +130,10 @@ export const ACCOUNTING: Record<string, SinkAccounting> = {
     consumer: "internal",
     note: "Detached chord.song-index.load child transcript (apps/chord/song-index): download, snapshot build and section load timings. Failures surface as the index status `failed` (its state row) and the job dead-letter.",
   },
+  "chord-video-check": {
+    consumer: "internal",
+    note: "On-demand oEmbed checks that settled nothing (apps/chord/video-availability): no answer (timeout, network) or a code that says nothing about the video. Forensic only — nothing durable reads it. By design such a check fails open: the video stays `unknown`, the loop is still offered, and the next query or the player's own report settles it, so a stuck YouTube shows as rows that never leave `unknown` in chord_video_status_v, not as a report.",
+  },
   "slow-ops": {
     consumer: "internal",
     note: "One line per client slow-op batch that arrived with a non-zero browser-side drop count (the beacon queue hit its 1000-item cap). Accounting for signals that never reached the recorder, so the loss is not silent; the durable slow-op SIGNAL itself is the slow-op report filed by the recorder.",

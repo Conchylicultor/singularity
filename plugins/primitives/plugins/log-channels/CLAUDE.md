@@ -169,6 +169,7 @@ count accumulates across drops.
 - Cross-plugin:
   - Imported by:
     - `apps/chord/song-index`
+    - `apps/chord/video-availability`
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
     - `apps/events/refresh`

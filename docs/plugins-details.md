@@ -578,6 +578,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `change-feed-exclusion` "chord_sections"
               - `change-feed-exclusion` "chord_loop_windows"
             - Uses:
+              - `apps/chord/video-availability.chordVideoStatus`
+              - `apps/chord/video-availability.ensureVideoStatus`
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
@@ -599,6 +601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/chord/loops/next-chords`
           - Core:
             - Uses:
+              - `apps/chord/video-availability.VideoStatusSchema`
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.HookpadChord`
               - `integrations/hooktheory.HookpadChordRule`
@@ -705,6 +708,51 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SnapshotSkipSchema`
               - `StoredChordSchema`
               - `TokenizedChordSchema`
+        - **`video-availability`** — Chord video availability: the chord_videos evidence ledger (oEmbed's answer and the player's, each in its own columns), the chord_video_status_v view that resolves them, the on-demand oEmbed check a loop query runs over the videos it is about to offer, and the player's playback-report endpoint.
+          - Server:
+            - Contributes:
+              - `derived-view` "chord_video_status_v"
+              - `change-feed-exclusion` "chord_videos"
+            - Uses:
+              - `database.db`
+              - `database/change-feed.ExcludeFromChangeFeed`
+              - `database/derived-views.View`
+              - `database/sql-column.parsedText`
+              - `database/sql-projection.parsed`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `primitives/log-channels.defineLogSink`
+            - DB schema:
+              - `plugins/apps/plugins/chord/plugins/video-availability/server/internal/tables.ts`
+              - `plugins/apps/plugins/chord/plugins/video-availability/server/internal/views.ts`
+            - Exports (values):
+              - `_chordVideos`
+              - `chordVideoStatus`
+              - `ensureVideoStatus`
+            - Routes:
+              - `POST /api/chord/videos/:videoId/playback`
+              - `GET /api/chord/videos/summary`
+          - Core:
+            - Uses: `infra/endpoints.defineEndpoint`
+            - Exports (types):
+              - `CodeVerdict`
+              - `ObservedVideoStatus`
+              - `PlaybackReport`
+              - `VideoStatus`
+              - `VideoStatusCounts`
+            - Exports (values):
+              - `EVIDENCE_TTL_DAYS`
+              - `ObservedVideoStatusSchema`
+              - `PlaybackReportSchema`
+              - `reportPlaybackEndpoint`
+              - `statusFromOembedCode`
+              - `statusFromPlayerCode`
+              - `UNPLAYABLE_STATUSES`
+              - `VideoStatusCountsSchema`
+              - `VideoStatusSchema`
+              - `videoStatusSummaryEndpoint`
+          - Cross-plugin:
+            - Imported by: `apps/chord/song-index`
     - **`debug`** — Debug app.
       - Plugins:
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
@@ -11567,6 +11615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/browser/bookmarks`
       - `apps/browser/history`
       - `apps/chord/song-index`
+      - `apps/chord/video-availability`
       - `apps/deploy/analytics/collect`
       - `apps/deploy/analytics/dashboard`
       - `apps/deploy/deployments`
@@ -11770,6 +11819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/song-index`
+          - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `database/live-state-snapshot`
           - `debug/slow-ops`
@@ -11881,6 +11931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `View`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/video-availability`
           - `conversations/agents`
           - `database`
           - `database/change-feed`
@@ -12087,6 +12138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/song-index`
+          - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `backup`
           - `conversations/conversation-category`
@@ -12114,6 +12166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/video-availability`
           - `conversations/session-chain`
           - `page/links`
           - `tasks/tasks-core`
@@ -17270,6 +17323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/chord/song-index`
+          - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history`
@@ -28246,6 +28300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/chord/song-index`
+          - `apps/chord/video-availability`
           - `apps/deploy/deployments`
           - `apps/deploy/remote-deploy`
           - `apps/events/refresh`

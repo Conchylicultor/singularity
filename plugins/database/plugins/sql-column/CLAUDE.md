@@ -270,6 +270,7 @@ hand-written jsonb columns, where the rule closes).
 - Cross-plugin:
   - Imported by:
     - `apps/chord/song-index`
+    - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
     - `backup`
     - `conversations/conversation-category`

@@ -13,109 +13,30 @@
 //   ./singularity run plugins/apps/plugins/chord/plugins/song-index/e2e/song-index-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
 //
 // Mutates server state: records the request row and may start a load.
-//
-// The status is read by polling its resource over HTTP (`waitFor`): this script
-// has no browser session to subscribe with, and the harness offers no push wait.
 
 import {
-  agentFetch,
   numArg,
   report,
-  waitFor,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
-  IndexStatusSchema,
-  LoopCandidateSchema,
-  NextChordCountSchema,
-  chordTokenFromParts,
-  type ChordToken,
-  type IndexStatus,
-} from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import { z } from "zod";
+  FindResponseSchema,
+  NextResponseSchema,
+  ensureReady,
+  major,
+  minor,
+  postJson,
+} from "./flows";
 
 const r = report("chord song index");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;
 
-async function postJson(path: string, body?: unknown): Promise<unknown> {
-  const res = await agentFetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!res.ok)
-    throw new Error(`POST ${path} → HTTP ${res.status}: ${await res.text()}`);
-  return res.json();
-}
-
-async function readStatus(): Promise<IndexStatus> {
-  const res = await agentFetch("/api/resources/chord.index-status");
-  if (!res.ok)
-    throw new Error(
-      `GET /api/resources/chord.index-status → HTTP ${res.status}`,
-    );
-  const { value } = z.object({ value: z.unknown() }).parse(await res.json());
-  return IndexStatusSchema.parse(value);
-}
-
-const FindResponseSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("not-ready"), status: IndexStatusSchema }),
-  z.object({
-    kind: z.literal("ready"),
-    candidates: z.array(LoopCandidateSchema),
-  }),
-]);
-const NextResponseSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("not-ready"), status: IndexStatusSchema }),
-  z.object({
-    kind: z.literal("ready"),
-    nextChords: z.array(NextChordCountSchema),
-  }),
-]);
-
-const major = (root: number): ChordToken =>
-  chordTokenFromParts({ root, intervals: [4, 3], inversion: 0 });
-const minor = (root: number): ChordToken =>
-  chordTokenFromParts({ root, intervals: [3, 4], inversion: 0 });
 const I = major(0);
 const IV = major(5);
 const V = major(7);
 
 // ── 1. ensure → ready ────────────────────────────────────────────────────────
 
-const opened = IndexStatusSchema.parse(
-  await postJson("/api/chord/index/ensure"),
-);
-r.note(`ensure answered ${JSON.stringify(opened)}`);
-r.ok(
-  "ensure records the request",
-  opened.kind !== "not-requested",
-  JSON.stringify(opened),
-);
-
-let lastPhase = "";
-const settled = await waitFor(
-  async () => {
-    const status = await readStatus();
-    const phase =
-      status.kind === "loading"
-        ? `${status.phase} ${status.done ?? "-"}/${status.total ?? "-"}`
-        : status.kind;
-    if (phase !== lastPhase) r.note(`status: ${phase}`);
-    lastPhase = phase;
-    return status;
-  },
-  (status) => status.kind === "ready" || status.kind === "failed",
-  { timeoutMs, intervalMs: 2_000 },
-);
-r.ok(
-  "the index reaches ready",
-  settled.value.kind === "ready",
-  `${JSON.stringify(settled.value)} after ${Math.round(settled.waitedMs / 1000)} s`,
-);
-if (settled.value.kind !== "ready") await r.finish();
-r.note(
-  `ready: ${JSON.stringify(settled.value)} (waited ${Math.round(settled.waitedMs / 1000)} s)`,
-);
+await ensureReady(r, timeoutMs);
 
 // ── 2. find {I, IV, V} ∋ IV, major ───────────────────────────────────────────
 

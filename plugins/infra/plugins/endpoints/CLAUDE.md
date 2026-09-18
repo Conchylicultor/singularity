@@ -216,6 +216,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/chord/song-index`
+    - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deploy-history`

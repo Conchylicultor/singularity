@@ -4,6 +4,7 @@ import {
   HookpadModeSchema,
   TheorytabSectionIdSchema,
 } from "@plugins/integrations/plugins/hooktheory/core";
+import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { AlignmentSchema } from "./beat-time";
 import { CHORD_FEATURES } from "./features";
 import { IndexStatusSchema } from "./index-status";
@@ -56,6 +57,12 @@ export const LoopCandidateSchema = z.object({
   videoId: z.string(),
   /** From the dump, when it knew it. A video-fraction alignment needs it (or the player's). */
   videoDurationSeconds: z.number().nullable(),
+  /**
+   * What is known about the video, as of this answer: `ok` (checked, it plays)
+   * or `unknown` (nobody could tell yet). Never `gone` or `not-embeddable` —
+   * `find` leaves those out.
+   */
+  videoStatus: VideoStatusSchema,
   alignment: AlignmentSchema,
   window: LoopWindowFieldsSchema,
   /** The section's chords overlapping the window (one ringing in from before counts), in beat order. */

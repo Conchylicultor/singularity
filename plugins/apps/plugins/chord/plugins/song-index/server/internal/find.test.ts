@@ -8,7 +8,12 @@ import {
   deriveSection,
 } from "../../core";
 import { chord, section, windowsOf } from "../../core/test-sections";
-import { chordsInWindow, findLoopsWhere, nextChordsQuery } from "./find";
+import {
+  chordsInWindow,
+  findLoopsWhere,
+  nextChordsQuery,
+  playableVideoWhere,
+} from "./find";
 
 const dialect = new PgDialect();
 const I = "0:4-3/0";
@@ -62,6 +67,28 @@ describe("findLoopsWhere", () => {
     });
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["target"]);
+  });
+});
+
+describe("playableVideoWhere", () => {
+  it("keeps a video with no status row, and leaves out the unplayable ones", () => {
+    // Fail open: a left-joined video nobody has checked has a NULL status and
+    // must stay offered. Only the statuses that cannot play are excluded.
+    const { sql, params } = dialect.sqlToQuery(playableVideoWhere());
+    expect(sql).toMatch(/is null or .* not in \(\$1, \$2\)/);
+    expect(params).toEqual(["gone", "not-embeddable"]);
+  });
+
+  it("is not part of the windows-only WHERE", () => {
+    // `findLoopsWhere` is the set `nextChordsQuery` counts, which deliberately
+    // ignores the videos; it must stand on the windows table alone.
+    const body = FindLoopsBodySchema.parse({
+      unlocked: [I, IV],
+      target: I,
+      limit: 10,
+    });
+    const { sql } = dialect.sqlToQuery(findLoopsWhere(body));
+    expect(sql).not.toContain("status");
   });
 });
 

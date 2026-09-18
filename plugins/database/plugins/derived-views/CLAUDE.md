@@ -105,6 +105,7 @@ and re-export it from `core/index.ts`. See
     - `View`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/video-availability`
     - `conversations/agents`
     - `database`
     - `database/change-feed`

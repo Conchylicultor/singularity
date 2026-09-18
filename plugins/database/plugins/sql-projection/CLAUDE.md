@@ -173,6 +173,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
 - Description: Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/video-availability`
     - `conversations/session-chain`
     - `page/links`
     - `tasks/tasks-core`

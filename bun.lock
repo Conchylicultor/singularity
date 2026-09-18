@@ -249,6 +249,10 @@
         "@streamparser/json": "^0.0.26",
       },
     },
+    "plugins/apps/plugins/chord/plugins/video-availability": {
+      "name": "@singularity/plugin-apps-chord-video-availability",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/debug": {
       "name": "@singularity/plugin-apps-debug",
       "version": "0.0.1",
@@ -6102,6 +6106,8 @@
     "@singularity/plugin-apps-chord-shell": ["@singularity/plugin-apps-chord-shell@workspace:plugins/apps/plugins/chord/plugins/shell"],
 
     "@singularity/plugin-apps-chord-song-index": ["@singularity/plugin-apps-chord-song-index@workspace:plugins/apps/plugins/chord/plugins/song-index"],
+
+    "@singularity/plugin-apps-chord-video-availability": ["@singularity/plugin-apps-chord-video-availability@workspace:plugins/apps/plugins/chord/plugins/video-availability"],
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 

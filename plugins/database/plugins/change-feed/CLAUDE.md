@@ -161,6 +161,7 @@ silent socket is still not detected; that needs a heartbeat.
 - Cross-plugin:
   - Imported by:
     - `apps/chord/song-index`
+    - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
     - `database/live-state-snapshot`
     - `debug/slow-ops`

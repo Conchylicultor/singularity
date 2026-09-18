@@ -5,13 +5,23 @@ import {
   arrayOverlaps,
   eq,
   inArray,
+  isNull,
   not,
   notInArray,
+  or,
   sql,
   type SQL,
 } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  UNPLAYABLE_STATUSES,
+  type VideoStatus,
+} from "@plugins/apps/plugins/chord/plugins/video-availability/core";
+import {
+  chordVideoStatus,
+  ensureVideoStatus,
+} from "@plugins/apps/plugins/chord/plugins/video-availability/server";
 import {
   LoopWindowFieldsSchema,
   NextChordCountSchema,
@@ -35,7 +45,13 @@ import { _chordLoopWindows, _chordSections } from "./tables";
 const w = _chordLoopWindows;
 const s = _chordSections;
 
-/** The WHERE of `findLoopWindows`, built apart so its SQL can be checked without a database. */
+/**
+ * The WHERE of `findLoopWindows` over the windows, built apart so its SQL can
+ * be checked without a database. The video's condition is `playableVideoWhere`,
+ * kept out of this one because it needs the sections and the video status
+ * joined: this one stands on the windows table alone, and it is exactly the
+ * set `nextChordsQuery` counts (see why that count ignores the videos there).
+ */
 export function findLoopsWhere(body: FindLoopsBody): SQL {
   const conditions: SQL[] = [
     eq(w.shape, body.shape),
@@ -58,6 +74,37 @@ export function findLoopsWhere(body: FindLoopsBody): SQL {
 }
 
 /**
+ * The video's part of `findLoopWindows`' WHERE: leave out a video already known
+ * to be unplayable.
+ *
+ * **Left join, fail open.** A video nobody has looked at has no status row, and
+ * it is offered: that is the point — `findLoopWindows` checks it on demand a
+ * moment later, and an unreachable YouTube must never empty the trainer. Only a
+ * status that says the video cannot play removes it here.
+ */
+export function playableVideoWhere(): SQL {
+  const where = or(
+    isNull(chordVideoStatus.status),
+    notInArray(chordVideoStatus.status, [...UNPLAYABLE_STATUSES]),
+  );
+  if (where === undefined)
+    throw new Error("unreachable: playableVideoWhere always has conditions");
+  return where;
+}
+
+const isPlayable = (status: VideoStatus): boolean =>
+  !UNPLAYABLE_STATUSES.some((unplayable) => unplayable === status);
+
+/**
+ * Rows the query fetches per candidate asked for. About 1 video in 6 in the
+ * dump cannot play (measured on 720 ids, 2026-09-17/18), and on a cold index
+ * the query cannot know which: the check runs after it. Three times the limit
+ * still leaves `limit` survivors when two in three turn out dead — four times
+ * the measured rate.
+ */
+const CANDIDATE_OVERFETCH = 3;
+
+/**
  * The section's chords the window sounds, in beat order.
  *
  * The overlap rule is `chordOverlapsWindow`, the same call the window's
@@ -76,7 +123,20 @@ export function chordsInWindow(
     .map(expandChord);
 }
 
-/** Random windows whose chords are all unlocked and include the target, with what the trainer needs to play them. */
+/**
+ * Random windows whose chords are all unlocked and include the target, with
+ * what the trainer needs to play them — on a video not known to be unplayable.
+ *
+ * Three steps: the query leaves out the videos already known dead and fetches
+ * `limit * CANDIDATE_OVERFETCH` rows; one wave of checks (`ensureVideoStatus`)
+ * settles the videos nobody has looked at recently; the ones that just came
+ * back dead are dropped, and at most `limit` survivors are returned.
+ *
+ * **Fewer than `limit` is a legal answer**, and there is deliberately no second
+ * query to top it up: `limit` has always meant "at most", the trainer asks for
+ * a small batch often, and a retry loop would put a chain of oEmbed waves in
+ * front of a read that has to answer in tens of milliseconds.
+ */
 export async function findLoopWindows(
   body: FindLoopsBody,
 ): Promise<LoopCandidate[]> {
@@ -112,15 +172,18 @@ export async function findLoopWindows(
     })
     .from(w)
     .innerJoin(s, eq(s.id, w.sectionId))
-    .where(findLoopsWhere(body))
+    // Joined to filter only. The status a candidate carries comes from the
+    // check wave below, which is never staler than this row.
+    .leftJoin(chordVideoStatus, eq(chordVideoStatus.videoId, s.videoId))
+    .where(and(findLoopsWhere(body), playableVideoWhere()))
     // A random pick of the matching windows, sorted after the GIN index has cut
     // them down — never a sort of the table. Measured 2026-09-17 on the full
     // index (183,270 windows), 100 random unlocked sets over HTTP: p95 31 ms,
     // inside the < 50 ms target, so the sort stays.
     .orderBy(sql`random()`)
-    .limit(body.limit);
+    .limit(body.limit * CANDIDATE_OVERFETCH);
 
-  return rows.map(({ window, chords, ...section }) => {
+  const candidates = rows.map(({ window, chords, ...section }) => {
     if (section.videoId === null) {
       throw new Error(
         `section ${section.sectionId} has loop windows but no video — a load wrote windows for an unloopable section`,
@@ -135,12 +198,41 @@ export async function findLoopWindows(
       chords: chordsInWindow(chords, window),
     };
   });
+
+  // One wave over every fetched video, never a loop: a failed or timed-out
+  // check comes back `unknown`, which keeps the candidate.
+  const statuses = await ensureVideoStatus([
+    ...new Set(candidates.map((c) => c.videoId)),
+  ]);
+  const playable: LoopCandidate[] = [];
+  for (const candidate of candidates) {
+    const videoStatus = statuses.get(candidate.videoId);
+    if (videoStatus === undefined) {
+      throw new Error(
+        `ensureVideoStatus returned no status for video ${candidate.videoId}, one of the ids it was given`,
+      );
+    }
+    if (!isPlayable(videoStatus)) continue;
+    playable.push({ ...candidate, videoStatus });
+    if (playable.length === body.limit) break;
+  }
+  return playable;
 }
 
 /**
  * The query behind `countLoopsByNextChord`: for every window of the shape (and
  * modes), its distinct chords outside the unlocked set; a window with exactly
  * one counts for that chord.
+ *
+ * **It counts windows on dead videos too, deliberately.** `find` leaves out a
+ * video known to be unplayable; this does not, so the two disagree by the
+ * windows on those videos. The number only RANKS chords ("which one next"), and
+ * the ~17 % of windows on dead videos falls roughly evenly across chords, so the
+ * ranking barely moves. With videos checked on demand, most are `unknown`
+ * anyway: the filter would remove almost nothing, for a join to the sections and
+ * the video status over the 183k windows. If this count ever becomes a promise
+ * the user reads ("unlock vi for 1,542 songs"), it needs that join AND a swept
+ * corpus, so the statuses it filters on are known — one change, not this one.
  *
  * **Every window of the shape, with no overlap prefilter.** A window that
  * shares nothing with the unlocked set still counts when it has one distinct
