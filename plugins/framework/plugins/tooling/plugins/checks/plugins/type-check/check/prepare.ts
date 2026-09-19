@@ -1,8 +1,8 @@
 // Everything type-check does that reads file bytes or walks the tree, before and
-// after the per-target tsc workers: the import graph, the closure fingerprints,
-// each tsconfig's include-expansion, lint ownership and the coverage gate, the
-// closure-cache lookups, the warm-base materialize, the program keys — and,
-// once the workers are back, every record.
+// after the tsc worker: the import graph, the closure fingerprints, the
+// tsconfig's include-expansion and the coverage gate, the closure-cache lookups,
+// the warm-base materialize, the program key — and, once the worker is back,
+// every record.
 //
 // It is 70–130 s of SYNCHRONOUS work, and it used to run on the check runner's
 // own thread. `./singularity check` runs every selected check concurrently in
@@ -19,27 +19,26 @@
 //
 // ONE session per run, in two phases, because the record phase needs state the
 // prepare phase built: the closure fingerprint of every file sent to lint, the
-// key of every skipped target, and above all `keyCtx.contentHash`, the memo the
+// program key when it skipped, and above all `keyCtx.contentHash`, the memo the
 // post-run key recompute reuses. Keeping that memo in memory is what keeps the
 // recorded program key exactly what it was when this all ran in one function.
 //
 // The three orderings `../CLAUDE.md` calls load-bearing all live inside this
-// one module, in the order they always ran: keys AFTER `materializeWarmBase`;
-// the skip clause AFTER `lintByTarget` is built; a PASS recorded from the
+// one module, in the order they always ran: the key AFTER `materializeWarmBase`;
+// the skip clause AFTER `lintFiles` is built; a PASS recorded from the
 // buildinfo the worker WROTE, through the same `keyCtx`.
 
 import { join, relative } from "path";
 import ts from "typescript";
 import {
-  discoverTscTargets,
+  repoProgram,
   tsBuildInfoPath,
   materializeWarmBase,
   publishWarmBase,
   realGitFacts,
   type ContentHashMemo,
-  type TscTarget,
+  type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { tsconfigPathOf } from "../core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints, type TreeListing } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
@@ -58,24 +57,17 @@ export interface PrepareInput {
    */
   listing: TreeListing;
   /**
-   * `ctx.cacheEnabled !== false`. Disarms the per-target SKIP, never the
-   * record: someone forcing a real run wants every program rebuilt, and the
-   * pass it produces is still a good fact to keep.
+   * `ctx.cacheEnabled !== false`. Disarms the SKIP, never the record: someone
+   * forcing a real run wants the program rebuilt, and the pass it produces is
+   * still a good fact to keep.
    */
   cacheEnabled: boolean;
-}
-
-/** A target as the runner needs it to spawn its worker. */
-export interface PlannedTarget {
-  name: string;
-  /** Absolute path of the tsconfig the worker builds (`-p <file>`, else `tsconfig.json`). */
-  tsconfigPath: string;
 }
 
 /**
  * What the runner does next. Plain data — it crosses the thread boundary.
  *
- * `uncovered` is the coverage gate: some lintable file belongs to no tsconfig
+ * `uncovered` is the coverage gate: some lintable file is not a root of the
  * program, so there is nothing to run and nothing to record. It is returned
  * before any cache is opened.
  */
@@ -83,25 +75,24 @@ export type Plan =
   | { kind: "uncovered"; uncovered: string[] }
   | {
       kind: "run";
-      /** Every discovered target, in discovery order (the cost lines follow it). */
-      targets: PlannedTarget[];
-      /** Names of the targets whose worker must run. */
-      toRun: string[];
-      /** Absolute paths of the files each target's worker must lint. */
-      lintByTarget: Record<string, string[]>;
-      /** Targets whose program key is already recorded green. Sorted. */
-      skipped: string[];
-      /** `<target>: <why>` for every target that could not be keyed. */
-      unkeyed: string[];
-      /** One transcript line per target saying which incremental base it starts from. */
-      warmBase: string[];
-      /** What computing the program keys cost, rounded. */
+      /** The program the worker builds. */
+      program: TscProgram;
+      /** Whether the worker must run at all (false = the program is unchanged). */
+      run: boolean;
+      /** Absolute paths of the files the worker must lint. */
+      lintFiles: string[];
+      /** True iff the program key is already recorded green (so `run` is false). */
+      skipped: boolean;
+      /** Why the program could not be keyed at all, when it could not. */
+      unkeyed?: string;
+      /** The transcript line saying which incremental base this run starts from. */
+      warmBase: string;
+      /** What computing the program key cost, rounded. */
       keysMs: number;
     };
 
-/** One worker that came back (a crashed worker has no outcome, and records nothing). */
-export interface TargetOutcome {
-  name: string;
+/** The worker that came back (a crashed worker has no outcome, and records nothing). */
+export interface ProgramOutcome {
   /** No tsc error, no lint violation, no failed lint file. */
   clean: boolean;
   /** Absolute paths, as the worker reports them. */
@@ -117,81 +108,56 @@ export type Preparation =
   | {
       plan: Extract<Plan, { kind: "run" }>;
       /**
-       * The record phase, in the order it always ran. Call once, with every
-       * outcome. Returns the transcript lines the run should log — today the
-       * warm-base publish summary, which is the only record step whose result
-       * the caller cannot see from anywhere else.
+       * The record phase, in the order it always ran. Call once, with the
+       * worker's outcome — or `undefined` when there is none, because the
+       * worker crashed or the program was skipped. Returns the transcript lines
+       * the run should log — today the warm-base publish summary, which is the
+       * only record step whose result the caller cannot see from anywhere else.
        */
-      finalize(outcomes: TargetOutcome[]): Promise<string[]>;
+      finalize(outcome: ProgramOutcome | undefined): Promise<string[]>;
     };
 
 const toRel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
 
 /**
- * Each target's tsconfig include-expansion — the ROOTS of its program — parsed
- * once and shared, because two things need it: the lint-ownership walk below
- * starts from them, and a target's program key is partly "which roots is this".
+ * The program's include-expansion — its ROOTS — or the reason there is none.
  *
- * A target whose tsconfig will not parse is simply ABSENT from the map, never
- * present with an empty list: the broken tsconfig surfaces as a tsc error in
- * that target's own worker, and absent is what stops a program key being minted
- * for a program we could not describe.
+ * Two things need it: the coverage gate is `lintable − roots`, and half of what
+ * the program key says is "which roots is this".
+ *
+ * A tsconfig that will not parse is its own arm rather than an empty root list,
+ * and the difference is load-bearing in both directions. An empty list would
+ * make the coverage gate report EVERY lintable file as orphaned — a wall of
+ * noise for one broken JSON file — and it would mint a program key for a
+ * program we could not describe. The `unparsed` arm instead skips the gate and
+ * the key and lets the worker run, where tsc reports the broken config as the
+ * one diagnostic it is.
  */
-function parseTargetRoots(targets: TscTarget[]): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  for (const t of targets) {
-    const cfgPath = tsconfigPathOf(t);
-    const cfg = ts.readConfigFile(cfgPath, ts.sys.readFile);
-    if (cfg.error) continue;
-    const parsed = ts.parseJsonConfigFileContent(
-      cfg.config,
-      ts.sys,
-      t.dir,
-      undefined,
-      cfgPath,
-    );
-    out.set(
-      t.name,
-      parsed.fileNames.map((f) => ts.sys.resolvePath(f)),
-    );
-  }
-  return out;
-}
+type ProgramRoots =
+  { kind: "roots"; roots: string[] } | { kind: "unparsed"; why: string };
 
-/**
- * Assign every lintable file to exactly one target's program for linting.
- * Program membership = include-root files + their forward-import closure, so a
- * reachable-but-not-included file (e.g. a plugin-root config) is owned by the
- * program that actually contains it. `web-core` is processed first so files
- * shared across runtimes (`core`/`shared`) are linted under the same program
- * typescript-eslint's projectService picks for them today (the first matching
- * reference in the root tsconfig), keeping the editor and the check in lockstep.
- */
-function computeOwnership(
-  root: string,
-  targets: TscTarget[],
-  targetRoots: Map<string, string[]>,
-  forward: Map<string, Set<string>>,
-  lintable: Set<string>,
-): Map<string, string> {
-  const order = [...targets].sort((a, b) =>
-    a.name === "web-core" ? -1 : b.name === "web-core" ? 1 : 0,
-  );
-  const owner = new Map<string, string>();
-  for (const t of order) {
-    const stack = (targetRoots.get(t.name) ?? [])
-      .map((f) => toRel(root, f))
-      .filter((r) => lintable.has(r));
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (!lintable.has(cur) || owner.has(cur)) continue;
-      owner.set(cur, t.name);
-      const fwd = forward.get(cur);
-      if (fwd) for (const dep of fwd) if (!owner.has(dep)) stack.push(dep);
-    }
+function parseProgramRoots(program: TscProgram): ProgramRoots {
+  const cfg = ts.readConfigFile(program.tsconfigPath, ts.sys.readFile);
+  if (cfg.error) {
+    return {
+      kind: "unparsed",
+      why: ts.flattenDiagnosticMessageText(cfg.error.messageText, " "),
+    };
   }
-  return owner;
+  const parsed = ts.parseJsonConfigFileContent(
+    cfg.config,
+    ts.sys,
+    // The config's own directory: every `include` / `exclude` pattern in it is
+    // relative to the file, and the repo tsconfig sits at the repo root.
+    join(program.tsconfigPath, ".."),
+    undefined,
+    program.tsconfigPath,
+  );
+  return {
+    kind: "roots",
+    roots: parsed.fileNames.map((f) => ts.sys.resolvePath(f)),
+  };
 }
 
 /** Prepare one run: the plan, and the session its record phase closes over. */
@@ -200,211 +166,175 @@ export function openPreparation({
   cacheEnabled,
 }: PrepareInput): Preparation {
   const { root } = listing;
-  const targets = discoverTscTargets(root);
+  const program = repoProgram(root);
 
   // Lint universe + per-file closure fingerprints (the warm-path file filter).
   // A FILTER over the listing, never its own walk: that second enumeration is
   // what let a stray `.ts` under gitignored `.cache/` reach the coverage gate
   // and fail a build over content the key never covered.
   const graphs = buildImportGraphs(listing);
-  const lintable = new Set(graphs.files);
   const { perFile } = computeClosureFingerprints(listing, graphs, graphs.files);
 
-  // Assign every lintable file to one program; assert full coverage (the
-  // load-bearing gate that replaces projectService's "every file resolves to
-  // a project"). An unowned file would never be linted — fail loudly.
-  const targetRoots = parseTargetRoots(targets);
-  const owner = computeOwnership(
-    root,
-    targets,
-    targetRoots,
-    graphs.forward,
-    lintable,
-  );
-  const uncovered = graphs.files.filter((f) => !owner.has(f));
-  if (uncovered.length > 0) return { plan: { kind: "uncovered", uncovered } };
+  // THE COVERAGE GATE — the load-bearing replacement for projectService's
+  // "every file resolves to a project". It used to need a forward-import
+  // closure walk from each target's roots, because a file could legitimately be
+  // outside every `include` yet reachable from one. Under a blanket include
+  // that case is gone: a lintable file that is not a root is by definition
+  // outside `include` (a stray `scripts/x.ts` at the repo root), which is
+  // exactly what must fail. So the gate is now set subtraction.
+  const rootsResult = parseProgramRoots(program);
+  if (rootsResult.kind === "roots") {
+    const roots = new Set(rootsResult.roots.map((abs) => toRel(root, abs)));
+    const uncovered = graphs.files.filter((f) => !roots.has(f));
+    if (uncovered.length > 0) return { plan: { kind: "uncovered", uncovered } };
+  }
 
   // Closure cache: lint only files whose import closure changed since the last
-  // recorded PASS. tsc still runs for every target regardless.
+  // recorded PASS. tsc still runs regardless.
   const cache = openClosureCache();
-  const lintByTarget = new Map<string, string[]>();
+  const lintFiles: string[] = [];
   for (const rel of graphs.files) {
     const fp = perFile.get(rel);
     if (fp && cache.has(rel, fp)) continue; // unchanged closure → already linted
-    const t = owner.get(rel)!;
-    let bucket = lintByTarget.get(t);
-    if (!bucket) lintByTarget.set(t, (bucket = []));
-    bucket.push(join(root, rel));
+    lintFiles.push(join(root, rel));
   }
 
-  // Pick each target's incremental base: the pooled entry whose recorded file
-  // contents best match this tree, or the local base when nothing beats it.
-  // That is what makes a FRESH worktree warm — its tree is a main commit's
-  // tree, and the base that fits it is the one the last-merged agent published,
-  // which "newest wins" evicted within minutes. See `checks/core/warm-base.ts`.
+  // Pick the incremental base: the pooled entry whose recorded file contents
+  // best match this tree, or the local base when nothing beats it. That is what
+  // makes a FRESH worktree warm — its tree is a main commit's tree, and the base
+  // that fits it is the one the last-merged agent published, which "newest wins"
+  // evicted within minutes. See `checks/core/warm-base.ts`.
   //
   // ONE memo for the whole run, created here: the scoring hashes most of the
-  // files the program keys are about to hash, so sharing it both halves the
+  // files the program key is about to hash, so sharing it both halves the
   // reads and guarantees the two steps saw the same tree.
   const contentHash: ContentHashMemo = new Map();
-  const warmBase = targets.map((t) =>
-    materializeWarmBase(root, t.name, contentHash),
-  );
+  const warmBase = materializeWarmBase(root, program.name, contentHash);
 
-  // PER-TARGET SKIP. An outer-cache MISS used to rebuild all seven programs
-  // even when the edit could not possibly reach five of them; the same file
-  // was checked 3.7 times per miss. A target's program key says "this exact
-  // program — these roots, this content, these options — passed before", and a
-  // target whose key is already recorded green has nothing left to compute.
+  // THE SKIP. An outer-cache MISS rebuilds the program even when the edit
+  // cannot have changed it. The program key says "this exact program — these
+  // roots, this content, these options — passed before", and a program whose
+  // key is already recorded green has nothing left to compute.
   //
   // Computed AFTER `materializeWarmBase`, because the enumeration of the
   // program comes out of the `.tsbuildinfo` on disk: a fresh worktree that
   // just pulled a sibling's base can skip on its very first run.
   //
-  // The `lintByTarget` clause is load-bearing, and so is its ORDERING. If the
+  // The `lintFiles` clause is load-bearing, and so is its ORDERING. If the
   // per-file closure cache has evicted a file's lint PASS, that file must be
-  // re-linted, and only its target's worker can do it — so a non-empty lint
-  // bucket defeats the skip. Reading it before `lintByTarget` was built would
-  // silently make that clause always true.
+  // re-linted, and only the worker can do it — so a non-empty lint list defeats
+  // the skip. Reading it before `lintFiles` was built would silently make that
+  // clause always true.
   //
   // `--no-cache` disarms the SKIP but not the RECORD: someone forcing a real
-  // run wants every program rebuilt, and the pass it produces is still a
+  // run wants the program rebuilt, and the pass it produces is still a
   // perfectly good fact to keep.
   const keyStart = performance.now();
   const keyCtx = openProgramKeyContext(listing, contentHash);
   const passes = openProgramPasses();
-  const keyByTarget = new Map<string, string>();
-  const skipped = new Set<string>();
-  const unkeyed: string[] = [];
-  for (const t of targets) {
-    const roots = targetRoots.get(t.name);
-    if (roots === undefined) {
-      unkeyed.push(`${t.name}: tsconfig did not parse`);
-      continue; // its own worker reports the broken tsconfig
-    }
+  const buildInfoPath = tsBuildInfoPath(root, program.name);
+  let key: string | undefined;
+  let unkeyed: string | undefined;
+  if (rootsResult.kind === "unparsed") {
+    unkeyed = `tsconfig did not parse: ${rootsResult.why}`;
+  } else {
     const result = programKey(
       keyCtx,
-      {
-        name: t.name,
-        tsconfigPath: tsconfigPathOf(t),
-        buildInfoPath: tsBuildInfoPath(root, t.name),
-      },
-      roots,
+      { tsconfigPath: program.tsconfigPath, buildInfoPath },
+      rootsResult.roots,
     );
-    if (result.kind !== "key") {
-      unkeyed.push(`${t.name}: ${result.why}`);
-      continue; // no enumeration → cold run, then recorded below
-    }
-    keyByTarget.set(t.name, result.key);
-    if (
-      cacheEnabled &&
-      passes.has(t.name, result.key) &&
-      (lintByTarget.get(t.name) ?? []).length === 0
-    ) {
-      skipped.add(t.name);
-    }
+    if (result.kind === "key") key = result.key;
+    else unkeyed = result.why; // no enumeration → cold run, then recorded below
   }
+  const skipped =
+    key !== undefined &&
+    cacheEnabled &&
+    passes.has(program.name, key) &&
+    lintFiles.length === 0;
   const keysMs = Math.round(performance.now() - keyStart);
 
   const plan: Extract<Plan, { kind: "run" }> = {
     kind: "run",
-    targets: targets.map((t) => ({
-      name: t.name,
-      tsconfigPath: tsconfigPathOf(t),
-    })),
-    toRun: targets.filter((t) => !skipped.has(t.name)).map((t) => t.name),
-    lintByTarget: Object.fromEntries(lintByTarget),
-    skipped: [...skipped].sort(),
-    unkeyed,
-    warmBase: warmBase.map((o) => o.line),
+    program,
+    run: !skipped,
+    lintFiles,
+    skipped,
+    ...(unkeyed !== undefined ? { unkeyed } : {}),
+    warmBase: warmBase.line,
     keysMs,
   };
 
-  async function finalize(outcomes: TargetOutcome[]): Promise<string[]> {
-    // Publish each worker's buildinfo as a warm base for whoever runs next.
+  async function finalize(
+    outcome: ProgramOutcome | undefined,
+  ): Promise<string[]> {
+    // Publish the worker's buildinfo as a warm base for whoever runs next.
     // Publish even when the check FAILED with diagnostics: the buildinfo records
     // program STATE, which is valid regardless of the verdict — a run that found
-    // type errors is still a perfectly good incremental base. `outcomes` holds
-    // only workers that returned, so a crashed target is already excluded
-    // here, which is what we want: a crashed worker may have left torn state.
+    // type errors is still a perfectly good incremental base. `outcome` is
+    // absent when the worker crashed or never ran, and a crashed worker may
+    // have left torn state, so nothing is published then.
     //
-    // HEAD is read ONCE, not once per target: it is the same answer eight times
-    // over, and it is the label that lets the pool's prune recognise these
-    // entries later as commits that reached `main` — the property that decides
-    // which base survives for the next fresh worktree. An unavailable HEAD
-    // publishes legacy unlabelled entries and SAYS so in the summary line,
-    // rather than dropping the fact on the floor.
-    const head = await realGitFacts.headSha(root);
-    const published = await Promise.all(
-      outcomes.map(async (o) => ({
-        name: o.name,
-        ...(await publishWarmBase(
-          root,
-          o.name,
-          head.ok ? head.value : undefined,
-        )),
-      })),
-    );
-    const live = published.filter((p) => p.published);
-    const protectedDetail = live
-      .filter((p) => p.protectedOnMain > 0)
-      .map((p) => `${p.name}: kept ${p.kept}, ${p.protectedOnMain} on main`);
-    const lines = [
-      `type-check: published ${live.length} warm bases ` +
-        (head.ok
-          ? `labelled ${head.value.slice(0, 12)}`
-          : `UNLABELLED (git: ${head.reason})`) +
-        (protectedDetail.length > 0 ? ` (${protectedDetail.join("; ")})` : ""),
-    ];
+    // HEAD is the label that lets the pool's prune recognise this entry later as
+    // a commit that reached `main` — the property that decides which base
+    // survives for the next fresh worktree. An unavailable HEAD publishes a
+    // legacy unlabelled entry and SAYS so in the summary line, rather than
+    // dropping the fact on the floor.
+    const lines: string[] = [];
+    if (outcome) {
+      const head = await realGitFacts.headSha(root);
+      const p = await publishWarmBase(
+        root,
+        program.name,
+        head.ok ? head.value : undefined,
+      );
+      lines.push(
+        `type-check: published ${p.published ? 1 : 0} warm base ` +
+          (head.ok
+            ? `labelled ${head.value.slice(0, 12)}`
+            : `UNLABELLED (git: ${head.reason})`) +
+          (p.protectedOnMain > 0
+            ? ` (kept ${p.kept}, ${p.protectedOnMain} on main)`
+            : ""),
+      );
+    }
 
     // Record per-file lint PASSes for every file we sent that did NOT fail.
     // (Conservative: a crashed worker records nothing — re-lints next time.)
-    for (const o of outcomes) {
-      const failed = new Set(o.failedLintFiles);
-      for (const abs of lintByTarget.get(o.name) ?? []) {
+    if (outcome) {
+      const failed = new Set(outcome.failedLintFiles);
+      for (const abs of lintFiles) {
         if (failed.has(abs)) continue;
         const fp = perFile.get(toRel(root, abs));
         if (fp) cache.record(toRel(root, abs), fp);
       }
     }
 
-    // Record a program PASS for every target whose worker came back completely
-    // clean. The key is RECOMPUTED from the buildinfo the worker just WROTE, so
-    // what is recorded describes the program that actually passed rather than
-    // the one predicted before it ran — on a cold target the two differ, since
-    // there was no enumeration to predict from at all.
+    // Record a program PASS when the worker came back completely clean. The key
+    // is RECOMPUTED from the buildinfo the worker just WROTE, so what is
+    // recorded describes the program that actually passed rather than the one
+    // predicted before it ran — on a cold run the two differ, since there was
+    // no enumeration to predict from at all.
     //
-    // Only fully-clean targets record. A tsc error obviously must not be
-    // recorded green; a lint failure need not block a TSC key, but keeping the
-    // rule "clean means clean" costs one re-run of a target that was failing
-    // anyway and leaves nothing to reason about later.
-    for (const o of outcomes) {
-      if (!o.clean) continue;
-      const target = targets.find((t) => t.name === o.name);
-      const roots = target && targetRoots.get(o.name);
-      if (!target || roots === undefined) continue;
+    // Only a fully-clean run records. A tsc error obviously must not be recorded
+    // green; a lint failure need not block a TSC key, but keeping the rule
+    // "clean means clean" costs one re-run of a program that was failing anyway
+    // and leaves nothing to reason about later.
+    if (outcome?.clean && rootsResult.kind === "roots") {
       const result = programKey(
         keyCtx,
-        {
-          name: o.name,
-          tsconfigPath: tsconfigPathOf(target),
-          buildInfoPath: tsBuildInfoPath(root, o.name),
-        },
-        roots,
+        { tsconfigPath: program.tsconfigPath, buildInfoPath },
+        rootsResult.roots,
       );
-      if (result.kind === "key") passes.record(o.name, result.key);
+      if (result.kind === "key") passes.record(program.name, result.key);
     }
 
-    // Re-record the key of every SKIPPED target. Not a new claim — it is the
+    // Re-record the key of a SKIPPED program. Not a new claim — it is the
     // identical key that was already green — but the store ages entries out by
-    // when they were last WRITTEN, so without this a target that skips
+    // when they were last WRITTEN, so without this a program that skips
     // successfully every day for a fortnight would be evicted for being unused
-    // and pay a cold run. One tiny write per skipped target turns the age bound
-    // into "unused for 14 days", which is what it was always meant to say.
-    for (const name of skipped) {
-      const key = keyByTarget.get(name);
-      if (key !== undefined) passes.record(name, key);
-    }
+    // and pay a cold run. One tiny write turns the age bound into "unused for
+    // 14 days", which is what it was always meant to say.
+    if (skipped && key !== undefined) passes.record(program.name, key);
 
     return lines;
   }

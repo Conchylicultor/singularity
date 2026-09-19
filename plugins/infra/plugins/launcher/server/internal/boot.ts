@@ -990,9 +990,12 @@ export function seedReleaseAssetMirror(opts: {
  * lockstep silently: the seed would land at the old path while the app read the
  * new one, and a released app would fall back to hardcoded schema defaults with
  * nothing to fail. Note `@plugins/config_v2/data-dirs` is safe to import here
- * where the config_v2 BARRELS are not — the launcher must type-check under the
- * DOM-free `tools` tsconfig, and a `data-dirs` module reaches `paths/core` and
- * nothing else.
+ * where the config_v2 BARRELS are not: a `data-dirs` module reaches `paths/core`
+ * and nothing else, while the barrels reach `fields/core` → React. The launcher
+ * boots a released app with no repo around it, so its import closure is kept
+ * deliberately small. Once a DOM-free `tools` tsconfig made that a compile
+ * error; the repo builds one full-lib program now, so it is intent to hold to
+ * (research/2026-09-18-global-type-check-one-program.md).
  *
  * The bundle's own `config-seed/config/` layout is the release CLI's staging
  * convention, unrelated to the data root, so it stays spelled out.

@@ -1,9 +1,9 @@
 /**
- * THE way to build a TypeScript program for a target and get a buildinfo out of
- * it. Both producers go through here — the `type-check` check's per-target fan
- * out and the build's `--skip-checks` fast path — so the compiler options, and
- * the declaration emit that gives every file in the buildinfo a real signature,
- * are written down once (`../shared/worker.ts`) and cannot drift apart.
+ * THE way to build a TypeScript program and get a buildinfo out of it. Both
+ * producers go through here — the `type-check` check and the build's
+ * `--skip-checks` fast path — so the compiler options, and the declaration emit
+ * that gives every file in the buildinfo a real signature, are written down
+ * once (`../shared/worker.ts`) and cannot drift apart.
  */
 import { writeFileSync } from "fs";
 import os from "os";
@@ -36,7 +36,7 @@ export interface TypeCheckWorkerRun {
 }
 
 /**
- * Run one target's worker to completion. Throws when the worker itself crashed
+ * Run the worker to completion. Throws when the worker itself crashed
  * (nonzero exit) — tsc diagnostics are a clean exit with a non-empty
  * `tscErrors`, never an exit code.
  *
@@ -66,8 +66,8 @@ export async function spawnTypeCheckWorker(opts: {
   const spawned = await spawnCaptured([process.execPath, WORKER, jobPath], {
     cwd: root,
     background,
-    // A type-check worker builds a whole TypeScript program; on a cold target
-    // that is minutes of unavoidable CPU, and on a saturated box (N agent
+    // A type-check worker builds a whole TypeScript program; cold, that is
+    // minutes of unavoidable CPU, and on a saturated box (N agent
     // fleets, all demoted to background QoS) it is longer still by an amount
     // nothing here can predict. There is no shorter deadline to borrow: the
     // human running `./singularity check` IS the deadline, and killing a worker

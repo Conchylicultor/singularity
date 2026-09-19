@@ -174,11 +174,28 @@ the returned `slots` in an in-process `createSemaphore(slots)`
   that would livelock two builds each holding one slot).
 - `grant.run(fn)` — spend one unit through the in-process semaphore. Every heavy
   child (a type-check worker, tsc, vite, the Chromium suite) goes through it.
+  `grant.run(fn, { units })` spends more than one — see *Weighted spend* below.
 - `grant.env()` — `{ SINGULARITY_HOST_GRANT, SINGULARITY_LANE }`, inherited by a
   subprocess child so its `inheritedGrant()` rebuilds the SAME budget and spends
   those units — acquiring NOTHING host-wide, because the parent holds the slots
   and the child is their only spender. This is what deletes the old
   `SINGULARITY_HOST_SLOT_HELD` / `kind: "exempt"` double-acquire dodge.
+
+### Weighted spend
+
+A unit is `PER_UNIT_BYTES` of resident memory, so a child that reliably peaks at
+several quanta must occupy several units — otherwise `B × PER_UNIT_BYTES` models a
+fleet that cannot exist. `grant.run(fn, { units })` occupies that many, atomically
+(`packages/semaphore` weights), and **clamps to `min(units, grant.units)`**: the
+grant is the ceiling, so a 1-unit inherited grant runs a 2-unit request at weight
+1 rather than waiting for capacity it will never be given — the same rule as "a
+reduced grant just runs the fleet at lower concurrency". Declaring more units than
+the grant holds is therefore legal and reads "as heavy as this grant can express".
+
+The weight is declared **where the cost is measured**, never here: `type-check/core`
+computes `ceil(TYPE_CHECK_WORKER_PEAK_BYTES / PER_UNIT_BYTES)` from its own
+transcript mean, so re-tuning the quantum reflows the weight and nothing in this
+plugin names a consumer.
 
 The obligation reaches checks through `CheckContext { grant }`
 (`framework/tooling/core`): the check runner passes the invoker's grant to every
@@ -242,6 +259,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Imported by:
     - `database/admin`
     - `debug/profiling/boot-bench`
+    - `framework/tooling/checks/type-check`
     - `infra/host/host-read-pool`
     - `infra/safe-fetch/browser-fetch`
     - `infra/worktree`

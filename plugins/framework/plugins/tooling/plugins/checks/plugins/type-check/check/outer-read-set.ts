@@ -25,8 +25,9 @@ import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
  *  (a) MEMBERSHIP of the type/config namespaces — glob facts over every `.ts` /
  *      `.tsx` (the lintable + tsc universe, incl. `.d.ts`) and every
  *      `tsconfig*.json`. This is the COVERAGE-GATE guard (hazard H3): a BRAND-NEW
- *      `.ts` — which the gate must FAIL if it maps to no tsconfig target — ADDS a
- *      member, so the glob match set changes → MISS → re-run → the gate fires.
+ *      `.ts` — which the gate must FAIL if it is not a root of the program —
+ *      ADDS a member, so the glob match set changes → MISS → re-run → the gate
+ *      fires.
  *      A content-only read-set records only files that already exist, so it would
  *      NOT see a new file and would stale-PASS the gate; the membership fact is
  *      what closes that hole. A new `tsconfig*.json` is caught the same way.

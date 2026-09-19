@@ -767,8 +767,10 @@ export async function runChecks(
               }
             }
           },
-          (waitMs) => {
-            queuedMs = waitMs;
+          {
+            onWait: (waitMs) => {
+              queuedMs = waitMs;
+            },
           },
         );
       }),

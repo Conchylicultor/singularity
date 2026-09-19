@@ -28,9 +28,9 @@
  * - `include: ["*.ts"]` (this folder's rule sources) — TypeScript refuses to
  *   parse a config whose input set is empty, and typescript-eslint reports that
  *   as "Unable to parse the specified 'tsconfig' file". The inputs are never
- *   compiled; only the options are read. Those files already belong to
- *   `tsconfig.tools.json`, which is what type-checks and lints them; nothing
- *   discovers this config but this test.
+ *   compiled; only the options are read. Those files already belong to the root
+ *   `tsconfig.json` — the repo's one program — which is what type-checks and
+ *   lints them; nothing discovers this config but this test.
  *
  * The first attempt was a small fixture project checked in beside this file
  * (`lint/fixtures/tsconfig.json` plus an empty `file.tsx` whose bytes the

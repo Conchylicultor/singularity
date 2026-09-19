@@ -22,12 +22,19 @@ import {
  * removal we perform is recorded, a `disappeared` line with no matching `in-app`
  * line *proves* an external actor instead of leaving it to be inferred.
  *
- * The channel is declared HERE, not in `infra/worktree`, for two reasons. It is
- * the dependency inversion the durable-signals accounting states (a CRUD
- * primitive must not name the observability stack), and concretely `infra/
- * worktree` is reached from the `tools` tsconfig target — declaring a durable
- * channel there drags `log-channels` → `endpoints` → DOM types into a program
- * whose `lib` is ES2023, breaking type-check for unrelated tooling.
+ * The channel is declared HERE, not in `infra/worktree`. That is the dependency
+ * inversion the durable-signals accounting states — a CRUD primitive must not
+ * name the observability stack — and it also keeps `infra/worktree`'s import
+ * closure small, which matters because build-time tooling reaches it: declaring
+ * a durable channel there would drag `log-channels` → `endpoints` into every
+ * script that touches a worktree.
+ *
+ * Nothing fails if that inversion is undone. It used to: `infra/worktree` was
+ * also compiled by a `tools` tsconfig whose `lib` withheld DOM, and the
+ * `endpoints` chain reaches DOM types. The repo builds one full-lib program now
+ * (research/2026-09-18-global-type-check-one-program.md), so this is design
+ * intent. If it needs enforcing, the rung is a `plugin-boundaries` deny rule,
+ * not a second tsconfig.
  */
 const log = defineLogSink({
   id: "worktree-removal",

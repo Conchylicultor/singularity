@@ -1,7 +1,8 @@
 /**
- * Per-target worker for the `type-check` check. Spawned once per tsconfig
- * target (own process, so the single-threaded TS-program build for each target
- * runs on its own core). It builds the program ONCE and drives both consumers:
+ * The worker process for the `type-check` check: one per run, in its own
+ * process, so the single-threaded TS-program build gets a core to itself and
+ * its peak RSS is measurable from outside. It builds the program ONCE and
+ * drives both consumers:
  *
  *   1. `tsc` semantic diagnostics (via the incremental builder, persisting the
  *      shared `.tsbuildinfo` so warm runs re-check only the diff);

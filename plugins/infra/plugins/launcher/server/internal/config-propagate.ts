@@ -22,12 +22,17 @@ import { dirname, join } from "node:path";
 
 /**
  * The `// @hash <digest>` header every propagated config document carries on
- * line 1. Read here rather than imported because the launcher must type-check
- * under the DOM-free `tools` tsconfig, where the `config_v2` barrels (which
- * reach `fields/core` → React types) are out of bounds — the same constraint
- * that makes `@plugins/config_v2/data-dirs` the one config_v2 module the
+ * line 1. Spelled here rather than imported to keep the launcher's import
+ * closure small: it boots a released app with no repo around it, so it must not
+ * pull in the `config_v2` barrels (which reach `fields/core` → React) — the same
+ * intent that makes `@plugins/config_v2/data-dirs` the one config_v2 module the
  * launcher may reach. The header grammar is an on-disk contract, identical in
  * both layers.
+ *
+ * That closure used to be enforced by a `tools` tsconfig whose `lib` withheld
+ * DOM, so a React type reaching here was a compile error. The repo builds one
+ * full-lib program now, so nothing fails if the closure grows — keep it small on
+ * purpose (research/2026-09-18-global-type-check-one-program.md).
  */
 const HASH_HEADER_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 

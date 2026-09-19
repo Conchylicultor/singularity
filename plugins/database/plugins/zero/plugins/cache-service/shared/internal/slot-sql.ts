@@ -1,10 +1,10 @@
 // Runtime-agnostic Zero replication-slot / publication cleanup SQL. Kept light
-// (no @plugins server imports, no DOM types) so BOTH the foreground supervisor
-// script `scripts/start.ts` (tools tsconfig, ES2023 lib, its own `pg` client)
-// AND the server helper `server/internal/slot-lifecycle.ts` (via the admin
-// pool) can share one implementation. Importing the admin SERVER barrel from a
-// script would pull the endpoints codec (BodyInit/FormData — DOM types) into the
-// no-DOM tools program; this seam avoids that by taking a plain query runner.
+// (no @plugins server imports) so BOTH the foreground supervisor script
+// `scripts/start.ts` (its own `pg` client) AND the server helper
+// `server/internal/slot-lifecycle.ts` (via the admin pool) can share one
+// implementation. Importing the admin SERVER barrel from a script would pull
+// the whole endpoints codec into a standalone supervisor; this seam avoids that
+// by taking a plain query runner.
 
 import {
   queryRows,

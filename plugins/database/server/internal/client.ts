@@ -328,9 +328,9 @@ export function installQueryWrapper(pool: Pool): void {
     // Context-less work (boot, migrations, `warmPool`, the change-feed listener)
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
     if (currentOriginClass() === "background") {
-      return backgroundQueryGate.run(runRetrying, (waitMs) =>
-        chargeWait("background-acquire", waitMs),
-      );
+      return backgroundQueryGate.run(runRetrying, {
+        onWait: (waitMs) => chargeWait("background-acquire", waitMs),
+      });
     }
     return runRetrying();
   }) as typeof pool.query;
@@ -367,9 +367,9 @@ export function installQueryWrapper(pool: Pool): void {
     if (currentOriginClass() !== "background") return origConnect();
 
     return (async (): Promise<PoolClient> => {
-      const releaseSlot = await backgroundTxGate.acquire((waitMs) =>
-        chargeWait("background-tx-acquire", waitMs),
-      );
+      const releaseSlot = await backgroundTxGate.acquire({
+        onWait: (waitMs) => chargeWait("background-tx-acquire", waitMs),
+      });
       let client: PoolClient;
       try {
         client = await origConnect();

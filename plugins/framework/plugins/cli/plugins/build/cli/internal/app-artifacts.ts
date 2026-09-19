@@ -10,16 +10,16 @@ import {
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
-  discoverTscTargets,
   materializeWarmBase,
   publishWarmBase,
   realGitFacts,
+  repoProgram,
   tsBuildInfoPath,
   type ContentHashMemo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   spawnTypeCheckWorker,
-  tsconfigPathOf,
+  TYPE_CHECK_WORKER_UNITS,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core";
 import {
   holdThroughValve,
@@ -582,13 +582,10 @@ export async function generateAppSources(opts: {
  * codegen-coupled obligations — e.g. a newly-reorderable slot that still owes an
  * authored override — fail at build instead of slipping silently to `push`.
  * Selected generically via the `alwaysRun` flag (never by naming a check).
- * Plus one incremental tsc per runtime entrypoint, since the full `typescript`
- * check (which covers them) did not run.
- *
- * NB the registry read (`discoverTscTargets`) happens HERE, when the job list is
- * built — i.e. before the host grant, not inside it. It is a cheap filesystem
- * scan that emits no span and no output; only the heavy work it describes runs
- * on the grant.
+ * Plus one incremental tsc over the repo's ONE TypeScript program, since the
+ * full `type-check` check (which covers it) did not run. It used to be one tsc
+ * per runtime entrypoint (server-core, central-core, cli) because there was a
+ * program per runtime; there is one program now, so there is one job.
  *
  * The check selection is NOT read here. It used to be — this function called
  * `listAllChecks()` and handed the resulting id list to `runChecks` — which was
@@ -652,92 +649,83 @@ export async function fastValidationJobs(opts: {
     };
   });
 
-  const tscTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
+  const program = repoProgram(root);
 
-  // Read ONCE for the whole fan-out, not once per target.
-  //
   // The memo is the file-content hashes the warm-base scoring compares against a
-  // candidate base's recorded versions; the same bytes answer for every target,
-  // so one map across the fan-out reads each file at most once. The sha labels
-  // every entry this build publishes, and it names the tree the build answered
-  // for — one commit, not one per target. Unavailable (detached, no git) means
-  // the entries publish unlabelled, which only makes them unprotectable at prune
-  // time; it is never a failure of the build.
+  // candidate base's recorded versions. The sha labels the entry this build
+  // publishes, and it names the tree the build answered for. Unavailable
+  // (detached, no git) means the entry publishes unlabelled, which only makes it
+  // unprotectable at prune time; it is never a failure of the build.
   const hashMemo: ContentHashMemo = new Map();
-  let headSha: string | undefined;
-  if (tscTargets.length > 0) {
-    const head = await realGitFacts.headSha(root);
-    headSha = head.ok ? head.value : undefined;
-  }
+  const head = await realGitFacts.headSha(root);
+  const headSha = head.ok ? head.value : undefined;
 
-  for (const target of tscTargets) {
-    jobs.push(async (grant) => {
-      const end = hooks.span(
-        `tsc:${target.name}`,
-        "build:validation",
-        `tsc ${target.name}`,
-      );
-      const start = performance.now();
-      const buildInfo = tsBuildInfoPath(root, target.name);
-      // Feed and read the same host-global warm-base pool the
-      // `type-check` check uses, so the fast path is not a second,
-      // divergent incremental lineage.
-      const warm = materializeWarmBase(root, target.name, hashMemo);
-      const lines: StepResult["lines"] = [
-        { text: warm.line, stream: "stdout" },
-      ];
-      // The SAME worker the `type-check` check runs — not a `tsc --noEmit` of
-      // our own. A buildinfo has exactly one producer, so the compiler options
-      // and the declaration emit that gives every file in it a real signature
-      // (the hash of its public shape) are written down in one place and the two
-      // producers cannot drift. That emit is the whole point: a `--noEmit` base
-      // stores a placeholder signature per file, so a body-only edit to a hub
-      // re-checks its entire importer closure — and publishing such a base into
-      // the shared pool inflicts that on whoever picks it up next.
-      //
-      // Spend a grant unit per worker — a heavy child — so the fast-path
-      // (--skip-checks) fan-out is bounded by the same grant as everything else.
-      const run = await grant.run(() =>
+  jobs.push(async (grant) => {
+    const end = hooks.span(
+      `tsc:${program.name}`,
+      "build:validation",
+      `tsc ${program.name}`,
+    );
+    const start = performance.now();
+    const buildInfo = tsBuildInfoPath(root, program.name);
+    // Feed and read the same host-global warm-base pool the `type-check` check
+    // uses, so the fast path is not a second, divergent incremental lineage.
+    const warm = materializeWarmBase(root, program.name, hashMemo);
+    const lines: StepResult["lines"] = [{ text: warm.line, stream: "stdout" }];
+    // The SAME worker the `type-check` check runs — not a `tsc --noEmit` of
+    // our own. A buildinfo has exactly one producer, so the compiler options
+    // and the declaration emit that gives every file in it a real signature
+    // (the hash of its public shape) are written down in one place and the two
+    // producers cannot drift. That emit is the whole point: a `--noEmit` base
+    // stores a placeholder signature per file, so a body-only edit to a hub
+    // re-checks its entire importer closure — and publishing such a base into
+    // the shared pool inflicts that on whoever picks it up next.
+    //
+    // Spend the same weight the check spends (`TYPE_CHECK_WORKER_UNITS`, from
+    // the measured peak of this very process) so the fast-path worker and the
+    // check's worker are admitted as the same size of thing.
+    const run = await grant.run(
+      () =>
         spawnTypeCheckWorker({
           root,
-          name: target.name,
-          tsconfigPath: tsconfigPathOf(target),
+          name: program.name,
+          tsconfigPath: program.tsconfigPath,
           buildInfoPath: buildInfo,
           // Type-checking only: linting belongs to the check pass this path is
           // skipping, and an empty list is what the worker reads as "none".
           lintFiles: [],
           background,
         }),
-      );
-      end({ maxRssBytes: run.maxRssBytes });
-      for (const line of run.result.tscErrors.split("\n")) {
-        if (line) lines.push({ text: line, stream: "stdout" });
-      }
-      // A worker that CRASHED threw out of `grant.run` above and takes this step
-      // down with it, so reaching here means the program built: diagnostics or
-      // not, its state is a usable base. Published only when clean, matching the
-      // pool's other producer's caution about state it cannot vouch for.
-      const success = run.result.tscErrors === "";
-      if (success) {
-        const p = await publishWarmBase(root, target.name, headSha);
-        lines.push({
-          text: p.published
-            ? `type-check: warm base ${target.name}: published ${p.labelled ? "labelled" : "unlabelled"}, pool keeps ${p.kept} (${p.protectedOnMain} on main)`
-            : `type-check: warm base ${target.name}: nothing to publish (no local buildinfo)`,
-          stream: "stdout",
-        });
-      }
-      const rss = maxRssLine(`tsc ${target.name}`, run.maxRssBytes);
-      if (rss) lines.push({ text: rss, stream: "stdout" });
-      return {
-        id: `tsc:${target.name}`,
-        label: `tsc ${target.name}`,
-        lines,
-        durationMs: Math.round(performance.now() - start),
-        success,
-      };
-    });
-  }
+      { units: TYPE_CHECK_WORKER_UNITS },
+    );
+    end({ maxRssBytes: run.maxRssBytes });
+    for (const line of run.result.tscErrors.split("\n")) {
+      if (line) lines.push({ text: line, stream: "stdout" });
+    }
+    // A worker that CRASHED threw out of `grant.run` above and takes this step
+    // down with it, so reaching here means the program built: diagnostics or
+    // not, its state is a usable base. Published only when clean, matching the
+    // pool's other producer's caution about state it cannot vouch for.
+    const success = run.result.tscErrors === "";
+    if (success) {
+      const p = await publishWarmBase(root, program.name, headSha);
+      lines.push({
+        text: p.published
+          ? `type-check: warm base ${program.name}: published ${p.labelled ? "labelled" : "unlabelled"}, pool keeps ${p.kept} (${p.protectedOnMain} on main)`
+          : `type-check: warm base ${program.name}: nothing to publish (no local buildinfo)`,
+        stream: "stdout",
+      });
+    }
+    const rss = maxRssLine(`tsc ${program.name}`, run.maxRssBytes);
+    if (rss) lines.push({ text: rss, stream: "stdout" });
+    return {
+      id: `tsc:${program.name}`,
+      label: `tsc ${program.name}`,
+      lines,
+      durationMs: Math.round(performance.now() - start),
+      success,
+    };
+  });
 
   return jobs;
 }

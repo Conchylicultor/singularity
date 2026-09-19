@@ -216,7 +216,7 @@ export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
 //      a new such type is added — so listing them here is not the friction.
 //      `e2e` holds a plugin's Playwright scripts; it is deliberately NOT a
 //      collected dir (there is nothing to register — a collected dir would
-//      generate an empty registry and pull in collected-dir-tsconfig-coverage).
+//      generate an empty registry for it).
 function standardDirsWith(defs: DiscoveredCollectedDir[]): Set<string> {
   return new Set([
     ...defs.map((d) => d.dir),

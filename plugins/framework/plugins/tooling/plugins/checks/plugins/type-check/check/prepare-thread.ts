@@ -11,18 +11,18 @@
 // `ProgramKeyContext.contentHash` across the fan-out, and a thread holds it in
 // memory for free where a process would have to serialize it. Checks only
 // ever run from source, so the worker is spawned by path the same way the
-// per-target tsc worker is (the sentinel's compiled-release vendoring does not
+// tsc worker is (the sentinel's compiled-release vendoring does not
 // apply here).
 //
 // Nothing here imports `./prepare` at runtime — only its types — so the
 // runner's thread never evaluates the TypeScript compiler for it.
 
-import type { Plan, PrepareInput, TargetOutcome } from "./prepare";
+import type { Plan, PrepareInput, ProgramOutcome } from "./prepare";
 
 /** Runner → thread. One in flight at a time. */
 export type PrepareRequest =
   | { type: "prepare"; input: PrepareInput }
-  | { type: "finalize"; outcomes: TargetOutcome[] };
+  | { type: "finalize"; outcome: ProgramOutcome | undefined };
 
 /** Thread → runner: one reply per request. */
 export type PrepareReply =
@@ -37,9 +37,9 @@ export interface PrepareThread {
   prepare(input: PrepareInput): Promise<Plan>;
   /**
    * Run the record phase of the session `prepare` opened, and hand back the
-   * lines it wants logged.
+   * lines it wants logged. `undefined` when the worker crashed or never ran.
    */
-  finalize(outcomes: TargetOutcome[]): Promise<string[]>;
+  finalize(outcome: ProgramOutcome | undefined): Promise<string[]>;
   /** Terminate the thread. Idempotent; a call still pending is rejected. */
   close(): void;
 }
@@ -141,8 +141,8 @@ export function openPrepareThread(): PrepareThread {
       }
       return reply.plan;
     },
-    async finalize(outcomes) {
-      const reply = await send({ type: "finalize", outcomes });
+    async finalize(outcome) {
+      const reply = await send({ type: "finalize", outcome });
       if (reply.type !== "finalized") {
         throw new Error(
           `type-check prepare thread answered "finalize" with "${reply.type}"`,

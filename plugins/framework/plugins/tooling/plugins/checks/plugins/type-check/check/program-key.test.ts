@@ -1,5 +1,5 @@
 /**
- * The per-target program key is what lets a tsc worker be SKIPPED, so the whole
+ * The program key is what lets the tsc worker be SKIPPED, so the whole
  * value of these tests is the direction of the failures: a key that changes
  * when it should not costs a needless run, but a key that stays the same when
  * the program's meaning changed skips a check that would have failed.
@@ -40,7 +40,7 @@ function writeBuildInfo(rels: string[]): string {
   return join(root, rel);
 }
 
-const TARGET = {
+const PROGRAM = {
   name: "web",
   get tsconfigPath() {
     return join(root, "tsconfig.json");
@@ -62,7 +62,7 @@ async function keyNow(
 ): Promise<string | null> {
   const result = programKey(
     openProgramKeyContext(await readTreeListing(root)),
-    TARGET,
+    PROGRAM,
     roots,
   );
   return result.kind === "key" ? result.key : null;
@@ -210,9 +210,9 @@ test("readProgramFileList tells an ABSENT buildinfo from an unreadable one", () 
   // is worth naming in the log. Collapsing them to one nullish value is exactly
   // what the discriminated result exists to prevent.
   rmSync(join(root, ".cache"), { recursive: true, force: true });
-  expect(readProgramFileList(TARGET.buildInfoPath).kind).toBe("absent");
+  expect(readProgramFileList(PROGRAM.buildInfoPath).kind).toBe("absent");
   write(".cache/tsbuildinfo/web.tsbuildinfo", "{not json");
-  expect(readProgramFileList(TARGET.buildInfoPath).kind).toBe("unreadable");
+  expect(readProgramFileList(PROGRAM.buildInfoPath).kind).toBe("unreadable");
 });
 
 test("readProgramFileList reads the nested `program.fileNames` shape too", () => {
@@ -220,7 +220,7 @@ test("readProgramFileList reads the nested `program.fileNames` shape too", () =>
     ".cache/tsbuildinfo/web.tsbuildinfo",
     JSON.stringify({ program: { fileNames: ["../../a.ts"] } }),
   );
-  expect(readProgramFileList(TARGET.buildInfoPath)).toEqual({
+  expect(readProgramFileList(PROGRAM.buildInfoPath)).toEqual({
     kind: "files",
     files: [join(root, "a.ts")],
     versions: [undefined],

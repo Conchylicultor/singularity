@@ -55,8 +55,12 @@ export function registerBarrelStubs(_repoRoot: string): void {
   const noop = () => {};
   const identity = <T>(x: T): T => x;
 
-  // `globalThis` carries no DOM typing in every tsconfig target that reaches
-  // this file, so the probe reads the property structurally.
+  // Read structurally rather than as `globalThis.window`: this module runs in
+  // Bun, where there is no window, and the structural probe says exactly that —
+  // "does this runtime happen to have one" — instead of asserting a DOM global
+  // into server code. (It was once also a hard requirement, from a tsconfig
+  // whose `lib` withheld DOM; the repo builds one full-lib program now, so the
+  // spelling is intent, not a compiler error.)
   if (typeof (globalThis as { window?: unknown }).window === "undefined") {
     const loc = {
       protocol: "http:",

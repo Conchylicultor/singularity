@@ -1,11 +1,42 @@
+// The ONE TypeScript program for the whole repo: every `.ts`/`.tsx` git tracks
+// is a root of it, and `type-check` builds it once.
+//
+// It used to be a `files: []` + `references` umbrella over seven programs
+// (web-core, server-core, central-core, cli, tooling, tools, test). Measured
+// from their `.tsbuildinfo` files on 2026-09-17, those seven held 30,649 file
+// instances for 8,252 distinct repo files — the same file checked 3.7 times per
+// cold miss — and SIX of them loaded the identical type environment (DOM via
+// the `es2023.full` default, plus `@types/node`, `@types/bun`, `@types/react`).
+// The split bought no type-environment isolation; runtime isolation (web must
+// not import server) is `plugin-boundaries`' job, not tsc's. See
+// research/2026-09-18-global-type-check-one-program.md.
 {
   "extends": "./tsconfig.base.json",
-  "files": [],
-  "references": [
-    { "path": "./plugins/framework/plugins/web-core" },
-    { "path": "./plugins/framework/plugins/server-core" },
-    { "path": "./plugins/framework/plugins/central-core" },
-    { "path": "./tsconfig.tools.json" },
-    { "path": "./tsconfig.test.json" }
-  ]
+  "compilerOptions": {
+    // No `lib`: the default for target ES2023 is es2023.full — DOM, DOM.Iterable,
+    // DOM.AsyncIterable and the rest — which is what six of the seven programs
+    // already loaded, and a superset of the explicit web/test list.
+    //
+    // `types` is EXPLICIT although the auto-included set is measured equal to
+    // it: an explicit list keeps a stray `@types/*` install from silently
+    // widening the globals of every file in the repo.
+    "types": ["node", "@types/bun"],
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force"
+  },
+  // The whole lintable universe by construction: every `.ts`/`.tsx` git tracks
+  // outside `plugins/` is `test/*.ts`, `vitest.config.ts` or `eslint.config.ts`.
+  // Every collected dir (web, server, check, facet, composition, data-dirs,
+  // prewarm, provision, vite, scripts, lint, cli, bin, e2e, fixtures,
+  // __tests__, `shared/*.d.ts`, `web/vite-env.d.ts`, and the gitignored
+  // `*.composition.*.generated.ts` registries) is under it, so a new one needs
+  // no edit here.
+  "include": ["plugins", "test", "*.config.ts"],
+  // tsc expands `include` by walking the FILESYSTEM, not by listing git, so
+  // these name what is on disk but not in git: `node_modules`, and the release
+  // trees (`web-core/dist` is a symlink to `dist.live.<pid>`, beside
+  // `dist.staging.*` / `dist.old.*` / `dist.swap.*`). Dot-prefixed directories
+  // (`.cache`, `.check-*`, `.claude/worktrees`) are never matched by `*`/`**`
+  // in a tsconfig pattern, so they need no entry.
+  "exclude": ["**/node_modules", "**/dist", "**/dist.*"]
 }

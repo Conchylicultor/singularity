@@ -36,9 +36,23 @@ function grantOfUnits(units: number, lane: Lane): Grant {
   const sem = createSemaphore(units);
   return {
     units,
-    run: (fn) => sem.run(fn),
+    run: (fn, opts) => sem.run(fn, { weight: spendOf(opts?.units, units) }),
     env: () => ({ [HOST_GRANT_ENV]: String(units), [HOST_LANE_ENV]: lane }),
   };
+}
+
+// How much of a grant one `run` occupies. A nonsense request (fractional, zero,
+// negative) is a wiring bug and throws; a request LARGER than the grant is not —
+// it is a heavy child meeting a small grant, and the grant is the ceiling, so it
+// clamps. See `Grant.run` for why that is the same rule as a reduced grant just
+// running the fleet at lower concurrency. Clamping here, once, is also what keeps
+// the semaphore's `weight > max` throw unreachable from any grant caller.
+function spendOf(want: number | undefined, held: number): number {
+  if (want === undefined) return 1;
+  if (!Number.isInteger(want) || want < 1) {
+    throw new Error(`grant.run: units must be a positive integer, got ${want}`);
+  }
+  return Math.min(want, held);
 }
 
 /**

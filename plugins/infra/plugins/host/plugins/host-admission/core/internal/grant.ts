@@ -22,7 +22,23 @@ export const HOST_LANE_ENV = "SINGULARITY_LANE";
  */
 export interface Grant {
   readonly units: number;
-  run<T>(fn: () => Promise<T>): Promise<T>;
+  /**
+   * Spend the holder's units on one heavy child. `opts.units` is how many this
+   * child is worth (default 1, a positive integer) — a child whose MEASURED peak
+   * is a multiple of the `PER_UNIT_BYTES` quantum declares that multiple, so the
+   * quantum can stay the fleet's mean while a heavy consumer pays its own tail
+   * where it is measured.
+   *
+   * The request is CLAMPED to `min(units, grant.units)`, and the clamp lives here
+   * because the grant is the ceiling: a 1-unit grant (an inherited
+   * `SINGULARITY_HOST_GRANT=1`) runs a 2-unit request at weight 1 rather than
+   * waiting for capacity it will never be given. That is the same rule as "a
+   * reduced grant just runs the fleet at lower concurrency" — the holder's
+   * fan-out narrows, nothing deadlocks, and a weight can never exceed the
+   * semaphore's `max`. Declaring more units than the grant holds is therefore
+   * legal and means "as heavy as this grant can express".
+   */
+  run<T>(fn: () => Promise<T>, opts?: { units?: number }): Promise<T>;
   env(): Record<string, string>;
 }
 

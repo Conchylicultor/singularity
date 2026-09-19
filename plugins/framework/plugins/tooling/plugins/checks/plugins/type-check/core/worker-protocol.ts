@@ -13,7 +13,7 @@ export interface TypeCheckWorkerJob {
   name: string;
   tsconfigPath: string;
   buildInfoPath: string;
-  /** Absolute paths assigned to THIS target's program (closure-cache-filtered). */
+  /** Absolute paths to lint under this program (closure-cache-filtered). */
   lintFiles: string[];
 }
 

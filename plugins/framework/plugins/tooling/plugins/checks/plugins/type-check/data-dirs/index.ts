@@ -21,7 +21,7 @@ export const closureCacheDir = defineDataDir({
 });
 
 /**
- * The per-target program-PASS record.
+ * The program-PASS record.
  *
  * A sibling of the closure cache rather than a namespace inside it: the two are
  * keyed on different things (a file's import closure vs a whole tsc program's
@@ -31,8 +31,8 @@ export const closureCacheDir = defineDataDir({
  * declarations.
  *
  * Host-global for the same reason: a program key is content-addressed, so a
- * fresh worktree skips a target that main — or a sibling — already passed on an
- * identical program.
+ * fresh worktree skips a program that main — or a sibling — already passed on
+ * an identical tree.
  *
  * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/program-key.ts
  */

@@ -62,7 +62,10 @@ export type Lane = "interactive" | "background";
  * headroom, or (c) replace the uniform quantum with per-class weights, is the
  * open Stage-2 question in
  * `research/2026-07-12-global-host-admission-memory-dimension.md` — do NOT
- * re-tune this ad hoc.
+ * re-tune this ad hoc. Option (c) now has a spelling: a consumer whose measured
+ * peak exceeds this quantum declares a multi-unit weight through `grant.run(fn,
+ * { units })`, so the quantum stays the mean and the tail is paid where it is
+ * measured.
  *
  * One caveat for whoever picks that up: Stage 2 §2.1 proposed a
  * `reservedRamCost()` **mirroring** `reservedCpuCost()`, and the latter no longer

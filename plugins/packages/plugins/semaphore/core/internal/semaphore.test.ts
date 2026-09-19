@@ -56,11 +56,14 @@ describe("createSemaphore", () => {
     });
 
     // First holder acquires immediately (no wait) and parks on the gate.
-    const first = sem.run(async () => {
-      await gate;
-    }, (ms) => waits.push(ms));
+    const first = sem.run(
+      async () => {
+        await gate;
+      },
+      { onWait: (ms) => waits.push(ms) },
+    );
     // Second must queue behind the first, so its onWait is positive.
-    const second = sem.run(async () => {}, (ms) => waits.push(ms));
+    const second = sem.run(async () => {}, { onWait: (ms) => waits.push(ms) });
 
     await tick();
     expect(waits).toEqual([expect.any(Number)]); // only the immediate holder reported so far
@@ -172,12 +175,12 @@ describe("createSemaphore", () => {
     const sem = createSemaphore(1);
     const waits: number[] = [];
 
-    const release = await sem.acquire((ms) => waits.push(ms));
+    const release = await sem.acquire({ onWait: (ms) => waits.push(ms) });
     expect(waits).toHaveLength(1);
     expect(waits[0]!).toBeLessThan(5); // acquired without queueing
 
     // Second must queue behind the first, so its onWait is positive.
-    const queued = sem.acquire((ms) => waits.push(ms));
+    const queued = sem.acquire({ onWait: (ms) => waits.push(ms) });
     await tick();
     expect(waits).toHaveLength(1); // nothing reported while still queued
 
@@ -211,5 +214,167 @@ describe("createSemaphore", () => {
     open();
     await running;
     expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+  });
+
+  test("a weighted caller takes its whole weight, atomically", async () => {
+    const sem = createSemaphore(2);
+    const running = new Set<string>();
+    const overlaps: string[][] = [];
+    const open: Record<string, () => void> = {};
+    const gates: Record<string, Promise<void>> = {};
+    for (const id of ["heavy-a", "heavy-b", "light"]) {
+      gates[id] = new Promise<void>((r) => {
+        open[id] = r;
+      });
+    }
+    const body = (id: string, weight: number) =>
+      sem.run(
+        async () => {
+          running.add(id);
+          overlaps.push([...running]);
+          await gates[id]!;
+          running.delete(id);
+        },
+        { weight },
+      );
+
+    const a = body("heavy-a", 2);
+    const b = body("heavy-b", 2);
+    const light = body("light", 1);
+
+    await tick();
+    // The first heavy body holds BOTH units, so nothing else fits — not the other
+    // heavy one, and not the light one either.
+    expect(sem.stats()).toEqual({ active: 2, queued: 2, max: 2 });
+
+    open["heavy-a"]!();
+    await tick();
+    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2 });
+    open["heavy-b"]!();
+    await tick();
+    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2 });
+    open["light"]!();
+    await Promise.all([a, b, light]);
+
+    // Every admission saw itself alone: a weight is all-or-nothing, so a heavy
+    // body never ran half-acquired beside anyone.
+    expect(overlaps).toEqual([["heavy-a"], ["heavy-b"], ["light"]]);
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+  });
+
+  test("a queued heavy waiter is never overtaken by a lighter one that would fit", async () => {
+    const sem = createSemaphore(2);
+    const admitted: string[] = [];
+    let openLight!: () => void;
+    let openHeavy!: () => void;
+    const lightGate = new Promise<void>((r) => {
+      openLight = r;
+    });
+    const heavyGate = new Promise<void>((r) => {
+      openHeavy = r;
+    });
+
+    const light0 = sem.run(async () => {
+      admitted.push("light0");
+      await lightGate;
+    });
+    await tick();
+    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2 });
+
+    // Needs both units, so it queues with one unit free.
+    const heavy = sem.run(
+      async () => {
+        admitted.push("heavy");
+        await heavyGate;
+      },
+      { weight: 2 },
+    );
+    // This one WOULD fit in the free unit — strict FIFO keeps it behind the heavy
+    // waiter, which is what stops a stream of light callers from starving it.
+    const light1 = sem.run(async () => {
+      admitted.push("light1");
+    });
+
+    await tick();
+    expect(admitted).toEqual(["light0"]);
+    expect(sem.stats()).toEqual({ active: 1, queued: 2, max: 2 });
+
+    openLight();
+    await tick();
+    expect(admitted).toEqual(["light0", "heavy"]);
+    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2 });
+
+    openHeavy();
+    await Promise.all([light0, heavy, light1]);
+    expect(admitted).toEqual(["light0", "heavy", "light1"]);
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+  });
+
+  test("rejects a weight that could never be admitted, at the call site", () => {
+    const sem = createSemaphore(2);
+    // Throws synchronously — not a rejected promise nobody is awaiting yet.
+    expect(() => sem.run(async () => {}, { weight: 3 })).toThrow(/exceeds max/);
+    expect(() => sem.acquire({ weight: 3 })).toThrow(/exceeds max/);
+    expect(() => sem.run(async () => {}, { weight: 0 })).toThrow(
+      /positive integer/,
+    );
+    expect(() => sem.acquire({ weight: 1.5 })).toThrow(/positive integer/);
+    // A refused request never touched the gate.
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+  });
+
+  test("releasing a weighted lease frees all of its weight, exactly once", async () => {
+    const sem = createSemaphore(3);
+    const release = await sem.acquire({ weight: 3 });
+    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3 });
+
+    const admitted: number[] = [];
+    const queued = [1, 2, 3].map((i) =>
+      sem.acquire().then((r) => {
+        admitted.push(i);
+        return r;
+      }),
+    );
+    await tick();
+    expect(admitted).toEqual([]); // all three units are held by the one lease
+
+    release();
+    release(); // idempotent, weighted or not
+    await tick();
+    // The freed weight is handed down the queue while each waiter still fits.
+    expect(admitted).toEqual([1, 2, 3]);
+    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3 });
+
+    for (const q of queued) (await q)();
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 3 });
+  });
+
+  test("onWait fires once for a weighted caller, at its acquisition", async () => {
+    const sem = createSemaphore(2);
+    const waits: number[] = [];
+    let open!: () => void;
+    const gate = new Promise<void>((r) => {
+      open = r;
+    });
+
+    const holder = sem.run(
+      async () => {
+        await gate;
+      },
+      { weight: 2, onWait: (ms) => waits.push(ms) },
+    );
+    const queued = sem.run(async () => {}, {
+      weight: 2,
+      onWait: (ms) => waits.push(ms),
+    });
+
+    await tick();
+    expect(waits).toHaveLength(1); // only the immediate holder reported so far
+    expect(waits[0]!).toBeLessThan(5);
+
+    open();
+    await Promise.all([holder, queued]);
+    expect(waits).toHaveLength(2);
+    expect(waits[1]!).toBeGreaterThan(0); // genuinely waited for the full weight
   });
 });

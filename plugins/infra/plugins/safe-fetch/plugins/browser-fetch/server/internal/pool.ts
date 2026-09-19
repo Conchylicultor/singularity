@@ -55,7 +55,7 @@ export function withBrowserSlot<T>(fn: () => Promise<T>): Promise<T> {
       pool.run(fn, {
         onAcquired: (waitMs) => chargeWait("browser-fetch-acquire", waitMs),
       }),
-    (waitMs) => chargeWait("browser-fetch-local", waitMs),
+    { onWait: (waitMs) => chargeWait("browser-fetch-local", waitMs) },
   );
 }
 

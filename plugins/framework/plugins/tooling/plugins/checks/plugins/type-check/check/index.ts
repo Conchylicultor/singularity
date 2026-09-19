@@ -4,31 +4,41 @@
  * The old `typescript` and `eslint` checks each built the full TS program over
  * the repo (tsc for diagnostics, typescript-eslint via projectService for the
  * type-aware rules). Type-aware linting is ~99% TS-program construction — the
- * same work tsc does — so the cold cost was paid twice. This check builds each
- * tsconfig target's program ONCE (in a per-target worker process) and reads
- * both tsc diagnostics and lint results off it.
+ * same work tsc does — so the cold cost was paid twice. This check builds the
+ * repo's ONE program once, in a worker process, and reads both tsc diagnostics
+ * and lint results off it.
+ *
+ * One program, not seven. Until 2026-09-18 there was a tsc target per runtime
+ * (web-core, server-core, central-core, cli, tooling, tools, test); measured,
+ * they held 30,649 file instances for 8,252 distinct files, and six of them
+ * loaded the identical type environment. The split cost 3.7 checks of the
+ * average file per cold miss and bought no type isolation.
  *
  * Warm paths are preserved: tsc stays incremental via the shared `.tsbuildinfo`,
- * and lint reuses the per-file closure cache (only closure-changed files are
- * re-linted). Files are assigned to exactly one program for linting (dedup)
- * but tsc still checks shared `core` files under every program that includes
- * them — exactly as the old typescript check did.
+ * lint reuses the per-file closure cache (only closure-changed files are
+ * re-linted), and a program whose content key is already recorded green runs no
+ * worker at all.
  *
  * This file runs on the check runner's thread, which every other check in the
  * pass shares, so it holds nothing that reads file bytes or walks the tree: the
- * git reads (async), the outer read-set, the grant fan-out, the log lines and
+ * git reads (async), the outer read-set, the grant spend, the log lines and
  * the verdict. Everything else — 70–130 s of synchronous work — runs on the
  * preparation thread (`./prepare-thread`, `./prepare`).
  */
 import {
   tsBuildInfoPath,
   currentScanView,
+  type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { spawnTypeCheckWorker, type TypeCheckWorkerResult } from "../core";
+import {
+  spawnTypeCheckWorker,
+  TYPE_CHECK_WORKER_UNITS,
+  type TypeCheckWorkerResult,
+} from "../core";
 import type {
   Check,
   CheckContext,
@@ -36,15 +46,15 @@ import type {
 import { readTreeListing } from "./fingerprint";
 import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
-import type { PlannedTarget, TargetOutcome } from "./prepare";
+import type { ProgramOutcome } from "./prepare";
 
-/** A worker's output plus what the parent measured about its process. */
+/** The worker's output plus what the parent measured about its process. */
 interface WorkerResult extends TypeCheckWorkerResult {
   maxRssBytes: number | undefined;
   cpuTimeMicros: number | undefined;
 }
 
-// Priority isolation at the spawn site: workers for a non-main branch run
+// Priority isolation at the spawn site: a worker for a non-main branch runs
 // darwinbg (E-cores + background IO tier) so N concurrent agent fleets can't
 // starve the interactive main backend — regardless of whether the parent
 // session/CLI was itself demoted. Relying on inheritance is how 10 of 11
@@ -65,39 +75,17 @@ async function workerBackground(): Promise<boolean> {
   return result.stdout.trim() !== "main";
 }
 
-/** Bounded-concurrency map: each TS program is large, so cap in-flight workers. */
-async function mapConcurrent<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  const workers = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      for (;;) {
-        const i = next++;
-        if (i >= items.length) return;
-        out[i] = await fn(items[i]!);
-      }
-    },
-  );
-  await Promise.all(workers);
-  return out;
-}
-
 async function runWorker(
   root: string,
-  target: PlannedTarget,
+  program: TscProgram,
   lintFiles: string[],
   background: boolean,
 ): Promise<WorkerResult> {
   const run = await spawnTypeCheckWorker({
     root,
-    name: target.name,
-    tsconfigPath: target.tsconfigPath,
-    buildInfoPath: tsBuildInfoPath(root, target.name),
+    name: program.name,
+    tsconfigPath: program.tsconfigPath,
+    buildInfoPath: tsBuildInfoPath(root, program.name),
     lintFiles,
     background,
   });
@@ -108,12 +96,14 @@ async function runWorker(
   };
 }
 
-// One greppable line per worker, e.g.
-// "type-check worker web-core: cpu 86.6s, maxRSS 2.4 GB".
-// THIS fleet is the process class host-admission's `PER_UNIT_BYTES` (3.6e9)
-// claims to size — "one type-check-class worker's resident set" — and it had
-// never actually been observed; the budget's RAM quantum was calibrated on vite
+// One greppable line for the worker, e.g.
+// "type-check worker repo: cpu 186.6s, maxRSS 7.2 GB".
+// THIS process is the class host-admission's `PER_UNIT_BYTES` (3.6e9) claims to
+// size — "one type-check-class worker's resident set" — and it had never
+// actually been observed; the budget's RAM quantum was calibrated on vite
 // samples alone. See research/2026-07-12-global-host-admission-memory-dimension.md.
+// It is also what `TYPE_CHECK_WORKER_UNITS` (`../core`) is measured from, so
+// these lines are the instrument behind the weight this check spends.
 //
 // Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B), the same convention as the
 // CLI's own footprint lines (cli/plugins/build/cli/run.ts `maxRssLine`), because
@@ -124,10 +114,10 @@ async function runWorker(
 // beats inventing a shared plugin for it.
 //
 // CPU seconds sit beside the peak because they are the only load-independent
-// cost this fleet has: the identical web-core program build measured 105s at
-// load 12.8 and 266s at load 14.0, so a wall-clock before/after on a shared box
-// measures the neighbours. Every claim about what a target costs — and the
-// per-target skip's whole payoff — is read off these numbers.
+// cost this worker has: the identical program build measured 105s at load 12.8
+// and 266s at load 14.0, so a wall-clock before/after on a shared box measures
+// the neighbours. Every claim about what this check costs — and the skip's
+// whole payoff — is read off these numbers.
 //
 // `null` when the runtime reported NEITHER measurement — an unavailable
 // reading, not a swallowed failure: the line is omitted and nothing else
@@ -156,7 +146,7 @@ const seconds = (ms: number): string => (ms / 1000).toFixed(1);
 const check: Check = {
   id: "type-check",
   description:
-    "TypeScript types and type-aware ESLint pass (one shared program per tsconfig target)",
+    "TypeScript types and type-aware ESLint pass (one shared program for the whole repo)",
   // OUTER input-keyed via validate-by-replay (Stage 2). run() records EVERY input
   // its verdict depends on (lintable-file membership + contents + the global-
   // trigger set) into the recording FileSystemView; on the next run those facts
@@ -169,7 +159,7 @@ const check: Check = {
 
     // ONE reading of the tree's file set, shared by everything that asks what
     // files exist: the lint universe, the outer read-set, the closure
-    // fingerprints, and the program keys. Four separate walks used to cost
+    // fingerprints, and the program key. Four separate walks used to cost
     // seconds and gave the enumeration rules four places to disagree — and, as
     // walks, they answered with files git never puts in this check's cache key.
     const listing = await readTreeListing(root);
@@ -187,20 +177,13 @@ const check: Check = {
     const view = currentScanView();
     if (view) recordOuterReadSet(view, listing);
 
-    // One worker per target: tsc for all, lint for those with assigned files.
-    // The fleet is bounded by the host CPU GRANT the invoking build/check/push
-    // already holds (`ctx.grant`) — this check acquires NOTHING host-wide, it
-    // just SPENDS the grant's units. That is the fix for the 2026-07-09 thrash (N
-    // overlapping agent builds each spawned `targets.length` multi-GB workers,
-    // 30-40 at once): the grant is drawn from the single laned CPU pool, so the
-    // host ceiling is `B` workers total, subdivided across every build's fan-out.
-    const results: WorkerResult[] = [];
-    const crashes: { name: string; error: string }[] = [];
+    let result: WorkerResult | undefined;
+    let crash: string | undefined;
 
     // Everything that reads file bytes or walks the tree — the import graph,
-    // fingerprints, tsconfig include-expansion, ownership + coverage gate,
-    // closure cache, warm base, program keys, and the records after the fan-out
-    // — runs on the preparation thread, so this thread (shared by every other
+    // fingerprints, tsconfig include-expansion, the coverage gate, the closure
+    // cache, the warm base, the program key, and the records after the run —
+    // runs on the preparation thread, so this thread (shared by every other
     // check in the pass) keeps servicing timers and sockets throughout.
     const thread = openPrepareThread();
     try {
@@ -211,7 +194,8 @@ const check: Check = {
       });
       const prepareMs = performance.now() - prepareStart;
 
-      // The coverage gate: an unowned file would never be linted — fail loudly.
+      // The coverage gate: a file outside the program would never be linted or
+      // type-checked — fail loudly.
       if (plan.kind === "uncovered") {
         ctx.log?.(
           `type-check: prepared off-thread in ${seconds(prepareMs)}s (finalize skipped: coverage gate failed)`,
@@ -220,104 +204,88 @@ const check: Check = {
         const { uncovered } = plan;
         return {
           ok: false,
-          message: `type-check: ${uncovered.length} lintable file(s) belong to no tsconfig program:\n  ${uncovered.slice(0, 40).join("\n  ")}`,
-          hint: 'The lintable set is git-derived, so an uncovered file is genuinely repo source: add its directory to a tsconfig `include` (or its plugin\'s tsconfig) so it is type-checked and linted — the same gap projectService would report as "not found by the project service". If it is NOT source, it does not belong in the git tree: delete it, or add it to .gitignore.',
+          message: `type-check: ${uncovered.length} lintable file(s) are outside the repo's TypeScript program:\n  ${uncovered.slice(0, 40).join("\n  ")}`,
+          hint: "The root `tsconfig.json` includes `plugins`, `test` and the root `*.config.ts`, which is every place repo source lives — so an uncovered file sits somewhere else (a stray `scripts/x.ts` at the repo root, a new top-level directory). Move it under `plugins/` where it belongs. If it is genuinely a new top-level source tree, add it to the root tsconfig `include`. If it is NOT source, it does not belong in the git tree: delete it, or add it to .gitignore.",
         };
       }
 
-      const { targets, skipped, unkeyed } = plan;
-      const toRun = targets.filter((t) => plan.toRun.includes(t.name));
-      // Emitted on EVERY run, including "skipped 0" — the zero is the datum that
-      // says the key was computed and matched nothing, which is what separates a
-      // cold tree from a broken key. The cost of computing the keys is on the
-      // same line because it is paid whether or not anything is skipped.
+      const { program, lintFiles, skipped, unkeyed, keysMs } = plan;
+      // Emitted on EVERY run, skipped or not — the "running" half is the datum
+      // that says the key was computed and did NOT match, which is what
+      // separates a cold tree from a broken key. The cost of computing the key
+      // is on the same line because it is paid either way.
       ctx.log?.(
-        `type-check: skipped ${skipped.length} of ${targets.length} targets, program unchanged since last pass` +
-          (skipped.length > 0 ? `: ${skipped.join(", ")}` : "") +
-          ` (program keys ${plan.keysMs}ms)`,
+        skipped
+          ? `type-check: program unchanged since last pass, skipped (program keys ${keysMs}ms)`
+          : `type-check: program changed, running (program keys ${keysMs}ms)`,
         "stderr",
       );
-      // One line per target naming the incremental base this run starts from,
-      // and how much of it still matches the tree. Without it "why was this run
-      // cold?" had no answer anywhere in the transcript — and a pool that hands
-      // out a base matching nothing looks exactly like a pool that works.
-      for (const line of plan.warmBase) ctx.log?.(line, "stderr");
-      // Named, not just counted: "5 of 7 skipped" with no explanation of the
-      // other two is the shape of a report that hides a broken key. A cold
-      // worktree legitimately lists every target here on its first run.
-      if (unkeyed.length > 0) {
-        ctx.log?.(
-          `type-check: no program key for ${unkeyed.length} target(s) — ${unkeyed.join("; ")}`,
-          "stderr",
-        );
+      // Which incremental base this run starts from, and how much of it still
+      // matches the tree. Without it "why was this run cold?" had no answer
+      // anywhere in the transcript — and a pool that hands out a base matching
+      // nothing looks exactly like a pool that works.
+      ctx.log?.(plan.warmBase, "stderr");
+      // Named, not just implied: "running" with no explanation of why there was
+      // no key to compare against is the shape of a report that hides a broken
+      // key. A cold worktree legitimately says this on its first run.
+      if (unkeyed !== undefined) {
+        ctx.log?.(`type-check: no program key — ${unkeyed}`, "stderr");
       }
 
-      const background = await workerBackground();
-
-      // Fan out at exactly `grant.units` concurrency, spending one unit per worker
-      // via `grant.run`. A reduced grant (`units < toRun.length`) simply runs the
-      // fleet at lower concurrency — surfaced as ONE observation line through the
-      // runner's `ctx.log` seam, so it lands in check-<id>.log/build.log and not only in
-      // a terminal (never a blocking log or a progress bar: checks run under
-      // Promise.all in the runner, which buffers and attributes these lines).
-      const units = ctx.grant.units;
-      if (units < toRun.length) {
-        ctx.log?.(
-          `type-check: ${units} of ${toRun.length} targets run concurrently (host CPU grant)`,
-          "stderr",
-        );
+      if (plan.run) {
+        const background = await workerBackground();
+        // The worker spends the CPU grant the invoking build/check/push already
+        // holds (`ctx.grant`) — this check acquires NOTHING host-wide. That is
+        // the fix for the 2026-07-09 thrash (N overlapping agent builds each
+        // spawning `targets.length` multi-GB workers, 30-40 at once).
+        //
+        // It spends `TYPE_CHECK_WORKER_UNITS` of them, not one. A unit is
+        // `PER_UNIT_BYTES` (3.6e9) of resident memory, and this process is
+        // measured at ~7.2 GB — it is worth two. The weight is declared in
+        // `../core`, where the measurement lives; the grant clamps it to what
+        // the holder actually has, so a 1-unit grant still runs.
+        try {
+          result = await ctx.grant.run(
+            () => runWorker(root, program, lintFiles, background),
+            { units: TYPE_CHECK_WORKER_UNITS },
+          );
+        } catch (err) {
+          crash = (err as Error).message;
+        }
       }
-      await mapConcurrent(toRun, units, (t) =>
-        ctx.grant.run(async () => {
-          try {
-            results.push(
-              await runWorker(
-                root,
-                t,
-                plan.lintByTarget[t.name] ?? [],
-                background,
-              ),
-            );
-          } catch (err) {
-            crashes.push({ name: t.name, error: (err as Error).message });
-          }
-        }),
+
+      // Peak RSS and CPU of the worker, when one ran. Emitted through the
+      // runner's `ctx.log` observation seam, so the measurement is DURABLE
+      // (check-<id>.log + the build's checks section) — a terminal-only write
+      // would evaporate, and calibrating both host-admission's RAM quantum and
+      // this check's own weight is exactly an after-the-fact grep over many
+      // runs. Purely an observation: a missing rusage, or a crashed worker
+      // (which threw before it could be measured), changes nothing about the
+      // verdict below.
+      const costLine = workerCostLine(
+        `type-check worker ${program.name}`,
+        result?.maxRssBytes,
+        result?.cpuTimeMicros,
       );
+      if (costLine !== null) ctx.log?.(costLine, "stderr");
 
-      // Peak RSS of every worker that ran, one labelled line per target (target
-      // order, not completion order, so successive runs are diffable). Emitted
-      // through the runner's `ctx.log` observation seam, so the measurement is
-      // DURABLE (check-<id>.log + the build's checks section) — a terminal-only write
-      // would evaporate, and calibrating host-admission's RAM quantum is exactly
-      // an after-the-fact grep over many runs. Purely an observation: a missing
-      // rusage, or a crashed worker (which threw before it could be measured),
-      // changes nothing about the verdict below.
-      const byName = new Map(results.map((r) => [r.name, r]));
-      for (const t of targets) {
-        const r = byName.get(t.name);
-        const line = workerCostLine(
-          `type-check worker ${t.name}`,
-          r?.maxRssBytes,
-          r?.cpuTimeMicros,
-        );
-        if (line !== null) ctx.log?.(line, "stderr");
-      }
-
-      // The record phase, on the thread that holds the session: warm bases,
-      // per-file lint PASSes, program PASSes, skipped re-records (see
-      // `./prepare`). Only workers that RETURNED are handed over — a crashed
-      // worker records nothing. "Clean" is decided here because only this side
-      // has the outputs: no tsc error, no lint violation, no failed lint file.
-      const outcomes: TargetOutcome[] = results.map((r) => ({
-        name: r.name,
+      // The record phase, on the thread that holds the session: the warm base,
+      // per-file lint PASSes, the program PASS, the skipped re-record (see
+      // `./prepare`). The outcome is handed over only when the worker RETURNED
+      // — a crashed or skipped run records nothing new. "Clean" is decided here
+      // because only this side has the outputs: no tsc error, no lint
+      // violation, no failed lint file.
+      const outcome: ProgramOutcome | undefined = result && {
         clean:
-          !r.tscErrors && !r.lintViolations && r.failedLintFiles.length === 0,
-        failedLintFiles: r.failedLintFiles,
-      }));
+          !result.tscErrors &&
+          !result.lintViolations &&
+          result.failedLintFiles.length === 0,
+        failedLintFiles: result.failedLintFiles,
+      };
       const finalizeStart = performance.now();
-      const finalizeLines = await thread.finalize(outcomes);
+      const finalizeLines = await thread.finalize(outcome);
       // What the record phase published back into the warm-base pool, and
-      // whether those entries carry the sha that lets the prune protect them.
+      // whether that entry carries the sha that lets the prune protect it.
       for (const line of finalizeLines) ctx.log?.(line, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
       // instrument for making the preparation itself cheaper.
@@ -330,39 +298,32 @@ const check: Check = {
     }
 
     // Aggregate the two failure categories.
-    const tscSections = results
-      .filter((r) => r.tscErrors)
-      .map((r) => `${r.name}:\n    ${r.tscErrors.split("\n").join("\n    ")}`);
-    const lintLines = results
-      .filter((r) => r.lintViolations)
-      .map((r) => r.lintViolations)
-      .join("\n");
+    const tscErrors = result?.tscErrors ?? "";
+    const lintLines = result?.lintViolations ?? "";
 
-    if (crashes.length === 0 && tscSections.length === 0 && !lintLines)
-      return { ok: true };
+    if (crash === undefined && !tscErrors && !lintLines) return { ok: true };
 
     const parts: string[] = [];
-    if (crashes.length > 0) {
-      parts.push(
-        `type-check workers failed:\n  ${crashes.map((c) => `${c.name}: ${c.error}`).join("\n  ")}`,
-      );
+    if (crash !== undefined) {
+      parts.push(`type-check worker failed:\n  ${crash}`);
     }
-    if (tscSections.length > 0) {
-      parts.push(`TypeScript type errors:\n  ${tscSections.join("\n  ")}`);
+    if (tscErrors) {
+      parts.push(
+        `TypeScript type errors:\n  ${tscErrors.split("\n").join("\n  ")}`,
+      );
     }
     if (lintLines) {
       parts.push(`ESLint violations:\n  ${lintLines.split("\n").join("\n  ")}`);
     }
 
-    const combined = tscSections.join("\n");
-    const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
+    const hasMissingModule = /error TS2307: Cannot find module/.test(tscErrors);
     const hints: string[] = [];
     if (hasMissingModule) {
       hints.push(
         'A "Cannot find module" error for a dep you didn\'t touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push.',
       );
     }
-    if (tscSections.length > 0) {
+    if (tscErrors) {
       hints.push(
         "Fix type errors before pushing. If a cast is necessary, fix the type definition instead.",
       );

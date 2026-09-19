@@ -16537,7 +16537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ReadSet`
               - `RunChecksOptions`
               - `TreeSnapshot`
-              - `TscTarget`
+              - `TscProgram`
               - `ValidateOptions`
               - `ValidateResult`
               - `WarmBaseGitFacts`
@@ -16548,7 +16548,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `computeCheckSourceHash`
               - `computeTreeHash`
               - `currentScanView`
-              - `discoverTscTargets`
               - `fingerprint`
               - `gitGrepList`
               - `grepCode`
@@ -16568,6 +16567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `readCheckProgress`
               - `readProgramFileList`
               - `realGitFacts`
+              - `repoProgram`
               - `requestedJobs`
               - `runChecks`
               - `scopeOf`
@@ -16578,7 +16578,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`barrel-stubs-in-sync`**
             - **`bun-runtime`**
             - **`class-token-walk-single-source`**
-            - **`collected-dir-tsconfig-coverage`**
             - **`composition-closure`**
             - **`config-origins-in-sync`**
             - **`config-stable-list-ids`**
@@ -16628,14 +16627,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`tsconfig-alias-single-owner`**
             - **`type-check`**
               - Core:
-                - Uses: `infra/spawn.spawnCaptured`
+                - Uses:
+                  - `infra/host/host-admission.PER_UNIT_BYTES`
+                  - `infra/spawn.spawnCaptured`
                 - Exports (types):
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
                   - `TypeCheckWorkerRun`
                 - Exports (values):
                   - `spawnTypeCheckWorker`
-                  - `tsconfigPathOf`
+                  - `TYPE_CHECK_WORKER_PEAK_BYTES`
+                  - `TYPE_CHECK_WORKER_UNITS`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses:
@@ -18328,6 +18330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `database/admin`
               - `debug/profiling/boot-bench`
+              - `framework/tooling/checks/type-check`
               - `infra/host/host-read-pool`
               - `infra/safe-fetch/browser-fetch`
               - `infra/worktree`
@@ -19914,7 +19917,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints`
           - `plugin-meta/barrel-import`
       - Core:
-        - Exports (types): `Semaphore`
+        - Exports (types):
+          - `Semaphore`
+          - `SlotOptions`
         - Exports (values): `createSemaphore`
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
       - Cross-plugin:

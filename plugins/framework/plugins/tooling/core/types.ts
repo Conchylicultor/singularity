@@ -3,7 +3,7 @@ import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/c
 /**
  * What every check is handed when run. `grant` is the host CPU admission the
  * invoking build/check/push already holds — a check that fans out heavy children
- * (type-check's per-target workers, layout-geometry's Chromium suite) spends
+ * (type-check's tsc worker, layout-geometry's Chromium suite) spends
  * `grant.run(...)` per child instead of acquiring host-wide again, so the whole
  * check pass is accountable to the one grant. Checks that spawn nothing heavy
  * ignore the argument.
@@ -40,8 +40,8 @@ export interface CheckContext {
    * The runner honours it for its own result cache, but a check with caches of
    * its OWN has to be told — otherwise `--no-cache` stops meaning "actually do
    * the work", which is the entire reason someone types it. `type-check` reads
-   * it to disarm its per-target program skip, so a debugging run really does
-   * rebuild every tsc program.
+   * it to disarm its program skip, so a debugging run really does rebuild the
+   * tsc program.
    *
    * OPTIONAL, defaulting to cached, so a caller outside the runner need not
    * think about it: read it as `ctx.cacheEnabled !== false`.

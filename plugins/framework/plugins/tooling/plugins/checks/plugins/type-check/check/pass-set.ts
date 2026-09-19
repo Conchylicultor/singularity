@@ -2,7 +2,7 @@
 //
 // Two of type-check's caches are the same store with different keys — the
 // per-file lint closure cache (key = a file's closure fingerprint) and the
-// per-target program-pass record (key = a tsc program's content key). Both are
+// program-pass record (key = a tsc program's content key). Both are
 // host-global on purpose: a fresh worktree reuses whatever a sibling recorded
 // for an identical key, which is the whole reason the key is content-addressed
 // rather than tree- or worktree-scoped.

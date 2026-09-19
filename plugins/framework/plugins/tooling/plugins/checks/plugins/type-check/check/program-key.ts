@@ -1,16 +1,18 @@
-// A content key for ONE tsc target's program, and the host-global record of
-// which such programs have passed.
+// A content key for a tsc program, and the host-global record of which such
+// programs have passed.
 //
-// Why per-target at all: a miss on the outer (whole-check) cache rebuilds all
-// seven programs, and the same file is checked 3.7 times per miss — the five
-// node-side programs are near-copies of one another, and `test` contains
-// everything but 301 files. An edit under a plugin's `web/` cannot change the
-// verdict of `server-core`, yet `server-core` is rebuilt anyway. The key below
-// says, per target, "this exact program passed before", so the worker for an
-// unaffected target has nothing to do.
+// Why a key at all: a miss on the outer (whole-check) cache rebuilds the
+// program even when the edit cannot have changed what it contains — a docs
+// commit that happens to sit in the same tree as a `.ts` the outer read-set
+// recorded, a generated registry rewritten to identical bytes. The key below
+// says "this exact program passed before", so a worker with nothing to compute
+// does not run. (It was once a key PER TARGET, when there were seven
+// overlapping programs and an edit under a plugin's `web/` still rebuilt
+// `server-core`. There is one program now, and the key is what still makes an
+// unchanged tree free.)
 //
 // THIS KEY DECIDES WHETHER A WORKER RUNS. A recorded match means tsc is not
-// invoked for that target at all, so the key IS the verdict for it — there is
+// invoked at all, so the key IS the verdict — there is
 // no compiler behind it to catch a key that was too loose. That is why the
 // envelope below is spelled out in full, and why anything unclear (no
 // buildinfo, a shape we do not recognise) yields NO key and a cold run rather
@@ -19,7 +21,7 @@
 //
 // Soundness, in one paragraph. A program is a function of (roots, file
 // contents, compiler options). `L_t` — the `fileNames` tsc itself wrote into
-// the target's `.tsbuildinfo` — is the exact set of files the program loaded on
+// the program's `.tsbuildinfo` — is the exact set of files it loaded on
 // some earlier tree. If every file in `L_t` has identical content now and the
 // roots are identical, module resolution runs the same and yields the same
 // program, hence the same verdict. Roots are covered by `R_t`; options by the
@@ -54,7 +56,7 @@ import { programPassDir } from "../data-dirs";
 import { findFiles, type TreeListing } from "./fingerprint";
 import { openPassSet, type PassSetBounds } from "./pass-set";
 
-// Entries are per (target, program key) — at most a handful per run, against
+// Entries are per (program name, program key) — one or two per run, against
 // the closure cache's thousands — so the count bound is a formality and the
 // 14-day age bound does the evicting. Same shape as the closure cache so the
 // two stores are read the same way.
@@ -79,9 +81,9 @@ const BOUNDS: PassSetBounds = {
  * Dropping them is safe WITHOUT a second mechanism, and the reason is worth
  * stating: a lint-rule edit flips `globalConfigFingerprint`, which flips every
  * file's closure fingerprint, which empties the closure cache — so every
- * target's `lintByTarget` bucket is non-empty and the skip clause refuses every
- * target anyway. The narrowing only removes a redundancy; it cannot let a
- * lint-rule change go unchecked.
+ * run's `lintFiles` list is non-empty and the skip clause refuses to skip
+ * anyway. The narrowing only removes a redundancy; it cannot let a lint-rule
+ * change go unchecked.
  */
 function isTscTrigger(rel: string): boolean {
   const base = rel.split("/").pop()!;
@@ -109,7 +111,7 @@ let cachedSelfSourceHash: string | null = null;
 
 /**
  * A hash of THIS check's own source — every `.ts` under the plugin's `check/`
- * and `shared/`, plus the target discovery it depends on.
+ * and `shared/`, plus the program declaration it depends on.
  *
  * Without it, editing the worker (say, adding a diagnostic category) would leave
  * every recorded PASS looking valid, and the new behaviour would be skipped over
@@ -141,15 +143,15 @@ export function selfSourceHash(): string {
 }
 
 /**
- * Everything a program key needs that is the SAME for every target, computed
- * once per run: the tsc-relevant trigger contents, the name-only census of the
- * repo's TypeScript (the shadowing guard), and this check's own source hash.
+ * Everything a program key needs that is not the program's own file list,
+ * computed once per run: the tsc-relevant trigger contents, the name-only
+ * census of the repo's TypeScript (the shadowing guard), and this check's own
+ * source hash.
  */
 export interface ProgramKeyContext {
   root: string;
   /**
-   * Memoised `abs -> content hash`, shared by every target (the programs
-   * overlap heavily) AND with whoever opened the context.
+   * Memoised `abs -> content hash`, shared with whoever opened the context.
    *
    * The warm-base selection hashes most of these same files moments earlier to
    * score the pool, so the run passes ONE memo through both steps: the reads
@@ -177,7 +179,7 @@ export function openProgramKeyContext(
   // siblings) are gitignored, yet they sit inside a tsconfig `include` and tsc
   // compiles them. Two of them exist on `main` right now. Left out, this census
   // would stop noticing when one appears or vanishes — and this key is what
-  // decides whether tsc runs for a target at all, so there would be no compiler
+  // decides whether tsc runs at all, so there would be no compiler
   // behind it to catch the miss.
   //
   // The list comes from the WRITER's own function, not from a glob retyped
@@ -203,18 +205,18 @@ export function openProgramKeyContext(
 }
 
 /**
- * A target's program key, or the reason there is none.
+ * The program key, or the reason there is none.
  *
- * "No key" is not a failure — a cold target simply has no earlier program to
+ * "No key" is not a failure — a cold checkout simply has no earlier program to
  * compare against — but it is not a key either, and the caller must not be able
  * to confuse the two. The `why` is what the check prints so an operator can see
- * WHICH targets could not be keyed and whether that is expected.
+ * that the program could not be keyed, and whether that is expected.
  */
 export type ProgramKeyResult =
   { kind: "key"; key: string } | { kind: "none"; why: string };
 
 /**
- * The content key of one target's program.
+ * The content key of a program.
  *
  * `roots` is the tsconfig's own include-expansion (`R_t`), which pins WHICH
  * program this is; the buildinfo's file list is what that program actually
@@ -222,10 +224,10 @@ export type ProgramKeyResult =
  */
 export function programKey(
   ctx: ProgramKeyContext,
-  target: { name: string; tsconfigPath: string; buildInfoPath: string },
+  program: { tsconfigPath: string; buildInfoPath: string },
   roots: string[],
 ): ProgramKeyResult {
-  const listed = readProgramFileList(target.buildInfoPath);
+  const listed = readProgramFileList(program.buildInfoPath);
   if (listed.kind === "absent") {
     return { kind: "none", why: "no buildinfo yet" };
   }
@@ -241,7 +243,7 @@ export function programKey(
     key: sha256(
       [
         ctx.sharedPrefix,
-        rel(target.tsconfigPath),
+        rel(program.tsconfigPath),
         sha256([...roots].sort().map(rel).join("\n")),
         body,
       ].join("\n"),
@@ -251,16 +253,16 @@ export function programKey(
 
 export interface ProgramPasses {
   /** True iff this exact program key was recorded green before, by any worktree. */
-  has(targetName: string, key: string): boolean;
-  record(targetName: string, key: string): void;
+  has(programName: string, key: string): boolean;
+  record(programName: string, key: string): void;
 }
 
-/** Open the host-global record of per-target program PASSes. */
+/** Open the host-global record of program PASSes, keyed by program name. */
 export function openProgramPasses(): ProgramPasses {
   const set = openPassSet(programPassDir, BOUNDS);
   return {
-    has: (targetName, key) => set.has(`${targetName}:${key}`),
-    record: (targetName, key) =>
-      set.record(`${targetName}:${key}`, { target: targetName, key }),
+    has: (programName, key) => set.has(`${programName}:${key}`),
+    record: (programName, key) =>
+      set.record(`${programName}:${key}`, { program: programName, key }),
   };
 }

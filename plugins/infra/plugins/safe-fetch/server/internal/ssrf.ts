@@ -34,12 +34,16 @@ export interface SafeFetchInit {
    * Request body for non-GET methods (raw bytes / stream).
    *
    * `Bun.BodyInit`, NOT the bare global `BodyInit` — deliberately. The bare name
-   * exists only in `lib.dom`, so naming it here made this server-side module
-   * un-type-checkable from any target that withholds DOM (`tsconfig.tools.json`
-   * pins `lib: ["ES2023"]`), and one tools-scoped script importing a plugin's
-   * server code would fail on a lib gap rather than on anything it wrote. The
-   * namespaced alias is what bun's own `fetch` init declares (`bun-types/fetch.d.ts`),
-   * so this is the same type without the DOM dependency.
+   * exists only in `lib.dom`, and this is server code: naming a DOM global here
+   * would say this module belongs to the browser environment, which it does not.
+   * The namespaced alias is what bun's own `fetch` init declares
+   * (`bun-types/fetch.d.ts`), so it is the same type, spelled as what it is.
+   *
+   * Prefer bun's namespaced types over bare DOM globals throughout server code,
+   * for the same reason. This used to be enforced by a `tools` tsconfig that
+   * withheld DOM; the repo now builds ONE program that loads the full lib, so
+   * the rule is design intent rather than a compiler error
+   * (research/2026-09-18-global-type-check-one-program.md).
    */
   body?: Bun.BodyInit;
   timeoutMs?: number;
@@ -108,7 +112,9 @@ export function isPrivateIp(ip: string): boolean {
 
   // IPv4-mapped (::ffff:1.2.3.4) and IPv4-compatible (::1.2.3.4) — unwrap the
   // trailing dotted-quad and classify it as IPv4.
-  const mapped = /^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(addr);
+  const mapped = /^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(
+    addr,
+  );
   if (mapped) {
     const v4 = mapped[1];
     return v4 ? isPrivateIpv4(v4) : true;

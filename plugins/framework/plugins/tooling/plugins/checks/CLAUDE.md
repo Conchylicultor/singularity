@@ -372,7 +372,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `ReadSet`
     - `RunChecksOptions`
     - `TreeSnapshot`
-    - `TscTarget`
+    - `TscProgram`
     - `ValidateOptions`
     - `ValidateResult`
     - `WarmBaseGitFacts`
@@ -383,7 +383,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `computeCheckSourceHash`
     - `computeTreeHash`
     - `currentScanView`
-    - `discoverTscTargets`
     - `fingerprint`
     - `gitGrepList`
     - `grepCode`
@@ -403,6 +402,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `readCheckProgress`
     - `readProgramFileList`
     - `realGitFacts`
+    - `repoProgram`
     - `requestedJobs`
     - `runChecks`
     - `scopeOf`
@@ -413,7 +413,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`barrel-stubs-in-sync`**
   - **`bun-runtime`**
   - **`class-token-walk-single-source`**
-  - **`collected-dir-tsconfig-coverage`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**
   - **`config-stable-list-ids`**

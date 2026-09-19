@@ -1,80 +1,39 @@
-import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
-export interface TscTarget {
+/**
+ * The repo's ONE TypeScript program.
+ *
+ * There used to be a `TscTarget[]` here, discovered by scanning
+ * `plugins/framework/plugins/*` for a `tsconfig.json` and adding the two
+ * root-level projects (`tsconfig.tools.json`, `tsconfig.test.json`) — seven
+ * programs, each spelled as a `tsc` COMMAND LINE (`dir` + `args`), which every
+ * spawner then had to decode a `-p` back out of. Measured, the seven held
+ * 30,649 file instances for 8,252 distinct repo files, and six of them loaded
+ * the identical type environment: the split bought no type-environment
+ * isolation, only 3.7 checks of the average file per cold miss. So there is one
+ * program, named by its tsconfig FILE, and no list to iterate.
+ * See research/2026-09-18-global-type-check-one-program.md.
+ */
+export interface TscProgram {
+  /**
+   * The program's name. Used for its `.tsbuildinfo` filename, its warm-base
+   * pool partition and its transcript lines — so it is a stable literal, not
+   * something derived from a path that varies per worktree.
+   */
   name: string;
-  dir: string;
-  args: string[];
-  hasEntrypoint: boolean;
+  /** Absolute path of the tsconfig the worker builds. */
+  tsconfigPath: string;
 }
 
-export function discoverTscTargets(root: string): TscTarget[] {
-  const pluginsDir = join(root, "plugins/framework/plugins");
-  const entries = readdirSync(pluginsDir, { withFileTypes: true });
-  const targets: TscTarget[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const dir = join(pluginsDir, entry.name);
-    if (!existsSync(join(dir, "tsconfig.json"))) continue;
-    const hasApp = existsSync(join(dir, "tsconfig.app.json"));
-    targets.push({
-      name: entry.name,
-      dir,
-      args: hasApp ? ["-p", "tsconfig.app.json"] : [],
-      hasEntrypoint: existsSync(join(dir, "bin", "index.ts")),
-    });
-
-    // A sibling `tsconfig.node.json` (web-core's vite/vitest config files) owns
-    // lintable files no other project includes; give it its own target so the
-    // type-check covers and lints them. Not a runtime entrypoint — the build's
-    // per-entrypoint tsc loop filters it out via hasEntrypoint.
-    if (existsSync(join(dir, "tsconfig.node.json"))) {
-      targets.push({
-        name: `${entry.name}-node`,
-        dir,
-        args: ["-p", "tsconfig.node.json"],
-        hasEntrypoint: false,
-      });
-    }
-  }
-
-  // Root-level tools project: owns the build-time files (lint barrels, plugin
-  // scripts, root/plugin *.config.ts) that no runtime tsconfig includes. Not a
-  // runtime entrypoint, so the build's per-entrypoint tsc loop skips it; the
-  // `typescript` check runs every target, so it gets type-checked there.
-  if (existsSync(join(root, "tsconfig.tools.json"))) {
-    targets.push({
-      name: "tools",
-      dir: root,
-      args: ["-p", "tsconfig.tools.json"],
-      hasEntrypoint: false,
-    });
-  }
-
-  // Root-level test project: owns every `*.test.ts(x)` / `__tests__/**` file
-  // plus every `plugins/**/e2e/**` Playwright script, none of which the runtime
-  // tsconfigs include. Without it those files belong to no program —
-  // type-checked here (matching the dedicated test project main references via
-  // `tsc -b`) and linted via the same program. e2e/ lands here rather than in a
-  // project of its own because it needs exactly this target's shape: DOM lib
-  // (for `page.evaluate` browser bodies) plus node/bun types (for the driver).
-  if (existsSync(join(root, "tsconfig.test.json"))) {
-    targets.push({
-      name: "test",
-      dir: root,
-      args: ["-p", "tsconfig.test.json"],
-      hasEntrypoint: false,
-    });
-  }
-
-  return targets.sort((a, b) => a.name.localeCompare(b.name));
+export function repoProgram(root: string): TscProgram {
+  return { name: "repo", tsconfigPath: join(root, "tsconfig.json") };
 }
 
-// Stable per-target `.tsbuildinfo` location for incremental type-checking.
-// Lives under `.cache/` (gitignored) — OUTSIDE `node_modules`, so it survives
-// the `bun install` that every build runs. Warmed before each run from the
-// host-global pool in `./warm-base.ts`, so a fresh worktree's first check
-// starts from whatever any worktree checked most recently.
-export function tsBuildInfoPath(root: string, targetName: string): string {
-  return join(root, ".cache", "tsbuildinfo", `${targetName}.tsbuildinfo`);
+// Stable `.tsbuildinfo` location for incremental type-checking. Lives under
+// `.cache/` (gitignored) — OUTSIDE `node_modules`, so it survives the `bun
+// install` that every build runs. Warmed before each run from the host-global
+// pool in `./warm-base.ts`, so a fresh worktree's first check starts from
+// whatever any worktree checked most recently.
+export function tsBuildInfoPath(root: string, programName: string): string {
+  return join(root, ".cache", "tsbuildinfo", `${programName}.tsbuildinfo`);
 }

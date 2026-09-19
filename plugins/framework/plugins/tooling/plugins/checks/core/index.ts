@@ -1,8 +1,8 @@
 export { checkCollectedDir } from "./collected-dir";
 export { runChecks, listAllChecks, scopeOf, requestedJobs } from "./runner";
 export type { RunChecksOptions } from "./runner";
-export { discoverTscTargets, tsBuildInfoPath } from "./discover";
-export type { TscTarget } from "./discover";
+export { repoProgram, tsBuildInfoPath } from "./discover";
+export type { TscProgram } from "./discover";
 export { materializeWarmBase, publishWarmBase } from "./warm-base";
 export type { WarmBaseOutcome, WarmBasePublish } from "./warm-base";
 export { realGitFacts } from "./warm-base-git";

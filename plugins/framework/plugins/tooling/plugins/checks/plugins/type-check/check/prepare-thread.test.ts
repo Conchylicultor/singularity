@@ -47,30 +47,34 @@ async function git(...args: string[]): Promise<void> {
   }
 }
 
-// One tsc target (`discoverTscTargets` finds a tsconfig under
-// plugins/framework/plugins/<name>/) whose include-roots cover both sources.
-// The target name is unique to this suite so no warm base in the host-global
-// pool is ever materialized into the fixture.
-//
-// Spelled as the directory `discoverTscTargets` scans plus the fixture's name,
-// never as one `plugins/...` literal: this plugin exists only inside the
-// throwaway repo, and a whole-path literal reads to `plugin-refs-resolve` as a
-// reference to a plugin of THIS repo that does not exist.
-const TARGETS_DIR = "plugins/framework/plugins";
-const TARGET = "prepare-thread-fixture";
-const TARGET_DIR = `${TARGETS_DIR}/${TARGET}`;
+// The fixture is a whole repo in miniature: a root `tsconfig.json` (the only
+// tsconfig `repoProgram` ever names) whose `include` covers both sources.
+const PROGRAM = "repo";
+
+let dataRoot = "";
+/** A real directory that is NOT a git checkout — the failing-root case below. */
+let notARepo = "";
+const priorDataRoot = process.env.SINGULARITY_DIR;
 
 beforeAll(async () => {
+  // The program name is a fixed literal now (`repo`), not a per-suite one, so
+  // the host-global stores this preparation touches — the warm-base pool, the
+  // closure cache, the program-pass set — are the REAL ones unless pointed
+  // elsewhere. Left alone, the suite would score (and copy) every pooled
+  // multi-GB base of every checkout on this machine. `SINGULARITY_DIR` is the
+  // sanctioned redirect (every DataDir read resolves it per call), and it is
+  // set before any worker is spawned so the thread inherits it too.
+  dataRoot = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-data-"));
+  process.env.SINGULARITY_DIR = dataRoot;
+  notARepo = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-norepo-"));
+
   root = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-"));
   write(
-    `${TARGET_DIR}/tsconfig.json`,
+    "tsconfig.json",
     JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] }),
   );
-  write(`${TARGET_DIR}/src/a.ts`, "export const a = 1;\n");
-  write(
-    `${TARGET_DIR}/src/b.ts`,
-    'import { a } from "./a";\nexport const b = a + 1;\n',
-  );
+  write("src/a.ts", "export const a = 1;\n");
+  write("src/b.ts", 'import { a } from "./a";\nexport const b = a + 1;\n');
   write("package.json", JSON.stringify({ name: "fixture" }));
   await git("init", "-q");
   // So the host user's own global ignores cannot decide what the fixture holds.
@@ -78,7 +82,11 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  if (priorDataRoot === undefined) delete process.env.SINGULARITY_DIR;
+  else process.env.SINGULARITY_DIR = priorDataRoot;
   if (root) rmSync(root, { recursive: true, force: true });
+  if (dataRoot) rmSync(dataRoot, { recursive: true, force: true });
+  if (notARepo) rmSync(notARepo, { recursive: true, force: true });
 });
 
 /** The one field that is a measurement, not a decision, zeroed for comparison. */
@@ -113,27 +121,17 @@ test(
       const fromThread = await thread.prepare(await input());
       const inProcess = openPreparation(await input()).plan;
       expect(decisions(fromThread)).toEqual(decisions(inProcess));
-      // Not a vacuous equality: the fixture is a runnable, unkeyed cold target.
+      // Not a vacuous equality: the fixture is a runnable, unkeyed cold tree.
       expect(decisions(fromThread)).toEqual({
         kind: "run",
-        targets: [
-          {
-            name: TARGET,
-            tsconfigPath: join(root, TARGET_DIR, "tsconfig.json"),
-          },
-        ],
-        toRun: [TARGET],
-        lintByTarget: {
-          [TARGET]: [
-            join(root, TARGET_DIR, "src/a.ts"),
-            join(root, TARGET_DIR, "src/b.ts"),
-          ],
-        },
-        skipped: [],
-        unkeyed: [`${TARGET}: no buildinfo yet`],
-        // The fixture's target name is unique to this suite, so its pool
-        // partition is empty and the cold branch is the only one reachable.
-        warmBase: [`type-check: warm base ${TARGET}: cold, pool empty`],
+        program: { name: PROGRAM, tsconfigPath: join(root, "tsconfig.json") },
+        run: true,
+        lintFiles: [join(root, "src/a.ts"), join(root, "src/b.ts")],
+        skipped: false,
+        unkeyed: "no buildinfo yet",
+        // The data root is a fresh temp dir, so the pool partition really is
+        // empty and the cold branch is the only one reachable.
+        warmBase: `type-check: warm base ${PROGRAM}: cold, pool empty`,
         keysMs: 0,
       });
     } finally {
@@ -146,19 +144,20 @@ test(
 test(
   "a coverage-gate failure crosses the thread as the same plan",
   async () => {
-    // Outside the tsconfig include and imported by nothing: no program owns it.
-    write(`${TARGET_DIR}/stray.ts`, "export const stray = 1;\n");
+    // Outside the tsconfig include: not a root of the program, so nothing
+    // type-checks or lints it.
+    write("stray.ts", "export const stray = 1;\n");
     const thread = openPrepareThread();
     try {
       const fromThread = await thread.prepare(await input());
       expect(fromThread).toEqual(openPreparation(await input()).plan);
       expect(fromThread).toEqual({
         kind: "uncovered",
-        uncovered: [`${TARGET_DIR}/stray.ts`],
+        uncovered: ["stray.ts"],
       });
     } finally {
       thread.close();
-      rmSync(join(root, TARGET_DIR, "stray.ts"), { force: true });
+      rmSync(join(root, "stray.ts"), { force: true });
     }
   },
   TIMEOUT_MS,
@@ -169,15 +168,16 @@ test(
   async () => {
     const thread = openPrepareThread();
     try {
-      // A root with no plugins/ tree: target discovery's readdir throws inside
-      // `./prepare`, on the thread.
+      // A real directory that is not a git checkout: the program key's name
+      // census lists the composition registries with `git ls-files`, which
+      // fails loudly there — inside `./prepare`, on the thread.
       const err = await rejection(
         thread.prepare({
-          listing: { root: join(root, "no-such-checkout"), files: [] },
+          listing: { root: notARepo, files: [] },
           cacheEnabled: true,
         }),
       );
-      expect(err.message).toContain("no-such-checkout");
+      expect(err.message).toContain(notARepo);
       // A frame from inside `./prepare` — only the thread's own stack has one.
       expect(err.stack).toContain("openPreparation");
     } finally {
@@ -192,7 +192,7 @@ test(
   async () => {
     const thread = openPrepareThread();
     try {
-      expect((await rejection(thread.finalize([]))).message).toContain(
+      expect((await rejection(thread.finalize(undefined))).message).toContain(
         "finalize with no run plan",
       );
     } finally {

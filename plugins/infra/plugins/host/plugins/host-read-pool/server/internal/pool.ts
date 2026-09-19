@@ -119,7 +119,7 @@ export function withHeavyReadSlot<T>(
         onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs),
       });
     },
-    (waitMs) => chargeWait("heavy-read-local", waitMs),
+    { onWait: (waitMs) => chargeWait("heavy-read-local", waitMs) },
   );
 }
 

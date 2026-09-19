@@ -1714,7 +1714,9 @@ export function createResourceRuntime(
     };
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
-      gated ? () => readLoadGate.run(load, chargeReadGateWait) : load,
+      gated
+        ? () => readLoadGate.run(load, { onWait: chargeReadGateWait })
+        : load,
       {
         onWait: opts.onCoalesceWait,
         // Undefined for every read caller ⇒ join any live flight, exactly as
@@ -1773,7 +1775,9 @@ export function createResourceRuntime(
     const revalidate = entry.revalidate;
     try {
       const run = () =>
-        readLoadGate.run(() => revalidate(params), chargeReadGateWait);
+        readLoadGate.run(() => revalidate(params), {
+          onWait: chargeReadGateWait,
+        });
       const raw = await (opts.wrapOrigin
         ? opts.wrapOrigin("sub", entry.key, run)
         : run());
