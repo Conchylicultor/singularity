@@ -17,15 +17,19 @@ the engraver lays them out:
   `perTrack` gives each track its own part (one staff, or a grand staff when the
   track's range straddles the split pitch by ≥16 semitones); `auto` groups tracks
   by **instrument** — a per-track key of `gmProgram` (else `instrumentHint`, else
-  the track id so unknown instruments never merge). Each `auto` group pools its
-  tracks' notes into one part: a solo-piano piece imported as two left/right-hand
-  tracks shares one GM program → **one** grand staff (the pitch split + per-clef
-  voice separation reconstructs the standard piano engraving), while a true
-  ensemble of distinct instruments stays one part per instrument. If `auto`
+  the track id so unknown instruments never merge). Each `auto` group becomes one
+  part. A group of exactly **two** tracks is a two-handed part: a grand staff
+  where each track owns one staff (higher-sounding track on top, each staff's
+  clef from its own track's median pitch). So a solo piano imported as
+  right-hand / left-hand tracks keeps every note on its own hand's staff — a
+  right-hand note below middle C is not moved to the bass staff. A group of one
+  track, or three or more, pools its notes into one part split by `splitPitch`.
+  A true ensemble of distinct instruments stays one part per instrument. If `auto`
   yields exactly one group it renders identically to `grand`; multiple groups use
   the per-part staff/grand-staff + bracket logic. Parts are ordered top→bottom by
   descending mean pitch. >1 part → the system is wrapped in a `bracket`; a
-  grand-staff part is joined by a `brace`.
+  grand-staff part is joined by a `brace`. `grand` always pitch-splits (it is
+  the explicit "merge everything" mode), even for two hand tracks.
 - **Staves** — a part owns 1 staff (clef by median pitch) or 2 (treble/bass split
   by `splitPitch`). Every measure carries the same staff shape so the engraver
   stacks/connects uniformly; an empty staff in a bar becomes a whole-measure rest.
@@ -112,9 +116,16 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
   - `planEngraving(model, width, endBeat)` — **pure** layout (no Renderer, no
     DOM, safe in a `useMemo`): runs Pass 1 (measure each measure's minimum width,
     then discards the single-use VexFlow voices) + Pass 2 (greedy line-break),
-    computes per-system geometry (`top`, `boxHeight`, `scale`, `startBeat`) and
+    computes per-system geometry (`top`, `staffTops`, `boxHeight`, `pitch`,
+    `scale`, `startBeat`) and
     the cross-system tie sets (`tieIn`/`tieOut`, keyed `"si:vi"`). Returns an
     `EngravePlan` (all coordinates rebased so each system box starts at y=0).
+    Heights vary per system: `web/internal/staff-extent.ts` reads how far each
+    staff's ink reaches past its lines (ledger-line notes, stems, tuplet
+    numbers, chord symbols) straight from the model's keys, and the plan spaces
+    the staves and sizes the box from that — so a high or low passage is never
+    clipped by its SVG or drawn into the neighbouring staff. The virtualizer
+    takes each system's `pitch` as its exact row size.
   - `drawSystem(host, plan, systemIndex, colors)` — draws ONE system into its own
     `<svg>` (rebuilding fresh voices), returning that system's `{ anchors, notes }`.
 - `web/components/notation-system.tsx` — `<NotationSystem>`: one windowed system

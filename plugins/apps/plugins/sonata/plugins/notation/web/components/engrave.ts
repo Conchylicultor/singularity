@@ -46,6 +46,11 @@ import type {
   EngVoice,
   StemDir,
 } from "../internal/convert";
+import {
+  measureStaffExtents,
+  unionExtent,
+  type StaffExtent,
+} from "../internal/staff-extent";
 
 /** An ascending beat→x mapping point within a system (drives the playhead). */
 export interface BeatAnchor {
@@ -85,10 +90,18 @@ export interface SystemPlan {
   scale: number;
   /** First measure's start beat — for the beat→system binary search. */
   startBeat: number;
-  /** This system's top in sizer coordinates (0-based, index * systemPitch). */
+  /** This system's top in sizer coordinates (the sum of earlier `pitch`es). */
   top: number;
-  /** SVG box height: SYSTEM_TOP_PAD + contentHeight + SYSTEM_BOTTOM_PAD. */
+  /**
+   * Each staff's VexFlow `Stave` y within this system's box. Spaced per system
+   * from the staves' ink extents, so ledger-line notes never collide or clip.
+   */
+  staffTops: number[];
+  /** SVG box height: everything this system draws, plus a small pad. */
   boxHeight: number;
+  /** Top-to-top distance to the next system (boxHeight + SYSTEM_GAP) — this
+   *  system's virtual row size. */
+  pitch: number;
   /** voiceKey "si:vi" receiving an incoming (from the previous system) tie. */
   tieIn: Set<string>;
   /** voiceKey "si:vi" sending a hanging tie into the next system. */
@@ -106,19 +119,13 @@ export interface EngravePlan {
   width: number;
   /** Left gutter before the first measure (label gutter included). */
   leftPad: number;
-  /** Per-staff vertical offsets within a system (relative to its first staff). */
-  offsets: number[];
-  /** Height of one system's staff stack (last offset + STAFF_HEIGHT). */
-  contentHeight: number;
-  /** Top-to-top distance between systems (== virtualizer estimateSize). */
-  systemPitch: number;
   /** Whether per-part labels are drawn (multi-part + named). */
   hasLabels: boolean;
   /** Part layout (bracket/brace + labels). */
   parts: readonly EngPart[];
   /** Score end beat — the terminal anchor's beat. */
   endBeat: number;
-  /** Total sizer height (systems.length * systemPitch). */
+  /** Total sizer height (the sum of every system's `pitch`). */
   totalHeight: number;
 }
 
@@ -139,18 +146,19 @@ export interface EngraveColors {
 // --- Layout constants (px). ---
 const LEFT_PAD = 12;
 const RIGHT_PAD = 12;
-/** Top-to-top distance between the two staves of one grand-staff part. */
+/** Minimum top-to-top distance between the two staves of one grand-staff part. */
 const STAFF_GAP = 80;
-/** Top-to-top distance between two distinct parts (wider than within a part). */
+/** Minimum top-to-top distance between two distinct parts. */
 const PART_PITCH = 112;
-/** Rendered height of a single 5-line stave. */
-const STAFF_HEIGHT = 40;
-/** Blank space between one system's last staff and the next system's first. */
-const SYSTEM_GAP = 64;
-/** Padding above the first staff (room for chord symbols) in a system box. */
-const SYSTEM_TOP_PAD = 26;
-/** Padding below the last staff in a system box. */
-const SYSTEM_BOTTOM_PAD = 12;
+/** Clear space kept between one staff's lowest ink and the next staff's highest. */
+const STAFF_CLEARANCE = 12;
+/** Blank space between one system's box and the next system's box. */
+const SYSTEM_GAP = 24;
+/** Padding inside a system box, above its highest ink and below its lowest. */
+const BOX_PAD = 6;
+/** Stave-local y of a stave's top / bottom line (VexFlow's 4-space headroom). */
+const TOP_LINE_Y = 40;
+const BOTTOM_LINE_Y = 80;
 /** Slack added to each measure's measured minimum width. */
 const MEASURE_PAD = 24;
 /** Clef + opening barline room on a system's first measure. */
@@ -164,10 +172,36 @@ const LABEL_GUTTER = 64;
 
 /** Number of sharps/flats in a VexFlow key-signature name. */
 const KEYSIG_ACCIDENTALS: Record<string, number> = {
-  C: 0, G: 1, D: 2, A: 3, E: 4, B: 5, "F#": 6, "C#": 7,
-  F: 1, Bb: 2, Eb: 3, Ab: 4, Db: 5, Gb: 6, Cb: 7,
-  Am: 0, Em: 1, Bm: 2, "F#m": 3, "C#m": 4, "G#m": 5, "D#m": 6, "A#m": 7,
-  Dm: 1, Gm: 2, Cm: 3, Fm: 4, Bbm: 5, Ebm: 6, Abm: 7,
+  C: 0,
+  G: 1,
+  D: 2,
+  A: 3,
+  E: 4,
+  B: 5,
+  "F#": 6,
+  "C#": 7,
+  F: 1,
+  Bb: 2,
+  Eb: 3,
+  Ab: 4,
+  Db: 5,
+  Gb: 6,
+  Cb: 7,
+  Am: 0,
+  Em: 1,
+  Bm: 2,
+  "F#m": 3,
+  "C#m": 4,
+  "G#m": 5,
+  "D#m": 6,
+  "A#m": 7,
+  Dm: 1,
+  Gm: 2,
+  Cm: 3,
+  Fm: 4,
+  Bbm: 5,
+  Ebm: 6,
+  Abm: 7,
 };
 
 function stemOf(stem: StemDir): number | undefined {
@@ -315,18 +349,35 @@ function allVoices(bm: BuiltMeasure): Voice[] {
   return bm.staves.flatMap((s) => s.voices.map((v) => v.voice));
 }
 
-/** Vertical staff offsets (relative to the first staff top) for one system. */
-function staffOffsets(staves: readonly EngStaff[]): number[] {
-  const offsets: number[] = [];
-  let off = 0;
-  for (let i = 0; i < staves.length; i++) {
-    offsets[i] = off;
-    const next = staves[i + 1];
-    if (next) {
-      off += next.partId === staves[i]!.partId ? STAFF_GAP : PART_PITCH;
-    }
+/**
+ * One system's vertical layout from its measures' ink: each staff's `Stave` y
+ * within the box, and the box height. A staff sits far enough below the one
+ * above that neither's ink (ledger-line notes, stems, chord symbols) reaches
+ * the other, and never closer than the standard staff / part distance.
+ */
+function systemVerticalLayout(
+  measures: readonly EngMeasure[],
+  staves: readonly EngStaff[],
+): { staffTops: number[]; boxHeight: number } {
+  let extents: StaffExtent[] | null = null;
+  for (const m of measures) {
+    const ext = measureStaffExtents(m);
+    extents = extents ? extents.map((e, i) => unionExtent(e, ext[i]!)) : ext;
   }
-  return offsets;
+  const ext = extents ?? [];
+  if (ext.length === 0) return { staffTops: [], boxHeight: 2 * BOX_PAD };
+  const staffTops: number[] = [BOX_PAD - ext[0]!.top];
+  for (let i = 1; i < ext.length; i++) {
+    const minPitch =
+      staves[i]!.partId === staves[i - 1]!.partId ? STAFF_GAP : PART_PITCH;
+    const clear = ext[i - 1]!.bottom - ext[i]!.top + STAFF_CLEARANCE;
+    staffTops.push(staffTops[i - 1]! + Math.max(minPitch, clear));
+  }
+  const last = ext.length - 1;
+  return {
+    staffTops,
+    boxHeight: staffTops[last]! + ext[last]!.bottom + BOX_PAD,
+  };
 }
 
 function connect(
@@ -353,10 +404,6 @@ export function planEngraving(
 ): EngravePlan {
   // The staff shape is identical in every measure; take it from the first.
   const staffDefs = model.measures[0]?.staves ?? [];
-  const staffCount = staffDefs.length;
-  const offsets = staffOffsets(staffDefs);
-  const contentHeight = (offsets[staffCount - 1] ?? 0) + STAFF_HEIGHT;
-  const systemPitch = SYSTEM_TOP_PAD + contentHeight + SYSTEM_GAP;
 
   // Per-part labels: only meaningful for a multi-part (per-track) layout.
   const hasLabels = model.parts.length > 1 && model.parts.some((p) => p.name);
@@ -413,12 +460,18 @@ export function planEngraving(
     sliceMinWidths.push(curMinWidths);
   }
 
-  // Per-system geometry + width distribution.
+  // Per-system geometry + width distribution. Systems stack top to bottom,
+  // each as tall as its own ink needs.
+  let top = 0;
   const systems: SystemPlan[] = sliceMeasures.map((measures, index) => {
     const minWidths = sliceMinWidths[index]!;
     const scoreStart = index === 0;
     const extra0 = firstExtra(measures[0]!, scoreStart);
     const totalMin = minWidths.reduce((s, w) => s + w, 0);
+    const { staffTops, boxHeight } = systemVerticalLayout(measures, staffDefs);
+    const pitch = boxHeight + SYSTEM_GAP;
+    const systemTop = top;
+    top += pitch;
     return {
       index,
       measures,
@@ -428,8 +481,10 @@ export function planEngraving(
       extra0,
       scale: (available - extra0) / totalMin,
       startBeat: measures[0]!.startBeat,
-      top: index * systemPitch,
-      boxHeight: SYSTEM_TOP_PAD + contentHeight + SYSTEM_BOTTOM_PAD,
+      top: systemTop,
+      staffTops,
+      boxHeight,
+      pitch,
       tieIn: new Set<string>(),
       tieOut: new Set<string>(),
     };
@@ -482,13 +537,10 @@ export function planEngraving(
     systems,
     width,
     leftPad,
-    offsets,
-    contentHeight,
-    systemPitch,
     hasLabels,
     parts: model.parts,
     endBeat,
-    totalHeight: systems.length * systemPitch,
+    totalHeight: top,
   };
 }
 
@@ -515,9 +567,7 @@ export function drawSystem(
   ctx.setFillStyle(colors.foreground);
   ctx.setStrokeStyle(colors.foreground);
 
-  // First staff sits a fixed pad below the box top; the rest follow `offsets`.
-  const firstStaffTop = SYSTEM_TOP_PAD;
-  const staffTop = (i: number): number => firstStaffTop + (plan.offsets[i] ?? 0);
+  const staffTop = (i: number): number => sys.staffTops[i]!;
 
   const anchors: BeatAnchor[] = [];
   const notes: NoteEl[] = [];
@@ -578,7 +628,9 @@ export function drawSystem(
       ? vfStaves[0].getNoteEndX() - vfStaves[0].getNoteStartX()
       : Math.max(16, w - 24);
     if (vfVoices.length > 0) {
-      new Formatter().joinVoices(vfVoices).format(vfVoices, Math.max(16, inner));
+      new Formatter()
+        .joinVoices(vfVoices)
+        .format(vfVoices, Math.max(16, inner));
     }
 
     // Draw each voice on its staff, with per-voice beams + note tagging.
@@ -634,7 +686,7 @@ export function drawSystem(
 
   // Part labels (per-track only), on the score-start system, monochrome.
   if (plan.hasLabels && systemIndex === 0) {
-    drawPartLabels(plan.parts, plan.offsets, SYSTEM_TOP_PAD, ctx);
+    drawPartLabels(plan.parts, sys.staffTops, ctx);
   }
 
   // Terminal anchor at the score end, so the playhead travels to the finish.
@@ -733,8 +785,7 @@ function drawTies(
 /** Draw a small left-margin label centered on each part's staves. */
 function drawPartLabels(
   parts: readonly EngPart[],
-  offsets: readonly number[],
-  firstStaffTop: number,
+  staffTops: readonly number[],
   ctx: ReturnType<Renderer["getContext"]>,
 ): void {
   ctx.save();
@@ -743,9 +794,10 @@ function drawPartLabels(
   for (const part of parts) {
     const count = part.staffCount;
     if (part.name) {
-      const topOff = offsets[staffIdx] ?? 0;
-      const botOff = (offsets[staffIdx + count - 1] ?? topOff) + STAFF_HEIGHT;
-      const cy = firstStaffTop + (topOff + botOff) / 2;
+      // Centered between the part's top line and its bottom line.
+      const first = staffTops[staffIdx]!;
+      const last = staffTops[staffIdx + count - 1] ?? first;
+      const cy = (first + TOP_LINE_Y + last + BOTTOM_LINE_Y) / 2;
       ctx.fillText(part.name, 4, cy);
     }
     staffIdx += count;

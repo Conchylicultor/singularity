@@ -174,10 +174,37 @@ const REST_KEY: Record<"treble" | "bass", Record<StemDir, string>> = {
 /** VexFlow accepts these key-signature names; anything else falls back to "C". */
 const VEXFLOW_KEYS = new Set<string>([
   // Major
-  "C", "G", "D", "A", "E", "B", "F#", "C#", "F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb",
+  "C",
+  "G",
+  "D",
+  "A",
+  "E",
+  "B",
+  "F#",
+  "C#",
+  "F",
+  "Bb",
+  "Eb",
+  "Ab",
+  "Db",
+  "Gb",
+  "Cb",
   // Minor
-  "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m",
-  "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm", "Abm",
+  "Am",
+  "Em",
+  "Bm",
+  "F#m",
+  "C#m",
+  "G#m",
+  "D#m",
+  "A#m",
+  "Dm",
+  "Gm",
+  "Cm",
+  "Fm",
+  "Bbm",
+  "Ebm",
+  "Abm",
 ]);
 
 /** A `KeySignature` → a VexFlow key-sig name, normalized and allowlist-guarded. */
@@ -263,13 +290,21 @@ function buildBarStaff(
     const w = windows[wi]!;
     const cw = w.len / w.cells;
     for (let j = 0; j < w.cells; j++) {
-      cells.push({ start: w.start + j * cw, end: w.start + (j + 1) * cw, win: w, winIndex: wi });
+      cells.push({
+        start: w.start + j * cw,
+        end: w.start + (j + 1) * cw,
+        win: w,
+        winIndex: wi,
+      });
     }
   }
   if (cells.length === 0) return [];
 
   // Snap a real time onto the nearest cell boundary (window-aware quantization).
-  const boundaries = [...cells.map((c) => c.start), cells[cells.length - 1]!.end];
+  const boundaries = [
+    ...cells.map((c) => c.start),
+    cells[cells.length - 1]!.end,
+  ];
   const snap = (t: number): number => {
     let best = boundaries[0]!;
     let bestDist = Math.abs(t - best);
@@ -328,13 +363,17 @@ function buildBarStaff(
     while (cell < groupEnd) {
       const runKey = keyFor(cellIds[cell]!);
       let runLen = 1;
-      while (cell + runLen < groupEnd && keyFor(cellIds[cell + runLen]!) === runKey) {
+      while (
+        cell + runLen < groupEnd &&
+        keyFor(cellIds[cell + runLen]!) === runKey
+      ) {
         runLen++;
       }
       const ids = cellIds[cell]!;
       const runStartBeat = cells[cell]!.start;
       const runEndCell = cell + runLen;
-      const runReachesBarEnd = Math.abs(cells[runEndCell - 1]!.end - barEnd) < EPS;
+      const runReachesBarEnd =
+        Math.abs(cells[runEndCell - 1]!.end - barEnd) < EPS;
 
       // Decompose the run in its group's units: real beats for a binary group,
       // notated in-space beats for a tuplet group.
@@ -377,7 +416,13 @@ function buildBarStaff(
           runReachesBarEnd && chord.some((s) => s.fullEnd > barEnd + EPS);
         // Graces attach to the tickable that BEGINS a principal — one whose true
         // onset lands in this bar and whose run starts at that (snapped) onset.
-        const graces = collectRunGraces(chord, runStartBeat, snapped, graceByPrincipalId, speller);
+        const graces = collectRunGraces(
+          chord,
+          runStartBeat,
+          snapped,
+          graceByPrincipalId,
+          speller,
+        );
         pieces.forEach((p, i) => {
           const isLastPiece = i === pieces.length - 1;
           const realBeats = p.beats * notatedScale;
@@ -578,11 +623,75 @@ function buildPart(
   };
 }
 
-/** A pre-part group: an id, an optional label, and its pooled notes. */
+/**
+ * Build a two-handed part: a grand staff where each TRACK owns one staff, so a
+ * piano imported as right-hand / left-hand tracks engraves each hand on its own
+ * staff exactly as authored — a right-hand note below middle C stays on the
+ * upper staff instead of being re-split by pitch. The higher-sounding track
+ * (by mean pitch) is the upper staff; each staff's clef follows its own track's
+ * median pitch, so a hand playing high throughout reads in treble.
+ */
+function handsPart(
+  id: string,
+  name: string | undefined,
+  hands: readonly [Note[], Note[]],
+  splitPitch: number,
+  separateVoices: boolean,
+  maxVoicesPerStaff: number,
+): PlanPart {
+  const [upper, lower] =
+    meanPitchOf(hands[1]) > meanPitchOf(hands[0])
+      ? [hands[1], hands[0]]
+      : [hands[0], hands[1]];
+  const staffOf = (notes: Note[]): PlanStaff => ({
+    clef: medianPitchOf(notes) >= splitPitch ? "treble" : "bass",
+    partId: id,
+    voices: voiceBuckets(notes, separateVoices, maxVoicesPerStaff),
+  });
+  return { id, name, staves: [staffOf(upper), staffOf(lower)] };
+}
+
+/**
+ * A pre-part group: an id, an optional label, and its notes kept per source
+ * track (each non-empty, in score order). A group of exactly two tracks is a
+ * two-handed part ({@link handsPart}); otherwise the tracks pool into one part.
+ */
 interface NoteGroup {
   id: string;
   name?: string;
-  notes: Note[];
+  trackNotes: Note[][];
+}
+
+/** Build one group's part: one staff per hand for two tracks, else pooled. */
+function groupPart(
+  group: NoteGroup,
+  fallbackName: string | undefined,
+  forceGrand: boolean,
+  splitPitch: number,
+  separateVoices: boolean,
+  maxVoicesPerStaff: number,
+): PlanPart {
+  const name = group.name ?? fallbackName;
+  const [a, b, ...rest] = group.trackNotes;
+  if (a && b && rest.length === 0) {
+    return handsPart(
+      group.id,
+      name,
+      [a, b],
+      splitPitch,
+      separateVoices,
+      maxVoicesPerStaff,
+    );
+  }
+  return buildPart(
+    group.id,
+    name,
+    group.trackNotes.flat(),
+    forceGrand,
+    splitPitch,
+    separateVoices,
+    maxVoicesPerStaff,
+  );
 }
 
 type TrackInfo = NonNullable<ConvertOptions["tracks"]>[number];
@@ -606,16 +715,18 @@ function partsFromGroups(
   maxVoicesPerStaff: number,
 ): PlanPart[] {
   const orderIndex = new Map(groups.map((g, i) => [g.id, i]));
+  const mean = new Map(
+    groups.map((g) => [g.id, meanPitchOf(g.trackNotes.flat())]),
+  );
   const ordered = [...groups].sort((a, b) => {
-    const dm = meanPitchOf(b.notes) - meanPitchOf(a.notes);
+    const dm = mean.get(b.id)! - mean.get(a.id)!;
     if (Math.abs(dm) > EPS) return dm;
     return (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
   });
   return ordered.map((g, i) =>
-    buildPart(
-      g.id,
-      g.name ?? `Track ${i + 1}`,
-      g.notes,
+    groupPart(
+      g,
+      `Track ${i + 1}`,
       /* forceGrand */ false,
       splitPitch,
       separateVoices,
@@ -665,14 +776,20 @@ function buildPlan(score: Score, opts: ConvertOptions): PlanPart[] {
     const groups: NoteGroup[] = trackOrder.map((trackId) => ({
       id: trackId,
       name: trackMeta.get(trackId)?.name,
-      notes: byTrack.get(trackId)!,
+      trackNotes: [byTrack.get(trackId)!],
     }));
-    return partsFromGroups(groups, splitPitch, separateVoices, maxVoicesPerStaff);
+    return partsFromGroups(
+      groups,
+      splitPitch,
+      separateVoices,
+      maxVoicesPerStaff,
+    );
   }
 
   // `auto`: group tracks by instrument key into parts. A solo-piano piece split
   // into left/right-hand tracks shares one GM program → one group → one grand
-  // staff; a true ensemble of distinct instruments stays one part per instrument.
+  // staff with one hand per staff; a true ensemble of distinct instruments stays
+  // one part per instrument.
   const byInstrument = new Map<string, string[]>();
   const keyOrder: string[] = [];
   for (const trackId of trackOrder) {
@@ -686,23 +803,39 @@ function buildPlan(score: Score, opts: ConvertOptions): PlanPart[] {
     ids.push(trackId);
   }
 
-  // Exactly one instrument group (or no tracks) → render like `grand`.
-  if (byInstrument.size <= 1) return [grandPart()];
-
   const groups: NoteGroup[] = keyOrder.map((key) => {
     const ids = byInstrument.get(key)!;
-    const notes = ids.flatMap((id) => byTrack.get(id) ?? []);
+    const trackNotes = ids.map((id) => byTrack.get(id)!);
     const names = [
       ...new Set(
-        ids.map((id) => trackMeta.get(id)?.name).filter((n): n is string => !!n),
+        ids
+          .map((id) => trackMeta.get(id)?.name)
+          .filter((n): n is string => !!n),
       ),
     ];
     return {
       id: key,
       name: names.length > 0 ? names.join(", ") : undefined,
-      notes,
+      trackNotes,
     };
   });
+
+  // Exactly one instrument group (or no tracks) → one unlabeled grand staff:
+  // one hand per staff when the group is two tracks, else like `grand`.
+  const [only, ...others] = groups;
+  if (!only) return [grandPart()];
+  if (others.length === 0) {
+    return [
+      groupPart(
+        { ...only, id: "_grand", name: undefined },
+        undefined,
+        /* forceGrand */ true,
+        splitPitch,
+        separateVoices,
+        maxVoicesPerStaff,
+      ),
+    ];
+  }
   return partsFromGroups(groups, splitPitch, separateVoices, maxVoicesPerStaff);
 }
 
@@ -750,7 +883,8 @@ export function convert(score: Score, opts: ConvertOptions): EngraveModel {
       else break;
     }
     const barLen = sig.numerator * (4 / sig.denominator);
-    const barEnd = barList[i + 1]?.startBeat ?? Math.max(barStart + barLen, end);
+    const barEnd =
+      barList[i + 1]?.startBeat ?? Math.max(barStart + barLen, end);
 
     const keyName = vexflowKeyName(
       effectiveKeyAt(score, barStart) ?? score.meta.key,
@@ -762,7 +896,13 @@ export function convert(score: Score, opts: ConvertOptions): EngraveModel {
     const staves: EngStaff[] = planStaves.map((ps) => ({
       clef: ps.clef,
       partId: ps.partId,
-      voices: buildStaffVoices(ps, barStart, barEnd, speller, graceByPrincipalId),
+      voices: buildStaffVoices(
+        ps,
+        barStart,
+        barEnd,
+        speller,
+        graceByPrincipalId,
+      ),
     }));
 
     let chordSymbol: string | undefined;
@@ -820,11 +960,19 @@ function buildStaffVoices(
   const present = ps.voices
     .map((notes) => buildSegs(notes, barStart, barEnd, speller))
     .filter((segs) => segs.length > 0)
-    .map((segs) => buildBarStaff(segs, barStart, barEnd, graceByPrincipalId, speller));
+    .map((segs) =>
+      buildBarStaff(segs, barStart, barEnd, graceByPrincipalId, speller),
+    );
 
   if (present.length === 0) {
     // Empty staff/voice in this bar → a single whole-measure rest voice.
-    const rest = buildBarStaff([], barStart, barEnd, graceByPrincipalId, speller);
+    const rest = buildBarStaff(
+      [],
+      barStart,
+      barEnd,
+      graceByPrincipalId,
+      speller,
+    );
     return [{ tickables: withRestKeys(rest, ps.clef, "auto"), stem: "auto" }];
   }
 

@@ -43,8 +43,12 @@ export interface VirtualRowsProps<T> {
 
 export interface UseVirtualRowsOptions<T> {
   items: readonly T[];
-  /** Estimated px per row; dynamic measurement refines it after mount. */
-  estimateSize: number;
+  /**
+   * Estimated px per row — one size for every row, or a per-index size for rows
+   * whose heights are known up front (e.g. laid-out systems of a score). Dynamic
+   * measurement refines it after mount.
+   */
+  estimateSize: number | ((index: number) => number);
   /** Rows rendered beyond the viewport on each side. Default 8. */
   overscan?: number;
   getKey: (item: T, index: number) => string;
@@ -133,7 +137,8 @@ export function useVirtualRows<T>({
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollEl,
-    estimateSize: () => estimateSize,
+    estimateSize:
+      typeof estimateSize === "number" ? () => estimateSize : estimateSize,
     overscan,
     getItemKey: (index) => getKey(items[index]!, index),
     rangeExtractor,

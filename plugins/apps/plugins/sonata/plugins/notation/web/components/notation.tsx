@@ -200,10 +200,15 @@ function NotationInner({ score }: NotationProps) {
   const planRef = useLatestRef(plan);
 
   // Headless windowing: only systems near the viewport mount (create SVG DOM).
+  // Each system's height is exact from the plan (systems vary with their ink).
+  const estimateSize = useCallback(
+    (i: number) => plan?.systems[i]?.pitch ?? 1,
+    [plan],
+  );
   const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
     useVirtualRows<SystemPlan>({
       items: plan?.systems ?? EMPTY_SYSTEMS,
-      estimateSize: plan?.systemPitch ?? 1,
+      estimateSize,
       getKey: (s) => String(s.index),
       overscan: 4,
     });
