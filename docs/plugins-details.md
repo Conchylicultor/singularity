@@ -4529,9 +4529,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/css/ui-kit.ControlSizeProvider`
+                  - `primitives/dom/auto-scroll.useEdgeAutoScroll`
                   - `primitives/hover-reveal.hoverRevealClass`
                   - `primitives/hover-reveal.useHoverReveal`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/latest-ref.useEventCallback`
                   - `primitives/shortcuts.useSurfaceShortcuts`
             - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
               - Web:
@@ -27453,6 +27455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/persistent-draft.writeDraft`
             - Exports (types):
               - `EdgeAutoScroll`
+              - `EdgeScrollSurface`
               - `FindScrollParentOptions`
               - `JumpToBottomButtonProps`
               - `JumpToBottomView`
@@ -27472,6 +27475,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useStickyScroll`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `build`
               - `build/build-logs`
@@ -28034,6 +28038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/piano-roll`
           - `apps/sonata/primitives/inertial-drag`
           - `apps/sonata/primitives/keyboard`
+          - `apps/sonata/progress/loop`
           - `apps/sonata/shell`
           - `apps/sonata/track-mixer`
           - `build/serve-composition`

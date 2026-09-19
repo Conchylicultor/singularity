@@ -5,9 +5,23 @@ import {
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { findScrollParent } from "./internal/find-scroll-parent";
 
-export interface UseEdgeAutoScrollOptions {
-  /** Any element inside the scroll viewport; the hook walks up to find the scroller. */
-  anchorRef: RefObject<HTMLElement | null>;
+/**
+ * What an edge auto-scroll moves: anything with an edge band the pointer can
+ * approach and a way to move by some pixels. A DOM scroll container is one (the
+ * `anchorRef` form builds it); a surface whose "scroll" is not a scrollTop — a
+ * timeline that scrolls by moving its playhead — supplies its own.
+ */
+export interface EdgeScrollSurface {
+  /** The band's top and bottom edges, in viewport coordinates. */
+  band(): { top: number; bottom: number };
+  /**
+   * Move by `px` (fractional; + reveals what is below, - what is above).
+   * Returns whether the surface actually moved — false at a clamped end.
+   */
+  scrollBy(px: number): boolean;
+}
+
+interface EdgeAutoScrollCommon {
   /**
    * Fired after each frame that ACTUALLY moved the surface, with the last tracked
    * pointer position. This is where a gesture re-evaluates itself: while the
@@ -20,6 +34,24 @@ export interface UseEdgeAutoScrollOptions {
   /** Speed at (or past) the edge, px/sec. Default 900. */
   maxSpeed?: number;
 }
+
+export type UseEdgeAutoScrollOptions = EdgeAutoScrollCommon &
+  (
+    | {
+        /** Any element inside the scroll viewport; the hook walks up to find the scroller. */
+        anchorRef: RefObject<HTMLElement | null>;
+        surface?: never;
+      }
+    | {
+        /**
+         * Resolves the surface once per gesture, on its first `track` — so it can
+         * read refs and geometry that only exist once mounted. `null` makes the
+         * gesture a no-op.
+         */
+        surface: () => EdgeScrollSurface | null;
+        anchorRef?: never;
+      }
+  );
 
 export interface EdgeAutoScroll {
   /**
@@ -81,14 +113,38 @@ function edgeBand(el: HTMLElement): { top: number; bottom: number } {
   return { top: rect.top, bottom: rect.bottom };
 }
 
+/**
+ * A DOM scroll container as an {@link EdgeScrollSurface}. `scrollBy` moves in
+ * whole px, so the sub-pixel remainder is carried here — a slow ramp (< 1px per
+ * frame) would otherwise never move at all.
+ */
+function domSurface(el: HTMLElement): EdgeScrollSurface {
+  let remainder = 0;
+  return {
+    band: () => edgeBand(el),
+    scrollBy: (px) => {
+      remainder += px;
+      const stepPx = Math.trunc(remainder);
+      remainder -= stepPx;
+      if (stepPx === 0) return false;
+      const before = el.scrollTop;
+      // `instant`, never the container's CSS `scroll-behavior`: a smooth scroll
+      // settles asynchronously, so the moved-check would read `before` on every
+      // frame and the loop would pile animations onto each other.
+      el.scrollBy({ top: stepPx, behavior: "instant" });
+      return el.scrollTop !== before;
+    },
+  };
+}
+
 /** Signed px/sec for the current pointer position: + scrolls down, - scrolls up, 0 idles. */
 function velocityFor(
-  el: HTMLElement,
+  surface: EdgeScrollSurface,
   clientY: number,
   threshold: number,
   maxSpeed: number,
 ): number {
-  const { top, bottom } = edgeBand(el);
+  const { top, bottom } = surface.band();
   const fromTop = clientY - top;
   const fromBottom = bottom - clientY;
   // The nearer edge decides the direction, so a viewport shorter than two bands
@@ -104,9 +160,10 @@ function velocityFor(
 }
 
 /**
- * Scroll the anchor's scroll parent while a gesture's pointer sits in the top or
- * bottom edge band, ramping up the closer to the edge — the "drag past the
- * viewport and the document follows" behavior, factored out of any one gesture.
+ * Scroll the anchor's scroll parent (or a caller-supplied `surface`) while a
+ * gesture's pointer sits in the top or bottom edge band, ramping up the closer
+ * to the edge — the "drag past the viewport and the document follows" behavior,
+ * factored out of any one gesture and any one kind of scroller.
  *
  * Gesture-agnostic: the hook knows nothing but a viewport `clientY`. The caller
  * feeds it from whatever it is tracking (`track`) and re-applies its own per-frame
@@ -122,25 +179,32 @@ function velocityFor(
  * say). A held button already gives implicit capture, which is why the ramp only
  * has to tolerate a pointer outside the window.
  */
-export function useEdgeAutoScroll({
-  anchorRef,
-  onScroll,
-  threshold = DEFAULT_THRESHOLD,
-  maxSpeed = DEFAULT_MAX_SPEED,
-}: UseEdgeAutoScrollOptions): EdgeAutoScroll {
+export function useEdgeAutoScroll(
+  options: UseEdgeAutoScrollOptions,
+): EdgeAutoScroll {
+  const {
+    onScroll,
+    threshold = DEFAULT_THRESHOLD,
+    maxSpeed = DEFAULT_MAX_SPEED,
+  } = options;
+  // How a gesture finds its surface, read at `track` time (see there).
+  const resolveSurfaceRef = useLatestRef((): EdgeScrollSurface | null => {
+    if (options.surface) return options.surface();
+    const el = findScrollParent(options.anchorRef.current, {
+      requireOverflowing: true,
+    });
+    return el ? domSurface(el) : null;
+  });
   // Read the callback through a ref so a fresh identity on every render never
   // restarts (or reschedules) an in-flight loop.
   const onScrollRef = useLatestRef(onScroll);
 
-  // Per-gesture state. `scrollElRef` is resolved lazily on the first `track` and
+  // Per-gesture state. `surfaceRef` is resolved lazily on the first `track` and
   // released by `stop` — see `track`.
-  const scrollElRef = useRef<HTMLElement | null>(null);
+  const surfaceRef = useRef<EdgeScrollSurface | null>(null);
   const clientYRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
-  // Sub-pixel remainder: `scrollBy` moves in whole px, so a slow ramp (< 1px per
-  // frame) would otherwise never move at all.
-  const remainderRef = useRef(0);
 
   /**
    * Start the loop unless it is already running.
@@ -161,8 +225,8 @@ export function useEdgeAutoScroll({
     if (rafRef.current !== null) return;
 
     function step(time: number): void {
-      const el = scrollElRef.current;
-      if (!el) {
+      const surface = surfaceRef.current;
+      if (!surface) {
         rafRef.current = null;
         lastTimeRef.current = null;
         return;
@@ -173,29 +237,25 @@ export function useEdgeAutoScroll({
         1000;
       lastTimeRef.current = time;
 
-      const velocity = velocityFor(el, clientYRef.current, threshold, maxSpeed);
+      const velocity = velocityFor(
+        surface,
+        clientYRef.current,
+        threshold,
+        maxSpeed,
+      );
       if (velocity === 0) {
         // Outside the band: stop scheduling. `track` restarts the loop when the
         // pointer comes back — an idle gesture burns no frames.
         rafRef.current = null;
         lastTimeRef.current = null;
-        remainderRef.current = 0;
         return;
       }
 
-      remainderRef.current += velocity * dt;
-      const stepPx = Math.trunc(remainderRef.current);
-      remainderRef.current -= stepPx;
-      if (stepPx !== 0) {
-        const before = el.scrollTop;
-        // `instant`, never the container's CSS `scroll-behavior`: a smooth scroll
-        // settles asynchronously, so the moved-check below would read `before` on
-        // every frame and the loop would pile animations onto each other.
-        el.scrollBy({ top: stepPx, behavior: "instant" });
-        // Only report a frame that MOVED the surface. At a clamped top/bottom edge
-        // the scroll is a no-op, and the consumer's per-frame work (which can be as
-        // expensive as a querySelectorAll + a rect per row) must not run for nothing.
-        if (el.scrollTop !== before) onScrollRef.current(clientYRef.current);
+      // Only report a frame that MOVED the surface. At a clamped top/bottom edge
+      // the scroll is a no-op, and the consumer's per-frame work (which can be as
+      // expensive as a querySelectorAll + a rect per row) must not run for nothing.
+      if (surface.scrollBy(velocity * dt)) {
+        onScrollRef.current(clientYRef.current);
       }
 
       rafRef.current = requestAnimationFrame(step);
@@ -206,12 +266,10 @@ export function useEdgeAutoScroll({
 
   const track = useEventCallback((clientY: number) => {
     clientYRef.current = clientY;
-    // Resolve the scroller lazily, once per gesture (`stop` clears it), never at
+    // Resolve the surface lazily, once per gesture (`stop` clears it), never at
     // mount: the anchor may not be mounted yet when the hook first runs, and a
     // host is free to re-parent the surface between gestures.
-    scrollElRef.current ??= findScrollParent(anchorRef.current, {
-      requireOverflowing: true,
-    });
+    surfaceRef.current ??= resolveSurfaceRef.current();
     startLoop();
   });
 
@@ -219,8 +277,7 @@ export function useEdgeAutoScroll({
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
     lastTimeRef.current = null;
-    remainderRef.current = 0;
-    scrollElRef.current = null;
+    surfaceRef.current = null;
   });
 
   // Unmounting mid-gesture must never leave a loop scrolling a detached surface.

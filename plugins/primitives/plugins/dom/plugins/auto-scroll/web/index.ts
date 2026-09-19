@@ -21,6 +21,7 @@ export type {
 export { useEdgeAutoScroll } from "./use-edge-auto-scroll";
 export type {
   EdgeAutoScroll,
+  EdgeScrollSurface,
   UseEdgeAutoScrollOptions,
 } from "./use-edge-auto-scroll";
 export { findScrollParent } from "./internal/find-scroll-parent";

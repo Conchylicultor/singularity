@@ -3,18 +3,32 @@ import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRef } from "react";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorApi,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useEdgeAutoScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { snapToBars } from "../loop-actions";
 import { useLoopEdgeBuckets } from "../loop-edge-state";
 
 /** Height (px) of the invisible grab strip centred on each boundary line. */
 const HANDLE_HIT_PX = 12;
 
+/**
+ * How close (px) to the lane's top or bottom edge a dragged boundary starts
+ * scrolling the roll. A little under the primitive's default, since a boundary
+ * sitting on the playhead is grabbed right at the lane's bottom edge.
+ */
+const EDGE_SCROLL_PX = 40;
+
 /** Pointer handlers that drag one loop boundary; spread onto its grab targets. */
 type BoundaryDragProps = {
   onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerUp: () => void;
+  onPointerCancel: () => void;
 };
 
 /**
@@ -31,6 +45,12 @@ type BoundaryDragProps = {
  * still scrubs the song. The grab targets `stopPropagation()` their
  * `pointerdown` so grabbing a boundary never also starts the lane's scrub.
  *
+ * Holding a dragged boundary near the lane's top or bottom edge scrolls the
+ * roll (later / earlier in the song), so a bound can be carried past what is on
+ * screen. The roll scrolls by moving the playhead, so the edge auto-scroll gets
+ * a surface whose `scrollBy` seeks; playback pauses while it scrolls and
+ * resumes on release, like the lane's own drag.
+ *
  * Mirrors the progress-bar `LoopRegion`'s visual language (primary tint + ring;
  * faded / outline-only while disabled) so the same loop reads as the same thing
  * on both surfaces.
@@ -43,14 +63,93 @@ type BoundaryDragProps = {
  * layer's own top edge — the content origin, wherever the scroll has put it.
  */
 export function LoopRollRegion({ projection }: { projection: Projection }) {
-  const { loop, setLoop, score } = useSonata();
+  const { loop, setLoop, score, seekTo, isPlaying, play, stop } = useSonata();
+  const cursor = useCursorApi();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // The boundary being dragged (and whether Alt is held for off-grid placement),
+  // and whether this drag's edge scroll paused playback.
+  const dragRef = useRef<{ edge: "start" | "end"; altKey: boolean } | null>(
+    null,
+  );
+  const pausedRef = useRef(false);
   const { beatToY, yToBeat } = projection;
+  const H = projection.viewport.height;
   // Which boundaries have scrolled off-screen (so their content-space label is
   // hidden — the screen-anchored edge chip stands in for it). Called BEFORE the
   // early return so hook order stays stable; it early-returns empty internally
   // when there's no loop / time axis.
   const { top: edgeTop, bottom: edgeBottom } = useLoopEdgeBuckets(projection);
+
+  // Pointer → beat: the layer's top edge is content Y 0, so the pointer's
+  // offset from it is a content-space Y. `setLoop` clamps and keeps the min
+  // gap, so the boundaries can never cross.
+  const moveDragged = useEventCallback((clientY: number) => {
+    const drag = dragRef.current;
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!drag || !rect || !loop || !yToBeat) return;
+    const beat = yToBeat(clientY - rect.top);
+    setLoop({
+      ...loop,
+      [drag.edge]: drag.altKey ? beat : snapToBars(beat, score),
+    });
+  });
+
+  // The roll as an edge-scroll surface. The playhead sits on the lane's bottom
+  // edge, so the lane's top in the viewport is the content origin moved down by
+  // the playhead's content Y, less the lane height (see `useLoopEdgeBuckets`).
+  // Scrolling by `px` is a seek by that much content Y.
+  const autoScroll = useEdgeAutoScroll({
+    threshold: EDGE_SCROLL_PX,
+    surface: () => {
+      const root = rootRef.current;
+      if (!root || !beatToY || !yToBeat) return null;
+      return {
+        band: () => {
+          const top =
+            root.getBoundingClientRect().top + beatToY(cursor.getBeat()) - H;
+          return { top, bottom: top + H };
+        },
+        scrollBy: (px) => {
+          if (isPlaying && !pausedRef.current) {
+            pausedRef.current = true;
+            stop();
+          }
+          const before = cursor.getBeat();
+          seekTo(yToBeat(beatToY(before) + px));
+          return cursor.getBeat() !== before;
+        },
+      };
+    },
+    // The content moved under a still pointer: re-place the boundary under it.
+    onScroll: moveDragged,
+  });
+
+  // The drag's pointer handlers — event callbacks, since they drive refs.
+  const startDrag = useEventCallback(
+    (edge: "start" | "end", e: ReactPointerEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragRef.current = { edge, altKey: e.altKey };
+    },
+  );
+  const continueDrag = useEventCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag || (e.buttons & 1) === 0) return;
+      drag.altKey = e.altKey;
+      moveDragged(e.clientY);
+      autoScroll.track(e.clientY);
+    },
+  );
+  const endDrag = useEventCallback(() => {
+    dragRef.current = null;
+    autoScroll.stop();
+    if (pausedRef.current) {
+      pausedRef.current = false;
+      play();
+    }
+  });
+
   // No region, or a display without a real time axis → render nothing.
   if (!loop || !beatToY || !yToBeat) return null;
 
@@ -63,20 +162,11 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
   const aOn = !edgeTop.includes("A") && !edgeBottom.includes("A");
   const bOn = !edgeTop.includes("B") && !edgeBottom.includes("B");
 
-  // Pointer → beat: the layer's top edge is content Y 0, so the pointer's
-  // offset from it is a content-space Y. `setLoop` clamps and keeps the min
-  // gap, so the boundaries can never cross.
   const dragBoundary = (edge: "start" | "end"): BoundaryDragProps => ({
-    onPointerDown: (e) => {
-      e.stopPropagation();
-      e.currentTarget.setPointerCapture(e.pointerId);
-    },
-    onPointerMove: (e) => {
-      const rect = rootRef.current?.getBoundingClientRect();
-      if (!rect || (e.buttons & 1) === 0) return;
-      const beat = yToBeat(e.clientY - rect.top);
-      setLoop({ ...loop, [edge]: e.altKey ? beat : snapToBars(beat, score) });
-    },
+    onPointerDown: (e) => startDrag(edge, e),
+    onPointerMove: continueDrag,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
   });
   const dragA = dragBoundary("start");
   const dragB = dragBoundary("end");

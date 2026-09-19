@@ -3,7 +3,10 @@
 //     at the very end of the song (it used to stop at the last bar line), and
 //     does not drag the playhead along with it;
 //   - on the piano roll, dragging the A boundary line moves A (the bar's A
-//     handle follows) without also scrubbing the song.
+//     handle follows) without also scrubbing the song;
+//   - holding a dragged boundary at the roll's top edge scrolls the song
+//     forward, and the boundary keeps following the pointer past what was on
+//     screen when the drag began.
 //
 // The loop lives only in the page's memory, so nothing is left behind.
 //
@@ -101,6 +104,32 @@ await withBrowser(async (h) => {
     valueBefore,
   );
   await snap(page, OUT, "3-a-moved");
+
+  // ── Piano roll: hold the dragged A line at the top edge ─────────────────
+  const lane = await page.locator("canvas").first().boundingBox();
+  if (!lane) throw new Error("the roll's canvas has no box");
+  const a2 = await rollStart.boundingBox();
+  if (!a2) throw new Error("the roll's A line has no box");
+  const beforeHold = Number(await slider.getAttribute("aria-valuenow"));
+  const aBeforeHold = await centerX(barStart);
+  await page.mouse.move(ax, a2.y + a2.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(ax, lane.y + 4, { steps: 12 });
+  await page.waitForTimeout(1500);
+  await snap(page, OUT, "4-holding-at-top");
+  await page.mouse.up();
+  const afterHold = Number(await slider.getAttribute("aria-valuenow"));
+  const aAfterHold = await centerX(barStart);
+  r.ok(
+    "holding at the top edge scrolls the song forward",
+    afterHold > beforeHold,
+    `playhead was at beat ${beforeHold}, now ${afterHold}`,
+  );
+  r.ok(
+    "A keeps following the pointer past the first screen",
+    aAfterHold > aBeforeHold + 20,
+    `A on the bar was ${aBeforeHold.toFixed(1)}, now ${aAfterHold.toFixed(1)}`,
+  );
 
   await r.finish();
 });

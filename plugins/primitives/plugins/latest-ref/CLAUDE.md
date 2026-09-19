@@ -36,6 +36,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/inertial-drag`
     - `apps/sonata/primitives/keyboard`
+    - `apps/sonata/progress/loop`
     - `apps/sonata/shell`
     - `apps/sonata/track-mixer`
     - `build/serve-composition`

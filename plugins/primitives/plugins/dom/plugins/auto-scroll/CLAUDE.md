@@ -79,11 +79,18 @@ called from the pointer handler only, never from that applier**, or the hook
 re-latches off its own callback. (It fires only on a frame that actually moved the
 surface: at a clamped edge the consumer's per-frame work must not run for nothing.)
 
-**The scroll parent is resolved per gesture** — lazily on the first `track` after
+**What it scrolls is an `EdgeScrollSurface`** — an edge band plus a
+`scrollBy(px)` that says whether anything moved. `anchorRef` builds the usual one
+from a DOM scroll container (carrying the sub-pixel remainder, since `scrollBy`
+moves in whole px). A surface whose scroll is not a `scrollTop` passes its own
+via `surface` instead: the Sonata piano roll scrolls by moving the playhead, so
+its surface's `scrollBy` is a seek (see `apps/sonata/progress/loop`).
+
+**The surface is resolved per gesture** — lazily on the first `track` after
 a `stop`, never at mount: the anchor may be unmounted when the hook first runs,
 and a host may re-parent the surface between gestures.
 
-**`requireOverflowing: true`** is what keeps failure loud. The plain walk returns
+**`requireOverflowing: true`** (the `anchorRef` form) is what keeps failure loud. The plain walk returns
 the first *style*-scrollable ancestor even when its content currently fits, and
 the loop would then run at 60fps writing a `scrollTop` that never budges —
 indistinguishable from "parked at the bottom". Callers that merely *read* a scroll
@@ -107,6 +114,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/persistent-draft.writeDraft`
   - Exports (types):
     - `EdgeAutoScroll`
+    - `EdgeScrollSurface`
     - `FindScrollParentOptions`
     - `JumpToBottomButtonProps`
     - `JumpToBottomView`
@@ -126,6 +134,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `useStickyScroll`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
     - `build`
     - `build/build-logs`
