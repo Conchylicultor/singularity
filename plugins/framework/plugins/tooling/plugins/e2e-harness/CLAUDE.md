@@ -266,6 +266,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/sonata/library`
     - `apps/sonata/look`
     - `apps/sonata/pitch-layout`
+    - `apps/sonata/progress/loop`
     - `apps/sonata/track-mixer`
     - `apps/sonata/view-options`
     - `apps/website/improve`

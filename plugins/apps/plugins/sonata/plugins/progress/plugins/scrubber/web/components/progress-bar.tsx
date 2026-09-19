@@ -160,8 +160,13 @@ export function ProgressBar() {
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      // Primary button held → continuous drag-scrub.
+      // Primary button held → continuous drag-scrub — but only for a drag the
+      // track itself started (it captured the pointer on press). A marker that
+      // runs its own drag (the loop handles) captures the pointer instead, and
+      // its moves still bubble up here; without this check they would drag the
+      // playhead along with the handle.
       if (!ready || (e.buttons & 1) === 0) return;
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
       seekToPointer(e);
     },
     [ready, seekToPointer],

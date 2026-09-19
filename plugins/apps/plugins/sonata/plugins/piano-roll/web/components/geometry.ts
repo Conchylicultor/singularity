@@ -265,6 +265,7 @@ export function buildProjection(input: {
   const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   const beatToY = (beat: number): number =>
     -tempo.beatToSeconds(beat) * pxPerSecond;
+  const yToBeat = (y: number): number => tempo.secondsToBeat(-y / pxPerSecond);
   // `null` for a pitch the axis does not carry — a stated "not here", not a
   // fabricated position an overlay would anchor to (see `Projection`).
   const pitchToX = (pitch: number): number | null => {
@@ -291,6 +292,7 @@ export function buildProjection(input: {
     capabilities: new Set(["time-axis", "pitch-plane"]),
     viewport: { width, height },
     beatToY,
+    yToBeat,
     pitchToX,
     noteToRect,
     pitchPlane: plane,

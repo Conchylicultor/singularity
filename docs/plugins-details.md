@@ -16864,6 +16864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/look`
               - `apps/sonata/pitch-layout`
+              - `apps/sonata/progress/loop`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
               - `apps/website/improve`

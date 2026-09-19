@@ -49,21 +49,18 @@ export function defaultLoopAt(score: Score, beat: number): LoopRange | null {
 }
 
 /**
- * Snap a beat to the nearest bar line (`bars(score)`). Callers bypass this when
- * Alt is held, for fine off-grid placement.
+ * Snap a beat to the nearest loop boundary: a bar line (`bars(score)`) or the
+ * song's end. The end is a target in its own right because `bars()` lists bar
+ * STARTS only — a song whose last bar is cut short (or simply ends mid-bar)
+ * has no bar line at its end, so without it a loop's `B` could never reach the
+ * end of the song. Callers bypass this when Alt is held, for fine off-grid
+ * placement.
  */
 export function snapToBars(beat: number, score: Score): number {
-  const lines = bars(score);
-  const first = lines[0];
-  if (!first) return beat;
-  let nearest = first.startBeat;
-  let bestDist = Math.abs(beat - nearest);
-  for (const { startBeat } of lines) {
-    const d = Math.abs(beat - startBeat);
-    if (d < bestDist) {
-      bestDist = d;
-      nearest = startBeat;
-    }
+  const targets = [...bars(score).map((b) => b.startBeat), scoreEndBeat(score)];
+  let nearest = targets[0]!;
+  for (const t of targets) {
+    if (Math.abs(beat - t) < Math.abs(beat - nearest)) nearest = t;
   }
   return nearest;
 }

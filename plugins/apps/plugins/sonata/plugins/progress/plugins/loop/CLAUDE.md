@@ -4,9 +4,15 @@ Sonata A–B practice loop: a draggable loop region on the progression bar, a
 toolbar Loop toggle, and `L`/`[`/`]` shortcuts that cycle playback within `[A, B]`.
 
 The loop is also surfaced on the piano roll's falling-note timeline — a
-scroll-synced `[A, B]` band with `A`/`B` boundary lines, contributed (view-only)
-through the generic `Sonata.TransportOverlay` slot so it scrolls glued to the
-notes. Dragging the bounds stays on the progression bar.
+scroll-synced `[A, B]` band with `A`/`B` boundary lines, contributed through the
+generic `Sonata.TransportOverlay` slot so it scrolls glued to the notes. Each
+boundary line (and its letter chip) is draggable there too, mapped back to a
+beat through the projection's `yToBeat`; the rest of the band stays
+pointer-transparent so dragging the lane still scrubs.
+
+Both surfaces snap a dragged bound with one rule (`snapToBars`): the nearest bar
+line or the song's end — the end has to be a target of its own, since a song
+that ends mid-bar has no bar line there. Holding Alt skips the snap.
 
 Because the loop is usually taller than the lookahead, a boundary often sits
 off-screen. The loop also surfaces a sticky off-screen `A`/`B` edge indicator —

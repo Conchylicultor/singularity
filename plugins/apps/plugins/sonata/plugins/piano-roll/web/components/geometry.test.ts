@@ -148,6 +148,21 @@ test("buildProjection scales the whole Y axis by spread (and 1 is the baseline)"
   expect(r2.w).toBeCloseTo(r1.w, 9);
 });
 
+test("buildProjection's yToBeat inverts beatToY across tempo changes and zoom", () => {
+  const score = makeScore([note(60, 0, 1), note(62, 6, 2)]);
+  const p = buildProjection({
+    width: 520,
+    height: 400,
+    plane: PIANO,
+    score: scaleTempo(score, 0.5),
+    tempoScale: 0.5,
+    spread: 1.7,
+  });
+  for (const beat of [0, 1.5, 4, 5.25, 8]) {
+    expect(p.yToBeat!(p.beatToY!(beat))).toBeCloseTo(beat, 9);
+  }
+});
+
 // --- per-note fields -----------------------------------------------------------
 
 test("alpha maps velocity 0..127 onto 0.4..1.0", () => {

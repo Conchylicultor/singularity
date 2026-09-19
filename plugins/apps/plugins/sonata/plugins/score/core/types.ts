@@ -227,6 +227,12 @@ export interface Projection {
   /** Present iff "time-axis": beat → screen Y (px from the top of the lane). */
   beatToY?: (beat: number) => number;
   /**
+   * Present iff "time-axis": the exact inverse of {@link beatToY} — a
+   * content-space Y (px) back to its beat. Lets an overlay turn a pointer
+   * position on the lane into a beat (e.g. dragging a loop boundary).
+   */
+  yToBeat?: (y: number) => number;
+  /**
    * Present iff "pitch-plane": pitch → screen X (px, column center), or `null`
    * when this axis does not carry that pitch. A missing pitch is a real
    * possibility (a display shows a range, a score may not respect it), and it
