@@ -15,7 +15,7 @@ const LEAD_SECONDS = 0.03;
 const BASS_VELOCITY = 84;
 const UPPER_VELOCITY = 70;
 
-/** The trainer's piano: one AudioContext and one voice set, for this screen. */
+/** The Chord app's piano: one AudioContext and one voice set, for this screen. */
 type PianoGraph = {
   ctx: AudioContext;
   voices: InstrumentVoices;
@@ -29,8 +29,11 @@ type PianoGraph = {
  * - **Created on the first chord played**, inside the click that asked for it.
  *   So the samples download only when a chord is first played, and the context
  *   is born inside a user gesture, which is what lets it start running.
- * - **One per screen**: later chords reuse the same context and voices. Each
- *   new chord cuts the one before it (`allOff`), so chords never pile up.
+ * - **One per screen**: later chords reuse the same context and voices, and the
+ *   screen hands this ONE instance to everything that sounds — the chord
+ *   buttons, the answer boxes, and the keyboard's own playable keys. A second
+ *   `usePiano()` would open a second context beside it. Each new sound cuts the
+ *   one before it (`allOff`), so nothing piles up.
  * - **Disposed on unmount**: the voices, then the context.
  *
  * The instrument is read generically from `SonataAudio.Instrument` (the one

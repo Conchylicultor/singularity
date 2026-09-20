@@ -1,0 +1,41 @@
+/* The chord piano's bespoke paint. Layout stays with the layout primitives;
+ * this file only paints, and every colour reads the chord theme — the lit key
+ * and its label are the `.chord-tone` pair (`--fn-bg` / `--fn-ink`) an answer
+ * box already wears, so the two read as the same object. No hex here. */
+
+/* The doubled bass wears the theme's NEUTRAL chord grey (`--categorical-10`,
+ * the colour a root outside the key already uses), given the same tile-and-ink
+ * treatment `.chord-tone` gives a chord colour — a little deeper, so it sits
+ * under the chord rather than beside it.
+ *
+ * Neutral rather than a washed-out version of the chord's own hue, which is
+ * what this first tried: mixing the tile toward `--muted` in a dark theme lands
+ * on a darker shade of the SAME colour, so the bass read as a fourth chord tone
+ * on a black key. Dropping the hue entirely is what makes it read as support.
+ * Defined here rather than in `.chord-tone` because nothing else in the app
+ * doubles a bass. */
+.chord-piano {
+  --fn-bass: color-mix(in oklch, var(--categorical-10) 58%, black);
+  --fn-bass-ink: color-mix(in srgb, var(--categorical-10) 12%, white);
+}
+
+/* The note printed on a lit key. Only lit keys carry one, so the ink is always
+ * the tile's own; an unlit key says nothing. */
+.chord-key-label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fn-ink);
+}
+.chord-key-label[data-bass] {
+  color: var(--fn-bass-ink);
+}
+
+/* The card's header: the chord's letter name, then its numeral. Both in the
+ * chord's own colour, so the header and the keys below it match. */
+.chord-piano-name {
+  color: var(--fn, var(--foreground));
+}
+.chord-piano-num {
+  font-size: 20px;
+}

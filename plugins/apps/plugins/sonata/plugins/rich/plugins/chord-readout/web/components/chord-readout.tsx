@@ -14,7 +14,10 @@ import {
   formatChordSymbolWithBass,
   romanNumeral,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import {
+  Keyboard,
+  useSonataKeySkin,
+} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -106,6 +109,8 @@ function fitToWindow(voicings: number[][]): {
  * every gap, jumping the whole section column with it.
  */
 export function ChordReadout() {
+  // Sonata's own look paints its keys: one control, every keyboard in the app.
+  const skin = useSonataKeySkin();
   const { score } = useSonata();
   const [showInversions, setShowInversions] = useDraft<boolean>(
     "sonata:chord-readout:inversions",
@@ -253,6 +258,7 @@ export function ChordReadout() {
                 <Keyboard
                   plane={plane}
                   lit={voicing}
+                  skin={skin}
                   className="w-full"
                   // The chip height is the layout's own choice — four rows of
                   // Jankó pads need more room than one row of piano keys — so it

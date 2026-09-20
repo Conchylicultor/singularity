@@ -17,7 +17,6 @@ import {
   type NextStep,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { NextStepRow } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
-import { RevealSwitch } from "@plugins/apps/plugins/chord/plugins/reveal/web";
 import type {
   NextStepRead,
   StepReadiness,
@@ -48,7 +47,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
- * The side panel: the reveal switch, today's totals, a quieter all-time line,
+ * The side panel: today's totals, a quieter all-time line,
  * and "Your chords" —
  * the level the learner is on, one line per unlocked chord (oldest first, so
  * the newest sits just above), and the locked next step at the foot.
@@ -81,27 +80,21 @@ export function ProgressPanel({
   return (
     <Card className="rounded-2xl" aria-label="Your progress">
       <Stack gap="lg">
-        {/* Above the stats, and outside their loading state: the switch is a
-            setting about how the learner wants to practise, so it must be
-            usable while the stats are still on their way. */}
-        <RevealSwitch />
-        <Stack gap="lg" className="border-t border-border pt-lg">
-          {matchResource(progress, {
-            pending: () => <Loading variant="rows" count={4} />,
-            ready: (p) => (
-              <PanelBody
-                progress={p}
-                curriculum={curriculum}
-                nextStep={nextStep}
-                readiness={readiness}
-                adding={adding}
-                undoing={undoing}
-                onAdd={onAdd}
-                onUndo={onUndo}
-              />
-            ),
-          })}
-        </Stack>
+        {matchResource(progress, {
+          pending: () => <Loading variant="rows" count={4} />,
+          ready: (p) => (
+            <PanelBody
+              progress={p}
+              curriculum={curriculum}
+              nextStep={nextStep}
+              readiness={readiness}
+              adding={adding}
+              undoing={undoing}
+              onAdd={onAdd}
+              onUndo={onUndo}
+            />
+          ),
+        })}
       </Stack>
     </Card>
   );

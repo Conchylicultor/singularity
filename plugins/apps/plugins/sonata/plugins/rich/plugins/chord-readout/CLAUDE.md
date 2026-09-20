@@ -10,6 +10,7 @@
   - Uses:
     - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
+    - `apps/sonata/primitives/keyboard.useSonataKeySkin`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useHasChords`

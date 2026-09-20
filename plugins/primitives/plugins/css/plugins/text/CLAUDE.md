@@ -206,7 +206,7 @@ fixed raw size escapes per-site via
     - `apps/browser/tabs`
     - `apps/browser/webview`
     - `apps/chord/curriculum`
-    - `apps/chord/reveal`
+    - `apps/chord/piano`
     - `apps/chord/shell`
     - `apps/chord/song-index`
     - `apps/chord/trainer`

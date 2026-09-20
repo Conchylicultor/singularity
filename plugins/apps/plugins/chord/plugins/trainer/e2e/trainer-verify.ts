@@ -11,10 +11,9 @@
 //      heading shows the score; POST /api/chord/rounds answers with a round id;
 //   5. `chord.progress` moves: one more song and one more answer per box, all
 //      time — and the side panel shows the new song count;
-//   6. reveal is switched to Keyboard: the song card names the key, every box
-//      names its chord, and the keys the keyboard lights are exactly the notes
-//      `chordVoicing` gives for the chord clicked — the piano's own call. The
-//      switch is put back where it was found.
+//   6. the song card names the key, every box names its chord, and the keys the
+//      piano lights are exactly the notes `chordSound` gives for the chord
+//      clicked — the very call the piano plays, doubled bass included.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/chord/plugins/trainer/e2e/trainer-verify.ts [--timeout-min 15] [--headed]
@@ -41,14 +40,13 @@ import { CurriculumSchema } from "@plugins/apps/plugins/chord/plugins/curriculum
 import {
   chordKeyPlan,
   chordLabel,
-  chordVoicing,
+  chordSound,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   hookpadTonicPc,
   type HookpadMode,
 } from "@plugins/integrations/plugins/hooktheory/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
-import type { Page } from "playwright";
 import { z } from "zod";
 
 const r = report("chord trainer");
@@ -92,18 +90,6 @@ function parseKeyTag(text: string): { tonic: string; mode: HookpadMode } {
     throw new Error(`The song card's key tag reads ${JSON.stringify(text)}`);
   }
   return { tonic, mode };
-}
-
-/** Which reveal value the switch is on, so the run can put it back. */
-async function revealMode(page: Page): Promise<string | null> {
-  const on = page.locator('[role="radio"][aria-checked="true"]');
-  for (const chip of await on.all()) {
-    const label = (await chip.innerText()).trim();
-    if (label === "Off" || label === "Names" || label === "Keyboard") {
-      return label;
-    }
-  }
-  return null;
 }
 
 /** The chords the learner has right now: the palette the progress is read for. */
@@ -294,19 +280,14 @@ await withBrowser(async ({ session }) => {
     );
   r.ok("the side panel shows the new song count", shown);
 
-  // ── 6. reveal: the names, and the keyboard's notes ────────────────────────
+  // ── 6. the names, and the piano's notes ──────────────────────────────────
   //
-  // The switch is turned to Keyboard and back, so the setting is left as it was
-  // found. The keyboard check is the end-to-end proof that the picture matches
-  // the sound: the lit keys are read off the DOM and compared with
-  // `chordVoicing` computed HERE, from the key the song card names and the
-  // chord the button stands for — the same call the trainer's piano plays.
-  // Clicking a chord button after the check also plays that chord, so this step
-  // exercises the piano; a failure there surfaces as a page error below.
-
-  const wasRevealed = await revealMode(page);
-  r.note(`reveal was "${wasRevealed ?? "?"}"`);
-  await page.getByRole("radio", { name: "Keyboard", exact: true }).click();
+  // The end-to-end proof that the picture matches the sound: the lit keys are
+  // read off the DOM and compared with `chordSound` computed HERE, from the key
+  // the song card names and the chord the button stands for — the same call the
+  // trainer's piano plays, doubled bass included. Clicking a chord button after
+  // the check also plays that chord, so this step exercises the piano; a
+  // failure there surfaces as a page error below.
 
   const keyTag = page.getByText(SONG_KEY).first();
   const keyShown = await keyTag
@@ -344,6 +325,15 @@ await withBrowser(async ({ session }) => {
     if (solo === undefined || token === undefined) {
       r.note("no chord answers on a digit of its own — keyboard check skipped");
     } else {
+      // Pause first. The keyboard shows the last chord HEARD, and while the
+      // loop runs the playhead is one of the things that sounds a chord — so a
+      // playing video would take the keyboard back at the next box, between
+      // this click and the read below. That is the behaviour under test
+      // elsewhere ("a click holds until the song moves on"); here it is noise,
+      // and pausing removes it rather than papering over it with a retry.
+      const pause = page.locator('button[aria-label="Pause"]:not([disabled])');
+      if ((await pause.count()) > 0) await pause.click();
+
       await page.locator(`button[aria-keyshortcuts="${solo.digit}"]`).click();
       const keys = page.locator("[data-pitch]:has(.chord-key-label)");
       await keys
@@ -358,23 +348,25 @@ await withBrowser(async ({ session }) => {
           nodes.map((n) => Number(n.getAttribute("data-pitch"))),
         )
       ).sort((a, b) => a - b);
-      const voicing = [
-        ...chordVoicing(token, hookpadTonicPc(songKey.tonic)),
-      ].sort((a, b) => a - b);
+      const sound = chordSound(token, hookpadTonicPc(songKey.tonic));
+      const played = [...sound.pitches].sort((a, b) => a - b);
       r.eq(
         `the keyboard lights the notes the piano plays for ${chordLabel(token).text}`,
         litPitches,
-        voicing,
+        played,
       );
       const names = await keys.locator(".chord-key-label").allInnerTexts();
-      r.eq("every lit key is named", names.length, voicing.length);
+      r.eq("every lit key is named", names.length, played.length);
+      // The doubled bass is drawn as itself, greyed, rather than as a fourth
+      // chord tone — the one thing the pitch set alone cannot tell you.
+      const bass = await page
+        .locator(
+          `[data-pitch="${String(sound.bass)}"] .chord-key-label[data-bass]`,
+        )
+        .count();
+      r.eq("the doubled bass is drawn as the bass", bass, 1);
       r.note(`lit ${litPitches.join(",")} named ${names.join(",")}`);
     }
-  }
-
-  // Put the setting back where it was found.
-  if (wasRevealed !== null) {
-    await page.getByRole("radio", { name: wasRevealed, exact: true }).click();
   }
 
   r.ok(

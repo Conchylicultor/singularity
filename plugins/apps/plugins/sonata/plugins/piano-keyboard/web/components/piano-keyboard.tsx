@@ -14,6 +14,7 @@ import {
 import {
   Keyboard,
   type LabelTone,
+  useSonataKeySkin,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
   useCursorSelector,
@@ -118,6 +119,8 @@ function keyLabel(
  * keys they land on.
  */
 export function PianoKeyboard({ projection }: { projection: Projection }) {
+  // Sonata's own look paints its keys: one control, every keyboard in the app.
+  const skin = useSonataKeySkin();
   const plane = projection.pitchPlane;
   const { score } = useSonata();
   const { labelScope } = useConfig(pianoKeyboardConfig);
@@ -223,6 +226,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
     <Keyboard
       plane={plane}
       lit={lit}
+      skin={skin}
       interaction={interaction}
       // A lit accidental shows the same darker shade as the falling note that
       // lands on it — the exact `accidentalColor` the piano-roll uses.

@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-chord-reveal",
-  "description": "How much of a chord the Chord trainer shows: nothing, its name in the song's key, or its name plus a piano lighting the notes the app plays for it.",
-  "private": true,
-  "version": "0.0.1"
-}

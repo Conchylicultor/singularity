@@ -101,7 +101,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/browser/tabs`
     - `apps/browser/webview`
     - `apps/chord/curriculum`
-    - `apps/chord/reveal`
+    - `apps/chord/piano`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`

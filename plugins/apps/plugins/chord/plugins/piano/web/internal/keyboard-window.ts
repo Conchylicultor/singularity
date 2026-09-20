@@ -1,10 +1,18 @@
 /**
- * The keyboard the reveal card draws: C3 to C6, three octaves. Wide enough for
- * any chord `chordVoicing` produces — it pins every chord's bass to the pitch
- * nearest middle C (F♯3–F4), so a triad or seventh sits comfortably inside —
- * with room above for a chord stacked past an octave.
+ * The keyboard the card draws by default: C2 to C6, four octaves.
+ *
+ * Wide enough for everything the app plays without ever moving: `chordVoicing`
+ * pins every chord's own bass to the pitch nearest middle C (F♯3–F4) and the
+ * doubled bass sits an octave under that (F♯2–F3), so the low end needs to
+ * reach into the second octave, and the top has room for a chord stacked past
+ * an octave above middle C.
+ *
+ * Four octaves rather than the three this started at: the keys are what the
+ * learner reads the chord off, so the keyboard is the size of an instrument
+ * rather than of a chip, and a bass two octaves below the melody has somewhere
+ * to be drawn.
  */
-const DEFAULT_LOW = 48;
+const DEFAULT_LOW = 36;
 const DEFAULT_HIGH = 84;
 
 /**

@@ -85,6 +85,16 @@ export function songKeySignature(key: SongKey): KeySignature {
   };
 }
 
+/**
+ * The key's tonic as a pitch class (0–11): what a chord token's root is
+ * measured from, and therefore what a voicing is built on. The one reading of
+ * it, so a surface naming a chord and a surface sounding it cannot start from
+ * different tonics.
+ */
+export function songKeyTonicPc(key: SongKey): number {
+  return hookpadTonicPc(key.tonic);
+}
+
 /** The key as the learner reads it: "G major", "E♭ mixolydian". */
 export function songKeyLabel(key: SongKey): string {
   assertTonic(key.tonic);

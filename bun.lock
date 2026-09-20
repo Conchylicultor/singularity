@@ -242,12 +242,12 @@
       "name": "@singularity/plugin-apps-chord-curriculum",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/chord/plugins/progress": {
-      "name": "@singularity/plugin-apps-chord-progress",
+    "plugins/apps/plugins/chord/plugins/piano": {
+      "name": "@singularity/plugin-apps-chord-piano",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/chord/plugins/reveal": {
-      "name": "@singularity/plugin-apps-chord-reveal",
+    "plugins/apps/plugins/chord/plugins/progress": {
+      "name": "@singularity/plugin-apps-chord-progress",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/chord/plugins/shell": {
@@ -6173,9 +6173,9 @@
 
     "@singularity/plugin-apps-chord-curriculum": ["@singularity/plugin-apps-chord-curriculum@workspace:plugins/apps/plugins/chord/plugins/curriculum"],
 
-    "@singularity/plugin-apps-chord-progress": ["@singularity/plugin-apps-chord-progress@workspace:plugins/apps/plugins/chord/plugins/progress"],
+    "@singularity/plugin-apps-chord-piano": ["@singularity/plugin-apps-chord-piano@workspace:plugins/apps/plugins/chord/plugins/piano"],
 
-    "@singularity/plugin-apps-chord-reveal": ["@singularity/plugin-apps-chord-reveal@workspace:plugins/apps/plugins/chord/plugins/reveal"],
+    "@singularity/plugin-apps-chord-progress": ["@singularity/plugin-apps-chord-progress@workspace:plugins/apps/plugins/chord/plugins/progress"],
 
     "@singularity/plugin-apps-chord-shell": ["@singularity/plugin-apps-chord-shell@workspace:plugins/apps/plugins/chord/plugins/shell"],
 

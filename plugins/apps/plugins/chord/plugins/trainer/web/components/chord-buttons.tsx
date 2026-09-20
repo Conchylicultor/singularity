@@ -49,8 +49,8 @@ export function ChordButtons({
   lit: ChordToken | null;
   /** The digit waiting for its second key and what that key reaches, or null. */
   picking: Picking | null;
-  /** Names a chord in the song's key, or null while reveal is off. */
-  nameChord: ((token: ChordToken) => string) | null;
+  /** Names a chord in the song's key. */
+  nameChord: (token: ChordToken) => string;
   /** The locked next step, when there is one to show. */
   nextStep: {
     step: NextStep;
@@ -130,11 +130,11 @@ function ChordPad({
   outOfReach: boolean;
   lit: boolean;
   picking: boolean;
-  nameChord: ((token: ChordToken) => string) | null;
+  nameChord: (token: ChordToken) => string;
   onPick: (token: ChordToken) => void;
 }) {
   const fn = chordFunction(token);
-  const name = nameChord === null ? null : nameChord(token);
+  const name = nameChord(token);
   const keys = pickKey === null ? digit : `${digit} ${pickKey}`;
   return (
     <button
@@ -143,7 +143,7 @@ function ChordPad({
       style={chordToneStyle(token)}
       data-lit={lit ? "" : undefined}
       data-picking={picking ? "" : undefined}
-      aria-label={`${chordLabel(token).text}${name === null ? "" : `, ${name}`}${fn === null ? "" : `, ${fn}`}, key ${keys}`}
+      aria-label={`${chordLabel(token).text}, ${name}${fn === null ? "" : `, ${fn}`}, key ${keys}`}
       aria-keyshortcuts={digit}
       onClick={() => onPick(token)}
     >
@@ -176,7 +176,7 @@ function ChordPad({
             </Inline>
           )}
         </Line>
-        <span className="chord-pad-fn">{name ?? fn ?? "outside the key"}</span>
+        <span className="chord-pad-fn">{name}</span>
       </Stack>
     </button>
   );

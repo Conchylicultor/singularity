@@ -1,15 +1,17 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   chordKeyPlan,
-  chordVoicing,
+  chordSound,
   songKeyLabel,
+  songKeyTonicPc,
   songVocabulary,
   type SongKey,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
-  RevealKeyboardCard,
-  useReveal,
-} from "@plugins/apps/plugins/chord/plugins/reveal/web";
+  PianoCard,
+  useChordSoundSource,
+  usePiano,
+} from "@plugins/apps/plugins/chord/plugins/piano/web";
 import type {
   ChordToken,
   LoopCandidate,
@@ -46,7 +48,10 @@ import {
   matchResource,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -79,7 +84,6 @@ import {
   useLoopQueue,
   type LoopQueue,
 } from "../internal/use-loop-queue";
-import { usePiano } from "../internal/use-piano";
 import { AnswerStrip } from "./answer-strip";
 import { ChordButtons } from "./chord-buttons";
 import { ProgressPanel } from "./progress-panel";
@@ -93,11 +97,16 @@ type RoundSession = {
   /** How many times each box was filled (a new fill replays its pop). */
   fills: readonly number[];
   /**
-   * The last chord the learner asked to HEAR — a chord button after the check,
-   * the "you: IV" tag, or a box replaying its stretch of the song. What the
-   * reveal keyboard shows while nothing is sounding. It lives here, rather than
-   * as its own state, because a session is already minted fresh per loop: the
-   * next song clears it with everything else, and there is no reset to remember.
+   * The last chord HEARD — a chord button after the check, the "you: IV" tag,
+   * a box replaying itself, or the playhead crossing into a box while the
+   * checked loop runs. The one chord the piano draws.
+   *
+   * Every way of sounding a chord writes here, which is what lets a chord
+   * clicked DURING playback light the keyboard: the click is simply more recent
+   * than the box behind it, and it stays on show until the song reaches the
+   * next chord. It lives on the session, rather than as its own state, because
+   * a session is already minted fresh per loop: the next song clears it with
+   * everything else, and there is no reset to remember.
    */
   lastPlayed: ChordToken | null;
 };
@@ -340,16 +349,20 @@ function Trainer({
   queue: LoopQueue;
   memory: SessionMemory;
 } & LadderProps) {
-  // How much of a chord is shown, and the words to say it with. One speller per
-  // loop, shared by every box, button and lit key, so nothing on screen can
-  // name a chord against a different key from its neighbour.
-  const reveal = useReveal();
+  // The words to say a chord with. One speller per loop, shared by every box,
+  // button and lit key, so nothing on screen can name a chord against a
+  // different key from its neighbour — and one tonic under it, so nothing
+  // sounds a chord built on a different one.
   const songKey = useMemo<SongKey>(
     () => ({ tonic: loop.window.keyTonic, mode: loop.window.keyMode }),
     [loop],
   );
   const words = useMemo(() => songVocabulary(songKey), [songKey]);
-  const nameChord = reveal === "off" ? null : words.nameChord;
+  const tonicPc = useMemo(() => songKeyTonicPc(songKey), [songKey]);
+  // Which sound a chord BOX plays: the song's own bars, or the piano. The
+  // buttons and the piano's keys are not asked — they always sound on the
+  // piano, because a chord outside the loop has no stretch of song to play.
+  const soundSource = useChordSoundSource();
 
   const player = useYouTubePlayer();
   const playerState = useYouTubePlayerState(player);
@@ -416,6 +429,25 @@ function Trainer({
   const heardAt = useHeardClock(player, round);
   const sounding = useSoundingBox(player, round, checked);
 
+  // The playhead crossing into a box is a chord sounding, so it is recorded
+  // like every other way of sounding one. That is the whole rule behind "the
+  // piano shows what you are hearing": there is one memory, and the most recent
+  // writer wins — a click during playback holds the keyboard until the song
+  // reaches the next chord, and then the song takes it back.
+  //
+  // The session is read through a ref because it is DERIVED (a fresh object
+  // until the first write of a loop), so depending on it would re-run this
+  // effect on renders where nothing sounded.
+  const sessionRef = useLatestRef(session);
+  useEffect(() => {
+    if (round === null || sounding === null) return;
+    const token = round.boxes[sounding]?.token ?? null;
+    const current = sessionRef.current;
+    if (token === null || current === null) return;
+    if (current.lastPlayed === token) return;
+    setStored({ ...current, lastPlayed: token });
+  }, [round, sounding, sessionRef]);
+
   const record = useEndpointMutation(recordRoundEndpoint);
   const report = useEndpointMutation(reportPlaybackEndpoint);
 
@@ -426,7 +458,10 @@ function Trainer({
     setStored({ ...session, sheet });
   };
 
-  const playOnPiano = (pitches: readonly number[]) => {
+  // The two ways the screen sounds something, both through the one piano: a
+  // set of notes (a key the learner pressed) and a chord (its whole sound,
+  // doubled bass included — `chordSound` is the same call the keyboard lights).
+  const playNotes = useEventCallback((pitches: readonly number[]) => {
     void piano(pitches).catch((err: unknown) => {
       showToast({
         title: "The piano could not play",
@@ -435,12 +470,17 @@ function Trainer({
       });
       throw err;
     });
-  };
+  });
+  const playChord = useEventCallback((token: ChordToken) =>
+    playNotes(chordSound(token, tonicPc).pitches),
+  );
 
   const pick = useEventCallback((token: ChordToken) => {
     if (session === null || round === null) return;
     if (session.sheet.checked) {
-      playOnPiano(chordVoicing(token, round.keyTonicPc));
+      // Always the piano, whatever the sound toggle says: this chord need not
+      // be in the loop at all, so there may be no song to play it with.
+      playChord(token);
       setStored({ ...session, lastPlayed: token });
       return;
     }
@@ -480,18 +520,19 @@ function Trainer({
     queue.next();
   });
 
-  // A box replays that chord's stretch of the song, so that is the chord the
-  // learner is now listening to.
+  // A box plays its chord — the song's own bars, or the same chord struck on
+  // the piano, whichever the toggle is on. Either way it is the chord the
+  // learner is now listening to, so the keyboard shows it.
   const onReplayBox = useEventCallback((box: Box) => {
-    if (!playerReady) return;
     memory.markInteracted();
-    player.playRange(box.startSec, box.endSec);
     if (session !== null) setStored({ ...session, lastPlayed: box.token });
+    if (soundSource === "song") player.playRange(box.startSec, box.endSec);
+    else playChord(box.token);
   });
 
+  // The answer the learner gave, which the song never played: the piano only.
   const onHearAnswer = useEventCallback((answer: ChordToken) => {
-    if (round === null) return;
-    playOnPiano(chordVoicing(answer, round.keyTonicPc));
+    playChord(answer);
     if (session !== null) setStored({ ...session, lastPlayed: answer });
   });
 
@@ -574,18 +615,12 @@ function Trainer({
   );
   useSurfaceShortcuts(shortcuts);
 
-  // The ONE chord on show, fed to the lit button, the keyboard card and that
-  // card's header, so the three can never disagree. The playhead wins while the
-  // checked loop plays; otherwise it is the last chord the learner asked to
-  // hear. Null before the check BY CONSTRUCTION — that is what stops the
-  // keyboard giving the answer away, rather than a guard somewhere that could
-  // be forgotten.
-  const shownChord =
-    !checked || round === null || session === null
-      ? null
-      : sounding === null
-        ? session.lastPlayed
-        : (round.boxes[sounding]?.token ?? null);
+  // The ONE chord on show, fed to the lit button, the piano and its header, so
+  // the three can never disagree: the last chord heard, whatever sounded it.
+  // Null before the check BY CONSTRUCTION — nothing writes `lastPlayed` until
+  // the round is checked — which is what stops the keyboard giving the answer
+  // away, rather than a guard somewhere that could be forgotten.
+  const shownChord = !checked || session === null ? null : session.lastPlayed;
 
   const step =
     nextStep.kind === "answer" && nextStep.answer.kind === "step"
@@ -597,7 +632,7 @@ function Trainer({
       <SongCard
         loop={loop}
         playing={playing}
-        keyName={reveal === "off" ? null : songKeyLabel(songKey)}
+        keyName={songKeyLabel(songKey)}
         canPlay={playerReady}
         checked={checked}
         onTogglePlay={togglePlay}
@@ -626,9 +661,9 @@ function Trainer({
           sheet={session.sheet}
           fills={session.fills}
           player={player}
-          playerReady={playerReady}
+          canReplay={soundSource === "piano" || playerReady}
           soundingPosition={sounding}
-          nameChord={nameChord}
+          nameChord={words.nameChord}
           onSelect={onSelect}
           onReplayBox={onReplayBox}
           onHearAnswer={onHearAnswer}
@@ -638,7 +673,7 @@ function Trainer({
         plan={plan}
         lit={shownChord}
         picking={keys.picking}
-        nameChord={nameChord}
+        nameChord={words.nameChord}
         nextStep={
           step === null
             ? null
@@ -652,13 +687,12 @@ function Trainer({
         }
         onPick={pick}
       />
-      {reveal === "keyboard" && round !== null && (
-        <RevealKeyboardCard
-          token={shownChord}
-          songKey={songKey}
-          tonicPc={round.keyTonicPc}
-        />
-      )}
+      <PianoCard
+        token={shownChord}
+        songKey={songKey}
+        tonicPc={tonicPc}
+        play={playNotes}
+      />
     </>
   );
 }

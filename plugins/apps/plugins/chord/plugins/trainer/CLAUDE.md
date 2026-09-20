@@ -97,27 +97,28 @@ prev, next)` between two playhead reads — a forward move finishes every box
   step disarms with nothing to clean up. The clock does not stop for the second
   key: a two-stroke answer costs what it costs. ← / → move, Backspace clears,
   Space plays or pauses, Enter moves to the next song.
-- **After the check**: a box replays the song over that box once
-  (`controller.playRange`), then the loop goes on; a chord button, or the
-  "you: IV" tag under a wrong box, plays that chord on the piano in the song's
-  key (`chordVoicing(token, round.keyTonicPc)`); the button of the chord
-  sounding now is lit.
+- **After the check**: a box plays its chord — the song's own bars once
+  (`controller.playRange`), or the chord struck alone on the piano, whichever
+  the piano's sound toggle is on. A chord button, or the "you: IV" tag under a
+  wrong box, always plays on the piano (`chordSound(token, tonicPc)`), because
+  neither chord need be in the loop at all. The button of the chord sounding now
+  is lit.
 - **The round is saved once**, by the fill that checks it
   (`recordRoundEndpoint`). A round left before it is checked is never sent.
 - **Video reports** (`reportPlaybackEndpoint`): `playing` the first time a
   video plays in the visit; a player error with its code — then a toast says
   the video can't play here, and the trainer drops that loop and every queued
   loop on the same video.
-- **The piano** (`usePiano`): Sonata's default instrument (the one
+- **The piano** (`piano/web`): `usePiano` is Sonata's default instrument (the one
   `SonataAudio.Instrument` contribution marked `default`, the sampled grand),
   read generically, never by name. One `AudioContext` and one voice set per
   screen, created by the first chord played (inside that click, so it starts
   running, and the samples download only then), disposed on unmount. Each chord
   cuts the one before it. A failure (no default instrument, samples that do not
-  load) shows a toast and is rethrown.
-- **The progress panel** (`ProgressPanel`): `<RevealSwitch/>` first — above the
-  `matchResource`, so the setting is usable while the stats are still loading —
-  then today (songs, % right, seconds per
+  load) shows a toast and is rethrown. The screen holds the ONE instance and
+  hands `<PianoCard>` a `play` function, so the card's playable keys sound on
+  the same context rather than opening a second one.
+- **The progress panel** (`ProgressPanel`): today (songs, % right, seconds per
   chord), an all-time line, and "Your chords" — the level and the stage being
   worked through, then one line per unlocked chord **in unlock order** (chip,
   accuracy meter marked at 90 %, accuracy, median time red over 2 s, a check
@@ -129,20 +130,26 @@ prev, next)` between two playhead reads — a forward move finishes every box
   unlocked set, a few dozen chords at most), not a collection anyone searches,
   sorts or filters. It shows a loading state until `chord.progress` has its
   first value.
-- **Reveal** (`reveal/web`): `useReveal()` says how much of a chord to show.
-  With it on, one `songVocabulary(songKey)` per loop names every chord and note
-  — the song card grows a key tag, each box a name under its numeral, each
-  button a name instead of its function word — and at `keyboard` a card under
-  the buttons draws the chord on a piano. A box's name follows the same `shown`
-  the numeral does, so before the check it names the LEARNER's answer and leaks
-  nothing.
-  **`shownChord` is the one chord on show**, fed to the lit button and the card
-  together: the playhead's box while the checked loop plays, otherwise
-  `session.lastPlayed` (the last chord the learner asked to hear — a button
-  after the check, the "you: IV" tag, or a box replay). It is null before the
-  check **by construction**, which is what stops the keyboard giving the answer
-  away; `lastPlayed` is a `RoundSession` field, so the next song clears it with
-  the rest and there is no reset to remember.
+- **The words, and the piano** (`piano/web`): one `songVocabulary(songKey)` and
+  one `songKeyTonicPc(songKey)` per loop, so nothing on screen names a chord
+  against one key while sounding it against another. Every chord is named — the
+  song card carries a key tag, each box a name under its numeral, each button a
+  name instead of its function word — and `<PianoCard>` sits under the buttons,
+  always. (There used to be a three-valued `reveal` setting gating all of this;
+  it is gone, and with it every `| null` name prop.) A box's name follows the
+  same `shown` the numeral does, so before the check it names the LEARNER's
+  answer and leaks nothing.
+  **`shownChord` is the one chord on show**, fed to the lit button and the piano
+  together, and it is simply `session.lastPlayed` — the last chord HEARD.
+  Everything that sounds a chord writes it: a button, a box, the "you: IV" tag,
+  and a `useEffect` on the sounding position, so the playhead crossing into a
+  box is just another writer rather than a special case outranking the others.
+  That is what lets a chord clicked DURING playback light the keyboard: the
+  click is more recent, and holds until the song reaches the next chord. It is
+  null before the check **by construction** (nothing writes `lastPlayed` until
+  then), which is what stops the keyboard giving the answer away; `lastPlayed`
+  is a `RoundSession` field, so the next song clears it with the rest and there
+  is no reset to remember.
 - **The locked next step** shows in two places, both from `curriculum/web`:
   `<NextStepPad>` at the end of the button grid (chord steps only — the grid
   has no way to draw a key mode) and `<NextStepRow>` in the panel (every kind).
@@ -179,12 +186,13 @@ is filled from the keyboard, using only digits that answer on their own; the
 score heading, the saved round, `chord.progress` (one more song, one more
 answer per asked box) and the side panel's all-time line are checked.
 
-Then reveal is switched to Keyboard (and back): the key tag is parsed back into
-the key it names, every box label carries a letter name, and the lit keys'
-`data-pitch` set must equal `chordVoicing(token, tonicPc)` computed in the
-script — the proof that the picture matches the sound, since the piano plays
-that same call. Clicking the button to light them also plays it, so the step
-exercises the piano.
+Then the key tag is parsed back into the key it names, every box label is
+checked for a letter name, and the lit keys' `data-pitch` set must equal
+`chordSound(token, tonicPc).pitches` computed in the script — the proof that the
+picture matches the sound, since the piano plays that same call — with the
+doubled bass drawn as the bass (`[data-bass]`) rather than as a fourth chord
+tone. Clicking the button to light them also plays it, so the step exercises the
+piano.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -204,14 +212,12 @@ exercises the piano.
     - `apps/chord/curriculum.useNextStep`
     - `apps/chord/curriculum.useUndoStep`
     - `apps/chord/curriculum.useUnlockStep`
-    - `apps/chord/reveal.RevealKeyboardCard`
-    - `apps/chord/reveal.RevealSwitch`
-    - `apps/chord/reveal.useReveal`
+    - `apps/chord/piano.PianoCard`
+    - `apps/chord/piano.useChordSoundSource`
+    - `apps/chord/piano.usePiano`
     - `apps/chord/song-index.SongIndexGate`
     - `apps/chord/vocabulary.ChordNumeral`
     - `apps/chord/vocabulary.chordToneStyle`
-    - `apps/sonata/audio/instruments.InstrumentVoices`
-    - `apps/sonata/audio/instruments.SonataAudio`
     - `infra/endpoints.useEndpointMutation`
     - `integrations/youtube.useYouTubePlayer`
     - `integrations/youtube.useYouTubePlayerState`

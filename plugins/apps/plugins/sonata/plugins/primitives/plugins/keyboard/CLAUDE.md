@@ -112,10 +112,12 @@ pads sit on the paper lane rather than floating over it as an unrelated dark gri
     - `KeyHighlight`
     - `KeyRenderState`
     - `LabelTone`
-  - Exports (values): `Keyboard`
+  - Exports (values):
+    - `Keyboard`
+    - `useSonataKeySkin`
 - Cross-plugin:
   - Imported by:
-    - `apps/chord/reveal`
+    - `apps/chord/piano`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

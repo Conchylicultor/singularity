@@ -6,12 +6,7 @@ import {
   pct,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { useConfig } from "@plugins/config_v2/web";
-import {
-  asSonataLook,
-  SONATA_LOOK_STYLES,
-  sonataLookConfig,
-} from "@plugins/apps/plugins/sonata/plugins/look/core";
+import type { SonataKeys } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import {
   isAccidental,
   type PitchKey,
@@ -77,6 +72,16 @@ export interface KeyboardProps {
   /** Pitches to highlight (e.g. a chord voicing or the keys sounding now). */
   lit: KeyHighlight;
   /**
+   * What the pads are made of — flat fills, skeuomorphic ivory/ebony, or the
+   * drawn skin. Taken as DATA rather than read from Sonata's look config here,
+   * because a component that reads a config can only be rendered where that
+   * config is registered: this one used to crash in any app but Sonata, with
+   * nothing in the types to warn you. A Sonata surface passes
+   * `useSonataKeySkin()`, so one control still paints every keyboard in the
+   * app; anyone else picks from `SONATA_LOOK_STYLES`.
+   */
+  skin: SonataKeys;
+  /**
    * Optional content drawn inside each key, seated near its front edge (e.g. a
    * note label). Receives the key and how it is being drawn, so the caller owns
    * all content styling. Called once per PAD: a layout where a pitch has two
@@ -134,24 +139,24 @@ function groupTiers(keys: readonly PitchKey[]): KeyTier[] {
  * and lit. Knows nothing about chords, scores, or playback — the caller supplies
  * the plane, which pitches to light (and in what color), and any per-key
  * content. The full projection-driven `PianoKeyboard` and the chord/key readouts
- * all compose this. The skin is read from Sonata's look, so the choice applies
- * everywhere a keyboard renders. Height is set by the caller via `className` or
- * a `style` height; the pads fill it.
+ * all compose this. The skin arrives as data — Sonata's surfaces hand it
+ * `useSonataKeySkin()`, so one control still paints every keyboard in the app.
+ * Height is set by the caller via `className` or a `style` height; the pads
+ * fill it.
  */
 export function Keyboard({
   plane,
   lit,
+  skin,
   renderKey,
   accidentalColor = (c) => c,
   interaction,
   className,
   style,
 }: KeyboardProps) {
-  const { look } = useConfig(sonataLookConfig);
-  // One read, one skin. The whole `keys` union stays in hand (rather than just
-  // `keys.skin`) so the drawn arm's palette is reached by narrowing, never by
-  // asserting that a look which draws must have brought colours with it.
-  const skin = SONATA_LOOK_STYLES[asSonataLook(look)].keys;
+  // The whole `keys` union arrives (rather than just `keys.skin`) so the drawn
+  // arm's palette is reached by narrowing, never by asserting that a look which
+  // draws must have brought colours with it.
   const chrome = KEY_CHROME[plane.layout];
   // Pointer handlers when playable; `{}` (no listeners) otherwise.
   const playProps = usePlayableKeyboard(interaction);

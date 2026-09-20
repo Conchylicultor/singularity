@@ -55,7 +55,7 @@ export function AnswerStrip({
   sheet,
   fills,
   player,
-  playerReady,
+  canReplay,
   soundingPosition,
   nameChord,
   onSelect,
@@ -67,11 +67,12 @@ export function AnswerStrip({
   /** How many times each box was filled: a new count replays the fill's pop. */
   fills: readonly number[];
   player: YouTubePlayerController;
-  playerReady: boolean;
+  /** A box can be replayed now: the player is ready, or the piano is playing them. */
+  canReplay: boolean;
   /** The box sounding now, once checked (null otherwise). */
   soundingPosition: number | null;
-  /** Names a chord in the song's key, or null while reveal is off. */
-  nameChord: ((token: ChordToken) => string) | null;
+  /** Names a chord in the song's key. */
+  nameChord: (token: ChordToken) => string;
   onSelect: (position: number) => void;
   onReplayBox: (box: Box) => void;
   onHearAnswer: (answer: ChordToken) => void;
@@ -125,7 +126,7 @@ export function AnswerStrip({
                 selected={sheet.selected === box.position}
                 sounding={soundingPosition === box.position}
                 popped={(fills[box.position] ?? 0) > 0}
-                canReplay={playerReady}
+                canReplay={canReplay}
                 nameChord={nameChord}
                 onSelect={onSelect}
                 onReplay={onReplayBox}
@@ -188,8 +189,8 @@ function AnswerBox({
   sounding: boolean;
   popped: boolean;
   canReplay: boolean;
-  /** Names a chord in the song's key, or null while reveal is off. */
-  nameChord: ((token: ChordToken) => string) | null;
+  /** Names a chord in the song's key. */
+  nameChord: (token: ChordToken) => string;
   onSelect: (position: number) => void;
   onReplay: (box: Box) => void;
 }) {
@@ -199,7 +200,7 @@ function AnswerBox({
   const shown = checked ? box.token : answer;
   // The name follows `shown`, so it leaks nothing: before the check it names
   // what the LEARNER picked, after it the chord that really played.
-  const name = shown === null || nameChord === null ? null : nameChord(shown);
+  const name = shown === null ? null : nameChord(shown);
   const mark =
     checked && asked ? (answer === box.token ? "ok" : "bad") : undefined;
   const beatsLabel = `${String(box.gridSpan)} beat${box.gridSpan === 1 ? "" : "s"}`;

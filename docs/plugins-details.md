@@ -668,6 +668,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `unopenedStages`
           - Cross-plugin:
             - Imported by: `apps/chord/trainer`
+        - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "config"
+            - Uses:
+              - `apps/chord/vocabulary.ChordNumeral`
+              - `apps/chord/vocabulary.chordToneStyle`
+              - `apps/sonata/audio/instruments.InstrumentVoices`
+              - `apps/sonata/audio/instruments.SonataAudio`
+              - `apps/sonata/primitives/keyboard.Keyboard`
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `config_v2.useSetConfig`
+              - `primitives/css/card.Card`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/toggle-chip.SegmentedOption`
+              - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
+            - Exports (values):
+              - `PianoCard`
+              - `useChordSoundSource`
+              - `usePiano`
+              - `useSetChordSoundSource`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/chord/trainer`
+          - Core:
+            - Exports (types): `ChordSoundSource`
+            - Exports (values):
+              - `asChordSoundSource`
+              - `CHORD_SOUND_SOURCES`
         - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
           - Server:
             - Contributes: `resource.declare` "chord.progress"
@@ -710,36 +747,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RoundAnswerSchema`
               - `TARGET_ACCURACY`
               - `TARGET_MEDIAN_MS`
-        - **`reveal`** — How much of a chord the Chord trainer shows: the reveal setting (off / names / names and keyboard), the <RevealSwitch> the side panel puts above its stats, and <RevealKeyboardCard> — the chord on show as a piano lighting exactly the notes the app's own piano plays for it, named in the song's key. The Chord trainer's reveal setting, server side: registers the reveal config (off / chord names / chord names and keyboard) so it persists and shows in Settings.
-          - Web:
-            - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses:
-              - `apps/chord/vocabulary.ChordNumeral`
-              - `apps/chord/vocabulary.chordToneStyle`
-              - `apps/sonata/primitives/keyboard.Keyboard`
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `primitives/css/card.Card`
-              - `primitives/css/line.Line`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/toggle-chip.SegmentedOption`
-            - Exports (values):
-              - `RevealKeyboardCard`
-              - `RevealSwitch`
-              - `useReveal`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/chord/trainer`
-          - Core:
-            - Exports (types): `RevealMode`
-            - Exports (values):
-              - `asRevealMode`
-              - `REVEAL_MODES`
         - **`shell`** — The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
@@ -933,8 +940,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/chord/curriculum`
+              - `apps/chord/piano`
               - `apps/chord/progress`
-              - `apps/chord/reveal`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
         - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per unlocked chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
@@ -951,14 +958,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/curriculum.useNextStep`
               - `apps/chord/curriculum.useUndoStep`
               - `apps/chord/curriculum.useUnlockStep`
-              - `apps/chord/reveal.RevealKeyboardCard`
-              - `apps/chord/reveal.RevealSwitch`
-              - `apps/chord/reveal.useReveal`
+              - `apps/chord/piano.PianoCard`
+              - `apps/chord/piano.useChordSoundSource`
+              - `apps/chord/piano.usePiano`
               - `apps/chord/song-index.SongIndexGate`
               - `apps/chord/vocabulary.ChordNumeral`
               - `apps/chord/vocabulary.chordToneStyle`
-              - `apps/sonata/audio/instruments.InstrumentVoices`
-              - `apps/sonata/audio/instruments.SonataAudio`
               - `infra/endpoints.useEndpointMutation`
               - `integrations/youtube.useYouTubePlayer`
               - `integrations/youtube.useYouTubePlayerState`
@@ -1104,6 +1109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ChordKeyGroup`
               - `ChordLabel`
               - `ChordPick`
+              - `ChordSound`
               - `SongKey`
               - `SongVocabulary`
             - Exports (values):
@@ -1112,15 +1118,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `chordFunction`
               - `chordKeyPlan`
               - `chordLabel`
+              - `chordSound`
               - `chordVoicing`
               - `pickPage`
               - `songKeyLabel`
               - `songKeySignature`
+              - `songKeyTonicPc`
               - `songVocabulary`
           - Cross-plugin:
             - Imported by:
               - `apps/chord/curriculum`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/trainer`
     - **`debug`** — Debug app.
       - Plugins:
@@ -4105,7 +4113,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values): `SonataAudio`
               - Cross-plugin:
                 - Imported by:
-                  - `apps/chord/trainer`
+                  - `apps/chord/piano`
                   - `apps/sonata/audio/engine`
                   - `apps/sonata/audio/live-play`
                   - `apps/sonata/audio/piano`
@@ -4413,6 +4421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/live-play.useLivePlay`
               - `apps/sonata/primitives/keyboard.Keyboard`
               - `apps/sonata/primitives/keyboard.LabelTone`
+              - `apps/sonata/primitives/keyboard.useSonataKeySkin`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useCursorSelector`
               - `apps/sonata/shell.useSonata`
@@ -4656,10 +4665,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `KeyHighlight`
                   - `KeyRenderState`
                   - `LabelTone`
-                - Exports (values): `Keyboard`
+                - Exports (values):
+                  - `Keyboard`
+                  - `useSonataKeySkin`
               - Cross-plugin:
                 - Imported by:
-                  - `apps/chord/reveal`
+                  - `apps/chord/piano`
                   - `apps/sonata/piano-keyboard`
                   - `apps/sonata/rich/chord-readout`
                   - `apps/sonata/rich/key-readout`
@@ -4874,6 +4885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
+                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useHasChords`
@@ -4930,6 +4942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
+                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorSelector`
@@ -8203,7 +8216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.reveal`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -8354,7 +8367,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `apps-core/surface/floating`
       - `apps-core/surface/floating/wallpaper`
-      - `apps/chord/reveal`
+      - `apps/chord/piano`
       - `apps/chord/song-index`
       - `apps/deploy/deployments`
       - `apps/sonata/audio/metronome`
@@ -17304,7 +17317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/chord/curriculum`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/deploy/deploy-history/investigate-failure`
@@ -24047,7 +24060,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/task`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/pages/welcome/quick-create`
@@ -24489,6 +24502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
+              - `apps/chord/piano`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deploy-history`
@@ -24851,7 +24865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/shell`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/event-list`
@@ -25186,6 +25200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/chord/curriculum`
+              - `apps/chord/piano`
               - `apps/chord/shell`
               - `apps/chord/trainer`
               - `apps/pages/welcome/recent-pages`
@@ -25503,7 +25518,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/chord/curriculum`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
@@ -26010,7 +26025,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/chord/curriculum`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/chord/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
@@ -26354,7 +26369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
-              - `apps/chord/reveal`
+              - `apps/chord/piano`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
@@ -28522,6 +28537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/surface/floating`
           - `apps-core/tabs`
+          - `apps/chord/piano`
           - `apps/chord/trainer`
           - `apps/prototypes/gallery`
           - `apps/sonata/audio/engine`

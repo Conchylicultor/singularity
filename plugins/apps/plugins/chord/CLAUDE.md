@@ -31,9 +31,11 @@ What exists today:
   real songs it opens). See its CLAUDE.md.
 - `progress` — every checked round and its answers, the mastery rule, and the
   live `chord.progress` stats.
-- `reveal` — how much of a chord is shown besides its numeral (off / names /
-  names and keyboard): the setting, the panel's switch, and the card that draws
-  the chord on a piano. See its CLAUDE.md.
+- `piano` — the app's piano: the notes it plays for a chord (bass doubled an
+  octave below the voicing), the four-octave keyboard that draws them and plays
+  under the finger, and the toggle choosing whether a chord box sounds the song
+  or the piano. Always on screen — the old three-valued `reveal` setting is
+  gone. See its CLAUDE.md.
 - `trainer` — the round model and answer rules (`core`), and the trainer screen
   itself, the app's index pane (`web`).
 
@@ -44,8 +46,8 @@ What exists today:
 - Description: Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
 - Sub-plugins:
   - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum standing), useNextStep (the step on offer, re-read after every write), useUnlockStep / useUndoStep (the two writes, whose conflicts surface as a toast), and the two places the locked next step shows — <NextStepPad>, the ghost chord button at the end of the grid, and <NextStepRow>, the panel row that draws every kind of step. The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.
+  - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
   - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
-  - **`reveal`** — How much of a chord the Chord trainer shows: the reveal setting (off / names / names and keyboard), the <RevealSwitch> the side panel puts above its stats, and <RevealKeyboardCard> — the chord on show as a piano lighting exactly the notes the app's own piano plays for it, named in the song's key. The Chord trainer's reveal setting, server side: registers the reveal config (off / chord names / chord names and keyboard) so it persists and shows in Settings.
   - **`shell`** — The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
   - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.
   - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per unlocked chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).

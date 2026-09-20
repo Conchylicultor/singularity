@@ -8,7 +8,10 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import {
+  Keyboard,
+  useSonataKeySkin,
+} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import {
@@ -64,6 +67,8 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
  * (see `KeyReadoutActions`) so it stays reachable while the card is collapsed.
  */
 export function KeyReadout() {
+  // Sonata's own look paints its keys: one control, every keyboard in the app.
+  const skin = useSonataKeySkin();
   const { score } = useSonata();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
@@ -168,6 +173,7 @@ export function KeyReadout() {
             <Keyboard
               plane={plane}
               lit={scale.lit}
+              skin={skin}
               className="w-full"
               // The chip height is the layout's own choice — four rows of Jankó
               // pads need more room than one row of piano keys — so it is a

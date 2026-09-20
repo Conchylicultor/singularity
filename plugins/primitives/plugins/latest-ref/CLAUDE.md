@@ -25,6 +25,7 @@ stability-independent and is suppressed at the site with an inline disable.)
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/tabs`
+    - `apps/chord/piano`
     - `apps/chord/trainer`
     - `apps/prototypes/gallery`
     - `apps/sonata/audio/engine`
