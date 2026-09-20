@@ -496,6 +496,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PROTOTYPE_VERSION_KINDS`
     - `prototypeHistoryResource`
     - `PrototypeHistorySchema`
+    - `prototypeIdsIn`
     - `PrototypeMetaSchema`
     - `PrototypeOptionSchema`
     - `prototypePicksResource`

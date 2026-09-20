@@ -27,9 +27,11 @@ both plugins import `code-api`, which depends only on the endpoints primitive an
   - Uses:
     - `conversations/conversation-view/code.EditedFileSchema`
     - `infra/endpoints.defineEndpoint`
+    - `infra/endpoints.interpolatePath`
     - `primitives/commit-list.CommitRowSchema`
     - `primitives/live-state.resolvableSchema`
   - Exports (values):
+    - `codeImageUrl`
     - `getCodeTree`
     - `getCommitFiles`
     - `getCommitInfo`

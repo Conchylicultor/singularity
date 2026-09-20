@@ -26,6 +26,7 @@
     - `parsePageApplyReport`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`

@@ -113,6 +113,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `ViewerThumbnail`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`

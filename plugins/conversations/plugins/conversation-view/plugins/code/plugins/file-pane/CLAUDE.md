@@ -50,6 +50,8 @@
 - Cross-plugin:
   - Imported by:
     - `code-explorer`
+    - `conversations/conversation-view/artifacts/research`
+    - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane/diff`
     - `conversations/conversation-view/code/file-pane/image`

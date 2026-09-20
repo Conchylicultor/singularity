@@ -558,6 +558,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `config_v2/settings/conflict-agent`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`

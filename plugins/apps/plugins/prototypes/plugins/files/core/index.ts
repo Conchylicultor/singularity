@@ -36,6 +36,7 @@ export type { PrototypeProblem, PrototypeFolder } from "./validate";
 export {
   newPrototypeId,
   isPrototypeId,
+  prototypeIdsIn,
   PROTOTYPE_ID_RE,
   UNTITLED_PROTOTYPE,
 } from "./id";

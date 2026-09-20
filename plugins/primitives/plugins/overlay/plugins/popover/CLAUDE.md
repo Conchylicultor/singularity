@@ -23,6 +23,7 @@
     - `build`
     - `config_v2/settings`
     - `conversations/conversation-preprompt`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`

@@ -2,7 +2,7 @@ import {
   isInterruptContent,
   type JsonlEvent,
 } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { PROTOTYPE_ID_RE } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { prototypeIdsIn } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 // Pure: everything the end-of-turn job decides from a transcript, with no I/O,
 // so the attribution rules are pinned by fixture events rather than by a live
@@ -66,27 +66,6 @@ export function findTurnWindow(
   };
 }
 
-// Word-guarded on both sides: `proto-1-abcdx` is not the id `proto-1-abcd`.
-// `matchAll` clones the regex, so the shared `g` instance keeps no state across
-// calls.
-const TOUCHED_ID_RE = new RegExp(
-  `(?<![A-Za-z0-9])(?:${PROTOTYPE_ID_RE.source})(?![A-Za-z0-9])`,
-  "g",
-);
-
-// Walked leaf by leaf rather than matched against `JSON.stringify(input)`: the
-// escapes it writes (`\n`, `\t`) would put a letter right before an id that
-// starts a line of a Bash command, and the guard above would then reject it.
-function* stringLeaves(value: unknown): Generator<string> {
-  if (typeof value === "string") {
-    yield value;
-  } else if (Array.isArray(value)) {
-    for (const item of value) yield* stringLeaves(item);
-  } else if (value !== null && typeof value === "object") {
-    for (const item of Object.values(value)) yield* stringLeaves(item);
-  }
-}
-
 /**
  * Every prototype id named in the inputs of the window's tool calls, first
  * mention first. Whatever the tool: an `Edit`/`Write` path, a `Bash` command,
@@ -94,14 +73,16 @@ function* stringLeaves(value: unknown): Generator<string> {
  * transcript, so the prompt that delegated the work is the only trace of it
  * here. An id that is not a prototype on disk is harmless: recording it answers
  * `no-such-prototype`.
+ *
+ * What counts as a mention — the word guard and the leaf walk — is
+ * `prototypeIdsIn`, beside the mint it has to agree with. All this adds is
+ * which part of the transcript is read: tool-call inputs, and nothing else.
  */
 export function touchedPrototypeIds(window: readonly JsonlEvent[]): string[] {
   const ids = new Set<string>();
   for (const event of window) {
     if (event.kind !== "tool-call") continue;
-    for (const text of stringLeaves(event.input)) {
-      for (const match of text.matchAll(TOUCHED_ID_RE)) ids.add(match[0]);
-    }
+    for (const id of prototypeIdsIn(event.input)) ids.add(id);
   }
   return [...ids];
 }

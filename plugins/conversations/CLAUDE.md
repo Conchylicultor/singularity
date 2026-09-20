@@ -207,6 +207,9 @@
     - `conversations/conversation-progress`
     - `conversations/conversation-ui/row`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/artifacts/research`
+    - `conversations/conversation-view/artifacts/screenshot`
+    - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
@@ -267,6 +270,13 @@
     - Plugins:
       - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
       - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
+      - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
+        - Plugins:
+          - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat. A write edited it — created, when the text it wrote mints an <agent-page> — and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; titles come from the live pages list.
+          - **`prototype`** — Prototypes as a conversation artifact: every `proto-…` id the transcript names — in a tool input or in the agent's or user's own words — listed as a row that opens the mock beside the chat. A `prototype new` command created what it printed, a Write/Edit inside the folder edited it, anything else referenced it. Titles come from the live prototypes list.
+          - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation.
+          - **`screenshot`** — Screenshots as a conversation artifact: every picture the agent read, shown as a four-up thumbnail grid that is one ← / → set in the full-window image viewer.
+          - **`skill`** — Skills as a conversation artifact: every skill the agent loaded, as a wrapped strip of monospace name chips — a repo skill opens its SKILL.md in the file-peek pane, a plugin-packaged skill has no file here and says so.
       - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
       - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
         - Plugins:

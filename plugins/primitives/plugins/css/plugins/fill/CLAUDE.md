@@ -117,6 +117,7 @@ primitive exists to name.
     - `config_v2/settings`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-ui/row`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`

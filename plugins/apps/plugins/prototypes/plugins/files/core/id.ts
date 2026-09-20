@@ -56,6 +56,50 @@ export function isPrototypeId(name: string): boolean {
   return new RegExp(`^(?:${PROTOTYPE_ID_RE.source})$`).test(name);
 }
 
+// Word-guarded on both sides: `proto-1-abcdx` is not the id `proto-1-abcd`.
+// `matchAll` clones the regex, so this shared `g` instance keeps no state
+// across calls.
+const MENTIONED_ID_RE = new RegExp(
+  `(?<![A-Za-z0-9])(?:${PROTOTYPE_ID_RE.source})(?![A-Za-z0-9])`,
+  "g",
+);
+
+// Walked leaf by leaf rather than matched against `JSON.stringify(value)`: the
+// escapes it writes (`\n`, `\t`) would put a letter right before an id that
+// starts a line of a Bash command, and the guard above would then reject it.
+function* stringLeaves(value: unknown): Generator<string> {
+  if (typeof value === "string") {
+    yield value;
+  } else if (Array.isArray(value)) {
+    for (const item of value) yield* stringLeaves(item);
+  } else if (value !== null && typeof value === "object") {
+    for (const item of Object.values(value)) yield* stringLeaves(item);
+  }
+}
+
+/**
+ * Every prototype id named anywhere in an already-parsed value — a string, or
+ * any JSON shape whose string leaves are walked — first mention first, deduped.
+ *
+ * The scan, not just the shape: two consumers ask the same question of the same
+ * kind of payload (a tool call's `input`). The end-of-turn checkpoint job asks
+ * it of a finished turn's calls to decide which prototypes to record; the
+ * transcript's artifacts surface asks it of the calls on screen. Re-deriving the
+ * word guard and the leaf walk per consumer is the `att-`/`block-` failure this
+ * module exists to avoid — a change to the mint would switch one of them off
+ * with nothing failing.
+ *
+ * An id that is not a prototype on disk is not filtered here: this reads a
+ * mention, and whether the folder exists is the caller's question.
+ */
+export function prototypeIdsIn(value: unknown): string[] {
+  const ids = new Set<string>();
+  for (const text of stringLeaves(value)) {
+    for (const match of text.matchAll(MENTIONED_ID_RE)) ids.add(match[0]);
+  }
+  return [...ids];
+}
+
 /**
  * What a prototype is called when its `index.html` has no `<title>`.
  *

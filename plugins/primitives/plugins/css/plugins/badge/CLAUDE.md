@@ -102,6 +102,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/allow-monitor`
+    - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`

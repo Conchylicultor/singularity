@@ -1,4 +1,4 @@
-// @hash 4d1d6b6f79f2
+// @hash 0240f4db202b
 {
   "items": [
     "tasks.attempt-view:attempt-switch",
@@ -9,6 +9,7 @@
     "code-explorer:explorer",
     "apps.agent-manager.pages-nav:pages",
     "conversations.conversation-view.code.docs-button:docs",
+    "conversations.conversation-view.artifacts:artifacts",
     "conversations.conversation-view.push-profiling:push-profiling",
     "conversations.conversation-view.commits-graph:commits-graph",
     "review:review",

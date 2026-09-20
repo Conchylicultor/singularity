@@ -284,6 +284,7 @@ the outcome too, with no separate code path.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
     - `conversations/conversation-view/action-bar`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/header`

@@ -7,3 +7,4 @@ export {
   getCommitFiles,
   getCommitInfo,
 } from "./endpoints";
+export { codeImageUrl } from "./image-url";

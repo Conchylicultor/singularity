@@ -995,6 +995,10 @@ See "Open questions" in the design doc.
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/artifacts/page`
+    - `conversations/conversation-view/artifacts/prototype`
+    - `conversations/conversation-view/artifacts/research`
+    - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`

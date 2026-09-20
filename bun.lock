@@ -1331,6 +1331,30 @@
       "name": "@singularity/plugin-conversations-conversation-view-allow-monitor",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/page": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts-page",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/prototype": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts-prototype",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/research": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts-research",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/screenshot": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts-screenshot",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/skill": {
+      "name": "@singularity/plugin-conversations-conversation-view-artifacts-skill",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/branch": {
       "name": "@singularity/plugin-conversations-conversation-view-branch",
       "version": "0.0.1",
@@ -6688,6 +6712,18 @@
     "@singularity/plugin-conversations-conversation-view-action-bar": ["@singularity/plugin-conversations-conversation-view-action-bar@workspace:plugins/conversations/plugins/conversation-view/plugins/action-bar"],
 
     "@singularity/plugin-conversations-conversation-view-allow-monitor": ["@singularity/plugin-conversations-conversation-view-allow-monitor@workspace:plugins/conversations/plugins/conversation-view/plugins/allow-monitor"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts": ["@singularity/plugin-conversations-conversation-view-artifacts@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts-page": ["@singularity/plugin-conversations-conversation-view-artifacts-page@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/page"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts-prototype": ["@singularity/plugin-conversations-conversation-view-artifacts-prototype@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/prototype"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts-research": ["@singularity/plugin-conversations-conversation-view-artifacts-research@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/research"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts-screenshot": ["@singularity/plugin-conversations-conversation-view-artifacts-screenshot@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/screenshot"],
+
+    "@singularity/plugin-conversations-conversation-view-artifacts-skill": ["@singularity/plugin-conversations-conversation-view-artifacts-skill@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/skill"],
 
     "@singularity/plugin-conversations-conversation-view-branch": ["@singularity/plugin-conversations-conversation-view-branch@workspace:plugins/conversations/plugins/conversation-view/plugins/branch"],
 

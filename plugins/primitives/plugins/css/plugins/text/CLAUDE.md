@@ -280,6 +280,7 @@ fixed raw size escapes per-site via
     - `conversations/conversation-ui/row`
     - `conversations/conversation-view`
     - `conversations/conversation-view/allow-monitor`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`

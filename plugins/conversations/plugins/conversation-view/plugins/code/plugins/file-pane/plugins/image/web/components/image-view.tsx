@@ -1,4 +1,5 @@
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
 
 export function ImageView({
   worktree,
@@ -7,7 +8,7 @@ export function ImageView({
   worktree: string;
   path: string;
 }) {
-  const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(path)}`;
+  const src = codeImageUrl(worktree, path);
   return (
     <Center axis="both" className="h-full p-lg">
       <img

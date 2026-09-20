@@ -11,6 +11,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
 
 const IMG_HREF_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(?:[?#].*)?$/i;
 
@@ -53,9 +54,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
             return (
               <ViewerThumbnail
                 image={{
-                  src: isExternalUrl(src)
-                    ? src
-                    : `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(src)}`,
+                  src: isExternalUrl(src) ? src : codeImageUrl(worktree, src),
                   name: basename(src),
                   sourceLabel: "Markdown",
                   alt: alt || undefined,
