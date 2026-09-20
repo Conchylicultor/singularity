@@ -37,7 +37,13 @@ const LOGS_WS_PATH = "/ws/logs";
 interface LiveLogChannelBaseProps {
   /** Durable channel id to subscribe to (e.g. `deploy`, `release`). */
   channel: string;
-  /** Header label; the "Live" marker is appended by the primitive. */
+  /**
+   * Header label. The always-open form appends a dimmed "Live" marker to it,
+   * because those surfaces show a live tail BESIDE a persisted one and the two
+   * headers have to be told apart. A `disclosure` header does not: its chevron
+   * already says whether anything is streaming, and there is no persisted twin
+   * beside it to confuse it with.
+   */
   label?: ReactNode;
   /** Shown while the buffer is empty (subscribing replays the ring buffer). */
   emptyState?: ReactNode;
@@ -172,11 +178,18 @@ export function LiveLogChannel({
     },
   });
 
-  const copyButton = (
+  const copyText = entries.map((e) => e.line).join("\n");
+
+  const copyButton = (hidden?: boolean) => (
     <ControlSizeProvider size="xs">
       <CopyButton
-        text={entries.map((e) => e.line).join("\n")}
+        text={copyText}
         title="Copy logs"
+        // `invisible` is a RESERVATION, not a hide-with-a-dead-target:
+        // `visibility: hidden` takes the button out of hit-testing, out of the
+        // tab order and out of the a11y tree, while it keeps its box. The box is
+        // the point — see the header below.
+        className={hidden ? "invisible" : undefined}
       />
     </ControlSizeProvider>
   );
@@ -215,7 +228,7 @@ export function LiveLogChannel({
               {liveMarker}
             </Text>
           </Fill>
-          {copyButton}
+          {copyButton()}
         </Line>
         {body}
       </Stack>
@@ -227,14 +240,18 @@ export function LiveLogChannel({
       <Stack gap="none" className={rootClass}>
         {/* The header IS the disclosure control, and the copy button rides its
             `actions` slot — a SIBLING of the control, never an interactive
-            nested inside one. */}
-        <SectionHeaderRow actions={open ? copyButton : undefined}>
-          {label}
-          {/* Dropped while shut: no socket is open then, so the marker would be
-              a claim this view is not making. */}
-          {open ? " " : null}
-          {open ? liveMarker : null}
-        </SectionHeaderRow>
+            nested inside one.
+
+            The button is always RENDERED, and merely invisible while the section
+            is shut, because a row is as tall as its tallest occupant: a copy
+            button that comes and goes took the header from 28px to 36px on every
+            toggle, and the chevron and the label visibly slid down with it. So
+            the spacer IS the button, exactly as `SectionHeaderRow` already
+            reserves the chevron's box on a header that cannot open — a
+            hand-measured stand-in would drift from the control it stands in for.
+            There is also nothing to copy while shut: the buffer is whatever the
+            socket delivered, and the socket is closed. */}
+        <SectionHeaderRow actions={copyButton(!open)}>{label}</SectionHeaderRow>
         {/* `rail-x-sm` insets the scroller AND publishes the inset, so the
             bordered log box sits inside the section rather than bleeding to its
             edges the way the header row does. */}
