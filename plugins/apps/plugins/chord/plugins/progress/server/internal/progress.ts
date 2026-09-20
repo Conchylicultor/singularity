@@ -19,12 +19,6 @@ import {
 } from "../../core";
 import { startOfLocalDay } from "./local-day";
 
-// Every table name in these queries is QUOTED ("chord_answers"). That is load-
-// bearing: the database client learns which tables a live resource's loader
-// reads by scanning its SQL for `FROM "<table>"` / `JOIN "<table>"`, and only
-// quoted names match. An unquoted `FROM chord_answers` reads the same rows but
-// records no dependency, so a saved answer never reaches `chord.progress`.
-
 const RecentAnswerRowSchema = z.object({
   token: ChordTokenSchema,
   correct: z.boolean(),

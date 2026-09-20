@@ -1,5 +1,8 @@
+import { sql as drizzleSql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient } from "pg";
+import { z } from "zod";
 import {
   retryUntil,
   exponential,
@@ -23,6 +26,7 @@ import {
   onClientLost,
   queryText,
 } from "@plugins/database/plugins/connection/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 
@@ -141,24 +145,120 @@ registerGateGauge("db-pool", () => {
 // deliberately excluded: loaders are read-only by contract, so any write captured
 // under a loader's ambient context is a foreign observability leak (e.g. the
 // report path's `INSERT INTO "notifications"` running inside whatever loader
-// happened to be open), never a genuine read dependency. Drizzle always
-// double-quotes table identifiers, so this is reliable for ORM reads; raw sql``
-// and CTE aliases fall to coarse over-capture, which is acceptable for this
-// read-set. Exported for co-located unit testing.
+// happened to be open), never a genuine read dependency. Exported for co-located
+// unit testing.
 //
-// `DELETE FROM` reuses the `FROM` keyword, so we capture the leading clause
-// keyword and skip a `delete from` match — otherwise a delete's write target
-// would slip in through the bare `from` branch. `INSERT INTO` / `UPDATE` targets
-// never follow FROM/JOIN, so no such guard is needed for them.
+// HOW THE NAME IS SPELLED DOES NOT MATTER. Drizzle double-quotes every
+// identifier it emits; a hand-written `sql` template usually does not, because
+// that is how people write SQL. Both are matched, and they differ only in what
+// happens after the match:
+//
+//   - a QUOTED name is taken as written, exactly as it always has been;
+//   - an UNQUOTED name is only a candidate. Anything at all can follow FROM — a
+//     CTE name, a subquery alias, a set-returning function — so a candidate is
+//     kept only if it names a relation that really exists in the `public` schema
+//     (`setKnownRelations` below). A phantom name in a read-set is not free
+//     noise: the Debug → Read-set pane calls a resource a "silent FULL" the
+//     moment its read-set holds a table the change-feed does not cover, so
+//     unfiltered aliases would drown the one surface that exists to spot this
+//     class of bug. While no relation set is installed — before boot loads it,
+//     and on the central runtime, which never touches this pool — every unquoted
+//     candidate is dropped, so capture is then byte-identical to the
+//     quoted-only behaviour this replaces.
+//
+// Three guards on the unquoted branch, each with a live site in this repo:
+//   - `IS DISTINCT FROM` is an operator, not a FROM clause, and what follows it
+//     is an expression (`page-doc-order.ts` has one inside a live loader). It is
+//     matched and then dropped, the same way `DELETE FROM`'s write target is —
+//     matching it is what stops the bare `from` branch from picking its operand
+//     up.
+//   - a candidate immediately followed by `(` is a function call, not a relation
+//     — `FROM unnest(…)` and `CROSS JOIN LATERAL (…)`, both in the chord
+//     progress loader.
+//   - a leading `ONLY` belongs to the clause, not to the name, so `FROM ONLY
+//     tasks` captures `tasks`.
+//
+// A schema-qualified name keeps only its relation part when the schema is
+// `public` (which is what the change-feed reports as `TG_TABLE_NAME`), and is
+// dropped whole otherwise: the jobs list loader reads
+// `FROM graphile_worker._private_jobs`, a schema the change-feed structurally
+// excludes, so recording it would add a dependency that can never fire.
+//
+// One over-capture stays possible: a CTE named after a real table
+// (`WITH tasks AS (…) SELECT … FROM tasks`) records a phantom dependency. That
+// costs one extra recompute and never a missed one — the direction this index
+// has always been allowed to err in.
 export function extractReadTablesFromSql(text: string): string[] {
-  const re = /\b(from|join|delete\s+from)\s+"([^"]+)"/gi;
+  const re =
+    /\b(distinct\s+from|delete\s+from|from|join)\s+(?:only\s+)?(?:"([^"]+)"|([a-z_][\w$.]*))(\s*\()?/gi;
   const tables = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    if (m[1]!.toLowerCase().startsWith("delete")) continue; // write target, not a read
-    tables.add(m[2]!);
+    const keyword = m[1]!.toLowerCase().replace(/\s+/g, " ");
+    if (keyword !== "from" && keyword !== "join") continue; // write target / operator
+    const quoted = m[2];
+    if (quoted !== undefined) {
+      tables.add(quoted);
+      continue;
+    }
+    if (m[4] !== undefined) continue; // a call — `unnest(`, `lateral (`
+    const relation = publicRelationName(m[3]!);
+    if (relation !== null && knownRelations?.has(relation))
+      tables.add(relation);
   }
   return Array.from(tables);
+}
+
+// Postgres folds an unquoted identifier to lower case, so a candidate is
+// normalised the same way before it is looked up. Returns null for a name
+// qualified with a schema other than `public` — the change-feed reports changes
+// under the bare relation name and covers `public` only.
+function publicRelationName(candidate: string): string | null {
+  const parts = candidate.toLowerCase().split(".");
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2 && parts[0] === "public") return parts[1]!;
+  return null;
+}
+
+// The relations that really exist in `public`, as of the last load. `null` means
+// none has been installed, which is the state of every process that never calls
+// `loadKnownRelations` — and the reason an unquoted candidate is dropped rather
+// than trusted there.
+let knownRelations: ReadonlySet<string> | null = null;
+
+// Exported for co-located unit testing: the filter is module-local state, so a
+// test installs and clears its own set rather than reaching for a database.
+export function setKnownRelations(relations: ReadonlySet<string> | null): void {
+  knownRelations = relations;
+}
+
+const KnownRelationRowSchema = z.object({ relname: z.string() });
+
+/**
+ * Read which relations `public` really holds and install them for
+ * {@link extractReadTablesFromSql}.
+ *
+ * Ordinary and partitioned tables plus plain and materialized views: loaders
+ * read the derived views (`tasks_v`, `attempts_v`, …) as readily as base
+ * tables, and the change-feed already expands a base-table change onto them.
+ *
+ * Idempotent, and it replaces the set wholesale — so it is safe to call again
+ * after later DDL creates more relations (change-feed creates
+ * `live_state_changelog` inside its own barrier hook).
+ */
+export async function loadKnownRelations(
+  executor: NodePgDatabase,
+): Promise<void> {
+  const rows = await executeRows(executor, {
+    query: drizzleSql.raw(
+      `SELECT c.relname::text AS relname
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m')`,
+    ),
+    row: KnownRelationRowSchema,
+    label: "loadKnownRelations",
+  });
+  setKnownRelations(new Set(rows.map((r) => r.relname)));
 }
 
 // Postgres deadlock-victim (40P01) and serialization-failure (40001) are, by
@@ -251,7 +351,11 @@ export function installQueryWrapper(pool: Pool): void {
 
     const runOnce = async () => {
       const acq0 = performance.now();
-      const client = await origConnect(); // unwrapped: avoids double-recording
+      // `origConnect`, so this checkout takes no transaction lease and applies
+      // no read-set patch. A client still carrying one from an earlier
+      // transaction checkout records its tables twice here; a read-set is a
+      // Set, so the repeat costs nothing.
+      const client = await origConnect();
       const acqMs = performance.now() - acq0;
       // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
       // lands the same duration in the enclosing entry's waits ("db-acquire"
@@ -337,7 +441,10 @@ export function installQueryWrapper(pool: Pool): void {
 
   // Gate background TRANSACTIONS. `pool.connect()` hands out a raw pooled client
   // that bypasses the `pool.query` wrapper entirely — no timing, no lane gate,
-  // and (until now) no reservation. It is the path drizzle's `db.transaction()`
+  // and (until now) no reservation. Read-set capture is the one concern that
+  // follows the client out (`wrapClientQueryForReadSet`, applied on every
+  // non-callback path below), because a loader reading inside a transaction has
+  // a read-set just the same. It is the path drizzle's `db.transaction()`
   // takes (`NodePgSession` does `await this.client.connect()` when
   // `client instanceof Pool`, which is why `db` must keep proxying a real
   // `pg.Pool`). Under event-loop lag a transaction holds its connection across
@@ -363,8 +470,11 @@ export function installQueryWrapper(pool: Pool): void {
     // context is still the caller's. Interactive checkouts (HTTP mutations) and
     // context-less ones (`awaitDbReady`, `warmPool`) take no gate: the former are
     // allowed the reserved floor, and the latter must never be able to wait on a
-    // gate at boot.
-    if (currentOriginClass() !== "background") return origConnect();
+    // gate at boot. Both still get read-set capture — a loader that reads inside
+    // a transaction has a read-set whichever lane it runs in.
+    if (currentOriginClass() !== "background") {
+      return origConnect().then(wrapClientQueryForReadSet);
+    }
 
     return (async (): Promise<PoolClient> => {
       const releaseSlot = await backgroundTxGate.acquire({
@@ -380,9 +490,44 @@ export function installQueryWrapper(pool: Pool): void {
         releaseSlot();
         throw err;
       }
-      return armLease(client, releaseSlot);
+      return armLease(wrapClientQueryForReadSet(client), releaseSlot);
     })();
   }) as typeof pool.connect;
+}
+
+// Record the read-set of a query issued on a CHECKED-OUT client, which is the
+// path `db.transaction()` takes. `pool.query` is where every other read is seen,
+// and a checked-out client never passes through it — so without this a loader
+// that wrapped its reads in a transaction recorded no tables at all, and its
+// resource silently served stale data. Same failure as an unrecognised table
+// name, different spelling.
+//
+// Deliberately the read-set line and nothing else: timing and the `[acquire]`
+// span still bypass a checked-out client (see plugins/database/CLAUDE.md), and
+// this wrapper takes no gate, touches no lease and changes no result.
+//
+// The patch is per CLIENT, not per checkout — pg reassigns `release` on every
+// checkout but keeps the same `query` — so it is applied once and then left
+// alone, or every checkout of a pooled client would stack another layer of
+// wrapper on the last. Which caller is asking is read at call time, so one
+// lasting patch is correct for every future checkout.
+const readSetWrappedClients = new WeakSet<PoolClient>();
+
+function wrapClientQueryForReadSet(client: PoolClient): PoolClient {
+  if (readSetWrappedClients.has(client)) return client;
+  readSetWrappedClients.add(client);
+  const clientQuery = client.query.bind(client);
+  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
+  client.query = ((...a: Parameters<typeof clientQuery>): any => {
+    // Same gate as the `pool.query` path: only a `loader` entry has a read-set,
+    // and it has one whether a human or the cascade is driving it. Observation
+    // only — the call itself is handed on untouched, callback form included.
+    if (currentCallerKind() === "loader") {
+      recordReadTables(extractReadTablesFromSql(queryText(a[0])));
+    }
+    return clientQuery(...a);
+  }) as typeof client.query;
+  return client;
 }
 
 // Turn one background checkout into a gate lease: the slot is held from checkout

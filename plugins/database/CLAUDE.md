@@ -40,9 +40,16 @@ multi-second right after a restart when the cost is really cold-connection
 acquisition; a spiking `[acquire]` aggregate is the signal for that. Each `db`
 span is attributed to the innermost enclosing request/loader (its `parent`) via
 the recorder's ambient context, so N+1 patterns point straight at the caller.
-**Direct `pool.connect()` → `client.query` paths bypass this timing** (e.g.
-`awaitDbReady`'s `SELECT 1` and `warmPool`) — they go through a checked-out
-client, not `pool.query`, so their durations are not recorded.
+**A query on a checked-out client — `pool.connect()` → `client.query`, which is
+the path `db.transaction()` takes — is still not timed.** It never reaches
+`pool.query`, so it gets no `[acquire]` span and no `<sql>` span, and the
+durations of `awaitDbReady`'s `SELECT 1` and of `warmPool`'s probes are not
+recorded. **Read-set capture no longer bypasses it:** `installQueryWrapper`
+patches the checked-out client's `query` too (`wrapClientQueryForReadSet`), so a
+loader that reads inside a transaction records its tables exactly as it would
+through `pool.query` — before, it recorded none and its resource silently served
+stale data. The patch is applied once per client, since pg reassigns `release`
+on every checkout but keeps the same `query`.
 
 ## Query deadline (a call with no reply fails; its connection is abandoned)
 
@@ -74,7 +81,9 @@ What the app pool (`server/internal/client.ts`) adds on top:
 
 - **The pool is `createDbPool({ name: "app" })`.** `installQueryWrapper` keeps
   only what the app pool has: lane gates, the deadlock retry, `[acquire]` spans
-  and read-set capture. It has no clock of its own.
+  and read-set capture. It has no clock of its own. Of those, read-set capture is
+  the one that also rides a checked-out client, because a transaction is just
+  another way to spell a read.
 - **One clock per attempt.** A 40P01/40001 retry re-runs the statement on a
   checked-out client, and that statement gets its own bound. A retry only follows
   a *reply* (the victim's error), so a hang still costs one bound, not five.
@@ -241,6 +250,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `db`
     - `dbLog`
     - `isTransientDbError`
+    - `loadKnownRelations`
 - Cross-plugin:
   - Imported by:
     - `active-data`

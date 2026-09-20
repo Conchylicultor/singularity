@@ -1,5 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { awaitDbReady, warmPool, db } from "./internal/client";
+import {
+  awaitDbReady,
+  warmPool,
+  db,
+  loadKnownRelations,
+} from "./internal/client";
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   withQueryDeadline,
@@ -8,7 +13,13 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
 
-export { db, dbLog, awaitDbReady, isTransientDbError } from "./internal/client";
+export {
+  db,
+  dbLog,
+  awaitDbReady,
+  isTransientDbError,
+  loadKnownRelations,
+} from "./internal/client";
 export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
 
 export default {
@@ -57,5 +68,12 @@ export default {
       { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: derived-views rebuild" },
       () => rebuildDerivedViews(db),
     );
+    // Last, because every relation a loader can read now exists. This is the
+    // snapshot that tells an unquoted table name in a loader's raw SQL apart
+    // from a CTE name or a subquery alias, so its read-set records the tables it
+    // really depends on (`extractReadTablesFromSql`). One cheap catalog read,
+    // not DDL — it waits on no lock, so it keeps the ordinary query deadline
+    // rather than the widened boot one the three steps above need.
+    await loadKnownRelations(db);
   },
 } satisfies ServerPluginDefinition;

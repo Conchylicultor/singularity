@@ -58,14 +58,6 @@ const DocOrderRowSchema = z.object({
 export async function docOrderPaths(
   executor: NodePgDatabase = db,
 ): Promise<Map<string, RankPath>> {
-  // `${_blocks}` interpolates the drizzle table, which renders the identifier
-  // DOUBLE-QUOTED (`"page_blocks"`). Load-bearing, not style: the read-set
-  // extractor (`plugins/database/server/internal/client.ts`) matches only
-  // `\b(from|join)\s+"([^"]+)"`, so raw SQL naming the table UNQUOTED captures
-  // NOTHING — the `page_blocks → pages` live-state edge would never register and
-  // the sidebar would silently stop updating. No error, no log. (`page-id.ts`'s
-  // unquoted CTE is not a counter-precedent: it is a write path, which has no
-  // read-set contract.)
   const rows = await executeRows(executor, {
     label: "page doc-order rank paths",
     row: DocOrderRowSchema,

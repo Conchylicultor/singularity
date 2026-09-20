@@ -12131,6 +12131,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `db`
       - `dbLog`
       - `isTransientDbError`
+      - `loadKnownRelations`
   - Cross-plugin:
     - Imported by:
       - `active-data`
@@ -12323,6 +12324,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
           - `database.db`
+          - `database.loadKnownRelations`
           - `database/admin.connectionString`
           - `database/admin.ExcludeFromFork`
           - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`

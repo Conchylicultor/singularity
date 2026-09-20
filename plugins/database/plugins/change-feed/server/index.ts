@@ -4,7 +4,7 @@ import {
   scopedResourceIdentities,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { db } from "@plugins/database/server";
+import { db, loadKnownRelations } from "@plugins/database/server";
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   withQueryDeadline,
@@ -89,6 +89,15 @@ export default {
       excludedTableNames(),
       new Set(feedExemptTables()),
     );
+    // `rebuildTriggers` above creates `live_state_changelog`, which did not exist
+    // yet when the database plugin took its own snapshot of the public relations.
+    // Take it again so a loader naming the changelog unquoted is recognised too.
+    // Idempotent, and it replaces the set wholesale.
+    //
+    // Here, in the blocking barrier, rather than in `onReady` below: `onReady`
+    // runs after the barrier lifts, when the gateway may already be routing
+    // traffic, and a loader running in that window would capture nothing.
+    await loadKnownRelations(db);
   },
   // The LISTEN consumer is a background watcher, so it starts after the ready
   // barrier (same phase as git-watcher's startGitWatcher). The view-dependency

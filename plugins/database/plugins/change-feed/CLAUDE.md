@@ -141,6 +141,7 @@ silent socket is still not detected; that needs a heartbeat.
   - Contributes: `fork-data-exclusion` "live_state_changelog"
   - Uses:
     - `database.db`
+    - `database.loadKnownRelations`
     - `database/admin.connectionString`
     - `database/admin.ExcludeFromFork`
     - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
