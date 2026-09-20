@@ -484,6 +484,7 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.plainOf`
     - `page/editor.RichText`
     - `page/editor.runsOf`
+    - `page/editor.runsOfNode`
     - `page/editor.SerializedBlock`
     - `page/editor.serializeForestToMarkdown`
     - `page/editor.serializeInlineMarkdown`

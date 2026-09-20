@@ -3601,6 +3601,29 @@ covered. Design:
     INTERIOR break inside a marked run round-trips exactly.
   Design:
   [`research/2026-09-10-page-soft-break-markdown-round-trip.md`](../../../../research/2026-09-10-page-soft-break-markdown-round-trip.md).
+- **A paragraph whose words open with a block marker is escaped: `\3. x`.** The
+  serializer asks who would claim the line it just wrote, through the SAME
+  `claimersOf` / `claimOf` dispatch the parser uses (fence, then claimers by
+  `precedence`, then default text) — one authority, so the two directions cannot
+  disagree about what a line means. A line another type would claim gets ONE
+  backslash at index 0, which every claimer's `^`-anchor or `trim()` defeats;
+  the parse strips it and takes the rest as prose. Dialect-free and needing no
+  fourth `MarkdownContext` field, since `\3. x` is correct CommonMark.
+  - The probe reads the LEFT-STRIPPED line while the text keeps its spaces:
+    leading whitespace is indent to the parser but content to a paragraph, so
+    `"  3. x"` is escaped ahead of its own spaces. (`"  ---"` hides this —
+    `divider` compares `trim()`.)
+  - **Only the default-text type may be escaped.** Any other type whose own line
+    is claimed by someone else THROWS — escaping it would make the block a
+    paragraph on the way back, the very loss this closes.
+  - **Two asserts, our dialect only** (the clipboard is deliberately lossy and
+    must never throw during a Cmd+C): a `lines`-branch block emits ONE line
+    unless it declares a `markdown.fence` (`equation`'s `"$$" + expression` fans
+    a multi-line formula into sibling blocks otherwise), and a `lines` line never
+    opens with `<` — which is what lets the claim authority skip the multi-line
+    tag branch honestly.
+  Design:
+  [`research/2026-09-20-page-markdown-line-claim-escape.md`](../../../../research/2026-09-20-page-markdown-line-claim-escape.md).
 
 ### The page tags
 

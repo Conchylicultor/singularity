@@ -21760,6 +21760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.plainOf`
           - `page/editor.RichText`
           - `page/editor.runsOf`
+          - `page/editor.runsOfNode`
           - `page/editor.SerializedBlock`
           - `page/editor.serializeForestToMarkdown`
           - `page/editor.serializeInlineMarkdown`

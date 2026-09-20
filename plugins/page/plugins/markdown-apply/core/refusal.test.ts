@@ -68,9 +68,10 @@ function refusal(parts: {
       updates: [],
       deleteIds: parts.deleteIds ?? [],
     },
-    textEdits: (parts.textEdits ?? []).map(
-      (blockId): MarkdownTextEdit => ({ blockId, runs: [] }),
-    ),
+    textEdits: (parts.textEdits ?? []).map((blockId): MarkdownTextEdit => ({
+      blockId,
+      runs: [],
+    })),
     stats: {
       survived: 0,
       created: parts.creates.length,

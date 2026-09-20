@@ -265,6 +265,14 @@ WITHIN that block, the same as pressing Shift+Enter in the editor, and not a
 block boundary. Hand it back unchanged, like everything else, and it is not a
 write.
 
+A LEADING \`\\\` is part of it too: it marks a line as plain prose whose words
+merely start like something else — \`\\3. Step one\`, \`\\- not a bullet\`,
+\`\\# not a heading\`. The paragraph's text is everything after that one
+backslash. Keep it when you hand the line back, and put one there yourself if an
+edit makes a paragraph start with \`-\`, \`+\`, \`#\`, \`>\`, \`$$\`, \`---\` or
+a number followed by \`.\` or \`)\` — without it the line comes back as a list,
+heading or divider instead of the paragraph you wrote.
+
 Some tags also carry READ-ONLY attributes describing state that lives outside
 the page — facts about the block held elsewhere in the system, not text anyone
 typed into the document. Write them back exactly as you found them. Editing one
@@ -513,6 +521,12 @@ same as pressing Shift+Enter in the editor rather than Enter. It is part of that
 line's text, not a block boundary, so handing one back unchanged is not a write —
 and adding one gives you a break inside a block where a new line would have given
 you a new block.
+
+A LEADING \`\\\` marks a line as a plain paragraph whose words merely start like
+something else (\`\\3. Step one\`, \`\\- not a bullet\`). Keep it where you find
+one, and add one when your edit makes a paragraph begin with \`-\`, \`+\`, \`#\`,
+\`>\`, \`$$\`, \`---\` or a number followed by \`.\` or \`)\` — otherwise the line
+is read back as a list, heading or divider rather than the paragraph you meant.
 
 A worked round trip:
 

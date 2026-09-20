@@ -631,8 +631,14 @@ describe("line claims (a paragraph that opens like a list)", () => {
     for (const [type, data, line] of [
       ["numbered-list", { text: runs("2. x") }, "1. 2. x"],
       ["heading-1", { text: runs("# x") }, "# # x"],
-      ["to-do", { text: runs("- [ ] y"), checked: false }, "- [ ] - [ ] y"],
-      ["bulleted-list", { text: runs("- z") }, "- - z"],
+      // The brackets in the TEXT carry the INLINE escape, which is the other
+      // layer and untouched by any of this: what the line-claim check reads is
+      // the to-do's own `- [ ] ` prefix, which the to-do itself parses back.
+      ["to-do", { text: runs("- [ ] y"), checked: false }, "- [ ] - \\[ \\] y"],
+      // `* `, not `- `: a type emits its CANONICAL prefix (`markdownPrefixes[0]`),
+      // and this one declares `["* ", "- ", "+ "]`. So the bullet marker and the
+      // text's own leading `- ` are visibly different characters here.
+      ["bulleted-list", { text: runs("- z") }, "* - z"],
     ] as const) {
       const forest = [node(type, data)];
       expect(serialize(forest)).toBe(line);
@@ -682,6 +688,14 @@ describe("line claims (a paragraph that opens like a list)", () => {
     expect(() =>
       serializeForestToMarkdown([node("broken", { text: runs("x") })], ctx),
     ).toThrow(/"broken".*"bulleted-list"/s);
+    // One rule for every assert here: our own dialect asserts, the clipboard
+    // never throws — a Cmd+C may not crash, whatever the document holds.
+    expect(() =>
+      serializeForestToMarkdown([node("broken", { text: runs("x") })], {
+        ...ctx,
+        softBreaks: "newline",
+      }),
+    ).not.toThrow();
   });
 
   test("a hand-written line opening with `<` throws — the tag branch is not modelled", () => {

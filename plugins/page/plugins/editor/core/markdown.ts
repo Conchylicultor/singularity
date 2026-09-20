@@ -1085,11 +1085,14 @@ function stealerOf(line: string, claimers: Claimers): Handle | undefined {
  * Unreachable today — every claiming type parses the line it emits, which the
  * check above now asserts on every block rather than assuming.
  *
- * `assertExact` is `softBreaks === "escaped"`, our own dialect: the clipboard's
- * is deliberately lossy and must never throw during a Cmd+C. The ESCAPE itself
- * is dialect-free and needs no fourth `MarkdownContext` field —
+ * `assertExact` is `softBreaks === "escaped"`, our own dialect, and it gates
+ * EVERY throw here — one rule, so nobody has to reason per assert about which
+ * ones a Cmd+C can reach: **our own dialect asserts; the clipboard never
+ * throws.** That dialect is deliberately lossy and emits what it has.
+ *
+ * The ESCAPE itself is dialect-free and needs no fourth `MarkdownContext` field:
  * `\3. Investigate` is correct CommonMark and renders as the paragraph it is
- * wherever a person pastes it.
+ * wherever a person pastes it, so the clipboard is better with it, not worse.
  */
 function claimSafeLines(
   line: string,
@@ -1138,17 +1141,24 @@ function claimSafeLines(
   const claimant = claimantOf(first, claimers);
   if (claimant === handle) return lines;
   if (handle !== claimers.fallback) {
-    throw new Error(
-      `markdown: a "${handle.type}" block emitted the line ${JSON.stringify(first)}, which ` +
-        `parses back as "${claimant?.type ?? "nothing"}" — its \`markdown.serialize\` and its ` +
-        "`markdown.parseLine` disagree. Escaping the line is NOT the answer here: it would make " +
-        "the block a paragraph on the way back, which is the loss this check exists to prevent. " +
-        "Only the default-text type may be escaped.",
-    );
+    // Unreachable in the clipboard dialect today — but the gate is the same one
+    // sentence everywhere in this function, so nobody has to re-derive per
+    // assert whether THIS one can fire during a Cmd+C. The clipboard emits the
+    // line as it stands and keeps the loss, which is what that dialect is for.
+    if (assertExact) {
+      throw new Error(
+        `markdown: a "${handle.type}" block emitted the line ${JSON.stringify(first)}, which ` +
+          `parses back as "${claimant?.type ?? "nothing"}" — its \`markdown.serialize\` and its ` +
+          "`markdown.parseLine` disagree. Escaping the line is NOT the answer here: it would " +
+          "make the block a paragraph on the way back, which is the loss this check exists to " +
+          "prevent. Only the default-text type may be escaped.",
+      );
+    }
+    return lines;
   }
   const escaped = "\\" + first;
   const after = claimantOf(escaped, claimers);
-  if (after !== handle) {
+  if (assertExact && after !== handle) {
     throw new Error(
       `markdown: a paragraph reading ${JSON.stringify(first)} is claimed by ` +
         `"${claimant?.type ?? "nothing"}", and escaping it as ${JSON.stringify(escaped)} still ` +
