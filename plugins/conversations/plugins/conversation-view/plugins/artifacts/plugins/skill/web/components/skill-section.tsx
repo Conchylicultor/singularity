@@ -39,7 +39,7 @@ export function SkillSection({ items }: { items: ArtifactItem[] }) {
   };
 
   return (
-    <Cluster gap="2xs" className="px-xs">
+    <Cluster gap="2xs" className="px-sm">
       {items.map((item) => {
         const path = skillFilePath(item.key);
 

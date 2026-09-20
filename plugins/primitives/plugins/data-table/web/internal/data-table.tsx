@@ -297,9 +297,9 @@ function DataTableRow<TRow>({
     >
       {/* A cell is a `<Text as="div">`, so wrapping the row's cells in a
           SingleLine context makes each one pick up Text's sanctioned
-          `inline-block max-w-full min-w-0 truncate` leaf recipe (the single home
-          of `min-w-0`). Blockified as a grid item to `block`, that `min-w-0` lets
-          the cell shrink to its track — so a `minmax(0,1fr)` column with a long
+          `block w-fit max-w-full min-w-0 truncate` leaf recipe (the single home
+          of `min-w-0`). As a grid item the cell is blockified and content-sized
+          either way, and that `min-w-0` lets it shrink to its track — so a `minmax(0,1fr)` column with a long
           value ellipsizes instead of bleeding over its neighbors (the behavior
           `ColumnDef.width` documents), while `alignClass` still positions the
           content. Scoped to the cells only — the trailing rowActions cluster

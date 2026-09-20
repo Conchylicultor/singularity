@@ -44,7 +44,7 @@ export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
 
   return (
     <ImageGallery>
-      <Grid cols={4} gap="2xs" align="center" className="px-xs">
+      <Grid cols={4} gap="2xs" align="center" className="px-sm">
         {items.map((item) => {
           const name = screenshotName(item.key);
           return (

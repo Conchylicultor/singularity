@@ -23,7 +23,13 @@ export function ArtifactsPanel({
 }) {
   return (
     <>
-      <Line className="gap-sm border-b px-sm py-xs">
+      {/*
+        `px-md` is where the body's text starts too — the `p-xs` on the stack
+        below plus the `px-sm` each band inside it pays — so the title, every
+        section heading and every row glyph share one left edge. The header sits
+        outside that stack, so it has to say the sum itself.
+      */}
+      <Line className="gap-sm border-b px-md py-xs">
         <Fill>
           <Text variant="label" className="font-semibold">
             Artifacts

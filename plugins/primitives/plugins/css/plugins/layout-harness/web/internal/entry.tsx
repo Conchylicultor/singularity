@@ -61,6 +61,181 @@ function contentLeftOf(el: HTMLElement): number {
   return el.getBoundingClientRect().left + px(getComputedStyle(el).paddingLeft);
 }
 
+// ── Optical centre: where a box's INK looks centred ────────────────
+//
+// Every other measurement here comes out of `getBoundingClientRect`, and that is
+// precisely why the repo could not see a row whose icon sits below its own
+// words: the BOXES are centred on each other perfectly, and the letters are not
+// in the middle of theirs. So this is the one measurement that asks what is
+// DRAWN rather than what is reserved — the cap-to-baseline band of a text run,
+// the `getBBox()` ink of a glyph.
+
+// One canvas for the whole page's text metrics. `measureText` is a pure
+// function of (font, string), so nothing about it is per-element.
+const textMetricsCtx = (() => {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx)
+    throw new Error(
+      "optical centre: this browser gave no 2d canvas context, so text metrics cannot be read",
+    );
+  return ctx;
+})();
+
+// Assigning an unparsable string to `ctx.font` is a SILENT no-op — the previous
+// font stays and `measureText` cheerfully answers about the wrong face. So each
+// assignment is made from a known sentinel and checked to have moved off it. A
+// box genuinely computing to `7px cursive` would read correctly anyway; the
+// point is that a malformed shorthand can never pass unnoticed.
+const FONT_SENTINEL = "7px cursive";
+
+function metricsFor(el: Element, text: string): TextMetrics {
+  const cs = getComputedStyle(el);
+  const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  textMetricsCtx.font = FONT_SENTINEL;
+  textMetricsCtx.font = font;
+  if (textMetricsCtx.font === FONT_SENTINEL) {
+    throw new Error(
+      `optical centre: canvas rejected the font shorthand "${font}" built from the computed style, so its text metrics would describe some other face`,
+    );
+  }
+  return textMetricsCtx.measureText(text);
+}
+
+/**
+ * The midpoint of a text run's ink top and its baseline — what the eye calls
+ * the middle of a line of words.
+ *
+ * The line box is found with a `Range` over the first non-empty text node, not
+ * from the marked element's own content box. A Range's first client rect IS the
+ * line box the text sits in — its top and its height — however that line came to
+ * be placed: inside a flex item centred by its row, below padding, as the first
+ * of several lines. Deriving it from the marked box instead would silently
+ * answer about the wrong y the moment the box was not the thing laying the text
+ * out.
+ *
+ * Within that line box the baseline sits at half-leading + the font's ascent,
+ * and the ink top is the ascent of THESE characters (`actualBoundingBoxAscent`)
+ * — the cap height for a capitalised run, the x-height for a lowercase one.
+ * The full text of the node is measured even when the box ellipsizes it, so the
+ * number does not jump at the width where truncation starts.
+ */
+function textInkCenter(el: Element): number | null {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let textNode: Text | null = null;
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    if (node.data.trim() !== "") {
+      textNode = node;
+      break;
+    }
+  }
+  const parent = textNode?.parentElement;
+  if (!textNode || !parent) return null;
+  const range = document.createRange();
+  range.selectNodeContents(textNode);
+  // One rect per line box; the first is the first line. A run that wrapped would
+  // otherwise report a rect spanning every line, whose "half-leading" is
+  // meaningless.
+  const line = range.getClientRects()[0];
+  if (!line || line.height === 0) return null;
+  const m = metricsFor(parent, textNode.data);
+  const fontBox = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
+  const baseline =
+    line.top + (line.height - fontBox) / 2 + m.fontBoundingBoxAscent;
+  return baseline - m.actualBoundingBoxAscent / 2;
+}
+
+/** The inline-start/end-agnostic Y alignment fraction of a `preserveAspectRatio`. */
+function alignFractionY(align: number): number {
+  const P = SVGPreserveAspectRatio;
+  if (
+    align === P.SVG_PRESERVEASPECTRATIO_XMINYMIN ||
+    align === P.SVG_PRESERVEASPECTRATIO_XMIDYMIN ||
+    align === P.SVG_PRESERVEASPECTRATIO_XMAXYMIN
+  )
+    return 0;
+  if (
+    align === P.SVG_PRESERVEASPECTRATIO_XMINYMAX ||
+    align === P.SVG_PRESERVEASPECTRATIO_XMIDYMAX ||
+    align === P.SVG_PRESERVEASPECTRATIO_XMAXYMAX
+  )
+    return 1;
+  // YMID, and the `unknown` value, which is what the initial `xMidYMid` is.
+  return 0.5;
+}
+
+/**
+ * The centre of an `<svg>`'s DRAWN ink, in viewport pixels.
+ *
+ * `getBBox()` is the union of what the shapes actually cover, in the viewBox's
+ * own user units, so it is mapped onto the rendered rect the way the browser
+ * maps everything else inside the viewBox: uniformly scaled and aligned per
+ * `preserveAspectRatio`.
+ *
+ * The box centre would be the easy number and the wrong one. A Material glyph
+ * is drawn inside a 24×24 viewBox with clear space around it, and an icon set
+ * whose glyphs sit low in that box is exactly the kind of misalignment this
+ * invariant exists to see.
+ */
+function svgInkCenter(svg: SVGSVGElement): number | null {
+  // Not guarded: `__measure` only asks about boxes that generate one, and a
+  // `getBBox` that threw anyway would be a harness fault, which belongs at the
+  // top of the page as a fixture page error rather than quietly as "no ink".
+  const bbox = svg.getBBox();
+  if (bbox.height === 0) return null;
+  const rect = svg.getBoundingClientRect();
+  const cs = getComputedStyle(svg);
+  const top = rect.top + px(cs.borderTopWidth) + px(cs.paddingTop);
+  const width =
+    rect.width -
+    px(cs.borderLeftWidth) -
+    px(cs.borderRightWidth) -
+    px(cs.paddingLeft) -
+    px(cs.paddingRight);
+  const height =
+    rect.height -
+    px(cs.borderTopWidth) -
+    px(cs.borderBottomWidth) -
+    px(cs.paddingTop) -
+    px(cs.paddingBottom);
+  const vb = svg.viewBox.baseVal;
+  // No viewBox: user units ARE css pixels, measured from the content box origin.
+  if (vb.width === 0 || vb.height === 0) return top + bbox.y + bbox.height / 2;
+  const par = svg.preserveAspectRatio.baseVal;
+  const none =
+    par.align === SVGPreserveAspectRatio.SVG_PRESERVEASPECTRATIO_NONE;
+  const slice =
+    par.meetOrSlice === SVGPreserveAspectRatio.SVG_MEETORSLICE_SLICE;
+  const scaleY = none
+    ? height / vb.height
+    : slice
+      ? Math.max(width / vb.width, height / vb.height)
+      : Math.min(width / vb.width, height / vb.height);
+  const offsetY = none
+    ? top
+    : top + (height - vb.height * scaleY) * alignFractionY(par.align);
+  return offsetY + (bbox.y - vb.y + bbox.height / 2) * scaleY;
+}
+
+/**
+ * A box's optical centre, or `null` when it bears no ink to have one.
+ *
+ * `null` is a measurement OUTCOME, not a default: the `opticalCenter` invariant
+ * reports it as a failure, the same way `railAlignment` fails on an unpublished
+ * rail. A spacer silently agreeing with every sibling is the shape of a gate
+ * that has stopped checking anything.
+ */
+function opticalCenterOf(el: Element): number | null {
+  if (el instanceof SVGSVGElement) return svgInkCenter(el);
+  const text = textInkCenter(el);
+  if (text !== null) return text;
+  // A box wrapping ONE glyph and nothing else is that glyph, optically. Two
+  // would be a question with two answers, so it has none.
+  const svgs = el.querySelectorAll("svg");
+  const only = svgs.length === 1 ? svgs[0] : null;
+  return only instanceof SVGSVGElement ? svgInkCenter(only) : null;
+}
+
 // A rail this large is not a rail — it is the marker saying the property was
 // never published, arriving as `var()`'s fallback so "unpublished" and "0px"
 // stay distinguishable. Padding cannot be negative, so a negative sentinel would
@@ -170,6 +345,31 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
         leaf.style.display = "inline";
         leaf.style.maxWidth = "none";
         leaf.style.overflow = "visible";
+        break;
+      }
+      if (mutate.value === "inline-block") {
+        // The construct the block-level leaf replaced, and the one this whole
+        // vertical invariant exists for.
+        //
+        // An inline-block whose overflow is not `visible` takes its BOTTOM
+        // MARGIN EDGE as its baseline, so it sits entirely above the baseline of
+        // the line it is on — and the block parent must still leave room for the
+        // strut's descent underneath. The cell ends up several pixels taller than
+        // the text in it, the text sits at the top of that cell, and the row's
+        // `items-center` then centres every sibling against the inflated box. The
+        // icon lands half the phantom space below the words.
+        //
+        // Nothing else is touched: no width, no overflow, no class. `truncate`
+        // already supplies the `overflow: hidden` half, which is why restoring
+        // one display keyword is the whole of the historical bug — and why every
+        // horizontal invariant stays green under it.
+        const leaf = scope.querySelector<HTMLElement>('[data-geo="content"]');
+        if (!leaf) {
+          throw new Error(
+            'swapLeafDisplay:"inline-block" mutation: no `[data-geo="content"]` leaf found',
+          );
+        }
+        leaf.style.display = "inline-block";
         break;
       }
       if (mutate.value === "absolute-pad") {
@@ -397,7 +597,26 @@ void loadFixtures().then((loaded) => {
     // page restating them.
     const tree = createElement(
       "div",
-      { "data-geo-root": "", "data-theme-scope": "" },
+      {
+        // A FRESH MOUNT per fixture, and per falsified/clean run of one.
+        //
+        // Every mutation in `applyMutation` writes INLINE STYLES imperatively —
+        // React knows nothing about them. One root renders every fixture in
+        // turn, so when two fixtures happen to share an element shape React
+        // reconciles rather than remounts, hands the second one the first one's
+        // DOM nodes, and the mutation's styles ride along into a run that never
+        // asked for them. The second fixture then measures the FIRST one's
+        // falsification and fails for a reason that is not in its own source.
+        //
+        // Keying on the fixture makes those nodes unreachable: React tears the
+        // old tree down and builds a new one, so a mutation cannot outlive the
+        // run that applied it. Widths within one run still reconcile, which is
+        // what a measure-then-decide primitive (`AdaptiveBar`) needs to see a
+        // width CHANGE rather than a first mount.
+        key: `${id}::${falsify ? "mutated" : "clean"}`,
+        "data-geo-root": "",
+        "data-theme-scope": "",
+      },
       createElement(
         "div",
         { "data-geo": "container", style: { width, position: "relative" } },
@@ -453,6 +672,7 @@ void loadFixtures().then((loaded) => {
         box: box(el),
         truncates: el.scrollWidth > el.clientWidth,
         contentLeft: contentLeftOf(el),
+        opticalCenter: opticalCenterOf(el),
       };
     }
     // The rail is read where the CHILDREN read it — from inside the region, off

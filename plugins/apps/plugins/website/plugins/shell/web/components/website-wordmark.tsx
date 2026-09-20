@@ -51,9 +51,11 @@ export function WordmarkText({
     >
       equin
       {/* A plain run, not a nested `<Text>`: in the header's single-line
-          context a `<Text>` becomes its own clipped inline-block, which sits on
-          its box's bottom edge rather than the text's baseline — lifting the
-          full stop off the line. */}
+          context a `<Text>` becomes its own clipped, block-level box, so the
+          full stop would drop onto a line of its own. (It used to be an
+          inline-block, which kept it on the line but sat it on the box's bottom
+          edge rather than the text's baseline, lifting the stop — the same
+          overflow-baseline rule, seen from the other side.) */}
       <span className="text-primary">.</span>
     </Text>
   );

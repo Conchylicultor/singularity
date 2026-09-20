@@ -176,6 +176,7 @@ genuine transient-chrome list escapes with
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-ui/row`
+    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `debug/trace/pane`

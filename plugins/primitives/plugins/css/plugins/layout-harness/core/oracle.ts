@@ -394,6 +394,83 @@ export function checkRailAlignment(
   return { ok: true };
 }
 
+// ── opticalCenter ──────────────────────────────────────────────────
+//
+// At every measured width, the named slots' optical centres agree within ε.
+//
+// The only VERTICAL invariant. Every other kind judges x, so a row whose icon
+// sits below the words beside it satisfies all of them — which is how the
+// canonical `Line > icon + Fill(Text)` recipe carried a 3px drop through 72 call
+// sites with a green gate.
+//
+// It compares INK, not boxes, because boxes are what the layout engine already
+// agrees about. `items-center` centres boxes perfectly while a cell that is
+// taller than the text inside it puts that text off-centre within its own box;
+// the boxes line up and the row still looks wrong. The two things the eye
+// actually lines up — the letters' cap-to-baseline band and a glyph's drawn ink
+// — are what `MeasuredFixture["slots"].opticalCenter` reports.
+//
+// A present slot whose optical centre is `null` FAILS. A box with no ink has
+// nothing to align, and reading that as "agrees with everyone" would turn an
+// empty measurement into a green gate — the same reason an unpublished rail
+// fails `railAlignment` instead of defaulting to 0.
+//
+// ε defaults to 0.75px: a real misalignment of this class is 2-3px (half a
+// strut's descent), while sub-pixel text metrics and a glyph's own ink rounding
+// drift by a few tenths. A slot absent at a given width is skipped, matching
+// every other check.
+const DEFAULT_OPTICAL_EPSILON = 0.75;
+
+export function checkOpticalCenter(
+  measuredByWidth: Record<number, MeasuredFixture>,
+  slots: string[],
+  epsilon = DEFAULT_OPTICAL_EPSILON,
+): OracleResult {
+  if (slots.length < 2) {
+    return {
+      ok: false,
+      detail: `opticalCenter: needs at least two slots to compare, got ${slots.length}`,
+    };
+  }
+  let compared = 0;
+  for (const width of widthsOf(measuredByWidth)) {
+    const m = measuredByWidth[width]!;
+    const present: { id: string; center: number }[] = [];
+    for (const id of slots) {
+      const slot = m.slots[id];
+      if (!slot) continue;
+      if (slot.opticalCenter === null) {
+        return {
+          ok: false,
+          detail: `opticalCenter: at width ${width}px, slot "${id}" has no measurable optical centre — it bears neither text nor an <svg>, so there is no ink to align. An empty box cannot stand in for an aligned one; mark the box that actually carries the glyph or the words.`,
+        };
+      }
+      present.push({ id, center: slot.opticalCenter });
+    }
+    if (present.length < 2) continue;
+    compared += 1;
+    const lowest = present.reduce((a, b) => (a.center < b.center ? a : b));
+    const highest = present.reduce((a, b) => (a.center > b.center ? a : b));
+    const spread = highest.center - lowest.center;
+    if (spread > epsilon) {
+      const all = present
+        .map((s) => `${s.id}=${s.center.toFixed(2)}`)
+        .join(", ");
+      return {
+        ok: false,
+        detail: `opticalCenter: at width ${width}px, slot "${highest.id}" sits ${spread.toFixed(2)}px below "${lowest.id}" (${all}; ε=${epsilon}). These are ink centres, not box centres, so the boxes may well be centred on each other — a cell that is taller than the text inside it centres perfectly and still drops its siblings by half the extra height.`,
+      };
+    }
+  }
+  if (compared === 0) {
+    return {
+      ok: false,
+      detail: `opticalCenter: slots [${slots.join(", ")}] were never measured together at any width`,
+    };
+  }
+  return { ok: true };
+}
+
 // ── evaluateInvariant (dispatcher) ─────────────────────────────────
 //
 // `falsification` is NOT evaluated here. The test harness handles it specially:
@@ -430,6 +507,8 @@ export function evaluateInvariant(
       return checkTruncatesTogether(measuredByWidth, inv.slots);
     case "railAlignment":
       return checkRailAlignment(measuredByWidth, inv.epsilon);
+    case "opticalCenter":
+      return checkOpticalCenter(measuredByWidth, inv.slots, inv.epsilon);
     case "falsification":
       // Handled specially by the suite (re-render mutated → assert violation).
       return { ok: true };

@@ -1,8 +1,6 @@
 import type { ComponentType } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
@@ -32,6 +30,16 @@ export interface ArtifactRowProps {
  * One artifact, on one line: the kind's glyph, what it is called, and a mark
  * for what the conversation did to it.
  *
+ * It IS a {@link Row} — the primitive whose whole subject is this shape — and
+ * not a line container dressed up as one. That is what makes the glyph track
+ * the words (`Row` sizes any bare `<svg>` in its leading slot from the row's own
+ * type rung), the title a declared size rather than whatever the popover
+ * happened to inherit, and the focus ring the same one every other row in the
+ * app paints.
+ *
+ * `hover="muted"` because this row lives on a popover panel, not in a sidebar:
+ * the accent tint is the sidebar/menu treatment and reads as a selection here.
+ *
  * Shared by every kind that lists rows, so a prototype line and a research line
  * cannot drift apart. A kind whose items want a different shape — thumbnails,
  * name chips — renders its own and reuses {@link RelationMarker} instead.
@@ -56,27 +64,39 @@ export function ArtifactRow({
     `${RELATION_LABEL[item.relation]} · ${formatRelativeTime(new Date(item.lastAt))}`;
 
   return (
-    <Line
-      as="button"
-      type="button"
+    <Row
+      // No size class: the row sizes its leading glyph from its own type rung,
+      // so the mark beside the words tracks them instead of being a number this
+      // file picked once.
+      icon={<Icon className="text-muted-foreground" />}
+      // The picker density, which is what this popover is — and one step under
+      // the panel's own header, so the list never out-shouts the thing naming
+      // it. Measured against the mock: this lands the row on its 28px pitch and
+      // the glyph on its ~11px of ink, where the default rung would run eight
+      // pixels taller per row. `size` and the title's `variant` below are ONE
+      // decision, because the glyph is sized from the ROW's rung — a title that
+      // declared a different one would put the two back out of step.
+      size="sm"
+      hover="muted"
       disabled={inertReason !== undefined || onOpen === undefined}
       onClick={() => {
         onOpen?.();
         close();
       }}
       title={`${item.key}\n${detail}`}
-      className={cn(
-        "w-full gap-sm rounded-md px-xs py-2xs text-left",
-        "hover:bg-muted/60 disabled:cursor-default disabled:opacity-60",
-      )}
     >
-      <Icon className={cn("size-4 text-muted-foreground", rigidClass())} />
       <Fill>
-        <Text className={cn(referenced && "text-muted-foreground")}>
+        <Text variant="caption" tone={referenced ? "muted" : "default"}>
           {title}
         </Text>
       </Fill>
+      {/*
+        The mark stays in the row BODY, not in `actions`: it says what the
+        conversation DID to this artifact, which is state to read rather than a
+        control to press — and `actions` is revealed on hover, so a mark put
+        there would vanish exactly when the reader is not pointing at the row.
+      */}
       <RelationMarker relation={item.relation} />
-    </Line>
+    </Row>
   );
 }

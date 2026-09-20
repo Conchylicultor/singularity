@@ -55,6 +55,27 @@ export interface MeasuredFixture {
        * that applies no padding of its own reports its plain left edge.
        */
       contentLeft: number;
+      /**
+       * Where this box's INK looks vertically centred — the y a reader's eye
+       * calls "the middle of this thing", which is not the middle of its box.
+       *
+       * Text: the midpoint of the ink top and the baseline. A text box reserves
+       * room below the baseline for descenders and half-leading, so its box
+       * centre sits below the letters; the letters are what the eye lines up.
+       * Measured from canvas `TextMetrics` (`actualBoundingBoxAscent` for the
+       * ink top, `fontBoundingBox*` + the computed `line-height` for where the
+       * baseline falls inside the box).
+       *
+       * An `<svg>`: the centre of `getBBox()` — the drawn ink — mapped through
+       * the `viewBox` onto the rendered rect. A Material glyph does not fill its
+       * viewBox, so the box centre would hide a real misalignment.
+       *
+       * `null` when the box bears neither: an empty spacer has no ink and
+       * therefore no optical centre. Like `railStart`, `null` means NOT
+       * MEASURABLE, and `opticalCenter` reports it as a failure rather than
+       * silently counting a box with nothing in it as agreeing with everything.
+       */
+      opticalCenter: number | null;
     }
   >;
   order: string[];
@@ -75,7 +96,7 @@ export interface MeasuredFixture {
 //
 // Slot identity is the `data-geo` contract authored by the fixture — the oracle
 // never references a primitive's internal class names, so it survives refactors
-// of the primitive's mechanics. The nine kinds:
+// of the primitive's mechanics. The ten kinds:
 //
 // - noOverlap                 adjacent boxes (in DOM `order`) never collide.
 // - noClip                    every slot box stays inside `container`.
@@ -93,6 +114,10 @@ export interface MeasuredFixture {
 //                             rather than named slots, because it is the one the
 //                             fixture must not be able to scope to the children
 //                             it already handles.
+// - opticalCenter             the named slots' INK is centred on one line — the
+//                             only VERTICAL kind. Every other one above is a
+//                             claim about x; a row whose icon sits below its own
+//                             words satisfies all of them.
 // - falsification             NOT evaluated by the oracle — the suite re-renders
 //                             the mutated construct and asserts `expectViolated`
 //                             is VIOLATED (proof the oracle has teeth).
@@ -113,6 +138,7 @@ export type GeometryInvariant =
   | { kind: "truncatesTogether"; slots: string[] }
   | { kind: "neverTruncatesWhenRoomy"; slots: string[] }
   | { kind: "railAlignment"; epsilon?: number }
+  | { kind: "opticalCenter"; slots: string[]; epsilon?: number }
   | {
       kind: "falsification";
       mutate: FixtureMutation;
@@ -143,7 +169,21 @@ export const HOST_MARKER_ATTR = "data-geo-host";
 // proving the inner `expectViolated` invariant actually bites on the wrong shape.
 export type FixtureMutation =
   | { kind: "templateOverride"; value: string } // force a wrong grid template
-  | { kind: "swapLeafDisplay"; value: string } // e.g. "inline" / "absolute-pad" — the known-broken construct
+  // Re-declare the fixture's `[data-geo="content"]` leaf as a known-broken
+  // construct. Each `value` names one historical shape of the single-line text
+  // leaf, not a raw CSS display keyword:
+  //
+  //   "inline"        the leaf silently no-ops `overflow`, so it overflows its
+  //                   block parent instead of ellipsizing → violates `noClip`.
+  //   "absolute-pad"  the old menu-indicator shape, where a long label slides
+  //                   UNDER an absolutely-placed indicator → violates `noOverlap`.
+  //   "inline-block"  the leaf sinks its parent's line box. An inline-block whose
+  //                   overflow is not `visible` takes its bottom margin edge as
+  //                   its baseline, so the block parent must still fit the
+  //                   strut's descent BELOW it — the cell comes out taller than
+  //                   its own text, and a row centring on that cell drops every
+  //                   sibling half the phantom space → violates `opticalCenter`.
+  | { kind: "swapLeafDisplay"; value: string }
   // Re-publish the rail as `value` from BELOW the region, so the children keep
   // the geometry the region gave them while the published number no longer
   // describes it. That is the only way to prove `railAlignment` compares

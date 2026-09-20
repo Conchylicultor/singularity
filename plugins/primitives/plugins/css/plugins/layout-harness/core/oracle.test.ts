@@ -4,6 +4,7 @@ import {
   checkNeverTruncatesWhenRoomy,
   checkNoClip,
   checkNoOverlap,
+  checkOpticalCenter,
   checkPinnedRight,
   checkRailAlignment,
   checkRigidIntegrity,
@@ -30,12 +31,16 @@ function box(left: number, right: number, top = 0, bottom = 20): MeasuredBox {
 // `contentLeft` defaults to the box's own left edge — a probe with no padding of
 // its own, which is what every measured slot but a `rail-bleed` row is. The rail
 // tests below pass it explicitly.
+// `opticalCenter` defaults to the box's vertical middle — the answer for a box
+// whose ink happens to fill it. The optical tests below pass it explicitly,
+// because the whole point of the invariant is that ink and box disagree.
 function slot(
   b: MeasuredBox,
   truncates = false,
   contentLeft = b.left,
+  opticalCenter: number | null = (b.top + b.bottom) / 2,
 ): MeasuredFixture["slots"][string] {
-  return { box: b, truncates, contentLeft };
+  return { box: b, truncates, contentLeft, opticalCenter };
 }
 
 // A canonical 4-slot row: leading | content | meta | trailing inside a container.
@@ -392,6 +397,98 @@ describe("checkRailAlignment", () => {
   });
 });
 
+describe("checkOpticalCenter", () => {
+  // The canonical row, correct: a 16px glyph and a text leaf in a 24px-tall row.
+  // The boxes are NOT the same height and the ink still lines up, which is what
+  // the invariant is for — every horizontal check is blind to both facts.
+  const glyph = slot(box(8, 24, 4, 20), false, 8, 12);
+  const title = slot(box(32, 200, 0, 24), false, 32, 12.2);
+
+  test("passes when the named slots' ink agrees", () => {
+    const m = row(box(0, 208, 0, 24), { glyph, title }, ["glyph", "title"]);
+    expect(checkOpticalCenter({ 208: m }, ["glyph", "title"]).ok).toBe(true);
+  });
+
+  // The bug itself: the cell holding the text is taller than the text, so the
+  // words sit ~3px above where the row centred the icon.
+  test("fails when a cell taller than its text drops the icon below the words", () => {
+    const sunkGlyph = slot(box(8, 24, 7, 23), false, 8, 15);
+    const m = row(box(0, 208, 0, 30), { glyph: sunkGlyph, title }, [
+      "glyph",
+      "title",
+    ]);
+    const r = checkOpticalCenter({ 208: m }, ["glyph", "title"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.detail).toContain("glyph");
+      expect(r.detail).toContain("2.80px below");
+    }
+  });
+
+  // Box centres agreeing is exactly what the broken row already did, so a check
+  // that read boxes would call this green.
+  test("sees a misalignment the box centres hide", () => {
+    const b = box(8, 24, 0, 30);
+    const c = box(32, 200, 0, 30);
+    expect((b.top + b.bottom) / 2).toBe((c.top + c.bottom) / 2);
+    const m = row(
+      box(0, 208, 0, 30),
+      { glyph: slot(b, false, 8, 15), title: slot(c, false, 32, 12) },
+      ["glyph", "title"],
+    );
+    expect(checkOpticalCenter({ 208: m }, ["glyph", "title"]).ok).toBe(false);
+  });
+
+  test("tolerates sub-pixel drift below the default epsilon", () => {
+    const m = row(
+      box(0, 208, 0, 24),
+      { glyph, title: slot(box(32, 200, 0, 24), false, 32, 12.6) },
+      ["glyph", "title"],
+    );
+    expect(checkOpticalCenter({ 208: m }, ["glyph", "title"]).ok).toBe(true);
+  });
+
+  test("fails at ANY width in the sweep, not just the widest", () => {
+    const wide = row(box(0, 400, 0, 24), { glyph, title }, ["glyph", "title"]);
+    const narrow = row(
+      box(0, 120, 0, 30),
+      { glyph: slot(box(8, 24, 7, 23), false, 8, 15), title },
+      ["glyph", "title"],
+    );
+    const r = checkOpticalCenter({ 120: narrow, 400: wide }, [
+      "glyph",
+      "title",
+    ]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("at width 120px");
+  });
+
+  // A box with no ink is a failure to MEASURE, never an agreement. Reading it as
+  // "matches everyone" is how a gate quietly stops gating.
+  test("fails when a named slot has no ink to centre", () => {
+    const m = row(
+      box(0, 208, 0, 24),
+      { glyph, title: slot(box(32, 200, 0, 24), false, 32, null) },
+      ["glyph", "title"],
+    );
+    const r = checkOpticalCenter({ 208: m }, ["glyph", "title"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("no measurable optical centre");
+  });
+
+  test("fails when fewer than two slots are named", () => {
+    const m = row(box(0, 208, 0, 24), { glyph }, ["glyph"]);
+    expect(checkOpticalCenter({ 208: m }, ["glyph"]).ok).toBe(false);
+  });
+
+  test("fails when the named slots never appear together", () => {
+    const m = row(box(0, 208, 0, 24), { glyph }, ["glyph"]);
+    const r = checkOpticalCenter({ 208: m }, ["glyph", "title"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("never measured together");
+  });
+});
+
 describe("evaluateInvariant dispatcher", () => {
   test("routes to the right checker (noOverlap)", () => {
     const m = row(box(0, 100), { a: slot(box(0, 60)), b: slot(box(48, 100)) }, [
@@ -409,6 +506,22 @@ describe("evaluateInvariant dispatcher", () => {
       end: 8,
     });
     const r = evaluateInvariant({ kind: "railAlignment" }, { 100: m });
+    expect(r.ok).toBe(false);
+  });
+
+  test("routes to the right checker (opticalCenter)", () => {
+    const m = row(
+      box(0, 100, 0, 30),
+      {
+        a: slot(box(0, 20, 0, 30), false, 0, 15),
+        b: slot(box(24, 100, 0, 24), false, 24, 11),
+      },
+      ["a", "b"],
+    );
+    const r = evaluateInvariant(
+      { kind: "opticalCenter", slots: ["a", "b"] },
+      { 100: m },
+    );
     expect(r.ok).toBe(false);
   });
 

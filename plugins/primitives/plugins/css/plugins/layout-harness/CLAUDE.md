@@ -161,6 +161,20 @@ through the generic `loadFixtures()`:
    `falsification` invariant is re-measured with its mutation applied and asserted
    VIOLATED (proof the gate bites). jsdom can't lay out grid/overflow, so this
    drives a real browser. It also fails on a **page error** — see below.
+
+   **Every fixture run is a fresh mount, and it has to be.** One React root
+   renders the whole catalog in turn, but the rendered tree is keyed on the
+   fixture (and on whether this run is the falsified one), so React tears the
+   previous tree down instead of reconciling with it. Without that key, two
+   fixtures that happen to share an element shape hand each other their DOM
+   nodes — and since every mutation in `applyMutation` writes INLINE STYLES
+   imperatively, which React does not track, the first fixture's falsification
+   rides into the second fixture's clean run. The second then fails for a reason
+   that is nowhere in its own source. That is not hypothetical: it is how the
+   `opticalCenter` fixture's neighbour first went red, with the exact 3.2px
+   signature of the bug the mutation restores. Widths WITHIN one run still
+   reconcile, which is what a measure-then-decide primitive (`AdaptiveBar`)
+   needs — it must see a width change, not a first mount.
 2. **the contributed check** (`check/index.ts`, id `layout-geometry`) — shells out
    to (1), gated by a sidecar marker keyed on a sha256 of the WORKING-TREE
    content (tracked + untracked-not-ignored) of the css subtree, ui-kit
@@ -334,9 +348,9 @@ page is a production one whoever invokes it.
 
 Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,
 `noClip`, `leftPack`, `rigidIntegrity`, `pinnedRight`, `neverTruncatesWhenRoomy`,
-`truncationOnsetOrder`, `truncatesTogether`, `railAlignment`), dispatched by
-`evaluateInvariant`. The last two are the two halves of the shrink hierarchy and
-neither can express the other: `truncationOnsetOrder` asserts STRICT priority
+`truncationOnsetOrder`, `truncatesTogether`, `railAlignment`, `opticalCenter`),
+dispatched by `evaluateInvariant`. `truncationOnsetOrder` and `truncatesTogether`
+are the two halves of the shrink hierarchy and neither can express the other: `truncationOnsetOrder` asserts STRICT priority
 (one cell gives up characters first), `truncatesTogether` asserts the row shares
 its deficit (at every width, all listed slots truncate or none does). A new kind
 needs NO edit outside this file and `types.ts`: the suite stamps every violation
@@ -348,6 +362,50 @@ not a magic px constant. `falsification` is NOT evaluated by the oracle — the
 suite handles it by re-rendering the mutated construct and asserting the inner
 `expectViolated` invariant is VIOLATED (proof the oracle has teeth).
 `core/oracle.test.ts` is the oracle's own correctness proof on synthetic boxes.
+
+## The one vertical invariant
+
+Nine of the ten kinds judge x. `opticalCenter` is the only one that judges y, and
+it exists because a whole bug class was invisible without it: a row whose icon
+sits below the words beside it satisfies every horizontal claim — nothing
+overlaps, nothing clips, the title truncates exactly on cue — and looks wrong to
+everyone who sees it.
+
+It compares INK, never boxes. Boxes are what the layout engine already agrees
+about: `items-center` centres them to the pixel, and a cell that is taller than
+the text inside it is centred perfectly while the words sit at its top. So the
+measurement asks what is DRAWN.
+
+- **Text** — the midpoint of the ink top and the baseline. The line box is found
+  with a `Range` over the first non-empty text node and its FIRST client rect,
+  so the number is right wherever that line was placed (inside a flex item its
+  row centred, below padding, as one of several lines). The baseline sits at
+  half-leading plus the font's ascent inside that rect; the ink top is
+  `actualBoundingBoxAscent` — the cap height of a capitalised run, the x-height
+  of a lowercase one. The node's FULL text is measured even when the box
+  ellipsizes it, so the value does not jump at the width where truncation
+  starts.
+- **`<svg>`** — the centre of `getBBox()`, mapped through the `viewBox` onto the
+  rendered rect (uniform scale, aligned per `preserveAspectRatio`). Material
+  glyphs leave clear space inside their viewBox, so the element's box centre is
+  not what anyone sees.
+- **Neither** — `null`, and a named slot reporting `null` FAILS. A box with no
+  ink has nothing to align, and counting it as agreeing with every sibling is how
+  a gate quietly stops gating. Same decision as `railStart`'s `null`.
+
+ε defaults to 0.75px: the real fault is 2-3px (half a strut's descent), while
+sub-pixel text metrics drift by tenths.
+
+`text/row-glyph-and-words-on-one-line` is the fixture, and it is the canonical
+row the css skill teaches — `Line > glyph + Fill(Text) + trailing mark`, the
+shape `rg '<Fill>\s*\n\s*<Text'` finds in 72 places. Its falsification is the
+construct the recipe was fixed BY: **`swapLeafDisplay: "inline-block"`** restores
+the single-line leaf to an inline-block. With `truncate`'s `overflow: hidden`
+already on it, its baseline becomes its bottom margin edge, so the `Fill` around
+it must additionally fit the strut's descent underneath — a cell ~6px taller than
+its own text — and the row centres the glyph against that inflated box. One
+display keyword is the whole mutation; every horizontal invariant stays green
+under it, which is what makes a red `opticalCenter` mean this and nothing else.
 
 ## Wiring footgun
 
@@ -406,6 +464,7 @@ somehow is not.
     - `checkNeverTruncatesWhenRoomy`
     - `checkNoClip`
     - `checkNoOverlap`
+    - `checkOpticalCenter`
     - `checkPinnedRight`
     - `checkRailAlignment`
     - `checkRigidIntegrity`

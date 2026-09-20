@@ -75,10 +75,35 @@ context (`useSingleLine()` from `…/ui-kit/web`, the exact mirror of `ControlSi
 
 - Inside a **line container** (`Frame` slot / `Row` / `Bar` / collapsible header,
   which provide `SingleLineProvider value={true}`) a `<Text>` applies the
-  `inline-block max-w-full min-w-0 truncate` recipe and ellipsizes on one line,
+  `block w-fit max-w-full min-w-0 truncate` recipe and ellipsizes on one line,
   auto-deriving a `title` tooltip from string children.
 - Inside a **flow container** (`Stack` col / `Stack wrap` / `Column` / `Cluster`,
   which reset to `value={false}` + `whitespace-normal`) it wraps.
+
+### Why the leaf is block-level
+
+The recipe used to say `inline-block`, and that is the whole of a misalignment
+the repo carried at every row built the canonical way. An inline-level box whose `overflow` is not
+`visible` — which `truncate` makes true — hands the line it sits on the bottom of
+its own margin box as its baseline. Put such a leaf in a plain block parent (a
+`<Fill>` cell is one) and the parent still has to leave room *below* that
+baseline for its own strut's descender: at 16px/24px the cell measured 30px for
+24px of text. The row's `items-center` then centred the sibling icon against that
+inflated box and dropped it ~3px below the words it labels — the canonical
+`Line > Icon + Fill(Text)` row, quietly wrong at all ~57 places a `<Text>` sits
+directly in a `<Fill>`.
+
+`block` removes the inline formatting context, so there is no strut and the
+parent's height is exactly the leaf's. It is exact at every font-size pairing,
+which `vertical-align: top` is not (that only helps while the leaf's line-height
+is at least the parent's). `w-fit` restores the shrink-to-fit width
+`inline-block` was also providing, so a `hover:underline` or a background still
+ends where the words end; in a flex or grid parent it changes nothing, since the
+item is blockified and content-sized there either way.
+
+It is the [`Badge`](../badge/CLAUDE.md) baseline incident one layer down — an
+inline-flex chip handing a sentence its *icon's* bottom edge — and the same class
+of bug: a box offering the line a baseline that is not its text's.
 
 There is deliberately **no truncation on/off prop** — "non-truncating text in a
 line row" is a contradiction, so misuse is structurally impossible: pick the
@@ -88,7 +113,7 @@ forced-single-line-in-a-flow-region case wraps the leaf in
 `<SingleLineProvider value={true}>` explicitly. The `min-w-0` lives only here (the
 single owner); `variant` is optional (omit = inherit the surrounding typography,
 the role `TruncatingText` used to fill). The `text/block-parent-no-op` geometry
-fixture guards the inline-block hardening; `web/__tests__/single-line.test.tsx`
+fixture guards the block-level hardening; `web/__tests__/single-line.test.tsx`
 covers the context behavior.
 
 This plugin also hosts the `no-clip-without-nowrap` lint rule (relocated from the

@@ -89,13 +89,37 @@ const TONE_CLASS: Record<TextTone, string> = {
  * box that establishes a block formatting context — a block/inline-block element or
  * a flex/grid item (which CSS *blockifies*). A plain inline `<span>` silently no-ops
  * and the text overflows OUTSIDE a flex/grid row — e.g. as a node child of a plain
- * block `<div>` (such as `Frame`'s node-slot wrapper). `inline-block` makes the box
- * always honor overflow (a flex/grid item blockifies `inline-block` → `block` exactly
- * as it would `inline`, so the row case is unchanged); `max-w-full` caps it at its
- * container so it ellipsizes against the parent instead of overflowing.
+ * block `<div>` (such as `Frame`'s node-slot wrapper). `max-w-full` caps the box at
+ * its container so it ellipsizes against the parent instead of overflowing.
+ *
+ * `block`, and not `inline-block`, because of where the LINE the leaf sits on ends.
+ * An inline-level box whose overflow is not `visible` hands its line the bottom of
+ * its own margin box as its baseline. So a truncating leaf dropped in a plain block
+ * parent — which `<Fill>` is — sat with its whole box above the parent's baseline,
+ * and the parent still had to leave room below that baseline for its own strut's
+ * descender. The cell came out ~6px taller than the words in it, at 16px/24px, and
+ * every row that centred an icon against that cell put the icon ~3px below the text
+ * it labelled — the canonical `Line > Icon + Fill(Text)` recipe, and a `<Text>` sits
+ * directly in a `<Fill>` at ~57 places, every one of them wrong the same way.
+ * Going block-level removes the inline formatting context altogether, so
+ * there is no strut and the parent's height is exactly the leaf's — exact at every
+ * font-size pairing, which `vertical-align: top` is not (it only helps while the
+ * leaf's line-height is at least the parent's).
+ *
+ * It is the `Badge` baseline incident one layer down (see `badge.tsx`, where an
+ * inline-flex chip handed a sentence its ICON's bottom edge and carried the label
+ * ~3.5px off the words beside it). Same class of bug: a box quietly offering the
+ * line a baseline that is not its text's.
+ *
+ * `w-fit` then restores what `inline-block` was also giving for free — shrink-to-fit
+ * width, so a `hover:underline` or a background still ends where the words end
+ * rather than spanning the cell. It changes nothing in a flex or grid parent (there
+ * the item is blockified and already content-sized, and `max-w-full` has always
+ * clamped the flex base size), and in a plain block parent it reproduces the old
+ * width to the pixel.
  */
 function singleLineLeafClass(): string {
-  return "inline-block max-w-full min-w-0 truncate";
+  return "block w-fit max-w-full min-w-0 truncate";
 }
 
 export interface TextProps extends React.HTMLAttributes<HTMLElement> {

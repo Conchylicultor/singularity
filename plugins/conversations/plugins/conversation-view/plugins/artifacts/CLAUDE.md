@@ -54,6 +54,24 @@ alone for a bespoke layout (a thumbnail grid, a chip strip). The section heading
 is drawn by the host from the kind's `label` — a section renders only what goes
 under it.
 
+**`ArtifactRow` IS a `Row`**, so a kind that hand-rolls a line out of `Line` +
+an icon + a `<Text>` is the one that drifts: `Row` declares the type rung (a
+variant-less `<Text>` in a popover inherits the document root — 16px), sizes a
+bare glyph from that same rung, and owns the focus ring and padding. The row
+adds only `size="sm"` (picker density, one step under the panel's own header),
+`hover="muted"` (the popover tint — `Row`'s default accent reads as a selection
+here) and the dismissal below. The row's `size` and the title's `Text variant`
+are one decision: the glyph is sized from the ROW's rung, so a title on a
+different one is back out of step.
+
+Everything in the panel shares one left edge, and each band pays for it
+separately: the header says `px-md` outright; inside the body stack's `p-xs`, a
+heading and a bespoke section say `px-sm`, which is what a row's `p-row` already
+is. Move one and the others have to follow.
+
+The relation mark goes in the row BODY, never in `Row`'s `actions` slot: it is
+state to read, not a control to press, and `actions` is hover-revealed.
+
 `ArtifactRow` dismisses the popover itself when its row is activated, so a kind
 cannot ship a row that navigates and leaves the panel over what it opened. A
 bespoke layout that opens something calls `useCloseArtifacts()` for the same
@@ -86,6 +104,7 @@ here.
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

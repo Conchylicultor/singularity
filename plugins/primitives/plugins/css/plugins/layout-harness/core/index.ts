@@ -11,6 +11,7 @@ export {
   checkTruncationOnsetOrder,
   checkTruncatesTogether,
   checkRailAlignment,
+  checkOpticalCenter,
 } from "./oracle";
 export type { OracleResult } from "./oracle";
 export {
