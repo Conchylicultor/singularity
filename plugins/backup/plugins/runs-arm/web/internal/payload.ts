@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import type {
-  BackupSourceReport,
-  BackupTargetResult,
+import {
+  backupSourceWentIn,
+  type BackupSourceReport,
+  type BackupTargetResult,
 } from "@plugins/backup/core";
 import { armJson, armNumber } from "@plugins/runs/web";
 import type { UnionRun } from "@plugins/runs/core";
@@ -40,19 +41,56 @@ const BackupTargetResultSchema: ZodParser<BackupTargetResult> = z.object({
     .optional(),
 });
 
-const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z.object({
-  id: z.string(),
-  name: z.string(),
-  skipped: z.boolean(),
-  items: z.array(
-    z.object({
-      label: z.string(),
-      detail: z.string().optional(),
-      count: z.number().optional(),
-    }),
-  ),
-  sizeBytes: z.number(),
-});
+/**
+ * One source report, decoding BOTH manifest shapes.
+ *
+ * v3 rows carry `outcome`; v2 rows carry `skipped: boolean` and have no way to
+ * say a source failed at all, so the boolean maps onto `included` / `skipped`
+ * losslessly. A row carrying neither is malformed and throws — the tolerance
+ * here is for a shape this repo really wrote, not for any shape at all.
+ */
+const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    outcome: z.enum(["included", "skipped", "failed"]).optional(),
+    skipped: z.boolean().optional(),
+    error: z.string().optional(),
+    items: z.array(
+      z.object({
+        label: z.string(),
+        detail: z.string().optional(),
+        count: z.number().optional(),
+      }),
+    ),
+    sizeBytes: z.number(),
+  })
+  .refine(
+    (r) => r.outcome !== undefined || r.skipped !== undefined,
+    "a source report says neither `outcome` (v3) nor `skipped` (v2)",
+  )
+  .transform((r): BackupSourceReport => {
+    const base = {
+      id: r.id,
+      name: r.name,
+      items: r.items,
+      sizeBytes: r.sizeBytes,
+    };
+    if (r.outcome === "failed") {
+      return {
+        ...base,
+        outcome: "failed",
+        // A v3 writer always sets it; the fallback covers a row hand-edited or
+        // written by a build between the two, and says so rather than
+        // presenting a failure with no words.
+        error: r.error ?? "(the source failed without recording a reason)",
+      };
+    }
+    if (r.outcome === "skipped" || (r.outcome === undefined && r.skipped)) {
+      return { ...base, outcome: "skipped" };
+    }
+    return { ...base, outcome: "included" };
+  });
 
 const targetResultsOf = armJson(
   backupRunFields,
@@ -94,7 +132,12 @@ export function backupTargetResults(run: UnionRun): BackupTargetResult[] {
  * source did not go into the archive and this list is what the archive holds —
  * the same reading the `sourceCount` column's `WHERE` takes on the server, so
  * the list and the number cannot disagree.
+ *
+ * A FAILED source is kept, and that is the point of it being here: it did put
+ * something in the archive (or tried to), and the one place a person looks
+ * after a bad night has to be the place that says which source came up short.
+ * Both readings come from `backupSourceWentIn`, so neither can drift.
  */
 export function backupSources(run: UnionRun): BackupSourceReport[] {
-  return (sourcesOf(run) ?? []).filter((s) => !s.skipped);
+  return (sourcesOf(run) ?? []).filter(backupSourceWentIn);
 }

@@ -35,11 +35,11 @@ export async function assemblePrototypes(
   const { enabled } = getConfig(prototypesSourceConfig);
 
   if (!enabled) {
-    return { id: ID, name: NAME, skipped: true, items: [], sizeBytes: 0 };
+    return { id: ID, name: NAME, outcome: "skipped", items: [], sizeBytes: 0 };
   }
 
   if (!existsSync(prototypesDir.path)) {
-    return { id: ID, name: NAME, skipped: false, items: [], sizeBytes: 0 };
+    return { id: ID, name: NAME, outcome: "included", items: [], sizeBytes: 0 };
   }
 
   await cp(prototypesDir.path, dir, { recursive: true });
@@ -51,7 +51,7 @@ export async function assemblePrototypes(
   return {
     id: ID,
     name: NAME,
-    skipped: false,
+    outcome: "included",
     items: [
       {
         label: "prototypes",

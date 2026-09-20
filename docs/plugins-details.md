@@ -7283,7 +7283,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `BackupRunDetail`
       - `backupRunPane`
   - Server:
-    - Contributes: `ConfigV2.Register` "config"
+    - Contributes:
+      - `ConfigV2.Register` "config"
+      - `report-kind` "backup-incomplete"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
@@ -7293,9 +7295,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.BACKUPS_DIR`
       - `primitives/log-channels.Log`
+      - `reports.recordReport`
+      - `reports.ReportKind`
     - DB schema: `plugins/backup/server/internal/tables.ts`
+    - Exports (types): `BackupIncompletePayload`
     - Exports (values):
       - `_backupRuns`
+      - `backupIncompleteKind`
       - `BackupSource`
       - `BackupTarget`
     - Register: `defineSupervisedJob('backup.run.supervised')`
@@ -7305,13 +7311,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types):
       - `BackupArchive`
       - `BackupManifest`
+      - `BackupSourceFailed`
+      - `BackupSourceIncluded`
       - `BackupSourceItem`
+      - `BackupSourceOutcome`
       - `BackupSourceReport`
+      - `BackupSourceSkipped`
       - `BackupTargetResult`
     - Exports (values):
       - `BACKUP_RUN_KIND`
       - `backupRoute`
       - `backupRunRoute`
+      - `backupSourceWentIn`
   - Cross-plugin:
     - Imported by:
       - `apps/chord/song-index`
@@ -31461,6 +31472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
     - Imported by:
+      - `backup`
       - `conversations`
       - `conversations/conversation-view/pending-turn`
       - `conversations/model-provider`

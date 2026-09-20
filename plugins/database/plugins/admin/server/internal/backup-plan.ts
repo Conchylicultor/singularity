@@ -62,10 +62,30 @@ export function planBackupExclusions(
   return { excludeTableData, excludedTables, unmatched };
 }
 
-/** {@link readSchemaCatalog} then {@link planBackupExclusions}. */
+/**
+ * {@link readSchemaCatalog} then {@link planBackupExclusions}, with the
+ * database's NAME in any refusal.
+ *
+ * The pure planner cannot say which database it refused — it is handed a
+ * catalog, not a name — and for three nights that was the difference between a
+ * diagnosable failure and a riddle. Every database in the cluster is planned
+ * against the same declarations, so a message naming only the constraint reads
+ * as "your declarations are wrong" when the truth is usually "THIS database's
+ * schema is older than your declarations": a composition fork that has not
+ * booted since the migration that dropped the link, or a leaked test database.
+ * Those are not fixed by editing a contribution, which is what the shared
+ * wording advises, so the name is the whole difference.
+ */
 export async function resolveBackupPlan(
   source: string,
   exclusions: BackupExclusions,
 ): Promise<BackupPlan> {
-  return planBackupExclusions(await readSchemaCatalog(source), exclusions);
+  try {
+    return planBackupExclusions(await readSchemaCatalog(source), exclusions);
+  } catch (err) {
+    if (err instanceof BackupPlanError) {
+      throw new BackupPlanError(`database "${source}": ${err.message}`);
+    }
+    throw err;
+  }
 }

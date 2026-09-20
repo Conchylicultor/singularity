@@ -21,7 +21,7 @@ export async function assembleSongIndexSnapshot(
 ): Promise<BackupSourceReport> {
   const path = snapshotPath();
   if (!existsSync(path)) {
-    return { id: ID, name: NAME, skipped: true, items: [], sizeBytes: 0 };
+    return { id: ID, name: NAME, outcome: "skipped", items: [], sizeBytes: 0 };
   }
   const target = join(dir, basename(path));
   await copyFile(path, target);
@@ -29,7 +29,7 @@ export async function assembleSongIndexSnapshot(
   return {
     id: ID,
     name: NAME,
-    skipped: false,
+    outcome: "included",
     items: [
       {
         label: basename(path),

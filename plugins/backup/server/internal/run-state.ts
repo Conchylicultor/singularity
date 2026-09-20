@@ -7,7 +7,9 @@ import {
   isRunAlive,
   type RunTerminal,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import { recordReport } from "@plugins/reports/server";
 import { _backupRuns } from "./tables";
+import { backupGapSummary } from "./report-kind";
 
 /** The index the claiming INSERT contends on — see `./tables.ts`. */
 const INFLIGHT_UQ = "backup_runs_inflight_uniq";
@@ -119,23 +121,47 @@ export async function closeBackupRow(
   runId: string,
   terminal: RunTerminal,
 ): Promise<void> {
-  await db
+  const detail =
+    terminal.signalCode !== null
+      ? `Backup process was killed by ${terminal.signalCode} before recording an outcome.`
+      : terminal.exitCode === HARD_KILL_EXIT_CODE
+        ? "Backup process disappeared without recording an outcome (hard kill)."
+        : `Backup process exited ${terminal.exitCode} before recording an outcome.`;
+
+  const closed = await db
     .update(_backupRuns)
     .set({
       status: "failed",
       finishedAt: terminal.finishedAt,
-      targetResults: [
-        {
-          targetId: "supervisor",
-          ok: false,
-          detail:
-            terminal.signalCode !== null
-              ? `Backup process was killed by ${terminal.signalCode} before recording an outcome.`
-              : terminal.exitCode === HARD_KILL_EXIT_CODE
-                ? "Backup process disappeared without recording an outcome (hard kill)."
-                : `Backup process exited ${terminal.exitCode} before recording an outcome.`,
-        },
-      ],
+      targetResults: [{ targetId: "supervisor", ok: false, detail }],
     })
-    .where(and(eq(_backupRuns.id, runId), isNull(_backupRuns.finishedAt)));
+    .where(and(eq(_backupRuns.id, runId), isNull(_backupRuns.finishedAt)))
+    .returning({ id: _backupRuns.id, trigger: _backupRuns.trigger });
+
+  // The one failure the child cannot report on its own, because there is no
+  // child left to do it: it died before writing anything. That is not a rare
+  // shape — 2026-09-19 03:11 was a backup whose process could not open a
+  // database connection at all — and until now it alerted nowhere, so the
+  // report is filed here, from the backend that closed the row.
+  //
+  // Gated on `returning`, not fired unconditionally: this runs in the
+  // reconciler of EVERY backend that sees the exit marker land, and only the
+  // one whose UPDATE actually closed the row is entitled to say the run ended.
+  // The others match no row and must stay silent.
+  //
+  // `recordReport` directly rather than the outbox: unlike the child, this IS a
+  // backend, with the engine's velocity window and dedup memory already in it.
+  const row = closed[0];
+  if (row === undefined) return;
+  const gaps = [{ kind: "run" as const, what: "Supervisor", error: detail }];
+  await recordReport({
+    kind: "backup-incomplete",
+    source: "server-caught",
+    message: backupGapSummary({ status: "failed", gaps }),
+    // The trigger comes off the row this UPDATE just closed, not from a
+    // default: a manually-triggered backup that died is a different thing to
+    // read than a nightly one that did, and the report should not guess.
+    data: { runId, status: "failed", trigger: row.trigger, gaps },
+    occurredAt: terminal.finishedAt.getTime(),
+  });
 }

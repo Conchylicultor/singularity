@@ -5,9 +5,12 @@ import { backupConfig } from "../shared/config";
 import { runBackup } from "../shared/endpoints";
 import { backupRunJob } from "./internal/backup-job";
 import { handleRun } from "./internal/handle-run";
+import { backupIncompleteKind } from "./internal/report-kind";
 import { reconcileBackups } from "./internal/reconcile-backups";
 
 export { BackupSource, BackupTarget } from "./internal/contribution";
+export { backupIncompleteKind } from "./internal/report-kind";
+export type { BackupIncompletePayload } from "./internal/report-kind";
 export { _backupRuns } from "./internal/tables";
 
 export default {
@@ -16,7 +19,14 @@ export default {
   httpRoutes: {
     [runBackup.route]: handleRun,
   },
-  contributions: [ConfigV2.Register({ descriptor: backupConfig })],
+  contributions: [
+    ConfigV2.Register({ descriptor: backupConfig }),
+    // The kind has to exist on MAIN's backend, which is what drains the outbox
+    // the child writes into — the child itself only writes a file. Registering
+    // it here (rather than in the child alone) is what makes the drain able to
+    // resolve it.
+    backupIncompleteKind,
+  ],
   onReady: async () => {
     // BACKUPS_DIR is host-global; only the main runtime owns backup lifecycle.
     // A filesystem sweep only — closing rows belongs to the supervised job now.

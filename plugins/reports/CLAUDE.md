@@ -118,6 +118,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
   - Imported by:
+    - `backup`
     - `conversations`
     - `conversations/conversation-view/pending-turn`
     - `conversations/model-provider`

@@ -6,15 +6,29 @@ import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { projectMemorySourceConfig } from "../../shared/config";
 
-export async function assembleProjectMemory(dir: string): Promise<BackupSourceReport> {
+export async function assembleProjectMemory(
+  dir: string,
+): Promise<BackupSourceReport> {
   const { enabled } = getConfig(projectMemorySourceConfig);
 
   if (!enabled) {
-    return { id: "project-memory", name: "Project Memory", skipped: true, items: [], sizeBytes: 0 };
+    return {
+      id: "project-memory",
+      name: "Project Memory",
+      outcome: "skipped",
+      items: [],
+      sizeBytes: 0,
+    };
   }
 
   if (!existsSync(CLAUDE_PROJECTS_DIR)) {
-    return { id: "project-memory", name: "Project Memory", skipped: false, items: [], sizeBytes: 0 };
+    return {
+      id: "project-memory",
+      name: "Project Memory",
+      outcome: "included",
+      items: [],
+      sizeBytes: 0,
+    };
   }
 
   let totalCount = 0;
@@ -23,7 +37,10 @@ export async function assembleProjectMemory(dir: string): Promise<BackupSourceRe
   // Scan for */memory/ directories under CLAUDE_PROJECTS_DIR
   // Bun.Glob does not support onlyDirectories, so scan files under */memory/**/* instead
   const seen = new Set<string>();
-  for await (const rel of new Bun.Glob("*/memory/**/*").scan({ cwd: CLAUDE_PROJECTS_DIR, onlyFiles: true })) {
+  for await (const rel of new Bun.Glob("*/memory/**/*").scan({
+    cwd: CLAUDE_PROJECTS_DIR,
+    onlyFiles: true,
+  })) {
     // rel is like "<project>/memory/foo.md"
     const projectName = rel.split("/")[0];
     if (!projectName) continue;
@@ -43,9 +60,16 @@ export async function assembleProjectMemory(dir: string): Promise<BackupSourceRe
     sizeBytes += s.size;
   }
 
-  const items = totalCount > 0
-    ? [{ label: "memory", detail: `${totalCount} files`, count: totalCount }]
-    : [];
+  const items =
+    totalCount > 0
+      ? [{ label: "memory", detail: `${totalCount} files`, count: totalCount }]
+      : [];
 
-  return { id: "project-memory", name: "Project Memory", skipped: false, items, sizeBytes };
+  return {
+    id: "project-memory",
+    name: "Project Memory",
+    outcome: "included",
+    items,
+    sizeBytes,
+  };
 }

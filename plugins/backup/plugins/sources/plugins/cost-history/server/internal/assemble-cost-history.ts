@@ -18,7 +18,7 @@ export async function assembleCostHistory(
     return {
       id: "cost-history",
       name: "Cost History",
-      skipped: true,
+      outcome: "skipped",
       items: [],
       sizeBytes: 0,
     };
@@ -70,7 +70,7 @@ export async function assembleCostHistory(
   return {
     id: "cost-history",
     name: "Cost History",
-    skipped: false,
+    outcome: "included",
     items,
     sizeBytes,
   };

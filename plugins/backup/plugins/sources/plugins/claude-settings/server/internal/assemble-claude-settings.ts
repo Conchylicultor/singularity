@@ -6,7 +6,9 @@ import { CLAUDE_DIR } from "@plugins/infra/plugins/paths/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { claudeSettingsSourceConfig } from "../../shared/config";
 
-async function countFilesAndSize(cwd: string): Promise<{ count: number; sizeBytes: number }> {
+async function countFilesAndSize(
+  cwd: string,
+): Promise<{ count: number; sizeBytes: number }> {
   let count = 0;
   let sizeBytes = 0;
   for await (const rel of new Bun.Glob("**/*").scan({ cwd, onlyFiles: true })) {
@@ -17,11 +19,19 @@ async function countFilesAndSize(cwd: string): Promise<{ count: number; sizeByte
   return { count, sizeBytes };
 }
 
-export async function assembleClaudeSettings(dir: string): Promise<BackupSourceReport> {
+export async function assembleClaudeSettings(
+  dir: string,
+): Promise<BackupSourceReport> {
   const { enabled } = getConfig(claudeSettingsSourceConfig);
 
   if (!enabled) {
-    return { id: "claude-settings", name: "Claude Settings", skipped: true, items: [], sizeBytes: 0 };
+    return {
+      id: "claude-settings",
+      name: "Claude Settings",
+      outcome: "skipped",
+      items: [],
+      sizeBytes: 0,
+    };
   }
 
   const items = [];
@@ -48,7 +58,11 @@ export async function assembleClaudeSettings(dir: string): Promise<BackupSourceR
   }
 
   // plugins/installed_plugins.json
-  const installedPluginsPath = join(CLAUDE_DIR, "plugins", "installed_plugins.json");
+  const installedPluginsPath = join(
+    CLAUDE_DIR,
+    "plugins",
+    "installed_plugins.json",
+  );
   if (existsSync(installedPluginsPath)) {
     const dest = join(dir, "installed_plugins.json");
     await cp(installedPluginsPath, dest);
@@ -77,5 +91,11 @@ export async function assembleClaudeSettings(dir: string): Promise<BackupSourceR
     items.push({ label: "teams", detail: `${count} files` });
   }
 
-  return { id: "claude-settings", name: "Claude Settings", skipped: false, items, sizeBytes };
+  return {
+    id: "claude-settings",
+    name: "Claude Settings",
+    outcome: "included",
+    items,
+    sizeBytes,
+  };
 }

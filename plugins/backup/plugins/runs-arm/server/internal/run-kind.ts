@@ -29,12 +29,25 @@ function outcomeExpr(): SQL {
  * `sources` as an object rather than an array (see `BackupManifestSchema`) —
  * for those the honest answer is "unknown", not zero, and a `jsonb_array_length`
  * over an object would error the whole page rather than one row.
+ *
+ * Both manifest shapes count here, and this is the SQL half of the reading
+ * `backupSourceWentIn` states once in `backup/core`: v3 rows say `outcome`
+ * (anything but `skipped` went in — a FAILED source wrote whatever it got
+ * through, so it is in the archive and is counted), v2 rows say `skipped`. The
+ * `outcome` test comes first so a v3 row is never read through the absent
+ * boolean, and the boolean's `coalesce` still answers for a v2 row that omitted
+ * it. Written as `->> 'outcome' is not null` rather than the `?` key-existence
+ * operator, which collides with the placeholder syntax of every SQL driver that
+ * uses `?` and is not worth the footgun for a test that reads the same.
  */
 const sourceCountExpr = sql`(case
   when jsonb_typeof(${_backupRuns.manifest} -> 'sources') = 'array' then (
     select count(*)::integer
     from jsonb_array_elements(${_backupRuns.manifest} -> 'sources') as s
-    where coalesce((s ->> 'skipped')::boolean, false) = false
+    where case
+      when s ->> 'outcome' is not null then s ->> 'outcome' <> 'skipped'
+      else coalesce((s ->> 'skipped')::boolean, false) = false
+    end
   )
   else null::integer
 end)`;

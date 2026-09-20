@@ -12,7 +12,13 @@ export async function assembleTranscripts(
   const { enabled } = getConfig(transcriptsSourceConfig);
 
   if (!enabled) {
-    return { id: "transcripts", name: "Transcripts", skipped: true, items: [], sizeBytes: 0 };
+    return {
+      id: "transcripts",
+      name: "Transcripts",
+      outcome: "skipped",
+      items: [],
+      sizeBytes: 0,
+    };
   }
 
   let count = 0;
@@ -39,9 +45,13 @@ export async function assembleTranscripts(
   return {
     id: "transcripts",
     name: "Transcripts",
-    skipped: false,
+    outcome: "included",
     items: [
-      { label: "transcripts", detail: `${files} files across ${count} conversations`, count },
+      {
+        label: "transcripts",
+        detail: `${files} files across ${count} conversations`,
+        count,
+      },
     ],
     sizeBytes,
   };

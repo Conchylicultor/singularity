@@ -69,17 +69,40 @@ function TargetResultLine({
   );
 }
 
-/** One source's report: what it is, and the items it contributed. */
+/**
+ * One source's report: what it is, the items it contributed, and — when it did
+ * not finish — what stopped it.
+ *
+ * The failure line is the whole reason a failed source is listed here at all
+ * rather than dropped with the skipped ones. Its words are the component's own
+ * and may run to several lines (the databases source names every database it
+ * could not dump), so it wraps rather than truncating: this is the one surface
+ * where the detail IS the content.
+ */
 function SourceReportLines({
   source,
 }: {
   source: BackupSourceReport;
 }): ReactNode {
+  const failed = source.outcome === "failed";
   return (
     <Stack gap="2xs">
       <Text as="p" variant="body" className="font-medium">
-        {source.name}
+        <Inline gap="sm">
+          <span>{source.name}</span>
+          {failed && <MdError className="size-3.5 text-destructive" />}
+        </Inline>
       </Text>
+      {source.outcome === "failed" && (
+        <Text
+          as="p"
+          variant="caption"
+          tone="destructive"
+          className="whitespace-pre-wrap pl-md"
+        >
+          {source.error}
+        </Text>
+      )}
       {source.items.map((item, i) => (
         <Text
           key={`${item.label}:${i}`}

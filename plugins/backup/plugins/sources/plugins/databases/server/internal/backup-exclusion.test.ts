@@ -95,6 +95,43 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     expect(info.sizeBytes).toBeGreaterThan(0);
   });
 
+  /**
+   * The refusal that took the machine's backups down for three nights, and the
+   * one fact its message was missing.
+   *
+   * `mail_messages` links to `mail_threads`, so leaving out the threads' rows
+   * while keeping the messages makes an archive `pg_restore` cannot load — the
+   * planner refuses before `pg_dump` starts. That part always worked. What it
+   * would not say is WHICH database, and every database on the cluster is
+   * planned against the same declarations: a dormant composition fork still
+   * carrying a constraint main has since dropped produces this exact message,
+   * and without the name it reads as "your declarations are wrong" when they
+   * are not.
+   */
+  test("refuses a kept table linking to a left-out one, naming the database", async () => {
+    const name = await databaseName(source.db);
+    const out = join(dir, "kept-link.dump");
+
+    const err = await backupDatabase(name, out, {
+      tables: ["mail_threads"],
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(err).toBeInstanceOf(Error);
+    const message = (err as Error).message;
+    // The database, which is the fact that makes this diagnosable.
+    expect(message).toContain(`database "${name}"`);
+    // And the link itself, so the reader knows what to do about it.
+    expect(message).toContain("mail_messages");
+    expect(message).toContain("mail_threads");
+
+    // Refused BEFORE pg_dump ran, so there is no half-written archive claiming
+    // to be this database.
+    expect(await Bun.file(out).exists()).toBe(false);
+  });
+
   test("a declared table the database lacks is reported, not fatal", async () => {
     const name = await databaseName(source.db);
     const plan = await backupDatabase(name, join(dir, "unmatched.dump"), {

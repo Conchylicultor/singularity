@@ -80,19 +80,45 @@ export async function assembleArchive(
 
   try {
     // Assemble every source concurrently — each writes into its own staging
-    // subdir, so they are independent. Promise.all preserves contribution order
-    // in the reports array.
+    // subdir, so they are independent.
+    //
+    // `allSettled`, not `all`: a source that throws is ONE source missing from
+    // the archive, and it used to be the whole archive. A single rejection
+    // propagated out of here, past the `finally` that reclaims staging, and the
+    // run ended with no file at all — so a stale foreign key in a database
+    // nobody has booted since the last migration cost the machine its
+    // attachments, its secrets and its transcripts too.
+    //
+    // A thrown source becomes a `failed` report instead. Its staging subdir is
+    // left exactly as it is and goes into the tar: whatever it managed to write
+    // is real, and the manifest says in the same breath which source did not
+    // finish and what it said. `backup-body` reads those outcomes and refuses
+    // to call such a run `ok`.
     const sources = BackupSource.getContributions();
     const reports: BackupSourceReport[] = await Promise.all(
-      sources.map(async (source) => {
+      sources.map(async (source): Promise<BackupSourceReport> => {
         const dir = join(stagingDir, source.id);
         await mkdir(dir, { recursive: true });
-        return source.assemble(dir);
+        try {
+          return await source.assemble(dir);
+        } catch (err) {
+          return {
+            id: source.id,
+            name: source.name,
+            outcome: "failed",
+            error: err instanceof Error ? err.message : String(err),
+            // Unknown: the source threw rather than reporting. What it wrote is
+            // in the archive either way, and claiming a byte count we did not
+            // measure would be worse than claiming none.
+            items: [],
+            sizeBytes: 0,
+          };
+        }
       }),
     );
 
     const manifest: BackupManifest = {
-      version: 2,
+      version: 3,
       createdAt: new Date().toISOString(),
       trigger,
       sources: reports,

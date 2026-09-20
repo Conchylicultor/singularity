@@ -27,7 +27,7 @@ export async function assembleAttachments(
     return {
       id: "attachments",
       name: "Attachments",
-      skipped: true,
+      outcome: "skipped",
       items: [],
       sizeBytes: 0,
     };
@@ -37,7 +37,7 @@ export async function assembleAttachments(
     return {
       id: "attachments",
       name: "Attachments",
-      skipped: false,
+      outcome: "included",
       items: [],
       sizeBytes: 0,
     };
@@ -49,7 +49,7 @@ export async function assembleAttachments(
   return {
     id: "attachments",
     name: "Attachments",
-    skipped: false,
+    outcome: "included",
     items: [{ label: "attachments", detail: `${count} files`, count }],
     sizeBytes,
   };

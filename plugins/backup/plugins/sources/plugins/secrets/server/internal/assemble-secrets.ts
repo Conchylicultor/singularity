@@ -15,7 +15,7 @@ export async function assembleSecrets(
     return {
       id: "secrets",
       name: "Secrets",
-      skipped: true,
+      outcome: "skipped",
       items: [],
       sizeBytes: 0,
     };
@@ -42,5 +42,11 @@ export async function assembleSecrets(
     items.push({ label: ".key" });
   }
 
-  return { id: "secrets", name: "Secrets", skipped: false, items, sizeBytes };
+  return {
+    id: "secrets",
+    name: "Secrets",
+    outcome: "included",
+    items,
+    sizeBytes,
+  };
 }

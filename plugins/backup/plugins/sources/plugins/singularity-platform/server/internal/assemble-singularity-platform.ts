@@ -29,7 +29,7 @@ export async function assembleSingularityPlatform(
     return {
       id: "singularity-platform",
       name: "Singularity Platform",
-      skipped: true,
+      outcome: "skipped",
       items: [],
       sizeBytes: 0,
     };
@@ -70,7 +70,7 @@ export async function assembleSingularityPlatform(
   return {
     id: "singularity-platform",
     name: "Singularity Platform",
-    skipped: false,
+    outcome: "included",
     items,
     sizeBytes,
   };

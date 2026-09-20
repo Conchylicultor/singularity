@@ -25,7 +25,7 @@ export async function assembleConfig(dir: string): Promise<BackupSourceReport> {
     return {
       id: "config",
       name: "Config",
-      skipped: true,
+      outcome: "skipped",
       items: [],
       sizeBytes: 0,
     };
@@ -39,7 +39,7 @@ export async function assembleConfig(dir: string): Promise<BackupSourceReport> {
     return {
       id: "config",
       name: "Config",
-      skipped: false,
+      outcome: "included",
       items: [],
       sizeBytes: 0,
     };
@@ -51,7 +51,7 @@ export async function assembleConfig(dir: string): Promise<BackupSourceReport> {
   return {
     id: "config",
     name: "Config",
-    skipped: false,
+    outcome: "included",
     items: [{ label: "config", detail: `${count} files`, count }],
     sizeBytes,
   };
