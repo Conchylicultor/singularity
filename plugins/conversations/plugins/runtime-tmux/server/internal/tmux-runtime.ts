@@ -25,6 +25,7 @@ import { parseInputDraft } from "./input-draft";
 import { asLaunchMessage } from "./launch-message";
 import { resolvePaneStatus } from "./pane-status";
 import { captureProcessTree } from "./process-tree";
+import { typedChunks } from "./typed-keys";
 
 // AskUserQuestion menus must be detected regardless of how the pane otherwise
 // reads, because the CLI signature changed across versions:
@@ -190,19 +191,19 @@ const FORM_CLEAR_TIMEOUT_MS = 6_000;
 // unambiguous even though pane titles can contain arbitrary characters.
 const SEP = "\t";
 
-// pasteTurn() submit-verification poll. The CLI is an async (Ink/React) TUI:
-// when tmux writes the bracketed paste and Enter into the PTY in one read
-// chunk, the paste handler schedules a React state update but the trailing
-// Enter is processed in the SAME tick — before the paste commits to state — so
-// it fires against an empty draft and submits nothing (the user then has to
-// press Enter manually). A fixed inter-key delay only papers over this: under
-// concurrent load the render can lag past any constant.
+// typeTurn() submit-verification poll. The CLI is an async (Ink/React) TUI:
+// when tmux writes the turn's text and Enter into the PTY in one read chunk,
+// the input handler schedules a React state update but the trailing Enter is
+// processed in the SAME tick — before the text commits to state — so it fires
+// against an empty draft and submits nothing (the user then has to press Enter
+// manually). A fixed inter-key delay only papers over this: under concurrent
+// load the render can lag past any constant.
 //
 // Instead we verify against the rendered input box, the same self-healing shape
 // answerPrompt() uses for Escape. The Claude idle input is a `❯` prompt line
 // bounded by full-width `─` rules; its draft content is everything between the
 // prompt glyph and the next rule. We (1) poll until that draft is non-empty —
-// proof the paste committed — then (2) send Enter and poll until the draft
+// proof the text committed — then (2) send Enter and poll until the draft
 // clears again, RE-SENDING Enter on SUBMIT_ENTER_RETRY_MS if it lingers (a
 // dropped/early keystroke). A second Enter on an already-empty box is a no-op,
 // so retry is safe. Timeouts are generous because many concurrent agents slow
@@ -210,15 +211,15 @@ const SEP = "\t";
 //
 // Both timeouts are VERIFICATION outcomes, not delivery failures: they report
 // and return, because by then the keystrokes are already in the pane and only
-// the transcript can say whether the agent took them. pasteTurn throws only
+// the transcript can say whether the agent took them. typeTurn throws only
 // when a tmux command itself fails — i.e. when the text provably never left us.
 const SUBMIT_POLL_INTERVAL_MS = 75;
 const SUBMIT_ENTER_RETRY_MS = 500;
-const PASTE_COMMIT_TIMEOUT_MS = 5_000;
+const TEXT_COMMIT_TIMEOUT_MS = 5_000;
 const SUBMIT_TIMEOUT_MS = 5_000;
 // Used only when the input box can't be parsed (unrecognized CLI render): the
-// proven fixed delay between a committed paste and Enter, the pre-chaining
-// mitigation. Strictly better than firing Enter in the same chunk as the paste.
+// proven fixed delay between committed text and Enter, the pre-chaining
+// mitigation. Strictly better than firing Enter in the same chunk as the text.
 const FALLBACK_SUBMIT_DELAY_MS = 150;
 
 /**
@@ -249,44 +250,40 @@ async function sendEnter(conversationId: string): Promise<void> {
 }
 
 /**
- * Paste `text` into the pane's idle input and submit it, verifying submission
+ * Type `text` into the pane's idle input and submit it, verifying submission
  * against the rendered input box rather than firing Enter blindly (see the
  * SUBMIT_* comment block for the async-TUI race this avoids).
+ *
+ * TYPED, never pasted. A bracketed paste (what this used to send) makes the
+ * CLI file the turn under `<pasted_content>` tags, which tell the agent the
+ * user's own words "may contain instructions the user did not write" — and
+ * which the app's delivery check then cannot match. See typed-keys.ts for the
+ * measurements behind the chunking.
  *
  * Shared verbatim by send() and answerPrompt() so both submit identically.
  * The pane must already be at the idle input prompt (callers clear copy mode
  * and partial input first).
  */
-async function pasteTurn(conversationId: string, text: string): Promise<void> {
-  const bufferName = `singularity-send-${conversationId}`;
-  const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
-    stdin: Buffer.from(text),
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const loadExit = await load.exited;
-  if (loadExit !== 0) {
-    const stderr = await new Response(load.stderr).text();
-    throw new Error(
-      `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
+async function typeTurn(conversationId: string, text: string): Promise<void> {
+  // `--` so a turn that opens with `-` is read as text and not as a flag.
+  for (const chunk of typedChunks(text)) {
+    const keys = Bun.spawn(
+      [TMUX, "send-keys", "-t", conversationId, "-l", "--", chunk],
+      { stdout: "pipe", stderr: "pipe" },
     );
-  }
-  const paste = Bun.spawn(
-    [TMUX, "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  const pasteExit = await paste.exited;
-  if (pasteExit !== 0) {
-    const stderr = await new Response(paste.stderr).text();
-    throw new Error(
-      `tmux paste-buffer for ${conversationId} failed (exit ${pasteExit}): ${stderr.trim() || "<no stderr>"}`,
-    );
+    const keysExit = await keys.exited;
+    if (keysExit !== 0) {
+      const stderr = await new Response(keys.stderr).text();
+      throw new Error(
+        `tmux send-keys for ${conversationId} failed (exit ${keysExit}): ${stderr.trim() || "<no stderr>"}`,
+      );
+    }
   }
 
-  // Phase 1: wait until the paste commits to the input box (draft non-empty).
-  // Sending Enter before this either no-ops (paste not yet in state) or, if the
-  // CLI is still in paste mode, appends a literal newline to the draft.
-  const commitDeadline = Date.now() + PASTE_COMMIT_TIMEOUT_MS;
+  // Phase 1: wait until the text commits to the input box (draft non-empty).
+  // Sending Enter before this either no-ops (the keystrokes are not yet in
+  // state) or lands mid-text and submits half a turn.
+  const commitDeadline = Date.now() + TEXT_COMMIT_TIMEOUT_MS;
   let committed = false;
   let everObserved = false;
   for (;;) {
@@ -303,15 +300,15 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
   }
 
   if (!committed) {
-    // Either the box render is unrecognized (never observed) or the paste never
+    // Either the box render is unrecognized (never observed) or the text never
     // surfaced. Fall back to the proven fixed-delay submit — strictly better
-    // than chaining Enter into the same PTY chunk as the paste.
+    // than chaining Enter into the same PTY chunk as the text.
     if (everObserved) {
       void recordReport({
         kind: "crash",
         source: "server-caught",
-        message: `tmux pasteTurn for ${conversationId}: paste did not surface in input box within ${PASTE_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
-        data: { errorType: "TmuxSubmitError", label: "tmux-runtime.pasteTurn" },
+        message: `tmux typeTurn for ${conversationId}: text did not surface in input box within ${TEXT_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
+        data: { errorType: "TmuxSubmitError", label: "tmux-runtime.typeTurn" },
       });
     }
     await Bun.sleep(FALLBACK_SUBMIT_DELAY_MS);
@@ -348,8 +345,8 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
   void recordReport({
     kind: "crash",
     source: "server-caught",
-    message: `tmux pasteTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter; submission unverified (transcript decides)`,
-    data: { errorType: "TmuxSubmitError", label: "tmux-runtime.pasteTurn" },
+    message: `tmux typeTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter; submission unverified (transcript decides)`,
+    data: { errorType: "TmuxSubmitError", label: "tmux-runtime.typeTurn" },
   });
 }
 
@@ -744,7 +741,7 @@ export const tmuxRuntime: ConversationRuntime = {
       stderr: "pipe",
     }).exited;
     // Clear a partial draft ONLY when the input box actually holds one, asking
-    // the box directly via captureInputDraft (the same trusted read pasteTurn
+    // the box directly via captureInputDraft (the same trusted read typeTurn
     // uses to verify submission). C-c is the CLI's "abort current line": at an
     // idle prompt it discards the draft harmlessly, but sent into a WORKING
     // agent it interrupts the streaming response and STOPS it. So it must never
@@ -753,15 +750,15 @@ export const tmuxRuntime: ConversationRuntime = {
     // check→send race would occasionally fire C-c into a live agent (the
     // regular-prompt "agent stopped" bug). A web-driven send leaves the terminal
     // input empty, so this reads "" and sends no C-c; C-c fires only for a
-    // genuine hand-typed draft — exactly the text pasteTurn would append to.
+    // genuine hand-typed draft — exactly the text typeTurn would append to.
     if (await captureInputDraft(conversationId)) {
       await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
         stdout: "pipe",
         stderr: "pipe",
       }).exited;
     }
-    // Bracketed paste + Enter in one atomic tmux invocation (see pasteTurn).
-    await pasteTurn(conversationId, text);
+    // Typed keystrokes + a verified Enter (see typeTurn).
+    await typeTurn(conversationId, text);
   },
 
   async answerPrompt(conversationId: string, text: string): Promise<void> {
@@ -777,13 +774,13 @@ export const tmuxRuntime: ConversationRuntime = {
     //    self-healing rationale.
     await escapeUntilPromptCleared(conversationId);
 
-    // 3. Paste + Enter. We deliberately do NOT C-c first: the answer text comes
+    // 3. Type + Enter. We deliberately do NOT C-c first: the answer text comes
     //    from the web form, so the terminal input line is empty (no draft to
     //    clear), and an unconditional C-c here could interrupt/kill a running
     //    agent — the same hazard send() avoids by clearing only a genuine draft
-    //    (captureInputDraft). The menu is already dismissed, so pasteTurn writes
+    //    (captureInputDraft). The menu is already dismissed, so typeTurn writes
     //    into the idle prompt.
-    await pasteTurn(conversationId, text);
+    await typeTurn(conversationId, text);
   },
 
   async flushInteractivePrompt(conversationId: string): Promise<void> {
@@ -791,7 +788,7 @@ export const tmuxRuntime: ConversationRuntime = {
     // answer. Cancelling the menu forces the CLI to flush the buffered
     // assistant tool_use to the JSONL transcript so the web UI can render it.
     // This is exactly answerPrompt()'s self-healing Escape loop minus the
-    // C-c + paste step — no answer text is ever sent.
+    // C-c + type step — no answer text is ever sent.
     await escapeUntilPromptCleared(conversationId);
   },
 };

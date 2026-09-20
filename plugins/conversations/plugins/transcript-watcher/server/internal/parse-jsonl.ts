@@ -5,6 +5,7 @@ import {
   unwrapRelayEnvelopes,
   extractTeammateMessages,
   stripRelayBoilerplate,
+  unwrapPastedContent,
   userPromptText,
 } from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
@@ -334,7 +335,10 @@ async function buildEvents(
     ts: string,
     promptUuid: string | undefined,
   ): Promise<void> => {
-    let body = rawText;
+    // First, before anything looks for a tag: the CLI wraps whatever it took
+    // as a paste, so a relay envelope or a task-notification pasted into the
+    // prompt would otherwise stay hidden inside `<pasted_content>`.
+    let body = unwrapPastedContent(rawText);
     if (!seenPreprompt) {
       const { preprompt, rest } = extractPreprompt(body);
       if (preprompt) {

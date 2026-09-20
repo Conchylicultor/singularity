@@ -1,4 +1,5 @@
 import { isInterruptContent } from "./interrupt";
+import { unwrapPastedContent } from "./pasted-content";
 
 /**
  * The text of a transcript line the user typed, or null when the line is
@@ -33,6 +34,9 @@ export function userPromptText(line: Record<string, unknown>): string | null {
   } else {
     return null;
   }
+  // The `<pasted_content>` wrapper is the terminal's, not the person's — a
+  // turn they pasted says the same thing as one they typed.
+  text = unwrapPastedContent(text);
   if (!text.trim() || isInterruptContent(text)) return null;
   return text;
 }

@@ -135,6 +135,7 @@ memo degrades to a full chain re-read on every push.
     - `PREPROMPT_TAG`
     - `stripRelayBoilerplate`
     - `TokenUsageSchema`
+    - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`
     - `userPromptText`
     - `wrapPreprompt`

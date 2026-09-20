@@ -1,4 +1,7 @@
-import { activeLineUuids } from "@plugins/conversations/plugins/transcript-watcher/core";
+import {
+  activeLineUuids,
+  unwrapPastedContent,
+} from "@plugins/conversations/plugins/transcript-watcher/core";
 import { readChainLines } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { cutTranscriptAtUnansweredPrompt } from "./transcript-cut";
 
@@ -80,8 +83,15 @@ export async function readTurnsFromChain(
 
     if (obj.type === "user" && msg?.role === "user") {
       // User turns have string content; tool_result arrays are skipped.
+      // Unwrapped for the same reason userPromptText unwraps: a turn the
+      // person pasted says what a turn they typed says, and these turns feed
+      // the summary, title and category the reader sees.
       if (typeof msg.content === "string" && msg.content.length > 0) {
-        turns.push({ at: ts, role: "user", text: msg.content });
+        turns.push({
+          at: ts,
+          role: "user",
+          text: unwrapPastedContent(msg.content),
+        });
       }
       continue;
     }

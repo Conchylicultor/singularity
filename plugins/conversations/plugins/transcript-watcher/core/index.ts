@@ -12,6 +12,7 @@ export {
   extractPreprompt,
 } from "./protocol";
 export { isInterruptContent } from "./interrupt";
+export { unwrapPastedContent } from "./pasted-content";
 export { userPromptText } from "./user-prompt";
 export { activeLineUuids } from "./branch-filter";
 export type { TeammateMessage } from "./relay";
