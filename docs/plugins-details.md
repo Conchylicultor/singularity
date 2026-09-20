@@ -9571,6 +9571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
@@ -24800,6 +24801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkNeverTruncatesWhenRoomy`
               - `checkNoClip`
               - `checkNoOverlap`
+              - `checkOpticalCenter`
               - `checkPinnedRight`
               - `checkRailAlignment`
               - `checkRigidIntegrity`
@@ -25277,6 +25279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/conversation-ui/row`
+              - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `debug/trace/pane`

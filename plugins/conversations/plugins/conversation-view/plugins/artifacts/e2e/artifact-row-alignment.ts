@@ -130,7 +130,9 @@ await withBrowser(async (h) => {
       if (m.actualBoundingBoxAscent === 0) return null;
       const size = parseFloat(style.fontSize);
       const leading =
-        style.lineHeight === "normal" ? size * 1.2 : parseFloat(style.lineHeight);
+        style.lineHeight === "normal"
+          ? size * 1.2
+          : parseFloat(style.lineHeight);
       const baseline =
         box.top +
         (leading - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 +
@@ -178,7 +180,10 @@ await withBrowser(async (h) => {
     };
   }, TOLERANCE_PX);
 
-  r.ok("the panel lists at least one row-shaped artifact", rows.rows.length > 0);
+  r.ok(
+    "the panel lists at least one row-shaped artifact",
+    rows.rows.length > 0,
+  );
   r.note(
     `panel ${rows.panelFontSize}, section headings ${rows.headingFontSize ?? "—"}`,
   );
@@ -208,4 +213,4 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();
