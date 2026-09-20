@@ -3,7 +3,9 @@
 The skills a conversation loaded, as name chips in the Artifacts popover.
 
 Every `Skill` tool call, keyed by `input.skill`, always `referenced` — a skill
-is instructions the agent read, never something the conversation made.
+is instructions the agent read, never something the conversation made. Which is
+also why the kind is `origin: "consumed"`: the chips are listed, and the number
+on the closed button leaves them out.
 
 Chips rather than rows because a skill's name is its whole identity; a column of
 one-word rows would be mostly empty space. No relation mark either: it never

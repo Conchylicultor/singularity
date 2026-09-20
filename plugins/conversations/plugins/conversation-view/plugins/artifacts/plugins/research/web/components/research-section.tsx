@@ -1,4 +1,4 @@
-import { MdArticle } from "react-icons/md";
+import { MdScience } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -8,8 +8,13 @@ import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/pl
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { researchTitle } from "../internal/research-docs";
 
-/** The design docs' glyph — the same one the conversation's Docs button uses. */
-export const RESEARCH_ICON = MdArticle;
+/**
+ * The design docs' glyph — a flask, the mark the mock draws for research
+ * (`proto-1789731211-jeis`). Deliberately not the Docs toolbar button's page
+ * glyph: here it sits directly beside Pages, and two document glyphs in a row
+ * read as one kind of thing split in two.
+ */
+export const RESEARCH_ICON = MdScience;
 
 /**
  * The research docs this conversation wrote, changed or read, one per line.

@@ -7,8 +7,10 @@
  * each one is about the HOST rather than about any one kind:
  *
  *   1. the closed button carries a count, and that count is the number of
- *      artifacts the popover then actually lists — a host that counted from the
- *      merged hits but dropped a kind while rendering would still show "12";
+ *      artifacts the popover then lists under its PRODUCED kinds — a host that
+ *      counted from the merged hits but dropped a kind while rendering would
+ *      still show "12", and one that counted the pictures the agent merely
+ *      looked at would overstate what the conversation made;
  *   2. every heading in the panel is a registered kind, and they appear in
  *      registry order — the popover names no kind, so a heading it invented, or
  *      an order of its own, is a bug in the host;
@@ -64,6 +66,14 @@ const KIND_LABELS = [
   "Skills",
 ] as const;
 
+/**
+ * The sections whose entries the button's number is supposed to add up — the
+ * kinds that declare `origin: "produced"`. The rest (pictures the agent looked
+ * at, skills it loaded) get a section like any other and count for nothing, so
+ * the panel legitimately lists more than the button says.
+ */
+const COUNTED_LABELS: readonly string[] = ["Prototypes", "Pages", "Research"];
+
 /** Sections this conversation must have, or it is the wrong subject. */
 const REQUIRED = ["Prototypes", "Research"];
 
@@ -111,12 +121,19 @@ function entriesAt(page: Page, index: number): Locator {
   return sectionAt(page, index).locator("xpath=./*[2]/*");
 }
 
-/** Everything the panel is listing right now, across every section. */
-async function listedCount(page: Page): Promise<number> {
-  const sections = await panelOf(page).locator(".uppercase").count();
+/**
+ * Everything the panel is listing right now — across every section, or across
+ * the counted ones only, which is what the button's number claims.
+ */
+async function listedCount(
+  page: Page,
+  only?: readonly string[],
+): Promise<number> {
+  const labels = await headings(page);
   let listed = 0;
-  for (let i = 0; i < sections; i += 1) {
-    listed += await entriesAt(page, i).count();
+  for (const [index, label] of labels.entries()) {
+    if (only !== undefined && !only.includes(label)) continue;
+    listed += await entriesAt(page, index).count();
   }
   return listed;
 }
@@ -156,12 +173,12 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "before");
 
-  const total = Number(settled.value);
+  const made = Number(settled.value);
   r.ok(
     `the button shows a count (${JSON.stringify(settled.value)} after ${settled.waitedMs}ms)`,
     settled.ok,
   );
-  r.ok(`the count is not zero (${total})`, total > 0);
+  r.ok(`the count is not zero (${made})`, made > 0);
   r.ok("the button is enabled once it has a count", await button.isEnabled());
 
   // --- 2. open it -----------------------------------------------------------
@@ -170,11 +187,11 @@ await withBrowser(async (h) => {
   r.ok("clicking opens the popover", await reaches(panel, "visible"));
 
   // Two kinds resolve their titles from a live list and draw a skeleton per
-  // item until it lands, so the panel is only done when what it lists adds up
-  // to what the button claimed.
+  // item until it lands, so the panel is only done when its counted sections
+  // add up to what the button claimed.
   const loaded = await waitFor(
-    async () => await listedCount(page),
-    (n) => n === total,
+    async () => await listedCount(page, COUNTED_LABELS),
+    (n) => n === made,
     { timeoutMs: 30_000 },
   );
   await snap(page, out, "popover");
@@ -200,12 +217,23 @@ await withBrowser(async (h) => {
     r.ok(`the "${label}" section is present`, present.includes(label));
   }
 
-  // --- 4. the count is the number of things actually listed -----------------
+  // --- 4. the count is what the counted sections actually list --------------
   for (const [index, label] of present.entries()) {
     const n = await entriesAt(page, index).count();
     r.ok(`"${label}" lists something (${n})`, n > 0);
   }
-  r.eq("the button's count is what the popover lists", loaded.value, total);
+  r.eq(
+    "the button's count is what the popover lists under its produced kinds",
+    loaded.value,
+    made,
+  );
+  // The uncounted kinds are what make that a claim rather than a tautology:
+  // this conversation looked at things, and the button did not count them.
+  const listed = await listedCount(page);
+  r.ok(
+    `the panel lists more than the button counts (${listed} listed, ${made} counted)`,
+    listed > made,
+  );
 
   // --- 5. a research row opens the doc beside the conversation --------------
   const row = entriesAt(page, present.indexOf("Research")).first();

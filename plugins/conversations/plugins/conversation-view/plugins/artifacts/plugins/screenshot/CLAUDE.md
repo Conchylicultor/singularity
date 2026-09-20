@@ -3,11 +3,17 @@
 The pictures a conversation looked at, as a thumbnail grid in the Artifacts
 popover.
 
-A `Read` on an image path counts, and counts as `created`: agents read a picture
-after making it (a screenshot of the app they just changed, a compare sheet).
-The key is the path exactly as the tool got it — screenshots usually land in a
-temp directory, outside any worktree, and the image endpoint serves an absolute
-path fine.
+A `Read` on an image path counts, and its relation is `created`: agents read a
+picture after making it (a screenshot of the app they just changed, a compare
+sheet). The key is the path exactly as the tool got it — screenshots usually
+land in a temp directory, outside any worktree, and the image endpoint serves an
+absolute path fine.
+
+The kind is `origin: "consumed"` all the same, and the two are about different
+things. The relation says how this conversation came by one picture; `origin`
+says whether pictures belong in the number on the closed button. They do not: a
+turn that took four screenshots on the way to one page made one thing, not five,
+and the grid is here to be looked at, not tallied.
 
 ## Why the popover stays open over the viewer
 

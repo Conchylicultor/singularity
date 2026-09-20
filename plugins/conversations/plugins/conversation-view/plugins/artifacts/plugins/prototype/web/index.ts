@@ -14,6 +14,7 @@ export default {
       id: PROTOTYPE_KIND,
       label: "Prototypes",
       icon: PROTOTYPE_ICON,
+      origin: "produced",
       extract: extractPrototypeHits,
       Section: PrototypeSection,
     }),

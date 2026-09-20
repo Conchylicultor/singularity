@@ -1,4 +1,4 @@
-import { MdPhoto } from "react-icons/md";
+import { MdPhotoCamera } from "react-icons/md";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -12,7 +12,7 @@ import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-v
 import { screenshotName } from "../internal/screenshots";
 
 /** The pictures' glyph, the same one the Screenshot toolbar button wears. */
-export const SCREENSHOT_ICON = MdPhoto;
+export const SCREENSHOT_ICON = MdPhotoCamera;
 
 /**
  * The pictures the conversation looked at, four to a row.

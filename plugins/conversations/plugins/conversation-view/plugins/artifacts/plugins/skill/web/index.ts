@@ -11,6 +11,7 @@ export default {
       id: SKILL_KIND,
       label: "Skills",
       icon: SKILL_ICON,
+      origin: "consumed",
       extract: extractSkills,
       Section: SkillSection,
     }),

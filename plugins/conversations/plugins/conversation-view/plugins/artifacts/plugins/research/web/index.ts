@@ -11,6 +11,7 @@ export default {
       id: RESEARCH_KIND,
       label: "Research",
       icon: RESEARCH_ICON,
+      origin: "produced",
       extract: extractResearch,
       Section: ResearchSection,
     }),

@@ -26,7 +26,8 @@ A kind is one sub-plugin under `plugins/<kind>/web/`, contributing to
 ConversationArtifacts.Kind({
   id: "prototype",
   label: "Prototypes",
-  icon: MdDesignServices,
+  icon: MdDesktopWindows,
+  origin: "produced",      // or "consumed" — see "What the number means"
   extract: (event) => …,   // PURE — runs per event, before anything renders
   Section: PrototypeSection,
 });
@@ -45,6 +46,24 @@ job:
 - **`Section` is the component**, because a kind's titles need a lookup (the
   prototypes list, a page's name) and a lookup is a hook. It is mounted only
   while the popover is open, and only when the kind found something.
+
+### What the number means
+
+The number beside the glyph is what the conversation **made**, not what the
+panel lists. A kind says which it is with `origin`, and it is required, so a new
+kind decides rather than inflating the count by existing:
+
+- `"produced"` — prototypes, pages, research docs. These count.
+- `"consumed"` — the pictures the agent read, the skills it loaded. These get
+  their own section like any other and count for nothing. A turn that took four
+  screenshots on the way to one page made one thing, not five, and a button that
+  said "5" would be describing the agent's route rather than the user's work.
+
+So the panel normally lists more rows than the button counts. That is why the
+panel's own heading carries no number — two different numbers an inch apart
+under the same word read as a contradiction — and why the button's tooltip says
+"*N* made". A conversation that only looked at things still opens the panel,
+with no number on the button at all rather than a "0" its own rows contradict.
 
 ### What a section should render
 
@@ -76,6 +95,17 @@ state to read, not a control to press, and `actions` is hover-revealed.
 cannot ship a row that navigates and leaves the panel over what it opened. A
 bespoke layout that opens something calls `useCloseArtifacts()` for the same
 effect.
+
+**The glyphs come from the mock** (`proto-1789731211-jeis`): assorted shapes on
+the button, a flask for research, a camera for screenshots, a bolt for skills.
+
+Two kinds outrank the mock, and the rule is where the row GOES: a prototype row
+opens the Prototypes app and a page row opens Pages, so each wears that app's
+own rail icon rather than the mock's drawing of one — you should land in the
+thing whose mark you just clicked. Research has no app of its own (a row opens
+the file-peek pane), so it takes the mock's flask, and deliberately not the Docs
+toolbar button's page glyph: here it sits directly beside Pages, and two
+document glyphs in a row read as one kind split in two.
 
 **No per-kind colour.** Every glyph, title and mark takes the normal
 muted/foreground ink; what a conversation *did* is a whole dot (made it), half a

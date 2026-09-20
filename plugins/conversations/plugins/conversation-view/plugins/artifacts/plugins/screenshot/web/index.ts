@@ -14,6 +14,7 @@ export default {
       id: SCREENSHOT_KIND,
       label: "Screenshots",
       icon: SCREENSHOT_ICON,
+      origin: "consumed",
       extract: extractScreenshots,
       Section: ScreenshotSection,
     }),

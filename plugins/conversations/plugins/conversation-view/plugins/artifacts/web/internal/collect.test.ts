@@ -12,9 +12,11 @@ function kindOn(
   id: string,
   toolName: string,
   relation: ArtifactHit["relation"],
+  origin: KindExtractor["origin"] = "produced",
 ): KindExtractor {
   return {
     id,
+    origin,
     extract: (event) =>
       event.kind === "tool-call" && event.name === toolName
         ? [{ kind: id, key: String(event.input), relation, at: event.at }]
@@ -38,7 +40,12 @@ describe("collectArtifacts", () => {
 
   test("no registered kinds settles at zero rather than staying pending", () => {
     const result = collectArtifacts([], { pending: false, data: EVENTS });
-    expect(result).toEqual({ pending: false, byKind: new Map(), total: 0 });
+    expect(result).toEqual({
+      pending: false,
+      byKind: new Map(),
+      total: 0,
+      count: 0,
+    });
   });
 
   test("every kind sees every event, and the total spans all of them", () => {
@@ -54,6 +61,33 @@ describe("collectArtifacts", () => {
     expect(result.total).toBe(3);
     expect(result.byKind.get("read")?.map((i) => i.key)).toEqual(["a"]);
     expect(result.byKind.get("write")?.map((i) => i.key)).toEqual(["a", "b"]);
+  });
+
+  test("a consumed kind is listed but left out of the count", () => {
+    const result = collectArtifacts(
+      [
+        kindOn("looked", "Read", "referenced", "consumed"),
+        kindOn("made", "Write", "created"),
+      ],
+      { pending: false, data: EVENTS },
+    );
+    if (result.pending) throw new Error("expected settled");
+
+    // Three artifacts in the panel, two of them the conversation's own work.
+    expect(result.total).toBe(3);
+    expect(result.count).toBe(2);
+    expect(result.byKind.get("looked")?.map((i) => i.key)).toEqual(["a"]);
+  });
+
+  test("a conversation that only looked has something to list, nothing to count", () => {
+    const result = collectArtifacts(
+      [kindOn("looked", "Read", "referenced", "consumed")],
+      { pending: false, data: EVENTS },
+    );
+    if (result.pending) throw new Error("expected settled");
+
+    expect(result.total).toBe(1);
+    expect(result.count).toBe(0);
   });
 
   test("repeat sightings inside one kind collapse to one item", () => {
@@ -72,6 +106,7 @@ describe("collectArtifacts", () => {
   test("a kind reporting under another kind's name fails loudly", () => {
     const liar: KindExtractor = {
       id: "mine",
+      origin: "produced",
       extract: (event) => [
         { kind: "yours", key: "x", relation: "created", at: event.at },
       ],

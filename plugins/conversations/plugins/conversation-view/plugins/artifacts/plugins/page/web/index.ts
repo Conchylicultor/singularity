@@ -11,6 +11,7 @@ export default {
       id: PAGE_KIND,
       label: "Pages",
       icon: PAGE_ICON,
+      origin: "produced",
       extract: extractPageHits,
       Section: PageSection,
     }),

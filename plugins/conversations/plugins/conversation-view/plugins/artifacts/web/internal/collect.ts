@@ -5,9 +5,11 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
-/** The two fields of a registered kind that the extraction pass needs. */
+/** The fields of a registered kind that the extraction pass needs. */
 export interface KindExtractor {
   id: string;
+  /** Whether this kind's items add to the count — see `ArtifactKind.origin`. */
+  origin: "produced" | "consumed";
   extract: (event: JsonlEvent) => ArtifactHit[];
 }
 
@@ -24,8 +26,16 @@ export type ConversationArtifactsResult =
       pending: false;
       /** Items per kind id. A kind that found nothing has no entry. */
       byKind: ReadonlyMap<string, ArtifactItem[]>;
-      /** Every artifact, across every kind — what the button shows. */
+      /** Every artifact, across every kind — what the panel lists. */
       total: number;
+      /**
+       * Artifacts of `"produced"` kinds only — the number on the button.
+       *
+       * Lower than `total` whenever the conversation looked at things it did
+       * not make, and `0` for one that only looked: the panel still has
+       * something to show, so the two are asked separately.
+       */
+      count: number;
     };
 
 /** Events are read in transcript order, so hits arrive oldest-first. */
@@ -53,8 +63,15 @@ export function collectArtifacts(
     }
   }
 
+  const produced = new Set(
+    kinds.filter((kind) => kind.origin === "produced").map((kind) => kind.id),
+  );
   const byKind = mergeHits(hits);
   let total = 0;
-  for (const items of byKind.values()) total += items.length;
-  return { pending: false, byKind, total };
+  let count = 0;
+  for (const [id, items] of byKind) {
+    total += items.length;
+    if (produced.has(id)) count += items.length;
+  }
+  return { pending: false, byKind, total, count };
 }

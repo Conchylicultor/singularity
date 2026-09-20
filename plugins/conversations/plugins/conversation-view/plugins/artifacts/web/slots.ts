@@ -27,6 +27,19 @@ export interface ArtifactKind {
   /** The kind's glyph, drawn at the left of each of its rows. */
   icon: ComponentType<{ className?: string }>;
   /**
+   * Did the conversation MAKE these, or only look at them?
+   *
+   * The number on the closed button answers "what did this conversation
+   * produce", so only `"produced"` kinds add to it. A `"consumed"` kind — the
+   * pictures the agent read, the skills it loaded — gets its own section in the
+   * panel like any other, but leaves the number alone: a turn that took four
+   * screenshots on the way to one page made one thing, not five.
+   *
+   * Required, so a new kind says which it is instead of quietly inflating the
+   * count by existing.
+   */
+  origin: "produced" | "consumed";
+  /**
    * PURE. Called once per transcript event, outside React. Return every
    * artifact of this kind the event touched — one hit per sighting; the host
    * folds repeats together. Every hit's `kind` must be this contribution's own

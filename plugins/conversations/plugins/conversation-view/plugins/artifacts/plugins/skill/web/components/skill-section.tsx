@@ -1,4 +1,4 @@
-import { MdAutoAwesome } from "react-icons/md";
+import { MdBolt } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -11,7 +11,7 @@ import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-v
 import { PACKAGED_SKILL_REASON, skillFilePath } from "../internal/skills";
 
 /** The skills' glyph. */
-export const SKILL_ICON = MdAutoAwesome;
+export const SKILL_ICON = MdBolt;
 
 /**
  * The skills this conversation loaded, as a wrapped strip of name chips.

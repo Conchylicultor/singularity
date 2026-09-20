@@ -15,6 +15,9 @@ import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/pl
  * The glyph, in one place: the registry draws it on the contribution and every
  * row draws it again, and a row whose icon disagreed with its own section's
  * would read as a different kind of thing.
+ *
+ * It is the Pages app's own icon: a row here opens that app, and the thing you
+ * land in should wear the mark you clicked.
  */
 export const PAGE_ICON = MdDescription;
 
