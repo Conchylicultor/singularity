@@ -41,7 +41,7 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { claimInflightRun, type InsertRunRow } from "./recorder";
+import { claimInflightRun, closeRunOn, type InsertRunRow } from "./recorder";
 import { readBuildTerminal } from "./stale-holder";
 import { _buildRuns } from "./tables";
 
@@ -200,6 +200,29 @@ describe("claimInflightRun settles a dead holder", () => {
     expect((err as { constraint?: string }).constraint).not.toBe(
       "build_runs_inflight_uniq",
     );
+  });
+});
+
+describe("closeRunOn", () => {
+  // The success half of the tolerance `missing-ledger.test.ts` pins: on a
+  // database that HAS the table, the same call stamps the row rather than
+  // absorbing anything. This suite owns the migrated database, so the pair
+  // lives across the two files rather than paying for a second migration pass.
+  test("stamps finishedAt and exitCode, first-writer-wins", async () => {
+    const r = row(process.pid);
+    expect(await claimInflightRun(t.db, NS, r)).toBe("claimed");
+
+    await closeRunOn(t.db, r.id, 3);
+    const closed = await readRow(r.id);
+    expect(closed.exitCode).toBe(3);
+    const firstStamp = closed.finishedAt;
+    expect(firstStamp).not.toBeNull();
+
+    // A second close finds `finished_at` set and changes nothing.
+    await closeRunOn(t.db, r.id, 0);
+    const again = await readRow(r.id);
+    expect(again.exitCode).toBe(3);
+    expect(again.finishedAt?.getTime()).toBe(firstStamp!.getTime());
   });
 });
 

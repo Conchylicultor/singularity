@@ -36,7 +36,8 @@ export interface BuildRunRecorder {
    * Claim this namespace's in-flight row for a terminal build (a direct
    * `./singularity build`, where no backend minted the row first). Returns
    * "lost" when a LIVE build holds this namespace's slot, and "unavailable" when
-   * the namespace has no database yet.
+   * the namespace has no ledger yet — no database, or no `build_runs` table in
+   * it.
    *
    * A holder whose build has already ended — it exited early, threw, was
    * signalled or SIGKILLed without closing its row — does not make this "lost":
@@ -45,7 +46,8 @@ export interface BuildRunRecorder {
    *
    * "unavailable" is a real outcome, not an error: a fresh checkout that has
    * never been deployed can still run `build --composition sonata`, and its own
-   * DB fork may not exist. A missing ledger must degrade to a note, never fail
+   * DB fork may not exist; on a machine's very first build the database exists
+   * and its tables do not. A missing ledger must degrade to a note, never fail
    * the build it is only observing.
    *
    * `targets` is WHICH COMPOSITIONS this one invocation builds — `{singularity}`
@@ -71,11 +73,25 @@ function isInflightViolation(err: unknown): boolean {
   return pg?.code === "23505" && pg.constraint === INFLIGHT_UQ;
 }
 
-// 3D000 (invalid_catalog_name) is Postgres saying the database does not exist.
-// The checkout has never been deployed, so there is no ledger to write to; every
-// other error is a genuine fault and rethrows.
-function isMissingDatabase(err: unknown): boolean {
-  return (err as { code?: string } | null)?.code === "3D000";
+// "There is no ledger here yet" — the two ways Postgres says it:
+//
+//   3D000 (invalid_catalog_name) — no database at all. The checkout has never
+//          been deployed, so nothing has ever forked it one.
+//   42P01 (undefined_table)      — the database is there and `build_runs` is
+//          not. That is a FIRST build: the base database is created empty when
+//          the cluster starts, and the schema arrives only when the backend
+//          restarts and migrates at the end of this very build. The ordering
+//          note above says the same thing generally — the CLI always runs new
+//          code against the schema the PREVIOUS build left behind, and on a
+//          first build there is no previous schema at all.
+//
+// Both are the same fact, so both degrade to the "unavailable" outcome; every
+// other error is a genuine fault and rethrows. (`fork-schema-drift.ts` and
+// `orphaned-tables.ts` read 42P01 the same way: the migration runner never ran
+// on this DB.)
+function isMissingLedger(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code;
+  return code === "3D000" || code === "42P01";
 }
 
 /** One attempt at the claiming INSERT. */
@@ -169,6 +185,57 @@ export async function claimInflightRun(
 }
 
 /**
+ * `insertRun`'s body over any drizzle handle — the recorder's own short-lived
+ * pool in production, a throwaway fixture DB in the tests. The classification
+ * `claimInflightRun` deliberately does NOT make: a ledger that is not there is
+ * the named outcome `"unavailable"`, every other error propagates.
+ */
+export async function insertRunOn(
+  db: NodePgDatabase,
+  namespace: Namespace,
+  r: InsertRunRow,
+): Promise<"claimed" | "lost" | "unavailable"> {
+  try {
+    return await claimInflightRun(db, namespace, r);
+  } catch (err) {
+    if (isMissingLedger(err)) return "unavailable";
+    throw err;
+  }
+}
+
+/**
+ * `closeRun`'s body over any drizzle handle. First-writer-wins: the CLI's stamp
+ * is authoritative for the run it owns. The backend's `proc.exited` writer and
+ * the orphan reconciler are late fallbacks guarded by the same
+ * `isNull(finishedAt)` predicate, so a row closed here is never re-stamped by
+ * them.
+ *
+ * A namespace with no ledger — no database, or a database whose schema this
+ * build has not created yet — never had a row to close (`insertRunOn` answered
+ * "unavailable"), so the same tolerance applies here.
+ *
+ * This one stays on drizzle: unlike `.values()`, `.set()` names ONLY the
+ * assigned columns, so an UPDATE is already immune to the schema skew described
+ * above. Verified with `.toSQL()`:
+ *   update "build_runs" set "finished_at" = $1, "exit_code" = $2
+ *   where ("build_runs"."id" = $3 and "build_runs"."finished_at" is null)
+ */
+export async function closeRunOn(
+  db: NodePgDatabase,
+  id: string,
+  exitCode: number,
+): Promise<void> {
+  try {
+    await db
+      .update(_buildRuns)
+      .set({ finishedAt: new Date(), exitCode })
+      .where(and(eq(_buildRuns.id, id), isNull(_buildRuns.finishedAt)));
+  } catch (err) {
+    if (!isMissingLedger(err)) throw err;
+  }
+}
+
+/**
  * The CLI-side `build_runs` writer for ONE namespace's database — the building
  * checkout's own. It used to be hardcoded to main's, because the only rows it
  * wrote were main's deploy and its compose-serve children; a composition is now
@@ -179,42 +246,11 @@ export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
   const pool = openShortLivedClient(namespace);
   const db: NodePgDatabase = drizzle(pool);
 
+  // Nothing but the pool binding lives here: both writes are the exported
+  // db-parametrized bodies above, so what the tests drive is what the CLI runs.
   return {
-    async insertRun(r) {
-      try {
-        return await claimInflightRun(db, namespace, r);
-      } catch (err) {
-        if (isMissingDatabase(err)) return "unavailable";
-        throw err;
-      }
-    },
-
-    async closeRun(id, exitCode) {
-      // First-writer-wins: the CLI's stamp is authoritative for the run it owns.
-      // The backend's `proc.exited` writer and the orphan reconciler are late
-      // fallbacks guarded by the same `isNull(finishedAt)` predicate, so a row
-      // closed here is never re-stamped by them.
-      //
-      // A namespace with no database never had a row to close (insertRun
-      // answered "unavailable"), so the same tolerance applies here.
-      //
-      // This one stays on drizzle: unlike `.values()`, `.set()` names ONLY the
-      // assigned columns, so an UPDATE is already immune to the schema skew
-      // above. Verified with `.toSQL()`:
-      //   update "build_runs" set "finished_at" = $1, "exit_code" = $2
-      //   where ("build_runs"."id" = $3 and "build_runs"."finished_at" is null)
-      try {
-        await db
-          .update(_buildRuns)
-          .set({ finishedAt: new Date(), exitCode })
-          .where(and(eq(_buildRuns.id, id), isNull(_buildRuns.finishedAt)));
-      } catch (err) {
-        if (!isMissingDatabase(err)) throw err;
-      }
-    },
-
-    async close() {
-      await pool.end();
-    },
+    insertRun: (r) => insertRunOn(db, namespace, r),
+    closeRun: (id, exitCode) => closeRunOn(db, id, exitCode),
+    close: () => pool.end(),
   };
 }

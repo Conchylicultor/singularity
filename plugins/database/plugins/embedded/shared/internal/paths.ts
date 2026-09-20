@@ -19,6 +19,16 @@ function resolvePgPort(): number {
 
 export const PG_PORT = resolvePgPort();
 export const PG_USER = "singularity";
+
+// The base database, and main's namespace: the one database that is nobody's
+// copy. Every other database in the app — a worktree's fork, a served
+// composition's — is minted from this one, so the cluster is not usable until
+// it exists. Pinned to `MAIN_WORKTREE_NAME` by `paths.test.ts`: this module is
+// imported by a start script that deliberately reaches for nothing but node
+// builtins and its own `shared/`, so only a test can hold the two spellings
+// together.
+export const PG_BASE_DATABASE = "singularity";
+
 export const PG_MAJOR = 18;
 export const MAX_CONNECTIONS = 500;
 

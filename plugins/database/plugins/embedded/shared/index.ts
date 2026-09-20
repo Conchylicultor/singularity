@@ -1,5 +1,6 @@
 export {
   MAX_CONNECTIONS,
+  PG_BASE_DATABASE,
   PG_DATA_DIR,
   PG_DIR,
   PG_LOG_FILE,

@@ -55,7 +55,8 @@ build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 | `format` | Prettier over the `.ts`/`.tsx` changed on this branch — the same pass `build` runs, in seconds. It exists because `push` never builds, so a `format-clean` failure would otherwise cost a full build. |
 | `regen-generated` / `regen-migrations` | The repo-tree codegen and migration-generation pipelines as standalone commands (used by the normalize pass). |
 | `normalize-generated` | Marker-gated repair of generated artifacts a merge driver auto-resolved. Invoked by the `post-rewrite` hook; rarely run by hand. |
-| `apply-migrations` / `serve-app` | Runtime entrypoints a released bundle's launcher invokes. |
+| `serve-app` | Runtime entrypoint a released bundle's launcher invokes. |
+| `apply-migrations` | Apply pending migrations to one namespace's database. No caller: every database is migrated by the first backend that boots against it. |
 | `db` / `start` | DB fork/list/drop admin, and the one-time gateway bring-up. |
 
 The **orphan guard** (`plugins/bootstrap/cli/orphan-guard.ts`) is armed by `bin/index.ts` for
@@ -430,7 +431,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 - Cross-plugin:
   - Imported by: `framework/tooling/import-closure`
 - Sub-plugins:
-  - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+  - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). Has no caller: every database gets its schema from the first backend that boots against it.
   - **`await`** — `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
   - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
   - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.

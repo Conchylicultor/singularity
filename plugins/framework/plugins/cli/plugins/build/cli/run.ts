@@ -355,6 +355,48 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
   process.exit(1);
 }
 
+/**
+ * The MAIN checkout's database is nobody's copy: every other database in the app
+ * is minted from it (a worktree's is a `pg_dump | pg_restore` of it, `db fork`
+ * copies it by name), so there is no fork and no job to wait for here. Starting
+ * the cluster creates it — `plugins/database/plugins/embedded/scripts/start.ts`,
+ * which the gateway's supervisor runs. If it is absent, nothing is in flight and
+ * polling would only spend a minute before saying the same thing, so this fails
+ * at once.
+ *
+ * The build itself creates NOTHING: provisioning storage is not a build's job,
+ * and the base database must not depend on someone having run a build.
+ */
+async function requireBaseDatabase(name: string): Promise<void> {
+  if (await databaseReady(name)) return;
+
+  // With `services: []` the user runs their own Postgres and the app supervises
+  // nothing — so the start script never runs, and we do not provision inside a
+  // cluster the app does not own. Name the command that creates it instead.
+  const selfHosted = readDatabaseConfig().services.length === 0;
+  console.error(
+    [
+      `ERROR: no database for "${name}".`,
+      "",
+      ...(selfHosted
+        ? [
+            "This host runs its own Postgres (no managed services configured),",
+            "so nothing here creates the base database. Create it with:",
+            "",
+            `    createdb ${name}`,
+          ]
+        : [
+            "The bundled Postgres creates it when the cluster starts. Start it with:",
+            "",
+            "    ./singularity start",
+          ]),
+      "",
+      "Then re-run ./singularity build.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
 // `/gateway/worktrees` is the gateway's own API and exists on every gateway
 // version — a 200 here proves the gateway is alive. Central's own readiness
 // is covered by the gateway's waitReady on its Unix socket; no separate
@@ -1029,24 +1071,34 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   await waitForPg();
   endSpan();
 
-  // 2d. Ensure this checkout's own DB fork has completed (forked
-  // asynchronously during conversation creation).
+  // 2d. Ensure this checkout's own database is there: main's base database, or
+  // a worktree's fork (forked asynchronously during conversation creation).
   //
   // This IS the main-composition target's database step, HOISTED out of the
   // per-target loop, and for two reasons worth naming: the `build_runs` row
   // this invocation opens a few lines below lives in that database, and a
-  // missing fork must fail in seconds rather than after the frontend build.
+  // missing database must fail in seconds rather than after the frontend build.
   // Skipped entirely for a composition-only build — that invocation neither
   // publishes this checkout's app nor needs its data, and on a fresh
   // checkout the fork may legitimately not exist yet (the ledger degrades
   // to a note; see `insertRun`).
+  //
+  // WHICH database this is decides how it comes into existence, so the two
+  // cases are not the same step. A worktree's is a fork, made asynchronously by
+  // a job, and waiting for it is right. The MAIN checkout's is nobody's copy —
+  // no fork, no job — so it is checked once and never waited for. The predicate
+  // is git's answer (`checkoutRef`), never a comparison against the namespace
+  // string: a linked worktree whose directory happens to be named
+  // `singularity` mints the same namespace as main.
   if (targets.some((t) => t.isMainComposition)) {
+    const isMainCheckout = checkout.kind === "main";
     endSpan = buildProfilerStart(
       "waitForDatabase",
       "build:database",
-      "wait for DB fork",
+      isMainCheckout ? "check base DB" : "wait for DB fork",
     );
-    await waitForWorktreeDatabase(name);
+    if (isMainCheckout) await requireBaseDatabase(name);
+    else await waitForWorktreeDatabase(name);
     endSpan();
   }
 
@@ -1083,12 +1135,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
       );
     } else if (claim === "unavailable") {
-      // A checkout that has never been deployed has no database of its own.
-      // A composition-only build is a legitimate way to reach that state, so
-      // the missing ledger is a note, never a failure: nothing about the
-      // deploy depends on it.
+      // No ledger to write to — either no database at all (a checkout that has
+      // never been deployed, which a composition-only build legitimately
+      // reaches), or a database whose `build_runs` table this build has not
+      // created yet (the machine's very first build). Either way it is a note,
+      // never a failure: nothing about the deploy depends on it.
       softNotes.push(
-        `build-runs: no database for ${name} yet — this build is not in the ledger`,
+        `build-runs: no ledger in ${name} yet — this build is not recorded`,
       );
     }
   }

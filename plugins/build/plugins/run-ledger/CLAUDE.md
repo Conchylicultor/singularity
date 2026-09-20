@@ -70,10 +70,22 @@ rejects with `42804 … is of type text[] but expression is of type record`.
 `sql.param()` binds it as ONE parameter; the type is then inferred from the
 column, so no `::text[]` cast is needed.
 
-`insertRun` has THREE outcomes, not two. `"unavailable"` (Postgres 3D000) means
-the checkout has no database yet — a fresh checkout running a composition-only
-build is a legitimate way to reach that, and the missing ledger must degrade to a
-note rather than fail a deploy it only observes.
+`insertRun` has THREE outcomes, not two. `"unavailable"` means there is no
+ledger here yet, which Postgres says in two ways: `3D000` (no database at all —
+a fresh checkout that has never been deployed, reached legitimately by a
+composition-only build) and `42P01` (the database is there and `build_runs` is
+not — the machine's very first build, where the base database was created empty
+when the cluster started and the schema arrives only when the backend restarts
+and migrates at the end of this very build). Both are the same fact, so
+`isMissingLedger` covers both and `closeRun` tolerates both; every other error is
+a genuine fault and rethrows. A missing ledger must degrade to a note rather than
+fail a deploy it only observes.
+
+Both writes are exported as db-parametrized bodies — `insertRunOn` / `closeRunOn`
+beside `claimInflightRun` — and `createBuildRunRecorder` is nothing but the pool
+binding over them, so `missing-ledger.test.ts` drives exactly the code the CLI
+runs. That suite's database is deliberately UNMIGRATED (`createTestDb` without
+`runMigrations`), which is the 42P01 scenario itself.
 
 ## A dead holder is settled at the claim
 
