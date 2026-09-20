@@ -1,32 +1,17 @@
-import {
-  Button,
-  cn,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useCallback } from "react";
 import {
   fetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { triggerBuildEndpoint } from "../../core";
-import { MdContentCopy, MdPlayArrow } from "react-icons/md";
+import { triggerBuildEndpoint, BUILD_LOG_CHANNEL } from "../../core";
+import { MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import {
-  useReconnectingWebSocket,
-  wsUrl,
-} from "@plugins/primitives/plugins/networking/web";
-import {
-  useStickyScroll,
-  JumpToBottomButton,
-} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { RunsDataView } from "@plugins/runs/web";
 // The one declaration of the kind a build run carries — not a literal repeated
 // here, which would have gone on silently highlighting nothing after a rename.
@@ -39,14 +24,6 @@ import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
 import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
-import type {
-  ClientMessage,
-  ServerMessage,
-  LogEntryWire,
-} from "@plugins/primitives/plugins/log-channels/core";
-import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
-
-const LOGS_WS_PATH = "/ws/logs";
 
 // Both build surfaces open on the `active` tab, which is empty whenever nothing
 // is in flight — the normal case. The shared surface's own default reads
@@ -56,10 +33,6 @@ const LOGS_WS_PATH = "/ws/logs";
 // should know whether a filter is narrowing it; until then this is the honest
 // wording here.)
 const NO_MATCHING_RUNS = <>Nothing matches this view.</>;
-
-// Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
-// Overflow is owned by the `<Scroll axis="y">` wrapper, not baked in here.
-const logViewerClass = cn("bg-muted/30 px-md py-sm", textVariantClass("code"));
 
 function BuildControls({
   building,
@@ -83,137 +56,41 @@ function BuildControls({
   );
 }
 
-function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
-  const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const lastSeqRef = useRef<number>(0);
-  const selectedRef = useRef("build");
-
-  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
-    useStickyScroll();
-
-  const wsHandle = useReconnectingWebSocket({
-    url: wsUrl(LOGS_WS_PATH),
-    enabled: true,
-    onOpen: (ws) => {
-      const msg: ClientMessage = {
-        type: "subscribe",
-        channel: "build",
-        ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
-      };
-      ws.send(JSON.stringify(msg));
-    },
-    onMessage: (event) => {
-      const msg: ServerMessage = JSON.parse(event.data);
-      switch (msg.type) {
-        case "history":
-          if (msg.entries.length === 0) break;
-          setEntries((prev) => [...prev, ...msg.entries]);
-          lastSeqRef.current = Math.max(
-            lastSeqRef.current,
-            msg.entries[msg.entries.length - 1]!.seq,
-          );
-          break;
-        case "entry":
-          if (msg.seq <= lastSeqRef.current) break;
-          lastSeqRef.current = msg.seq;
-          setEntries((prev) => [...prev, msg]);
-          break;
-        case "error":
-          toast({
-            type: "build",
-            title: "Build log error",
-            description: msg.error,
-            variant: "error",
-          });
-          break;
-      }
-    },
-  });
-
-  // Re-subscribe on reconnect
-  useEffect(() => {
-    const handle = wsHandle.current;
-    if (!handle) return;
-    const msg: ClientMessage = {
-      type: "subscribe",
-      channel: selectedRef.current,
-    };
-    handle.send(JSON.stringify(msg));
-  }, [wsHandle]);
-
-  const copyLogs = useCallback(async () => {
-    const text = entries.map((e) => e.line).join("\n");
-    await navigator.clipboard.writeText(text);
-    toast({
-      type: "build",
-      title: "Logs copied",
-      description: "Build logs copied to clipboard",
-      variant: "info",
-    });
-  }, [entries]);
-
+/**
+ * The build's live log stream, as a section the popover can keep shut.
+ *
+ * Shut is the default, and it is what the popover is FOR: you open it to see
+ * what is deployed, to start a build, and to read the list of runs — three
+ * things a wall of log text used to push below the fold. The one time the logs
+ * are the reason you opened it is while a build is running, so the section
+ * starts open then. Either way it is one click away, and closing it also drops
+ * the log subscription.
+ *
+ * Everything under the header — the socket, the sequence de-dup, the sticky
+ * scroll, the copy button — belongs to the shared `LiveLogChannel` primitive.
+ * This file used to carry its own copy of that body, one whose extra mount-time
+ * `subscribe` made the server replay the whole ring buffer a second time, so
+ * every line showed up twice.
+ */
+function BuildLogView({ building }: { building: boolean }) {
   return (
-    <Stack gap="none" className="relative border-b">
-      <Stack
-        direction="row"
-        align="center"
-        justify="between"
-        gap="none"
-        className="border-b px-md py-xs"
-      >
-        <Text as="span" variant="label" className="text-muted-foreground">
-          Logs
-        </Text>
-        <ControlSizeProvider size="xs">
-          <IconButton
-            icon={MdContentCopy}
-            label="Copy logs"
-            variant="ghost"
-            onClick={copyLogs}
-            disabled={entries.length === 0}
-          />
-        </ControlSizeProvider>
-      </Stack>
-      <Scroll
-        axis="y"
-        fill={variant === "pane"}
-        ref={scrollRef}
-        className={cn(
-          logViewerClass,
-          variant === "popover" ? "h-48" : "min-h-48",
-        )}
-      >
-        {entries.length === 0 && (
-          <span className="text-muted-foreground">No build logs yet</span>
-        )}
-        {entries.map((entry) => (
-          <Stack
-            direction="row"
-            gap="sm"
-            key={entry.seq}
-            className={
-              entry.stream === "stderr" ? "text-destructive" : "text-foreground"
-            }
-          >
-            <span className={cn(rigidClass(), "text-muted-foreground")}>
-              {new Date(entry.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              })}
-            </span>
-            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-          </Stack>
-        ))}
-        {/* Must stay the last child: it marks the true end of the content. */}
-        {bottomSentinel}
-      </Scroll>
-      {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
-      <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
-      </Pin>
-    </Stack>
+    <LiveLogChannel
+      channel={BUILD_LOG_CHANNEL}
+      label="Logs"
+      disclosure={building ? "open" : "closed"}
+      emptyState="No build logs yet"
+      // Shorter than the primitive's default: in a popover the run list below
+      // has to stay in view.
+      className="h-48"
+      onError={(error) =>
+        toast({
+          type: "build",
+          title: "Build log error",
+          description: error,
+          variant: "error",
+        })
+      }
+    />
   );
 }
 
@@ -279,7 +156,9 @@ function BuildPopoverContentInner({
       <BuildControls building={building} onBuild={handleBuild} />
       {variant === "popover" ? (
         <>
-          <BuildLogView variant={variant} />
+          <Stack gap="none" className="border-b">
+            <BuildLogView building={building} />
+          </Stack>
           {/* The popover has to supply the history scroll itself. A DataView is
               always natural-height and never opens a scroller, and here there is
               no `PaneChrome` above it to do so — the whole loaded window would

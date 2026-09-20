@@ -3,17 +3,10 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useRef, useCallback, type ReactElement } from "react";
+import { useCallback, type ReactElement } from "react";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import {
-  useReconnectingWebSocket,
-  wsUrl,
-} from "@plugins/primitives/plugins/networking/web";
-import {
-  useStickyScroll,
-  JumpToBottomButton,
-} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -25,15 +18,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { BUILD_LOG_CHANNEL } from "@plugins/build/core";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
-import type {
-  ClientMessage,
-  ServerMessage,
-  LogEntryWire,
-} from "@plugins/primitives/plugins/log-channels/core";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
@@ -144,125 +132,26 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
   );
 }
 
-const LOGS_WS_PATH = "/ws/logs";
-
+/**
+ * The live tail, for a run whose per-step logs are not on disk yet (a build
+ * still in flight, or one whose artifact never landed). Body, socket, de-dup and
+ * copy button all belong to the shared `LiveLogChannel` primitive — this file
+ * used to carry its own copy of them.
+ */
 function LiveLogs(): ReactElement {
-  const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const lastSeqRef = useRef<number>(0);
-
-  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
-    useStickyScroll();
-
-  useReconnectingWebSocket({
-    url: wsUrl(LOGS_WS_PATH),
-    enabled: true,
-    onOpen: (ws) => {
-      const msg: ClientMessage = {
-        type: "subscribe",
-        channel: "build",
-        ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
-      };
-      ws.send(JSON.stringify(msg));
-    },
-    onMessage: (event) => {
-      const msg: ServerMessage = JSON.parse(event.data);
-      switch (msg.type) {
-        case "history":
-          if (msg.entries.length === 0) break;
-          setEntries((prev) => [...prev, ...msg.entries]);
-          lastSeqRef.current = Math.max(
-            lastSeqRef.current,
-            msg.entries[msg.entries.length - 1]!.seq,
-          );
-          break;
-        case "entry":
-          if (msg.seq <= lastSeqRef.current) break;
-          lastSeqRef.current = msg.seq;
-          setEntries((prev) => [...prev, msg]);
-          break;
-        case "error":
-          toast({
-            type: "build",
-            title: "Build log error",
-            description: msg.error,
-            variant: "error",
-          });
-          break;
-      }
-    },
-  });
-
-  const copyLogs = useCallback(async () => {
-    const text = entries.map((e) => e.line).join("\n");
-    await navigator.clipboard.writeText(text);
-    toast({
-      type: "build",
-      title: "Logs copied",
-      description: "Build logs copied to clipboard",
-      variant: "info",
-    });
-  }, [entries]);
-
   return (
-    <Stack gap="none" className="relative">
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        justify="between"
-        className="pb-xs"
-      >
-        <Text as="span" variant="label" className="text-muted-foreground">
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
-          Logs <span className="text-muted-foreground/60 ml-1">Live</span>
-        </Text>
-        <ControlSizeProvider size="xs">
-          <IconButton
-            icon={MdContentCopy}
-            label="Copy logs"
-            variant="ghost"
-            onClick={copyLogs}
-            disabled={entries.length === 0}
-          />
-        </ControlSizeProvider>
-      </Stack>
-      <Scroll
-        axis="y"
-        ref={scrollRef}
-        className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
-      >
-        {entries.length === 0 && (
-          <span className="text-muted-foreground">No build logs yet</span>
-        )}
-        {entries.map((entry) => (
-          <Stack
-            key={entry.seq}
-            direction="row"
-            gap="sm"
-            className={cn(
-              entry.stream === "stderr"
-                ? "text-destructive"
-                : "text-foreground",
-            )}
-          >
-            <span className={cn("text-muted-foreground", rigidClass())}>
-              {new Date(entry.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              })}
-            </span>
-            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-          </Stack>
-        ))}
-        {/* Must stay the last child: it marks the true end of the content. */}
-        {bottomSentinel}
-      </Scroll>
-      {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
-      <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
-      </Pin>
-    </Stack>
+    <LiveLogChannel
+      channel={BUILD_LOG_CHANNEL}
+      label="Logs"
+      emptyState="No build logs yet"
+      onError={(error) =>
+        toast({
+          type: "build",
+          title: "Build log error",
+          description: error,
+          variant: "error",
+        })
+      }
+    />
   );
 }

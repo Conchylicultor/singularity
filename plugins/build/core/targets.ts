@@ -19,3 +19,11 @@ import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 export function isMainCompositionBuild(targets: readonly string[]): boolean {
   return targets.length === 1 && targets[0] === MAIN_COMPOSITION_ID;
 }
+
+/**
+ * The durable log channel every build writes to. One spelling shared by the
+ * server that creates the channel and the two surfaces that subscribe to it —
+ * a renamed channel is then a type error rather than a viewer that silently
+ * shows nothing.
+ */
+export const BUILD_LOG_CHANNEL = "build";

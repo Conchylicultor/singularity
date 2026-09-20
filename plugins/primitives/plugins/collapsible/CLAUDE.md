@@ -91,6 +91,7 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `primitives/css/row`
     - `primitives/data-view`
     - `primitives/data-view/tree`
+    - `primitives/log-channels`
     - `primitives/section-card`
     - `primitives/tree`
     - `reorder/node-types/header`

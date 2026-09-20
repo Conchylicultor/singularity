@@ -7562,28 +7562,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
-      - `primitives/css/pin.Pin`
-      - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
       - `primitives/css/status-dot.StatusDot`
       - `primitives/css/text.Text`
-      - `primitives/css/text.textVariantClass`
       - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.ButtonGroup`
       - `primitives/css/ui-kit.cn`
       - `primitives/css/ui-kit.ControlSizeProvider`
       - `primitives/detail-sections.defineDetailSections`
-      - `primitives/dom/auto-scroll.JumpToBottomButton`
-      - `primitives/dom/auto-scroll.useStickyScroll`
       - `primitives/icon-button.IconButton`
       - `primitives/live-state.useNotificationsChannelStatuses`
       - `primitives/live-state.useResource`
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
-      - `primitives/networking.useReconnectingWebSocket`
-      - `primitives/networking.wsUrl`
+      - `primitives/log-channels.LiveLogChannel`
       - `primitives/overlay/popover.InlinePopover`
       - `primitives/overlay/tooltip.WithTooltip`
       - `primitives/pane.openPane`
@@ -7643,6 +7637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.defineRoute`
     - Exports (types): `BuildRun`
     - Exports (values):
+      - `BUILD_LOG_CHANNEL`
       - `buildDetailRoute`
       - `buildHistoryResource`
       - `buildRoute`
@@ -7731,7 +7726,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleTrigger`
           - `primitives/css/clip.Clip`
-          - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
@@ -7739,11 +7733,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/dom/auto-scroll.JumpToBottomButton`
-          - `primitives/dom/auto-scroll.useStickyScroll`
           - `primitives/icon-button.IconButton`
-          - `primitives/networking.useReconnectingWebSocket`
-          - `primitives/networking.wsUrl`
+          - `primitives/log-channels.LiveLogChannel`
           - `shell/notifications.toast`
       - Server:
         - Uses:
@@ -23541,6 +23532,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row`
           - `primitives/data-view`
           - `primitives/data-view/tree`
+          - `primitives/log-channels`
           - `primitives/section-card`
           - `primitives/tree`
           - `reorder/node-types/header`
@@ -24811,8 +24803,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
-              - `build`
-              - `build/build-logs`
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -24990,7 +24980,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth`
               - `backup`
               - `backup/runs-arm`
-              - `build`
               - `build/build-info`
               - `build/build-logs`
               - `build/deployment`
@@ -25115,6 +25104,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/folder-picker`
+              - `primitives/log-channels`
               - `primitives/outline/rail`
               - `primitives/section-card`
               - `reorder/editor`
@@ -27752,8 +27742,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
-              - `build`
-              - `build/build-logs`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `debug/logs`
@@ -28853,10 +28841,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/collapsible.CollapsibleContent`
+          - `primitives/collapsible.CollapsibleProvider`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
+          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -28923,6 +28914,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/release/release-logs`
           - `backup`
           - `build`
+          - `build/build-logs`
           - `conversations/conversation-view/rewind`
           - `conversations/transcript-retention`
           - `database`
@@ -29047,8 +29039,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `wsUrl`
       - Cross-plugin:
         - Imported by:
-          - `build`
-          - `build/build-logs`
           - `debug/logs`
           - `infra/endpoints`
           - `infra/health`

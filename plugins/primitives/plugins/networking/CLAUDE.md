@@ -78,8 +78,6 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `wsUrl`
 - Cross-plugin:
   - Imported by:
-    - `build`
-    - `build/build-logs`
     - `debug/logs`
     - `infra/endpoints`
     - `infra/health`

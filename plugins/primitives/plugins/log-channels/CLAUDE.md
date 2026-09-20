@@ -47,6 +47,24 @@ one JSON object per line: `{"t":<ms>,"stream":"stdout"|"stderr","line":"..."}`. 
 file survives the backend restart that `./singularity build` performs mid-build;
 the in-memory ring buffer only backs the live UI pane.
 
+## Viewing a channel live
+
+`<LiveLogChannel channel="…" />` (web barrel) is **the one implementation** of
+"show me this channel as it happens": the `/ws/logs` subscribe, the sequence
+de-dup, the sticky-scroll with its jump-to-bottom off-ramp, the copy button and
+the timestamped row markup. Five surfaces used to carry their own copy of that
+body; two of them (the build toolbar popover, the build run-detail section) were
+still carrying it, and the popover's copy subscribed twice on mount, so the
+server replayed the ring buffer a second time and every build line appeared
+twice.
+
+The subscription is the cost of mounting it, so a surface that wants the section
+present but **shut** passes `disclosure="closed"` instead of hiding it with CSS:
+the header becomes a chevron row, the list unmounts, and the socket closes with
+it. Reopening resumes from the last sequence already on screen (`fromSequence`),
+so the tail is never replayed. `disclosure` is an INITIAL state — a later change
+does not reopen a section the reader closed.
+
 ### Reading logs
 
 `tail`/`cat` the `.jsonl` file directly. This plugin owns only the **read** path
@@ -108,10 +126,13 @@ count accumulates across drops.
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleProvider`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -178,6 +199,7 @@ count accumulates across drops.
     - `apps/studio/compositions/release/release-logs`
     - `backup`
     - `build`
+    - `build/build-logs`
     - `conversations/conversation-view/rewind`
     - `conversations/transcript-retention`
     - `database`

@@ -15,7 +15,6 @@
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/clip.Clip`
-    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -23,11 +22,8 @@
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/dom/auto-scroll.JumpToBottomButton`
-    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/icon-button.IconButton`
-    - `primitives/networking.useReconnectingWebSocket`
-    - `primitives/networking.wsUrl`
+    - `primitives/log-channels.LiveLogChannel`
     - `shell/notifications.toast`
 - Server:
   - Uses:

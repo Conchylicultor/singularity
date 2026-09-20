@@ -2,12 +2,17 @@ import type React from "react";
 import { useState, useRef, type ReactNode } from "react";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import {
+  CollapsibleContent,
+  CollapsibleProvider,
+} from "@plugins/primitives/plugins/collapsible/web";
+import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -29,15 +34,13 @@ const MONO_LOG_CLASS = textVariantClass("code");
 /** The app's own log socket. */
 const LOGS_WS_PATH = "/ws/logs";
 
-export interface LiveLogChannelProps {
+interface LiveLogChannelBaseProps {
   /** Durable channel id to subscribe to (e.g. `deploy`, `release`). */
   channel: string;
   /** Header label; the "Live" marker is appended by the primitive. */
   label?: ReactNode;
   /** Shown while the buffer is empty (subscribing replays the ring buffer). */
   emptyState?: ReactNode;
-  /** Fill the parent's height instead of the default `min-h-48 max-h-96`. */
-  fill?: boolean;
   /** Sizing overrides for the scroller (`max-h-*`, `min-h-*`, …). */
   className?: string;
   /**
@@ -47,6 +50,39 @@ export interface LiveLogChannelProps {
    */
   onError?: (message: string) => void;
 }
+
+/**
+ * `fill` and `disclosure` are mutually exclusive, and the union is what says so:
+ * "take the parent's whole height" and "collapse to a single row" are opposite
+ * intents, so a view that can be shut cannot also be the thing filling the box
+ * it sits in.
+ */
+export type LiveLogChannelProps = LiveLogChannelBaseProps &
+  (
+    | {
+        /** Fill the parent's height instead of the default `min-h-48 max-h-96`. */
+        fill?: boolean;
+        disclosure?: never;
+      }
+    | {
+        fill?: never;
+        /**
+         * Turn the header into a disclosure control, starting in this state.
+         * Omitted ⇒ the view is always open and carries no chevron.
+         *
+         * Closing it does more than hide: the list is unmounted AND the
+         * subscription is dropped, so a shut section costs nothing — this
+         * primitive's own "mount it only while visible" rule, made structural
+         * instead of merely documented. Reopening resumes from the last sequence
+         * already on screen rather than replaying the tail.
+         *
+         * ONE prop rather than `collapsible` + `defaultOpen`, so "starts open but
+         * has no chevron to close it" has no spelling. It is an INITIAL state:
+         * changing it later does not reopen a section the reader closed by hand.
+         */
+        disclosure: "open" | "closed";
+      }
+  );
 
 /**
  * A live view of one durable log channel: subscribe over `/ws/logs`, replay the
@@ -64,7 +100,9 @@ export interface LiveLogChannelProps {
  * previous channel's tail on screen, and a `key` makes that structural rather
  * than an effect that has to remember to clear.
  *
- * Mount it only while visible — the subscription is the cost.
+ * Mount it only while visible — the subscription is the cost. A surface that
+ * wants the section on screen but shut by default says so with `disclosure`,
+ * which drops the subscription for exactly as long as the section is closed.
  */
 export function LiveLogChannel({
   channel,
@@ -73,22 +111,28 @@ export function LiveLogChannel({
   fill,
   className,
   onError,
+  disclosure,
 }: LiveLogChannelProps): ReactNode {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
+  // No disclosure ⇒ permanently open, which is what keeps the subscription
+  // unconditional for every consumer that does not ask for one.
+  const [open, setOpen] = useState(disclosure !== "closed");
 
   const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
     useStickyScroll();
 
   useReconnectingWebSocket({
     url: wsUrl(LOGS_WS_PATH),
-    enabled: true,
+    // The socket IS the cost of the section, so it lives and dies with the
+    // section being open.
+    enabled: open,
     onOpen: (ws) => {
       const msg: ClientMessage = {
         type: "subscribe",
         channel,
-        // Resume rather than replay from zero: a reconnect must not duplicate
-        // the tail already on screen.
+        // Resume rather than replay from zero: a reconnect — or a reopened
+        // disclosure — must not duplicate the tail already on screen.
         ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
       };
       ws.send(JSON.stringify(msg));
@@ -128,29 +172,21 @@ export function LiveLogChannel({
     },
   });
 
-  return (
-    <Stack gap="none" className={fill ? "relative h-full" : "relative"}>
-      <Line className="pb-xs">
-        <Fill>
-          <Text as="span" variant="label" tone="muted">
-            {label}
-            {label ? " " : null}
-            <Text
-              as="span"
-              variant="label"
-              className="text-muted-foreground/60"
-            >
-              Live
-            </Text>
-          </Text>
-        </Fill>
-        <ControlSizeProvider size="xs">
-          <CopyButton
-            text={entries.map((e) => e.line).join("\n")}
-            title="Copy logs"
-          />
-        </ControlSizeProvider>
-      </Line>
+  const copyButton = (
+    <ControlSizeProvider size="xs">
+      <CopyButton
+        text={entries.map((e) => e.line).join("\n")}
+        title="Copy logs"
+      />
+    </ControlSizeProvider>
+  );
+
+  // Dimmer than the label beside it, and inheriting its size, so it reads as a
+  // state marker on the label rather than as a second label.
+  const liveMarker = <span className="text-muted-foreground/60">Live</span>;
+
+  const body = (
+    <>
       <LogEntryList
         entries={entries}
         emptyState={emptyState}
@@ -163,7 +199,50 @@ export function LiveLogChannel({
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
         <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
       </Pin>
-    </Stack>
+    </>
+  );
+
+  const rootClass = fill ? "relative h-full" : "relative";
+
+  if (disclosure === undefined) {
+    return (
+      <Stack gap="none" className={rootClass}>
+        <Line className="pb-xs">
+          <Fill>
+            <Text as="span" variant="label" tone="muted">
+              {label}
+              {label ? " " : null}
+              {liveMarker}
+            </Text>
+          </Fill>
+          {copyButton}
+        </Line>
+        {body}
+      </Stack>
+    );
+  }
+
+  return (
+    <CollapsibleProvider open={open} onOpenChange={setOpen}>
+      <Stack gap="none" className={rootClass}>
+        {/* The header IS the disclosure control, and the copy button rides its
+            `actions` slot — a SIBLING of the control, never an interactive
+            nested inside one. */}
+        <SectionHeaderRow actions={open ? copyButton : undefined}>
+          {label}
+          {/* Dropped while shut: no socket is open then, so the marker would be
+              a claim this view is not making. */}
+          {open ? " " : null}
+          {open ? liveMarker : null}
+        </SectionHeaderRow>
+        {/* `rail-x-sm` insets the scroller AND publishes the inset, so the
+            bordered log box sits inside the section rather than bleeding to its
+            edges the way the header row does. */}
+        <CollapsibleContent className="rail-x-sm pb-sm">
+          {body}
+        </CollapsibleContent>
+      </Stack>
+    </CollapsibleProvider>
   );
 }
 

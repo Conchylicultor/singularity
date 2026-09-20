@@ -209,28 +209,22 @@ The two other edges of the same argument:
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/css/pin.Pin`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/dom/auto-scroll.JumpToBottomButton`
-    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
-    - `primitives/networking.useReconnectingWebSocket`
-    - `primitives/networking.wsUrl`
+    - `primitives/log-channels.LiveLogChannel`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.openPane`
@@ -290,6 +284,7 @@ The two other edges of the same argument:
     - `primitives/pane.defineRoute`
   - Exports (types): `BuildRun`
   - Exports (values):
+    - `BUILD_LOG_CHANNEL`
     - `buildDetailRoute`
     - `buildHistoryResource`
     - `buildRoute`

@@ -115,8 +115,6 @@ offsets expressible on the semantic ramp.
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/songsheet`
-    - `build`
-    - `build/build-logs`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
