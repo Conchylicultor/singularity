@@ -1,11 +1,16 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
+  countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
   findLoopsEndpoint,
   nextChordsEndpoint,
 } from "../../core";
 import { ensureIndex } from "./ensure";
-import { countLoopsByNextChord, findLoopWindows } from "./find";
+import {
+  countLoopsByNextChord,
+  countLoopsInSet,
+  findLoopWindows,
+} from "./find";
 import { loadIndexStatus } from "./state";
 
 export const handleEnsureIndex = implement(ensureChordIndexEndpoint, () =>
@@ -33,5 +38,14 @@ export const handleNextChords = implement(
       kind: "ready" as const,
       nextChords: await countLoopsByNextChord(body),
     };
+  },
+);
+
+export const handleCountLoopsInSet = implement(
+  countLoopsInSetEndpoint,
+  async ({ body }) => {
+    const status = await loadIndexStatus();
+    if (status.kind !== "ready") return { kind: "not-ready" as const, status };
+    return { kind: "ready" as const, windows: await countLoopsInSet(body) };
   },
 );

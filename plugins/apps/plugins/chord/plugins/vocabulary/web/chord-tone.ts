@@ -1,6 +1,7 @@
 import type React from "react";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordDegree } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import "./chord-paint.css";
 
 /**
  * How deep each degree's solid tile is: the share of the chord colour kept
@@ -16,7 +17,7 @@ const OUTSIDE_SCALE = { colour: "var(--categorical-10)", depth: "74%" };
  * The CSS custom properties that paint a chord: `--fn` (its degree's colour,
  * the theme's `categorical-1…7`, or `categorical-10` for a root outside the
  * major scale) and `--fn-depth` (how deep its tile is). `.chord-tone` in
- * `trainer.css` derives the tile fill and the numeral on it from these.
+ * `chord-paint.css` derives the tile fill and the numeral on it from these.
  */
 export function chordToneStyle(token: ChordToken): React.CSSProperties {
   const degree = chordDegree(token);

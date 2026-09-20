@@ -7,9 +7,9 @@ the answer they gave for each box, and the stats the side panel shows. Design:
 ## Using it
 
 ```ts
-// The trainer, once every box of a round is filled. One transaction.
+// The trainer, once every box it asked for is filled. One transaction.
 POST /api/chord/rounds
-  { sectionId, videoId, shape, startBeat,
+  { sectionId, videoId, shape, startBeat, givenCount,
     answers: [{ position, token, answer, answerMs }] }   → { roundId }
 
 // The panel: the standing of each unlocked chord, today, and all time.
@@ -28,8 +28,14 @@ chordMastery(answersMostRecentFirst) → { answers, correct, accuracy, medianMs,
   decision.
 - **Answer times** must be whole ms in `MIN_ANSWER_MS`…`MAX_ANSWER_MS`
   (300 ms – 30 s). The trainer clamps; the endpoint refuses anything outside.
-- **Positions** are exactly `0…n-1`, one answer per box, in playing order.
+- **A round asks for only some of its boxes.** The curriculum scaffolds the
+  rest: they are shown already filled and the learner never names them. So
+  `answers` carries the asked boxes only, `givenCount` the rest, and
+  `boxCount` on the round means **boxes answered** — the loop had
+  `boxCount + givenCount`. Positions are distinct boxes of the loop
+  (`0…boxCount + givenCount − 1`), not `0…n-1`.
 - A round skipped before it was checked is never sent, so it never counts.
+- `songs` (today and all time) still counts rounds, scaffolded or not.
 
 ## The mastery rule
 
@@ -68,7 +74,9 @@ never shown: `useResource` answers `pending` until the server's first value.
 ## Tables
 
 - `chord_rounds`: one checked round (section, video, loop shape and start beat,
-  check time, box and right counts). Indexed on `checked_at`.
+  check time, answered and right counts, and `given_count` — boxes shown
+  filled in, 0 for every round checked before the curriculum). Indexed on
+  `checked_at`.
 - `chord_answers`: one box (`position`, the `token` that played, the `answer`
   picked, `correct`, `answer_ms`, `answered_at`). FK to the round, cascade.
   Indexed on `(token, answered_at desc, position desc)`, on `answered_at`, and

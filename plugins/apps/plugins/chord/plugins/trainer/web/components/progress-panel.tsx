@@ -8,6 +8,20 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
+  ChordNumeral,
+  chordToneStyle,
+} from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import {
+  stageById,
+  type Curriculum,
+  type NextStep,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import { NextStepRow } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
+import type {
+  NextStepRead,
+  StepReadiness,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/web";
+import {
   matchResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -26,13 +40,16 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { chordToneStyle } from "../internal/chord-tone";
-import { ChordNumeral } from "./chord-numeral";
+import {
+  Button,
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The side panel: today's totals, a quieter all-time line, and "Your chords" —
- * one line per unlocked chord with how well it is known.
+ * the level the learner is on, one line per unlocked chord (oldest first, so
+ * the newest sits just above), and the locked next step at the foot.
  *
  * "Your chords" is a plain component, not a DataView: it is a small fixed
  * status list (the unlocked set, a few dozen chords at most, in the
@@ -40,17 +57,41 @@ import { ChordNumeral } from "./chord-numeral";
  */
 export function ProgressPanel({
   progress,
-  chords,
+  curriculum,
+  nextStep,
+  readiness,
+  adding,
+  undoing,
+  onAdd,
+  onUndo,
 }: {
   progress: ResourceResult<ChordProgress>;
-  /** The unlocked chords, in the order to list them. */
-  chords: readonly ChordToken[];
+  curriculum: Curriculum;
+  /** What the next-step read says: a step, the index still loading, or the end. */
+  nextStep: NextStepRead;
+  /** Whether the learner is ready for the next step — or that it is not known yet. */
+  readiness: StepReadiness;
+  adding: boolean;
+  undoing: boolean;
+  onAdd: (step: NextStep) => void;
+  onUndo: () => void;
 }) {
   return (
     <Card className="rounded-2xl" aria-label="Your progress">
       {matchResource(progress, {
         pending: () => <Loading variant="rows" count={4} />,
-        ready: (p) => <PanelBody progress={p} chords={chords} />,
+        ready: (p) => (
+          <PanelBody
+            progress={p}
+            curriculum={curriculum}
+            nextStep={nextStep}
+            readiness={readiness}
+            adding={adding}
+            undoing={undoing}
+            onAdd={onAdd}
+            onUndo={onUndo}
+          />
+        ),
       })}
     </Card>
   );
@@ -58,10 +99,22 @@ export function ProgressPanel({
 
 function PanelBody({
   progress,
-  chords,
+  curriculum,
+  nextStep,
+  readiness,
+  adding,
+  undoing,
+  onAdd,
+  onUndo,
 }: {
   progress: ChordProgress;
-  chords: readonly ChordToken[];
+  curriculum: Curriculum;
+  nextStep: NextStepRead;
+  readiness: StepReadiness;
+  adding: boolean;
+  undoing: boolean;
+  onAdd: (step: NextStep) => void;
+  onUndo: () => void;
 }) {
   const { today, allTime } = progress;
   const byToken = new Map(progress.chords.map((c) => [c.token, c] as const));
@@ -92,18 +145,128 @@ function PanelBody({
         <Text variant="caption" tone="faint" className="font-semibold">
           Your chords
         </Text>
+        <LevelLine curriculum={curriculum} undoing={undoing} onUndo={onUndo} />
         <Stack gap="none">
-          {chords.map((token) => (
+          {curriculum.unlocked.map(({ token }) => (
             <ChordStandingLine
               key={token}
               token={token}
               standing={byToken.get(token) ?? null}
             />
           ))}
+          <NextStepLine
+            read={nextStep}
+            level={curriculum.level + 1}
+            readiness={readiness}
+            adding={adding}
+            onAdd={onAdd}
+          />
         </Stack>
       </Stack>
     </Stack>
   );
+}
+
+/**
+ * Which level the learner is on and what they are working through, with a way
+ * back from the last step. Undo takes back the step, not the practice: the
+ * rounds already played stay, and nothing else is lost.
+ */
+function LevelLine({
+  curriculum,
+  undoing,
+  onUndo,
+}: {
+  curriculum: Curriculum;
+  undoing: boolean;
+  onUndo: () => void;
+}) {
+  return (
+    // Named, because "Level 4" reads twice in this panel: the level the learner
+    // is ON, here, and the level the next step would REACH, in the locked row
+    // below. Anything looking for one of them needs to be able to say which.
+    <Line className="gap-xs" aria-label="Your level">
+      <Fill>
+        <Text variant="body" className="font-bold">
+          Level {curriculum.level}
+        </Text>
+      </Fill>
+      <Text variant="caption" tone="faint" className={rigidClass()}>
+        {stageById(curriculum.stage).title}
+      </Text>
+      {curriculum.level > 1 && (
+        <ControlSizeProvider size="sm">
+          <Button
+            variant="ghost"
+            className={rigidClass()}
+            loading={undoing}
+            title="Take the last step back. The rounds you have played stay."
+            onClick={onUndo}
+          >
+            Undo
+          </Button>
+        </ControlSizeProvider>
+      )}
+    </Line>
+  );
+}
+
+/**
+ * The next step at the foot of the list. Every answer the server can give is
+ * shown: the step itself, "the songs are still loading", or the end of the
+ * ladder — none of them is a blank space.
+ */
+function NextStepLine({
+  read,
+  level,
+  readiness,
+  adding,
+  onAdd,
+}: {
+  read: NextStepRead;
+  /** The level the next step would reach. */
+  level: number;
+  readiness: StepReadiness;
+  adding: boolean;
+  onAdd: (step: NextStep) => void;
+}) {
+  switch (read.kind) {
+    case "loading":
+      return <Loading variant="text" label="Working out your next step…" />;
+    case "error":
+      return (
+        <Text variant="caption" tone="muted" className="py-xs">
+          Your next step could not be worked out: {read.message}
+        </Text>
+      );
+    case "answer":
+      switch (read.answer.kind) {
+        case "not-ready":
+          return (
+            <Text variant="caption" tone="faint" className="py-xs">
+              Your next step arrives once the songs have loaded.
+            </Text>
+          );
+        case "done":
+          return (
+            <Text variant="caption" tone="faint" className="py-xs">
+              Nothing left to add — you have every chord these songs use.
+            </Text>
+          );
+        case "step": {
+          const { step } = read.answer;
+          return (
+            <NextStepRow
+              step={step}
+              level={level}
+              readiness={readiness}
+              adding={adding}
+              onAdd={() => onAdd(step)}
+            />
+          );
+        }
+      }
+  }
 }
 
 function Stat({ value, label }: { value: string; label: string }) {

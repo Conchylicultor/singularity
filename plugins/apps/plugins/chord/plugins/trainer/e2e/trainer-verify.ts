@@ -33,20 +33,34 @@ import {
   encodeProgressParams,
   type ChordProgress,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
-import { STARTING_CHORDS } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import { CurriculumSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import { chordKeyPlan } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import { z } from "zod";
 
 const r = report("chord trainer");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;
 
-/** An answer box: "Chord 2, 4 beats" (plus ": IV", ", right" once filled or checked). */
+/** An answer box: "Chord 2, 4 beats" (plus ": IV", ", given", ", right"…). */
 const BOX = 'button[aria-label^="Chord "][aria-label*=" beat"]';
+/** The boxes the round actually asks about — the given ones name themselves. */
+const ASKED_BOX = `${BOX}:not([aria-label*=", given"])`;
 const HEADING = "h2";
 
+/** The chords the learner has right now: the palette the progress is read for. */
+async function readCurriculum() {
+  const res = await agentFetch("/api/resources/chord.curriculum");
+  if (!res.ok) {
+    throw new Error(`GET /api/resources/chord.curriculum → HTTP ${res.status}`);
+  }
+  const { value } = z.object({ value: z.unknown() }).parse(await res.json());
+  return CurriculumSchema.parse(value);
+}
+
+const curriculum = await readCurriculum();
 const progressParams = encodeProgressParams({
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  tokens: [...STARTING_CHORDS],
+  tokens: curriculum.unlocked.map((u) => u.token),
 });
 
 async function readProgress(): Promise<ChordProgress> {
@@ -76,13 +90,16 @@ await withBrowser(async ({ session }) => {
 
   await boot(page, pathUrl("/chord"), { marker: BOX, timeoutMs });
   const heading = page.locator(HEADING).first();
-  const countBoxes = async () => page.locator(BOX).count();
+  const countBoxes = async () => page.locator(ASKED_BOX).count();
   const boxes = await countBoxes();
+  const allBoxes = await page.locator(BOX).count();
   const headingText = (await heading.innerText()).replace(/\s+/g, " ");
-  r.note(`first round: ${boxes} boxes, heading "${headingText}"`);
-  r.ok("the round has boxes", boxes > 0, String(boxes));
+  r.note(
+    `first round: ${boxes} of ${allBoxes} boxes asked, heading "${headingText}"`,
+  );
+  r.ok("the round asks for at least one box", boxes > 0, String(boxes));
   r.ok(
-    "the heading counts the same boxes",
+    "the heading counts the asked boxes only",
     headingText === `Chord 1 of ${boxes}`,
     headingText,
   );
@@ -145,10 +162,15 @@ await withBrowser(async ({ session }) => {
     .waitFor({ state: "visible", timeout: 60_000 });
   await page.waitForTimeout(1_000);
 
-  // ── 4. fill every box from the keyboard ────────────────────────────────────
+  // ── 4. fill every asked box from the keyboard ─────────────────────────────
 
   const total = await countBoxes();
-  const keys = ["1", "4", "5"];
+  // Only the digits that answer on their own: a digit several chords share
+  // arms a second keystroke, which this script has no reason to exercise.
+  const soloKeys = chordKeyPlan(curriculum.unlocked.map((u) => u.token))
+    .filter((group) => group.tokens.length === 1)
+    .map((group) => group.digit);
+  const keys = soloKeys.length > 0 ? soloKeys : ["1"];
   const rounds = page.waitForResponse(
     (res) =>
       new URL(res.url()).pathname === "/api/chord/rounds" &&

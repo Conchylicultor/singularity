@@ -6,4 +6,4 @@
  * the index (the trainer's) opens it and waits for it the same way this
  * plugin's own scripts do.
  */
-export { ensureReady, major, minor, postJson } from "./flows";
+export { ensureReady, major, minor, postJson, readStatus } from "./flows";

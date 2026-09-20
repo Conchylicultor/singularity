@@ -20,10 +20,37 @@ POST /api/chord/loops/find  { unlocked, target, shape?="bars-4", modes?, require
                               forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
   → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] }
 
-// For each chord outside `unlocked`: how many windows unlocking it adds.
+// For each chord outside `unlocked`: how many windows unlocking it adds, split
+// by the key mode of the window. Biggest single mode first.
 POST /api/chord/loops/next-chords  { unlocked, shape?, modes?, limit? = 20 (≤ 200) }
-  → { kind: "not-ready", status } | { kind: "ready", nextChords: { token, windows }[] }
+  → { kind: "not-ready", status }
+  | { kind: "ready", nextChords: { token, byMode: { major?: n, minor?: n, … } }[] }
+
+// Windows made only of this set: what a learner holding exactly these chords,
+// in these modes, could be given. The set is a parameter, so a caller can ask
+// about one nobody has — a whole family's seed, say.
+POST /api/chord/loops/count-in-set  { unlocked, shape?, modes? }
+  → { kind: "not-ready", status } | { kind: "ready", windows }
 ```
+
+Two counts are also exported from the **server barrel**, for a plugin in the
+same backend (the curriculum ranks its next step with them; HTTP between two
+server plugins would be the wrong seam):
+
+```ts
+countLoopsByNextChord(body)                        → NextChordCount[]   // the same rows as the endpoint
+countLoopsInSet({ unlocked, modes?, shape? })      → number             // windows made only of this set
+loadIndexStatus()                                  → IndexStatus        // gate your own read on it
+```
+
+Gate an in-process read on `loadIndexStatus()` the way the handlers here do:
+before the index is `ready` the counts are 0, which would read as "nothing
+left to learn" rather than "not loaded yet".
+
+`windowsInModes(count, modes)` (core) sums the modes a caller plays;
+`bestModeWindows(count)` is the largest single mode, which is the order the
+rows come in. Summing no mode at all throws: 0 for every chord is a ranking
+that never moves and never fails.
 
 `IndexStatus` is also the live resource `chord.index-status`
 (`chordIndexStatusResource`): `not-requested` | `loading { phase: queued |
@@ -53,11 +80,18 @@ a legal answer: there is no second query to top it up.
 
 The two reads answer about the same windows:
 
-- A chord's `windows` count is every window of the shape with exactly one chord
+- A chord's count is every window of the shape with exactly one chord
   outside the unlocked set — that chord — so unlocking it makes all of them
   `find` answers, except those on a video known to be unplayable. It counts
   windows sharing nothing with the set (a vamp on one chord), which is why it
   scans rather than starting from the GIN index.
+- **The count is per key mode, in one scan** (group by token AND `key_mode`,
+  fold, then `LIMIT` — so the limit counts chords, not rows). A chord worth
+  nothing in major can be the biggest step in minor, and a single total over
+  "whichever modes were scanned" is a number no caller can read. `modes` still
+  narrows which windows are scanned.
+- `countLoopsInSet` selects on `unlockedWindowsWhere`, the same rule `find`
+  uses with no target — so what it promises is exactly what can be played.
 - **The count ignores the videos, deliberately.** It only ranks chords, the
   dead videos fall roughly evenly across them, and with checks on demand most
   videos are `unknown` — so a filter would remove almost nothing, for a join
@@ -226,12 +260,17 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
+  - Exports (values):
+    - `countLoopsByNextChord`
+    - `countLoopsInSet`
+    - `loadIndexStatus`
   - Register: `defineSupervisedJob('chord.song-index.load')`
   - Resources: `chord.index-status` (push)
   - Routes:
     - `POST /api/chord/index/ensure`
     - `POST /api/chord/loops/find`
     - `POST /api/chord/loops/next-chords`
+    - `POST /api/chord/loops/count-in-set`
 - Core:
   - Uses:
     - `apps/chord/video-availability.VideoStatusSchema`
@@ -255,6 +294,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `ChordFeature`
     - `ChordToken`
     - `ChordTokenParts`
+    - `CountLoopsInSetBody`
     - `DerivedSection`
     - `DeriveSectionInput`
     - `FindLoopsBody`
@@ -284,11 +324,13 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `StoredChord`
     - `TokenizedChord`
     - `VideoFractionAlignment`
+    - `WindowsByMode`
   - Exports (values):
     - `alignmentFromSheetSage`
     - `AlignmentSchema`
     - `beatTimesAlignment`
     - `beatToSeconds`
+    - `bestModeWindows`
     - `CHORD_FEATURES`
     - `chordFeatures`
     - `chordIndexStatusResource`
@@ -297,6 +339,9 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `chordTokenFromParts`
     - `ChordTokenSchema`
     - `compactChord`
+    - `CountLoopsInSetBodySchema`
+    - `countLoopsInSetEndpoint`
+    - `DEFAULT_LOOP_SHAPE`
     - `deriveSection`
     - `ensureChordIndexEndpoint`
     - `expandChord`
@@ -341,8 +386,11 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `SnapshotSkipSchema`
     - `StoredChordSchema`
     - `TokenizedChordSchema`
+    - `WindowsByModeSchema`
+    - `windowsInModes`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/curriculum`
     - `apps/chord/progress`
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`

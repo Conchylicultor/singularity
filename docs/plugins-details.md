@@ -556,6 +556,118 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
+        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum standing), useNextStep (the step on offer, re-read after every write), useUnlockStep / useUndoStep (the two writes, whose conflicts surface as a toast), and the two places the locked next step shows — <NextStepPad>, the ghost chord button at the end of the grid, and <NextStepRow>, the panel row that draws every kind of step. The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.
+          - Server:
+            - Contributes: `resource.declare` "chord.curriculum"
+            - Uses:
+              - `apps/chord/song-index.countLoopsByNextChord`
+              - `apps/chord/song-index.countLoopsInSet`
+              - `apps/chord/song-index.loadIndexStatus`
+              - `database.db`
+              - `database/sql-column.parsedJson`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+            - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
+            - Resources: `chord.curriculum` (invalidate)
+            - Routes:
+              - `POST /api/chord/curriculum/next`
+              - `POST /api/chord/curriculum/unlock`
+              - `POST /api/chord/curriculum/undo`
+          - Web:
+            - Uses:
+              - `apps/chord/vocabulary.ChordNumeral`
+              - `apps/chord/vocabulary.chordToneStyle`
+              - `infra/endpoints.endpointQueryKey`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpoint`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/center.Center`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useResource`
+              - `shell/toast.showToast`
+            - Exports (types):
+              - `NextStepRead`
+              - `StepReadiness`
+              - `StepWrite`
+            - Exports (values):
+              - `NextStepPad`
+              - `NextStepRow`
+              - `stepReadiness`
+              - `useCurriculum`
+              - `useNextStep`
+              - `useUndoStep`
+              - `useUnlockStep`
+          - Core:
+            - Uses:
+              - `apps/chord/song-index.ChordToken`
+              - `apps/chord/song-index.chordTokenFromParts`
+              - `apps/chord/song-index.ChordTokenParts`
+              - `apps/chord/song-index.ChordTokenSchema`
+              - `apps/chord/song-index.IndexStatusSchema`
+              - `apps/chord/song-index.parseChordToken`
+              - `infra/endpoints.defineEndpoint`
+              - `integrations/hooktheory.HookpadModeSchema`
+              - `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `AskedBox`
+              - `AskedOptions`
+              - `AskRule`
+              - `ChordCandidate`
+              - `Curriculum`
+              - `CurriculumLevel`
+              - `FirstLevel`
+              - `LadderCounts`
+              - `LadderState`
+              - `NextStep`
+              - `NextStepAnswer`
+              - `NextStepChoice`
+              - `Stage`
+              - `StageEntry`
+              - `StageId`
+              - `UnlockedChord`
+              - `UnlockStepBody`
+            - Exports (values):
+              - `ASK_RULES`
+              - `askedPositions`
+              - `AskRuleSchema`
+              - `askRuleStep`
+              - `chooseNextStep`
+              - `chordCurriculumResource`
+              - `curriculumFromSteps`
+              - `CurriculumSchema`
+              - `FIRST_LEVEL`
+              - `firstCurriculum`
+              - `FRESH_ANSWERS`
+              - `minStepWindows`
+              - `nextAskRule`
+              - `nextCurriculumStepEndpoint`
+              - `NextStepAnswerSchema`
+              - `NextStepSchema`
+              - `sameStep`
+              - `STAGE_HOLD_SHARE`
+              - `STAGE_IDS`
+              - `stageById`
+              - `StageIdSchema`
+              - `stageIsOpen`
+              - `stageOf`
+              - `stageOrder`
+              - `STAGES`
+              - `targetIsIsolated`
+              - `undoCurriculumStepEndpoint`
+              - `unlockCurriculumStepEndpoint`
+              - `UnlockedChordSchema`
+              - `UnlockStepBodySchema`
+              - `unopenedStages`
+          - Cross-plugin:
+            - Imported by: `apps/chord/trainer`
         - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
           - Server:
             - Contributes: `resource.declare` "chord.progress"
@@ -660,12 +772,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs/supervised-job.defineSupervisedJob`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
+            - Exports (values):
+              - `countLoopsByNextChord`
+              - `countLoopsInSet`
+              - `loadIndexStatus`
             - Register: `defineSupervisedJob('chord.song-index.load')`
             - Resources: `chord.index-status` (push)
             - Routes:
               - `POST /api/chord/index/ensure`
               - `POST /api/chord/loops/find`
               - `POST /api/chord/loops/next-chords`
+              - `POST /api/chord/loops/count-in-set`
           - Core:
             - Uses:
               - `apps/chord/video-availability.VideoStatusSchema`
@@ -689,6 +806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ChordFeature`
               - `ChordToken`
               - `ChordTokenParts`
+              - `CountLoopsInSetBody`
               - `DerivedSection`
               - `DeriveSectionInput`
               - `FindLoopsBody`
@@ -718,11 +836,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `StoredChord`
               - `TokenizedChord`
               - `VideoFractionAlignment`
+              - `WindowsByMode`
             - Exports (values):
               - `alignmentFromSheetSage`
               - `AlignmentSchema`
               - `beatTimesAlignment`
               - `beatToSeconds`
+              - `bestModeWindows`
               - `CHORD_FEATURES`
               - `chordFeatures`
               - `chordIndexStatusResource`
@@ -731,6 +851,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `chordTokenFromParts`
               - `ChordTokenSchema`
               - `compactChord`
+              - `CountLoopsInSetBodySchema`
+              - `countLoopsInSetEndpoint`
+              - `DEFAULT_LOOP_SHAPE`
               - `deriveSection`
               - `ensureChordIndexEndpoint`
               - `expandChord`
@@ -775,8 +898,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SnapshotSkipSchema`
               - `StoredChordSchema`
               - `TokenizedChordSchema`
+              - `WindowsByModeSchema`
+              - `windowsInModes`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/curriculum`
               - `apps/chord/progress`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
@@ -785,7 +911,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `chord-trainer.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "chord-trainer"
             - Uses:
+              - `apps/chord/curriculum.NextStepPad`
+              - `apps/chord/curriculum.NextStepRead`
+              - `apps/chord/curriculum.NextStepRow`
+              - `apps/chord/curriculum.stepReadiness`
+              - `apps/chord/curriculum.StepReadiness`
+              - `apps/chord/curriculum.useCurriculum`
+              - `apps/chord/curriculum.useNextStep`
+              - `apps/chord/curriculum.useUndoStep`
+              - `apps/chord/curriculum.useUnlockStep`
               - `apps/chord/song-index.SongIndexGate`
+              - `apps/chord/vocabulary.ChordNumeral`
+              - `apps/chord/vocabulary.chordToneStyle`
               - `apps/sonata/audio/instruments.InstrumentVoices`
               - `apps/sonata/audio/instruments.SonataAudio`
               - `infra/endpoints.useEndpointMutation`
@@ -811,6 +948,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/yield.yieldClass`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -903,11 +1041,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `videoStatusSummaryEndpoint`
           - Cross-plugin:
             - Imported by: `apps/chord/song-index`
-        - **`vocabulary`** — What the Chord trainer says about a chord token: its Roman numeral (with quality mark and inversion figure), its scale degree, function and 1–7 key, its notes on a piano in a given key, and the placeholder starting chords.
+        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's locked next step, so one chord reads the same everywhere.
+          - Web:
+            - Uses: `primitives/css/ui-kit.cn`
+            - Exports (values):
+              - `ChordNumeral`
+              - `chordToneStyle`
           - Core:
             - Uses:
               - `apps/chord/song-index.ChordToken`
-              - `apps/chord/song-index.chordTokenFromParts`
               - `apps/chord/song-index.parseChordToken`
               - `apps/sonata/theory.CHORD_TEMPLATES`
               - `apps/sonata/theory.chordPitches`
@@ -915,16 +1057,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/theory.invertVoicing`
               - `apps/sonata/theory.romanNumeral`
             - Exports (types):
+              - `ChordDigit`
               - `ChordFunction`
+              - `ChordKeyGroup`
               - `ChordLabel`
             - Exports (values):
               - `chordDegree`
+              - `chordDigit`
               - `chordFunction`
+              - `chordKeyPlan`
               - `chordLabel`
-              - `chordShortcutKey`
               - `chordVoicing`
-              - `STARTING_CHORDS`
-              - `STARTING_MODES`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/chord/curriculum`
+              - `apps/chord/trainer`
     - **`debug`** — Debug app.
       - Plugins:
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
@@ -11868,6 +12015,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
+      - `apps/chord/curriculum`
       - `apps/chord/progress`
       - `apps/chord/song-index`
       - `apps/chord/video-availability`
@@ -12392,6 +12540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/curriculum`
           - `apps/chord/progress`
           - `apps/chord/song-index`
           - `apps/chord/video-availability`
@@ -16846,6 +16995,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
+              - `apps/chord/curriculum`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/deploy/deploy-history/investigate-failure`
@@ -17584,6 +17734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/chord/curriculum`
           - `apps/chord/progress`
           - `apps/chord/song-index`
           - `apps/chord/trainer`
@@ -19734,6 +19885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `youtubeVideoId`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/curriculum`
           - `apps/chord/progress`
           - `apps/chord/song-index`
           - `apps/chord/trainer`
@@ -23634,6 +23786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/agent-manager/welcome`
               - `apps/browser/webview`
+              - `apps/chord/curriculum`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/events/shell`
@@ -24036,6 +24189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
+              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deploy-history`
@@ -24391,6 +24545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/agent-manager/shell`
               - `apps/browser/shell`
+              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/event-list`
@@ -24721,6 +24876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
+              - `apps/chord/curriculum`
               - `apps/chord/shell`
               - `apps/chord/trainer`
               - `apps/pages/welcome/recent-pages`
@@ -25033,6 +25189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/chord/curriculum`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
@@ -25531,6 +25688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/chord/curriculum`
               - `apps/chord/shell`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
@@ -26068,8 +26226,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/chord/curriculum`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
+              - `apps/chord/vocabulary`
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
@@ -28262,6 +28422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/chord/curriculum`
           - `apps/chord/progress`
           - `apps/chord/song-index`
           - `apps/chord/trainer`
@@ -32215,6 +32376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `showToast`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/curriculum`
           - `apps/chord/trainer`
           - `apps/events/sources/refresh-all`
           - `apps/pages/page-tree`

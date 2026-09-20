@@ -17,14 +17,16 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  ChordNumeral,
+  chordToneStyle,
+} from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
+import {
   gridBeatAt,
   sheetScore,
   type AnswerSheet,
   type Box,
   type Round,
 } from "../../core";
-import { chordToneStyle } from "../internal/chord-tone";
-import { ChordNumeral } from "./chord-numeral";
 
 /** Half the gap between two boxes, in px: each box gives it up on both sides. */
 const HALF_GAP = 3;
@@ -39,9 +41,14 @@ function beatX(beat: number, beats: number, pxOffset = HALF_GAP): string {
  * of the window's beats, with a ruler of beat and bar ticks under it and a
  * playhead crossing the box that is sounding.
  *
- * Before the check, a click selects a box. After it, every box shows the
- * chord that played, marked right or wrong, a wrong one carries a "you: X"
- * tag (the answer given), and a click replays the song over that box.
+ * Some boxes are **given**: the round is not asking about them, so they show
+ * their chord from the start, dimmed and flat, and are not click targets until
+ * the check. The heading counts only the boxes the learner has to name.
+ *
+ * Before the check, a click selects an asked box. After it, every box shows the
+ * chord that played — the asked ones marked right or wrong, a wrong one
+ * carrying a "you: X" tag (the answer given) — and a click replays the song
+ * over that box, given boxes included: they are part of the loop.
  */
 export function AnswerStrip({
   round,
@@ -67,7 +74,14 @@ export function AnswerStrip({
   onHearAnswer: (answer: ChordToken) => void;
 }) {
   const { beats, beatsPerBar } = round.grid;
-  const total = round.boxes.length;
+  // The heading counts the boxes the learner must name, never the given ones:
+  // "Chord 1 of 2" on a four-chord loop where two are given.
+  const askedPositions = round.boxes
+    .filter((box) => sheet.asked[box.position] === true)
+    .map((box) => box.position);
+  const total = askedPositions.length;
+  const asking =
+    sheet.selected === null ? 0 : askedPositions.indexOf(sheet.selected);
   const score = sheet.checked ? sheetScore(sheet, round) : null;
 
   return (
@@ -80,7 +94,7 @@ export function AnswerStrip({
           <Text as="h2" variant="heading" className="font-bold">
             {score === null ? (
               <>
-                Chord {(sheet.selected ?? 0) + 1}{" "}
+                Chord {Math.max(asking, 0) + 1}{" "}
                 <Text tone="faint" className="font-medium">
                   of {total}
                 </Text>
@@ -103,6 +117,7 @@ export function AnswerStrip({
                 box={box}
                 beats={beats}
                 answer={sheet.answers[box.position] ?? null}
+                asked={sheet.asked[box.position] === true}
                 checked={sheet.checked}
                 selected={sheet.selected === box.position}
                 sounding={soundingPosition === box.position}
@@ -114,6 +129,7 @@ export function AnswerStrip({
             ))}
             {sheet.checked &&
               round.boxes.map((box) => {
+                if (sheet.asked[box.position] !== true) return null;
                 const answer = sheet.answers[box.position] ?? null;
                 return answer === null || answer === box.token ? null : (
                   <YourAnswer
@@ -148,6 +164,7 @@ function AnswerBox({
   box,
   beats,
   answer,
+  asked,
   checked,
   selected,
   sounding,
@@ -159,6 +176,8 @@ function AnswerBox({
   box: Box;
   beats: number;
   answer: ChordToken | null;
+  /** False on a GIVEN box: its chord was handed over, not asked for. */
+  asked: boolean;
   checked: boolean;
   selected: boolean;
   sounding: boolean;
@@ -168,9 +187,11 @@ function AnswerBox({
   onReplay: (box: Box) => void;
 }) {
   // Before the check a box shows the answer given; after it, the chord that
-  // played, with a mark saying whether the answer was right.
+  // played, with a mark saying whether the answer was right. A given box shows
+  // its own chord throughout and is never marked — nobody named it.
   const shown = checked ? box.token : answer;
-  const mark = checked ? (answer === box.token ? "ok" : "bad") : undefined;
+  const mark =
+    checked && asked ? (answer === box.token ? "ok" : "bad") : undefined;
   const beatsLabel = `${String(box.gridSpan)} beat${box.gridSpan === 1 ? "" : "s"}`;
   return (
     <button
@@ -186,16 +207,21 @@ function AnswerBox({
         ),
         ...(shown === null ? {} : chordToneStyle(shown)),
       }}
-      data-filled={shown === null ? undefined : ""}
+      data-given={asked ? undefined : ""}
+      data-filled={asked && shown !== null ? "" : undefined}
       data-selected={selected ? "" : undefined}
       data-mark={mark}
       data-now={checked && sounding ? "" : undefined}
       data-pop={popped && !checked ? "" : undefined}
-      disabled={checked && !canReplay}
+      // A given box is nothing to press before the check; after it, it replays
+      // its stretch of the song like any other box.
+      disabled={checked ? !canReplay : !asked}
       aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
         shown === null ? "" : `: ${chordLabel(shown).text}`
-      }${mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"}`}
-      aria-pressed={checked ? undefined : selected}
+      }${asked ? "" : ", given"}${
+        mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
+      }`}
+      aria-pressed={checked || !asked ? undefined : selected}
       onClick={() => (checked ? onReplay(box) : onSelect(box.position))}
     >
       <Center as="span" className="size-full">

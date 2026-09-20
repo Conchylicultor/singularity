@@ -18,6 +18,9 @@ import type { ChordToken } from "./token";
 export const LOOP_SHAPE_IDS = ["bars-4"] as const;
 export type LoopShapeId = (typeof LOOP_SHAPE_IDS)[number];
 
+/** The shape a read uses when the caller names none — the one the trainer plays. */
+export const DEFAULT_LOOP_SHAPE: LoopShapeId = "bars-4";
+
 /** What a loop shape reads of a section. Beats are Hookpad's, 1-based. */
 export type LoopSectionInput = {
   chords: readonly IndexedChord[];

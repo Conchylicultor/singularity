@@ -49,6 +49,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps-core/tab-bar`
     - `apps/agent-manager/welcome`
     - `apps/browser/webview`
+    - `apps/chord/curriculum`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/events/shell`

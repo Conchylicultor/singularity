@@ -673,6 +673,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/start-page`
+    - `apps/chord/curriculum`
     - `apps/chord/progress`
     - `apps/chord/song-index`
     - `apps/chord/trainer`

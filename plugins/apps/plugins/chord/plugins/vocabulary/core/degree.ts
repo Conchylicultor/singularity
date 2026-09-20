@@ -42,9 +42,3 @@ export function chordFunction(token: ChordToken): ChordFunction | null {
   if (fn === undefined) throw new Error(`No function for degree ${degree}`);
   return fn;
 }
-
-/** The key that answers this chord, "1" (I) to "7" (vii); `null` for a root outside the major scale. */
-export function chordShortcutKey(token: ChordToken): string | null {
-  const degree = chordDegree(token);
-  return degree === null ? null : String(degree + 1);
-}

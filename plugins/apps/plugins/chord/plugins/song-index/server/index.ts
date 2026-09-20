@@ -10,6 +10,7 @@ import {
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { BackupSource } from "@plugins/backup/server";
 import {
+  countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
   findLoopsEndpoint,
   nextChordsEndpoint,
@@ -18,6 +19,7 @@ import { songIndexConfig } from "../shared/config";
 import { assembleSongIndexSnapshot } from "./internal/backup-source";
 import { ensureIndexAtBoot } from "./internal/ensure";
 import {
+  handleCountLoopsInSet,
   handleEnsureIndex,
   handleFindLoops,
   handleNextChords,
@@ -30,6 +32,14 @@ import {
   _chordSections,
 } from "./internal/tables";
 
+// What another server plugin in this backend reads in process — the index is a
+// server plugin like any other, and HTTP between two of them would be the wrong
+// seam. The two counts a curriculum ranks its next step with, and the readiness
+// read its own endpoint gates on, so it answers `not-ready` with the status
+// exactly as the handlers here do rather than "nothing left to learn".
+export { countLoopsByNextChord, countLoopsInSet } from "./internal/find";
+export { loadIndexStatus } from "./internal/state";
+
 export default {
   description:
     "The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.",
@@ -37,6 +47,7 @@ export default {
     [ensureChordIndexEndpoint.route]: handleEnsureIndex,
     [findLoopsEndpoint.route]: handleFindLoops,
     [nextChordsEndpoint.route]: handleNextChords,
+    [countLoopsInSetEndpoint.route]: handleCountLoopsInSet,
   },
   register: [songIndexLoadJob],
   contributions: [

@@ -486,8 +486,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/chord/curriculum`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
+    - `apps/chord/vocabulary`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`
     - `apps/deploy/health`

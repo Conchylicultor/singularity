@@ -19,14 +19,20 @@ the prototype `proto-1789461303-updb` at its default options.
   `needs-duration`. An alignment of `none` throws: `find` never returns one.
 - Answer time: a box's clock starts the first time its chord finishes sounding
   in the round; `clampAnswerMs` bounds the time to 0.3–30 s.
-- **The answer sheet** (`sheet.ts`), pure: the first empty box starts selected;
-  a fill writes the selected box and moves to the next empty box after it (else
-  the first empty one); ← / → move; Backspace clears the box, or the one before
-  it when it is empty; the last fill checks the sheet, which then never changes.
-  A changed answer keeps its last fill's time. `recordRoundBody` is the body of
-  `POST /api/chord/rounds`; `sheetScore` the heading's numbers.
+- **The answer sheet** (`sheet.ts`), pure. `emptySheet(round, asked)` takes the
+  positions the learner must name — the curriculum's decision, made outside
+  (`asked` empty, out of range or repeated throws). The other boxes are
+  **given**: they come already filled with their own chord and cannot be
+  selected, cleared or refilled, so the arrows step over them and Backspace
+  reaches past them. The first asked box starts selected; a fill writes the
+  selected box and moves to the next empty box after it (else the first empty
+  one) — always an asked box, since a given one is never empty; the fill that
+  leaves none empty checks the sheet, which then never changes. A changed
+  answer keeps its last fill's time. `sheetScore` counts asked boxes only, and
+  `recordRoundBody` (the body of `POST /api/chord/rounds`) sends only their
+  answers, with the given boxes as `givenCount`.
 - **When a chord has finished sounding** (`heard.ts`): `finishedBoxes(boxes,
-  prev, next)` between two playhead reads — a forward move finishes every box
+prev, next)` between two playhead reads — a forward move finishes every box
   whose end it crosses (within 50 ms), a jump back (the loop wrapping) finishes
   the box it cut off within 0.3 s of its end. A box filled before its chord
   finished counts the minimum, 0.3 s.
@@ -39,22 +45,52 @@ the prototype `proto-1789461303-updb` at its default options.
 `trainerPane` (route `chord-trainer`, segment `""`, `appIndex`) renders
 `<SongIndexGate><TrainerScreen/></SongIndexGate>`.
 
+- **The palette comes from the curriculum** (`useCurriculum`): the unlocked
+  chords, the key modes and the ask rule. Until the standing lands the screen
+  shows its loading state — three buttons that are about to become four would
+  be a claim about what this learner has.
 - **The loop queue** (`useLoopQueue`): the loop on screen is the queue's
   first. When it is the last one left, 10 more are asked for
-  (`findLoopsEndpoint`: the starting chords, major, the weakest chord as
-  target, the sections of the last 20 loops moved past and of the ones still
-  queued left out). Nothing is asked until the progress has loaded. An empty
-  answer shows "No song fits these chords yet" (with Try again), never a blank
-  screen; `not-ready` and a failed query show in the same place.
+  (`findLoopsEndpoint`: the unlocked chords, the curriculum's modes, the
+  weakest chord as target, the sections of the last 20 loops moved past and of
+  the ones still queued left out). Nothing is asked until the progress has
+  loaded. An empty answer shows "No song fits these chords yet" (with Try
+  again), never a blank screen; `not-ready` and a failed query show in the same
+  place. **Each queued loop carries the target its batch was asked for**, so
+  the round asks about the chord the loop was chosen for — re-reading the
+  weakest chord when the round is built would name a different one, since the
+  progress moves in between. **Unlocking drops the queue.** The loops still
+  waiting were drawn from the old palette, so a step would otherwise take a
+  whole batch to be heard; everything behind the loop on screen goes and a
+  fresh query runs at once (the loop on screen stays — the learner may be
+  mid-answer). **Undo drops it too**: taking a step back removes a chord, and
+  the round on screen was very likely chosen for it, so a round the new palette
+  cannot hold goes with the rest rather than asking for a chord the learner no
+  longer has. The sections already played are remembered across the change.
+- **Which boxes the round asks about** (`askedPositions`, curriculum): the
+  chord being practised early on, then the cadence, then the whole loop — and
+  always the target alone while it is a chord unlocked ABOVE the level the rung
+  was set at and still settling (the curriculum's `askRuleLevel`; a chord the
+  learner already had when they paid for the rung is not isolated, or paying
+  would change nothing). The rest are **given**: they
+  show their chord in its own colour, dimmed and flat, are not click targets
+  before the check, and are never marked right or wrong. After the check they
+  replay their stretch of the song like any other box, because they are part of
+  the loop. The heading counts asked boxes only ("Chord 1 of 2").
 - **The player** stays mounted from loop to loop (a new video loads in place).
   Browsers block sound until the page is used, so the first loop waits for Play;
   after a Play or a Next every loop starts by itself (`autoplay`).
 - **Answer timing** (`useHeardClock`): watches the playhead, one read per
   animation frame while the video plays, and stamps each box the first time its
   chord finishes. Nothing re-renders for it.
-- **Keys** (surface-scoped, `useSurfaceShortcuts`): 1–7 answer by scale degree
-  (only the unlocked chords' keys), ← / → move, Backspace clears, Space plays or
-  pauses, Enter moves to the next song.
+- **Keys** (surface-scoped, `useSurfaceShortcuts`; `useChordKeys`): the chord's
+  root digit answers (`chordKeyPlan`, so ♭VII is on the 7). A digit several
+  unlocked chords share instead **lights** them, numbered 1…n on their buttons,
+  and the next number picks one; Escape drops the pick, and so does every other
+  key of the trainer. One registered shortcut per number does both jobs, so
+  nothing else on the page hears the second stroke. The clock does not stop for
+  it: a two-stroke answer costs what it costs. ← / → move, Backspace clears,
+  Space plays or pauses, Enter moves to the next song.
 - **After the check**: a box replays the song over that box once
   (`controller.playRange`), then the loop goes on; a chord button, or the
   "you: IV" tag under a wrong box, plays that chord on the piano in the song's
@@ -74,38 +110,51 @@ the prototype `proto-1789461303-updb` at its default options.
   cuts the one before it. A failure (no default instrument, samples that do not
   load) shows a toast and is rethrown.
 - **The progress panel** (`ProgressPanel`): today (songs, % right, seconds per
-  chord), an all-time line, and "Your chords" — one line per unlocked chord:
-  chip, accuracy meter marked at 90 %, accuracy, median time (red over 2 s),
-  and a check once mastered. It is a **plain component, not a DataView**: a
-  small fixed status list (the unlocked set, a few dozen chords at most, in the
-  curriculum's order), not a collection anyone searches, sorts or filters. It
-  shows a loading state until `chord.progress` has its first value.
+  chord), an all-time line, and "Your chords" — the level and the stage being
+  worked through, then one line per unlocked chord **in unlock order** (chip,
+  accuracy meter marked at 90 %, accuracy, median time red over 2 s, a check
+  once mastered), then the locked next step (`<NextStepRow>`). Undo sits beside
+  the level: it takes back the last step, not the rounds already played. The
+  panel reads "Level N" twice — the level the learner is on, and the one the
+  locked row would reach — so the first line is named `Your level`. It is
+  a **plain component, not a DataView**: a small fixed status list (the
+  unlocked set, a few dozen chords at most), not a collection anyone searches,
+  sorts or filters. It shows a loading state until `chord.progress` has its
+  first value.
+- **The locked next step** shows in two places, both from `curriculum/web`:
+  `<NextStepPad>` at the end of the button grid (chord steps only — the grid
+  has no way to draw a key mode) and `<NextStepRow>` in the panel (every kind).
+  Both take `stepReadiness(unlocked, progress)`, which has **three** answers:
+  until the standing lands nobody can say whether the learner is ready, so the
+  controls wait rather than reading "Add anyway" and taking it back.
 
 ### Paint
 
-`web/components/trainer.css` holds the bespoke paint only — tile colours,
-box states (`data-filled`, `data-selected`, `data-mark`, `data-now`,
-`data-pop`), the chord buttons, meters, the numeral's display sizes (which the
-type scale has no rung for, and one of which follows the box's width through a
-container query). Layout stays with the layout primitives: the boxes, ruler
-ticks, playhead and badges are placed by runtime numbers (`placedStyle`, a
-fraction of the window's beats), rows are `Line` + `Fill`, the page's two
-tracks are the one raw grid (a container query at 1000 px, with a named
-disable).
+`web/components/trainer.css` holds the bespoke paint only — box states
+(`data-given`, `data-filled`, `data-selected`, `data-mark`, `data-now`,
+`data-pop`), the chord buttons (`data-lit`, `data-picking`), meters, the
+numeral's display sizes (which the type scale has no rung for, and one of which
+follows the box's width through a container query). Layout stays with the
+layout primitives: the boxes, ruler ticks, playhead and badges are placed by
+runtime numbers (`placedStyle`, a fraction of the window's beats), rows are
+`Line` + `Fill`, the page's two tracks are the one raw grid (a container query
+at 1000 px, with a named disable).
 
-Colours read the chord theme: `chordToneStyle(token)` sets `--fn` (the
-degree's `--categorical-N`, or `--categorical-10` outside the scale) and
-`--fn-depth`; `.chord-tone` derives the solid tile (`--fn-bg`, the colour
-deepened toward black in OKLCH) and the numeral on it (`--fn-ink`).
+A chord's own colour and numeral are drawn the same wherever they appear, so
+they live with the vocabulary (`vocabulary/web`: `chordToneStyle`,
+`<ChordNumeral>`, `chord-paint.css`) and the curriculum's locked step draws
+them too. The ghost pad's box (`curriculum/web`) matches `.chord-pad`'s height
+and corners so the two sit in one grid.
 
 ## e2e
 
 `e2e/trainer-verify.ts`: the index reaches ready; /chord shows a round whose
-heading counts its boxes; Play leads to a playback report (playing or an
-error — headless Chromium may not play YouTube); every box is filled from the
-keyboard; the score heading, the saved round, and `chord.progress` (one more
-song, one more answer per box) and the side panel's all-time line are checked.
-
+heading counts its **asked** boxes (the given ones name themselves, ", given",
+which is how the script tells them apart); Play leads to a playback report
+(playing or an error — headless Chromium may not play YouTube); every asked box
+is filled from the keyboard, using only digits that answer on their own; the
+score heading, the saved round, `chord.progress` (one more song, one more
+answer per asked box) and the side panel's all-time line are checked.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -116,7 +165,18 @@ song, one more answer per box) and the side panel's all-time line are checked.
   - Slots: `chord-trainer.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "chord-trainer"
   - Uses:
+    - `apps/chord/curriculum.NextStepPad`
+    - `apps/chord/curriculum.NextStepRead`
+    - `apps/chord/curriculum.NextStepRow`
+    - `apps/chord/curriculum.stepReadiness`
+    - `apps/chord/curriculum.StepReadiness`
+    - `apps/chord/curriculum.useCurriculum`
+    - `apps/chord/curriculum.useNextStep`
+    - `apps/chord/curriculum.useUndoStep`
+    - `apps/chord/curriculum.useUnlockStep`
     - `apps/chord/song-index.SongIndexGate`
+    - `apps/chord/vocabulary.ChordNumeral`
+    - `apps/chord/vocabulary.chordToneStyle`
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
     - `infra/endpoints.useEndpointMutation`
@@ -142,6 +202,7 @@ song, one more answer per box) and the side panel's all-time line are checked.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

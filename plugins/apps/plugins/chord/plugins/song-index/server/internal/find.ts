@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   and,
   arrayContained,
@@ -13,6 +14,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   UNPLAYABLE_STATUSES,
@@ -23,12 +25,15 @@ import {
   ensureVideoStatus,
 } from "@plugins/apps/plugins/chord/plugins/video-availability/server";
 import {
+  DEFAULT_LOOP_SHAPE,
   LoopWindowFieldsSchema,
   NextChordCountSchema,
   chordOverlapsWindow,
   expandChord,
+  type ChordToken,
   type FindLoopsBody,
   type LoopCandidate,
+  type LoopShapeId,
   type NextChordCount,
   type NextChordsBody,
   type StoredChord,
@@ -36,14 +41,50 @@ import {
 } from "../../core";
 import { _chordLoopWindows, _chordSections } from "./tables";
 
-// ── The two reads over the loop windows ──────────────────────────────────────
+// ── The reads over the loop windows ──────────────────────────────────────────
 //
-// Both take the unlocked set as an array parameter and let the GIN index on
-// `chord_tokens` do the selective part. Neither checks readiness: the handlers
-// answer `not-ready` before calling them.
+// `find` hands the trainer loops to play; the two counts rank what to unlock
+// next. Each takes the unlocked set as an array parameter and lets the GIN
+// index on `chord_tokens` do the selective part. None checks readiness: the
+// handlers answer `not-ready` before calling them, and a curriculum calling
+// the counts in process does the same.
 
 const w = _chordLoopWindows;
 const s = _chordSections;
+
+/**
+ * The one rule for "a window this learner can be given": a window of the shape,
+ * in one of the modes, every chord of it unlocked — and, when a target is
+ * named, holding that chord. `find` and `countLoopsInSet` both go through it,
+ * so the two can never disagree about which windows are playable.
+ *
+ * The `<@` test is the GIN-indexed one; `@>` on the target is the selective
+ * part `find` leads with.
+ */
+export function unlockedWindowsWhere(args: {
+  shape: LoopShapeId;
+  unlocked: readonly ChordToken[];
+  /** The chord being learned: keep only windows holding it. */
+  target?: ChordToken;
+  modes?: readonly HookpadMode[];
+}): SQL {
+  if (args.unlocked.length === 0) {
+    throw new Error(
+      "an empty unlocked set matches no window: nothing has been unlocked yet",
+    );
+  }
+  const conditions: SQL[] = [eq(w.shape, args.shape)];
+  // Selective: the windows holding the target, straight off the GIN index.
+  if (args.target !== undefined)
+    conditions.push(arrayContains(w.chordTokens, [args.target]));
+  // Every chord of the window is unlocked.
+  conditions.push(arrayContained(w.chordTokens, [...args.unlocked]));
+  if (args.modes) conditions.push(inArray(w.keyMode, [...args.modes]));
+  const where = and(...conditions);
+  if (where === undefined)
+    throw new Error("unreachable: unlockedWindowsWhere always has conditions");
+  return where;
+}
 
 /**
  * The WHERE of `findLoopWindows` over the windows, built apart so its SQL can
@@ -54,13 +95,13 @@ const s = _chordSections;
  */
 export function findLoopsWhere(body: FindLoopsBody): SQL {
   const conditions: SQL[] = [
-    eq(w.shape, body.shape),
-    // Selective: the windows holding the target, straight off the GIN index.
-    arrayContains(w.chordTokens, [body.target]),
-    // Every chord of the window is unlocked.
-    arrayContained(w.chordTokens, body.unlocked),
+    unlockedWindowsWhere({
+      shape: body.shape,
+      unlocked: body.unlocked,
+      target: body.target,
+      modes: body.modes,
+    }),
   ];
-  if (body.modes) conditions.push(inArray(w.keyMode, body.modes));
   if (body.requireFeatures)
     conditions.push(arrayContains(w.features, body.requireFeatures));
   if (body.forbidFeatures)
@@ -255,23 +296,34 @@ export function nextChordsQuery(body: NextChordsBody): SQL {
   const unlocked = sql`${sql.param(body.unlocked)}::text[]`;
   const modes = body.modes ? sql`AND ${inArray(w.keyMode, body.modes)}` : sql``;
   return sql`
-    SELECT foreign_tokens[1] AS token, count(*)::int AS windows
+    SELECT token, jsonb_object_agg(key_mode, windows) AS "byMode"
     FROM (
-      SELECT array(
-        SELECT t FROM unnest(${w.chordTokens}) AS t WHERE NOT (t = ANY(${unlocked}))
-      ) AS foreign_tokens
-      FROM ${w}
-      WHERE ${w.shape} = ${body.shape}
-        ${modes}
-    ) AS candidates
-    WHERE cardinality(foreign_tokens) = 1
-    GROUP BY 1
-    ORDER BY 2 DESC, 1
+      SELECT foreign_tokens[1] AS token, key_mode, count(*)::int AS windows
+      FROM (
+        SELECT
+          array(
+            SELECT t FROM unnest(${w.chordTokens}) AS t WHERE NOT (t = ANY(${unlocked}))
+          ) AS foreign_tokens,
+          ${w.keyMode} AS key_mode
+        FROM ${w}
+        WHERE ${w.shape} = ${body.shape}
+          ${modes}
+      ) AS candidates
+      WHERE cardinality(foreign_tokens) = 1
+      GROUP BY 1, 2
+    ) AS per_mode
+    GROUP BY token
+    ORDER BY max(windows) DESC, token
     LIMIT ${body.limit}
   `;
 }
 
-/** The chords worth unlocking next, by how many windows each would add. */
+/**
+ * The chords worth unlocking next, by how many windows each would add — split
+ * by the window's key mode, so a caller that only plays some modes (a
+ * curriculum working through minor keys) sums the ones it means. The chord with
+ * the largest single-mode count comes first; `limit` counts chords, not rows.
+ */
 export async function countLoopsByNextChord(
   body: NextChordsBody,
 ): Promise<NextChordCount[]> {
@@ -279,4 +331,49 @@ export async function countLoopsByNextChord(
     query: nextChordsQuery(body),
     row: NextChordCountSchema,
   });
+}
+
+const LoopSetCountSchema = z.object({ windows: z.number().int() });
+
+/** What `countLoopsInSet` asks for: a chord set, and optionally the modes and shape. */
+export type LoopSetCountArgs = {
+  unlocked: readonly ChordToken[];
+  modes?: readonly HookpadMode[];
+  shape?: LoopShapeId;
+};
+
+/**
+ * The query behind `countLoopsInSet`, built apart so a database test can run it
+ * on a throwaway. It selects on `unlockedWindowsWhere` — the same rule `find`
+ * uses — with no target, so a window counts only when every chord in it is in
+ * the set: one chord outside and it is not this learner's yet.
+ */
+export function loopsInSetQuery(args: LoopSetCountArgs): SQL {
+  return sql`
+    SELECT count(*)::int AS windows
+    FROM ${w}
+    WHERE ${unlockedWindowsWhere({
+      shape: args.shape ?? DEFAULT_LOOP_SHAPE,
+      unlocked: args.unlocked,
+      modes: args.modes,
+    })}
+  `;
+}
+
+/**
+ * How many windows are made only of chords in this set: what a learner holding
+ * exactly these chords could be given — the number behind "how many songs would
+ * this family's seed open".
+ *
+ * Like `nextChordsQuery` it ignores the videos, and for the same reason: it
+ * ranks a step rather than promising the learner a number.
+ */
+export async function countLoopsInSet(args: LoopSetCountArgs): Promise<number> {
+  const rows = await executeRows(db, {
+    query: loopsInSetQuery(args),
+    row: LoopSetCountSchema,
+  });
+  const row = rows[0];
+  if (row === undefined) throw new Error("count(*) returned no row");
+  return row.windows;
 }

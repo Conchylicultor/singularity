@@ -40,8 +40,19 @@ export const _chordRounds = pgTable(
     checkedAt: timestamp("checked_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    /**
+     * Boxes the learner answered — not the boxes of the loop. A round scaffolded
+     * by the curriculum asks for some of them and shows the rest filled in;
+     * `givenCount` holds those, so the loop had `boxCount + givenCount` boxes.
+     */
     boxCount: integer("box_count").notNull(),
     correctCount: integer("correct_count").notNull(),
+    /**
+     * Boxes shown already filled, which the learner never named. 0 for every
+     * round checked before the curriculum existed, and for a round that asks
+     * for the whole loop.
+     */
+    givenCount: integer("given_count").notNull().default(0),
   },
   (t) => [index("chord_rounds_checked_at_idx").on(t.checkedAt)],
 );

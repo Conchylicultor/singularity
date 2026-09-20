@@ -9,34 +9,14 @@
  * lives here; black and white appear only as the ends a chord colour is mixed
  * toward. */
 
-/* ── A chord's colours ─────────────────────────────────────────────────────
- * `--fn` (the degree's colour) and `--fn-depth` come from `chordToneStyle`.
- * The solid tile deepens the colour in OKLCH so it keeps its strength; the
- * numeral on it is the colour washed almost to white. */
-.chord-tone {
-  --fn-bg: color-mix(in oklch, var(--fn, var(--categorical-10)) var(--fn-depth, 74%), black);
-  --fn-ink: color-mix(in srgb, var(--fn, var(--categorical-10)) 10%, white);
-}
+/* A chord's own colours (`.chord-tone`) and its numeral (`.chord-num`) are
+ * drawn the same everywhere, so they live with the vocabulary
+ * (`vocabulary/web/chord-paint.css`); this file only sizes them for the place
+ * they sit in. */
 
 /* The mockup's "sunk" black, a step below the page. */
 .chord-trainer {
   --chord-sunk: color-mix(in srgb, var(--background) 40%, black);
-}
-
-/* ── The numeral ──────────────────────────────────────────────────────────── */
-.chord-num {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--fn, var(--foreground));
-}
-.chord-num-mark {
-  font-family: var(--font-sans);
-  font-size: 0.42em;
-  vertical-align: 0.9em;
-  margin-left: 0.05em;
 }
 
 /* ── The song card ──────────────────────────────────────────────────────── */
@@ -91,6 +71,27 @@
 }
 .chord-box[data-filled] .chord-num {
   color: var(--fn-ink);
+}
+/* A GIVEN box — one the round is not asking about. Its chord is already
+ * printed, in its own colour but dimmed and flat: no fill, no dashed waiting
+ * edge, nothing to click before the check. So the strip reads as "these are
+ * the ones I have to name". */
+.chord-box[data-given] {
+  border: 1.5px solid color-mix(in srgb, var(--fn, var(--categorical-10)) 22%, transparent);
+  background: color-mix(in srgb, var(--fn, var(--categorical-10)) 7%, transparent);
+  cursor: default;
+}
+.chord-box[data-given] .chord-num {
+  color: var(--fn, var(--categorical-10));
+  opacity: 0.55;
+}
+/* After the check a given box replays the song over it like any other, so it
+ * takes the hover edge back; before it, there is nothing to click. */
+.chord-box[data-given]:not(:disabled) {
+  cursor: pointer;
+}
+.chord-box[data-given]:not(:disabled):hover {
+  border-color: var(--faint-foreground);
 }
 .chord-box[data-selected] {
   border: 2px solid var(--muted-foreground);
@@ -233,6 +234,18 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--faint-foreground);
+}
+/* Waiting for the second key: the digit was pressed and several chords sit on
+ * it, so those pads are lit and each shows the number that picks it. */
+.chord-pad[data-picking] {
+  border-color: var(--foreground);
+  box-shadow:
+    0 3px 0 var(--chord-sunk),
+    0 0 0 2px color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+/* The number that picks this chord once its digit has been pressed. */
+.chord-pad-pick {
+  opacity: 0.75;
 }
 /* The chord sounding right now — only once the round is checked, so a lit
  * button never gives an answer away. */

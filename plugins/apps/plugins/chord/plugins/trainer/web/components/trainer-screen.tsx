@@ -1,8 +1,6 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import {
-  STARTING_CHORDS,
-  STARTING_MODES,
-  chordShortcutKey,
+  chordKeyPlan,
   chordVoicing,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import type {
@@ -10,9 +8,24 @@ import type {
   LoopCandidate,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
+  askedPositions,
+  type Curriculum,
+  type NextStep,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import {
+  stepReadiness,
+  useCurriculum,
+  useNextStep,
+  useUndoStep,
+  useUnlockStep,
+  type NextStepRead,
+  type StepReadiness,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/web";
+import {
   chordProgressResource,
   encodeProgressParams,
   recordRoundEndpoint,
+  type ChordStanding,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { reportPlaybackEndpoint } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import {
@@ -22,7 +35,10 @@ import {
   type YouTubePlayerController,
 } from "@plugins/integrations/plugins/youtube/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -49,6 +65,7 @@ import {
   type Box,
   type Round,
 } from "../../core";
+import { useChordKeys } from "../internal/use-chord-keys";
 import { useHeardClock } from "../internal/use-heard-clock";
 import {
   loopKey,
@@ -61,9 +78,6 @@ import { ChordButtons } from "./chord-buttons";
 import { ProgressPanel } from "./progress-panel";
 import { SongCard } from "./song-card";
 import "./trainer.css";
-
-/** The chords the trainer asks for, until the curriculum decides. */
-const UNLOCKED = STARTING_CHORDS;
 
 /** One round's answers, tied to the loop they belong to. */
 type RoundSession = {
@@ -78,37 +92,93 @@ type RoundSession = {
  * buttons, and the progress panel beside them (below them under 1000px).
  * Flow and rules: `research/2026-09-18-apps-chord-trainer-app.md`, "How a
  * round works".
+ *
+ * Which chords play, and how much of a loop the learner names, come from the
+ * curriculum. Until it has landed the screen shows a loading state: a palette
+ * that is about to grow would be a claim about what this learner has.
  */
 export function TrainerScreen() {
-  const progressParams = useMemo(
-    () =>
-      encodeProgressParams({
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        tokens: [...UNLOCKED],
-      }),
-    [],
-  );
-  const progress = useResource(chordProgressResource, progressParams);
-  const queue = useLoopQueue({
-    unlocked: UNLOCKED,
-    modes: STARTING_MODES,
-    progress,
-  });
-  // Kept above the round, which unmounts when the queue runs dry.
-  const session = useSessionMemory();
-
+  const curriculum = useCurriculum();
   return (
     <Scroll className="chord-trainer @container h-full">
       <Inset x="lg" t="lg" b="xl" className="mx-auto max-w-[1280px]">
         {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 316px side panel, which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
         <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_316px]">
-          <Stack gap="md" className={yieldClass("x")}>
-            <LoopArea queue={queue} memory={session} />
-          </Stack>
-          <ProgressPanel progress={progress} chords={UNLOCKED} />
+          {matchResource(curriculum, {
+            pending: () => <Loading variant="block" />,
+            ready: (c) => <TrainerBody curriculum={c} />,
+          })}
         </div>
       </Inset>
     </Scroll>
+  );
+}
+
+/** The two tracks of the page, once the curriculum is known. */
+function TrainerBody({ curriculum }: { curriculum: Curriculum }) {
+  const unlocked = useMemo(
+    () => curriculum.unlocked.map((u) => u.token),
+    [curriculum],
+  );
+  const progressParams = useMemo(
+    () =>
+      encodeProgressParams({
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        tokens: unlocked,
+      }),
+    [unlocked],
+  );
+  const progress = useResource(chordProgressResource, progressParams);
+  const queue = useLoopQueue({
+    unlocked,
+    modes: curriculum.modes,
+    progress,
+  });
+  // Kept above the round, which unmounts when the queue runs dry.
+  const session = useSessionMemory();
+
+  const { read: nextStep } = useNextStep();
+  const { unlock, pending: adding } = useUnlockStep();
+  const undo = useUndoStep();
+
+  // Three answers, not two: while the standing is on its way nobody can say
+  // whether the learner is ready, and the Add controls show that rather than
+  // claiming they are behind.
+  const readiness = stepReadiness(unlocked, progress);
+  // The learner's standings, or that they have not landed. The round needs the
+  // target's answer count to know which boxes to ask about, so "not yet" has to
+  // be a state it can render, not a zero that would ask the target alone.
+  const standings: Standings = progress.pending
+    ? { known: false }
+    : { known: true, chords: progress.data.chords };
+
+  const onAdd = useEventCallback((step: NextStep) => unlock(step));
+
+  return (
+    <>
+      <Stack gap="md" className={yieldClass("x")}>
+        <LoopArea
+          queue={queue}
+          memory={session}
+          curriculum={curriculum}
+          standings={standings}
+          nextStep={nextStep}
+          readiness={readiness}
+          adding={adding}
+          onAdd={onAdd}
+        />
+      </Stack>
+      <ProgressPanel
+        progress={progress}
+        curriculum={curriculum}
+        nextStep={nextStep}
+        readiness={readiness}
+        adding={adding}
+        undoing={undo.pending}
+        onAdd={onAdd}
+        onUndo={undo.run}
+      />
+    </>
   );
 }
 
@@ -138,18 +208,45 @@ function useSessionMemory(): SessionMemory {
   );
 }
 
+/**
+ * The learner's per-chord standings, or that they have not landed yet. A union
+ * rather than an empty list: "no answers yet" and "not read yet" would ask for
+ * different boxes, so nothing downstream may confuse them.
+ */
+type Standings =
+  { known: false } | { known: true; chords: readonly ChordStanding[] };
+
+/** Everything the chord buttons and the round need from the curriculum. */
+type LadderProps = {
+  curriculum: Curriculum;
+  standings: Standings;
+  nextStep: NextStepRead;
+  readiness: StepReadiness;
+  adding: boolean;
+  onAdd: (step: NextStep) => void;
+};
+
 /** Where the loop goes: the round, or why there is none yet. */
 function LoopArea({
   queue,
   memory,
+  ...ladder
 }: {
   queue: LoopQueue;
   memory: SessionMemory;
-}) {
+} & LadderProps) {
   const { state } = queue;
   switch (state.kind) {
     case "ready":
-      return <Trainer loop={state.loop} queue={queue} memory={memory} />;
+      return (
+        <Trainer
+          loop={state.loop}
+          target={state.target}
+          queue={queue}
+          memory={memory}
+          {...ladder}
+        />
+      );
     case "loading":
       return <Loading variant="block" />;
     case "empty":
@@ -212,13 +309,22 @@ function Notice({
  */
 function Trainer({
   loop,
+  target,
   queue,
   memory,
+  curriculum,
+  standings,
+  nextStep,
+  readiness,
+  adding,
+  onAdd,
 }: {
   loop: LoopCandidate;
+  /** The chord this loop was chosen for: the one the round asks about. */
+  target: ChordToken;
   queue: LoopQueue;
   memory: SessionMemory;
-}) {
+} & LadderProps) {
   const player = useYouTubePlayer();
   const playerState = useYouTubePlayerState(player);
   const playerReady = playerState.kind === "ready";
@@ -242,16 +348,40 @@ function Trainer({
   );
   const round = roundResult.kind === "round" ? roundResult.round : null;
 
+  // Which boxes the round asks about. A chord unlocked above the level the ask
+  // rule was set at is asked alone until it has settled, so the rule needs how
+  // many answers the target already has — until the standings land there is no
+  // round to show yet, the same `null` the round itself uses.
+  const asked = useMemo(() => {
+    if (round === null || !standings.known) return null;
+    const targetAnswers =
+      standings.chords.find((c) => c.token === target)?.answers ?? 0;
+    const unlockedTarget = curriculum.unlocked.find((u) => u.token === target);
+    if (unlockedTarget === undefined) {
+      throw new Error(
+        `The round practises ${target}, which this learner has not unlocked`,
+      );
+    }
+    return askedPositions(round.boxes, {
+      windowBeats: round.grid.beats,
+      askRule: curriculum.askRule,
+      target,
+      targetLevel: unlockedTarget.level,
+      askRuleLevel: curriculum.askRuleLevel,
+      targetAnswers,
+    });
+  }, [round, curriculum, target, standings]);
+
   const key = loopKey(loop);
   const [stored, setStored] = useState<RoundSession | null>(null);
   const session: RoundSession | null =
-    round === null
+    round === null || asked === null
       ? null
       : stored?.key === key
         ? stored
         : {
             key,
-            sheet: emptySheet(round.boxes.length),
+            sheet: emptySheet(round, asked),
             fills: round.boxes.map(() => 0),
           };
   const checked = session?.sheet.checked ?? false;
@@ -300,7 +430,16 @@ function Trainer({
     if (sheet.checked) record.mutate({ body: recordRoundBody(sheet, round) });
   });
 
+  // The keys: the chord's digit, and a second key when several chords share it.
+  const plan = useMemo(
+    () => chordKeyPlan(curriculum.unlocked.map((u) => u.token)),
+    [curriculum],
+  );
+  const keys = useChordKeys({ plan, onPick: pick });
+  const { cancel } = keys;
+
   const togglePlay = useEventCallback(() => {
+    cancel();
     if (!playerReady) return;
     memory.markInteracted();
     if (player.isPlaying) player.pause();
@@ -308,6 +447,7 @@ function Trainer({
   });
 
   const nextSong = useEventCallback(() => {
+    cancel();
     memory.markInteracted();
     queue.next();
   });
@@ -325,10 +465,14 @@ function Trainer({
   const onSelect = useEventCallback((position: number) =>
     updateSheet((s) => selectBox(s, position)),
   );
-  const onMove = useEventCallback((delta: -1 | 1) =>
-    updateSheet((s) => moveSelection(s, delta)),
-  );
-  const onClear = useEventCallback(() => updateSheet(clearBackward));
+  const onMove = useEventCallback((delta: -1 | 1) => {
+    cancel();
+    updateSheet((s) => moveSelection(s, delta));
+  });
+  const onClear = useEventCallback(() => {
+    cancel();
+    updateSheet(clearBackward);
+  });
 
   // The first time a video plays this session it is reported playing; a
   // player error is reported with its code, and the trainer moves on.
@@ -391,28 +535,20 @@ function Trainer({
         group: "Chord",
         handler: onClear,
       },
-      ...UNLOCKED.flatMap((token) => {
-        const digit = chordShortcutKey(token);
-        return digit === null
-          ? []
-          : [
-              {
-                id: `chord.pick-${digit}`,
-                keys: digit,
-                label: `Answer degree ${digit}`,
-                group: "Chord",
-                handler: () => pick(token),
-              },
-            ];
-      }),
+      ...keys.shortcuts,
     ],
-    [togglePlay, nextSong, onMove, onClear, pick],
+    [togglePlay, nextSong, onMove, onClear, keys.shortcuts],
   );
   useSurfaceShortcuts(shortcuts);
 
   const litToken =
     checked && round !== null && sounding !== null
       ? (round.boxes[sounding]?.token ?? null)
+      : null;
+
+  const step =
+    nextStep.kind === "answer" && nextStep.answer.kind === "step"
+      ? nextStep.answer.step
       : null;
 
   return (
@@ -455,7 +591,23 @@ function Trainer({
           onHearAnswer={onHearAnswer}
         />
       )}
-      <ChordButtons chords={UNLOCKED} lit={litToken} onPick={pick} />
+      <ChordButtons
+        plan={plan}
+        lit={litToken}
+        picking={keys.picking?.digit ?? null}
+        nextStep={
+          step === null
+            ? null
+            : {
+                step,
+                level: curriculum.level + 1,
+                readiness,
+                adding,
+                onAdd: () => onAdd(step),
+              }
+        }
+        onPick={pick}
+      />
     </>
   );
 }

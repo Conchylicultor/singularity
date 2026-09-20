@@ -31,7 +31,13 @@ export async function postJson(path: string, body?: unknown): Promise<unknown> {
   return res.json();
 }
 
-async function readStatus(): Promise<IndexStatus> {
+/**
+ * Where the index stands, read off its live resource over plain HTTP. Reading
+ * it starts nothing — only `ensure` does — so a script that must not disturb
+ * the instance (the curriculum's ladder preview) asks this and refuses when the
+ * answer is not `ready`.
+ */
+export async function readStatus(): Promise<IndexStatus> {
   const res = await agentFetch("/api/resources/chord.index-status");
   if (!res.ok)
     throw new Error(

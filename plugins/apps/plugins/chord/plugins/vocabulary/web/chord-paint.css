@@ -1,0 +1,35 @@
+/* How a chord is drawn, wherever it is drawn: its colour and its numeral.
+ *
+ * Every surface that shows a chord — the trainer's answer boxes and buttons,
+ * the side panel's chips, the curriculum's locked next step — shares these two
+ * rules, so the same chord reads the same everywhere. The paint around them
+ * (the box states, the pad's shadow) stays with the surface that owns it.
+ *
+ * Colours READ the chord theme (`chordTheme`, shell): the chord colours are
+ * `--categorical-N`. No hex lives here; black and white appear only as the ends
+ * a chord colour is mixed toward. */
+
+/* ── A chord's colours ─────────────────────────────────────────────────────
+ * `--fn` (the degree's colour) and `--fn-depth` come from `chordToneStyle`.
+ * The solid tile deepens the colour in OKLCH so it keeps its strength; the
+ * numeral on it is the colour washed almost to white. */
+.chord-tone {
+  --fn-bg: color-mix(in oklch, var(--fn, var(--categorical-10)) var(--fn-depth, 74%), black);
+  --fn-ink: color-mix(in srgb, var(--fn, var(--categorical-10)) 10%, white);
+}
+
+/* ── The numeral ──────────────────────────────────────────────────────────── */
+.chord-num {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--fn, var(--foreground));
+}
+.chord-num-mark {
+  font-family: var(--font-sans);
+  font-size: 0.42em;
+  vertical-align: 0.9em;
+  margin-left: 0.05em;
+}

@@ -99,6 +99,7 @@ describe("recordRound", () => {
         { position: 0, token: I, answer: I, answerMs: 800 },
         { position: 2, token: V, answer: V, answerMs: 1200 },
       ],
+      givenCount: 0,
     };
     const { roundId } = await recordRound(t.db, body);
 
@@ -114,6 +115,7 @@ describe("recordRound", () => {
       startBeat: 17.5,
       boxCount: 3,
       correctCount: 2,
+      givenCount: 0,
     });
 
     const answers = await t.db
@@ -137,6 +139,33 @@ describe("recordRound", () => {
     for (const a of answers) {
       expect(a.answeredAt.getTime()).toBe(round.checkedAt.getTime());
     }
+  });
+
+  test("a scaffolded round writes only the boxes the learner named", async () => {
+    // Four boxes in the loop, one asked for: the answer is written at its own
+    // position, and the three shown filled in are the round's `givenCount`.
+    const { roundId } = await recordRound(t.db, {
+      sectionId: "abc_DEF-1",
+      videoId: "dQw4w9WgXcQ",
+      shape: "bars-4",
+      startBeat: 1,
+      answers: [{ position: 2, token: V, answer: V, answerMs: 1100 }],
+      givenCount: 3,
+    });
+    const [round] = await t.db
+      .select()
+      .from(_chordRounds)
+      .where(eq(_chordRounds.id, roundId));
+    expect(round).toMatchObject({
+      boxCount: 1,
+      correctCount: 1,
+      givenCount: 3,
+    });
+    const answers = await t.db
+      .select()
+      .from(_chordAnswers)
+      .where(eq(_chordAnswers.roundId, roundId));
+    expect(answers.map((a) => a.position)).toEqual([2]);
   });
 });
 

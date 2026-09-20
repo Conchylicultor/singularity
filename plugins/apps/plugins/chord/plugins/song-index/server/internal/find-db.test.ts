@@ -22,6 +22,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server";
+import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 import {
   FindLoopsBodySchema,
   NextChordsBodySchema,
@@ -29,9 +30,10 @@ import {
   SkipSummarySchema,
   SkipTally,
   chordTokenFromParts,
+  windowsInModes,
   type ChordToken,
 } from "../../core";
-import { findLoopsWhere, nextChordsQuery } from "./find";
+import { findLoopsWhere, loopsInSetQuery, nextChordsQuery } from "./find";
 import { _chordLoopWindows } from "./tables";
 
 let t: TestDb;
@@ -47,7 +49,11 @@ const vi = minor(9);
 const ii = minor(2);
 
 /** A window of `tokens` in its own section, so each row stands alone. */
-function window(sectionId: string, tokens: ChordToken[]) {
+function window(
+  sectionId: string,
+  tokens: ChordToken[],
+  keyMode: HookpadMode = "major",
+) {
   return {
     sectionId,
     shape: "bars-4" as const,
@@ -57,7 +63,7 @@ function window(sectionId: string, tokens: ChordToken[]) {
     beatsPerBar: 4,
     beatUnit: 4,
     keyTonic: "C",
-    keyMode: "major" as const,
+    keyMode,
     chordTokens: tokens,
     features: [],
     chordCount: tokens.length,
@@ -102,6 +108,12 @@ beforeAll(async () => {
     window("two-foreign", [I, vi, ii]),
     // Already playable: it adds nothing to any chord's count.
     window("all-unlocked", [I, IV, V]),
+    // The same step, in a minor key: `ii` opens one window there and none in
+    // major, so a count that did not split by mode would hide it.
+    window("minor-ii", [I, IV, ii], "minor"),
+    // A minor-key window made only of chords the major learner already has:
+    // it counts for the set, but only when minor is one of the modes asked for.
+    window("minor-playable", [I, V], "minor"),
   ]);
 });
 
@@ -109,10 +121,17 @@ afterAll(async () => {
   await t?.drop();
 });
 
-async function nextChords(unlocked: ChordToken[]) {
-  const body = NextChordsBodySchema.parse({ unlocked });
+async function nextChords(unlocked: ChordToken[], modes?: HookpadMode[]) {
+  const body = NextChordsBodySchema.parse({ unlocked, modes });
   const res = await t.db.execute(nextChordsQuery(body));
   return res.rows.map((row) => NextChordCountSchema.parse(row));
+}
+
+async function countInSet(unlocked: ChordToken[], modes?: HookpadMode[]) {
+  const res = await t.db.execute<{ windows: number }>(
+    loopsInSetQuery({ unlocked, modes }),
+  );
+  return res.rows[0]?.windows;
 }
 
 async function findSectionIds(unlocked: ChordToken[], target: ChordToken) {
@@ -128,17 +147,25 @@ describe("countLoopsByNextChord's query", () => {
     // The whole finding: a four-bar vamp on one chord outside the set has
     // exactly one distinct foreign chord, so unlocking that chord adds it.
     // Prefiltering on `chord_tokens && unlocked` dropped it.
-    expect(await nextChords([I, IV, V])).toEqual([{ token: vi, windows: 2 }]);
+    expect(await nextChords([I, IV, V])).toEqual([
+      { token: vi, byMode: { major: 2 } },
+      { token: ii, byMode: { minor: 1 } },
+    ]);
   });
 
   test("ignores a window two chords short, and one already playable", async () => {
-    // `ii` appears only in the two-foreign window, so nothing credits it.
-    const counted = await nextChords([I, IV, V]);
-    expect(counted.map((c) => c.token)).not.toContain(ii);
-    // Unlock `ii` as well and the same window now needs only `vi`.
+    // `two-foreign` (I, vi, ii) needs two chords, so it credits neither: `vi`
+    // is counted for the vamp and `mixed` only.
+    expect(await nextChords([I, IV, V])).toContainEqual({
+      token: vi,
+      byMode: { major: 2 },
+    });
+    // Unlock `ii` as well and that same window now needs only `vi` — while
+    // `mixed`, which also wants IV, drops out. Two windows either way, but
+    // different ones.
     expect(await nextChords([I, V, ii])).toEqual([
-      { token: vi, windows: 2 },
-      { token: IV, windows: 1 },
+      { token: vi, byMode: { major: 2 } },
+      { token: IV, byMode: { major: 1, minor: 1 } },
     ]);
   });
 
@@ -146,9 +173,62 @@ describe("countLoopsByNextChord's query", () => {
     // The contract the count promises, checked against the other read: the two
     // windows credited to `vi` are exactly the ones find hands back.
     const [credited] = await nextChords([I, IV, V]);
-    expect(credited).toEqual({ token: vi, windows: 2 });
+    expect(credited).toEqual({ token: vi, byMode: { major: 2 } });
     const found = await findSectionIds([I, IV, V, vi], vi);
     expect(found).toEqual(["mixed", "vamp-on-vi"]);
+  });
+
+  test("splits a chord's windows by the key mode they sound in", async () => {
+    // The reason for the split: `vi` opens two major windows and no minor one,
+    // `ii` one minor window and no major one. A single total over both modes
+    // would make `ii` look like a step for a learner who only plays major.
+    const counted = await nextChords([I, IV, V]);
+    const byToken = new Map(counted.map((c) => [c.token, c]));
+    const viRow = byToken.get(vi);
+    const iiRow = byToken.get(ii);
+    if (viRow === undefined || iiRow === undefined) {
+      throw new Error(
+        `vi and ii must both be counted: ${JSON.stringify(counted)}`,
+      );
+    }
+    expect(windowsInModes(viRow, ["major"])).toBe(2);
+    expect(windowsInModes(viRow, ["minor"])).toBe(0);
+    expect(windowsInModes(iiRow, ["major"])).toBe(0);
+    expect(windowsInModes(iiRow, ["major", "minor"])).toBe(1);
+  });
+
+  test("narrowing the scan to one mode leaves the other mode's rows out", async () => {
+    // `modes` still filters which windows are scanned — the counts just always
+    // come back split.
+    expect(await nextChords([I, IV, V], ["major"])).toEqual([
+      { token: vi, byMode: { major: 2 } },
+    ]);
+  });
+});
+
+describe("countLoopsInSet's query", () => {
+  test("counts the windows made only of chords in the set", async () => {
+    // `all-unlocked` (major) and `minor-playable` (minor) are the two windows
+    // a learner holding I, IV and V can be given.
+    expect(await countInSet([I, IV, V])).toBe(2);
+    expect(await countInSet([I, IV, V], ["major"])).toBe(1);
+    expect(await countInSet([I, IV, V], ["minor"])).toBe(1);
+  });
+
+  test("a window with one chord outside the set is not counted", async () => {
+    // `mixed` (I, IV, V, vi) is one chord short for {I, IV, V} and counts only
+    // once vi joins the set — the same rule `find` selects on, so what the
+    // count promises is exactly what can be played.
+    expect(await countInSet([I, IV, V])).toBe(2);
+    expect(await countInSet([I, IV, V, vi])).toBe(4);
+    // `two-foreign` (I, vi, ii) still needs `ii`.
+    expect(await countInSet([I, IV, V, vi, ii])).toBe(6);
+  });
+
+  test("an empty set is a programming error, not zero windows", async () => {
+    expect(() => loopsInSetQuery({ unlocked: [] })).toThrow(
+      /empty unlocked set/,
+    );
   });
 });
 

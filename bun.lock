@@ -238,6 +238,10 @@
       "name": "@singularity/plugin-apps-chord",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/chord/plugins/curriculum": {
+      "name": "@singularity/plugin-apps-chord-curriculum",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/chord/plugins/progress": {
       "name": "@singularity/plugin-apps-chord-progress",
       "version": "0.0.1",
@@ -6118,6 +6122,8 @@
     "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
 
     "@singularity/plugin-apps-chord": ["@singularity/plugin-apps-chord@workspace:plugins/apps/plugins/chord"],
+
+    "@singularity/plugin-apps-chord-curriculum": ["@singularity/plugin-apps-chord-curriculum@workspace:plugins/apps/plugins/chord/plugins/curriculum"],
 
     "@singularity/plugin-apps-chord-progress": ["@singularity/plugin-apps-chord-progress@workspace:plugins/apps/plugins/chord/plugins/progress"],
 

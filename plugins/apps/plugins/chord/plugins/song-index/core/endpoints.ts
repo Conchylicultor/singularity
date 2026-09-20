@@ -8,7 +8,8 @@ import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-ava
 import { AlignmentSchema } from "./beat-time";
 import { CHORD_FEATURES } from "./features";
 import { IndexStatusSchema } from "./index-status";
-import { LOOP_SHAPE_IDS } from "./loop-shapes";
+import { DEFAULT_LOOP_SHAPE, LOOP_SHAPE_IDS } from "./loop-shapes";
+import { NextChordCountSchema } from "./next-chords";
 import { TokenizedChordSchema } from "./stored-chord";
 import { ChordTokenSchema } from "./token";
 
@@ -84,7 +85,7 @@ export const FindLoopsBodySchema = z
     unlocked: z.array(ChordTokenSchema).min(1),
     /** The chord being learned: every returned window contains it. Must be unlocked. */
     target: ChordTokenSchema,
-    shape: LoopShapeIdSchema.default("bars-4"),
+    shape: LoopShapeIdSchema.default(DEFAULT_LOOP_SHAPE),
     /** Keep windows in one of these modes; absent = any. */
     modes: z.array(HookpadModeSchema).min(1).optional(),
     /** Keep windows whose spelling has every one of these features. */
@@ -119,22 +120,20 @@ export const NEXT_CHORDS_MAX_LIMIT = 200;
 
 export const NextChordsBodySchema = z.object({
   unlocked: z.array(ChordTokenSchema).min(1),
-  shape: LoopShapeIdSchema.default("bars-4"),
+  shape: LoopShapeIdSchema.default(DEFAULT_LOOP_SHAPE),
+  /**
+   * Scan only the windows in these modes; absent = every mode. The counts come
+   * back split by mode either way, so narrowing here only saves the scan.
+   */
   modes: z.array(HookpadModeSchema).min(1).optional(),
   limit: z.number().int().min(1).max(NEXT_CHORDS_MAX_LIMIT).default(20),
 });
 export type NextChordsBody = z.infer<typeof NextChordsBodySchema>;
 
-export const NextChordCountSchema = z.object({
-  token: ChordTokenSchema,
-  /** Windows whose chords are the unlocked set plus exactly this one. */
-  windows: z.number().int(),
-});
-export type NextChordCount = z.infer<typeof NextChordCountSchema>;
-
 /**
  * For each chord outside the unlocked set, how many windows unlocking it would
- * add: windows made of unlocked chords plus exactly that one. Most first.
+ * add: windows made of unlocked chords plus exactly that one, counted per key
+ * mode. The chord with the largest single-mode count comes first.
  */
 export const nextChordsEndpoint = defineEndpoint({
   route: "POST /api/chord/loops/next-chords",
@@ -144,6 +143,42 @@ export const nextChordsEndpoint = defineEndpoint({
     z.object({
       kind: z.literal("ready"),
       nextChords: z.array(NextChordCountSchema),
+    }),
+  ]),
+});
+
+export const CountLoopsInSetBodySchema = z.object({
+  /** The chords to count against: a window counts when every chord of it is one of these. */
+  unlocked: z.array(ChordTokenSchema).min(1),
+  shape: LoopShapeIdSchema.default(DEFAULT_LOOP_SHAPE),
+  /** Count only windows in these modes; absent = every mode. */
+  modes: z.array(HookpadModeSchema).min(1).optional(),
+});
+export type CountLoopsInSetBody = z.infer<typeof CountLoopsInSetBodySchema>;
+
+/**
+ * How many windows are made only of the chords in this set: what a learner
+ * holding exactly these chords could be given.
+ *
+ * The third of the index's reads, and the HTTP twin of the server barrel's
+ * `countLoopsInSet` — which the curriculum calls in process to rank a whole
+ * family's seed ("what would minor keys open?"), a question `next-chords`
+ * cannot answer because it counts one chord at a time. Over HTTP it is what
+ * lets a client ask the same thing about a set the learner does not have,
+ * which is how `curriculum/e2e/ladder-preview.ts` walks the ladder without
+ * unlocking anything.
+ *
+ * Like `next-chords` it ignores the videos: it ranks a step rather than
+ * promising the learner a number of songs.
+ */
+export const countLoopsInSetEndpoint = defineEndpoint({
+  route: "POST /api/chord/loops/count-in-set",
+  body: CountLoopsInSetBodySchema,
+  response: z.discriminatedUnion("kind", [
+    NotReadySchema,
+    z.object({
+      kind: z.literal("ready"),
+      windows: z.number().int().min(0),
     }),
   ]),
 });

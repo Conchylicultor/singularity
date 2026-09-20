@@ -28,28 +28,37 @@ export const RoundAnswerSchema = z.object({
 });
 export type RoundAnswer = z.infer<typeof RoundAnswerSchema>;
 
-export const RecordRoundBodySchema = z.object({
-  sectionId: TheorytabSectionIdSchema,
-  videoId: z.string().min(1),
-  shape: z.enum(LOOP_SHAPE_IDS),
-  /** The loop's first beat (Hookpad's, 1-based), which with `sectionId` and `shape` names the loop. */
-  startBeat: z.number(),
-  /** Every box of the round, one each: positions are exactly 0…n-1. */
-  answers: z
-    .array(RoundAnswerSchema)
-    .min(1)
-    .refine(
-      (answers) =>
-        answers
-          .map((a) => a.position)
-          .sort((a, b) => a - b)
-          .every((position, i) => position === i),
-      {
-        message:
-          "answer positions must be exactly 0…n-1, one answer per box of the round",
-      },
-    ),
-});
+export const RecordRoundBodySchema = z
+  .object({
+    sectionId: TheorytabSectionIdSchema,
+    videoId: z.string().min(1),
+    shape: z.enum(LOOP_SHAPE_IDS),
+    /** The loop's first beat (Hookpad's, 1-based), which with `sectionId` and `shape` names the loop. */
+    startBeat: z.number(),
+    /** Every box the learner was asked for, one answer each, in playing order. */
+    answers: z.array(RoundAnswerSchema).min(1),
+    /**
+     * Boxes of the loop shown already filled, which the learner never named —
+     * the curriculum's scaffolding. The loop had `answers.length + givenCount`
+     * boxes.
+     */
+    givenCount: z.number().int().min(0),
+  })
+  .refine(
+    (body) => {
+      const positions = body.answers.map((a) => a.position);
+      const boxes = positions.length + body.givenCount;
+      return (
+        new Set(positions).size === positions.length &&
+        positions.every((position) => position < boxes)
+      );
+    },
+    {
+      message:
+        "answer positions must be distinct boxes of the round: 0…(answers + givenCount − 1), one answer per box the learner was asked for",
+      path: ["answers"],
+    },
+  );
 export type RecordRoundBody = z.infer<typeof RecordRoundBodySchema>;
 
 /**

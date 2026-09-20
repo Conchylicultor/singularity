@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-chord-curriculum",
+  "description": "The Chord trainer's ladder: which chords and key modes are unlocked, how much of a loop the learner names, and which step comes next — ranked by how many real songs it opens.",
+  "private": true,
+  "version": "0.0.1"
+}

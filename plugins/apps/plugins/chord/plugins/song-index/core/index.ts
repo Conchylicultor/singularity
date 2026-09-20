@@ -9,6 +9,7 @@ export { CHORD_FEATURES, chordFeatures } from "./features";
 export type { ChordFeature } from "./features";
 export type { IndexedChord } from "./indexed-chord";
 export {
+  DEFAULT_LOOP_SHAPE,
   LOOP_SHAPES,
   LOOP_SHAPE_IDS,
   chordOverlapsWindow,
@@ -94,20 +95,28 @@ export {
 export { chordIndexStatusResource } from "./resources";
 export type { IndexLoadPhase, IndexPhase, IndexStatus } from "./index-status";
 export {
+  CountLoopsInSetBodySchema,
   FIND_LOOPS_MAX_LIMIT,
   FindLoopsBodySchema,
   LoopCandidateSchema,
   LoopWindowFieldsSchema,
   NEXT_CHORDS_MAX_LIMIT,
-  NextChordCountSchema,
   NextChordsBodySchema,
+  countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
   findLoopsEndpoint,
   nextChordsEndpoint,
 } from "./endpoints";
 export type {
+  CountLoopsInSetBody,
   FindLoopsBody,
   LoopCandidate,
-  NextChordCount,
   NextChordsBody,
 } from "./endpoints";
+export {
+  NextChordCountSchema,
+  WindowsByModeSchema,
+  bestModeWindows,
+  windowsInModes,
+} from "./next-chords";
+export type { NextChordCount, WindowsByMode } from "./next-chords";

@@ -4,7 +4,8 @@
 //      machine downloads the dump and builds the snapshot: minutes);
 //   2. find with unlocked {I, IV, V} and target IV in major returns windows whose
 //      chords all lie inside the set, each containing IV;
-//   3. next-chords for {I, IV, V} returns a list ranked by window count;
+//   3. next-chords for {I, IV, V} returns a list ranked by the biggest single
+//      key mode's window count, each row split by mode;
 //   4. 100 random finds, timed, with p50 / p95 reported (target: p95 < 50 ms on
 //      the full index — a worktree loads the sample, so the number there is only
 //      indicative).
@@ -18,6 +19,10 @@ import {
   numArg,
   report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  bestModeWindows,
+  windowsInModes,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   FindResponseSchema,
   NextResponseSchema,
@@ -103,9 +108,10 @@ if (next.kind !== "ready") {
     "empty",
   );
   r.ok(
-    "ranked by window count, most first",
+    "ranked by the largest single mode's window count, most first",
     next.nextChords.every(
-      (n, i, all) => i === 0 || (all[i - 1]?.windows ?? 0) >= n.windows,
+      (n, i, all) =>
+        i === 0 || bestModeWindows(all[i - 1] ?? n) >= bestModeWindows(n),
     ),
     JSON.stringify(next.nextChords),
   );
@@ -114,7 +120,12 @@ if (next.kind !== "ready") {
     next.nextChords.every((n) => ![I, IV, V].includes(n.token)),
   );
   r.note(
-    `top next chords: ${next.nextChords.map((n) => `${n.token}×${n.windows}`).join(", ")}`,
+    `top next chords (major / best mode): ${next.nextChords
+      .map(
+        (n) =>
+          `${n.token}×${windowsInModes(n, ["major"])}/${bestModeWindows(n)}`,
+      )
+      .join(", ")}`,
   );
   r.note(
     `vi (${minor(9)}) rank: ${next.nextChords.findIndex((n) => n.token === minor(9)) + 1 || "not in top 10"}`,

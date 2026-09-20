@@ -26,8 +26,11 @@ export async function recordRound(
         videoId: body.videoId,
         shape: body.shape,
         startBeat: body.startBeat,
+        // The boxes the learner answered, not the boxes of the loop: the
+        // scaffolded ones are `givenCount`.
         boxCount: answers.length,
         correctCount: answers.filter((a) => a.correct).length,
+        givenCount: body.givenCount,
       })
       .returning({ id: _chordRounds.id, checkedAt: _chordRounds.checkedAt });
     if (round === undefined) {

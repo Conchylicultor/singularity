@@ -101,6 +101,21 @@ describe("nextChordsQuery", () => {
     expect(params).toEqual([[I, IV, V], "bars-4", 20]);
   });
 
+  it("groups by token AND mode in one scan, ranked by the largest mode", () => {
+    // One pass over the windows answers every mode: the modes are grouped
+    // alongside the token, then folded into one row per token. `limit` counts
+    // tokens, so it is applied after the fold, and the ranking is the biggest
+    // single mode — a chord that is huge in minor must not sink under the sum.
+    const body = NextChordsBodySchema.parse({ unlocked: [I] });
+    const { sql } = dialect.sqlToQuery(nextChordsQuery(body));
+    expect(sql).toContain("GROUP BY 1, 2");
+    expect(sql).toContain('jsonb_object_agg(key_mode, windows) AS "byMode"');
+    expect(sql).toContain("ORDER BY max(windows) DESC, token");
+    expect(sql.lastIndexOf("LIMIT")).toBeGreaterThan(
+      sql.indexOf("GROUP BY token"),
+    );
+  });
+
   it("reads every window of the shape, sharing a chord with the set or not", () => {
     // The count's contract: a window whose chords are ALL outside the set still
     // has one distinct chord outside it when it is a vamp, and unlocking that

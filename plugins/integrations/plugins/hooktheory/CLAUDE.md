@@ -220,6 +220,7 @@ nothing calls it in a loop yet.
     - `youtubeVideoId`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/curriculum`
     - `apps/chord/progress`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
