@@ -20,6 +20,7 @@ export {
   setWorktreeOpPhase,
   clearWorktreeOp,
   isWorktreeOpActive,
+  listWorktreeOps,
   listActiveWorktreeOps,
   resolveActiveWorktreeOps,
   derivePushPhases,

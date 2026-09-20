@@ -73,6 +73,7 @@ the shape that would absorb it into "the setup succeeded".
     - `isCanonicalWorktreePath`
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
+    - `listWorktreeOps`
     - `markWorktreeOpStart`
     - `namespaceCollision`
     - `probeNamespace`

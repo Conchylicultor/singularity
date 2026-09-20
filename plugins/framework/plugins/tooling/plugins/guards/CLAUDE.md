@@ -1,8 +1,32 @@
 # guards
 
-Claude Code PreToolUse guards: each one inspects a tool call before it runs and
-either allows it, denies it with an explanation, or lets it through with a fact
-the model was missing.
+Claude Code hook guards. **PreToolUse** (`bin/guard.ts`): each guard inspects a
+tool call before it runs and either allows it, denies it with an explanation,
+rewrites it, or lets it through with a fact the model was missing.
+**SubagentStop / TeammateIdle** (`bin/stop-guard.ts`): refuse to let an agent end
+its turn while an op it started is still running.
+
+## The stop guard, and why a subagent needs one
+
+A subagent's background-task completion notification is filed under the PARENT
+session's queue and never delivered, so an agent that backgrounds a build and
+ends its turn is never woken — and whoever waits on it waits forever (measured:
+nine hours). `background-ops` therefore tells a subagent to hold its turn open on
+`./singularity await <op>` instead, and records which agent started which op
+(`core/agent-ops.ts`), because neither half of "is this agent walking away from
+its own op?" is available at stop time: the marker on disk doesn't say who asked,
+and the stop payload doesn't say what they started.
+
+`ctx.agent` is how a guard knows: `agent_id` is present on a subagent's payload
+and absent on the main conversation's. Note `session_id` and `transcript_path`
+are the PARENT's on a subagent's call — the same conflation that loses the
+notification — so they cannot stand in for it.
+
+The stop guard **fails open on every path that is not a confident block**, blocks
+only on an op that agent started AND that is live right now, and respects
+`stop_hook_active`. Claude Code also overrides any stop hook after 8 consecutive
+blocks. Do not "tighten" any of these three: a stop hook that over-blocks is
+worse than the bug it fixes.
 
 ## A guard never builds a path itself
 

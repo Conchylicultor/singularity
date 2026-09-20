@@ -2604,6 +2604,10 @@
         "pg": "^8.13.0",
       },
     },
+    "plugins/framework/plugins/cli/plugins/await": {
+      "name": "@singularity/plugin-framework-cli-await",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/bootstrap": {
       "name": "@singularity/plugin-framework-cli-bootstrap",
       "version": "0.0.1",
@@ -7328,6 +7332,8 @@
     "@singularity/plugin-framework-cli": ["@singularity/plugin-framework-cli@workspace:plugins/framework/plugins/cli"],
 
     "@singularity/plugin-framework-cli-apply-migrations": ["@singularity/plugin-framework-cli-apply-migrations@workspace:plugins/framework/plugins/cli/plugins/apply-migrations"],
+
+    "@singularity/plugin-framework-cli-await": ["@singularity/plugin-framework-cli-await@workspace:plugins/framework/plugins/cli/plugins/await"],
 
     "@singularity/plugin-framework-cli-bootstrap": ["@singularity/plugin-framework-cli-bootstrap@workspace:plugins/framework/plugins/cli/plugins/bootstrap"],
 

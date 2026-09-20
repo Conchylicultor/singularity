@@ -22,6 +22,19 @@ export interface HookInput {
    * is still running. See `GuardContext.readTranscript`.
    */
   transcript_path?: string;
+  /**
+   * Present ONLY when the call was made from inside a subagent — a documented
+   * common hook field. Its absence is the signal, not a missing value: the main
+   * conversation's own tool calls carry neither of these.
+   *
+   * This matters because a subagent and its parent are not interchangeable.
+   * `session_id` and `transcript_path` above are the PARENT's on a subagent's
+   * call (measured), which is the same conflation that loses a subagent's
+   * background-task notification — so without these two fields a guard cannot
+   * tell whose turn it is about to advise. See `background-ops`.
+   */
+  agent_id?: string;
+  agent_type?: string;
 }
 
 function matches(g: Guard["matcher"], tool: string): boolean {
@@ -71,6 +84,9 @@ export async function runHook(
     input.session_id || "unknown",
     options.writableDataDirs,
     input.transcript_path,
+    input.agent_id === undefined
+      ? null
+      : { id: input.agent_id, type: input.agent_type ?? "unknown" },
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 

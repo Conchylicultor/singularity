@@ -40,6 +40,7 @@ function pushMarker(slug: string): WorktreeOpInfo {
     slug,
     op: "push",
     pid: 1234,
+    opId: "op-1",
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: null,
@@ -50,6 +51,7 @@ function buildMarker(slug: string): WorktreeOpInfo {
     slug,
     op: "build",
     pid: 1234,
+    opId: "op-1",
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: null,
@@ -60,6 +62,7 @@ function checkMarker(slug: string): WorktreeOpInfo {
     slug,
     op: "check",
     pid: 1234,
+    opId: "op-1",
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: null,
@@ -264,7 +267,7 @@ test("holder write/read round-trips and clear is pushId-guarded", () => {
 
 test("clearWorktreeOp removes a marker owned by this process", () => {
   withTempSlug((slug) => {
-    markWorktreeOpStart(slug, "build"); // stamps process.pid
+    markWorktreeOpStart(slug, "build", "op-1"); // stamps process.pid
     expect(existsSync(markerPath(slug, "build"))).toBe(true);
     clearWorktreeOp(slug, "build");
     expect(existsSync(markerPath(slug, "build"))).toBe(false);
@@ -314,7 +317,7 @@ test("setWorktreeOpPhase is a no-op when the marker names another pid", () => {
 
 test("setWorktreeOpPhase stamps runningAt once and preserves pid/startedAt on re-flip", () => {
   withTempSlug((slug) => {
-    markWorktreeOpStart(slug, "build", "waiting-for-lock");
+    markWorktreeOpStart(slug, "build", "op-1", "waiting-for-lock");
     const started = readRawMarker(slug, "build").startedAt;
 
     setWorktreeOpPhase(slug, "build", "running");
@@ -358,6 +361,7 @@ test("derivePushPhases overrides a push marker's stored runningAt from the holde
     slug: "A",
     op: "push",
     pid: 1234,
+    opId: "op-1",
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: "1999-01-01T00:00:00.000Z",

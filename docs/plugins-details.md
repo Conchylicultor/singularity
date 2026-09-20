@@ -16343,6 +16343,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/tooling/import-closure`
       - Plugins:
         - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+        - **`await`** — `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
+          - Core:
+            - Exports (types):
+              - `AwaitedOp`
+              - `OpState`
+            - Exports (values):
+              - `allSettled`
+              - `AWAIT_EXIT`
+              - `decideStates`
+              - `exitCodeFor`
+              - `isTerminalOutcome`
         - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
           - Cross-plugin:
             - Imported by:
@@ -19808,6 +19819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isCanonicalWorktreePath`
           - `isWorktreeOpActive`
           - `listActiveWorktreeOps`
+          - `listWorktreeOps`
           - `markWorktreeOpStart`
           - `namespaceCollision`
           - `probeNamespace`

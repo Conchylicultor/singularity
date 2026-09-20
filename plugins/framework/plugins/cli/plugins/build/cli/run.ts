@@ -616,7 +616,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // lock is granted below, so a build queued behind another reads as queued
   // rather than running. Cleared in finalizeBuild below, which runs on
   // every graceful exit.
-  markWorktreeOpStart(name, "build", "waiting-for-lock");
+  markWorktreeOpStart(name, "build", buildId, "waiting-for-lock");
 
   // Guarantee a terminal record on every *graceful* exit path — a thrown
   // build step, process.exit(1), or SIGINT/SIGTERM. Without this, any

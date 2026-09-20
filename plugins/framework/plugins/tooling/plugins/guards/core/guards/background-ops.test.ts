@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { backgroundOpsGuard } from "./background-ops";
@@ -9,6 +12,34 @@ function verdict(command: string, run_in_background?: boolean): Verdict {
     createContext("/tmp"),
   ) as Verdict;
 }
+
+/**
+ * The same call as `verdict`, but made by a subagent. A real session id per
+ * call, because the guard records the started op under it — sharing one would
+ * let these tests write over each other's ledger.
+ */
+const scratch: string[] = [];
+function subagentVerdict(
+  command: string,
+  run_in_background?: boolean,
+): Verdict {
+  const cwd = mkdtempSync(join(tmpdir(), "bg-ops-"));
+  const sessionId = `bg-ops-test-${scratch.length}-${process.pid}`;
+  scratch.push(cwd, join(tmpdir(), `guard-agent-ops-${sessionId}.json`));
+  return backgroundOpsGuard.check(
+    { command, run_in_background },
+    createContext(cwd, sessionId, [], undefined, {
+      id: "agent-1",
+      type: "general-purpose",
+    }),
+  ) as Verdict;
+}
+
+// The guard records the started op under its session id. Left behind, those
+// files accumulate in the host's temp dir on every test run.
+afterAll(() => {
+  for (const path of scratch) rmSync(path, { force: true, recursive: true });
+});
 
 const blocks = (command: string, bg?: boolean) =>
   verdict(command, bg).kind === "deny";
@@ -78,6 +109,48 @@ describe("background-ops guard", () => {
 
     test("2>&1 is a redirection, not a detach", () => {
       expect(blocks("./singularity build 2>&1", true)).toBe(false);
+    });
+  });
+
+  describe("a subagent is told to await, because nothing will wake it", () => {
+    test("a backgrounded op is still allowed — the op itself is fine", () => {
+      const v = subagentVerdict("./singularity build", true);
+      expect(v.kind).not.toBe("deny");
+    });
+
+    test("… but it is told to await instead of ending its turn", () => {
+      const v = subagentVerdict("./singularity build", true);
+      expect(v.kind).toBe("inform");
+      expect(v.kind === "inform" && v.context).toContain(
+        "./singularity await build",
+      );
+      expect(v.kind === "inform" && v.context).toContain("NOT reach you");
+    });
+
+    test("the main conversation is told nothing new — its notification works", () => {
+      expect(verdict("./singularity build", true).kind).toBe("allow");
+    });
+
+    test("a foreground op still denies, but the hint names both steps", () => {
+      const v = subagentVerdict("./singularity test");
+      expect(v.kind).toBe("deny");
+      expect(v.kind === "deny" && v.reason).toContain("run_in_background");
+      expect(v.kind === "deny" && v.reason).toContain(
+        "./singularity await test",
+      );
+    });
+
+    test("the main conversation's foreground hint still says to end its turn", () => {
+      const v = verdict("./singularity test");
+      expect(v.kind === "deny" && v.reason).toContain("END YOUR TURN");
+    });
+
+    test("a subagent detaching with & is denied like anyone else", () => {
+      expect(subagentVerdict("./singularity build &", true).kind).toBe("deny");
+    });
+
+    test("a command that is not a long op says nothing to a subagent either", () => {
+      expect(subagentVerdict("ls -la", true).kind).toBe("allow");
     });
   });
 

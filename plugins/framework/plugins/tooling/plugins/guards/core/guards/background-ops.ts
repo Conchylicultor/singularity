@@ -1,6 +1,7 @@
+import { recordAgentOpStart } from "../agent-ops";
 import { defineGuard } from "../define-guard";
 import { parseShell, type ShellParseResult } from "../parse-shell";
-import type { BashInput } from "../types";
+import type { BashInput, GuardContext } from "../types";
 
 /**
  * Subcommands that take a host slot and run for minutes. From
@@ -48,13 +49,57 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * `run_in_background: true` has no timeout (measured task lifetimes of 125, 386
  * and 823 minutes) and answers with "You will be notified when it completes".
  * Forcing every long op through it deletes the handle-less state entirely.
+ *
+ * ## The notification only arrives for the main conversation
+ *
+ * That last sentence is a promise the harness keeps for the main session and
+ * breaks for a subagent — see {@link awaitInstead}. The op still runs correctly
+ * backgrounded, so the guard's advice is unchanged; what changes is what the
+ * caller does next. A subagent is told to hold its turn open on
+ * `./singularity await <op>`, and the ops it started are recorded so the
+ * stop-guard can refuse a turn that walks away from one.
  */
+/**
+ * What a subagent must do instead of ending its turn.
+ *
+ * "You will be notified when it completes" is false for a subagent. The harness
+ * builds that notification and files it under the PARENT session's queue, where
+ * nothing delivers it: measured in conv-1789736383-4i30, two teammates ended
+ * their turns on a background `check` and `test`, both exited 0 two minutes
+ * later, and neither agent moved again for nine hours. Upstream
+ * anthropics/claude-code #88423 / #87689 / #85534, all open.
+ *
+ * So the subagent is told to convert the wake-up it will not receive into one it
+ * cannot miss: the result of its own next tool call.
+ */
+function awaitInstead(op: string): string {
+  return (
+    `You are a subagent, so the completion notification for this ${op} will NOT reach you — ` +
+    `the harness files it under the parent session's queue and nothing delivers it there. ` +
+    `Do NOT end your turn expecting to be woken.\n` +
+    `Your next call must be: \`./singularity await ${op}\` (foreground). It blocks until the ` +
+    `${op} writes its verdict and prints it, so the wake-up becomes this call's own result. ` +
+    `If it exits 70 the op is simply still going — run it again.`
+  );
+}
+
+/** Note whose op this is, so the stop hook can tell it apart from its parent's. */
+function recordOwnership(ctx: GuardContext, op: string): void {
+  if (!ctx.agent) return;
+  recordAgentOpStart(ctx.sessionId, {
+    agentId: ctx.agent.id,
+    op,
+    cwd: ctx.cwd,
+    at: Date.now(),
+  });
+}
+
 export const backgroundOpsGuard = defineGuard<BashInput>({
   name: "background-ops",
   matcher: "Bash",
   // For the rare op that must be watched live (debugging the build itself).
   bypassToken: ".allow-foreground-ops",
-  check(input) {
+  check(input, ctx) {
     const cmd = input.command;
     if (!cmd) return null;
 
@@ -63,7 +108,13 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
     if (!op) return null;
 
     if (input.run_in_background === true) {
-      if (!shellDetachIn(parsed)) return null;
+      if (!shellDetachIn(parsed)) {
+        // The backgrounding itself is right for everyone — the op runs detached,
+        // untimed and tracked. What differs is who gets told when it ends.
+        if (!ctx.agent) return null;
+        recordOwnership(ctx, op);
+        return { inform: awaitInstead(op) };
+      }
       return {
         blocked: `This command already runs in the background — the extra shell-level detach (\`&\`/\`nohup\`) breaks it.`,
         why: "Detaching inside the shell makes the task exit immediately, so the harness records a completed task while the op is still running. You are then notified about the wrong thing.",
@@ -75,14 +126,16 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
       return {
         blocked: `\`./singularity ${op}\` is being detached by the shell, which produces no tracked task.`,
         why: "A shell-detached process is invisible to the harness: nothing notifies you when it ends, so the only way to learn the outcome is to watch a file. That is the polling loop this repo is trying to remove.",
-        hint: `Drop the \`&\`/\`nohup\` and pass \`run_in_background: true\` on the Bash tool call instead. You will be notified when it completes.`,
+        hint: `Drop the \`&\`/\`nohup\` and pass \`run_in_background: true\` on the Bash tool call instead.`,
       };
     }
 
     return {
       blocked: `\`./singularity ${op}\` must run with \`run_in_background: true\`.`,
       why: `A ${op} takes about 10 minutes at the median and regularly exceeds the 600 s foreground limit. On timeout you get "Command timed out after 10m 0s" — no task id, no notification — while the op keeps running, leaving you with no handle on it.`,
-      hint: `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. Background tasks have no timeout, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
+      hint: ctx.agent
+        ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./singularity await ${op}\`. ${awaitInstead(op)}`
+        : `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. Background tasks have no timeout, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
     };
   },
 });

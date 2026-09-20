@@ -300,7 +300,7 @@ const pushAction: CliAction<
   // Cleared on every graceful exit — normal completion, every process.exit(1)
   // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
   // push self-heals via the marker's pid-liveness check.
-  markWorktreeOpStart(opSlug, "push", "waiting-for-lock");
+  markWorktreeOpStart(opSlug, "push", pushId, "waiting-for-lock");
   process.on("exit", () => {
     clearWorktreeOp(opSlug, "push");
     // Only removes the holder file if it still names THIS push (guards

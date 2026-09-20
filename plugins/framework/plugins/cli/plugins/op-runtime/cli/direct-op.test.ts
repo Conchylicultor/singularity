@@ -68,7 +68,7 @@ function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
     },
     createOpProfiler: (kind, o) =>
       createOpProfiler(kind, { ...o, sink: (r) => records.push(r) }),
-    markWorktreeOpStart: (_slug, op, phase) => {
+    markWorktreeOpStart: (_slug, op, _opId, phase) => {
       events.push(`marker:${op}:${phase}`);
     },
     setWorktreeOpPhase: (_slug, op, phase) => {

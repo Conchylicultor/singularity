@@ -19,6 +19,8 @@ Agents work in isolated git worktrees automatically created before starting. The
 
    **Use `run_in_background: true` and end your turn** — build/push/check median ~10 min, over the 600 s foreground cap. Background tasks have no timeout and re-invoke you on exit, so there is nothing to wait for and nothing to watch. (Guards enforce both halves.)
 
+   **A SUBAGENT must not end its turn there** — it will never be re-invoked, because the harness files a subagent's completion notification under the parent session's queue and nothing delivers it. Background the op as usual, then call `./singularity await <op>` in the FOREGROUND: it blocks until the verdict is written and prints it, so the wake-up is that call's own result (exit 0 ok, 1 failed, 70 still running — just call it again). A stop hook refuses a subagent's turn that walks away from its own running op.
+
 3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
 
    The build's authority on whether it deployed is the deploy receipt at `~/.singularity/worktrees/<worktree>/build-status.json` (`status: ok` ⇒ deployed). A build killed by a caller timeout prints no verdict and leaves `status: running` with a dead pid. **Never** infer a deploy from `ls -t ~/.singularity/worktrees/<wt>/build-*.log` — that file is written only at the END of a build, so it matches a PREVIOUS run's `BUILD OK`.

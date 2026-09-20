@@ -228,7 +228,7 @@ export async function withDirectOp<K extends OpKind>(
     profiler?.markRequested();
     // Written up-front as "waiting-for-lock" and flipped to "running" once the
     // grant is held, so an op queued for its grant reads as queued.
-    deps.markWorktreeOpStart(slug, kind, "waiting-for-lock");
+    deps.markWorktreeOpStart(slug, kind, opId, "waiting-for-lock");
     deps.onExit(() => {
       deps.clearWorktreeOp(slug, kind);
       // The terminal record, on every graceful exit — including a

@@ -49,11 +49,19 @@ export function createContext(
    * absence surfaces as the `unavailable` arm, never as an empty transcript.
    */
   transcriptPath?: string,
+  /**
+   * The subagent this call came from, from the payload's `agent_id` /
+   * `agent_type`. `null` means the main conversation — see `GuardContext.agent`.
+   * Last and defaulted so the many `createContext(cwd)` calls in tests stay as
+   * they are; a test that cares passes it.
+   */
+  agent: { id: string; type: string } | null = null,
 ): GuardContext {
   return {
     cwd,
     sessionId,
     writableDataDirs,
+    agent,
     readTranscript(): TranscriptRead {
       if (!transcriptPath)
         return {

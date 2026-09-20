@@ -67,6 +67,14 @@ export interface WorktreeOpInfo {
   // would have to re-parse the marker files itself, re-deriving paths this
   // module owns.
   pid: number;
+  // The op-log id of the run this marker stands for, or null for a marker
+  // written before the field existed. The marker answers "is something running";
+  // the op-log answers "what did it end as" — and this is the only thing that
+  // joins the two. Without it a reader has to guess by (slug, kind, time), which
+  // picks the wrong run exactly when it matters: `ops/<op>.json` is ONE file per
+  // (worktree, kind), so a second check in the same worktree overwrites the
+  // first's marker and the timestamps no longer separate them.
+  opId: string | null;
   startedAt: string;
   phase: WorktreeOpPhase;
   // The instant this op's "running" phase began — i.e. when waiting ended and
@@ -107,9 +115,15 @@ function isPidAlive(pid: number): boolean {
 // that the newest (queued) op is what the UI shows during the overlap; the
 // ownership guards in setWorktreeOpPhase/clearWorktreeOp keep the finishing op
 // from mutating the file the newer op now owns.
+// `opId` is REQUIRED, not optional. Every writer already mints one for the
+// op-log before it writes its marker (build's buildId, push's pushId,
+// withDirectOp's opId), and a marker without it is a live op nobody can look up
+// the outcome of — the gap `./singularity await` exists to close. Required means
+// a future op kind cannot reintroduce that gap by forgetting an argument.
 export function markWorktreeOpStart(
   slug: string,
   op: WorktreeOp,
+  opId: string,
   phase: WorktreeOpPhase = "running",
 ): void {
   mkdirSync(opsDir(slug), { recursive: true });
@@ -118,6 +132,7 @@ export function markWorktreeOpStart(
     JSON.stringify({
       op,
       pid: process.pid,
+      opId,
       startedAt: new Date().toISOString(),
       phase,
     }),
@@ -187,6 +202,7 @@ function isReapableReadError(err: unknown): boolean {
 type MarkerJson = {
   op?: unknown;
   pid?: unknown;
+  opId?: unknown;
   startedAt?: unknown;
   phase?: unknown;
   runningAt?: unknown;
@@ -206,6 +222,10 @@ function markerInfoFromParsed(
       ? (parsed.op as WorktreeOp)
       : "build",
     pid: parsed.pid,
+    // Back-compat: a marker written before the field carries no run id, and a
+    // reader must be able to tell that from "this run has no id" — hence null
+    // rather than "".
+    opId: typeof parsed.opId === "string" ? parsed.opId : null,
     startedAt:
       typeof parsed.startedAt === "string"
         ? parsed.startedAt
@@ -245,24 +265,33 @@ async function readLiveMarkerAsync(
   return info;
 }
 
-// True iff any op marker for this worktree names a live pid. Reaps dead or
-// unparseable markers as it scans. ASYNC: this is called per-pane by the tmux
-// status poller, so the scan must yield the event loop (readdir/readFile on the
-// libuv threadpool) rather than block that runtime under filesystem IO
-// contention. Per-file reads run in parallel, like listActiveWorktreeOps.
-export async function isWorktreeOpActive(slug: string): Promise<boolean> {
+// Every live op marker for ONE worktree. Reaps dead or unparseable markers as it
+// scans. ASYNC for the same reason as its two callers: the scan must yield the
+// event loop (readdir/readFile on the libuv threadpool) rather than block a
+// runtime under filesystem IO contention; per-file reads run in parallel.
+//
+// The one scan, so the three questions asked of these markers — "is anything
+// running here" (the tmux status poller), "what is running everywhere" (the
+// op-status loader) and "is MY op still running" (`./singularity await`) — read
+// the directory the same way and reap on the same rule.
+export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {
   const dir = opsDir(slug);
   let files: string[];
   try {
     files = await readdir(dir);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
   const infos = await Promise.all(
     files.map((f) => readLiveMarkerAsync(slug, join(dir, f))),
   );
-  return infos.some((i) => i !== null);
+  return infos.filter((i): i is WorktreeOpInfo => i !== null);
+}
+
+// True iff any op marker for this worktree names a live pid.
+export async function isWorktreeOpActive(slug: string): Promise<boolean> {
+  return (await listWorktreeOps(slug)).length > 0;
 }
 
 // Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps
@@ -285,19 +314,7 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
       // subdir, so descending into a `.json` file would throw ENOTDIR. Skip
       // non-dirs.
       if (!entry.isDirectory()) return [];
-      const slug = entry.name;
-      const dir = opsDir(slug);
-      let files: string[];
-      try {
-        files = await readdir(dir);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        return []; // Not a worktree-with-ops dir; skip.
-      }
-      const infos = await Promise.all(
-        files.map((f) => readLiveMarkerAsync(slug, join(dir, f))),
-      );
-      return infos.filter((i): i is WorktreeOpInfo => i !== null);
+      return listWorktreeOps(entry.name);
     }),
   );
   return perSlug.flat();

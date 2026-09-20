@@ -77,6 +77,19 @@ export interface GuardContext {
    * already tripped, so the common path pays nothing.
    */
   readTranscript(): TranscriptRead;
+  /**
+   * The subagent this call came from, or `null` for the main conversation.
+   *
+   * A discriminated `null` rather than a `fromSubagent: boolean` plus loose id
+   * fields: a guard that branches on this almost always wants to NAME the agent
+   * (the stop hook keys its ownership ledger on the id), and two independent
+   * optional fields could disagree about whether there is an agent at all.
+   *
+   * Computed once here, because "is `agent_id` present" is the whole of the
+   * test and re-deriving it per guard is how one of them ends up reading
+   * `agent_type` instead — which is also set for a `--agent` main session.
+   */
+  agent: { id: string; type: string } | null;
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

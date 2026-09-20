@@ -33,6 +33,26 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
+          }
+        ]
+      }
     ]
   }
 }
