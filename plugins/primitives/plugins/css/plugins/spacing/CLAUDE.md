@@ -386,6 +386,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `stats/commits`
     - `stats/cost`
     - `stats/pushes`
+    - `stats/responsiveness`
     - `stats/tasks`
     - `tasks/attempt-view`
     - `tasks/task-attachments`

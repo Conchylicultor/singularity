@@ -183,7 +183,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     for (const table of opts.coveredTables()) {
       // A reconnect sweep is a synthesized FULL invalidation — no source
       // transaction corresponds, so no ack attribution (`xid: null`).
-      opts.route({ table, op: "U", ids: null, xid: null });
+      opts.route({ table, op: "U", ids: null, xid: null, changedAt: null });
     }
   }
 

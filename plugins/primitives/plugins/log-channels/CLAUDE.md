@@ -212,6 +212,7 @@ count accumulates across drops.
     - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
+    - `debug/latency-ledger`
     - `debug/logs`
     - `debug/op-rate`
     - `debug/paging-probe`

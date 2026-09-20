@@ -104,7 +104,7 @@ export async function ensureChangelogTable(db: NodePgDatabase): Promise<void> {
 //    aggregate the changed PK values into a text[]; with a composite/absent PK
 //    TG_ARGV[0] is empty → ids stays NULL → the consumer treats it as
 //    FULL-for-table (still correct, just unscoped).
-//  - Payload is json {t, op, ids}. NOTIFY has a ~8 KB ceiling; if the payload
+//  - Payload is json {t, op, ids, x, at}. NOTIFY has a ~8 KB ceiling; if the payload
 //    exceeds 7000 bytes (large bulk statement) we re-emit with ids = NULL so the
 //    consumer degrades to FULL-for-table rather than dropping the NOTIFY.
 //  - STATEMENT-level + transition tables means exactly one NOTIFY per statement,
@@ -116,6 +116,13 @@ DECLARE
   ids text[];
   payload text;
   has_rows boolean;
+  -- Wall clock of THIS statement, epoch ms — clock_timestamp(), not now(): now()
+  -- is the transaction's START, which for a long transaction predates the change
+  -- by the transaction's whole length. Rides the NOTIFY as 'at' so an open tab
+  -- can measure change → applied on a clock the serving thread does not own.
+  -- NOTIFY only — the changelog row has no use for it (catch-up replays changes
+  -- no tab was waiting on).
+  changed_at bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
 BEGIN
   -- A statement that touched zero rows changed no data — e.g. an
   -- INSERT … ON CONFLICT DO NOTHING that fully conflicted, or an UPDATE/DELETE
@@ -148,7 +155,7 @@ BEGIN
   -- changelog row below stores) — the mutation-ack attribution the live-state
   -- runtime threads onto its recompute frames (ackTx). Kept on the over-cap
   -- re-emit too: dropping the ids degrades scope, not attribution.
-  payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', ids, 'x', pg_current_xact_id()::text)::text;
+  payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', ids, 'x', pg_current_xact_id()::text, 'at', changed_at)::text;
 
   -- NOTIFY payloads are capped at ~8 KB. Over the cap, drop the id list and let
   -- the consumer recompute the whole table (FULL-for-table) instead of losing
@@ -156,7 +163,7 @@ BEGIN
   -- row below (NULL ids → FULL on catch-up), so re-derive ids once here.
   IF octet_length(payload) > 7000 THEN
     ids := NULL;
-    payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', NULL, 'x', pg_current_xact_id()::text)::text;
+    payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', NULL, 'x', pg_current_xact_id()::text, 'at', changed_at)::text;
   END IF;
 
   PERFORM pg_notify('live_state', payload);

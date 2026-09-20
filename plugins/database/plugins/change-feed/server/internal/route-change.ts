@@ -25,7 +25,12 @@ export function routeChange(change: DbChange): void {
   // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
   // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
   // claim survives the scope degrade. null (pre-upgrade NOTIFY) → omitted.
-  const xid = change.xid !== null ? { xid: change.xid } : {};
+  const xid = {
+    ...(change.xid !== null ? { xid: change.xid } : {}),
+    // The change's wall clock forwards on both applies too: a view-backed list
+    // is late by the same amount as the table that fed it.
+    ...(change.changedAt !== null ? { changedAt: change.changedAt } : {}),
+  };
   applyDbChange({
     table: change.table,
     op: change.op,

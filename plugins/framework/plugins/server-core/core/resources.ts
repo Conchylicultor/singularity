@@ -192,6 +192,22 @@ export function onResourcePush(cb: ResourcePushObserver): () => void {
   return () => pushObservers.delete(cb);
 }
 
+// Delivery-latency observer registry — the same shape as `onResourcePush` above.
+// The runtime reports EVERY delivery to >=1 subscriber (first notify → ws.send);
+// the profiler keeps only an aggregate and the slow-op funnel keeps only the ones
+// over its threshold, so a plugin that wants the whole distribution (p50/p95)
+// registers here. Runs on the flush path: an observer must be O(1) and never throw.
+export type ResourceDeliveryObserver = (
+  key: string,
+  latencyMs: number,
+  subscribers: number,
+) => void;
+const deliveryObservers = new Set<ResourceDeliveryObserver>();
+export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
+  deliveryObservers.add(cb);
+  return () => deliveryObservers.delete(cb);
+}
+
 // `wrapLoad` only establishes the profiler entry span + ambient context for the
 // loader body. Concurrency is NOT bounded here: the scarce resource is DB
 // connections, not loader bodies, so the gate lives at the one place those are
@@ -212,8 +228,12 @@ const runtime = createResourceRuntime({
   wrapFlush: (fn) => recordEntrySpan("flush", "flushNotifies", fn),
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
-  onDelivered: (key, latencyMs) =>
-    recordSpan("push", `deliver:${key}`, latencyMs),
+  onDelivered: (key, latencyMs, subscribers) => {
+    recordSpan("push", `deliver:${key}`, latencyMs);
+    for (const observer of deliveryObservers) {
+      observer(key, latencyMs, subscribers);
+    }
+  },
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.

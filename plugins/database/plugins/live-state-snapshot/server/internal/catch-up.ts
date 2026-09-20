@@ -52,7 +52,13 @@ function replayChange(
   // `xid: null` — catch-up replays run at boot, before any client subscribes, so
   // ack attribution has no consumer here; a missing ack is safe by design (the
   // client's resub snapshot watermark backstops any op the downtime absorbed).
-  route({ table: row.t, op: row.op, ids: row.ids, xid: null });
+  route({
+    table: row.t,
+    op: row.op,
+    ids: row.ids,
+    xid: null,
+    changedAt: null,
+  });
 }
 
 // Bounded cold-boot catch-up: replay only the changelog rows committed at or after

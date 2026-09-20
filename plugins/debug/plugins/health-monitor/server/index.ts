@@ -6,6 +6,15 @@ import {
   stopProcessSampler,
 } from "./internal/process-sampler";
 import { startHostSampler, stopHostSampler } from "./internal/host-sampler";
+
+// Every sample as it is taken, for plugins that build on the health series
+// without tailing its JSONL (debug/latency-ledger).
+export { onHealthSample } from "./internal/process-sampler";
+export type { HealthSampleObserver } from "./internal/process-sampler";
+export { onStackSamples } from "./internal/stall-profiler";
+export type { StackSampleObserver } from "./internal/stall-profiler";
+export { onHostSample } from "./internal/host-sampler";
+export type { HostSampleObserver } from "./internal/host-sampler";
 import { getHealthData } from "../shared/endpoints";
 
 // The health JSONL line shapes, for server-side consumers that scan the same

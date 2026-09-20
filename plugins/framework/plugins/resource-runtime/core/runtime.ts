@@ -761,6 +761,20 @@ interface PendingNotify {
    */
   lastNotifyAt: number;
   /**
+   * WALL-CLOCK instant (epoch ms, `Date.now()`-comparable) of the EARLIEST change
+   * folded into this pending: the change-feed's `clock_timestamp()` for a DB
+   * change, the `notify()` call for an external resource. Set on the first merge
+   * and only ever LOWERED afterwards (`Math.min`), so a coalesced pending reports
+   * its oldest change. It rides every value frame so the TAB can measure
+   * change → applied on a clock the serving thread does not own: `enqueuedAt`
+   * above is stamped when this thread finally reads the NOTIFY, so a stalled
+   * thread hides its own delay from `onDelivered`. Observability only — nothing
+   * in the runtime reads it back. Comparing it to the tab's `Date.now()` assumes
+   * browser, backend and Postgres share one machine clock (one instance per
+   * user). Absent for synthetic and ack-only pendings and for catch-up replay.
+   */
+  changedAt?: number;
+  /**
    * Source transaction ids (`pg_current_xact_id()::text` from the change-feed
    * NOTIFY) of the DB changes coalesced into this pending — the mutation-ack
    * attribution (`ackTx`) the drain stamps on the frames this recompute
@@ -1233,6 +1247,8 @@ export interface ResourceRuntime {
     identityBase: string;
     /** Source transaction id (xid8 text) — mutation-ack attribution (`ackTx`). */
     xid?: string;
+    /** Wall-clock epoch ms of the change (live NOTIFY only; see `PendingNotify.changedAt`). */
+    changedAt?: number;
   }) => void;
   /**
    * Force a FULL recompute of a single registered resource by key (param-less →
@@ -1861,6 +1877,7 @@ export function createResourceRuntime(
     subs: SocketState[],
     watermark?: string,
     ackTx?: readonly string[],
+    changedAt?: number,
   ): void | Promise<void> {
     const broadcast = (etag?: string): void => {
       const msg = {
@@ -1872,6 +1889,7 @@ export function createResourceRuntime(
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
         ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
+        ...(changedAt !== undefined ? { changedAt } : {}),
       };
       broadcastJson(subs, msg);
     };
@@ -1925,6 +1943,7 @@ export function createResourceRuntime(
     incoming: Set<string> | null,
     deleted?: Set<string>,
     sourceTx?: ReadonlySet<string>,
+    changedAt?: number,
   ): void {
     const existing = map.get(pk);
     const now = performance.now();
@@ -1940,6 +1959,7 @@ export function createResourceRuntime(
           : {}),
         enqueuedAt: now,
         lastNotifyAt: now,
+        ...(changedAt !== undefined ? { changedAt } : {}),
       };
       unionSourceTx(created, sourceTx);
       map.set(pk, created);
@@ -1953,6 +1973,14 @@ export function createResourceRuntime(
     // them would leave the drain joining a pre-commit flight in the most common
     // case of all — a FULL pending absorbing every later change for free.
     existing.lastNotifyAt = now;
+    // Earliest change wins (see `PendingNotify.changedAt`); also before the early
+    // returns, so a FULL-absorbing merge still keeps the oldest instant.
+    if (
+      changedAt !== undefined &&
+      (existing.changedAt === undefined || changedAt < existing.changedAt)
+    ) {
+      existing.changedAt = changedAt;
+    }
     if (existing.affected === null) return; // FULL absorbs everything (incl. deleted)
     if (incoming === null) {
       existing.affected = null; // degrade to FULL
@@ -2430,6 +2458,9 @@ export function createResourceRuntime(
       /** Source txid (feed only) — mutation-ack attribution. Hand/synthetic
        *  notifies never carry one, so their frames are structurally ack-less. */
       sourceTx?: string;
+      /** Wall-clock epoch ms of the change (feed). A hand `notify()` defaults to
+       *  now — the call IS the change for an external resource. */
+      changedAt?: number;
     },
   ): void {
     const pk = paramsKey(params);
@@ -2474,6 +2505,7 @@ export function createResourceRuntime(
       affected,
       opts?.deleted,
       opts?.sourceTx !== undefined ? new Set([opts.sourceTx]) : undefined,
+      opts?.changedAt ?? (source === "hand" ? Date.now() : undefined),
     );
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
@@ -2755,6 +2787,7 @@ export function createResourceRuntime(
     value: unknown,
     valueComputed: boolean,
     sourceTx?: ReadonlySet<string>,
+    changedAt?: number,
   ): Promise<void> {
     for (const edge of entry.downstream) {
       const down = registry.get(edge.downstreamKey);
@@ -2859,6 +2892,7 @@ export function createResourceRuntime(
           downAffected,
           undefined,
           sourceTx,
+          changedAt,
         );
       }
     }
@@ -2980,6 +3014,7 @@ export function createResourceRuntime(
           subs,
           flightWatermark,
           flightAckTx,
+          pendingEntry.changedAt,
         );
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
@@ -2999,6 +3034,9 @@ export function createResourceRuntime(
             : {}),
           ...(flightAckTx !== undefined && flightAckTx.length > 0
             ? { ackTx: flightAckTx }
+            : {}),
+          ...(pendingEntry.changedAt !== undefined
+            ? { changedAt: pendingEntry.changedAt }
             : {}),
         };
         broadcastJson(subs, msg);
@@ -3031,6 +3069,7 @@ export function createResourceRuntime(
       value,
       valueComputed,
       cascadeSourceTx(pendingEntry),
+      pendingEntry.changedAt,
     );
   }
 
@@ -3339,6 +3378,9 @@ export function createResourceRuntime(
           order,
           version,
           ...(ackTx !== undefined ? { ackTx } : {}),
+          ...(pendingEntry.changedAt !== undefined
+            ? { changedAt: pendingEntry.changedAt }
+            : {}),
         };
         broadcastJson(subs, msg);
         opts.onDelivered?.(
@@ -3370,6 +3412,7 @@ export function createResourceRuntime(
       refillRows,
       loaderRan,
       cascadeSourceTx(pendingEntry),
+      pendingEntry.changedAt,
     );
   }
 
@@ -3620,6 +3663,7 @@ export function createResourceRuntime(
               subs,
               flightWatermark,
               flightAckTx,
+              pendingEntry.changedAt,
             );
             opts.onPush?.(entry.key, {
               subscribers: subs.length,
@@ -3645,6 +3689,9 @@ export function createResourceRuntime(
                 order: undefined,
                 version,
                 ...(seedAckTx !== undefined ? { ackTx: seedAckTx } : {}),
+                ...(pendingEntry.changedAt !== undefined
+                  ? { changedAt: pendingEntry.changedAt }
+                  : {}),
               };
               broadcastJson(subs, msg);
             } else {
@@ -3675,6 +3722,7 @@ export function createResourceRuntime(
                 subs,
                 flightWatermark,
                 flightAckTx,
+                pendingEntry.changedAt,
               );
               opts.onPush?.(entry.key, {
                 subscribers: subs.length,
@@ -3698,6 +3746,9 @@ export function createResourceRuntime(
                 ...(flightAckTx !== undefined && flightAckTx.length > 0
                   ? { ackTx: flightAckTx }
                   : {}),
+                ...(pendingEntry.changedAt !== undefined
+                  ? { changedAt: pendingEntry.changedAt }
+                  : {}),
               };
               broadcastJson(subs, msg);
               opts.onPush?.(entry.key, {
@@ -3718,6 +3769,7 @@ export function createResourceRuntime(
             subs,
             flightWatermark,
             flightAckTx,
+            pendingEntry.changedAt,
           );
         }
       }
@@ -3740,6 +3792,7 @@ export function createResourceRuntime(
         value,
         valueComputed,
         cascadeSourceTx(pendingEntry),
+        pendingEntry.changedAt,
       );
     }
   }
@@ -4702,6 +4755,7 @@ export function createResourceRuntime(
     origin: string;
     identityBase: string;
     xid?: string;
+    changedAt?: number;
   }): void {
     try {
       const affectedKeys = tableToResources().get(change.table);
@@ -4891,6 +4945,7 @@ export function createResourceRuntime(
             source: "feed",
             deleted: tupleDeleted,
             sourceTx: change.xid,
+            changedAt: change.changedAt,
           });
         }
       }

@@ -14,6 +14,7 @@ import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { noteResourceWatermark } from "./watermark-registry";
 import { noteResourceTxAcks } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
+import { updateDelayReportSink } from "./update-delay-reporter";
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
@@ -191,6 +192,8 @@ type ServerMsg =
       etag?: string;
       watermark?: string;
       ackTx?: string[];
+      /** Wall-clock epoch ms of the change behind this frame (see update-delay-reporter.ts). */
+      changedAt?: number;
     }
   | {
       kind: "delta";
@@ -202,6 +205,7 @@ type ServerMsg =
       version: number;
       watermark?: string;
       ackTx?: string[];
+      changedAt?: number;
     }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
   // Standalone mutation-ack frame (per-resource `ackChannel` opt-in): a
@@ -1539,6 +1543,7 @@ export class NotificationsClient {
         msg.watermark,
         msg.kind === "update" ? msg.ackTx : undefined,
       );
+      if (msg.kind === "update") this.reportUpdateDelay(msg.key, msg.changedAt);
       return;
     }
     if (msg.kind === "delta") {
@@ -1552,10 +1557,24 @@ export class NotificationsClient {
         msg.watermark,
         msg.ackTx,
       );
+      this.reportUpdateDelay(msg.key, msg.changedAt);
       return;
     }
     // Only remaining case: "invalidate"
     this.applyInvalidate(msg.key, msg.params);
+  }
+
+  // Change → applied-in-this-tab delay, for every pushed frame that says when its
+  // change happened. Runs AFTER the cache write, so the value is in the tab's
+  // hands when the clock stops. Only this tab's live subs reach here (the no-sub
+  // gate above), so a background tab reports its own, honestly flagged, delays.
+  private reportUpdateDelay(key: string, changedAt: number | undefined): void {
+    if (changedAt === undefined) return;
+    updateDelayReportSink.emit({
+      key,
+      delayMs: Date.now() - changedAt,
+      hidden: document.visibilityState === "hidden",
+    });
   }
 
   private applyUpdate(

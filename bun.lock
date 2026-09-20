@@ -2023,6 +2023,10 @@
       "name": "@singularity/plugin-debug-heap-snapshot",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/latency-ledger": {
+      "name": "@singularity/plugin-debug-latency-ledger",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/live-state-churn": {
       "name": "@singularity/plugin-debug-live-state-churn",
       "version": "0.0.1",
@@ -3449,6 +3453,10 @@
     },
     "plugins/packages/plugins/signal-origin/plugins/sink": {
       "name": "@singularity/plugin-packages-signal-origin-sink",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/sleep-clock": {
+      "name": "@singularity/plugin-packages-sleep-clock",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/spawn-priority": {
@@ -4984,6 +4992,10 @@
     },
     "plugins/stats/plugins/pushes": {
       "name": "@singularity/plugin-stats-pushes",
+      "version": "0.0.1",
+    },
+    "plugins/stats/plugins/responsiveness": {
+      "name": "@singularity/plugin-stats-responsiveness",
       "version": "0.0.1",
     },
     "plugins/stats/plugins/tasks": {
@@ -7051,6 +7063,8 @@
 
     "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
 
+    "@singularity/plugin-debug-latency-ledger": ["@singularity/plugin-debug-latency-ledger@workspace:plugins/debug/plugins/latency-ledger"],
+
     "@singularity/plugin-debug-live-state-churn": ["@singularity/plugin-debug-live-state-churn@workspace:plugins/debug/plugins/live-state-churn"],
 
     "@singularity/plugin-debug-live-state-churn-emit": ["@singularity/plugin-debug-live-state-churn-emit@workspace:plugins/debug/plugins/live-state-churn/plugins/emit"],
@@ -7728,6 +7742,8 @@
     "@singularity/plugin-packages-signal-origin": ["@singularity/plugin-packages-signal-origin@workspace:plugins/packages/plugins/signal-origin"],
 
     "@singularity/plugin-packages-signal-origin-sink": ["@singularity/plugin-packages-signal-origin-sink@workspace:plugins/packages/plugins/signal-origin/plugins/sink"],
+
+    "@singularity/plugin-packages-sleep-clock": ["@singularity/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 
@@ -8424,6 +8440,8 @@
     "@singularity/plugin-stats-cost": ["@singularity/plugin-stats-cost@workspace:plugins/stats/plugins/cost"],
 
     "@singularity/plugin-stats-pushes": ["@singularity/plugin-stats-pushes@workspace:plugins/stats/plugins/pushes"],
+
+    "@singularity/plugin-stats-responsiveness": ["@singularity/plugin-stats-responsiveness@workspace:plugins/stats/plugins/responsiveness"],
 
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 

@@ -92,7 +92,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
         - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.
 
-- **`debug`** [55 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [56 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [92 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
@@ -221,6 +221,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
       - Plugins:
         - **`sink`**
+    - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
@@ -420,7 +421,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
     - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
 
-- **`stats`** [4 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
+- **`stats`** [5 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Plugins:

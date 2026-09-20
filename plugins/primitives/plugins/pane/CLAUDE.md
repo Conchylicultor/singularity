@@ -1023,6 +1023,7 @@ See "Open questions" in the design doc.
     - `debug/config-orphans`
     - `debug/health-monitor`
     - `debug/heap-snapshot`
+    - `debug/latency-ledger`
     - `debug/live-state-churn/emit`
     - `debug/live-state-health`
     - `debug/logs`

@@ -2,7 +2,7 @@
 // so it can be unit-tested without a DB socket.
 //
 // The payload is the JSON emitted by `live_state_notify()`:
-//   { "t": "<table>", "op": "I" | "U" | "D", "ids": string[] | null, "x": "<xid8>" }
+//   { "t": "<table>", "op": "I" | "U" | "D", "ids": string[] | null, "x": "<xid8>", "at": <epoch ms> }
 // `op` is the first letter of TG_OP. `ids` is an array of PK values as strings,
 // or null (composite/no PK, or an over-cap statement → FULL-for-table). `x` is
 // the source transaction id (`pg_current_xact_id()::text` — the same xid8 the
@@ -20,6 +20,12 @@ export type DbChange = {
   op: "I" | "U" | "D";
   ids: string[] | null;
   xid: string | null;
+  /**
+   * Wall-clock epoch ms of the statement (`clock_timestamp()` in the trigger), or
+   * null. Observability only: it lets an open tab measure change → applied.
+   * Null for a pre-upgrade NOTIFY and for every catch-up replay row.
+   */
+  changedAt: number | null;
 };
 
 export function parseLiveStatePayload(raw: string): DbChange | null {
@@ -58,5 +64,10 @@ export function parseLiveStatePayload(raw: string): DbChange | null {
   const x = obj.x;
   const xid = typeof x === "string" && x.length > 0 ? x : null;
 
-  return { table, op, ids: normalizedIds, xid };
+  // Tolerant like `x`: a missing or malformed `at` loses one latency sample,
+  // never the change.
+  const at = obj.at;
+  const changedAt = typeof at === "number" && Number.isFinite(at) ? at : null;
+
+  return { table, op, ids: normalizedIds, xid, changedAt };
 }

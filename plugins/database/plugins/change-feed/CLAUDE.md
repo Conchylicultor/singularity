@@ -165,6 +165,7 @@ silent socket is still not detected; that needs a heartbeat.
     - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
     - `database/live-state-snapshot`
+    - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `reports`

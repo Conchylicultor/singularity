@@ -153,6 +153,7 @@ check would have been a patch on a footgun.
     - `apps/events/refresh`
     - `apps/pages/agent-origin`
     - `debug/boot-profile`
+    - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `history/engine`

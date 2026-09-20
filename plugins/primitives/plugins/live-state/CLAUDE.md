@@ -616,6 +616,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
     - `MissedFrame`
+    - `PendingMountSnapshot`
     - `PointParams`
     - `PointResourceDescriptor`
     - `ResourceDescriptor`
@@ -624,6 +625,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ResourceResult`
     - `ResourceViewProps`
     - `SlowResourceInfo`
+    - `UpdateDelayInfo`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`
@@ -645,6 +647,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `noteResourceWatermark`
     - `NotificationsClient`
     - `NotificationsProvider`
+    - `pendingMountSnapshot`
     - `pointResourceDescriptor`
     - `queryKeyFor`
     - `resourceDescriptor`
@@ -652,7 +655,9 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ResourceStaleReadError`
     - `ResourceView`
     - `slowResourceReportSink`
+    - `subscribePendingMounts`
     - `subscribeResourceTxAcks`
+    - `updateDelayReportSink`
     - `useCombinedResources`
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
@@ -767,6 +772,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/summary`
     - `database/query-deadline`
     - `debug/claude-cli-calls`
+    - `debug/latency-ledger`
     - `debug/live-state-health`
     - `debug/queue`
     - `debug/queue-health`
@@ -806,6 +812,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `review/plugin-changes`
     - `runs`
     - `shell/notifications`
+    - `stats/responsiveness`
     - `tasks`
     - `tasks/attempt-view`
     - `tasks/attempt-work`

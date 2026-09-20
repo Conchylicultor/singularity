@@ -268,6 +268,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `Registration`
     - `ResourceContract`
     - `ResourceDefinition`
+    - `ResourceDeliveryObserver`
     - `ResourceLike`
     - `ResourceMode`
     - `ResourceParams`
@@ -298,6 +299,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `measureSubscribeCycle`
     - `notificationsWsHandler`
     - `notifyStatsFor`
+    - `onResourceDelivery`
     - `onResourcePush`
     - `physFootprintBytes`
     - `procMemory`

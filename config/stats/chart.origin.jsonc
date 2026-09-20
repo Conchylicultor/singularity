@@ -1,4 +1,4 @@
-// @hash f64ea22ac42f
+// @hash 35229783720e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -14,6 +14,7 @@
     "stats.cost:cost-distribution",
     "stats.cost:cost-top-conversations",
     "stats.pushes:pushes",
+    "stats.responsiveness:responsiveness",
     "stats.tasks:tasks-active"
   ]
 }

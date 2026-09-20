@@ -45,6 +45,15 @@ async function readVmStat(): Promise<VmStat | null> {
   return parseVmStat(result.stdout);
 }
 
+// Host-sample observers — same shape and same rules as `onHealthSample` in
+// process-sampler.ts. Main only, because the host sampler is.
+export type HostSampleObserver = (sample: HostSample) => void;
+const hostSampleObservers = new Set<HostSampleObserver>();
+export function onHostSample(cb: HostSampleObserver): () => void {
+  hostSampleObservers.add(cb);
+  return () => hostSampleObservers.delete(cb);
+}
+
 async function tick(): Promise<void> {
   const now = Date.now();
   const wallJumpMs = detectWallJumpMs(now, lastTickAt, SAMPLE_INTERVAL_MS);
@@ -104,6 +113,7 @@ async function tick(): Promise<void> {
     wallJumpMs,
   };
   channel.publish(JSON.stringify(sample));
+  for (const observer of hostSampleObservers) observer(sample);
 }
 
 export function startHostSampler(): void {

@@ -459,6 +459,7 @@ fixed raw size escapes per-site via
     - `stats/commits`
     - `stats/cost`
     - `stats/pushes`
+    - `stats/responsiveness`
     - `stats/tasks`
     - `tasks/attempt-view`
     - `tasks/task-attachments`

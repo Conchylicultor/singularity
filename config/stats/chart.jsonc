@@ -1,6 +1,7 @@
-// @hash f64ea22ac42f
+// @hash 35229783720e
 {
   "items": [
+    "stats.responsiveness:responsiveness",
     "stats.commits:commits",
     "stats.commits:lines",
     "stats.tasks:tasks-active",

@@ -148,10 +148,16 @@ measured overhead on a real worktree workload is still an open task.
     - `primitives/log-channels.readChannelJson`
   - Exports (types):
     - `HealthSample`
+    - `HealthSampleObserver`
     - `HostSample`
+    - `HostSampleObserver`
+    - `StackSampleObserver`
   - Exports (values):
     - `HealthSampleSchema`
     - `HostSampleSchema`
+    - `onHealthSample`
+    - `onHostSample`
+    - `onStackSamples`
   - Routes: `GET /api/debug/health-monitor`
 - Core:
   - Uses: `debug/slow-ops.SlowOpMarkerSchema`
@@ -166,7 +172,9 @@ measured overhead on a real worktree workload is still an open task.
     - `HealthSeriesSchema`
     - `HostSampleSchema`
 - Cross-plugin:
-  - Imported by: `debug/timeline`
+  - Imported by:
+    - `debug/latency-ledger`
+    - `debug/timeline`
 - Shared:
   - Exports (types):
     - `GetHealthDataResponse`

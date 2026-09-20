@@ -5,25 +5,35 @@ describe("parseLiveStatePayload", () => {
   test("parses a scoped UPDATE with ids", () => {
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a","b"]}`),
-    ).toEqual({ table: "tasks", op: "U", ids: ["a", "b"], xid: null });
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a", "b"],
+      xid: null,
+      changedAt: null,
+    });
   });
 
   test("parses an INSERT with ids", () => {
-    expect(
-      parseLiveStatePayload(`{"t":"tasks","op":"I","ids":["x"]}`),
-    ).toEqual({ table: "tasks", op: "I", ids: ["x"], xid: null });
+    expect(parseLiveStatePayload(`{"t":"tasks","op":"I","ids":["x"]}`)).toEqual(
+      { table: "tasks", op: "I", ids: ["x"], xid: null, changedAt: null },
+    );
   });
 
   test("parses a DELETE", () => {
-    expect(
-      parseLiveStatePayload(`{"t":"tasks","op":"D","ids":["x"]}`),
-    ).toEqual({ table: "tasks", op: "D", ids: ["x"], xid: null });
+    expect(parseLiveStatePayload(`{"t":"tasks","op":"D","ids":["x"]}`)).toEqual(
+      { table: "tasks", op: "D", ids: ["x"], xid: null, changedAt: null },
+    );
   });
 
   test("ids null → FULL-for-table", () => {
-    expect(
-      parseLiveStatePayload(`{"t":"tasks","op":"U","ids":null}`),
-    ).toEqual({ table: "tasks", op: "U", ids: null, xid: null });
+    expect(parseLiveStatePayload(`{"t":"tasks","op":"U","ids":null}`)).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: null,
+      xid: null,
+      changedAt: null,
+    });
   });
 
   test("missing ids → null", () => {
@@ -32,13 +42,18 @@ describe("parseLiveStatePayload", () => {
       op: "U",
       ids: null,
       xid: null,
+      changedAt: null,
     });
   });
 
   test("empty ids array stays empty (consumer treats empty as FULL)", () => {
-    expect(
-      parseLiveStatePayload(`{"t":"tasks","op":"U","ids":[]}`),
-    ).toEqual({ table: "tasks", op: "U", ids: [], xid: null });
+    expect(parseLiveStatePayload(`{"t":"tasks","op":"U","ids":[]}`)).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: [],
+      xid: null,
+      changedAt: null,
+    });
   });
 
   test("invalid JSON → null", () => {
@@ -59,7 +74,9 @@ describe("parseLiveStatePayload", () => {
   });
 
   test("bad op → null", () => {
-    expect(parseLiveStatePayload(`{"t":"tasks","op":"X","ids":null}`)).toBeNull();
+    expect(
+      parseLiveStatePayload(`{"t":"tasks","op":"X","ids":null}`),
+    ).toBeNull();
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"INSERT","ids":null}`),
     ).toBeNull();
@@ -69,18 +86,66 @@ describe("parseLiveStatePayload", () => {
   test("`x` (source txid) parses when present; absent/malformed degrades to null tolerantly", () => {
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a"],"x":"12345"}`),
-    ).toEqual({ table: "tasks", op: "U", ids: ["a"], xid: "12345" });
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a"],
+      xid: "12345",
+      changedAt: null,
+    });
     // Over-cap re-emit shape: ids dropped, attribution kept.
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":null,"x":"12345"}`),
-    ).toEqual({ table: "tasks", op: "U", ids: null, xid: "12345" });
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: null,
+      xid: "12345",
+      changedAt: null,
+    });
     // Malformed `x` never rejects the change — only the attribution degrades.
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a"],"x":42}`),
-    ).toEqual({ table: "tasks", op: "U", ids: ["a"], xid: null });
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a"],
+      xid: null,
+      changedAt: null,
+    });
     expect(
       parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a"],"x":""}`),
-    ).toEqual({ table: "tasks", op: "U", ids: ["a"], xid: null });
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a"],
+      xid: null,
+      changedAt: null,
+    });
+  });
+
+  test("`at` (the change's wall clock) parses when present; absent/malformed degrades to null", () => {
+    expect(
+      parseLiveStatePayload(
+        `{"t":"tasks","op":"U","ids":["a"],"x":"1","at":1789915496002}`,
+      ),
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a"],
+      xid: "1",
+      changedAt: 1789915496002,
+    });
+    // A malformed `at` loses one latency sample, never the change.
+    expect(
+      parseLiveStatePayload(`{"t":"tasks","op":"U","ids":["a"],"at":"soon"}`),
+    ).toEqual({
+      table: "tasks",
+      op: "U",
+      ids: ["a"],
+      xid: null,
+      changedAt: null,
+    });
   });
 
   test("ids present but wrong shape → null", () => {

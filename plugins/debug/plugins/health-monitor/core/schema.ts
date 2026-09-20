@@ -62,6 +62,15 @@ export const HealthSampleSchema = z.object({
   // timeline renders the preceding gap as a dark "sleep" segment. Optional —
   // pre-cutover JSONL lines must still parse, same rationale as `monitorOps`.
   wallJumpMs: z.number().optional(),
+  // Present when the machine SLEPT during this window, however briefly: the ms
+  // asleep, measured exactly as the gap between the OS clock that runs through
+  // sleep and the one that pauses (packages/sleep-clock). It catches what
+  // `wallJumpMs` cannot — maintenance naps of a few seconds, far under its 50 s
+  // bar, which otherwise read as multi-second event-loop stalls (2026-09-20: two
+  // unrelated backends filed identical stalls for the same naps). Same contract:
+  // the histogram is reset before reading, so a stamped sample is "no measurement
+  // this window". Absent off darwin, where sleep cannot be told from a stall.
+  sleptMs: z.number().optional(),
 });
 export type HealthSample = z.infer<typeof HealthSampleSchema>;
 

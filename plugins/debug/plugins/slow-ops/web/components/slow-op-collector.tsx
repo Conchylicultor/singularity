@@ -22,7 +22,18 @@ export function SlowOpCollector() {
 
   // Page-load signal: measure first-content paint in a post-paint frame.
   useEffect(() => {
+    // A hidden tab gets NO animation frame until it is shown again, so this
+    // callback would fire minutes later and report the time the tab sat in the
+    // background as a page load (a 1,569 s "load" was recorded that way on
+    // 2026-09-19). Once the tab has been hidden the number means nothing: drop it.
+    let wasHidden = document.visibilityState === "hidden";
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") wasHidden = true;
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     const id = requestAnimationFrame(() => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (wasHidden) return;
       const ms = performance.now();
       const t = cfgRef.current.pageLoadMs;
       if (ms <= t) return;
@@ -40,7 +51,10 @@ export function SlowOpCollector() {
         clientBoot: toClientBootSection(getBootTrace()),
       });
     });
-    return () => cancelAnimationFrame(id);
+    return () => {
+      cancelAnimationFrame(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   // Element signal: live-state resources hand us their mount → settle duration.

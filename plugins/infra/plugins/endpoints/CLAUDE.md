@@ -329,6 +329,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `debug/config-orphans`
     - `debug/health-monitor`
     - `debug/heap-snapshot`
+    - `debug/latency-ledger`
     - `debug/live-state-churn/emit`
     - `debug/live-state-health`
     - `debug/logs`
@@ -403,6 +404,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `stats/commits`
     - `stats/cost`
     - `stats/pushes`
+    - `stats/responsiveness`
     - `stats/tasks`
     - `tasks`
     - `tasks/task-attachments`

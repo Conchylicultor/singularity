@@ -92,6 +92,7 @@ Shared (both paths):
     - `primitives/loading`
     - `screenshot`
     - `stats/cost`
+    - `stats/responsiveness`
     - `ui/segmented-progress-bar/segmented`
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`

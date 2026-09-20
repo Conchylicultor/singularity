@@ -17,6 +17,7 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import { slowResourceReportSink } from "./slow-resource-reporter";
+import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import type { ChannelStatuses } from "./notifications-client";
 import type { ResourceDescriptor } from "../core";
@@ -330,6 +331,16 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
     if (gate && !pending && settledKey !== keyStr) setSettledKey(keyStr);
   }, [gate, pending, settledKey, keyStr]);
+
+  // Count this read as "still waiting for data" from mount until its first value
+  // lands (the cleanup runs on the `hasValue` flip, on unmount, and on a key
+  // change). The page-wide count is how a page load or a navigation knows it is
+  // on screen — see pending-mount-tracker.ts. Keyed on `hasValue`, not
+  // `pending`: a transient error does not make the page "loading again".
+  useEffect(() => {
+    if (hasValue) return;
+    return notePendingMount(key);
+  }, [hasValue, key, keyStr]);
 
   // Report the mount→settle duration once, the first time this resource leaves
   // `pending`. live-state stays threshold-agnostic — the registered reporter (a

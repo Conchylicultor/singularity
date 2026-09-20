@@ -21,6 +21,10 @@ import {
   drainAndMaybeDump,
 } from "./stall-profiler";
 import { detectWallJumpMs } from "./wall-jump";
+import {
+  createSleepMeter,
+  type SleepMeter,
+} from "@plugins/packages/plugins/sleep-clock/core";
 
 // Per-backend health sampler. Installed in the server plugin's `onReady` and
 // torn down in `onShutdown`. It samples this process's own event-loop lag, GC
@@ -50,6 +54,22 @@ const MAX_FILE_BYTES = 5_000_000; // ~2 days at 10s; tail-trimmed past this
 const STALL_ARM_P99_MS = 200;
 const STALL_ARM_MAX_MS = 1_000;
 
+// A window counts as "the machine slept" from this much sleep. The two OS clocks
+// are read a few hundred nanoseconds apart, so an awake window measures a hair
+// above zero; 250 ms is far above that and far below the shortest nap seen (5 s).
+const SLEPT_MIN_MS = 250;
+
+// Sample observers — the `onSlowSpan` shape. A plugin that wants every sample as
+// it is taken (debug/latency-ledger: thread-lag distribution + its minute clock)
+// registers here instead of tailing the JSONL. Called at the end of every tick,
+// on the sampler's own timer: an observer must be cheap and must not throw.
+export type HealthSampleObserver = (sample: HealthSample) => void;
+const sampleObservers = new Set<HealthSampleObserver>();
+export function onHealthSample(cb: HealthSampleObserver): () => void {
+  sampleObservers.add(cb);
+  return () => sampleObservers.delete(cb);
+}
+
 let histogram: IntervalHistogram | null = null;
 let interval: ReturnType<typeof setInterval> | null = null;
 // Declared exactly once at module eval (not in start): the sampler can be stopped
@@ -75,6 +95,8 @@ let lastTickAt = 0;
 // Whether the JSC stall profiler is armed in THIS process: main arms at boot,
 // worktree backends arm-on-elevated (one-way — bun:jsc has no stop).
 let stallArmed = false;
+// Exact machine-sleep measurement between ticks (see SLEPT_MIN_MS).
+let sleepMeter: SleepMeter | null = null;
 
 function healthFilePath(): string {
   return join(worktreeDataDir(runtimeNamespace()), "logs", "health.jsonl");
@@ -108,7 +130,15 @@ function tick(): void {
   // wallJumpMs so the gap is classifiable downstream. A merely-late tick from
   // a wedged loop stays below the jump factor and keeps its stall evidence.
   const wallJumpMs = detectWallJumpMs(now, lastTickAt, SAMPLE_INTERVAL_MS);
-  if (wallJumpMs !== undefined) histogram.reset();
+  // …and the naps that heuristic cannot see: any sleep at all in this window,
+  // measured from the OS clocks. A nap pollutes the histogram exactly like a long
+  // suspend does, so it gets the same treatment.
+  const slept = sleepMeter?.read();
+  const sleptMs =
+    slept?.supported === true && slept.sleptMs >= SLEPT_MIN_MS
+      ? slept.sleptMs
+      : undefined;
+  if (wallJumpMs !== undefined || sleptMs !== undefined) histogram.reset();
   const mem = process.memoryUsage();
   const meter = getSelfMeter();
   const proc = procMemory();
@@ -141,6 +171,7 @@ function tick(): void {
     monitorOps: meter.count - lastMonitorOps,
     monitorMs: meter.totalMs - lastMonitorMs,
     wallJumpMs,
+    sleptMs,
   };
   // Drain the JSC sampler for this window BEFORE resetting the histogram so the
   // drained samples and eventLoopMaxMs describe the same window. On a stall this
@@ -171,6 +202,7 @@ function tick(): void {
   lastMonitorMs = meter.totalMs;
   rotateIfNeeded();
   channel.publish(JSON.stringify(sample));
+  for (const observer of sampleObservers) observer(sample);
 }
 
 export function startProcessSampler(): void {
@@ -194,6 +226,7 @@ export function startProcessSampler(): void {
   lastMonitorOps = meter.count;
   lastMonitorMs = meter.totalMs;
   lastTickAt = Date.now();
+  sleepMeter = createSleepMeter();
   // Arm the on-stall stack-trace flight recorder. Main: always, at boot (the
   // UX-critical backend). Worktree backends: arm-on-elevated in tick() — see
   // the STALL_ARM_* constants.

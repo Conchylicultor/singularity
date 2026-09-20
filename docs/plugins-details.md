@@ -12242,6 +12242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/live-state-snapshot`
       - `database/query-deadline`
       - `debug/boot-profile`
+      - `debug/latency-ledger`
       - `debug/profiling/boot-bench`
       - `debug/slow-ops`
       - `debug/trace/engine`
@@ -12360,6 +12361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/query`
           - `database/zero/cache-service`
           - `debug/boot-profile`
+          - `debug/latency-ledger`
           - `debug/profiling/ops`
           - `debug/slow-ops`
           - `debug/slow-ops/cluster`
@@ -12403,6 +12405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `database/live-state-snapshot`
+          - `debug/latency-ledger`
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `reports`
@@ -12725,6 +12728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/analytics/collect`
           - `backup`
           - `conversations/conversation-category`
+          - `debug/latency-ledger`
           - `fields/json/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
@@ -13179,10 +13183,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/log-channels.readChannelJson`
         - Exports (types):
           - `HealthSample`
+          - `HealthSampleObserver`
           - `HostSample`
+          - `HostSampleObserver`
+          - `StackSampleObserver`
         - Exports (values):
           - `HealthSampleSchema`
           - `HostSampleSchema`
+          - `onHealthSample`
+          - `onHostSample`
+          - `onStackSamples`
         - Routes: `GET /api/debug/health-monitor`
       - Core:
         - Uses: `debug/slow-ops.SlowOpMarkerSchema`
@@ -13197,7 +13207,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HealthSeriesSchema`
           - `HostSampleSchema`
       - Cross-plugin:
-        - Imported by: `debug/timeline`
+        - Imported by:
+          - `debug/latency-ledger`
+          - `debug/timeline`
       - Shared:
         - Exports (types):
           - `GetHealthDataResponse`
@@ -13241,6 +13253,97 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes:
           - `GET /api/debug/heap-stats`
           - `POST /api/debug/heap-snapshot`
+    - **`latency-ledger`** — The browser half of the latency ledger: times every page load and in-app navigation until every list on screen has its data, and the delay of every update pushed into the tab, and posts them as per-minute histograms at most once a minute. The server half of the latency ledger: counts every delivery to a tab, every 10 s thread-lag sample and every stack sample by owning plugin into per-minute histograms, merges the browser's page-load / navigation / update-delay minutes into the same rows, and answers p50 / p95 for any window split into calm and under-pressure minutes, with the track's exit criteria as pass / fail.
+      - Web:
+        - Contributes: `Core.Root` → `LatencyCollector`
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.fetchEndpoint`
+          - `primitives/live-state.pendingMountSnapshot`
+          - `primitives/live-state.subscribePendingMounts`
+          - `primitives/live-state.updateDelayReportSink`
+          - `primitives/log-channels.clientLog`
+          - `primitives/pane.currentRoutePath`
+      - Server:
+        - Contributes:
+          - `resource.declare` "latency-ledger.revision"
+          - `change-feed-exclusion` "latency_ledger_minute"
+          - `change-feed-exclusion` "latency_ledger_host_minute"
+          - `change-feed-exclusion` "latency_ledger_thread_minute"
+          - `change-feed-exclusion` "latency_ledger_interaction"
+          - `fork-data-exclusion` "latency_ledger_minute"
+          - `fork-data-exclusion` "latency_ledger_host_minute"
+          - `fork-data-exclusion` "latency_ledger_thread_minute"
+          - `fork-data-exclusion` "latency_ledger_interaction"
+          - `backup-data-exclusion` "latency_ledger_minute"
+          - `backup-data-exclusion` "latency_ledger_host_minute"
+          - `backup-data-exclusion` "latency_ledger_thread_minute"
+          - `backup-data-exclusion` "latency_ledger_interaction"
+        - Uses:
+          - `database.db`
+          - `database/admin.ExcludeFromBackup`
+          - `database/admin.ExcludeFromFork`
+          - `database/change-feed.ExcludeFromChangeFeed`
+          - `database/sql-column.parsedJson`
+          - `database/sql-column.parsedText`
+          - `debug/health-monitor.onHealthSample`
+          - `debug/health-monitor.onHostSample`
+          - `debug/health-monitor.onStackSamples`
+          - `infra/endpoints.implement`
+          - `infra/host/duress.createShedBuffer`
+          - `infra/host/duress/latch.isUnderDuress`
+          - `infra/retention.defineRetention`
+        - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
+        - Register:
+          - `defineJob('retention.latency_ledger_minute')`
+          - `defineJob('retention.latency_ledger_host_minute')`
+          - `defineJob('retention.latency_ledger_thread_minute')`
+          - `defineJob('retention.latency_ledger_interaction')`
+        - Resources: `latency-ledger.revision` (push)
+        - Routes:
+          - `POST /api/latency-ledger/client`
+          - `GET /api/latency-ledger/summary`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `primitives/live-state.resourceDescriptor`
+        - Exports (types):
+          - `ClientLatencyMetric`
+          - `ClientMinute`
+          - `ExitCriterion`
+          - `HistogramAcc`
+          - `Interaction`
+          - `LatencyMetric`
+          - `LatencyStat`
+          - `LatencySummary`
+          - `LatencyWindow`
+        - Exports (values):
+          - `addSample`
+          - `BUCKET_COUNT`
+          - `bucketIndexFor`
+          - `bucketLowerMs`
+          - `CLIENT_METRICS`
+          - `ClientMinuteSchema`
+          - `countAtOrAbove`
+          - `emptyAcc`
+          - `emptyCounts`
+          - `EXIT_CRITERIA`
+          - `getLatencySummary`
+          - `HISTOGRAM_SCHEME`
+          - `InteractionSchema`
+          - `isEmptyAcc`
+          - `LATENCY_METRICS`
+          - `LATENCY_WINDOWS`
+          - `latencyLedgerRevisionResource`
+          - `mergeAcc`
+          - `mergeCounts`
+          - `METRIC_LABELS`
+          - `minuteStartOf`
+          - `percentileFromCounts`
+          - `PRESSURE_DECOMPRESSIONS_PER_SEC`
+          - `PRESSURE_FREE_MEM_MB`
+          - `submitClientLatency`
+          - `THREAD_STALL_MS`
     - **`live-state-churn`** — Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.
       - Plugins:
         - **`emit`** — Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
@@ -16686,6 +16789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Registration`
           - `ResourceContract`
           - `ResourceDefinition`
+          - `ResourceDeliveryObserver`
           - `ResourceLike`
           - `ResourceMode`
           - `ResourceParams`
@@ -16716,6 +16820,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `measureSubscribeCycle`
           - `notificationsWsHandler`
           - `notifyStatsFor`
+          - `onResourceDelivery`
           - `onResourcePush`
           - `physFootprintBytes`
           - `procMemory`
@@ -17524,7 +17629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
@@ -18039,6 +18144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/config-orphans`
           - `debug/health-monitor`
           - `debug/heap-snapshot`
+          - `debug/latency-ledger`
           - `debug/live-state-churn/emit`
           - `debug/live-state-health`
           - `debug/logs`
@@ -18113,6 +18219,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `stats/cost`
           - `stats/pushes`
+          - `stats/responsiveness`
           - `stats/tasks`
           - `tasks`
           - `tasks/task-attachments`
@@ -18623,6 +18730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `duressConfig`
           - Cross-plugin:
             - Imported by:
+              - `debug/latency-ledger`
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `reports`
@@ -18630,6 +18738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
               - Cross-plugin:
                 - Imported by:
+                  - `debug/latency-ledger`
                   - `debug/sentinel`
                   - `infra/host/duress`
                   - `primitives/log-channels`
@@ -19465,6 +19574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/refresh`
           - `apps/pages/agent-origin`
           - `debug/boot-profile`
+          - `debug/latency-ledger`
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `history/engine`
@@ -20262,6 +20372,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `readSignalOriginLines`
               - `SIGNAL_ORIGIN_FILE`
+    - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
+      - Core:
+        - Exports (types):
+          - `SleepMeter`
+          - `SleepReading`
+        - Exports (values): `createSleepMeter`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:
@@ -23878,6 +23994,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `runs`
               - `runs/run-outcome`
               - `shell/notifications`
+              - `stats/responsiveness`
               - `tasks/attempt-status`
               - `tasks/attempt-view`
               - `tasks/auto-start`
@@ -24497,6 +24614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading`
               - `screenshot`
               - `stats/cost`
+              - `stats/responsiveness`
               - `ui/segmented-progress-bar/segmented`
               - `ui/theme-engine/theme-customizer`
               - `ui/theme-engine/theme-gallery`
@@ -25287,6 +25405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `shell/notifications`
               - `stats/cost`
+              - `stats/responsiveness`
               - `ui/theme-engine/theme-gallery`
         - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
           - Web:
@@ -25645,6 +25764,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/commits`
               - `stats/cost`
               - `stats/pushes`
+              - `stats/responsiveness`
               - `stats/tasks`
               - `tasks/attempt-view`
               - `tasks/task-attachments`
@@ -26142,6 +26262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/commits`
               - `stats/cost`
               - `stats/pushes`
+              - `stats/responsiveness`
               - `stats/tasks`
               - `tasks/attempt-view`
               - `tasks/task-attachments`
@@ -26249,6 +26370,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/commits`
               - `stats/cost`
               - `stats/pushes`
+              - `stats/responsiveness`
               - `tasks/task-draft-form`
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
@@ -28542,6 +28664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveStateSocketKind`
           - `MatchResourceHandlers`
           - `MissedFrame`
+          - `PendingMountSnapshot`
           - `PointParams`
           - `PointResourceDescriptor`
           - `ResourceDescriptor`
@@ -28550,6 +28673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ResourceResult`
           - `ResourceViewProps`
           - `SlowResourceInfo`
+          - `UpdateDelayInfo`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -28571,6 +28695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `noteResourceWatermark`
           - `NotificationsClient`
           - `NotificationsProvider`
+          - `pendingMountSnapshot`
           - `pointResourceDescriptor`
           - `queryKeyFor`
           - `resourceDescriptor`
@@ -28578,7 +28703,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ResourceStaleReadError`
           - `ResourceView`
           - `slowResourceReportSink`
+          - `subscribePendingMounts`
           - `subscribeResourceTxAcks`
+          - `updateDelayReportSink`
           - `useCombinedResources`
           - `useNotificationsChannelStatuses`
           - `useNotificationsClient`
@@ -28693,6 +28820,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/summary`
           - `database/query-deadline`
           - `debug/claude-cli-calls`
+          - `debug/latency-ledger`
           - `debug/live-state-health`
           - `debug/queue`
           - `debug/queue-health`
@@ -28732,6 +28860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes`
           - `runs`
           - `shell/notifications`
+          - `stats/responsiveness`
           - `tasks`
           - `tasks/attempt-view`
           - `tasks/attempt-work`
@@ -29006,6 +29135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/boot-events`
           - `debug/boot-watchdog`
           - `debug/health-monitor`
+          - `debug/latency-ledger`
           - `debug/logs`
           - `debug/op-rate`
           - `debug/paging-probe`
@@ -29854,6 +29984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/config-orphans`
           - `debug/health-monitor`
           - `debug/heap-snapshot`
+          - `debug/latency-ledger`
           - `debug/live-state-churn/emit`
           - `debug/live-state-health`
           - `debug/logs`
@@ -32589,7 +32720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Web:
     - Slots:
-      - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`
+      - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.responsiveness`, `stats.tasks`
       - `statsPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "stats"
@@ -32615,6 +32746,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/commits`
       - `stats/cost`
       - `stats/pushes`
+      - `stats/responsiveness`
       - `stats/tasks`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
@@ -32675,6 +32807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/health-monitor`
           - `stats/cost`
           - `stats/pushes`
+          - `stats/responsiveness`
           - `stats/tasks`
         - Endpoint callers: `stats`
       - Shared:
@@ -32797,6 +32930,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getPushesStepBreakdown`
           - `getPushesThroughput`
           - `getPushesWaitTime`
+    - **`responsiveness`** — Responsiveness card: p50 / p95 of page loads, navigations and update delays for the last hour, day or week, calm beside under-pressure, with the exit criteria as pass / fail and the serving thread's time by plugin.
+      - Web:
+        - Contributes: `Stats.Chart` "Responsiveness" → `ResponsivenessSection`
+        - Uses:
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useEndpoint`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.useResource`
+          - `stats.Stats`
+          - `stats/commits.ChartState`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Web:
         - Contributes: `Stats.Chart` "Tasks" → `TasksSection`

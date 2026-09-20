@@ -276,6 +276,7 @@ hand-written jsonb columns, where the rule closes).
     - `apps/deploy/analytics/collect`
     - `backup`
     - `conversations/conversation-category`
+    - `debug/latency-ledger`
     - `fields/json/storage`
     - `fields/tags/storage`
     - `fields/text/storage`

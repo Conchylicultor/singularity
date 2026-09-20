@@ -51,6 +51,20 @@ const TOP_STACKS = 10;
 
 let sampler: StackSampler | null = null;
 
+// Stack-sample observers — the `onSlowSpan` shape. Called once per drain (every
+// 10 s tick while armed) with that window's samples. Armed always on main, and on
+// another backend only once it has shown an elevated tick, so an observer there
+// sees nothing until then. An observer must be cheap and must not throw.
+export type StackSampleObserver = (
+  samples: readonly StackSample[],
+  windowMs: number,
+) => void;
+const stackSampleObservers = new Set<StackSampleObserver>();
+export function onStackSamples(cb: StackSampleObserver): () => void {
+  stackSampleObservers.add(cb);
+  return () => stackSampleObservers.delete(cb);
+}
+
 // Render a source path relative to the worktree root so keys stay readable and
 // stable (the absolute prefix is noise and machine-specific).
 function shortenSource(sourceURL: string): string {
@@ -190,6 +204,12 @@ export function drainAndMaybeDump(
 ): void {
   if (!sampler) return;
   const traces = sampler.drain();
+  // Every drained batch, stall or not: what ran on the thread this window. Until
+  // this seam the samples of a healthy window were thrown away, so "what does this
+  // thread spend its time on" could only be answered during a freeze.
+  if (traces.length > 0) {
+    for (const observer of stackSampleObservers) observer(traces, windowMs);
+  }
 
   if (eventLoopMaxMs <= STALL_THRESHOLD_MS) return; // not a stall — discard
   if (traces.length === 0) return; // nothing captured for this window

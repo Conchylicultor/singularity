@@ -153,6 +153,7 @@ Settings → Config): `enabled`, `persistFirstN` (3), `bufferMaxEntries` (2000),
   - Exports (values): `duressConfig`
 - Cross-plugin:
   - Imported by:
+    - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `reports`

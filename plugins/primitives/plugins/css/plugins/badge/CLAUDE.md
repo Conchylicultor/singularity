@@ -194,6 +194,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `runs`
     - `runs/run-outcome`
     - `shell/notifications`
+    - `stats/responsiveness`
     - `tasks/attempt-status`
     - `tasks/attempt-view`
     - `tasks/auto-start`

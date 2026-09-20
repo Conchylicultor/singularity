@@ -62,6 +62,7 @@
     - `debug/health-monitor`
     - `stats/cost`
     - `stats/pushes`
+    - `stats/responsiveness`
     - `stats/tasks`
   - Endpoint callers: `stats`
 - Shared:

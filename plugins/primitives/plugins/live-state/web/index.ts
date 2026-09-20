@@ -14,6 +14,13 @@ export {
 export { hydrateEndpoint } from "./hydrate-endpoint";
 export { slowResourceReportSink } from "./slow-resource-reporter";
 export type { SlowResourceInfo } from "./slow-resource-reporter";
+export { updateDelayReportSink } from "./update-delay-reporter";
+export type { UpdateDelayInfo } from "./update-delay-reporter";
+export {
+  pendingMountSnapshot,
+  subscribePendingMounts,
+} from "./pending-mount-tracker";
+export type { PendingMountSnapshot } from "./pending-mount-tracker";
 export type { ResourceResult } from "./use-resource";
 export { combineResources, useCombinedResources } from "./resource-utils";
 export type {

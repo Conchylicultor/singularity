@@ -306,6 +306,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `database/live-state-snapshot`
     - `database/query-deadline`
     - `debug/boot-profile`
+    - `debug/latency-ledger`
     - `debug/profiling/boot-bench`
     - `debug/slow-ops`
     - `debug/trace/engine`
