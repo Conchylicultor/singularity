@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
@@ -22,8 +23,9 @@ export interface RecordNotificationInput {
    * rather than inserting a new row — so a deduped notification always reflects
    * its latest state (e.g. a crash whose noise classification flipped between
    * occurrences). The row's identity, creation time, and read/dismissed state
-   * are preserved, so dedup collapses recurrences into one row without
-   * resurfacing or re-alerting. Null/undefined means "no dedup" — Postgres
+   * are preserved, so dedup alone collapses recurrences into one row; whether
+   * that row re-alerts is the separate `resurfaceAfterMs` axis below.
+   * Null/undefined means "no dedup" — Postgres
    * treats NULLs as non-conflicting, so a normal insert always happens.
    *
    * Every dedup hit (regardless of re-surface policy) bumps the row's `count`
@@ -36,9 +38,15 @@ export interface RecordNotificationInput {
    * a row that last surfaced more than `resurfaceAfterMs` ago re-surfaces it —
    * resets `read`/`dismissed` to false and bumps `createdAt` to now, so it floats
    * back to the top of the bell as a fresh unread alert. A hit inside that window
-   * only coalesces (count/lastSeenAt bump, no re-alert). Omit for identity-dedup
-   * (the default): recurrences collapse forever onto one row and never resurface.
-   * Requires `dedupeKey` to have any effect.
+   * only coalesces (count/lastSeenAt bump, no re-alert). Requires `dedupeKey` to
+   * have any effect.
+   *
+   * Optional here, and omitting it really does mean "never resurface" — which is
+   * right only for the callers that dedupe on a key unique per event
+   * (conversation-created, build-finish, page reminders), where there is no
+   * second occurrence to re-alert about. Callers whose key names a standing
+   * problem must always pass one: the reports engine does, and enforces its own
+   * floor on top so no report kind can opt out of re-alerting.
    */
   resurfaceAfterMs?: number;
   /**
@@ -49,8 +57,13 @@ export interface RecordNotificationInput {
   id?: string;
 }
 
+// db-parametrized for the same reason upsertReport is: the re-surface semantics
+// live in the ON CONFLICT SQL, so the DB-backed suite drives THIS function
+// against a throwaway Postgres rather than restating its CASE expressions.
+// Production callers pass nothing and get the app pool.
 export async function recordNotification(
   input: RecordNotificationInput,
+  conn: NodePgDatabase = db,
 ): Promise<string> {
   const id =
     input.id ?? `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -65,7 +78,7 @@ export async function recordNotification(
     input.resurfaceAfterMs != null
       ? sql`(${_notifications.createdAt} < ${new Date(now.getTime() - input.resurfaceAfterMs)})`
       : sql`false`;
-  const inserted = await db
+  const inserted = await conn
     .insert(_notifications)
     .values({
       id,

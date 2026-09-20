@@ -21,6 +21,15 @@ interchangeable:
 (`recorded` | `shed` | `collapsed`) — "the engine took ownership" must never
 read as "recorded with no id".
 
+## The bell re-alerts; a kind cannot opt out
+
+A report IS a problem, and a problem that recurs after you dismissed it is news.
+So the bell's re-alert window has a floor (`RENOTIFY_FLOOR_MS`, 10 min in
+`record-report.ts`) and `meta.notifCooldownMs` is only ever a RAISE above it —
+same shape as `meta.fanOutPerWindow`, and deliberately no spelling for "never".
+A dismissed row comes back unread on the next occurrence past the window;
+occurrences inside it only bump `count`.
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -107,6 +116,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Report`
+    - `ReportFingerprintContext`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`

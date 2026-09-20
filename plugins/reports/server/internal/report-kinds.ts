@@ -1,6 +1,7 @@
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { RecordNotificationInput } from "@plugins/shell/plugins/notifications/server";
+import type { ReportFingerprintContext } from "@plugins/reports/core";
 import type { _reports } from "./tables";
 
 // The bell-notification variant a kind's report files. Single-sourced from the
@@ -23,8 +24,16 @@ export interface ReportKindSpec<TData = unknown> {
   // persisted into the generic `data` column and handed back to fingerprint /
   // renderTask consumers.
   schema: ZodParser<TData>;
-  // Dedup strategy: repeats sharing a fingerprint collapse onto one row.
-  fingerprint(data: TData): Promise<string> | string;
+  // Dedup strategy: repeats sharing a fingerprint collapse onto one row. `ctx`
+  // carries the occurrence's generic fields (the raw message, the source) for
+  // kinds whose payload can arrive carrying no identity of its own — without
+  // it, two unrelated such reports hash to the same constant and land on one
+  // row. Implementations that get their identity from the payload alone simply
+  // ignore it.
+  fingerprint(
+    data: TData,
+    ctx: ReportFingerprintContext,
+  ): Promise<string> | string;
   // When true, this kind bypasses the duress shed gate in recordReport. The
   // engine names no kind — a kind DECLARES itself exempt. Reserve for kinds
   // whose loss would break the shedding accounting itself: the duress-shed
@@ -49,11 +58,16 @@ export interface ReportKindSpec<TData = unknown> {
     // spelling for "no ceiling". Must be a positive integer; anything else
     // throws at admit rather than quietly disabling the mechanism.
     fanOutPerWindow?: number;
-    // Notification re-arm policy. When set, the bell notification re-alerts:
-    // each cooldown window starts a fresh unread row, while all reports within a
-    // window coalesce onto that one row (no spam). Omit (default) for
-    // identity-dedup kinds like crash that should never resurface once seen —
-    // those collapse forever onto a single row keyed by the report id.
+    // This kind's own bell re-arm window: how long its notification row stays
+    // quiet before a recurrence re-alerts as a fresh unread row. Reports inside
+    // the window coalesce onto that one row (count + last-seen bump, no spam).
+    // Only ever a RAISE — the engine takes the max of this and its floor
+    // (RENOTIFY_FLOOR_MS, 10 min), so there is no spelling for "never
+    // resurface". Omitting it means the floor, which is the right default: a
+    // report IS a problem, and a problem that recurs after you dismissed it is
+    // news. Set it only to ask for a LONGER quiet window — e.g. 6 h for a
+    // standing condition that re-trips on every mount, 24 h for a fact the user
+    // has already acted on.
     notifCooldownMs?: number;
   };
   renderTask(row: ReportRow): { title: string; description: string };

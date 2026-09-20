@@ -4,3 +4,4 @@ export { reportsRootRoute, reportDetailRoute } from "./routes";
 export { SERVER_REPORT_SOURCES, CLIENT_REPORT_SOURCES } from "./sources";
 export { reportsConfig } from "./config";
 export type { ReportSource } from "./sources";
+export type { ReportFingerprintContext } from "./fingerprint";

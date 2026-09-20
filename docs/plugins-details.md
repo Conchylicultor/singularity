@@ -31800,6 +31800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `Report`
+      - `ReportFingerprintContext`
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`

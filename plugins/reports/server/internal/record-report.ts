@@ -116,6 +116,15 @@ const reportShed = createShedBuffer<{
   },
 });
 
+// Floor on the bell's re-alert window, and the reason a kind cannot opt out of
+// re-alerting. A report IS a problem, and a problem that recurs after you
+// dismissed it is news — so "never tell me again" is never the right answer,
+// and there is deliberately no spelling for it. `meta.notifCooldownMs` is
+// therefore only ever a RAISE above this floor (the engine takes the max),
+// exactly the shape `meta.fanOutPerWindow` already has: a kind may ask for a
+// LONGER quiet window, never for silence.
+const RENOTIFY_FLOOR_MS = 10 * 60 * 1000;
+
 // The kind of the fan-out rollup. Naming it here is the engine's one naming of
 // a kind string, the precedent `duress-shed` above already sets: the engine
 // files the accounting, and the kind that OWNS the payload schema, the
@@ -213,7 +222,13 @@ export async function recordReport(
   // the exact shape the kind validated.
   const data = input.data;
   const parsed = spec.schema.parse(data);
-  const fp = await spec.fingerprint(parsed);
+  // The RAW message, not the clamped one below: the clamp is a display bound,
+  // and letting it move would make a report's identity depend on how long its
+  // message happened to be.
+  const fp = await spec.fingerprint(parsed, {
+    message: rawMessage ?? "",
+    source,
+  });
 
   // Duress shed gate — after kind lookup + schema validation + fingerprinting
   // (the cascade key), before any durable work. A shed report skips the
@@ -332,16 +347,24 @@ export async function recordReport(
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
   const desc = `${stalePrefix}${row.message}`;
   // The bell notification is always keyed by the stable report id — exactly one
-  // row per fingerprint, which updates in place. The kind's re-arm policy is the
-  // re-surface window, not the dedup key: without a cooldown (default) the row
-  // updates silently and never resurfaces once read (right for crashes: one
-  // tracked report per distinct crash); with a cooldown the row re-surfaces as a
-  // fresh unread alert once that long since it last surfaced, while reports in
-  // between only bump its count (right for slow ops: a recurring metric). This
-  // keeps the bell at one row per distinct problem instead of one per
+  // row per fingerprint, which updates in place. That dedup key is what keeps
+  // the bell at one row per distinct problem instead of one per
   // (report × time-bucket), which previously grew the undismissed set without
-  // bound. See research/perfs/2026-06-29-notifications-unbounded-resource-root-cause.md.
-  const cooldownMs = spec.meta.notifCooldownMs;
+  // bound. See
+  // research/perfs/archive/2026-06-29-notifications-unbounded-resource-root-cause.md.
+  //
+  // The re-arm policy is the re-surface WINDOW, a separate axis from that key:
+  // once the row has been quiet for the window it comes back as a fresh unread
+  // alert (read/dismissed cleared, floated to the top), while every occurrence
+  // inside the window only bumps its count. The window is never zero and never
+  // infinite — it is RENOTIFY_FLOOR_MS, which a kind may raise but not lower
+  // and not remove. So a crash you dismissed rings again the next time it
+  // fires at least 10 minutes later, and a slow op that keeps tripping rings
+  // at most that often.
+  const resurfaceAfterMs = Math.max(
+    RENOTIFY_FLOOR_MS,
+    spec.meta.notifCooldownMs ?? 0,
+  );
   // The bell write is observability output on the same report path as the
   // `_reports` upsert above — suppress its profiling for the same reasons: its
   // INSERT must never be attributed to whichever loader's ambient context
@@ -362,7 +385,7 @@ export async function recordReport(
         variant: spec.meta.variant,
         muted: row.noise,
         dedupeKey: row.id,
-        resurfaceAfterMs: cooldownMs,
+        resurfaceAfterMs,
         // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
         // Investigation tasks are filed on demand from that pane.
         linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),

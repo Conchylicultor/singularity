@@ -7,11 +7,6 @@ import {
   type SlowOpReportPayload,
 } from "../../core";
 
-// Bell re-alert cooldown for a slow op: re-alert at most once per minute while
-// that operation stays slow. Repeats of the same op within a window collapse
-// onto that window's single notification row, so a burst surfaces one alert.
-const SLOW_OP_NOTIF_COOLDOWN_MS = 60_000;
-
 // The slow-op report kind. Dedups per distinct `${operationKind}:${operation}`,
 // so each slow operation gets its own report pointing straight at the offending op
 // — keeping its own count, caller history, and context — while distinct slow ops
@@ -27,15 +22,18 @@ export const slowOpKind = ReportKind({
     tag: "[slow-op]",
     notif: "Slow operation detected",
     variant: "warning",
-    // A slow op is a recurring metric, not a one-shot incident: re-alert the
-    // bell at most once per window while it stays slow. Repeats of the same op
-    // within a window collapse onto that window's single notification row, so a
-    // burst surfaces one alert, not a storm.
-    notifCooldownMs: SLOW_OP_NOTIF_COOLDOWN_MS,
+    // No notifCooldownMs, unlike most sibling kinds: a slow op is a recurring
+    // metric, so it wants the SHORTEST re-alert the engine allows — which is
+    // the engine's own floor. It used to name 60 s here; the floor is 10
+    // minutes, so that number bought nothing and only read as if it did. This
+    // is the noisiest kind in the table, and quieter is the right direction
+    // for it anyway.
   },
   renderTask: (row: ReportRow) => {
     const d = SlowOpReportPayloadSchema.parse(row.data);
-    const coldStartSuffix = d.transportColdStart ? " — transport cold-start" : "";
+    const coldStartSuffix = d.transportColdStart
+      ? " — transport cold-start"
+      : "";
     return {
       title: `[slow-op] ${d.operationKind} ${d.operation} — ${Math.round(d.durationMs)}ms${coldStartSuffix}`,
       description: renderDescription(row, d),
@@ -55,7 +53,9 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   lines.push(`**Threshold:** ${d.thresholdMs}ms`);
   if (d.transportColdStart) {
     const waited =
-      d.transportWaitMs !== undefined ? ` (waited ~${Math.round(d.transportWaitMs)}ms for the socket)` : "";
+      d.transportWaitMs !== undefined
+        ? ` (waited ~${Math.round(d.transportWaitMs)}ms for the socket)`
+        : "";
     lines.push("");
     lines.push(
       `**Root cause:** the notifications transport was not ready when this ` +

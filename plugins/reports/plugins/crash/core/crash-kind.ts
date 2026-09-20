@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ReportFingerprintContext } from "@plugins/reports/core";
 import { UiContextMetaSchema } from "@plugins/primitives/plugins/ui-context/core";
 
 // The crash report payload, stored in the generic `data` jsonb column and
@@ -22,21 +23,54 @@ export const CrashPayloadSchema = z.object({
 });
 export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 
-// Crash fingerprint = sha256(errorType + top 3 normalized stack frames), first
-// 16 hex chars. Normalization strips line:col and cache-busters so the same bug
-// yields the same fingerprint across restarts and dev reloads.
-export async function crashFingerprint(data: CrashPayload): Promise<string> {
+// Crash fingerprint = sha256(<identity material>), first 16 hex chars. The
+// material is picked from the best identity the occurrence actually carries, in
+// this order:
+//
+//  1. Top 3 normalized stack frames, prefixed by the error type — the real
+//     crash case. Normalization strips line:col and cache-busters so the same
+//     bug yields the same fingerprint across restarts and dev reloads.
+//  2. No parsable frames, but a caller-declared `errorType` — several callers
+//     pass exactly that ON PURPOSE, so a family of varying messages collapses
+//     onto one row (`PaneRestoreCorrupt`, `JobDeadline`,
+//     `LiveStateWedge:<discriminator>`, `PluginLoadError <path>`,
+//     `EndpointError <status> <route>`). That is a declared identity: honour it.
+//  3. Neither — a browser `window.onerror` with no `Error` object, or a server
+//     call site passing `stack: null` and no type. The message is then the ONLY
+//     identity the report has, so it becomes the identity. Before this branch
+//     existed every such report hashed the constant `Error|` and upserted onto
+//     one row, which on main swallowed 499 unrelated occurrences over four
+//     months — the wrong source, the wrong task and whichever message arrived
+//     last.
+//
+// Branches 1 and 2 reproduce the pre-existing input byte for byte, so no report
+// that already has a row changes identity (pinned in crash-kind.test.ts).
+export async function crashFingerprint(
+  data: CrashPayload,
+  ctx: ReportFingerprintContext,
+): Promise<string> {
   const frames = normalizeFrames(data.stack ?? "");
-  const top = frames.slice(0, 3).join("|");
-  const input = `${data.errorType ?? "Error"}|${top}`;
+  const input =
+    frames.length > 0
+      ? `${data.errorType ?? "Error"}|${frames.slice(0, 3).join("|")}`
+      : data.errorType
+        ? `${data.errorType}|`
+        : `Error|msg:${normalizeMessage(ctx.message)}`;
   return sha256Hex(input).then((h) => h.slice(0, 16));
 }
+
+// A V8 frame: `at fn (url:12:3)`. Safari and Firefox instead spell one
+// `fn@https://host/file.js:12:3` — no "at", no spaces — and reading only the V8
+// form left those stacks with zero frames, dropping a perfectly good crash into
+// the message branch. Requiring the WHOLE line to be `<name>@<location>` keeps a
+// stack's prose header line out, even when the message itself contains an "@".
+const NON_V8_FRAME = /^[^@\s]*@\S+$/;
 
 function normalizeFrames(stack: string): string[] {
   return stack
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.startsWith("at "))
+    .filter((l) => l.startsWith("at ") || NON_V8_FRAME.test(l))
     .map((l) =>
       l
         .replace(/:\d+:\d+\)?$/, "")
@@ -44,6 +78,41 @@ function normalizeFrames(stack: string): string[] {
         .replace(/\/node_modules\/\.vite\/deps\//, "/NM/")
         .replace(/\/@fs\//, "/"),
     );
+}
+
+// The message as an identity: two messages describing the same problem must
+// normalize to the same string, or a recurring failure mints a row per
+// occurrence instead of accumulating on one. Everything replaced here is a
+// token that varies between occurrences of ONE problem — the job id in
+// `(job 12345)`, the conversation the sweeper happened to reclaim — and nothing
+// else is touched, so two genuinely different problems stay apart.
+//
+// Exported for the test, which pins both halves of that contract.
+export function normalizeMessage(message: string): string {
+  return (
+    message
+      .replace(/\s+/g, " ")
+      .trim()
+      // Order matters: each rule runs before any rule that could chew its
+      // matches into pieces. A UUID is hyphenated hex, so it goes first.
+      .replace(
+        /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+        "<uuid>",
+      )
+      // The shape of every id the app mints (`conv-1789653369-gpuv`,
+      // `att-1789665345-p1mc`, `report-…`): a word, a timestamp, an optional
+      // random suffix. Matching the SHAPE rather than an allowlist of prefixes
+      // means a new id family needs no edit here.
+      .replace(/\b[a-z][a-z0-9]*(?:-\d{6,})(?:-[a-z0-9]+)*\b/gi, "<id>")
+      // A hash / object id. The lookahead requires at least one a–f, so a plain
+      // long number is left to the digit rule below and reads as `#` rather
+      // than as an opaque blob.
+      .replace(/\b(?=[0-9a-f]*[a-f])[0-9a-f]{8,}\b/gi, "<hex>")
+      .replace(/\d+/g, "#")
+      // Bounded like every other identity input: a runaway message must not
+      // become a runaway hash input.
+      .slice(0, 200)
+  );
 }
 
 async function sha256Hex(input: string): Promise<string> {

@@ -12,7 +12,14 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import {
   createTestDb,
@@ -27,7 +34,9 @@ const T1 = new Date("2026-07-11T03:32:00.000Z");
 const T2 = new Date("2026-07-11T03:34:00.000Z");
 
 let seq = 0;
-const values = (over: Partial<ReportUpsertValues> = {}): ReportUpsertValues => ({
+const values = (
+  over: Partial<ReportUpsertValues> = {},
+): ReportUpsertValues => ({
   id: `report-test-${seq++}`,
   kind: "crash",
   fingerprint: "fp-1",
@@ -94,7 +103,12 @@ describe("upsertReport (real DB)", () => {
   test("a genuinely newer repeat advances last_seen_at and takes over attribution", async () => {
     await upsertReport(values({ occurredAt: T1, message: "old" }), t.db);
     const [row] = await upsertReport(
-      values({ occurredAt: T2, message: "new", data: { n: 2 }, clientId: "tab-2" }),
+      values({
+        occurredAt: T2,
+        message: "new",
+        data: { n: 2 },
+        clientId: "tab-2",
+      }),
       t.db,
     );
 
@@ -104,5 +118,30 @@ describe("upsertReport (real DB)", () => {
     expect(row?.message).toBe("new");
     expect(row?.data).toEqual({ n: 2 });
     expect(row?.lastClientId).toBe("tab-2");
+  });
+
+  // The row-level half of the stackless-crash regression: two distinct
+  // fingerprints occupy two rows, each counted once, rather than colliding on
+  // the (fingerprint, worktree) upsert target. The rule that makes two
+  // stackless messages produce two fingerprints is pinned in
+  // plugins/reports/plugins/crash/core/crash-kind.test.ts — this suite cannot
+  // call it, since reports/server importing reports/plugins/crash would close a
+  // cross-plugin cycle (crash/server already imports reports/server).
+  test("two distinct fingerprints occupy two rows, not one", async () => {
+    await upsertReport(
+      values({ fingerprint: "fp-a", message: "resize observer" }),
+      t.db,
+    );
+    await upsertReport(
+      values({ fingerprint: "fp-b", message: "jobs sweeper" }),
+      t.db,
+    );
+
+    const rows = await t.db.select().from(_reports);
+    expect(rows.map((r) => r.message).sort()).toEqual([
+      "jobs sweeper",
+      "resize observer",
+    ]);
+    expect(rows.every((r) => r.count === 1)).toBe(true);
   });
 });
