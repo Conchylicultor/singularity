@@ -152,6 +152,7 @@ icon+count button it stands in for — carries a per-site
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`
     - `tasks/task-description`
+    - `tasks/task-draft-form`
     - `tasks/task-events`
     - `tasks/task-list`
     - `tasks/worktree-identity`

@@ -27,6 +27,7 @@ import {
   useDefaultModel,
   useSetDefaultModel,
 } from "@plugins/conversations/plugins/model-provider/web";
+import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -40,6 +41,12 @@ export type LaunchRequest = {
   /** With `forkFromConversationId`: fork from just before this user message. */
   forkAtMessageUuid?: string;
   prepromptId?: string;
+  /**
+   * Thinking mode for the launched agent. `null` — the shape a picker with an
+   * "Auto" row emits — means "don't pin one", so it is carried as a value a
+   * caller can hand straight in rather than something they must translate.
+   */
+  effort?: EffortLevel | null;
 };
 
 export type LaunchControlProps = {
@@ -88,11 +95,13 @@ export function useLaunchConversation({
     if (launching) return;
     setLaunching(model);
     try {
-      const request = (await getRequest?.()) ?? {};
+      // `effort: null` is the picker's "Auto" — it means the body carries no
+      // effort at all, which is the one thing the endpoint's schema accepts.
+      const { effort, ...request } = (await getRequest?.()) ?? {};
       const conversation = await fetchEndpoint(
         createConversation,
         {},
-        { body: { model, ...request } },
+        { body: { model, ...request, ...(effort ? { effort } : {}) } },
       );
       onLaunched?.(conversation);
       if (openAfterLaunch)

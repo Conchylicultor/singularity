@@ -87,6 +87,7 @@ defined in exactly one place. The distinct export buys two things:
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/avatar`
     - `primitives/date-picker`
+    - `primitives/text-editor/composer`
     - `stats/commits`
     - `tasks/task-dependencies`
     - `ui/tokens/shadow`

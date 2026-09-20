@@ -29,11 +29,14 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
     - `reports.report`
-  - Exports (types): `ModelSelectProps`
+  - Exports (types):
+    - `ModelItem`
+    - `ModelSelectProps`
   - Exports (values):
     - `familyClass`
     - `ModelSelect`
     - `useDefaultModel`
+    - `useModelItems`
     - `useSetDefaultModel`
     - `useVisibleModels`
 - Server:

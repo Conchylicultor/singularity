@@ -32,10 +32,16 @@ Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
 ## Inserting into a draft
 
-Everything that adds text to the head card — the in-form `TaskDraftFormSlots.Action`
-buttons and external callers alike — goes through the popover's one insert funnel:
-caret insert via the head editor's handle, or append to the card's markdown when no
-editor is mounted (popover closed / form still loading). It only ever *adds*.
+Text is added two ways, and the difference is which card it lands in.
+
+An in-form `TaskDraftFormSlots.Action` button (the element picker) is rendered on
+EVERY card and writes into its own card's editor at the caret, so a chip lands in
+the prose you are writing rather than jumping to the top of the chain.
+
+An external caller has no card to speak of, so it must pick one: it goes through
+the popover's insert funnel, which aims at the head card — caret insert via the
+head editor's handle, or append to that card's markdown when no editor is mounted
+(popover closed / form still loading). It only ever *adds*.
 
 External callers pass `insert={draftInsert(text)}`. The request is keyed on a minted
 id, not the text, so the same snippet can be inserted twice and a remount can't
@@ -59,27 +65,33 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/text-editor.TextEditor`
+    - `primitives/slot-render.renderIsolated`
+    - `primitives/text-editor/composer.ComposerAttachButton`
+    - `primitives/text-editor/composer.ComposerField`
+    - `primitives/text-editor/composer.ComposerRule`
+    - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `primitives/text-editor/paste-images.extractAttachmentIds`
     - `shell/notifications.toast`
-    - `tasks/launch-options.LaunchOptionEntry`
     - `tasks/launch-options.LaunchOptionInfo`
     - `tasks/launch-options.launchOptionValue`
     - `tasks/launch-options.LaunchOptionValues`

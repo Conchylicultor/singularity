@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { IconType } from "react-icons";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core";
 import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
@@ -22,6 +23,75 @@ export interface LaunchBinding<V> {
 }
 
 /**
+ * How an option draws itself on a composer bar — as a pill, instead of as the
+ * labelled row `component` paints in the task detail's Prompt card.
+ *
+ * Optional: an option that declares no `pill` still appears on a bar, as its
+ * `component`, so adding a launch option never requires editing a host.
+ *
+ * Nothing new has to be kept in sync with the option's identity: the menu
+ * heading and the collapsed placeholder are both the option's existing
+ * {@link TaskLaunchOption.label}, and highlighting is **derived by the host**,
+ * not declared here — a solo pill tints when its value differs from
+ * `def.defaultValue`, and a fused pill never tints.
+ *
+ * Components rather than an items list on purpose: the host renders one pill
+ * per cluster, so a data-shaped descriptor would mean calling each member's
+ * hook inside a `.map()` — a rules-of-hooks error. A component per option is
+ * one hook scope each, and it keeps a value's own rendering (preprompt's
+ * per-row glyph) inside the plugin that owns it.
+ *
+ * Both components paint the INSIDE of the pill's two holes — the trigger's text
+ * and the menu's rows. The pill itself, the headed section around the rows, the
+ * muting of a fused pill's later values and the unset state all belong to the
+ * host, so an option cannot title its own section differently from its `label`,
+ * and the host is the one place the unset state is decided — an option only
+ * lends it a word (`unsetLabel`).
+ */
+export interface LaunchOptionPill<V> {
+  /** Leading glyph on the pill's trigger. */
+  icon: IconType;
+  /**
+   * This option's current value as pill text.
+   *
+   * **`null` is the unset state, and the host owns it**: it never renders this
+   * for an unset value, which is why the value handed in is non-nullable.
+   * "Renders nothing when unset" is therefore one rule in one place rather than
+   * a convention each option re-implements — and an option that tried to would
+   * not type-check. What the host paints instead is
+   * {@link LaunchOptionPill.unsetLabel} / the pill's placeholder.
+   */
+  Value: ComponentType<{ value: NonNullable<V> }>;
+  /**
+   * What a FUSED pill prints for this option while its value is unset — "Auto"
+   * for a thinking mode, "Off" for auto-start.
+   *
+   * It exists because a fused pill shows **every** member: two options behind
+   * one trigger, and the one that is unset simply vanishing, is a control the
+   * user cannot see and therefore cannot find. So the trigger names the unset
+   * state rather than dropping it, muted like any other non-leading value.
+   *
+   * A **solo** pill ignores this and falls back to the shared placeholder (the
+   * option's own `label`), which is what a one-value pill should read as while
+   * it holds nothing. An option in a cluster that omits it shows nothing —
+   * same self-describing absence as `useTaskBinding`.
+   *
+   * A plain string, not a component: this is the host's rendering of a state
+   * the host owns, so it takes the WORD from the option and nothing else.
+   */
+  unsetLabel?: string;
+  /**
+   * This option's rows inside the menu — bare `PickerPill.Item`s. The host
+   * wraps them in the headed section, titled with the option's `label`.
+   */
+  MenuGroup: ComponentType<LaunchControlProps<V>>;
+  /** Options sharing a cluster fuse into ONE pill, in registry order. */
+  cluster?: string;
+  /** Which end of the bar. Defaults to "start". */
+  side?: "start" | "end";
+}
+
+/**
  * One launch option: a labelled control that configures HOW the agent launches
  * (which model auto-starts it, which preprompt is prepended, which thinking
  * mode it runs at). Each host owns its own chrome — the detail card paints a
@@ -35,6 +105,11 @@ export interface TaskLaunchOption<V> {
   def: LaunchOptionDef<V>;
   /** The control itself. Controlled — see {@link LaunchControlProps}. */
   component: ComponentType<LaunchControlProps<V>>;
+  /**
+   * How this option draws on a composer bar. Omit it and the bar renders
+   * `component` inline instead. See {@link LaunchOptionPill}.
+   */
+  pill?: LaunchOptionPill<V>;
   /**
    * Binds the control to an EXISTING task's storage. Omit it and the option is
    * draft-only — self-describing, so there is no `hosts: [...]` knob to keep in

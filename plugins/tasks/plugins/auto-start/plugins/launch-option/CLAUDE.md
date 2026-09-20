@@ -13,6 +13,8 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
   - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
   - Uses:
     - `conversations/model-provider.ModelSelect`
+    - `conversations/model-provider.useModelItems`
+    - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `tasks.setAutoStart`
     - `tasks/auto-start.useTaskAutoStart`
     - `tasks/launch-options.TaskLaunch`

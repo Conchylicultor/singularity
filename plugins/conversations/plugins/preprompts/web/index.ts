@@ -7,6 +7,8 @@ export { PrepromptSelect } from "./components/preprompt-select";
 export type { PrepromptSelectProps } from "./components/preprompt-select";
 export { PrepromptGlyph } from "./components/preprompt-glyph";
 export { usePreprompt } from "./internal/use-preprompt";
+export { usePrepromptItems } from "./internal/items";
+export type { PrepromptItem } from "./internal/items";
 
 export default {
   description:

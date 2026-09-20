@@ -8,9 +8,12 @@
 - Web:
   - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
   - Uses:
+    - `conversations/preprompts.PrepromptGlyph`
     - `conversations/preprompts.PrepromptSelect`
+    - `conversations/preprompts.usePrepromptItems`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.useResource`
+    - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.toast`
     - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskPreprompt`

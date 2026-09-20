@@ -16,12 +16,15 @@
     - `primitives/css/ui-kit.SelectItem`
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
-  - Exports (types): `PrepromptSelectProps`
+  - Exports (types):
+    - `PrepromptItem`
+    - `PrepromptSelectProps`
   - Exports (values):
     - `PrepromptGlyph`
     - `prepromptsConfig`
     - `PrepromptSelect`
     - `usePreprompt`
+    - `usePrepromptItems`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses:

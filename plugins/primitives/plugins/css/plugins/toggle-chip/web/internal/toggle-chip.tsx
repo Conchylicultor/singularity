@@ -8,7 +8,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export type ToggleChipVariant = "solid" | "ghost";
+export type ToggleChipVariant = "solid" | "ghost" | "tinted";
 export type ToggleChipSize = "sm" | "md";
 
 // The chip's two-level scale sits one notch under the control scale by design
@@ -20,6 +20,12 @@ function chipSizeForDensity(density: ControlSize): ToggleChipSize {
   return density === "xs" ? "sm" : "md";
 }
 
+// The off state `solid` and `tinted` share: a chip that reads as an outlined
+// control whichever colour its on state wears. One spelling, so the two cannot
+// drift into looking like different buttons while switched off.
+const BORDERED_OFF =
+  "border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground";
+
 const VARIANT_CLASS: Record<
   ToggleChipVariant,
   { active: string; inactive: string }
@@ -27,13 +33,22 @@ const VARIANT_CLASS: Record<
   // stats look: filled primary when on, bordered background when off
   solid: {
     active: "border border-primary bg-primary text-primary-foreground",
-    inactive:
-      "border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+    inactive: BORDERED_OFF,
   },
   // filter look: accent fill when on, transparent ghost when off
   ghost: {
     active: "bg-accent text-accent-foreground",
     inactive: "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+  },
+  // attach look: the SAME bordered chip when off as `solid`, tinted rather than
+  // filled when on — the accent arrives as a wash, a line and the label's
+  // colour instead of as a block of primary. For a chip that sits in a row of
+  // its own kind and is toggled often, where a solid fill reads as an alert.
+  // Both states carry one `border`, so switching it on cannot move its
+  // neighbours by a pixel.
+  tinted: {
+    active: "border border-primary/40 bg-primary/10 text-primary",
+    inactive: BORDERED_OFF,
   },
 };
 
@@ -45,7 +60,12 @@ const VARIANT_CLASS: Record<
 export interface ToggleChipProps extends DensityControlled, Passthrough {
   /** Whether the chip reads as selected/on. Drives the active vs inactive color pair. */
   active: boolean;
-  /** Color treatment. "solid" = filled-primary (controls); "ghost" = accent (filters). Default "solid". */
+  /**
+   * Color treatment. "solid" = filled-primary when on, bordered when off
+   * (controls); "ghost" = accent fill when on, transparent when off (filters);
+   * "tinted" = accent wash + accent line + accent label when on, bordered when
+   * off (attach toggles). Default "solid".
+   */
   variant?: ToggleChipVariant;
   /** Leading icon, rendered before children. */
   icon?: React.ReactNode;

@@ -751,6 +751,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/setup-steps`
     - `primitives/slot-render`
     - `primitives/text-editor`
+    - `primitives/text-editor/composer`
+    - `primitives/text-editor/composer/picker-pill`
     - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`

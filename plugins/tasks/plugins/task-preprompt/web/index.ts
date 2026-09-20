@@ -1,7 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
+import { MdStickyNote2 } from "react-icons/md";
 import { prepromptLaunchOption } from "../core";
 import { PrepromptLaunchControl } from "./components/preprompt-control";
+import {
+  PrepromptPillValue,
+  PrepromptPillMenu,
+} from "./components/preprompt-pill";
 import { useTaskPrepromptBinding } from "./internal/binding";
 
 export { useTaskPreprompt } from "./hooks";
@@ -18,6 +23,15 @@ export default {
       label: "Preprompt",
       def: prepromptLaunchOption,
       component: PrepromptLaunchControl,
+      // Its own pill on the leading half of a composer bar: a preprompt shapes
+      // what the agent is told, which belongs beside the prose rather than with
+      // the run controls.
+      pill: {
+        icon: MdStickyNote2,
+        Value: PrepromptPillValue,
+        MenuGroup: PrepromptPillMenu,
+        side: "start",
+      },
       useTaskBinding: useTaskPrepromptBinding,
       // No `summarize`: a preprompt's human title lives in the `preprompts`
       // config, which only a hook can read — and the toast summary is a pure

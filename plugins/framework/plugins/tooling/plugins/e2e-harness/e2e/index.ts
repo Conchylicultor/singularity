@@ -27,6 +27,7 @@ export { capture } from "./capture";
 export type { Captured } from "./capture";
 export { report, onBeforeFinish } from "./report";
 export type { Report } from "./report";
+export { clearToasts } from "./toasts";
 export { stallRoute } from "./stall";
 export type { StalledRoute, StallRouteOptions } from "./stall";
 export { snap, DEFAULT_SNAP_TIMEOUT_MS } from "./shots";

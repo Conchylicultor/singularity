@@ -4,6 +4,7 @@ import { TaskLaunch as TaskLaunchSlots } from "./slots";
 export { TaskLaunch } from "./slots";
 export type {
   TaskLaunchOption,
+  LaunchOptionPill,
   LaunchControlProps,
   LaunchBinding,
   LaunchOptionEntry,

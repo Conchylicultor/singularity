@@ -1,24 +1,33 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type CSSProperties, useRef } from "react";
-import { MdClose, MdDragIndicator } from "react-icons/md";
+import { MdAdd, MdClose, MdDragIndicator, MdLink } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { HeadToolbar } from "./head-toolbar";
+import {
+  ComposerField,
+  ComposerAttachButton,
+  ComposerRule,
+} from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Stack,
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
-import { LaunchOptionChips } from "./launch-option-chips";
-import { RelateModeChip } from "./relate-mode-chip";
+import { LaunchOptionPills } from "./launch-option-pills";
+import { DependencyPill } from "./dependency-pill";
 import {
   InsertBeforeChildren,
   type ChildEntry,
 } from "./insert-before-children";
+import { TaskDraftFormSlots } from "../slots";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 export interface TaskDraftCardProps {
@@ -60,33 +69,6 @@ export interface TaskDraftCardProps {
   standalone?: boolean;
   onStandaloneChange?: (next: boolean) => void;
   showStandalone?: boolean;
-}
-
-function UrlToggle({
-  includeUrl,
-  onToggleUrl,
-  disabled,
-}: {
-  includeUrl: boolean;
-  onToggleUrl: (v: boolean) => void;
-  disabled: boolean;
-}) {
-  return (
-    <Inset t="xs">
-      <Text as="label" variant="caption" tone="muted">
-        <Stack direction="row" align="center" gap="xs">
-          <input
-            type="checkbox"
-            className="h-3 w-3"
-            checked={includeUrl}
-            disabled={disabled}
-            onChange={(e) => onToggleUrl(e.target.checked)}
-          />
-          URL
-        </Stack>
-      </Text>
-    </Inset>
-  );
 }
 
 export function TaskDraftCard({
@@ -153,20 +135,35 @@ export function TaskDraftCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "border-border bg-background group relative rounded-md border p-sm cursor-grab active:cursor-grabbing",
+        // No border and no padding of its own: the composer field below is the
+        // card's only box. What is left here is the drag host — the thing you
+        // grab, and what the hover affordances at its corner hang off.
+        hoverRevealGroup,
+        "relative cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 shadow-lg",
       )}
     >
-      {/* Drag handle hint pinned to the card's top-right; off-ramp 0.375rem inset (not on the spacing ramp). */}
-      <Pin
-        to="top-right"
-        decorative
-        style={{ top: "0.375rem", right: "0.375rem" }}
-      >
-        <MdDragIndicator className="pointer-events-none size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+      {/* Remove and the drag hint, together at the card's top-right corner and
+          revealed on hover — the field's bar has no room for chrome that is
+          about the card rather than about the task. */}
+      <Pin to="top-right" offset="xs">
+        <Line className={cn("gap-2xs", hoverRevealTarget)}>
+          {removable && (
+            <IconButton
+              icon={MdClose}
+              label="Remove task"
+              onClick={onRemove}
+              disabled={disabled}
+            />
+          )}
+          <MdDragIndicator
+            aria-hidden
+            className="pointer-events-none size-3 text-muted-foreground/30"
+          />
+        </Line>
       </Pin>
       <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
-        <TextEditor
+        <ComposerField
           value={text}
           onChange={onTextChange}
           onSubmit={onSubmitChord}
@@ -178,52 +175,43 @@ export function TaskDraftCard({
           maxHeight={isHead ? "20rem" : "8rem"}
           namespace={`task-draft-card-${cardId}`}
           insertRef={insertRef}
-        />
-      </div>
-      {isHead && <HeadToolbar insertText={insertText} />}
-      <Stack
-        direction="row"
-        wrap
-        align="center"
-        justify="between"
-        gap="sm"
-        className="pt-xs"
-      >
-        <Stack direction="row" wrap align="center" gap="md">
-          <LaunchOptionChips
-            values={launchOptions}
-            onChange={onLaunchOptionsChange}
-            disabled={disabled}
-          />
-          {showRelate && (
-            <RelateModeChip
-              value={relateMode}
-              onChange={onRelateModeChange!}
-              showIndependent={showIndependentRelate}
+          attach={
+            <ComposerAttachButton
+              icon={MdAdd}
+              activeIcon={MdLink}
+              label="Attach page URL"
+              active={includeUrl}
+              onToggle={onToggleUrl}
               disabled={disabled}
             />
-          )}
-        </Stack>
-        {removable && (
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={disabled}
-            aria-label="Remove task"
-            title="Remove task"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted size-5 rounded-md"
-          >
-            <Center className="size-full">
-              <MdClose className="size-3.5" />
-            </Center>
-          </button>
-        )}
-      </Stack>
-      <UrlToggle
-        includeUrl={includeUrl}
-        onToggleUrl={onToggleUrl}
-        disabled={disabled}
-      />
+          }
+          barStart={
+            <CardBarStart
+              insertText={insertText}
+              values={launchOptions}
+              onChange={onLaunchOptionsChange}
+              disabled={disabled}
+              relate={
+                showRelate
+                  ? {
+                      value: relateMode,
+                      onChange: onRelateModeChange!,
+                      showIndependent: showIndependentRelate,
+                    }
+                  : null
+              }
+            />
+          }
+          barEnd={
+            <LaunchOptionPills
+              side="end"
+              values={launchOptions}
+              onChange={onLaunchOptionsChange}
+              disabled={disabled}
+            />
+          }
+        />
+      </div>
       {relateTaskChildren &&
         relateTaskChildren.length > 0 &&
         insertBeforeIds &&
@@ -252,5 +240,65 @@ export function TaskDraftCard({
         </Inset>
       )}
     </Stack>
+  );
+}
+
+/**
+ * The leading half of the card's bar: the contributed actions that write into
+ * the prose (the element picker), then — past a hairline — the pills that
+ * configure what submitting it does.
+ *
+ * Every card carries the action slot, not just the head: each card owns its own
+ * caret-insert handle, so a picked element lands in the prose you are actually
+ * writing. (The HOST's funnel is the head card's alone — that is where an
+ * insert fired from outside the form has to go, since it must pick one card.)
+ *
+ * It draws no hairline when nothing contributed to the slot: a rule with
+ * nothing on one side of it is just a mark.
+ */
+function CardBarStart({
+  insertText,
+  values,
+  onChange,
+  disabled,
+  relate,
+}: {
+  insertText: (text: string) => void;
+  values: LaunchOptionValues;
+  onChange: (next: LaunchOptionValues) => void;
+  disabled: boolean;
+  relate: {
+    value: TaskChainRelateMode | undefined;
+    onChange: (next: TaskChainRelateMode | undefined) => void;
+    showIndependent?: boolean;
+  } | null;
+}) {
+  const actions = TaskDraftFormSlots.Action.useContributions();
+  const showActions = actions.length > 0;
+  return (
+    <>
+      {showActions && (
+        <>
+          <TaskDraftFormSlots.Action.Render>
+            {(item) => <item.component insertText={insertText} />}
+          </TaskDraftFormSlots.Action.Render>
+          <ComposerRule />
+        </>
+      )}
+      <LaunchOptionPills
+        side="start"
+        values={values}
+        onChange={onChange}
+        disabled={disabled}
+      />
+      {relate && (
+        <DependencyPill
+          value={relate.value}
+          onChange={relate.onChange}
+          showIndependent={relate.showIndependent}
+          disabled={disabled}
+        />
+      )}
+    </>
   );
 }

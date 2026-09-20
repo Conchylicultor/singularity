@@ -11787,8 +11787,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SelectItem`
           - `primitives/css/ui-kit.SelectTrigger`
           - `primitives/css/ui-kit.SelectValue`
-        - Exports (types): `EffortSelectProps`
-        - Exports (values): `EffortSelect`
+        - Exports (types):
+          - `EffortItem`
+          - `EffortSelectProps`
+        - Exports (values):
+          - `effortItems`
+          - `EffortSelect`
       - Core:
         - Uses: `primitives/live-state.tolerantEnum`
         - Exports (types):
@@ -11796,6 +11800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `EffortMeta`
         - Exports (values):
           - `EFFORT_REGISTRY`
+          - `EFFORT_UNSET_LABEL`
           - `EffortLevelSchema`
           - `normalizeEffort`
           - `reportUnknownEffort`
@@ -11806,6 +11811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations`
+          - `primitives/launch`
           - `tasks/task-effort`
     - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
       - Web:
@@ -11846,11 +11852,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SelectTrigger`
           - `primitives/css/ui-kit.SelectValue`
           - `reports.report`
-        - Exports (types): `ModelSelectProps`
+        - Exports (types):
+          - `ModelItem`
+          - `ModelSelectProps`
         - Exports (values):
           - `familyClass`
           - `ModelSelect`
           - `useDefaultModel`
+          - `useModelItems`
           - `useSetDefaultModel`
           - `useVisibleModels`
       - Server:
@@ -11918,12 +11927,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SelectItem`
           - `primitives/css/ui-kit.SelectTrigger`
           - `primitives/css/ui-kit.SelectValue`
-        - Exports (types): `PrepromptSelectProps`
+        - Exports (types):
+          - `PrepromptItem`
+          - `PrepromptSelectProps`
         - Exports (values):
           - `PrepromptGlyph`
           - `prepromptsConfig`
           - `PrepromptSelect`
           - `usePreprompt`
+          - `usePrepromptItems`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses:
@@ -17385,6 +17397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/toast`
               - `tasks/auto-start`
               - `tasks/launch-options`
+              - `tasks/task-draft-form`
               - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
@@ -24271,6 +24284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/avatar`
               - `primitives/date-picker`
+              - `primitives/text-editor/composer`
               - `stats/commits`
               - `tasks/task-dependencies`
               - `ui/tokens/shadow`
@@ -24570,6 +24584,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/prompt-editor`
               - `primitives/search`
               - `primitives/setup-steps`
+              - `primitives/text-editor/composer`
+              - `primitives/text-editor/composer/picker-pill`
               - `primitives/ui-context/element-picker`
               - `review/code-review`
               - `review/plugin-changes`
@@ -24888,10 +24904,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/capsule-toolbar`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
               - `primitives/overlay/image-viewer`
               - `primitives/search`
+              - `primitives/text-editor/composer`
               - `reorder/node-types/header`
               - `reorder/node-types/overflow`
               - `review/code-review`
@@ -24901,6 +24919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/health-report`
               - `shell/notifications`
               - `tasks/attempt-view`
+              - `tasks/task-draft-form`
               - `tasks/task-events`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
@@ -25225,6 +25244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/loading`
               - `primitives/search`
+              - `primitives/text-editor/composer`
               - `primitives/ui-context/element-picker`
               - `reorder/node-types/header`
               - `review/code-review`
@@ -25747,6 +25767,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/row-actions`
               - `primitives/setup-steps`
               - `primitives/tabbed-view`
+              - `primitives/text-editor/composer`
+              - `primitives/text-editor/composer/picker-pill`
               - `primitives/tree`
               - `primitives/ui-context/element-picker`
               - `reorder/editor`
@@ -26248,6 +26270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `primitives/rank-reorder`
               - `primitives/setup-steps`
+              - `primitives/text-editor/composer/picker-pill`
               - `primitives/ui-context/element-picker`
               - `reorder/editor`
               - `reorder/node-types/header`
@@ -26309,7 +26332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `shell/global-action-bar`
               - `shell/toast`
-        - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
+        - **`toggle-chip`** — Toggle-chip control: a stateful pill (composes Badge) in one of three colour treatments — solid (filled when on), ghost (accent fill when on, transparent when off) and tinted (accent wash when on, bordered when off) — with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
           - Web:
             - Uses:
               - `primitives/css/badge.Badge`
@@ -26366,6 +26389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/view-core`
               - `primitives/filter-chips`
+              - `primitives/text-editor/composer`
               - `primitives/view-switcher`
               - `review`
               - `shell/notifications`
@@ -26374,7 +26398,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/cost`
               - `stats/pushes`
               - `stats/responsiveness`
-              - `tasks/task-draft-form`
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
             - Uses:
@@ -26794,6 +26817,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps`
               - `primitives/slot-render`
               - `primitives/text-editor`
+              - `primitives/text-editor/composer`
+              - `primitives/text-editor/composer/picker-pill`
               - `primitives/text-editor/inline-chip`
               - `primitives/text-editor/paste-images`
               - `primitives/tree`
@@ -28134,6 +28159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/crash`
           - `reports/launch-fix`
           - `shell/health-report`
+          - `tasks/task-draft-form`
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
       - Web:
         - Uses:
@@ -28393,6 +28419,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
+          - `tasks/task-draft-form`
           - `tasks/task-events`
           - `tasks/task-list`
           - `tasks/worktree-identity`
@@ -28557,12 +28584,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `conversations/conversation-view.conversationPane`
+          - `conversations/effort-provider.effortItems`
           - `conversations/model-provider.useDefaultModel`
+          - `conversations/model-provider.useModelItems`
           - `conversations/model-provider.useSetDefaultModel`
           - `conversations/model-provider.useVisibleModels`
-          - `conversations/preprompts.PrepromptSelect`
+          - `conversations/preprompts.PrepromptGlyph`
+          - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
+          - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
@@ -28573,13 +28605,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/css/ui-kit.PopoverWidth`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.PaneOpenMode`
           - `primitives/pane.useOpenPane`
           - `primitives/shortcuts.formatShortcutLabel`
-          - `primitives/text-editor.TextEditor`
+          - `primitives/text-editor/composer.ComposerField`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
         - Exports (types):
           - `LaunchAgentFormProps`
           - `LaunchAgentPopoverProps`
@@ -29542,6 +29576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `primitives/css/ui-kit`
               - `primitives/error-boundary`
+              - `tasks/task-draft-form`
         - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
           - Web:
             - Uses:
@@ -30765,6 +30800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `NodeExtension`
           - `TextEditorPluginProps`
+          - `TextEditorProps`
         - Exports (values):
           - `registerNodeExtension`
           - `registerNodeExtensionSource`
@@ -30778,13 +30814,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/website/improve`
           - `conversations/agents`
           - `conversations/conversation-view/branch`
-          - `primitives/launch`
           - `primitives/prompt-editor`
+          - `primitives/text-editor/composer`
           - `primitives/text-editor/inline-chip`
           - `primitives/text-editor/paste-images`
           - `screenshot`
           - `tasks/task-description`
-          - `tasks/task-draft-form`
       - Plugins:
         - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
           - Cross-plugin:
@@ -30827,6 +30862,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-page-link`
               - `page/math/inline`
               - `page/url-paste`
+        - **`composer`** — Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
+          - Web:
+            - Uses:
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.Rigid`
+              - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/text-editor.TextEditor`
+              - `primitives/text-editor.TextEditorProps`
+            - Exports (types):
+              - `ComposerAttachButtonProps`
+              - `ComposerFieldProps`
+            - Exports (values):
+              - `ComposerAttachButton`
+              - `ComposerField`
+              - `ComposerRule`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/launch`
+              - `tasks/task-draft-form`
+          - Plugins:
+            - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked row per group.
+              - Web:
+                - Uses:
+                  - `primitives/css/fill.fillClasses`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.DropdownMenu`
+                  - `primitives/css/ui-kit.DropdownMenuContent`
+                  - `primitives/css/ui-kit.DropdownMenuItem`
+                  - `primitives/css/ui-kit.DropdownMenuSection`
+                  - `primitives/css/ui-kit.DropdownMenuSeparator`
+                  - `primitives/css/ui-kit.DropdownMenuTrigger`
+                - Exports (types):
+                  - `PickerPillGroupProps`
+                  - `PickerPillItemProps`
+                  - `PickerPillProps`
+                  - `PickerPillValueProps`
+                - Exports (values): `PickerPill`
+              - Cross-plugin:
+                - Imported by:
+                  - `primitives/launch`
+                  - `tasks/auto-start/launch-option`
+                  - `tasks/task-draft-form`
+                  - `tasks/task-effort`
+                  - `tasks/task-preprompt`
         - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
           - Web:
             - Uses: `primitives/text-editor/caret-motion.crossCaret`
@@ -33269,6 +33357,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
             - Uses:
               - `conversations/model-provider.ModelSelect`
+              - `conversations/model-provider.useModelItems`
+              - `primitives/text-editor/composer/picker-pill.PickerPill`
               - `tasks.setAutoStart`
               - `tasks/auto-start.useTaskAutoStart`
               - `tasks/launch-options.TaskLaunch`
@@ -33294,6 +33384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LaunchControlProps`
           - `LaunchOptionEntry`
           - `LaunchOptionInfo`
+          - `LaunchOptionPill`
           - `LaunchOptionValues`
           - `TaskLaunchOption`
         - Exports (values):
@@ -33535,27 +33626,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/overlay/overlay-boundary.OverlayBoundary`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`
           - `primitives/slot-render.defineRenderSlot`
-          - `primitives/text-editor.TextEditor`
+          - `primitives/slot-render.renderIsolated`
+          - `primitives/text-editor/composer.ComposerAttachButton`
+          - `primitives/text-editor/composer.ComposerField`
+          - `primitives/text-editor/composer.ComposerRule`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `primitives/text-editor/paste-images.extractAttachmentIds`
           - `shell/notifications.toast`
-          - `tasks/launch-options.LaunchOptionEntry`
           - `tasks/launch-options.LaunchOptionInfo`
           - `tasks/launch-options.launchOptionValue`
           - `tasks/launch-options.LaunchOptionValues`
@@ -33589,9 +33686,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`
         - Uses:
+          - `conversations/effort-provider.effortItems`
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskEffort`
@@ -33741,9 +33840,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
         - Uses:
+          - `conversations/preprompts.PrepromptGlyph`
           - `conversations/preprompts.PrepromptSelect`
+          - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskPreprompt`

@@ -366,6 +366,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/row-actions`
     - `primitives/setup-steps`
     - `primitives/tabbed-view`
+    - `primitives/text-editor/composer`
+    - `primitives/text-editor/composer/picker-pill`
     - `primitives/tree`
     - `primitives/ui-context/element-picker`
     - `reorder/editor`

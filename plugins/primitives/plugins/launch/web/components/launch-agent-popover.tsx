@@ -1,13 +1,24 @@
 import { useId, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { PopoverWidth } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  type PopoverWidth,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
-import { LaunchControl } from "./launch-control";
+import {
+  useDefaultModel,
+  useSetDefaultModel,
+} from "@plugins/conversations/plugins/model-provider/web";
+import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
+import { PrepromptPill } from "./preprompt-pill";
+import { RunPill } from "./run-pill";
+import { useLaunchConversation } from "./launch-control";
 import type { LaunchRequest } from "./launch-control";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -47,15 +58,18 @@ export type LaunchAgentFormProps = {
    * what opts into the pane, never the other way round.
    */
   openAfterLaunch?: boolean;
-  /** Where that conversation opens, when it does. Forwarded to `LaunchControl`. */
+  /** Where that conversation opens, when it does. */
   openMode?: PaneOpenMode;
 };
 
 /**
- * The launch FORM: what the user reads (title + description), the free-form
- * extra context they type, the preprompt they pick, and the launch control
- * itself. It owns the context text and the preprompt selection; the host owns
- * where the form sits and what happens after a launch.
+ * The launch FORM: what the user reads (title + description), one composer
+ * field holding the free-form extra context and — on its own bar, inside the
+ * same box — the preprompt and the model + thinking mode the launch will use,
+ * then the caller's toggles, then the Launch button.
+ *
+ * It owns the context text and every one of those choices; the host owns where
+ * the form sits and what happens after a launch.
  *
  * It is a form and not a popover because a second host needs exactly this body
  * inside a popover it already owns (a container card's glyph panel), and an
@@ -75,12 +89,33 @@ export function LaunchAgentForm({
 }: LaunchAgentFormProps) {
   const [text, setText] = useState("");
   const [prepromptId, setPrepromptId] = useState<string | null>(null);
+  const [effort, setEffort] = useState<EffortLevel | null>(null);
   const [toggleValues, setToggleValues] = useState<Record<string, boolean>>(
     () =>
       Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
   );
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
+
+  // The model the pill shows IS the persisted default, and picking one writes
+  // it — the behaviour the split button had, with no second copy of the value
+  // that could drift from it while the form is open.
+  const model = useDefaultModel();
+  const setDefaultModel = useSetDefaultModel();
+
+  const { launch } = useLaunchConversation({
+    openAfterLaunch,
+    openMode,
+    onLaunched,
+    getRequest: async () => {
+      const req = await getRequest(text, toggleValues);
+      return {
+        ...req,
+        ...(prepromptId ? { prepromptId } : {}),
+        ...(effort ? { effort } : {}),
+      };
+    },
+  });
 
   return (
     <Stack gap="md">
@@ -92,7 +127,7 @@ export function LaunchAgentForm({
           {description}
         </Text>
       </Stack>
-      <TextEditor
+      <ComposerField
         value={text}
         onChange={setText}
         placeholder={placeholder}
@@ -100,6 +135,24 @@ export function LaunchAgentForm({
         minRows={3}
         maxHeight="16rem"
         namespace={`launch-agent-form-${editorId}`}
+        barStart={
+          showPreprompt ? (
+            <PrepromptPill
+              value={prepromptId}
+              onChange={setPrepromptId}
+              disabled={disabled}
+            />
+          ) : undefined
+        }
+        barEnd={
+          <RunPill
+            model={model}
+            onModelChange={setDefaultModel}
+            effort={effort}
+            onEffortChange={setEffort}
+            disabled={disabled}
+          />
+        }
       />
       {toggles.map((t) => (
         <LaunchToggleRow
@@ -111,24 +164,16 @@ export function LaunchAgentForm({
           }
         />
       ))}
-      {showPreprompt && (
-        <PrepromptSelect
-          value={prepromptId}
-          onChange={setPrepromptId}
-          ariaLabel="Preprompt"
-          className="w-full"
-        />
-      )}
-      <LaunchControl
-        disabled={disabled}
-        openAfterLaunch={openAfterLaunch}
-        openMode={openMode}
-        getRequest={async () => {
-          const req = await getRequest(text, toggleValues);
-          return prepromptId ? { ...req, prepromptId } : req;
-        }}
-        onLaunched={onLaunched}
-      />
+      <Line>
+        {/* The empty flexible cell: the button sits flush right in its own
+            track rather than floating over the toggles above it. */}
+        <Fill />
+        {/* `launch` returns a promise, so the button pends and locks itself for
+            the whole round trip with no wiring of our own. */}
+        <Button disabled={disabled} onClick={() => launch(model)}>
+          Launch
+        </Button>
+      </Line>
     </Stack>
   );
 }

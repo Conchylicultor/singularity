@@ -48,6 +48,7 @@ Ordering for both surfaces lives in
     - `LaunchControlProps`
     - `LaunchOptionEntry`
     - `LaunchOptionInfo`
+    - `LaunchOptionPill`
     - `LaunchOptionValues`
     - `TaskLaunchOption`
   - Exports (values):

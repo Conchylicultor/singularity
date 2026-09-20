@@ -10,11 +10,14 @@ export {
   useSetDefaultModel,
 } from "./internal/hooks";
 export { familyClass } from "./internal/family-class";
+export { useModelItems } from "./internal/items";
+export type { ModelItem } from "./internal/items";
 export { ModelSelect } from "./components/model-select";
 export type { ModelSelectProps } from "./components/model-select";
 
 export default {
-  description: "Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.",
+  description:
+    "Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: modelProviderConfig }),
     Core.Root({ component: ModelCorruptionReporter }),

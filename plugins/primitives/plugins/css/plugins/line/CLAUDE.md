@@ -91,10 +91,12 @@ attribute type carries.
     - `primitives/data-view/capsule-toolbar`
     - `primitives/date-picker`
     - `primitives/error-boundary`
+    - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/outline/rail`
     - `primitives/overlay/image-viewer`
     - `primitives/search`
+    - `primitives/text-editor/composer`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `review/code-review`
@@ -104,6 +106,7 @@ attribute type carries.
     - `shell/health-report`
     - `shell/notifications`
     - `tasks/attempt-view`
+    - `tasks/task-draft-form`
     - `tasks/task-events`
     - `ui/tab-bar/chip`
     - `ui/tab-bar/connected`

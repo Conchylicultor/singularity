@@ -2,6 +2,7 @@ import { TextEditorSlots } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TextEditor } from "./components/text-editor";
+export type { TextEditorProps } from "./components/text-editor-impl";
 export { TextEditorSlots, type TextEditorPluginProps } from "./slots";
 export {
   registerNodeExtension,

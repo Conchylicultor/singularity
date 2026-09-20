@@ -467,6 +467,7 @@ fixed raw size escapes per-site via
     - `primitives/pane`
     - `primitives/rank-reorder`
     - `primitives/setup-steps`
+    - `primitives/text-editor/composer/picker-pill`
     - `primitives/ui-context/element-picker`
     - `reorder/editor`
     - `reorder/node-types/header`

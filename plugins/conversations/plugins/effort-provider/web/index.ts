@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { EffortSelect } from "./components/effort-select";
+export { effortItems } from "./internal/items";
+export type { EffortItem } from "./internal/items";
 export type { EffortSelectProps } from "./components/effort-select";
 
 export default {

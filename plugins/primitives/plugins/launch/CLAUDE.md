@@ -2,11 +2,23 @@
 
 ## `LaunchAgentForm` vs `LaunchAgentPopover`
 
-The form is the body (title/description, extra-context editor, preprompt picker,
-`LaunchControl`); the popover is that form inside an `InlinePopover` and is what
-almost every caller wants. Two components because a host that already owns a
-popover needs the body alone — nesting `InlinePopover` in another one is not an
-option.
+The form is the body (title/description, one `ComposerField`, the caller's
+toggles, the Launch button); the popover is that form inside an `InlinePopover`
+and is what almost every caller wants. Two components because a host that
+already owns a popover needs the body alone — nesting `InlinePopover` in another
+one is not an option.
+
+## Why the form does not use `LaunchControl`
+
+The preprompt and the fused model + thinking-mode pills live on the composer
+field's bar, so the action left over is a plain **Launch** button. `LaunchControl`
+is still right everywhere else — row actions, task details, fork buttons have no
+field to hang a bar on, and its `mod+N` launches ARE the control. Both share
+`useLaunchConversation`.
+
+The bar's pills come from the three provider readers (`useModelItems`,
+`effortItems`, `usePrepromptItems`), never from `tasks.launch-option`: that
+slot's values are written onto a task row, and a launch from here has no task.
 
 **Opening the launched conversation is the FORM's option; the popover does not
 take it.** A popover launch is always fire-and-forget (callers confirm via
@@ -21,12 +33,17 @@ and the form defaults `openAfterLaunch` to `false`.
 - Web:
   - Uses:
     - `conversations/conversation-view.conversationPane`
+    - `conversations/effort-provider.effortItems`
     - `conversations/model-provider.useDefaultModel`
+    - `conversations/model-provider.useModelItems`
     - `conversations/model-provider.useSetDefaultModel`
     - `conversations/model-provider.useVisibleModels`
-    - `conversations/preprompts.PrepromptSelect`
+    - `conversations/preprompts.PrepromptGlyph`
+    - `conversations/preprompts.usePrepromptItems`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/fill.Fill`
     - `primitives/css/fill.fillClasses`
+    - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
@@ -37,13 +54,15 @@ and the form defaults `openAfterLaunch` to `false`.
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/css/ui-kit.PopoverWidth`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.PaneOpenMode`
     - `primitives/pane.useOpenPane`
     - `primitives/shortcuts.formatShortcutLabel`
-    - `primitives/text-editor.TextEditor`
+    - `primitives/text-editor/composer.ComposerField`
+    - `primitives/text-editor/composer/picker-pill.PickerPill`
   - Exports (types):
     - `LaunchAgentFormProps`
     - `LaunchAgentPopoverProps`

@@ -1,0 +1,113 @@
+import {
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Stack,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  TextEditor,
+  type TextEditorProps,
+} from "@plugins/primitives/plugins/text-editor/web";
+
+/**
+ * Every `TextEditor` prop except `bottomSlot`: the composer IS the bottom slot,
+ * so there is no spelling for a caller to hand in a second one and silently
+ * lose the attach row and the bar.
+ */
+export interface ComposerFieldProps extends Omit<
+  TextEditorProps,
+  "bottomSlot"
+> {
+  /**
+   * The named toggle buttons ("Attach page URL", …) on their own wrapping row
+   * above the bar. Omit it and no row is rendered at all — the field collapses
+   * to the editor plus its bar.
+   */
+  attach?: React.ReactNode;
+  /** Leading half of the bar: icon actions, a {@link ComposerRule}, then pills. */
+  barStart?: React.ReactNode;
+  /** Trailing half of the bar, pushed flush right. */
+  barEnd?: React.ReactNode;
+}
+
+/**
+ * The prompt field the Improve and Launch popovers are built from: ONE box
+ * holding the prose, the attach row, and the bar of controls that configure
+ * what submitting it will do.
+ *
+ * It is a thin wrapper because `TextEditor` already has the seam it needs —
+ * `bottomSlot` renders inside `EditorShell`'s border. So the single border, the
+ * focus ring, the placeholder, the markdown⇄Lexical sync, ⌘⏎ submit, the
+ * imperative `insertRef` insert and the inline chips all keep working exactly as
+ * they do in a bare editor; the composer only decides what sits under the prose.
+ *
+ * Every other `TextEditor` prop is forwarded untouched.
+ */
+export function ComposerField({
+  attach,
+  barStart,
+  barEnd,
+  ...editor
+}: ComposerFieldProps) {
+  const hasAttach = isPresent(attach);
+  const hasBar = isPresent(barStart) || isPresent(barEnd);
+  if (!hasAttach && !hasBar) return <TextEditor {...editor} />;
+
+  return (
+    <TextEditor
+      {...editor}
+      bottomSlot={
+        // One density for everything under the prose, declared once here rather
+        // than per control, so a button, a chip and a pill on this bar are the
+        // same height under any theme.
+        <ControlSizeProvider size="sm">
+          <Stack gap="none">
+            {hasAttach && (
+              <Cluster gap="xs" className={insetClass({ x: "sm", t: "xs" })}>
+                {attach}
+              </Cluster>
+            )}
+            {hasBar && (
+              <Line className={cn("gap-xs", insetClass({ x: "xs", y: "xs" }))}>
+                {barStart}
+                {/* The empty flexible cell: everything after it sits flush
+                    right, in its own track rather than floating over the
+                    leading half. */}
+                <Fill />
+                {barEnd}
+              </Line>
+            )}
+          </Stack>
+        </ControlSizeProvider>
+      }
+    />
+  );
+}
+
+/**
+ * The hairline that separates the bar's icon actions from its pills. Rigid, so
+ * a crowded bar never crushes it down to nothing.
+ */
+export function ComposerRule() {
+  return <Rigid aria-hidden className="h-4 w-px bg-border" />;
+}
+
+/**
+ * Whether a caller actually handed us content. `{cond && <X/>}` yields `false`
+ * and `{maybe}` yields `null`/`undefined`; both mean "nothing here", and a bar
+ * with nothing in it should not paint a row.
+ */
+function isPresent(node: React.ReactNode): boolean {
+  return (
+    node !== undefined &&
+    node !== null &&
+    typeof node !== "boolean" &&
+    node !== ""
+  );
+}

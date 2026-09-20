@@ -181,6 +181,8 @@ primitive exists to name.
     - `primitives/prompt-editor`
     - `primitives/search`
     - `primitives/setup-steps`
+    - `primitives/text-editor/composer`
+    - `primitives/text-editor/composer/picker-pill`
     - `primitives/ui-context/element-picker`
     - `review/code-review`
     - `review/plugin-changes`

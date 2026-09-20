@@ -7,7 +7,14 @@ import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
  * it is its own session-scoped settings key (`--settings '{"ultracode":true}'`)
  * that sends xhigh effort AND enables dynamic-workflow orchestration.
  */
-export const EffortLevelSchema = z.enum(["low", "medium", "high", "xhigh", "max", "ultracode"]);
+export const EffortLevelSchema = z.enum([
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultracode",
+]);
 export type EffortLevel = z.infer<typeof EffortLevelSchema>;
 
 /** Used to normalize a corrupt stored value (absence = "no mode", handled separately). */
@@ -31,6 +38,17 @@ export const EFFORT_REGISTRY: Record<EffortLevel, EffortMeta> = {
   ultracode: { label: "Ultracode", settings: { ultracode: true } },
 };
 
+/**
+ * What "no thinking mode picked" is called, everywhere it is named: the picker
+ * row that clears it, and the pill that reads it back.
+ *
+ * It lives beside the registry because it belongs to the same question the
+ * registry answers — which thinking mode is this running at? — and "none, let
+ * the agent decide" is one of that question's answers, not a word each surface
+ * invents for itself.
+ */
+export const EFFORT_UNSET_LABEL = "Auto";
+
 /** Selectable modes, in registry order — drives every picker. */
 export const SELECTABLE_EFFORTS = Object.keys(EFFORT_REGISTRY) as EffortLevel[];
 
@@ -40,7 +58,9 @@ export function resolveEffortFlag(level: EffortLevel): string | undefined {
 }
 
 /** The `--settings` object for a level, or `undefined` if it is delivered via the flag. */
-export function resolveEffortSettings(level: EffortLevel): Record<string, unknown> | undefined {
+export function resolveEffortSettings(
+  level: EffortLevel,
+): Record<string, unknown> | undefined {
   return EFFORT_REGISTRY[level].settings;
 }
 
@@ -67,4 +87,8 @@ export function reportUnknownEffort(raw: unknown): void {
  * rejecting the whole array payload on the WS push path. Keep request-input/API-body
  * schemas strict (use the raw EffortLevelSchema there).
  */
-export const StoredEffortSchema = tolerantEnum(EffortLevelSchema, normalizeEffort, reportUnknownEffort);
+export const StoredEffortSchema = tolerantEnum(
+  EffortLevelSchema,
+  normalizeEffort,
+  reportUnknownEffort,
+);
