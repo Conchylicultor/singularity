@@ -940,6 +940,226 @@ function parserFor(
 }
 
 // ---------------------------------------------------------------------------
+// The claim authority: which handle would take a given line
+// ---------------------------------------------------------------------------
+//
+// ONE ordering, read by BOTH directions. The parse walk consumes it to dispatch
+// a line; the serialize walk asks it what the line it is about to write would
+// come back as. Before it existed the serializer did not know what the parser
+// would do with its own output, so a paragraph reading `3. Investigate…` went
+// out as a bare line and came back a `numbered-list` — losing its row id, and
+// with it the page's editability (`research/2026-09-20-page-markdown-line-claim-escape.md`).
+
+/** A handle declaring a fenced multi-line form, bound to that declaration. */
+interface FenceClaimer {
+  handle: Handle;
+  fence: NonNullable<BlockMarkdown<unknown>["fence"]>;
+}
+
+/** A non-`defaultText` handle with its resolved single-line parser. */
+interface LineClaimer {
+  handle: Handle;
+  precedence: number;
+  parse(line: string, ctx: MdParseCtx): unknown | null;
+}
+
+/**
+ * The parse-side dispatch for one handle set, in the order a line is offered to
+ * it: the fence arm first (a fence's opening line is its own claim and its body
+ * is opaque), then the non-`defaultText` claimers by `precedence` desc — a
+ * stable sort, so ties keep registration order — and last the default-text
+ * handle, which never claims and always accepts.
+ */
+interface Claimers {
+  fences: FenceClaimer[];
+  lines: LineClaimer[];
+  /** THE plain-paragraph type; `undefined` in a composition shipping none. */
+  fallback: Handle | undefined;
+}
+
+function claimersOf(handles: Handle[]): Claimers {
+  return {
+    fences: handles
+      .filter((h) => h.markdown?.fence)
+      .map((h) => ({ handle: h, fence: h.markdown!.fence! })),
+    lines: handles
+      .filter((h) => !h.defaultText)
+      .map((h) => ({
+        handle: h,
+        precedence: h.markdown?.precedence ?? 0,
+        parse: parserFor(h),
+      }))
+      .sort((a, b) => b.precedence - a.precedence),
+    fallback: defaultTextHandle(handles),
+  };
+}
+
+/**
+ * The stub parse context the TYPE probe runs against. Every `parseLine` today
+ * uses `ctx.runs` only to fill the text it just matched — a field its own
+ * predicate never inspects — so a probe handing back no runs decides exactly
+ * what the real call would, and costs regex work rather than a second
+ * `parseInlineMarkdown`. `parseMarkdownToForest` then re-invokes the winner with
+ * the REAL context and REFUSES LOUDLY if the two disagree, so the assumption is
+ * checked on every line rather than trusted.
+ */
+const PROBE_PARSE_CTX: MdParseCtx = { runs: () => [] };
+
+/** Which entry of a {@link Claimers} takes one line. */
+type Claim =
+  | { kind: "fence"; handle: Handle; fence: FenceClaimer["fence"] }
+  | { kind: "line"; handle: Handle; claimer: LineClaimer }
+  | { kind: "prose"; handle: Handle };
+
+/**
+ * A line's content as the parse walk sees it: its own leading whitespace gone,
+ * exactly as `parseMarkdownToForest` takes it off before offering a line to
+ * anybody. Stated HERE, inside the authority, so no caller can probe a claim
+ * against a string the parser would never show a claimer — a paragraph reading
+ * `"  3. x"` is claimed by `numbered-list`, and a probe of the raw line says
+ * prose, which is a block silently lost on the way back. Its two spaces are
+ * CONTENT, so only the probe sees the stripped form: what reaches `ctx.runs`
+ * keeps them.
+ */
+function lineContent(line: string): string {
+  return line.replace(/^\s+/, "");
+}
+
+function claimOf(line: string, claimers: Claimers): Claim | undefined {
+  const content = lineContent(line);
+  const fence = claimers.fences.find((f) => content.startsWith(f.fence.open));
+  if (fence) return { kind: "fence", handle: fence.handle, fence: fence.fence };
+  for (const claimer of claimers.lines) {
+    if (claimer.parse(content, PROBE_PARSE_CTX) !== null)
+      return { kind: "line", handle: claimer.handle, claimer };
+  }
+  const { fallback } = claimers;
+  return fallback === undefined
+    ? undefined
+    : { kind: "prose", handle: fallback };
+}
+
+/**
+ * Which block type this DEDENTED line would parse back as — TYPE only, no
+ * payload built. `undefined` only when the composition ships no default-text
+ * type, which is the same answer {@link defaultTextHandle} gives every other
+ * caller rather than an absorbed failure: the line then belongs to nobody.
+ *
+ * It deliberately does NOT model the tag branch. `claimTag` is multi-line and
+ * can decline after consuming nothing, so it is not a single-line predicate —
+ * and it does not need to be: a `lines`-branch line can only open with `<` if a
+ * handle emits one, which {@link claimSafeLines} ASSERTS rather than assumes.
+ */
+function claimantOf(line: string, claimers: Claimers): Handle | undefined {
+  return claimOf(line, claimers)?.handle;
+}
+
+/**
+ * The block type that would STEAL this line from the plain-paragraph type, or
+ * `undefined` when the line is ordinary prose.
+ *
+ * The distinction {@link claimantOf} cannot make on its own: its answer for an
+ * unclaimed line is the default-text handle, so "is it claimed" asked as "is it
+ * defined" is true of every line ever written. This is the question the escape
+ * asks in both directions.
+ */
+function stealerOf(line: string, claimers: Claimers): Handle | undefined {
+  const claim = claimOf(line, claimers);
+  return claim && claim.kind !== "prose" ? claim.handle : undefined;
+}
+
+/**
+ * The document line(s) ONE `lines`-branch node contributes, with the FIRST line
+ * ESCAPED when another block type would claim it back.
+ *
+ * The backslash goes at index 0 of the WHOLE line, ahead of any leading
+ * whitespace the text itself carries — so a paragraph reading `"  ---"` emits
+ * `\  ---` and keeps its two spaces. Every claimer either anchors at `^` or
+ * compares `trim()`, so index 0 defeats all of them; there is no position to
+ * search for, and a FIXED position is what makes the decode exact.
+ *
+ * **Only the default-text type may be escaped.** A non-default owner whose own
+ * line another type claims is a DEFECT and throws: escaping it would silently
+ * convert the block to a paragraph on the way back (`\- [ ] x` no longer claims
+ * `to-do`), which is precisely the damage this mechanism exists to close.
+ * Unreachable today — every claiming type parses the line it emits, which the
+ * check above now asserts on every block rather than assuming.
+ *
+ * `assertExact` is `softBreaks === "escaped"`, our own dialect: the clipboard's
+ * is deliberately lossy and must never throw during a Cmd+C. The ESCAPE itself
+ * is dialect-free and needs no fourth `MarkdownContext` field —
+ * `\3. Investigate` is correct CommonMark and renders as the paragraph it is
+ * wherever a person pastes it.
+ */
+function claimSafeLines(
+  line: string,
+  handle: Handle | undefined,
+  claimers: Claimers,
+  assertExact: boolean,
+): string[] {
+  const lines = line.split("\n");
+  // A type no handle in this composition declares emits "" and owns nothing —
+  // `serializerFor` never ran for it — so there is no owner to check a claim
+  // against. The walk passes it through exactly as it always has.
+  if (handle === undefined) return lines;
+  const first = lines[0]!;
+
+  if (assertExact) {
+    // ONE LINE, and `code-block` is the one exemption: a `fence` is
+    // self-delimiting, so its lines 2..n are read back as part of the same
+    // block. Any OTHER multi-line output fans one block out into siblings at
+    // its own indent, indistinguishable from blocks nobody wrote — the soft
+    // break's bug, still live for `equation`, which serializes `"$$" +
+    // expression` straight out of a textarea. The comment at the call site
+    // claimed this property already held; this is what makes it true.
+    if (lines.length > 1 && handle.markdown?.fence === undefined) {
+      throw new Error(
+        `markdown: a "${handle.type}" block emitted ${lines.length} lines, but only a type ` +
+          "declaring a `markdown.fence` may — every other type's lines 2..n come back as " +
+          "sibling blocks nobody wrote. A soft break inside run text is already spelled `\\n`; " +
+          "anything else multi-line needs a fence or a tag.",
+      );
+    }
+    // NEVER OPENS WITH `<`. The claim authority skips the tag branch on purpose
+    // (`claimTag` is multi-line and can decline after consuming nothing, so it
+    // is not a single-line predicate) — this assert is what makes that omission
+    // honest rather than assumed. `<` is an inline escape, so run text can never
+    // produce one here; only a hand-written `markdown.serialize` could.
+    if (lineContent(first).startsWith("<")) {
+      throw new Error(
+        `markdown: a "${handle.type}" block emitted the line ${JSON.stringify(first)}, which ` +
+          "opens with `<`. A line that could open a TAG is outside what the claim authority can " +
+          "answer (see `claimantOf`), so a type that wants a tag declares `markdown.tag` rather " +
+          "than writing one by hand.",
+      );
+    }
+  }
+
+  const claimant = claimantOf(first, claimers);
+  if (claimant === handle) return lines;
+  if (handle !== claimers.fallback) {
+    throw new Error(
+      `markdown: a "${handle.type}" block emitted the line ${JSON.stringify(first)}, which ` +
+        `parses back as "${claimant?.type ?? "nothing"}" — its \`markdown.serialize\` and its ` +
+        "`markdown.parseLine` disagree. Escaping the line is NOT the answer here: it would make " +
+        "the block a paragraph on the way back, which is the loss this check exists to prevent. " +
+        "Only the default-text type may be escaped.",
+    );
+  }
+  const escaped = "\\" + first;
+  const after = claimantOf(escaped, claimers);
+  if (after !== handle) {
+    throw new Error(
+      `markdown: a paragraph reading ${JSON.stringify(first)} is claimed by ` +
+        `"${claimant?.type ?? "nothing"}", and escaping it as ${JSON.stringify(escaped)} still ` +
+        `parses back as "${after?.type ?? "nothing"}". A line claim has to be defeated by one ` +
+        "leading backslash — a claimer that matches one is a claimer no paragraph can escape.",
+    );
+  }
+  return [escaped, ...lines.slice(1)];
+}
+
+// ---------------------------------------------------------------------------
 // Tag lexing (one line of an open tag)
 // ---------------------------------------------------------------------------
 //
@@ -1095,20 +1315,10 @@ export function parseMarkdownToForest(
 ): SerializedBlock[] {
   const { handles } = ctx;
   const parseCtx = parseCtxFor(ctx);
-  const fallback = defaultTextHandle(handles);
-  // Non-default handles paired with their resolved parser, ordered by precedence
-  // desc — stable sort keeps registration order for ties. The default-text
-  // handle is the fallback, never a claiming parser.
-  const claimers = handles
-    .filter((h) => !h.defaultText)
-    .map((h) => ({
-      handle: h,
-      precedence: h.markdown?.precedence ?? 0,
-      parse: parserFor(h),
-    }))
-    .sort((a, b) => b.precedence - a.precedence);
-  const fenceHandles = handles.filter((h) => h.markdown?.fence);
-  const fences = fenceHandles.map((h) => h.markdown!.fence!);
+  // The ONE dispatch order, shared with the serialize side — see `claimersOf`.
+  const claimers = claimersOf(handles);
+  const fallback = claimers.fallback;
+  const fences = claimers.fences.map((f) => f.fence);
   const tagParsers = tagParsersOf(handles);
 
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
@@ -1183,13 +1393,15 @@ export function parseMarkdownToForest(
       }
     }
 
+    // WHICH HANDLE TAKES THIS LINE — asked once, of the authority the
+    // serializer checks its own output against, so the two cannot drift. The
+    // tag pass above is deliberately outside it (see `claimantOf`).
+    const claim = claimOf(content, claimers);
+
     // Fenced multi-line (code): capture the info string, accumulate until the
     // closing fence, then hand the body to the type's `parseFenced`.
-    const fenceH = fenceHandles.find((h) =>
-      content.startsWith(h.markdown!.fence!.open),
-    );
-    if (fenceH) {
-      const fence = fenceH.markdown!.fence!;
+    if (claim?.kind === "fence") {
+      const { fence } = claim;
       const info = content.slice(fence.open.length).trim();
       const body: string[] = [];
       i++;
@@ -1205,35 +1417,79 @@ export function parseMarkdownToForest(
       flushBlanks(indent);
       tokens.push({
         indent,
-        type: fenceH.type,
+        type: claim.handle.type,
         data: fence.parseFenced(info, body.join("\n"), parseCtx),
       });
       continue;
     }
 
-    // Non-default claiming handles, precedence desc, first non-null wins.
-    let claimed = false;
-    for (const c of claimers) {
-      const data = c.parse(content, parseCtx);
-      if (data !== null) {
+    // A LINE-LEADING BACKSLASH MAKES THE LINE PROSE. It is how the serializer
+    // spells a paragraph whose own text opens with another type's line marker
+    // (`3. Investigate…`, `- x`, `---`): one `\` at index 0, which every claimer
+    // fails to match because each of them anchors at `^` or compares `trim()`.
+    // Strip that ONE backslash and hand the remainder to the default-text handle
+    // directly — never back to the claimers, which by definition would take it.
+    //
+    // Conditional on a real CLAIM, never on the backslash alone: a block whose
+    // text is a lone soft break emits the line `\n` (backslash + the letter
+    // `n`), and an unconditional strip would rewrite that block's text to `n`.
+    //
+    // The remainder keeps its own leading whitespace — `stealerOf` strips the
+    // indent to ASK the question, exactly as the walk above did, while those
+    // spaces are the paragraph's content.
+    //
+    // BLOCK LEVEL, before the inline parse, and it must be: `isEscapeAt`
+    // (`inline-markdown.ts`) treats a backslash as an escape only before one of
+    // that table's nine spellings, and `3`, `-`, `+`, `#`, `>`, `$` are not
+    // among them — so the inline layer is blind to this escape by construction,
+    // there is no double decode, and what reaches `ctx.runs` is byte-identical
+    // to what the serializer held before inserting. Unconditional across
+    // dialects, like every other decode here (lenient on parse, canonical on
+    // serialize), and this one costs no leniency at all: `\- x` in foreign
+    // pasted markdown means a literal `- x` paragraph in CommonMark too.
+    if (fallback !== undefined && content.startsWith("\\")) {
+      const bare = content.slice(1);
+      if (stealerOf(bare, claimers) !== undefined) {
         flushBlanks(indent);
-        tokens.push({ indent, type: c.handle.type, data });
-        claimed = true;
-        break;
+        tokens.push({
+          indent,
+          type: fallback.type,
+          data: { ...(fallback.empty?.() ?? {}), text: parseCtx.runs(bare) },
+        });
+        i++;
+        continue;
       }
     }
-    if (claimed) {
+
+    // Non-default claiming handles, precedence desc, first non-null wins — the
+    // winner named by `claimOf` above, re-invoked here with the REAL context.
+    if (claim?.kind === "line") {
+      const data = claim.claimer.parse(content, parseCtx);
+      if (data === null) {
+        throw new Error(
+          `markdown: "${claim.handle.type}" claimed the line ${JSON.stringify(content)} when ` +
+            "probed and DECLINED it with the real parse context. A `parseLine` decides its match " +
+            "from the line alone — `ctx.runs` fills the text it matched, it never decides the " +
+            "match — or the claim authority the serializer checks its own output against is " +
+            "answering a different question from the one the parser asks.",
+        );
+      }
+      flushBlanks(indent);
+      tokens.push({ indent, type: claim.handle.type, data });
       i++;
       continue;
     }
 
     // Plain paragraph → default text type.
-    if (fallback) {
+    if (claim) {
       flushBlanks(indent);
       tokens.push({
         indent,
-        type: fallback.type,
-        data: { ...(fallback.empty?.() ?? {}), text: parseCtx.runs(content) },
+        type: claim.handle.type,
+        data: {
+          ...(claim.handle.empty?.() ?? {}),
+          text: parseCtx.runs(content),
+        },
       });
     }
     i++;
@@ -1579,6 +1835,11 @@ export function serializeForestToMarkdown(
   ctx: MarkdownContext,
 ): string {
   const byType = new Map(ctx.handles.map((h) => [h.type, h] as const));
+  // What the PARSER would do with each line this walk writes — built once here
+  // and closed over by `renderList`. Deliberately not memoised on `ctx.handles`:
+  // `serverMarkdownContext()` mints a fresh array per call, so a WeakMap keyed
+  // on it would only ever grow.
+  const claimers = claimersOf(ctx.handles);
   const md = (text: RichText | string): string =>
     serializeInlineMarkdown(runsOf(text), ctx.protectedSpans, ctx.softBreaks);
 
@@ -1638,17 +1899,23 @@ export function serializeForestToMarkdown(
             `${openTagPrefix(pinned.name, tagAttrs(pinned, n.data, serializeCtx))}/>`,
           );
         } else {
+          // THE LINE A BLOCK EMITS IS CLAIMED BY THAT BLOCK, OR IT IS ESCAPED —
+          // `claimSafeLines` is the whole of it, and it also owns the split.
+          //
           // The split STAYS, and `code-block` is its one reason: it declares an
           // explicit `markdown.serialize` returning a genuinely multi-line
           // fenced string, and a declared serializer takes this branch. Every
-          // other explicit serializer here is single-line, and a soft break
-          // inside run text is spelled `\n` by the escaped dialect — so after
-          // that spelling a fan-out on this line can only come from a handle
-          // that deliberately produced one. Do NOT move the soft-break escape
-          // here: at this point the string is opaque (prefix, fence and inline
-          // text already concatenated), so escaping would collapse every fenced
-          // block onto one line and turn the code's own newlines into `\n`.
-          out.push(...line.split("\n"));
+          // other type here emits ONE line — which used to be a statement about
+          // the handles that happen to be registered and is now ASSERTED in our
+          // own dialect, because `equation` was a live counter-example (a
+          // multi-line LaTeX expression fanned out here exactly as a soft break
+          // used to). Do NOT move the soft-break escape here either: at this
+          // point the string is opaque (prefix, fence and inline text already
+          // concatenated), so escaping would collapse every fenced block onto
+          // one line and turn the code's own newlines into `\n`.
+          out.push(
+            ...claimSafeLines(line, h, claimers, ctx.softBreaks === "escaped"),
+          );
         }
         out.push(...indentLines(renderList(n.children)));
         continue;

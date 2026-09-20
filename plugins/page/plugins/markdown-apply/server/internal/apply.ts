@@ -5,11 +5,7 @@ import {
   serializePageContent,
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
-import {
-  parseMarkdownToForest,
-  plainOf,
-  runsOfNode,
-} from "@plugins/page/plugins/editor/core";
+import { parseMarkdownToForest } from "@plugins/page/plugins/editor/core";
 import { writeBlockTexts } from "@plugins/page/plugins/block-text-write/server";
 import {
   documentOrderRows,
@@ -20,6 +16,9 @@ import {
   subtractNoise,
   type MarkdownApplyPlan,
 } from "../../core";
+// Not through the core barrel: the wording has exactly one caller, and this
+// plugin's public API is the engine, not the sentence it refuses with.
+import { roundTripCreatesRefusal } from "../../core/refusal";
 import { serverMarkdownContext } from "./markdown-context";
 import { loadBlockScope, type BlockScopePageRow } from "./read";
 
@@ -204,100 +203,6 @@ export interface ApplyReport {
    * number is how anyone notices the projection has become lossier.
    */
   absorbedWrites: number;
-}
-
-/** How much of a row's stored text a refusal quotes. */
-const PREVIEW_CHARS = 60;
-
-/**
- * How many rows a refusal names before it stops listing them.
- *
- * The list is a superset of the one row that is actually lossy (see
- * {@link roundTripCreatesRefusal}), and on a long page it can be most of the
- * document. A message an agent has to relay whole is worth keeping readable, and
- * a handful of ids with their text is already enough to find the block in the
- * page, which is all the list is for.
- */
-const PREVIEW_ROWS = 5;
-
-/**
- * One row's stored text, shortened to something a human can search the page for.
- *
- * A newline comes out as the two characters `\n` rather than as a break. That is
- * not prettifying: a stored soft line break is the loss this refusal was written
- * for, so showing it where it sits is most of the message's value — and a
- * refusal that spilled onto lines of its own would be harder to read, not
- * easier.
- */
-function textPreview(row: StoredBlock): string {
-  const text = plainOf(runsOfNode(row)).replace(/\n/g, "\\n");
-  return text.length > PREVIEW_CHARS
-    ? `${text.slice(0, PREVIEW_CHARS)}…`
-    : text;
-}
-
-/**
- * The refusal for a baseline document that plans CREATES — the read having
- * invented blocks the page does not hold.
- *
- * Worded for the party that reads it. The engine is audience-agnostic and names
- * no tool, but the only caller that passes a baseline is an agent-facing one, so
- * this follows `agent-access`'s refusal idiom: name the ids, state the rule in
- * one clause, say what to do next. It gives the scope and its page, how many
- * blocks the untouched document would create, and the rows whose stored text the
- * round trip would rewrite, each with a short preview so a human can find it in
- * the page.
- *
- * **That list is deliberately a SUPERSET containing the lossy row**, not the
- * lossy row itself. A block that fans out into several document lines is
- * rewritten down to one of them, so it is always in here — but so is every row
- * the round trip merely re-canonicalizes, and telling those apart would mean
- * guessing which text edit "looks like" a truncation. Naming a few rows too many
- * costs a reader one glance; naming the wrong one sends them to the wrong block.
- */
-function roundTripCreatesRefusal(args: {
-  rootId: string;
-  pageId: string;
-  rows: readonly StoredBlock[];
-  identity: MarkdownApplyPlan;
-}): string {
-  const { rootId, pageId, rows, identity } = args;
-  const created = identity.patch.creates.length;
-  const rowById = new Map(rows.map((r) => [r.id, r] as const));
-  const edits = identity.textEdits;
-  const named = edits
-    .slice(0, PREVIEW_ROWS)
-    .map((edit) => {
-      const row = rowById.get(edit.blockId);
-      // A text edit always names a row of this very partition, so the bare-id
-      // arm is unreachable — but a message being built to explain a refusal is
-      // the wrong place to crash over it.
-      return row === undefined
-        ? edit.blockId
-        : `${edit.blockId} ("${textPreview(row)}")`;
-    })
-    .join(", ");
-  const more =
-    edits.length > PREVIEW_ROWS
-      ? `, and ${edits.length - PREVIEW_ROWS} more`
-      : "";
-  const candidates =
-    edits.length === 0
-      ? `No stored row's text would be rewritten, so the loss is in the shape the ` +
-        `read emitted rather than in one block's text.`
-      : edits.length === 1
-        ? `The row whose stored text the round trip would rewrite is ${named}.`
-        : `The rows whose stored text the round trip would rewrite are ` +
-          `${named}${more}; the block that fans out into several lines is one of ` +
-          `them.`;
-  return (
-    `markdown apply: block ${rootId} on page ${pageId} cannot be edited right ` +
-    `now. Reading it out and applying it back completely unchanged would itself ` +
-    `create ${created} block${created === 1 ? "" : "s"}, so there is no way to ` +
-    `tell this edit apart from the round trip's own damage. ${candidates} This ` +
-    `is a bug in the page's markdown projection, not in the edit — report it ` +
-    `rather than working around it.`
-  );
 }
 
 /** One scoped apply: the two channels, over rows a caller has already read. */

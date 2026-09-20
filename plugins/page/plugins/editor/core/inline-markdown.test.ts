@@ -513,6 +513,18 @@ describe("escaping — the rule that makes serialize → parse an identity", () 
       { text: 'printf "a\n"', marks: ["code"] },
     ]);
   });
+
+  test("a backslash before a BLOCK marker is two literal characters here", () => {
+    // The LINE-LEADING escape (`\3. x`, `\- x`, `\---`) belongs to
+    // `markdown.ts`, which takes it off before this scan ever runs. None of
+    // those characters is a spelling in `ESCAPES`, so this layer is blind to
+    // that escape by construction — which is what makes the two disjoint rather
+    // than double-decoding, and why `-`/`#`/`>` must never join the table (it is
+    // position-blind, so it would emit `well\-known` for every hyphen in every
+    // word).
+    for (const s of ["\\-", "\\3", "\\#", "\\>", "\\$"])
+      expect(par(s)).toEqual([{ text: s }]);
+  });
 });
 
 describe("the soft break: one spelling, in and out of a mark", () => {

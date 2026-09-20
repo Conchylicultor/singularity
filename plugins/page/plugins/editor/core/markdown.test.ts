@@ -66,6 +66,23 @@ const heading1 = defineBlock({
   markdownPrefixes: ["# "],
 });
 
+// H2 and H3 are mirrored too, because the line-claim escape below reads the
+// WHOLE prefix set: a paragraph reading `## x` comes back a heading, and a
+// mirror holding only `# ` would let that case pass vacuously.
+const heading2 = defineBlock({
+  type: "heading-2",
+  schema: textDataSchema,
+  empty: () => ({ text: [] }),
+  markdownPrefixes: ["## "],
+});
+
+const heading3 = defineBlock({
+  type: "heading-3",
+  schema: textDataSchema,
+  empty: () => ({ text: [] }),
+  markdownPrefixes: ["### "],
+});
+
 const toDo = defineBlock({
   type: "to-do",
   schema: textBlockSchema({ checked: z.boolean().default(false) }),
@@ -331,6 +348,8 @@ const handles: BlockHandle<unknown>[] = [
   text,
   bulletedList,
   heading1,
+  heading2,
+  heading3,
   toDo,
   numberedList,
   toggle,
@@ -511,6 +530,183 @@ describe("soft line breaks (a block's text is ONE document line)", () => {
     );
     expect(md).toBe("a\nb");
     expect(parse(md)).toHaveLength(2);
+  });
+});
+
+describe("line claims (a paragraph that opens like a list)", () => {
+  // A stored paragraph reading `3. Investigate…` went out as a BARE line and
+  // came back a `numbered-list` — a different row, so reading a page out and
+  // applying it back unchanged planned a delete and a create, and `edit_page`
+  // refused every edit to that page. Ten paragraphs across three pages on main
+  // were un-editable this way. The serializer now asks what the parser would do
+  // with the line it is about to write, and spells the paragraph with one
+  // leading backslash when another type would take it.
+
+  /** Each line, and the type that claims it when nothing is escaped. */
+  const claimed = [
+    ["3. x", "numbered-list"],
+    ["10) x", "numbered-list"],
+    ["- x", "bulleted-list"],
+    ["+ x", "bulleted-list"],
+    ["# x", "heading-1"],
+    ["## x", "heading-2"],
+    ["> x", "toggle"],
+    ["$$x", "equation"],
+    ["---", "divider"],
+    // `divider` compares `trim()`, so this one is claimed THROUGH its leading
+    // whitespace — and the whitespace is the paragraph's own content.
+    ["  ---", "divider"],
+    // …and this one is claimed only once the indent is off, which is what the
+    // probe has to strip: `^\d+` does not match `"  3. x"`. Probing the raw
+    // line answers *prose*, nothing is escaped, and the block is lost on the
+    // way back exactly as before.
+    ["  3. x", "numbered-list"],
+  ] as const;
+
+  test("the bare line IS claimed — the loss this closes", () => {
+    for (const [line, claimant] of claimed) {
+      expect([line, parse(line)[0]!.type]).toEqual([line, claimant]);
+    }
+  });
+
+  test("a paragraph is escaped once, round-trips exactly, and is idempotent", () => {
+    for (const [line] of claimed) {
+      const forest = [node("text", { text: runs(line) })];
+      const md = serialize(forest);
+      // ONE line, one backslash, at index 0 of the WHOLE line — ahead of any
+      // leading whitespace the text carries, which is how `"  ---"` keeps its
+      // two spaces.
+      expect(md).toBe("\\" + line);
+      expect(md.split("\n")).toHaveLength(1);
+      expect(parse(md)).toEqual(forest);
+      expect(serialize(parse(md))).toBe(md);
+    }
+  });
+
+  test("the decode is unconditional across dialects, like every other decode", () => {
+    // Lenient on parse, canonical on serialize. `\- x` means a literal `- x`
+    // paragraph in CommonMark too, so a pasted document reads MORE faithfully.
+    expect(parsePasted("\\3. x")).toEqual([
+      node("text", { text: runs("3. x") }),
+    ]);
+  });
+
+  test("the already-safe set gains NO escape — the check reads the EMITTED line", () => {
+    // `*`, `[`, `]`, `` ` `` and `<` are inline escape spellings, so by the time
+    // the line exists no claimer can reach its first character. That the check
+    // agrees is the proof it probes the emitted line rather than the run text.
+    for (const [stored, emitted] of [
+      ["* x", "\\* x"],
+      ["[ ] x", "\\[ \\] x"],
+      ["```x", "\\`\\`\\`x"],
+      ['<page id="p1"/>', '\\<page id="p1"/>'],
+    ] as const) {
+      const forest = [node("text", { text: runs(stored) })];
+      expect(serialize(forest)).toBe(emitted);
+      expect(parse(emitted)).toEqual(forest);
+    }
+  });
+
+  test("a literal backslash is a fixed point, escaped line or not", () => {
+    // `\- foo` decodes (a claimer takes `- foo`); `\\- foo` does not (nothing
+    // claims `\- foo`), and its backslash is the INLINE table's. Both have to
+    // survive re-emission unchanged, or a document drifts one backslash per
+    // round trip.
+    for (const md of ["\\- foo", "\\3. x", "\\\\- foo"]) {
+      expect(serialize(parse(md))).toBe(md);
+      expect(serialize(parse(serialize(parse(md))))).toBe(md);
+    }
+  });
+
+  test("a lone soft break still reads as a break, not as the letter `n`", () => {
+    // Why the decode gates on a real CLAIM and not on the backslash alone: a
+    // block whose text is one soft break emits the line `\n`, which begins with
+    // a backslash and is prose. An unconditional strip rewrites it to `n`.
+    const forest = [node("text", { text: runs("\n") })];
+    expect(serialize(forest)).toBe("\\n");
+    expect(parse("\\n")).toEqual(forest);
+  });
+
+  test("a claiming type's own line is never escaped, and keeps its type", () => {
+    for (const [type, data, line] of [
+      ["numbered-list", { text: runs("2. x") }, "1. 2. x"],
+      ["heading-1", { text: runs("# x") }, "# # x"],
+      ["to-do", { text: runs("- [ ] y"), checked: false }, "- [ ] - [ ] y"],
+      ["bulleted-list", { text: runs("- z") }, "- - z"],
+    ] as const) {
+      const forest = [node(type, data)];
+      expect(serialize(forest)).toBe(line);
+      expect(parse(line)).toEqual(forest);
+    }
+  });
+
+  test("a code block still emits three lines and is not escaped", () => {
+    // The fence is the ONE exemption from the one-line assert, and it is
+    // self-delimiting: its body is not offered to the claimers at all, so a line
+    // of code reading `3. x` needs nothing.
+    const forest = [node("code-block", { code: "3. x", language: "ts" })];
+    expect(serialize(forest)).toBe("```ts\n3. x\n```");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a multi-line equation throws in our dialect, and not in the clipboard's", () => {
+    // `equation` serializes `"$$" + expression` straight out of a textarea, so a
+    // multi-line expression fanned its lines 2..n out as sibling paragraphs —
+    // the soft break's bug on another type. The clipboard dialect is
+    // deliberately lossy and must never throw during a Cmd+C.
+    const forest = [node("equation", { expression: "a\nb" })];
+    expect(() => serialize(forest)).toThrow(/equation/);
+    expect(() =>
+      serializeForestToMarkdown(forest, { ...mdCtx, softBreaks: "newline" }),
+    ).not.toThrow();
+  });
+
+  test("a type whose own line it cannot parse back throws, rather than escaping", () => {
+    // Escaping a NON-default owner would silently convert the block to a
+    // paragraph on the way back (`\- [ ] x` is not a to-do), which is the very
+    // damage this closes — so the disagreement has to be fixed where it is
+    // declared. Unreachable with today's handles.
+    const broken = defineBlock({
+      type: "broken",
+      schema: textDataSchema,
+      empty: () => ({ text: [] }),
+      markdown: {
+        serialize: (d, ctx) => "- " + ctx.md(d.text),
+        parseLine: () => null,
+      },
+    });
+    const ctx: MarkdownContext = {
+      ...mdCtx,
+      handles: [...handles, broken as BlockHandle<unknown>],
+    };
+    expect(() =>
+      serializeForestToMarkdown([node("broken", { text: runs("x") })], ctx),
+    ).toThrow(/"broken".*"bulleted-list"/s);
+  });
+
+  test("a hand-written line opening with `<` throws — the tag branch is not modelled", () => {
+    // `claimTag` is multi-line and can decline after consuming nothing, so it is
+    // not a single-line predicate and the claim authority skips it. This assert
+    // is what makes that omission honest.
+    const tagish = defineBlock({
+      type: "tagish",
+      schema: textDataSchema,
+      empty: () => ({ text: [] }),
+      markdown: {
+        serialize: (d, ctx) => "<tagish>" + ctx.md(d.text),
+        parseLine: (line, ctx) =>
+          line.startsWith("<tagish>")
+            ? { text: ctx.runs(line.slice(8)) }
+            : null,
+      },
+    });
+    const ctx: MarkdownContext = {
+      ...mdCtx,
+      handles: [...handles, tagish as BlockHandle<unknown>],
+    };
+    expect(() =>
+      serializeForestToMarkdown([node("tagish", { text: runs("x") })], ctx),
+    ).toThrow(/tagish/);
   });
 });
 

@@ -284,6 +284,17 @@ export function matchInlineFormat(
 //   set is narrower — `\` and `)` only — because a URL is read verbatim up to
 //   its first unescaped `)`.
 //
+//   THE LINE-LEADING ESCAPE LIVES IN `markdown.ts`, AND MUST NOT MOVE HERE. A
+//   paragraph whose text opens with another block type's marker (`3. x`, `- x`,
+//   `---`) is spelled with one backslash at index 0 of the LINE, put there and
+//   taken off by the block walk. This table cannot express that: it is
+//   per-character and position-blind, so adding `-` to it would emit
+//   `well\-known` for every hyphen in every word of every document. A POSITION
+//   is what makes that escape exact, and a position is a fact about a line —
+//   which is why the two layers are disjoint by construction (none of `3`, `-`,
+//   `+`, `#`, `>`, `$` is a spelling below, so this scan never sees the block
+//   escape and never double-decodes it).
+//
 // PROTECTED SPANS (`\(latex\)`, `[[page:…]]`, `[[date:…]]`, …) are matched
 // FIRST and masked out of the scan in both directions: their bytes are emitted
 // verbatim on serialize (never escaped) and taken verbatim on parse (never
