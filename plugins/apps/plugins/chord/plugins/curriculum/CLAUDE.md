@@ -18,12 +18,12 @@ Two axes, one ladder.
 A **step** moves one axis. A **level** is how many steps you have taken, plus
 one — level 1 is `FIRST_LEVEL`, a constant, so there is never a row for it.
 
-| Level | Step                         | What the round asks                                |
-| ----- | ---------------------------- | -------------------------------------------------- |
-| 1     | I, IV, V, major keys         | only the boxes of the chord being practised        |
-| 2     | ask rule → `half`            | every box in the loop's second half (the cadence)  |
-| 3     | ask rule → `all`             | every box                                          |
-| 4…    | one chord, or a stage's seed | every box — except while the new chord is settling |
+| Level | Step                          | What the round asks                               |
+| ----- | ----------------------------- | ------------------------------------------------- |
+| 1     | I, IV, V, major keys          | only the boxes of the chord being practised       |
+| 2     | ask rule → `half`             | every box in the loop's second half (the cadence) |
+| 3     | ask rule → `all`              | every box                                         |
+| 4…    | one notion, or a stage's seed | every box — except while a new chord is settling  |
 
 **A NEW chord is asked alone**, until it has `FRESH_ANSWERS` (10) answers, so
 every new notion arrives isolated and widens out on its own.
@@ -77,6 +77,27 @@ Two consequences worth knowing:
   in it are ones the learner already knows. `locrian`, `harmonicMinor` and
   `phrygianDominant` have no stage: nothing opens them today.
 
+### Notions: what one step teaches
+
+A level teaches one notion, and a notion is not always one chord. A stage's
+`notion(parts)` says which of its chords are **one idea** — a string that is
+only ever compared — and candidates sharing one are unlocked by a single step.
+Every stage answers: one that bundles nothing returns the shared `ownNotion`
+(the chord's own token), so "nothing to bundle" is a stated answer rather than a
+missing method. Only `inversions` bundles, on the root-position twin: V⁶ and V⁶₄
+arrive together as "V, with another note in the bass" instead of spending a
+level each on the same idea.
+
+**A bundle is worth its biggest member, not the sum.** The sum double-counts the
+windows two members share, and counting the set exactly would cost one more
+`countLoopsInSet` query per notion on every `next` read. The biggest member is
+what decides whether the family earns a level, and the step opens at least that
+many.
+
+A step already carried a list of tokens (the minor-keys seed unlocks three at
+once), so `NextStep`, the stored rows and `curriculumFromSteps` are untouched,
+and the trainer's isolate-a-new-chord rule already takes the members in turn.
+
 ## Which step comes next
 
 `chooseNextStep` is **pure over supplied counts** — no database, no HTTP — so
@@ -87,13 +108,13 @@ gathers the numbers; this decides. In order:
    loop, the next step is the next rung. No new chord arrives until the learner
    names what they already hear.
 2. **Finish the stage in hand** — the stage the last chord step came from —
-   while its best pool chord is worth at least `minStepWindows` **and** at
+   while its best notion is worth at least `minStepWindows` **and** at
    least a fifth of the best step available anywhere (`STAGE_HOLD_SHARE`). One
    notion is finished before the next starts, but a family's rare leftovers
    never hold up a much bigger one: vii° opens a few dozen loops where minor
    keys open thousands, so it waits and comes back once the families ahead of
    it have run down.
-3. **Otherwise the best step anywhere**: each open stage's best pool chord, and
+3. **Otherwise the best step anywhere**: each open stage's best notion, and
    each unopened stage's seed. Ties go to the earlier stage, then the earlier
    token, so the same counts always give the same answer.
 

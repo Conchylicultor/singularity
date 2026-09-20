@@ -37,6 +37,7 @@ attribute type carries.
     - `apps/agent-manager/shell`
     - `apps/browser/shell`
     - `apps/chord/curriculum`
+    - `apps/chord/reveal`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/events/event-list`

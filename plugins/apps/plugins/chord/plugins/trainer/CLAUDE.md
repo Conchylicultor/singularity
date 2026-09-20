@@ -85,11 +85,17 @@ prev, next)` between two playhead reads — a forward move finishes every box
   chord finishes. Nothing re-renders for it.
 - **Keys** (surface-scoped, `useSurfaceShortcuts`; `useChordKeys`): the chord's
   root digit answers (`chordKeyPlan`, so ♭VII is on the 7). A digit several
-  unlocked chords share instead **lights** them, numbered 1…n on their buttons,
-  and the next number picks one; Escape drops the pick, and so does every other
-  key of the trainer. One registered shortcut per number does both jobs, so
-  nothing else on the page hears the second stroke. The clock does not stop for
-  it: a two-stroke answer costs what it costs. ← / → move, Backspace clears,
+  unlocked chords share instead **arms** — those chords light, numbered on their
+  buttons, and the next number picks one; Escape drops the pick, and so does
+  every other key of the trainer. While a digit is armed **it owns the number
+  keys**: the plan's own digit shortcuts stand down and the registered numbers
+  are exactly the ones `pickPage` says are in reach, so every number key means
+  "the chord I lit", not only the ones that happen to hold a chord themselves.
+  Past seven chords on one digit, `pickPage` keeps key 7 as the pager: six in
+  reach, the rest one press away, wrapping — so no chord is ever unreachable.
+  The hook holds only `{ digit, page }`, derived against the plan, so an undone
+  step disarms with nothing to clean up. The clock does not stop for the second
+  key: a two-stroke answer costs what it costs. ← / → move, Backspace clears,
   Space plays or pauses, Enter moves to the next song.
 - **After the check**: a box replays the song over that box once
   (`controller.playRange`), then the loop goes on; a chord button, or the
@@ -109,7 +115,9 @@ prev, next)` between two playhead reads — a forward move finishes every box
   running, and the samples download only then), disposed on unmount. Each chord
   cuts the one before it. A failure (no default instrument, samples that do not
   load) shows a toast and is rethrown.
-- **The progress panel** (`ProgressPanel`): today (songs, % right, seconds per
+- **The progress panel** (`ProgressPanel`): `<RevealSwitch/>` first — above the
+  `matchResource`, so the setting is usable while the stats are still loading —
+  then today (songs, % right, seconds per
   chord), an all-time line, and "Your chords" — the level and the stage being
   worked through, then one line per unlocked chord **in unlock order** (chip,
   accuracy meter marked at 90 %, accuracy, median time red over 2 s, a check
@@ -121,6 +129,20 @@ prev, next)` between two playhead reads — a forward move finishes every box
   unlocked set, a few dozen chords at most), not a collection anyone searches,
   sorts or filters. It shows a loading state until `chord.progress` has its
   first value.
+- **Reveal** (`reveal/web`): `useReveal()` says how much of a chord to show.
+  With it on, one `songVocabulary(songKey)` per loop names every chord and note
+  — the song card grows a key tag, each box a name under its numeral, each
+  button a name instead of its function word — and at `keyboard` a card under
+  the buttons draws the chord on a piano. A box's name follows the same `shown`
+  the numeral does, so before the check it names the LEARNER's answer and leaks
+  nothing.
+  **`shownChord` is the one chord on show**, fed to the lit button and the card
+  together: the playhead's box while the checked loop plays, otherwise
+  `session.lastPlayed` (the last chord the learner asked to hear — a button
+  after the check, the "you: IV" tag, or a box replay). It is null before the
+  check **by construction**, which is what stops the keyboard giving the answer
+  away; `lastPlayed` is a `RoundSession` field, so the next song clears it with
+  the rest and there is no reset to remember.
 - **The locked next step** shows in two places, both from `curriculum/web`:
   `<NextStepPad>` at the end of the button grid (chord steps only — the grid
   has no way to draw a key mode) and `<NextStepRow>` in the panel (every kind).
@@ -132,7 +154,8 @@ prev, next)` between two playhead reads — a forward move finishes every box
 
 `web/components/trainer.css` holds the bespoke paint only — box states
 (`data-given`, `data-filled`, `data-selected`, `data-mark`, `data-now`,
-`data-pop`), the chord buttons (`data-lit`, `data-picking`), meters, the
+`data-pop`), the box's name line (`.chord-box-name`), the chord buttons
+(`data-lit`, `data-picking`, the dimmed pager badge), meters, the
 numeral's display sizes (which the type scale has no rung for, and one of which
 follows the box's width through a container query). Layout stays with the
 layout primitives: the boxes, ruler ticks, playhead and badges are placed by
@@ -156,6 +179,13 @@ is filled from the keyboard, using only digits that answer on their own; the
 score heading, the saved round, `chord.progress` (one more song, one more
 answer per asked box) and the side panel's all-time line are checked.
 
+Then reveal is switched to Keyboard (and back): the key tag is parsed back into
+the key it names, every box label carries a letter name, and the lit keys'
+`data-pitch` set must equal `chordVoicing(token, tonicPc)` computed in the
+script — the proof that the picture matches the sound, since the piano plays
+that same call. Clicking the button to light them also plays it, so the step
+exercises the piano.
+
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
@@ -174,6 +204,9 @@ answer per asked box) and the side panel's all-time line are checked.
     - `apps/chord/curriculum.useNextStep`
     - `apps/chord/curriculum.useUndoStep`
     - `apps/chord/curriculum.useUnlockStep`
+    - `apps/chord/reveal.RevealKeyboardCard`
+    - `apps/chord/reveal.RevealSwitch`
+    - `apps/chord/reveal.useReveal`
     - `apps/chord/song-index.SongIndexGate`
     - `apps/chord/vocabulary.ChordNumeral`
     - `apps/chord/vocabulary.chordToneStyle`

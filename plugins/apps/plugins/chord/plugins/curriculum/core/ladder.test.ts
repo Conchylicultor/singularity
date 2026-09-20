@@ -22,7 +22,11 @@ const V = token("7:4-3/0");
 const ii = token("2:3-4/0");
 const vi = token("9:3-4/0");
 const V7 = token("7:4-3-3/0");
+const ii7 = token("2:3-4-3/0");
 const V6 = token("7:4-3/1");
+const V64 = token("7:4-3/2");
+const I6 = token("0:4-3/1");
+const I64 = token("0:4-3/2");
 const VofV = token("2:4-3/0");
 const MINOR_SEED = stageById("minor-keys").seed;
 
@@ -336,6 +340,136 @@ describe("which chords are candidates at all", () => {
         counts({ entries: [{ stage: "sevenths", windows: 900 }] }),
       ),
     ).toEqual({ kind: "done" });
+  });
+});
+
+describe("a step unlocks a notion, not a chord", () => {
+  test("every inversion of one chord arrives in a single step, biggest first", () => {
+    const step = chooseNextStep(
+      started,
+      counts({
+        candidates: [
+          { token: V6, windows: 300 },
+          { token: V64, windows: 500 },
+        ],
+      }),
+    );
+    expect(step).toEqual({
+      kind: "step",
+      step: {
+        kind: "chords",
+        stage: "inversions",
+        tokens: [V64, V6],
+        modes: [],
+      },
+      windows: 500,
+    });
+  });
+
+  test("inversions of different chords are different notions, and the bigger one wins", () => {
+    const step = chooseNextStep(
+      started,
+      counts({
+        candidates: [
+          { token: V6, windows: 300 },
+          { token: I6, windows: 500 },
+          { token: I64, windows: 100 },
+        ],
+      }),
+    );
+    // I's inversions, both of them — V⁶ is another notion and waits its turn.
+    expect(step).toEqual({
+      kind: "step",
+      step: {
+        kind: "chords",
+        stage: "inversions",
+        tokens: [I6, I64],
+        modes: [],
+      },
+      windows: 500,
+    });
+  });
+
+  test("a notion is worth its best member, not its members added up", () => {
+    // 300 + 300 would outrank the 500 seventh; the best member (300) does not.
+    const step = chooseNextStep(
+      started,
+      counts({
+        candidates: [
+          { token: V6, windows: 300 },
+          { token: V64, windows: 300 },
+          { token: V7, windows: 500 },
+        ],
+      }),
+    );
+    expect(step).toEqual({
+      kind: "step",
+      step: { kind: "chords", stage: "sevenths", tokens: [V7], modes: [] },
+      windows: 500,
+    });
+    // And on its own the bundle reports 300, the best member's — a tie inside
+    // the notion goes to the earlier token.
+    expect(
+      chooseNextStep(
+        started,
+        counts({
+          candidates: [
+            { token: V64, windows: 300 },
+            { token: V6, windows: 300 },
+          ],
+        }),
+      ),
+    ).toEqual({
+      kind: "step",
+      step: {
+        kind: "chords",
+        stage: "inversions",
+        tokens: [V6, V64],
+        modes: [],
+      },
+      windows: 300,
+    });
+  });
+
+  test("the stage in hand hands back the whole notion, not one of its chords", () => {
+    const step = chooseNextStep(
+      stateWith({ stage: "inversions" }),
+      counts({
+        candidates: [
+          { token: V6, windows: 300 },
+          { token: V64, windows: 200 },
+          { token: V7, windows: 900 }, // 300 is over a fifth of it, so V stays
+        ],
+      }),
+    );
+    expect(step).toMatchObject({
+      step: { stage: "inversions", tokens: [V6, V64] },
+      windows: 300,
+    });
+  });
+
+  test("a stage that bundles nothing still unlocks one chord at a time", () => {
+    for (const [stage, candidates] of [
+      [
+        "major-triads",
+        [
+          { token: vi, windows: 500 },
+          { token: ii, windows: 300 },
+        ],
+      ],
+      [
+        "sevenths",
+        [
+          { token: V7, windows: 500 },
+          { token: ii7, windows: 300 },
+        ],
+      ],
+    ] as const) {
+      expect(chooseNextStep(started, counts({ candidates }))).toMatchObject({
+        step: { stage, tokens: [candidates[0].token] },
+        windows: 500,
+      });
+    }
   });
 });
 

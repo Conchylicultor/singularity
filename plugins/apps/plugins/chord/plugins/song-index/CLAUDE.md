@@ -392,6 +392,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/progress`
+    - `apps/chord/reveal`
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`
 

@@ -33,6 +33,7 @@ anonymous index signature. See
     - `apps-core/surface`
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
+    - `apps/chord/reveal`
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`

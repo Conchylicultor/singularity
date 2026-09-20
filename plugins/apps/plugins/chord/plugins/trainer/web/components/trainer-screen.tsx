@@ -2,7 +2,14 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   chordKeyPlan,
   chordVoicing,
+  songKeyLabel,
+  songVocabulary,
+  type SongKey,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import {
+  RevealKeyboardCard,
+  useReveal,
+} from "@plugins/apps/plugins/chord/plugins/reveal/web";
 import type {
   ChordToken,
   LoopCandidate,
@@ -85,6 +92,14 @@ type RoundSession = {
   sheet: AnswerSheet;
   /** How many times each box was filled (a new fill replays its pop). */
   fills: readonly number[];
+  /**
+   * The last chord the learner asked to HEAR — a chord button after the check,
+   * the "you: IV" tag, or a box replaying its stretch of the song. What the
+   * reveal keyboard shows while nothing is sounding. It lives here, rather than
+   * as its own state, because a session is already minted fresh per loop: the
+   * next song clears it with everything else, and there is no reset to remember.
+   */
+  lastPlayed: ChordToken | null;
 };
 
 /**
@@ -325,6 +340,17 @@ function Trainer({
   queue: LoopQueue;
   memory: SessionMemory;
 } & LadderProps) {
+  // How much of a chord is shown, and the words to say it with. One speller per
+  // loop, shared by every box, button and lit key, so nothing on screen can
+  // name a chord against a different key from its neighbour.
+  const reveal = useReveal();
+  const songKey = useMemo<SongKey>(
+    () => ({ tonic: loop.window.keyTonic, mode: loop.window.keyMode }),
+    [loop],
+  );
+  const words = useMemo(() => songVocabulary(songKey), [songKey]);
+  const nameChord = reveal === "off" ? null : words.nameChord;
+
   const player = useYouTubePlayer();
   const playerState = useYouTubePlayerState(player);
   const playerReady = playerState.kind === "ready";
@@ -383,6 +409,7 @@ function Trainer({
             key,
             sheet: emptySheet(round, asked),
             fills: round.boxes.map(() => 0),
+            lastPlayed: null,
           };
   const checked = session?.sheet.checked ?? false;
 
@@ -414,6 +441,7 @@ function Trainer({
     if (session === null || round === null) return;
     if (session.sheet.checked) {
       playOnPiano(chordVoicing(token, round.keyTonicPc));
+      setStored({ ...session, lastPlayed: token });
       return;
     }
     const at = session.sheet.selected;
@@ -452,14 +480,19 @@ function Trainer({
     queue.next();
   });
 
+  // A box replays that chord's stretch of the song, so that is the chord the
+  // learner is now listening to.
   const onReplayBox = useEventCallback((box: Box) => {
     if (!playerReady) return;
     memory.markInteracted();
     player.playRange(box.startSec, box.endSec);
+    if (session !== null) setStored({ ...session, lastPlayed: box.token });
   });
 
   const onHearAnswer = useEventCallback((answer: ChordToken) => {
-    if (round !== null) playOnPiano(chordVoicing(answer, round.keyTonicPc));
+    if (round === null) return;
+    playOnPiano(chordVoicing(answer, round.keyTonicPc));
+    if (session !== null) setStored({ ...session, lastPlayed: answer });
   });
 
   const onSelect = useEventCallback((position: number) =>
@@ -541,10 +574,18 @@ function Trainer({
   );
   useSurfaceShortcuts(shortcuts);
 
-  const litToken =
-    checked && round !== null && sounding !== null
-      ? (round.boxes[sounding]?.token ?? null)
-      : null;
+  // The ONE chord on show, fed to the lit button, the keyboard card and that
+  // card's header, so the three can never disagree. The playhead wins while the
+  // checked loop plays; otherwise it is the last chord the learner asked to
+  // hear. Null before the check BY CONSTRUCTION — that is what stops the
+  // keyboard giving the answer away, rather than a guard somewhere that could
+  // be forgotten.
+  const shownChord =
+    !checked || round === null || session === null
+      ? null
+      : sounding === null
+        ? session.lastPlayed
+        : (round.boxes[sounding]?.token ?? null);
 
   const step =
     nextStep.kind === "answer" && nextStep.answer.kind === "step"
@@ -556,6 +597,7 @@ function Trainer({
       <SongCard
         loop={loop}
         playing={playing}
+        keyName={reveal === "off" ? null : songKeyLabel(songKey)}
         canPlay={playerReady}
         checked={checked}
         onTogglePlay={togglePlay}
@@ -586,6 +628,7 @@ function Trainer({
           player={player}
           playerReady={playerReady}
           soundingPosition={sounding}
+          nameChord={nameChord}
           onSelect={onSelect}
           onReplayBox={onReplayBox}
           onHearAnswer={onHearAnswer}
@@ -593,8 +636,9 @@ function Trainer({
       )}
       <ChordButtons
         plan={plan}
-        lit={litToken}
-        picking={keys.picking?.digit ?? null}
+        lit={shownChord}
+        picking={keys.picking}
+        nameChord={nameChord}
         nextStep={
           step === null
             ? null
@@ -608,6 +652,13 @@ function Trainer({
         }
         onPick={pick}
       />
+      {reveal === "keyboard" && round !== null && (
+        <RevealKeyboardCard
+          token={shownChord}
+          songKey={songKey}
+          tonicPc={round.keyTonicPc}
+        />
+      )}
     </>
   );
 }

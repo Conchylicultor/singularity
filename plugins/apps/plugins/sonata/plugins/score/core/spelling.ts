@@ -54,22 +54,48 @@ const LETTER_FIFTHS: Record<Step, number> = {
   B: 5,
 };
 
+/** The natural letters in circle order (F −1 … B +5) — `LETTER_FIFTHS` inverted. */
+const FIFTHS_LETTERS: readonly Step[] = (
+  Object.keys(LETTER_FIFTHS) as Step[]
+).sort((a, b) => LETTER_FIFTHS[a] - LETTER_FIFTHS[b]);
+
 const pc12 = (pitch: number): number => ((pitch % 12) + 12) % 12;
 
-/** Signed position on the circle of fifths for a key (negative = flats). */
-function keyFifths(key: KeySignature): number {
-  const letter = key.tonic[0]?.toUpperCase() as Step | undefined;
+/**
+ * Signed position on the circle of fifths of a MAJOR tonic (negative = flats):
+ * the letter's own position, plus 7 per sharp and 7 back per flat. Reads both
+ * the ASCII and the glyph accidentals — "Bb" and "B♭" are both −2, "C##" is 14.
+ * A string with no letter A–G reads as C, position 0.
+ */
+export function tonicFifths(tonic: string): number {
+  const letter = tonic[0]?.toUpperCase() as Step | undefined;
   if (!letter || !(letter in LETTER_FIFTHS)) return 0;
   let accidentals = 0;
-  for (const ch of key.tonic.slice(1)) {
+  for (const ch of tonic.slice(1)) {
     if (ch === "#" || ch === "♯") accidentals += 1;
     else if (ch === "b" || ch === "♭") accidentals -= 1;
   }
-  // Each sharp/flat moves 7 steps along the circle; a minor key shares its
-  // relative major's signature, 3 fifths flatter than the same-letter major.
-  return (
-    LETTER_FIFTHS[letter] + 7 * accidentals - (key.mode === "minor" ? 3 : 0)
-  );
+  return LETTER_FIFTHS[letter] + 7 * accidentals;
+}
+
+/**
+ * The major tonic whose signature is `fifths` — the inverse of
+ * {@link tonicFifths}. 0 → "C", 1 → "G", −2 → "B♭", 8 → "G♯". Any number of
+ * accidentals, so it never runs out the way a 15-entry table does.
+ */
+export function fifthsToTonic(fifths: number): string {
+  // The letters advance one per fifth from F (−1), so shifting by 1 makes the
+  // position a plain index; the whole turns it laps are the accidental count.
+  const letter = FIFTHS_LETTERS[(((fifths + 1) % 7) + 7) % 7];
+  if (letter === undefined) throw new Error("The circle has seven letters");
+  return letter + accidentalGlyph(Math.floor((fifths + 1) / 7));
+}
+
+/** Signed position on the circle of fifths for a key (negative = flats). */
+function keyFifths(key: KeySignature): number {
+  // A minor key shares its relative major's signature, 3 fifths flatter than
+  // the same-letter major.
+  return tonicFifths(key.tonic) - (key.mode === "minor" ? 3 : 0);
 }
 
 /** Scientific octave of a spelled pitch (the octave its NATURAL letter sits in). */

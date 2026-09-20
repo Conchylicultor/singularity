@@ -24,6 +24,7 @@ export function SongCard({
   loop,
   player,
   playing,
+  keyName,
   canPlay,
   checked,
   onTogglePlay,
@@ -32,6 +33,11 @@ export function SongCard({
   loop: LoopCandidate;
   player: ReactNode;
   playing: boolean;
+  /**
+   * The song's key as the learner reads it ("G major"), or null while reveal is
+   * off. The card stays presentational: the trainer reads the setting.
+   */
+  keyName: string | null;
   /** The player is ready to take play / pause. */
   canPlay: boolean;
   /** The round is checked: "Next song" becomes the main action. */
@@ -65,7 +71,7 @@ export function SongCard({
                 {loop.artist}
               </Text>
             </Line>
-            <Line>
+            <Line className="gap-xs">
               <Text
                 variant="caption"
                 tone="muted"
@@ -73,6 +79,15 @@ export function SongCard({
               >
                 {loop.sectionName}, {loop.window.bars} bars
               </Text>
+              {keyName !== null && (
+                <Text
+                  variant="caption"
+                  tone="muted"
+                  className="rounded-full bg-background px-xs"
+                >
+                  {keyName}
+                </Text>
+              )}
             </Line>
           </Stack>
         </Fill>

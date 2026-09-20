@@ -246,6 +246,10 @@
       "name": "@singularity/plugin-apps-chord-progress",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/chord/plugins/reveal": {
+      "name": "@singularity/plugin-apps-chord-reveal",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/chord/plugins/shell": {
       "name": "@singularity/plugin-apps-chord-shell",
       "version": "0.0.1",
@@ -6146,6 +6150,8 @@
     "@singularity/plugin-apps-chord-curriculum": ["@singularity/plugin-apps-chord-curriculum@workspace:plugins/apps/plugins/chord/plugins/curriculum"],
 
     "@singularity/plugin-apps-chord-progress": ["@singularity/plugin-apps-chord-progress@workspace:plugins/apps/plugins/chord/plugins/progress"],
+
+    "@singularity/plugin-apps-chord-reveal": ["@singularity/plugin-apps-chord-reveal@workspace:plugins/apps/plugins/chord/plugins/reveal"],
 
     "@singularity/plugin-apps-chord-shell": ["@singularity/plugin-apps-chord-shell@workspace:plugins/apps/plugins/chord/plugins/shell"],
 

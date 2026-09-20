@@ -73,6 +73,8 @@ export {
   accidentalGlyph,
   isAccidental,
   spellScore,
+  tonicFifths,
+  fifthsToTonic,
 } from "./spelling";
 export type { KeySpeller } from "./spelling";
 

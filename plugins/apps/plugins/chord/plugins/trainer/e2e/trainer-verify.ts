@@ -10,7 +10,11 @@
 //   4. every box is filled from the keyboard (1 = I, 4 = IV, 5 = V); the
 //      heading shows the score; POST /api/chord/rounds answers with a round id;
 //   5. `chord.progress` moves: one more song and one more answer per box, all
-//      time — and the side panel shows the new song count.
+//      time — and the side panel shows the new song count;
+//   6. reveal is switched to Keyboard: the song card names the key, every box
+//      names its chord, and the keys the keyboard lights are exactly the notes
+//      `chordVoicing` gives for the chord clicked — the piano's own call. The
+//      switch is put back where it was found.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/chord/plugins/trainer/e2e/trainer-verify.ts [--timeout-min 15] [--headed]
@@ -34,8 +38,17 @@ import {
   type ChordProgress,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { CurriculumSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
-import { chordKeyPlan } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import {
+  chordKeyPlan,
+  chordLabel,
+  chordVoicing,
+} from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
+import {
+  hookpadTonicPc,
+  type HookpadMode,
+} from "@plugins/integrations/plugins/hooktheory/core";
 import { VideoStatusSchema } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
+import type { Page } from "playwright";
 import { z } from "zod";
 
 const r = report("chord trainer");
@@ -46,6 +59,52 @@ const BOX = 'button[aria-label^="Chord "][aria-label*=" beat"]';
 /** The boxes the round actually asks about — the given ones name themselves. */
 const ASKED_BOX = `${BOX}:not([aria-label*=", given"])`;
 const HEADING = "h2";
+
+/** The song card's key tag, as `songKeyLabel` writes it: "G major", "E♭ mixolydian". */
+const SONG_KEY =
+  /^[A-G][♯♭]{0,2} (major|minor|dorian|phrygian|lydian|mixolydian|locrian|harmonic minor|phrygian dominant)$/;
+/** A box label carrying a letter name after its numeral: "…: V7, D7" (then ", given" / ", right"). */
+const NAMED_BOX = /: [^,]+, [A-G][♯♭]{0,2}[^,]*(, given)?(, (right|wrong))?$/;
+
+/** The mode words `songKeyLabel` prints, back to the id the index stores. */
+const MODE_OF_WORDS: Record<string, HookpadMode> = {
+  major: "major",
+  minor: "minor",
+  dorian: "dorian",
+  phrygian: "phrygian",
+  lydian: "lydian",
+  mixolydian: "mixolydian",
+  locrian: "locrian",
+  "harmonic minor": "harmonicMinor",
+  "phrygian dominant": "phrygianDominant",
+};
+
+/**
+ * The song card's key tag, read back into the key it names. Throws rather than
+ * guessing: a tag this cannot read means the app printed something else, which
+ * is the failure to see.
+ */
+function parseKeyTag(text: string): { tonic: string; mode: HookpadMode } {
+  const at = text.indexOf(" ");
+  const tonic = text.slice(0, at).replace(/♯/g, "#").replace(/♭/g, "b");
+  const mode = MODE_OF_WORDS[text.slice(at + 1)];
+  if (at === -1 || mode === undefined) {
+    throw new Error(`The song card's key tag reads ${JSON.stringify(text)}`);
+  }
+  return { tonic, mode };
+}
+
+/** Which reveal value the switch is on, so the run can put it back. */
+async function revealMode(page: Page): Promise<string | null> {
+  const on = page.locator('[role="radio"][aria-checked="true"]');
+  for (const chip of await on.all()) {
+    const label = (await chip.innerText()).trim();
+    if (label === "Off" || label === "Names" || label === "Keyboard") {
+      return label;
+    }
+  }
+  return null;
+}
 
 /** The chords the learner has right now: the palette the progress is read for. */
 async function readCurriculum() {
@@ -234,6 +293,89 @@ await withBrowser(async ({ session }) => {
       },
     );
   r.ok("the side panel shows the new song count", shown);
+
+  // ── 6. reveal: the names, and the keyboard's notes ────────────────────────
+  //
+  // The switch is turned to Keyboard and back, so the setting is left as it was
+  // found. The keyboard check is the end-to-end proof that the picture matches
+  // the sound: the lit keys are read off the DOM and compared with
+  // `chordVoicing` computed HERE, from the key the song card names and the
+  // chord the button stands for — the same call the trainer's piano plays.
+  // Clicking a chord button after the check also plays that chord, so this step
+  // exercises the piano; a failure there surfaces as a page error below.
+
+  const wasRevealed = await revealMode(page);
+  r.note(`reveal was "${wasRevealed ?? "?"}"`);
+  await page.getByRole("radio", { name: "Keyboard", exact: true }).click();
+
+  const keyTag = page.getByText(SONG_KEY).first();
+  const keyShown = await keyTag
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .then(
+      () => true,
+      (err: unknown) => {
+        if (err instanceof Error && err.name === "TimeoutError") return false;
+        throw err;
+      },
+    );
+  r.ok("the song card names the key", keyShown);
+
+  if (keyShown) {
+    const keyText = (await keyTag.innerText()).trim();
+    const songKey = parseKeyTag(keyText);
+    r.note(`key tag "${keyText}" → ${JSON.stringify(songKey)}`);
+
+    // Every box now carries a letter name after its numeral.
+    const labels = await page
+      .locator(BOX)
+      .evaluateAll((nodes) =>
+        nodes.map((n) => n.getAttribute("aria-label") ?? ""),
+      );
+    const named = labels.filter((label) => NAMED_BOX.test(label));
+    r.eq("every box names its chord", named.length, labels.length);
+    r.note(`box labels: ${labels.join(" | ")}`);
+
+    // A chord button whose digit answers on its own, so one click is one chord
+    // and the token behind it is not in doubt.
+    const solo = chordKeyPlan(curriculum.unlocked.map((u) => u.token)).find(
+      (group) => group.tokens.length === 1,
+    );
+    const token = solo?.tokens[0];
+    if (solo === undefined || token === undefined) {
+      r.note("no chord answers on a digit of its own — keyboard check skipped");
+    } else {
+      await page.locator(`button[aria-keyshortcuts="${solo.digit}"]`).click();
+      const keys = page.locator("[data-pitch]:has(.chord-key-label)");
+      await keys
+        .first()
+        .waitFor({ state: "visible", timeout: 10_000 })
+        .catch((err: unknown) => {
+          if (err instanceof Error && err.name === "TimeoutError") return;
+          throw err;
+        });
+      const litPitches = (
+        await keys.evaluateAll((nodes) =>
+          nodes.map((n) => Number(n.getAttribute("data-pitch"))),
+        )
+      ).sort((a, b) => a - b);
+      const voicing = [
+        ...chordVoicing(token, hookpadTonicPc(songKey.tonic)),
+      ].sort((a, b) => a - b);
+      r.eq(
+        `the keyboard lights the notes the piano plays for ${chordLabel(token).text}`,
+        litPitches,
+        voicing,
+      );
+      const names = await keys.locator(".chord-key-label").allInnerTexts();
+      r.eq("every lit key is named", names.length, voicing.length);
+      r.note(`lit ${litPitches.join(",")} named ${names.join(",")}`);
+    }
+  }
+
+  // Put the setting back where it was found.
+  if (wasRevealed !== null) {
+    await page.getByRole("radio", { name: wasRevealed, exact: true }).click();
+  }
 
   r.ok(
     "no page errors",

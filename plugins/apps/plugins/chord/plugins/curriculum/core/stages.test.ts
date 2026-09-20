@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   ChordTokenSchema,
+  parseChordToken,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
@@ -103,6 +104,30 @@ describe("stageOf — which family a chord belongs to", () => {
       ]) {
         const text = `${root}:${intervals.join("-")}/0`;
         expect(stageOf(token(text), MAJOR)).not.toBeNull();
+      }
+    }
+  });
+});
+
+describe("notion — which of a stage's chords are one idea", () => {
+  const parts = (text: string) => parseChordToken(text);
+
+  test("every inversion of one chord shares the root position's notion", () => {
+    const inversions = stageById("inversions");
+    expect(inversions.notion(parts("7:4-3/1"))).toBe(V);
+    expect(inversions.notion(parts("7:4-3/2"))).toBe(V);
+    expect(inversions.notion(parts("7:4-3-3/3"))).toBe("7:4-3-3/0");
+    // A different chord is a different idea, so it is a step of its own.
+    expect(inversions.notion(parts("0:4-3/1"))).not.toBe(
+      inversions.notion(parts("7:4-3/1")),
+    );
+  });
+
+  test("every other stage makes each chord its own notion: it bundles nothing", () => {
+    for (const stage of STAGES) {
+      if (stage.id === "inversions") continue;
+      for (const text of [I, V, "2:3-4-3/0", "0:5-2/0", "7:4-3/1"]) {
+        expect(stage.notion(parts(text))).toBe(text);
       }
     }
   });

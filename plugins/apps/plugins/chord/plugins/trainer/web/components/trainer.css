@@ -93,6 +93,22 @@
 .chord-box[data-given]:not(:disabled):hover {
   border-color: var(--faint-foreground);
 }
+/* The chord's name under its numeral, once reveal is on. Muted on an empty or
+ * given box, the tile's own ink on a filled one — the same pair the numeral
+ * follows, so the two lines read as one label. */
+.chord-box-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+.chord-box[data-filled] .chord-box-name {
+  color: var(--fn-ink);
+}
+.chord-box[data-given] .chord-box-name {
+  color: var(--fn, var(--categorical-10));
+  opacity: 0.55;
+}
 .chord-box[data-selected] {
   border: 2px solid var(--muted-foreground);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--foreground) 7%, transparent);
@@ -246,6 +262,11 @@
 /* The number that picks this chord once its digit has been pressed. */
 .chord-pad-pick {
   opacity: 0.75;
+}
+/* Dimmer: the chord is on another page of its digit, so this key does not pick
+ * it — it brings it into reach. */
+.chord-pad-pick.chord-pad-pager {
+  opacity: 0.4;
 }
 /* The chord sounding right now — only once the round is checked, so a lit
  * button never gives an answer away. */

@@ -20,6 +20,11 @@ import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core"
 // Membership is by predicate over the token's parts, and the FIRST stage of
 // `STAGES` whose predicate matches owns the chord. So a chord nobody thought
 // of still lands in exactly one pool, and a chord in no pool is never offered.
+//
+// A stage also says which of its chords are ONE IDEA — its `notion`. Chords
+// sharing a notion are unlocked by one step, because a level teaches a notion:
+// V⁶ and V⁶₄ are both "V, with another note in the bass", and a ladder that
+// spent a level on each would be teaching the same thing twice.
 
 export const STAGE_IDS = [
   "major-triads",
@@ -52,7 +57,20 @@ export type Stage = {
    * known. Pure — the same arguments always give the same answer.
    */
   holds(parts: ChordTokenParts, unlocked: ReadonlySet<ChordToken>): boolean;
+  /**
+   * The NOTION this chord belongs to. Candidates of this stage sharing a notion
+   * are unlocked by ONE step, because they are one idea.
+   *
+   * Required of every stage: a stage that bundles nothing answers `ownNotion`,
+   * so "this stage bundles nothing" is a stated answer rather than a missing
+   * method. The string is compared, never shown — only its equality matters.
+   */
+  notion(parts: ChordTokenParts): string;
 };
+
+/** Every chord its own notion: this stage bundles nothing, and says so. */
+export const ownNotion = (parts: ChordTokenParts): string =>
+  chordTokenFromParts(parts);
 
 // ── Reading a chord against the scales ───────────────────────────────────────
 
@@ -154,6 +172,7 @@ export const STAGES: readonly Stage[] = [
     seed: [chord(0, [4, 3]), chord(5, [4, 3]), chord(7, [4, 3])],
     holds: (parts) =>
       rootPosition(parts) && MAJOR_TRIAD_SHAPES.has(shapeOf(parts)),
+    notion: ownNotion,
   },
   {
     id: "minor-keys",
@@ -163,6 +182,7 @@ export const STAGES: readonly Stage[] = [
     seed: [chord(0, [3, 4]), chord(10, [4, 3]), chord(8, [4, 3])],
     holds: (parts) =>
       rootPosition(parts) && MINOR_TRIAD_SHAPES.has(shapeOf(parts)),
+    notion: ownNotion,
   },
   {
     id: "sevenths",
@@ -171,6 +191,7 @@ export const STAGES: readonly Stage[] = [
     seed: [],
     holds: (parts) =>
       rootPosition(parts) && DIATONIC_SEVENTH_SHAPES.has(shapeOf(parts)),
+    notion: ownNotion,
   },
   {
     id: "inversions",
@@ -183,6 +204,10 @@ export const STAGES: readonly Stage[] = [
     holds: (parts, unlocked) =>
       parts.inversion > 0 &&
       unlocked.has(chordTokenFromParts({ ...parts, inversion: 0 })),
+    // The notion is the chord itself, not this one arrangement of it: every
+    // inversion of a V is "V, with another note in the bass", so they arrive
+    // together and one level teaches one idea.
+    notion: (parts) => chordTokenFromParts({ ...parts, inversion: 0 }),
   },
   {
     id: "secondary",
@@ -193,6 +218,7 @@ export const STAGES: readonly Stage[] = [
       rootPosition(parts) &&
       (sameStack(parts.intervals, MAJOR_TRIAD) ||
         sameStack(parts.intervals, DOMINANT_SEVENTH)),
+    notion: ownNotion,
   },
   {
     id: "colour",
@@ -200,6 +226,7 @@ export const STAGES: readonly Stage[] = [
     modes: [],
     seed: [],
     holds: rootPosition,
+    notion: ownNotion,
   },
   {
     id: "mixolydian",
@@ -207,6 +234,7 @@ export const STAGES: readonly Stage[] = [
     modes: ["mixolydian"],
     seed: [],
     holds: () => false,
+    notion: ownNotion,
   },
   {
     id: "dorian",
@@ -214,6 +242,7 @@ export const STAGES: readonly Stage[] = [
     modes: ["dorian"],
     seed: [],
     holds: () => false,
+    notion: ownNotion,
   },
   {
     id: "lydian",
@@ -221,6 +250,7 @@ export const STAGES: readonly Stage[] = [
     modes: ["lydian"],
     seed: [],
     holds: () => false,
+    notion: ownNotion,
   },
   {
     id: "phrygian",
@@ -228,6 +258,7 @@ export const STAGES: readonly Stage[] = [
     modes: ["phrygian"],
     seed: [],
     holds: () => false,
+    notion: ownNotion,
   },
 ];
 

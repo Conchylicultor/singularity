@@ -1,4 +1,7 @@
-import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  parseChordToken,
+  type ChordToken,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 import { nextAskRule, type AskRule } from "./ask";
 import {
@@ -23,14 +26,19 @@ import type { NextStep } from "./step";
 //   1. Climb the ask ladder first. While the round does not yet ask for the
 //      whole loop, the next step is the next rung — no new chord arrives until
 //      the learner names what they already hear.
-//   2. Stay in the stage the last chord step came from, while its best chord is
-//      still worth taking AND still worth as much as a fifth of the best step
-//      available. One notion is finished before the next starts — but a
+//   2. Stay in the stage the last chord step came from, while its best notion
+//      is still worth taking AND still worth as much as a fifth of the best
+//      step available. One notion is finished before the next starts — but a
 //      family's rare leftovers never hold up a much bigger one.
-//   3. Otherwise take the best step anywhere: each open stage's best chord, and
+//   3. Otherwise take the best step anywhere: each open stage's best notion, and
 //      each unopened stage's seed. Best means "opens the most songs".
 //
 // When nothing is worth taking, the ladder is done.
+//
+// A step unlocks a NOTION, not a chord: the stage says which of its candidates
+// are one idea (`Stage.notion`), and they arrive together. For every stage but
+// inversions a notion is one chord, so a step is one chord; an inversions step
+// carries every inversion of one root-position twin.
 
 /** Where the learner stands: what they hear, and how much they name. */
 export type LadderState = {
@@ -102,15 +110,15 @@ export function chooseNextStep(
   const unlocked = new Set(state.unlocked);
   const modes = new Set(state.modes);
   const threshold = minStepWindows(counts.indexWindows);
-  const best = bestChordPerStage(counts.candidates, unlocked, modes);
+  const best = bestNotionPerStage(counts.candidates, unlocked, modes);
 
   // 3. The best step anywhere. Ties go to the earlier stage, then the earlier
   //    chord, so the same counts always give the same answer.
   const options = [
-    ...[...best].map(([stage, candidate]) => ({
+    ...[...best].map(([stage, notion]) => ({
       stage,
-      windows: candidate.windows,
-      tokens: [candidate.token],
+      windows: notion.windows,
+      tokens: notion.tokens,
       modes: [] as HookpadMode[],
     })),
     ...entryOptions(counts.entries, unlocked, modes),
@@ -124,8 +132,8 @@ export function chooseNextStep(
   const top = options[0];
   if (top === undefined || top.windows < threshold) return { kind: "done" };
 
-  // 2. Finish the stage in hand — while its next chord still earns its level.
-  //    A family keeps the ladder as long as its best chord is worth at least a
+  // 2. Finish the stage in hand — while its next notion still earns its level.
+  //    A family keeps the ladder as long as its best notion is worth at least a
   //    share of the best step available anywhere; a rare straggler (vii° opens
   //    a few dozen loops where minor keys open thousands) waits instead, and
   //    comes back once the families ahead of it have run down.
@@ -135,7 +143,7 @@ export function chooseNextStep(
     staying.windows >= threshold &&
     staying.windows >= top.windows * STAGE_HOLD_SHARE
   ) {
-    return chordStep(state.stage, [staying.token], [], staying.windows);
+    return chordStep(state.stage, staying.tokens, [], staying.windows);
   }
 
   return chordStep(top.stage, top.tokens, top.modes, top.windows);
@@ -159,29 +167,78 @@ function chordStep(
   };
 }
 
+/** One notion as a step: every chord it bundles, and what taking it opens. */
+type NotionCandidate = {
+  /** Its members, best first. Never empty — the step unlocks all of them. */
+  tokens: readonly ChordToken[];
+  /** The BEST member's windows, not the family's total. See below. */
+  windows: number;
+};
+
+/** The notion's best member: what its windows are, and its tie-break. */
+const leader = (notion: NotionCandidate): ChordToken => {
+  const first = notion.tokens[0];
+  if (first === undefined) throw new Error("a notion holds at least one chord");
+  return first;
+};
+
 /**
- * The best candidate chord of each OPEN stage. A chord already unlocked, or
+ * The best candidate NOTION of each OPEN stage. A chord already unlocked, or
  * one no pool holds (an inversion whose root-position twin is unknown), is not
  * a step. Ties inside a stage go to the earlier token.
+ *
+ * A notion's members are ordered by windows descending, then token ascending,
+ * so the same counts always give the same step.
+ *
+ * **Its `windows` is its best member's, not the sum.** Summing would count one
+ * window once per member that opens it, and counting the set exactly would cost
+ * one more `countLoopsInSet` query per notion on every `next` read. The ranking
+ * does not need it: the biggest member is what decides whether the family earns
+ * a level, and the step opens AT LEAST that many.
  */
-function bestChordPerStage(
+function bestNotionPerStage(
   candidates: readonly ChordCandidate[],
   unlocked: ReadonlySet<ChordToken>,
   modes: ReadonlySet<HookpadMode>,
-): Map<StageId, ChordCandidate> {
-  const best = new Map<StageId, ChordCandidate>();
+): Map<StageId, NotionCandidate> {
+  // (stage, notion) → the candidates that are that one idea.
+  const groups = new Map<
+    string,
+    { stage: StageId; members: ChordCandidate[] }
+  >();
   for (const candidate of candidates) {
     if (unlocked.has(candidate.token)) continue;
-    const stage = stageOf(candidate.token, unlocked);
-    if (stage === null) continue;
-    if (!stageIsOpen(stageById(stage), unlocked, modes)) continue;
+    const stageId = stageOf(candidate.token, unlocked);
+    if (stageId === null) continue;
+    const stage = stageById(stageId);
+    if (!stageIsOpen(stage, unlocked, modes)) continue;
+    const notion = stage.notion(parseChordToken(candidate.token));
+    const key = `${stageId}\u0000${notion}`;
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, { stage: stageId, members: [candidate] });
+    } else {
+      group.members.push(candidate);
+    }
+  }
+
+  const best = new Map<StageId, NotionCandidate>();
+  for (const { stage, members } of groups.values()) {
+    const ordered = [...members].sort(
+      (a, b) => b.windows - a.windows || a.token.localeCompare(b.token),
+    );
+    const top = ordered[0];
+    if (top === undefined) throw new Error("a notion holds at least one chord");
+    const notion: NotionCandidate = {
+      tokens: ordered.map((member) => member.token),
+      windows: top.windows,
+    };
     const current = best.get(stage);
     const better =
       current === undefined ||
-      candidate.windows > current.windows ||
-      (candidate.windows === current.windows &&
-        candidate.token < current.token);
-    if (better) best.set(stage, candidate);
+      notion.windows > current.windows ||
+      (notion.windows === current.windows && leader(notion) < leader(current));
+    if (better) best.set(stage, notion);
   }
   return best;
 }

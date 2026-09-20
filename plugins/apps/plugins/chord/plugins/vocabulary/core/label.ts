@@ -1,10 +1,15 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
-  CHORD_TEMPLATES,
   romanNumeral,
   type ChordTemplate,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { chordStack, pc12, type ChordStack } from "./stack";
+import {
+  chordStack,
+  matchChordTemplate,
+  pc12,
+  spelledTones,
+  type ChordStack,
+} from "./stack";
 
 // ── A chord token as a Roman numeral ─────────────────────────────────────────
 //
@@ -63,41 +68,11 @@ const SCALE_DEGREE_NAMES = [
   "7",
 ] as const;
 
-/** A tone above the root, as a chord member, within the octave and in the next one. */
-const SIMPLE_INTERVAL_NAMES = [
-  "1",
-  "♭2",
-  "2",
-  "♭3",
-  "3",
-  "4",
-  "♭5",
-  "5",
-  "♯5",
-  "6",
-  "♭7",
-  "7",
-] as const;
-const COMPOUND_INTERVAL_NAMES = [
-  "8",
-  "♭9",
-  "9",
-  "♯9",
-  "10",
-  "11",
-  "♯11",
-  "12",
-  "♭13",
-  "13",
-  "♭14",
-  "14",
-] as const;
-
 type Kind = "triad" | "seventh" | "other";
 
 export function chordLabel(token: ChordToken): ChordLabel {
   const stack = chordStack(token);
-  const template = matchTemplate(stack.tones);
+  const template = matchChordTemplate(stack);
   const named =
     template === undefined ? spelled(stack) : fromSonata(stack, template);
 
@@ -113,15 +88,6 @@ export function chordLabel(token: ChordToken): ChordLabel {
     figure,
     text: named.numeral + suffix + figure,
   };
-}
-
-function matchTemplate(tones: readonly number[]): ChordTemplate | undefined {
-  const above = tones.slice(1);
-  return CHORD_TEMPLATES.find(
-    (t) =>
-      t.intervals.length === above.length &&
-      t.intervals.every((interval, i) => interval === above[i]),
-  );
 }
 
 type Named = { numeral: string; suffix: string; kind: Kind };
@@ -160,11 +126,9 @@ function fromSonata(stack: ChordStack, template: ChordTemplate): Named {
 function spelled(stack: ChordStack): Named {
   const pcs = stack.tones.map(pc12);
   const lower = pcs.includes(3) && !pcs.includes(4);
-  const above = stack.tones.slice(1).map(intervalName);
   return {
     numeral: degreeNumeral(stack.root, lower),
-    // A lone root spells as "(1)": nothing sounds above it.
-    suffix: `(${above.length === 0 ? "1" : above.join(",")})`,
+    suffix: `(${spelledTones(stack)})`,
     kind: "other",
   };
 }
@@ -179,15 +143,6 @@ function degreeNumeral(root: number, lower: boolean): string {
     throw new Error("Sonata has no Roman numeral for a major or minor triad");
   }
   return numeral;
-}
-
-/** A tone above the root. Beyond two octaves it is named by its place in the second: what the ear hears. */
-function intervalName(semitones: number): string {
-  const names =
-    semitones < 12 ? SIMPLE_INTERVAL_NAMES : COMPOUND_INTERVAL_NAMES;
-  const name = names[semitones % 12];
-  if (name === undefined) throw new Error(`No name for ${semitones} semitones`);
-  return name;
 }
 
 function inversionFigure(stack: ChordStack, kind: Kind): string {

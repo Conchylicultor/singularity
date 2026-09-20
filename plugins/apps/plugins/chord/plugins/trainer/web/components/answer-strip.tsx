@@ -57,6 +57,7 @@ export function AnswerStrip({
   player,
   playerReady,
   soundingPosition,
+  nameChord,
   onSelect,
   onReplayBox,
   onHearAnswer,
@@ -69,6 +70,8 @@ export function AnswerStrip({
   playerReady: boolean;
   /** The box sounding now, once checked (null otherwise). */
   soundingPosition: number | null;
+  /** Names a chord in the song's key, or null while reveal is off. */
+  nameChord: ((token: ChordToken) => string) | null;
   onSelect: (position: number) => void;
   onReplayBox: (box: Box) => void;
   onHearAnswer: (answer: ChordToken) => void;
@@ -123,6 +126,7 @@ export function AnswerStrip({
                 sounding={soundingPosition === box.position}
                 popped={(fills[box.position] ?? 0) > 0}
                 canReplay={playerReady}
+                nameChord={nameChord}
                 onSelect={onSelect}
                 onReplay={onReplayBox}
               />
@@ -170,6 +174,7 @@ function AnswerBox({
   sounding,
   popped,
   canReplay,
+  nameChord,
   onSelect,
   onReplay,
 }: {
@@ -183,6 +188,8 @@ function AnswerBox({
   sounding: boolean;
   popped: boolean;
   canReplay: boolean;
+  /** Names a chord in the song's key, or null while reveal is off. */
+  nameChord: ((token: ChordToken) => string) | null;
   onSelect: (position: number) => void;
   onReplay: (box: Box) => void;
 }) {
@@ -190,6 +197,9 @@ function AnswerBox({
   // played, with a mark saying whether the answer was right. A given box shows
   // its own chord throughout and is never marked — nobody named it.
   const shown = checked ? box.token : answer;
+  // The name follows `shown`, so it leaks nothing: before the check it names
+  // what the LEARNER picked, after it the chord that really played.
+  const name = shown === null || nameChord === null ? null : nameChord(shown);
   const mark =
     checked && asked ? (answer === box.token ? "ok" : "bad") : undefined;
   const beatsLabel = `${String(box.gridSpan)} beat${box.gridSpan === 1 ? "" : "s"}`;
@@ -216,17 +226,29 @@ function AnswerBox({
       // A given box is nothing to press before the check; after it, it replays
       // its stretch of the song like any other box.
       disabled={checked ? !canReplay : !asked}
+      // The numeral first, then the name, then ", given": the order the e2e
+      // script and `ASKED_BOX` read, so the name extends the label instead of
+      // moving anything already in it.
       aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
-        shown === null ? "" : `: ${chordLabel(shown).text}`
+        shown === null
+          ? ""
+          : `: ${chordLabel(shown).text}${name === null ? "" : `, ${name}`}`
       }${asked ? "" : ", given"}${
         mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
       }`}
       aria-pressed={checked || !asked ? undefined : selected}
       onClick={() => (checked ? onReplay(box) : onSelect(box.position))}
     >
-      <Center as="span" className="size-full">
+      <Stack
+        as="span"
+        gap="xs"
+        align="center"
+        justify="center"
+        className="size-full"
+      >
         {shown !== null && <ChordNumeral token={shown} />}
-      </Center>
+        {name !== null && <span className="chord-box-name">{name}</span>}
+      </Stack>
       {mark !== undefined && (
         <Center
           as="span"

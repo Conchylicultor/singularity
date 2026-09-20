@@ -115,6 +115,7 @@ pads sit on the paper lane rather than floating over it as an unrelated dark gri
   - Exports (values): `Keyboard`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/reveal`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

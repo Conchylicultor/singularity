@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { ChordTokenSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import { chordDigit, chordKeyPlan, type ChordDigit } from "./keys";
+import { chordDigit, chordKeyPlan, pickPage, type ChordDigit } from "./keys";
 
 const token = (text: string) => ChordTokenSchema.parse(text);
 
@@ -73,5 +73,73 @@ describe("chordKeyPlan", () => {
   it("leaves out a digit nothing sits on, and an empty set has no groups", () => {
     expect(chordKeyPlan([token("0:4-3/0")]).map((g) => g.digit)).toEqual(["1"]);
     expect(chordKeyPlan([])).toEqual([]);
+  });
+});
+
+describe("pickPage", () => {
+  /** `n` distinct chords on one digit: the 5, with more and more stacked on it. */
+  const chords = (n: number) =>
+    Array.from({ length: n }, (_, i) => token(`7:${4 + i}-3/0`));
+
+  /** The numbers as a plain list, so a page reads in order. */
+  const reached = (tokens: readonly ReturnType<typeof token>[], page: number) =>
+    [...pickPage(tokens, page).numbers].map(([t, digit]) => `${digit}:${t}`);
+
+  it("gives every chord its own key while they fit", () => {
+    for (const n of [1, 2, 7]) {
+      const tokens = chords(n);
+      const { numbers, pager } = pickPage(tokens, 0);
+      expect(pager).toBeNull();
+      expect([...numbers.keys()]).toEqual(tokens);
+      expect([...numbers.values()].join("")).toBe("1234567".slice(0, n));
+    }
+  });
+
+  it("ignores the page while everything is in reach", () => {
+    const tokens = chords(7);
+    expect(reached(tokens, 3)).toEqual(reached(tokens, 0));
+  });
+
+  it("keeps the last key for paging once there are more chords than keys", () => {
+    const tokens = chords(8);
+    expect(pickPage(tokens, 0).pager).toBe("7");
+    expect(pickPage(tokens, 1).pager).toBe("7");
+    expect(reached(tokens, 0)).toEqual([
+      `1:${tokens[0]}`,
+      `2:${tokens[1]}`,
+      `3:${tokens[2]}`,
+      `4:${tokens[3]}`,
+      `5:${tokens[4]}`,
+      `6:${tokens[5]}`,
+    ]);
+    // The short last page numbers what it has, from 1.
+    expect(reached(tokens, 1)).toEqual([`1:${tokens[6]}`, `2:${tokens[7]}`]);
+  });
+
+  it("reaches every chord across the pages, each on exactly one", () => {
+    for (const n of [8, 13, 15]) {
+      const tokens = chords(n);
+      const pageCount = Math.ceil(n / 6);
+      const seen = new Set<string>();
+      for (let page = 0; page < pageCount; page++) {
+        for (const t of pickPage(tokens, page).numbers.keys()) {
+          expect(seen.has(t)).toBe(false);
+          seen.add(t);
+        }
+      }
+      expect(seen.size).toBe(n);
+    }
+  });
+
+  it("wraps, so a caller can just keep incrementing", () => {
+    const tokens = chords(13);
+    expect(reached(tokens, 3)).toEqual(reached(tokens, 0));
+    expect(reached(tokens, -1)).toEqual(reached(tokens, 2));
+    expect(reached(tokens, 100)).toEqual(reached(tokens, 1));
+  });
+
+  it("refuses a digit with no chords, and a page that is not a whole number", () => {
+    expect(() => pickPage([], 0)).toThrow(/answers nothing/);
+    expect(() => pickPage(chords(3), 0.5)).toThrow(/whole number/);
   });
 });
