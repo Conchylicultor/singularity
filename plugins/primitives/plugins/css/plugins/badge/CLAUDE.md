@@ -104,6 +104,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/dependent-count`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

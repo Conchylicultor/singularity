@@ -45,6 +45,7 @@ Design rationale lives in:
     - `active-data`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

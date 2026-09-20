@@ -1,7 +1,11 @@
+import { MdArticle } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { agentReportPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
@@ -18,11 +22,38 @@ function statusLabel(status: string): string {
   return status ? `Task ${status}` : "Task update";
 }
 
+/**
+ * Opens the sub-agent this notification is about.
+ *
+ * The row already carries the `tool-use-id` of the parent's `Agent` block,
+ * which IS the sub-agent's identity — so the completion message and the card
+ * that launched it lead to the same pane, and a notification scrolled past long
+ * after the card is still a way back into the work.
+ */
+function OpenSubagentAction({ toolUseId }: { toolUseId: string }) {
+  const openPane = useOpenPane();
+  return (
+    <IconButton
+      icon={MdArticle}
+      label="View sub-agent"
+      onClick={(e) => {
+        e.stopPropagation();
+        openPane(agentReportPane, { toolUseId }, { mode: "push" });
+      }}
+    />
+  );
+}
+
 export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   const e = event as TaskNotificationEvent;
-  const dot = <StatusDot colorClass={STATUS_DOT[e.status] ?? "bg-muted-foreground"} />;
+  const dot = (
+    <StatusDot colorClass={STATUS_DOT[e.status] ?? "bg-muted-foreground"} />
+  );
   const label = statusLabel(e.status);
   const hasExtra = !!e.extra && Object.keys(e.extra).length > 0;
+  const open = e.toolUseId ? (
+    <OpenSubagentAction toolUseId={e.toolUseId} />
+  ) : undefined;
 
   // Arbitrary, potentially long `extra` fields fold behind the card's chevron so
   // the default stays a single quiet line; the summary rides the header's
@@ -34,8 +65,12 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
         icon={dot}
         label={<span className="font-medium">{label}</span>}
         summary={e.summary}
-        fields={Object.entries(e.extra ?? {}).map(([key, value]) => ({ key, value }))}
+        fields={Object.entries(e.extra ?? {}).map(([key, value]) => ({
+          key,
+          value,
+        }))}
         aside={e.outputFile ? <FilePath filePath={e.outputFile} /> : undefined}
+        trailing={open}
       />
     );
   }
@@ -46,6 +81,7 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
     <EventLine icon={dot} label={label}>
       <span className="truncate">{e.summary}</span>
       {e.outputFile && <FilePath filePath={e.outputFile} />}
+      {open}
     </EventLine>
   );
 }

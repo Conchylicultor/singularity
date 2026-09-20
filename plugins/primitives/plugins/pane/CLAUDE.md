@@ -763,7 +763,7 @@ See "Open questions" in the design doc.
     - `conv-docs.actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
     - `conv-commits-graph.actions` "title" → `PaneTitleItem`
-    - `agent-report.actions` "title" → `PaneTitleItem`
+    - `agentReportPane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `conv-push-profiling.actions` "title" → `PaneTitleItem`
     - `conv-terminal.actions` "title" → `PaneTitleItem`
@@ -1003,6 +1003,7 @@ See "Open questions" in the design doc.
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/jsonl-viewer/file-path`
+    - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`

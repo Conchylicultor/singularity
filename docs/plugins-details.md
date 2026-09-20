@@ -8866,6 +8866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/fork-session`
       - `conversations/conversation-view/hold-and-exit`
       - `conversations/conversation-view/jsonl-viewer/file-path`
+      - `conversations/conversation-view/jsonl-viewer/subagents`
       - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
       - `conversations/conversation-view/jsonl-viewer/tool-call/read`
       - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
@@ -10126,6 +10127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/overlay/popover.InlinePopover`
+              - `primitives/relative-time.ElapsedTime`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/scope/dom-scope.defineDomScope`
@@ -10136,6 +10138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventFilterContribution`
               - `OverlayContribution`
               - `SectionExpand`
+              - `TranscriptViewProps`
             - Exports (values):
               - `EventLine`
               - `formatTime`
@@ -10144,6 +10147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `JsonlViewer`
               - `paneScrollScope`
               - `Timestamp`
+              - `TranscriptView`
               - `useJsonlConversationId`
               - `useLastAssistantEvent`
               - `useRowMarkdown`
@@ -10188,11 +10192,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
               - `conversations/conversation-view/jsonl-viewer/queue-operation`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/system`
               - `conversations/conversation-view/jsonl-viewer/task-notification`
               - `conversations/conversation-view/jsonl-viewer/teammate-message`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -10574,6 +10580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/meta-prompt`
                   - `conversations/conversation-view/jsonl-viewer/preprompt`
                   - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+                  - `conversations/conversation-view/jsonl-viewer/subagents`
                   - `conversations/conversation-view/jsonl-viewer/teammate-message`
                   - `conversations/conversation-view/jsonl-viewer/tool-call`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
@@ -10706,6 +10713,90 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
+            - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
+              - Server:
+                - Contributes:
+                  - `resource.declare` "subagent-activity"
+                  - `resource.declare` "subagent-transcript"
+                - Uses:
+                  - `conversations/transcript-watcher.conversationChainTag`
+                  - `conversations/transcript-watcher.readChainLines`
+                  - `conversations/transcript-watcher.readJsonlEventsFromChain`
+                  - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+                  - `conversations/transcript-watcher.transcriptChainSignature`
+                  - `conversations/transcript-watcher.watchPaths`
+                  - `infra/git/git-read-cache.createSignedMemo`
+                - Resources:
+                  - `subagent-activity` (push)
+                  - `subagent-transcript` (push)
+              - Web:
+                - Uses:
+                  - `conversations.useConversationById`
+                  - `conversations/conversation-view/jsonl-viewer.TranscriptView`
+                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Inset`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.ResourceResult`
+                  - `primitives/live-state.ResourceView`
+                  - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
+                  - `primitives/markdown.Markdown`
+                  - `primitives/relative-time.ElapsedTime`
+                  - `primitives/relative-time.formatElapsed`
+                  - `primitives/relative-time.useNow`
+                - Exports (types):
+                  - `SubagentStateDisplay`
+                  - `SubagentStatus`
+                - Exports (values):
+                  - `SubagentDuration`
+                  - `SubagentLastStep`
+                  - `SubagentPaneBody`
+                  - `subagentStateDisplay`
+                  - `useSubagentStatus`
+              - Core:
+                - Uses:
+                  - `conversations.hasLiveProcess`
+                  - `conversations/transcript-watcher.JsonlEvent`
+                  - `conversations/transcript-watcher.JsonlEventSchema`
+                  - `primitives/live-state.resourceDescriptor`
+                - Exports (types):
+                  - `DescribedSubagent`
+                  - `LastStep`
+                  - `SubagentActivityRow`
+                  - `SubagentJoin`
+                  - `SubagentReport`
+                  - `SubagentRequestShape`
+                  - `SubagentRunState`
+                  - `SubagentRunStateInput`
+                  - `SubagentTranscript`
+                  - `UndescribedSubagent`
+                - Exports (values):
+                  - `agentCallJoin`
+                  - `classifyLastStep`
+                  - `describedSubagent`
+                  - `DescribedSubagentSchema`
+                  - `formatLastStep`
+                  - `lastStepOfLines`
+                  - `LastStepSchema`
+                  - `SubagentActivityPayloadSchema`
+                  - `subagentActivityResource`
+                  - `SubagentActivityRowSchema`
+                  - `subagentReport`
+                  - `SubagentRequestShapeSchema`
+                  - `subagentRunState`
+                  - `subagentTranscriptResource`
+                  - `SubagentTranscriptSchema`
+                  - `toolResultIsOutcome`
+                  - `UndescribedSubagentSchema`
+              - Cross-plugin:
+                - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/agent`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -10726,7 +10817,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
                   - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
                   - `primitives/css/status-dot.StatusDot`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/pane.useOpenPane`
             - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "teammate-message" → `TeammateMessageRow`
@@ -10798,30 +10892,39 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `tasks/task-status.StatusIcon`
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
-                    - Slots: `agent-report.actions` ← `primitives.pane`
+                    - Slots: `agentReportPane.Actions` ← `primitives.pane`
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                       - `Pane.Register` "agent-report"
                     - Uses:
                       - `conversations/conversation-view.conversationPane`
+                      - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.SubagentLastStep`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.SubagentPaneBody`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.subagentStateDisplay`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.useSubagentStatus`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/model-provider.familyClass`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/line.Line`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/row.Row`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Inset`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.cn`
                       - `primitives/icon-button.IconButton`
-                      - `primitives/live-state.useResource`
-                      - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
                       - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
+                    - Exports (values): `agentReportPane`
+                  - Cross-plugin:
+                    - Imported by: `conversations/conversation-view/jsonl-viewer/task-notification`
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
                     - Contributes:
@@ -12150,8 +12253,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `AnchoredChain`
           - `AnchoredEntry`
+          - `PathsSnapshot`
           - `TranscriptSnapshot`
+          - `WatchSpec`
+          - `WatchTargets`
         - Exports (values):
+          - `conversationChainTag`
           - `findTranscriptPath`
           - `readChainLines`
           - `readJsonlEvents`
@@ -12160,13 +12267,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveAnchoredChain`
           - `resolveConversationTranscriptPaths`
           - `transcriptChainSignature`
+          - `watchPaths`
           - `watchTranscript`
+          - `watchTranscriptFile`
       - Cross-plugin:
         - Imported by:
           - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
           - `conversations`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
           - `debug/session-divergence`
@@ -18636,6 +18746,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/deployment`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `plugin-meta/plugin-tree`
               - `review/plugin-changes`
               - `tasks/attempt-work`
@@ -23962,6 +24073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/artifacts/skill`
               - `conversations/conversation-view/dependent-count`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -24573,6 +24685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
@@ -24920,6 +25033,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
@@ -25254,8 +25368,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -25429,6 +25545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/code-listing`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
@@ -25672,6 +25789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -26190,6 +26308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/teammate-message`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -26688,8 +26807,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
               - `conversations/conversation-view/jsonl-viewer/row-actions`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -28423,6 +28544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/conversation-view/jsonl-viewer/outline`
+          - `conversations/conversation-view/jsonl-viewer/task-notification`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/push-profiling`
@@ -28885,8 +29007,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/outline`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -29066,7 +29188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code/file-pane/raw`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/recover`
           - `conversations/summary`
@@ -29262,6 +29384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data`
           - `conversations/conversation-view/code/file-pane/markdown`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -29810,7 +29933,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conv-docs.actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
           - `conv-commits-graph.actions` "title" → `PaneTitleItem`
-          - `agent-report.actions` "title" → `PaneTitleItem`
+          - `agentReportPane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `conv-push-profiling.actions` "title" → `PaneTitleItem`
           - `conv-terminal.actions` "title" → `PaneTitleItem`
@@ -30050,6 +30173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer/file-path`
+          - `conversations/conversation-view/jsonl-viewer/task-notification`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
@@ -30320,6 +30444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/op-status`
           - `debug/boot-profile`
           - `debug/claude-cli-calls`

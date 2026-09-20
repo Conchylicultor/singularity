@@ -50,6 +50,7 @@
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
     - `conversations/conversation-view/jsonl-viewer/preprompt`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
 

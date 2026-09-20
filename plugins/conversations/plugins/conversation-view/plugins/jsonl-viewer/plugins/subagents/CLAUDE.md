@@ -1,0 +1,384 @@
+# subagents
+
+Which sub-agents a conversation has, what each one is doing right now, and each
+one's own transcript.
+
+When an agent launches a sub-agent, Claude Code writes the sub-agent its own
+transcript, live, next to the session file:
+
+```
+~/.claude/projects/<dir>/<sessionId>.jsonl
+~/.claude/projects/<dir>/<sessionId>/subagents/agent-<agentId>.jsonl       appended live
+~/.claude/projects/<dir>/<sessionId>/subagents/agent-<agentId>.meta.json   written once, at spawn
+```
+
+Three facts make this cheap. When the meta file records a **`toolUseId`**, it is
+the id of the parent's `Agent` tool-use block, so the join from a rendered card
+to its sub-agent is exact (see *The join has two keys* below). The transcript's
+lines have the **same shape as a session transcript** (`type`, `uuid`,
+`parentUuid`, `message`, plus `isSidechain` and `agentId`), so
+`readJsonlEventsFromChain` parses them unchanged and every existing event
+renderer already draws them. And **nothing holds the files open** — Claude Code
+opens, appends and closes per line — so the existing recursive watcher over
+`CLAUDE_PROJECTS_DIR` already delivers every append.
+
+## Discovery derives from the anchored chain, and must keep doing so
+
+A sub-agent directory is a kept session transcript's path, minus `.jsonl`, plus
+`/subagents` (`subagentDirs`). The paths come from
+`resolveConversationTranscriptPaths`, which returns only what
+`resolveAnchoredChain` **kept**.
+
+That is the whole ownership story, and it is load-bearing. A session chain is a
+list of ids *somebody else* recorded, and it can name another conversation's
+session; the anchor guard is what refuses those
+([`transcript-watcher/CLAUDE.md`](../../../../transcript-watcher/CLAUDE.md)).
+Deriving from the kept entries means a sub-agent directory is unreachable unless
+its parent transcript already passed that guard — for free, with nothing to
+remember.
+
+**Never re-resolve from raw session ids.** Globbing each id independently would
+resolve the foreign entry too, and we would scan — and stream — another agent's
+sub-agent transcripts. That is exactly the cross-conversation leak
+[`research/2026-08-19-global-pane-session-ownership.md`](../../../../../../../research/2026-08-19-global-pane-session-ownership.md)
+closed. A test pins it: a session the anchor dropped never has its `subagents/`
+directory scanned, even with its files sitting right there on disk.
+
+## The dispatch has to be by DIRECTORY, not by path
+
+The watcher routes a filesystem event by looking the path up in a reverse index.
+A sub-agent file is not in any index at the moment it is **created** — which is
+every sub-agent, every time — so exact-path routing drops precisely the event
+that says "a sub-agent now exists", and the card never appears at all.
+
+So the rooms here declare `dirs` (`watchPaths`'s discovered-membership form): an
+event anywhere inside one of the `subagents/` directories re-resolves the room
+before re-reading. It also means the `.jsonl` extension filter needs no widening
+for the meta files — a `.meta.json` is always accompanied by transcript appends
+in the same directory, and the rescan picks it up.
+
+Everything still rides the **one** `parcel.subscribe(CLAUDE_PROJECTS_DIR)` and
+the **one** 30 s reconcile sweep that `transcript-watcher` already holds. A
+second subscription over the identical root would double the native watch cost
+for nothing.
+
+## The two resources
+
+**`subagent-activity`**, keyed `{ id: conversationId }` — one row per sub-agent,
+and **one subscription serving every card in the conversation**, never one per
+card. `useResource` is a TanStack Query wrapper, so N cards on identical params
+are one query and one subscription; no provider is needed to share it.
+
+`lastStep` comes from a **bounded tail read** (the last 64 KB) of the one file
+that changed. A sub-agent transcript grows into the megabytes, and the index
+re-reads on every append, so the bound is what keeps a change O(1) instead of
+O(all sub-agents × their whole length). The per-agent `(mtime, size)` is held
+between scans, and a scan re-stats (cheap) but re-reads only what moved.
+
+The step is derived from the last classifiable line's own message **block type**
+— a closed set (`tool` / `tool-result` / `text` / `thinking`), plain data in
+`core/` rather than a slot. It deliberately does not reach into the per-tool
+renderers: those are web-only and need a fully built event with its result
+paired, which is the whole-file parse this tail read exists to avoid. A
+tool-aware phrasing is a separate feature over the pane's parsed events.
+
+**A trailing `tool_result` defers to the `tool_use` it answers.** A result always
+lands immediately after its call, so the newest line in a live window is a result
+about a third of the time (348 of 992 sampled cut points across the 826
+transcripts here) — and a result's text is the PAYLOAD, not a description of
+anything. Reporting it literally put a file's line-numbered contents on the card:
+
+> Result: 1 # row-actions 2 3 ## What this plugin owns 4 5 **Which** actions a JSONL tran…
+
+where the honest reading was `Read row-actions/CLAUDE.md`. So when the newest
+classifiable line is a result, `lastStepOfLines` keeps scanning for the action
+that produced it — present in the same window 340 of those 348 times.
+
+The `tool-result` arm survives for the remaining 8, where the call has scrolled
+out of the window, and it carries **no preview**: there is nowhere to put that
+text any more, which is what stops the payload coming back. It renders as
+"Finished a tool call". Not `null` there — a sub-agent mid-tool-loop has plainly
+not "not started".
+
+Text and thinking still win outright when they are newest; they are the sub-agent
+speaking, which says more than any tool name. They are skipped only when OLDER
+than a trailing result, where reporting them would quote something the sub-agent
+said before the step it has since taken.
+
+**`subagent-transcript`**, keyed `{ id, toolUseId }` → the parsed events. Keyed
+by the *tool-use* id, not the agent id, so a card and the pane route it opens
+need no extra identifier. While the sub-agent is still starting there is no file,
+so the room watches the directories; once the file is known its identity is
+fixed and the room narrows to that one path, so a sibling's appends stop waking
+it.
+
+Both resources pair their `revalidate` and their `loader` through **one**
+`createSignedMemo` binding, exactly as `jsonl-events-cache.ts` does — never two
+ETag probes that can drift, which is how `edited-files` once certified a stale
+value with a fresh ETag.
+
+## Not-known-yet is a state, in three places
+
+- A sub-agent whose **meta file** has not landed has **no row**. Inventing one
+  would mean naming it "unknown"; the card renders the absence as "starting".
+- The transcript resource returns a **discriminated result**
+  (`{ kind: "linked", … }` / `{ kind: "unlinked" }`), so "the file isn't there
+  yet" can never be read as "the sub-agent did nothing".
+- `lastStep: null` means it has written nothing classifiable yet — a fact, not a
+  stand-in for "idle".
+
+## "Running" is derived from the PARENT, and has three answers
+
+There is no end-of-run marker inside a sub-agent's own file (the last line is an
+ordinary assistant line), so the file cannot answer this. `subagentRunState`
+(`core/run-state.ts`) is the one computation, and it reads the parent:
+
+- **foreground** — the parent's `tool_result` lands only at completion ⇒ finished.
+- **background** — that `tool_result` is an immediate launch acknowledgement and
+  means nothing; completion is the `task-notification` carrying the same
+  tool-use id.
+- **neither, and the parent has no live process** — the sub-agent was killed or
+  died with the session. That is **ended without reporting**, a third state, not
+  "still running". Rendering it as running would be the card lying about work
+  that stopped minutes ago.
+
+**Do not add a staleness timeout as a fourth answer.** A sub-agent silent for
+five minutes may be inside one long tool call, and a timeout would turn that into
+a claim the code cannot support. Surfaces state the observation instead — "no
+update in 4m", from `lastActivityAt` — which the user can judge. There is no
+liveness or exit marker on disk; wanting one is a harness-level ask, not
+something to synthesise from timestamps.
+
+## The meta format has GROWN — measure before you require anything
+
+`agent-<id>.meta.json` has gained fields across Claude Code versions, and a
+conversation's `subagents/` directory accumulates sub-agents from **every
+version it has ever run under**. So the newest directory on the machine is the
+worst possible sample: everything looks mandatory there.
+
+Measured over all 818 meta files under `~/.claude/projects` (2026-09-20):
+
+| field           | present | missing |
+| --------------- | ------: | ------: |
+| `agentType`     |     818 |       0 |
+| `description`   |     818 |       0 |
+| `spawnDepth`    |     811 |       7 |
+| `model`         |     784 |      34 |
+| `toolUseId`     |     512 |     306 |
+| `requestShape`  |     422 |     396 |
+| `parentAgentId` |      16 |     802 |
+
+Seven files are literally `{agentType, description, toolUseId}` and nothing else.
+`requestShape` only ever takes `background` (414) or `foreground` (8), and no
+file on disk today is unparseable JSON.
+
+**A corpus scan is a good instrument and a poor alarm.** Every count on this page
+was measured because a defect had already been seen in the running app, and each
+one settled the question it was pointed at. None of them found anything. The
+files were there the whole time; a schema modelled on one directory shipped
+anyway, and blanked every card in the conversation. So measure before you require
+a field — and do not expect measuring to be what tells you a field is wrong.
+Driving the app is what does that.
+
+**Only `agentType` and `description` are required.** An earlier version of this
+plugin required `model`, `requestShape` and `spawnDepth` because one recent
+directory had them all; the result in the deployed app was
+`loader failed for subagent-activity: path ["model"] Required` — the resource
+errored for the whole conversation, the client retried, the log endpoint 429'd,
+and **no sub-agent card rendered at all**.
+
+An absent field means the harness did not record it. That is a fact, so a
+surface omits the reading rather than inventing a default. `toolUseId` in
+particular is absent for every in-process teammate (`taskKind:
+"in_process_teammate"`), which has a transcript but no `Agent` card in the parent
+to be reached from; such a sub-agent is listed but is not reachable by the keyed
+transcript resource.
+
+Note that `subagentRunState` has always typed `requestShape` as possibly absent
+and documented the fall-through — the required schema field contradicted the
+function's own contract. If you find yourself tightening one of these, check the
+corpus first, and check what the consumer already claims to tolerate.
+
+## The join has two keys, because the harness writes one or the other
+
+Spawning an agent **with a name** makes it an in-process teammate, and the
+harness then records the name **instead of** a `toolUseId`:
+
+```json
+{"agentType":"live-probe","description":"Live streaming test subject","name":"live-probe",
+ "spawnDepth":0,"requestShape":"background","model":"sonnet",
+ "taskKind":"in_process_teammate","teamName":"session-359d3e91","permissionMode":"auto"}
+```
+
+The parent's `Agent` tool-use block still exists and still has an id, so there is
+a card on screen for it. With an id-only join that card finds no row: no
+duration, no last step, and a button onto a pane that can never resolve. This is
+not a fringe case — **307 of the 818 metas on this machine are
+named-with-no-id**, and both agents that built this feature are among them.
+
+The other half of the join is in the parent's own call: `input.name` is the name
+it asked for, and the meta records the same string under `name`. Measured across
+all 175 sessions: **301 of those 307 resolve this way.**
+
+| join path | rule |
+| --- | --- |
+| meta has a `toolUseId` | match it; ids are unique by construction |
+| meta has only a `name` | match the name the parent's `Agent` call requested |
+
+Two guards on the name path, because **a name is not an id**:
+
+- It considers only metas carrying **no `toolUseId` of their own** — one that has
+  an id belongs to a different card, and matching it would steal that card's row.
+- A name answered by **more than one** meta refuses to join. The harness permits
+  a duplicate name and resolves it "latest wins", but that rule decides which
+  LIVE teammate a message reaches; a transcript join has no "live", and picking
+  either would put one sub-agent's work under the other's card. Zero collisions
+  occur across the 175 sessions here, so this is a guard, not a path.
+
+**Who reads the name.** A surface rendering the card already holds the `Agent`
+event, so `agentCallJoin(event)` hands `describedSubagent` both keys and the join
+costs nothing. The `subagent-transcript` resource cannot: a resource is given
+only a tool-use id, so it reads the name back out of the parent chain
+(`server/internal/agent-calls.ts`) — raw lines rather than built events, memoized
+on the parent chain's signature, so the multi-megabyte read happens once per
+parent write rather than once per sub-agent append.
+
+**What stays unreachable, deliberately.** A sub-agent that itself spawned a named
+teammate (`spawnDepth` 2) has its `Agent` call inside the SUB-AGENT's transcript.
+Those are the files that grow constantly, so folding them into the name index
+would trade that bound away to buy 5 of 818 cases. Such a teammate stays
+`unlinked` when a pane is opened by id — a state the result type can express. A
+nested card rendered inside its parent's own pane still joins, because that
+surface holds the event and passes the name directly. One further sub-agent
+resolves nowhere at all, its parent transcript having been truncated.
+
+## One unreadable meta costs one row, never the list
+
+A row is a **union**, not a flat record with an error flag:
+
+- `{ kind: "described", … }` — the meta parsed. Most of its fields may still be
+  legitimately absent.
+- `{ kind: "undescribed", reason }` — the file is there and we cannot make sense
+  of it (corrupt JSON, or a `requestShape` naming something this build has never
+  heard of).
+
+Both arms carry what the filesystem knows regardless — `agentId`, `startedAt`,
+`lastActivityAt`, `lastStep` — so an undescribed sub-agent still shows when it
+started and what it last did.
+
+The union is what makes "this sub-agent's metadata is unreadable" distinguishable
+from "this sub-agent has no recorded model", which a flat row with optional
+fields cannot express. Dropping the row instead would hide a sub-agent that
+demonstrably exists; filling in defaults would have the card state things nothing
+on disk supports.
+
+Only the two failures meaning "this FILE makes no sense" become a value —
+malformed JSON and a shape the schema rejects. A permission or I/O error still
+throws, because those say nothing about the sub-agent and everything about the
+machine. An `unreadable` result is never cached, so a torn read of a file being
+created heals on the next scan.
+
+## Every reader takes its directories as an argument
+
+`subagentDirs(conversationId)` is the ONE place that decides which directories
+this plugin may look at. `listSubagentEntries`, `scanActivityIn` and
+`findSubagentIn` all take the directory list, and the conversation-level
+functions are thin bindings over them.
+
+That keeps the ownership boundary structural rather than conventional: nothing
+downstream can widen the set, because nothing downstream resolves one.
+
+## Design
+
+[`research/2026-09-20-conversations-live-subagent-transcripts.md`](../../../../../../../research/2026-09-20-conversations-live-subagent-transcripts.md)
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+
+## Plugin reference
+
+- Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
+- Server:
+  - Contributes:
+    - `resource.declare` "subagent-activity"
+    - `resource.declare` "subagent-transcript"
+  - Uses:
+    - `conversations/transcript-watcher.conversationChainTag`
+    - `conversations/transcript-watcher.readChainLines`
+    - `conversations/transcript-watcher.readJsonlEventsFromChain`
+    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+    - `conversations/transcript-watcher.transcriptChainSignature`
+    - `conversations/transcript-watcher.watchPaths`
+    - `infra/git/git-read-cache.createSignedMemo`
+  - Resources:
+    - `subagent-activity` (push)
+    - `subagent-transcript` (push)
+- Web:
+  - Uses:
+    - `conversations.useConversationById`
+    - `conversations/conversation-view/jsonl-viewer.TranscriptView`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceView`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/markdown.Markdown`
+    - `primitives/relative-time.ElapsedTime`
+    - `primitives/relative-time.formatElapsed`
+    - `primitives/relative-time.useNow`
+  - Exports (types):
+    - `SubagentStateDisplay`
+    - `SubagentStatus`
+  - Exports (values):
+    - `SubagentDuration`
+    - `SubagentLastStep`
+    - `SubagentPaneBody`
+    - `subagentStateDisplay`
+    - `useSubagentStatus`
+- Core:
+  - Uses:
+    - `conversations.hasLiveProcess`
+    - `conversations/transcript-watcher.JsonlEvent`
+    - `conversations/transcript-watcher.JsonlEventSchema`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `DescribedSubagent`
+    - `LastStep`
+    - `SubagentActivityRow`
+    - `SubagentJoin`
+    - `SubagentReport`
+    - `SubagentRequestShape`
+    - `SubagentRunState`
+    - `SubagentRunStateInput`
+    - `SubagentTranscript`
+    - `UndescribedSubagent`
+  - Exports (values):
+    - `agentCallJoin`
+    - `classifyLastStep`
+    - `describedSubagent`
+    - `DescribedSubagentSchema`
+    - `formatLastStep`
+    - `lastStepOfLines`
+    - `LastStepSchema`
+    - `SubagentActivityPayloadSchema`
+    - `subagentActivityResource`
+    - `SubagentActivityRowSchema`
+    - `subagentReport`
+    - `SubagentRequestShapeSchema`
+    - `subagentRunState`
+    - `subagentTranscriptResource`
+    - `SubagentTranscriptSchema`
+    - `toolResultIsOutcome`
+    - `UndescribedSubagentSchema`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+
+<!-- AUTOGENERATED:END -->

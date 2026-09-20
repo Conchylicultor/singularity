@@ -7,6 +7,8 @@ import { TimestampAction } from "./components/timestamp-action";
 export { JsonlViewer } from "./slots";
 export type { OverlayContribution, EventFilterContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
+export { TranscriptView } from "./components/transcript-view";
+export type { TranscriptViewProps } from "./components/transcript-view";
 export { useVisibleEvents } from "./use-visible-events";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";

@@ -97,8 +97,12 @@ memo degrades to a full chain re-read on every push.
   - Exports (types):
     - `AnchoredChain`
     - `AnchoredEntry`
+    - `PathsSnapshot`
     - `TranscriptSnapshot`
+    - `WatchSpec`
+    - `WatchTargets`
   - Exports (values):
+    - `conversationChainTag`
     - `findTranscriptPath`
     - `readChainLines`
     - `readJsonlEvents`
@@ -107,13 +111,16 @@ memo degrades to a full chain re-read on every push.
     - `resolveAnchoredChain`
     - `resolveConversationTranscriptPaths`
     - `transcriptChainSignature`
+    - `watchPaths`
     - `watchTranscript`
+    - `watchTranscriptFile`
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
     - `debug/session-divergence`

@@ -139,6 +139,7 @@ back.
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/relative-time.ElapsedTime`
     - `primitives/relative-time.RelativeTime`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/scope/dom-scope.defineDomScope`
@@ -149,6 +150,7 @@ back.
     - `EventFilterContribution`
     - `OverlayContribution`
     - `SectionExpand`
+    - `TranscriptViewProps`
   - Exports (values):
     - `EventLine`
     - `formatTime`
@@ -157,6 +159,7 @@ back.
     - `JsonlViewer`
     - `paneScrollScope`
     - `Timestamp`
+    - `TranscriptView`
     - `useJsonlConversationId`
     - `useLastAssistantEvent`
     - `useRowMarkdown`
@@ -201,11 +204,13 @@ back.
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/preprompt`
     - `conversations/conversation-view/jsonl-viewer/queue-operation`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/system`
     - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -230,6 +235,7 @@ back.
   - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
   - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
   - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
+  - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

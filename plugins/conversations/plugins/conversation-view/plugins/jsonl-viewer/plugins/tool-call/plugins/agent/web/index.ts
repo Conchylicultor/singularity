@@ -4,6 +4,8 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { AgentToolView } from "./components/agent-tool-view";
 import { agentReportPane } from "./panes";
 
+export { agentReportPane } from "./panes";
+
 export default {
   description:
     "Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).",

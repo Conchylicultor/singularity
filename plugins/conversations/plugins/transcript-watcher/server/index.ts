@@ -5,8 +5,24 @@ import {
 } from "./internal/watcher";
 import { foreignSessionKind } from "./internal/foreign-session-kind";
 
-export { watchTranscript, refreshConversationChain } from "./internal/watcher";
-export type { TranscriptSnapshot } from "./internal/watcher";
+export {
+  watchTranscript,
+  watchTranscriptFile,
+  refreshConversationChain,
+  conversationChainTag,
+  // The generic room. A consumer whose files are DISCOVERED (a directory whose
+  // contents decide the set) binds it directly with `dirs`, so a file created
+  // there reaches the room at the moment it is born — the one thing exact-path
+  // dispatch cannot do. Everything still rides the single parcel subscription
+  // and the single reconcile sweep.
+  watchPaths,
+} from "./internal/watcher";
+export type {
+  TranscriptSnapshot,
+  PathsSnapshot,
+  WatchTargets,
+  WatchSpec,
+} from "./internal/watcher";
 // The BOUND signature only. `statChain` / `chainEtag` / `chainFileEtag` stay internal:
 // a consumer that assembles its own signature from the halves is a second authority.
 export { transcriptChainSignature } from "./internal/chain-signature";

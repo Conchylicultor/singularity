@@ -1607,6 +1607,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -6886,6 +6890,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 

@@ -28,6 +28,18 @@ interface ToolCallCardProps {
    * `false` so the card is not styled as a failure.
    */
   isError?: boolean;
+  /**
+   * Override "is this call still in flight", which the card otherwise derives
+   * from `event.result` being absent.
+   *
+   * For one tool family that derivation is simply wrong: a backgrounded `Agent`
+   * gets its `tool_result` at LAUNCH, as an acknowledgement, so the card would
+   * drop its running dots the instant a sub-agent starts and would show a
+   * killed sub-agent as finished. A renderer that can actually answer the
+   * question — because it reads the completion signal the harness really uses —
+   * says so here, and the card believes it.
+   */
+  running?: boolean;
 }
 
 export function ToolCallCard({
@@ -38,9 +50,10 @@ export function ToolCallCard({
   children,
   defaultOpen = false,
   isError,
+  running,
 }: ToolCallCardProps) {
   const hasError = isError ?? event.result?.isError;
-  const isRunning = !event.result;
+  const isRunning = running ?? !event.result;
   return (
     <CollapsibleCard
       error={hasError}

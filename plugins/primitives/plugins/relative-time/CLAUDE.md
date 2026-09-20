@@ -35,6 +35,7 @@
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/op-status`
     - `debug/boot-profile`
     - `debug/claude-cli-calls`
