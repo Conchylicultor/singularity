@@ -23,113 +23,36 @@ import {
 } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
 import { asLaunchMessage } from "./launch-message";
+import { classifyPaneText, type PaneMenu } from "./pane-menu";
 import { resolvePaneStatus } from "./pane-status";
 import { captureProcessTree } from "./process-tree";
 import { typedChunks } from "./typed-keys";
 
 // AskUserQuestion menus must be detected regardless of how the pane otherwise
-// reads, because the CLI signature changed across versions:
+// reads, because nothing outside the pane's own pixels says a question is up:
 //   - Old CLI: the menu kept the spinner + session status:"busy", so the pane
-//     looked `working` while actually waiting. (still handled below)
+//     looked `working` while actually waiting.
 //   - CLI v2.1.159: the menu presents as an IDLE pane — `✳` ready title prefix,
-//     session file status:"waiting" / waitingFor:"permission prompt". Nothing
-//     in the title or session file distinguishes it from an ordinary idle/
-//     permission state, so the only reliable signal is the menu's
-//     "Enter to select" footer at the BOTTOM of the pane content.
+//     session file status:"waiting" / waitingFor:"permission prompt".
+//   - CLI v2.1.276: same idle presentation, waitingFor:"input needed".
+// Those last two spellings are also what the CLI writes when it is merely
+// sitting at the prompt with nothing on screen, so neither the title nor the
+// session file can tell a blocked question from an ordinary wait. Only the
+// menu's own footer can — pane-menu.ts owns that reading, including the rule
+// that separates a live menu from one already answered.
+//
 // We therefore probe EVERY non-dead pane (not just working ones) and, on a
 // match, override the verdict to {working:false, waitingFor:"question"} — the
 // signal the AskUserQuestion web form gates on. Throttled to one capture-pane
 // per pane every PROBE_INTERVAL_MS to keep the cost bounded.
-//
-// The footer must be matched ONLY against the bottom-most CONTENT line(s) — never
-// the whole capture. A live menu is the pane's bottom-most element (it is the
-// active modal UI); the footer a PREVIOUS menu left in scrollback sits ABOVE
-// whatever the CLI rendered next (streaming output, the spinner status line, or
-// the idle `❯` input). Testing the whole 15-line blob matched that stale footer
-// and reported a live question on a pane that was actually mid-turn — tripping
-// the auto-answer Escape onto a working agent and interrupting it. See
-// bottomContentLines / FOOTER_TERMINATOR_RE / MENU_CHROME_RE.
 const PROBE_INTERVAL_MS = 5_000;
-// Every interactive menu footer — question OR rewind — terminates in the segment
-// "Esc to cancel". That terminator is the load-bearing signal that an open menu
-// sits at the very bottom of the pane: a STALE footer left in scrollback always
-// has real content (streamed output, the `❯` idle prompt) below it, so its
-// terminator is never the bottom-most content line. classifyPaneMenu() requires
-// the bottom-most content line to be this terminator before classifying a menu —
-// the same no-false-positive invariant the old single-line match relied on.
-const FOOTER_TERMINATOR_RE = /Esc to cancel\b/i;
-// A long footer HARD-WRAPS across terminal lines: extra control segments
-// ("· n to add notes · Tab to switch questions ·") widen it past the pane and
-// push "Esc to cancel" onto its own bottom line, so the three control anchors no
-// longer share one physical line. The CLI emits the break itself (tmux's `-J`
-// wrap-join does not rejoin it), so we rejoin the bottom-most content lines into
-// one logical footer before matching. Bounded to FOOTER_MAX_WRAP_LINES so the
-// rejoin window can never reach past the wrapped footer into the menu body above.
-const FOOTER_MAX_WRAP_LINES = 3;
-// The AskUserQuestion menu's footer — its presence is the only reliable signal
-// that the CLI is blocked on a question (the title/session file can read as a
-// plain idle/permission state, see the PROBE_INTERVAL_MS comment above).
-//
-// All three control segments required, in order, against the rejoined bottom
-// footer (NOT a loose substring). A working agent can legitimately STREAM the
-// words "enter to select" in its own prose, but reproducing the full fixed
-// control string verbatim —
-//   "Enter to select · ↑/↓ to navigate · Esc to cancel"
-// — is practically impossible, and the FOOTER_TERMINATOR_RE gate further requires
-// the pane's bottom-most line to literally be the menu terminator. `.*` between
-// segments tolerates separator/glyph drift across CLI versions. Case-insensitive
-// only as a cheap hedge; the structure is what carries the weight.
-const QUESTION_FOOTER_RE =
-  /Enter to select\b.*\bto navigate\b.*\bEsc to cancel\b/i;
-// Claude's *rewind* menu (opened by Esc-Esc at the idle prompt). It does NOT
-// share the question footer — verified against CLI v2.1.161 it renders
-// "Enter to continue · Esc to cancel" plus a "Restore the code…" header. Same
-// two-segment, ordered anchoring as the question footer so streamed prose
-// containing "enter to continue" cannot trip it. We detect it so
-// escapeUntilPromptCleared() can treat it as a menu to dismiss rather than
-// mistaking it for the idle prompt (which would strand the menu).
-const REWIND_FOOTER_RE = /Enter to continue\b.*\bEsc to cancel\b/i;
+
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
 
-// Trailing CLI chrome the live TUI renders BELOW an open menu's footer, none of
-// it menu content: blank rows, the elapsed-time spinner status line (e.g.
-// "✶ Gallivanting… (19d 17h · ↓ 16.9k tokens)"), and rotating "⎿ Tip:" hints.
-// On the spinner-keeping CLI (≤ v2.1.158) a live AskUserQuestion menu renders a
-// blank + spinner + tip beneath "Enter to select", so a fixed bottom-N-lines
-// window counted that chrome and never reached the footer — the menu read as
-// `working`. We strip it before locating the footer.
-//
-// The class is intentionally narrow (decorative braille/star spinner glyphs and
-// the `⎿` nested-output marker — NOT `*`, `·`, or `•`, which can begin real
-// streamed markdown). Over-stripping a real content line below a STALE footer
-// would re-expose that footer at the bottom and fire Escape into a working
-// agent; under-stripping only costs a manual "Answer here" click. Bias narrow.
-const MENU_CHROME_RE = /^\s*$|^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✢✳✴✶✷✸✹✺✻✽✾❋✦✧]\s|^\s*⎿/u;
-
-type PaneMenu = "question" | "rewind" | "idle";
-
-// The bottom-most CONTENT lines of a pane capture (trailing CLI chrome stripped),
-// newest last, at most FOOTER_MAX_WRAP_LINES of them. A live menu's footer is its
-// LAST rendered element, so once the chrome beneath it is gone the footer sits at
-// the very bottom — on one line when short, across the last few when it wraps. A
-// stale footer left in scrollback has real (non-chrome) content below it —
-// streamed output, the `❯` idle prompt — which survives the strip and keeps the
-// stale footer out of this window. The cap stops the rejoin window from reaching
-// past a wrapped footer into the menu body above it.
-function bottomContentLines(paneText: string): string[] {
-  const lines = paneText.split("\n");
-  let end = lines.length;
-  while (end > 0 && MENU_CHROME_RE.test(lines[end - 1]!)) end--;
-  const start = Math.max(0, end - FOOTER_MAX_WRAP_LINES);
-  return lines.slice(start, end);
-}
-
 // Single fresh capture-pane → which interactive menu (if any) is on screen.
-// A live menu is anchored to the bottom of the pane and its footer terminates in
-// "Esc to cancel": we require the bottom-most content line to be that terminator
-// (a footer found above real content is stale scrollback, not an open menu — see
-// the PROBE_INTERVAL_MS comment), then rejoin the bottom-most content lines so a
-// hard-wrapped footer reads as one logical line before matching the head anchors.
+// `-S -15` reaches a little into scrollback, which always covers the whole
+// visible pane too, so the composer that pane-menu.ts looks for is in frame
+// whenever the CLI is rendering it.
 async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   const proc = Bun.spawn([TMUX, "capture-pane", "-p", "-S", "-15", "-t", id], {
     stdout: "pipe",
@@ -137,13 +60,7 @@ async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   });
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
-  const bottom = bottomContentLines(stdout);
-  const last = bottom[bottom.length - 1];
-  if (!last || !FOOTER_TERMINATOR_RE.test(last)) return "idle";
-  const footer = bottom.join(" ").replace(/\s+/g, " ").trim();
-  if (QUESTION_FOOTER_RE.test(footer)) return "question";
-  if (REWIND_FOOTER_RE.test(footer)) return "rewind";
-  return "idle";
+  return classifyPaneText(stdout);
 }
 
 async function probeWaiting(id: string): Promise<boolean> {
