@@ -7,6 +7,33 @@
 `import()` so no other invocation pays for the host-admission, worktree and
 op-profiler barrels it pulls in.
 
+## Publishing is asked about, not assumed
+
+Before the mutex, push asks `infra/git/remotes` whether this checkout may write
+to its remote (a cached `git push --dry-run` probe — read that plugin's
+`CLAUDE.md` for how the answer is measured and when it is re-taken).
+
+- **publish** — the flow below, unchanged.
+- **local** — the three steps that touch the network are skipped: the
+  `fetch` + `merge --ff-only origin/main` at the start, the branch push, and the
+  push of `main`. Everything else is identical, so local `main` still advances
+  and still rebuilds itself. The reason is printed once, up front, so the
+  difference is never silent, and the final line says nothing was pushed.
+
+This is the ordinary state of a clone, not a broken checkout. The gate on the
+*fetch* matters most: left in, it would pull another repository's commits into
+the user's own `main` on every push, and break push for good the first time
+their main diverged.
+
+A push the remote REJECTS re-probes and records the answer
+(`recordPushRejection`), because a rejection is newer evidence than the cache —
+so a checkout that loses write access lands in local mode next time instead of
+failing forever.
+
+`--from-main` in local mode has no rebase at all (there is no `origin/main` to
+replay onto), so the commit carries the `Singularity-Push` trailer itself
+instead of receiving it from the rebase's `--exec`.
+
 ## The critical section
 
 Everything from the fetch onward runs inside `withPushLock`, which holds the
@@ -17,11 +44,21 @@ load-bearing:
 
 1. commit (only with `-m`) — a dirty tree without a message is refused
 2. consume any merge marker this push did **not** produce
-3. fetch + ff `main`, rebase onto it, stamping `Singularity-Push` on every commit
+3. fetch + ff `main` (publish mode only), then put the branch in landable shape
+   — three arms, decided by `main..HEAD`:
+   - **contains main** → *no rebase at all*; only the tip is amended with the
+     trailer. The rebase exists only to make step 7's ff-merge possible, already
+     true here, and it would **rewrite the merged-in upstream commits**: measured,
+     upstream's own sha stopped being an ancestor of main, so the next
+     `upstream merge` based below them and re-presented merged changes as
+     conflicts. Cost, accepted: the ledger groups the tip alone.
+   - **merge commits, but main moved past** → refuse, and say to `git merge main`
+     in the worktree. Never fall through to the flattening rebase.
+   - **otherwise** → `git rebase main --exec <stamp>`, unchanged.
 4. `ensureDeps({ frozenLockfile: true })` — install what the rebase brought in
 5. `normalizeGeneratedArtifacts(…, { force: true })` — re-derive and amend
 6. `check --scope tree` in a subprocess, under an **interactive** CPU grant
-7. push the branch, ff `main`, push `main`
+7. push the branch (publish mode only), ff `main`, push `main` (publish mode only)
 
 4 before 5 on purpose: the regen must run against a `node_modules` matching the
 tree it regenerates. Push's own rebases set `SKIP_POST_REWRITE_ENV` so the
@@ -33,6 +70,11 @@ Commits and pushes straight from `main`, skipping the worktree merge. Carries a
 hard rule, stated in the flag's own help text: **an agent must never pass it
 without explicit user approval in the current conversation.** Still takes the
 mutex, still runs the checks.
+
+In publish mode it rebases the checkout's own `main` onto `origin/main` *before*
+its final push, so a push that fails leaves local main advanced and already
+rebuilding. Long-standing, now stated in the code; the local arm never pushes,
+so it cannot happen there.
 
 A push owns no deploy receipt, so the fatal-signal tap armed here is its only
 record of being killed — and it is the op where that costs most, since the box

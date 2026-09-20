@@ -24,6 +24,11 @@ export const SERVER_REPORT_SOURCES = [
   "server-report-storm",
   "server-duress-monitor",
   "server-stall-monitor",
+  // Main's daily upstream check: the repo this checkout was cloned from has
+  // commits local `main` does not. Its own source because nothing failed — it
+  // is a scheduled observation of another repository, not an error anyone
+  // caught.
+  "server-upstream-monitor",
   "server-cost-monitor",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error

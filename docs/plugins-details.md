@@ -16727,6 +16727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `writeTestStatus`
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
+        - **`upstream`** — `./singularity upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
@@ -18680,6 +18681,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+        - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, and the upstream resolution built from the same facts.
+          - Core:
+            - Uses:
+              - `infra/spawn.spawnCaptured`
+              - `infra/spawn.spawnExpectOk`
+            - Exports (types):
+              - `LocalReason`
+              - `PublishTarget`
+              - `RemoteCapture`
+              - `RemoteFailure`
+              - `UpstreamRemote`
+            - Exports (values):
+              - `CANONICAL_REPO_URL`
+              - `classifyRemoteFailure`
+              - `describePublishTarget`
+              - `gitConfigGet`
+              - `gitConfigSet`
+              - `gitConfigUnset`
+              - `PUBLISH_REMOTE`
+              - `recordPushRejection`
+              - `remoteUrl`
+              - `resolvePublishTarget`
+              - `resolveUpstreamRemote`
+              - `sameRepoUrl`
+          - Cross-plugin:
+            - Imported by: `upstream`
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -19062,6 +19089,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/auto-start`
           - `tasks/task-title`
           - `toolchain`
+          - `upstream`
       - Plugins:
         - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
           - Server:
@@ -19822,8 +19850,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/checks`
           - `framework/tooling/checks/type-check`
           - `framework/tooling/format`
+          - `infra/git/remotes`
           - `infra/paths`
           - `reports/outbox`
+          - `upstream`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by:
@@ -29209,6 +29239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `stats/cost`
           - `toolchain`
+          - `upstream`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -31826,6 +31857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/viewport-escape`
       - `stats/cost`
       - `tasks/reports-investigation`
+      - `upstream`
   - Plugins:
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
@@ -35270,5 +35302,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/breadcrumb-separator`
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
+
+- **`upstream`** — Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports. It files no task and merges nothing; the user presses Investigate, and the task minted then carries the `./singularity upstream merge` instructions.
+  - Server:
+    - Contributes: `report-kind` "upstream-updates-available"
+    - Uses:
+      - `infra/jobs.defineJob`
+      - `primitives/log-channels.Log`
+      - `reports.recordReport`
+      - `reports.ReportKind`
+    - Exports (types): `UpstreamUpdatesPayload`
+    - Exports (values):
+      - `UPSTREAM_UPDATES_KIND`
+      - `upstreamUpdatesKind`
+    - Register: `defineJob('upstream.detect-updates')`
+  - Core:
+    - Uses:
+      - `infra/git/remotes.classifyRemoteFailure`
+      - `infra/git/remotes.RemoteFailure`
+      - `infra/git/remotes.resolveUpstreamRemote`
+      - `infra/spawn.spawnCaptured`
+      - `infra/spawn.spawnExpectOk`
+      - `infra/spawn.SpawnFailedError`
+    - Exports (types):
+      - `UpstreamCommit`
+      - `UpstreamStatus`
+    - Exports (values):
+      - `fetchUpstreamStatus`
+      - `UPSTREAM_BRANCH`
+      - `UPSTREAM_SUBJECT_LIMIT`
 
 <!-- AUTOGENERATED:END -->

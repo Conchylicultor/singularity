@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-upstream",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The repo this checkout was cloned from, watched: one definition of how far behind local `main` is, and a daily main-only job that records new upstream commits as a single rolling report (bell + Debug → Reports). It files no task — the merge instructions ride on the on-demand investigation task."
+}

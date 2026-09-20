@@ -31,6 +31,11 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import {
+  describePublishTarget,
+  recordPushRejection,
+  resolvePublishTarget,
+} from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 
 // One bound for both capture helpers below, because every command they run is
@@ -89,6 +94,84 @@ async function exec(
   if (exitCode !== 0) {
     process.exit(1);
   }
+}
+
+// `exec` for the two commands that WRITE to the remote.
+//
+// A plain `exec` would exit(1) here, which is right — the push failed — but it
+// would throw away the one thing the failure teaches: a checkout that used to
+// be allowed to publish may not be any more (a revoked collaborator, a repo
+// that changed hands, a fork the user re-pointed origin at). So the refusal is
+// treated as evidence: re-probe the remote and RECORD what it says, which is
+// newer than anything the cache holds. The next push then runs in local mode
+// instead of failing the same way forever.
+//
+// Still passthrough, so the user reads git's own error before any of this.
+async function execPublish(
+  cmd: string[],
+  cwd: string | undefined,
+  root: string,
+): Promise<void> {
+  const { exitCode } = await spawnPassthrough(cmd, { cwd });
+  if (exitCode === 0) return;
+  console.error("");
+  console.error(
+    "The remote rejected that push — asking it whether this checkout may publish at all...",
+  );
+  const reprobed = await recordPushRejection(root);
+  if (reprobed.kind === "local") {
+    console.error(describePublishTarget(reprobed));
+    console.error("Re-run ./singularity push to land the work on local main.");
+  } else {
+    // The probe and reality disagree: the remote accepts a write probe but
+    // refused this push. That is a fact about THIS push — a protected branch,
+    // a server hook, a branch someone else moved — not about access, so
+    // nothing is recorded and git's own error above is the whole story.
+    console.error(
+      `${reprobed.remote} still accepts a write probe, so this was about the push itself ` +
+        `(a protected branch, a server-side hook, or a branch that moved), not about access.`,
+    );
+  }
+  process.exit(1);
+}
+
+// The three facts that decide HOW this branch is made to land on main.
+interface LandingShape {
+  /** Commits in `main..HEAD` — what this push actually contributes. */
+  commits: number;
+  /** How many of them are merge commits. */
+  merges: number;
+  /** Is `main` already an ancestor of HEAD? */
+  containsMain: boolean;
+}
+
+// `git merge-base --is-ancestor` answers in its exit code: 0 yes, 1 no.
+// Anything else is git FAILING rather than answering, and reading that as "no"
+// would silently flatten a merge — so it exits like every other failed git call
+// in this file.
+async function branchContainsMain(): Promise<boolean> {
+  const cmd = ["git", "merge-base", "--is-ancestor", "main", "HEAD"];
+  const result = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
+  if (result.exitCode === 0) return true;
+  if (result.exitCode === 1) return false;
+  console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
+  if (result.stderr.trim()) console.error(result.stderr.trim());
+  process.exit(1);
+}
+
+async function readLandingShape(): Promise<LandingShape> {
+  const containsMain = await branchContainsMain();
+  const counted = Number(
+    await run(["git", "rev-list", "--count", "main..HEAD"]),
+  );
+  if (!Number.isInteger(counted)) {
+    console.error("Could not count the commits this push would land.");
+    process.exit(1);
+  }
+  const merges = (await run(["git", "rev-list", "--merges", "main..HEAD"]))
+    .split("\n")
+    .filter((line) => line.trim().length > 0).length;
+  return { commits: counted, merges, containsMain };
 }
 
 // Env for THIS push's own rebases. The `post-rewrite` hook normalizes generated
@@ -271,6 +354,24 @@ const pushAction: CliAction<
     process.exit(1);
   }
 
+  // May this checkout publish at all? Asked ONCE, here — before the push
+  // mutex, so a cold-cache probe's round trip is not paid while holding a
+  // host-wide lock, and before the commit below, which needs the answer (see
+  // its trailer case).
+  //
+  // Local `main` is the trunk either way: everything offline — the lock, the
+  // rebase onto main, the install, the normalize, the checks, the
+  // fast-forward — runs identically. What the answer gates is only the three
+  // steps that touch the network. A checkout that may not publish is not a
+  // broken one; it is the ordinary state of a clone.
+  const publish = await resolvePublishTarget(root0);
+  if (publish.kind === "local") {
+    // Printed for the local arm only: for a publisher nothing has changed, and
+    // a line saying so would be noise on every push. This is the one place the
+    // difference is announced, so it is never silent.
+    console.log(describePublishTarget(publish));
+  }
+
   // The op-marker slug (see markWorktreeOpStart below) is this checkout's own
   // namespace — `push` names the main composition, as `build` does. The
   // profiler carries it so the orphan reconciler can check push liveness.
@@ -357,7 +458,17 @@ const pushAction: CliAction<
       );
       for (const f of files) console.log(`  ${f}`);
       await exec(["git", "add", "-A"]);
-      await exec(["git", "commit", "-m", opts.message]);
+      // The Singularity-Push trailer is normally stamped by the rebase's
+      // `--exec`, once per replayed commit. `--from-main` in local mode is the
+      // one flow with no rebase at all — there is no `origin/main` to catch up
+      // with, local main IS the trunk — so the commit carries the trailer
+      // itself. Without it the commit lands on main unattributed and the
+      // pushes ledger has no row for a push that really happened.
+      const trailer =
+        opts.fromMain && publish.kind === "local"
+          ? ["--trailer", `Singularity-Push=${pushId}`]
+          : [];
+      await exec(["git", "commit", "-m", opts.message, ...trailer]);
     } else {
       console.log("No files to commit.");
     }
@@ -389,24 +500,37 @@ const pushAction: CliAction<
     try {
       await withPushLock(
         async () => {
-          profiler.stepStart("fetch");
-          console.log("Pulling main...");
-          await exec(["git", "fetch", "origin", "main"]);
-          profiler.stepEnd("fetch");
+          // Both steps are about the REMOTE's main. In local mode there is no
+          // such thing: nothing else writes to this trunk, so there is nothing
+          // to catch up with and nothing to replay onto. The commit above
+          // carried its own trailer for exactly this case.
+          //
+          // The publisher's arm keeps a hazard it has always had, now stated
+          // rather than implicit: this rebase moves the checkout's own `main`
+          // BEFORE the push below, so a push that then fails leaves local main
+          // advanced onto origin/main and already rebuilding. Accepted — the
+          // commits are still there and a re-run pushes them — and it is
+          // structurally absent from the local arm, which never pushes.
+          if (publish.kind === "publish") {
+            profiler.stepStart("fetch");
+            console.log("Pulling main...");
+            await exec(["git", "fetch", publish.remote, "main"]);
+            profiler.stepEnd("fetch");
 
-          profiler.stepStart("rebase");
-          await exec(
-            [
-              "git",
-              "rebase",
-              "origin/main",
-              "--exec",
-              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-            ],
-            undefined,
-            rebaseEnv(),
-          );
-          profiler.stepEnd("rebase");
+            profiler.stepStart("rebase");
+            await exec(
+              [
+                "git",
+                "rebase",
+                `${publish.remote}/main`,
+                "--exec",
+                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+              ],
+              undefined,
+              rebaseEnv(),
+            );
+            profiler.stepEnd("rebase");
+          }
 
           const fromMainRoot = await getWorktreeRoot();
 
@@ -441,10 +565,12 @@ const pushAction: CliAction<
             process.exit(1);
           }
 
-          profiler.stepStart("push-main");
-          console.log("Pushing main...");
-          await exec(["git", "push"]);
-          profiler.stepEnd("push-main");
+          if (publish.kind === "publish") {
+            profiler.stepStart("push-main");
+            console.log("Pushing main...");
+            await execPublish(["git", "push"], undefined, fromMainRoot);
+            profiler.stepEnd("push-main");
+          }
         },
         onLockRequested,
         onLockAcquired,
@@ -456,7 +582,11 @@ const pushAction: CliAction<
     }
     profiler.complete("success");
     profiler.write();
-    console.log("Done. Pushed directly from main.");
+    console.log(
+      publish.kind === "publish"
+        ? "Done. Pushed directly from main."
+        : "Done. Committed directly on local main. Nothing was pushed.",
+    );
     return;
   }
 
@@ -471,57 +601,138 @@ const pushAction: CliAction<
         // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
         // is shared across all worktrees; a prior fetch in another worktree can leave
         // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
-        profiler.stepStart("fetch");
-        console.log("Pulling main...");
-        await exec(["git", "fetch", "origin", "main"], mainWorktree);
-        profiler.stepEnd("fetch");
+        //
+        // Both steps are skipped when this checkout may not publish, and that
+        // is the most important half of the gate. Left in, the fetch would pull
+        // another repository's commits into the user's own `main` on every
+        // push — and the first time their main diverged, the fast-forward would
+        // fail and push would be broken for good. Local main is the trunk here,
+        // and nothing but this push writes to it.
+        if (publish.kind === "publish") {
+          profiler.stepStart("fetch");
+          console.log("Pulling main...");
+          await exec(["git", "fetch", publish.remote, "main"], mainWorktree);
+          profiler.stepEnd("fetch");
 
-        profiler.stepStart("ff-main");
-        await exec(["git", "merge", "--ff-only", "origin/main"], mainWorktree);
-        profiler.stepEnd("ff-main");
+          profiler.stepStart("ff-main");
+          await exec(
+            ["git", "merge", "--ff-only", `${publish.remote}/main`],
+            mainWorktree,
+          );
+          profiler.stepEnd("ff-main");
+        }
 
-        // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
-        //    runs after each replayed commit, amending it to carry a shared
-        //    Singularity-Push trailer so the server can group all commits in
-        //    this push as a single event.
-        profiler.stepStart("rebase");
-        const { exitCode: rebaseExit } = await runAllowFail(
-          [
-            "git",
-            "rebase",
-            "main",
-            "--exec",
-            `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-          ],
-          undefined,
-          rebaseEnv(),
-        );
-        profiler.stepEnd("rebase");
-        if (rebaseExit !== 0) {
-          // Best-effort cleanup on the failure path; do not let an abort
-          // failure mask the actionable rebase-conflict message printed below.
-          await runAllowFail(["git", "rebase", "--abort"]);
+        // 3. Make the branch land on main as a fast-forward, and stamp what
+        //    this push contributes with a shared Singularity-Push trailer so
+        //    the server can group it as a single event. Which of three arms
+        //    applies is a question about the branch's shape, not a preference.
+        const shape = await readLandingShape();
+
+        // Arm 1 — a branch that already CONTAINS main lands with no rebase at all.
+        //     The rebase exists only to make step 6's ff-merge possible, and
+        //     that is already true here — so rebasing would buy nothing and
+        //     cost something real: it REWRITES every commit it replays, and on
+        //     an update branch those include commits that belong to the
+        //     upstream repository. Measured: after such a rebase, upstream's
+        //     own sha was no longer an ancestor of main, so the next
+        //     `./singularity upstream merge` computed its merge base BELOW the
+        //     commits already merged, re-presented them, and conflicted on a
+        //     file nobody had touched twice. Landing by fast-forward keeps
+        //     upstream's commits under the identities upstream gave them, and
+        //     the next update merges only what is genuinely new.
+        //
+        //     The cost, stated rather than hidden: only the tip carries the
+        //     trailer, so the ledger groups the tip alone. That is the right
+        //     trade against rewriting another repository's commits.
+        //
+        //     The stamp is skipped entirely when there is nothing to land —
+        //     amending a tip that IS main's tip would fork it away from main
+        //     and break the very fast-forward this arm relies on.
+        if (shape.containsMain) {
+          if (shape.commits > 0) {
+            await exec(
+              [
+                "git",
+                "-c",
+                "trailer.ifexists=replace",
+                "commit",
+                "--amend",
+                "--no-edit",
+                "--trailer",
+                `Singularity-Push=${pushId}`,
+              ],
+              undefined,
+              // Same suppression as push's rebases: `--amend` fires
+              // `post-rewrite` too, and push owns the install→normalize
+              // ordering itself.
+              rebaseEnv(),
+            );
+          }
+        } else if (shape.merges > 0) {
+          // Arm 2 — merge commits on a branch main has moved past. The
+          //     rebase below would flatten them, which is exactly what arm 1 exists
+          //     to prevent — so refuse loudly instead of falling through to
+          //     the one operation that destroys the topology.
           console.error(
             [
-              `Rebase of ${branch} onto main failed (aborted).`,
+              `${branch} contains ${shape.merges} merge commit(s), and main has moved past it.`,
               ``,
-              `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
+              `Rebasing would flatten those merges — replaying everything they merged in as`,
+              `your own commits, under new shas. For an upstream update that silently undoes`,
+              `the merge: the next 'upstream merge' would re-present changes already merged.`,
               ``,
-              `To resolve:`,
-              `  1. git fetch origin main`,
-              `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
-              `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
-              `     (or 'git rebase --abort' to bail out)`,
-              `  4. Re-run ./singularity push`,
-              ``,
-              `If main's shape has diverged so much your commit no longer applies, re-apply your`,
-              `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
-              `your branch onto main — it stages a deletion of every commit that landed in between.`,
+              `To resolve, in this worktree:`,
+              `  1. git merge main        (the one sanctioned merge — do NOT rebase here)`,
+              `  2. Resolve conflicts, then 'git add <files>' and 'git commit'`,
+              `  3. Re-run ./singularity push`,
             ].join("\n"),
           );
           profiler.complete("failed_rebase");
           profiler.write();
           process.exit(1);
+        } else {
+          // Arm 3 — the ordinary branch: rebase onto main so the merge is always a
+          //     fast-forward. `--exec` runs after each replayed commit,
+          //     amending it to carry the trailer.
+          profiler.stepStart("rebase");
+          const { exitCode: rebaseExit } = await runAllowFail(
+            [
+              "git",
+              "rebase",
+              "main",
+              "--exec",
+              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+            ],
+            undefined,
+            rebaseEnv(),
+          );
+          profiler.stepEnd("rebase");
+          if (rebaseExit !== 0) {
+            // Best-effort cleanup on the failure path; do not let an abort
+            // failure mask the actionable rebase-conflict message printed below.
+            await runAllowFail(["git", "rebase", "--abort"]);
+            console.error(
+              [
+                `Rebase of ${branch} onto main failed (aborted).`,
+                ``,
+                `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
+                ``,
+                `To resolve:`,
+                `  1. git fetch origin main`,
+                `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
+                `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
+                `     (or 'git rebase --abort' to bail out)`,
+                `  4. Re-run ./singularity push`,
+                ``,
+                `If main's shape has diverged so much your commit no longer applies, re-apply your`,
+                `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
+                `your branch onto main — it stages a deletion of every commit that landed in between.`,
+              ].join("\n"),
+            );
+            profiler.complete("failed_rebase");
+            profiler.write();
+            process.exit(1);
+          }
         }
 
         // 3b. Ensure node_modules matches the rebased lockfile — main may
@@ -580,18 +791,19 @@ const pushAction: CliAction<
           process.exit(1);
         }
 
-        // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
-        profiler.stepStart("push-branch");
-        console.log(`Pushing branch ${branch}...`);
-        await exec([
-          "git",
-          "push",
-          "--force-with-lease",
-          "-u",
-          "origin",
-          branch,
-        ]);
-        profiler.stepEnd("push-branch");
+        // 5. Push the branch (force since rebase rewrites history — safe for
+        //    single-owner worktree branches). Skipped in local mode: the branch
+        //    has nowhere to go, and step 6 below is what the work is for.
+        if (publish.kind === "publish") {
+          profiler.stepStart("push-branch");
+          console.log(`Pushing branch ${branch}...`);
+          await execPublish(
+            ["git", "push", "--force-with-lease", "-u", publish.remote, branch],
+            undefined,
+            root,
+          );
+          profiler.stepEnd("push-branch");
+        }
 
         // 6. Fast-forward merge into main (guaranteed to succeed — we hold the
         //    lock, so no other push can have advanced main since our rebase).
@@ -600,11 +812,16 @@ const pushAction: CliAction<
         await exec(["git", "merge", "--ff-only", branch], mainWorktree);
         profiler.stepEnd("ff-merge");
 
-        // 7. Push main
-        profiler.stepStart("push-main");
-        console.log("Pushing main...");
-        await exec(["git", "push"], mainWorktree);
-        profiler.stepEnd("push-main");
+        // 7. Push main. The last step and the only one with nothing after it,
+        //    so in local mode the push simply ends at 6 — main has advanced,
+        //    and main's own auto-build takes it from there exactly as it does
+        //    for a publisher.
+        if (publish.kind === "publish") {
+          profiler.stepStart("push-main");
+          console.log("Pushing main...");
+          await execPublish(["git", "push"], mainWorktree, root);
+          profiler.stepEnd("push-main");
+        }
       },
       onLockRequested,
       onLockAcquired,
@@ -617,7 +834,11 @@ const pushAction: CliAction<
 
   profiler.complete("success");
   profiler.write();
-  console.log(`Done. ${branch} merged into main and pushed.`);
+  console.log(
+    publish.kind === "publish"
+      ? `Done. ${branch} merged into main and pushed.`
+      : `Done. ${branch} merged into local main. Nothing was pushed.`,
+  );
 };
 
 // Named `pushAction` rather than `run`, which this file already uses for its

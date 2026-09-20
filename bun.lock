@@ -2690,6 +2690,10 @@
       "name": "@singularity/plugin-framework-cli-test",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/upstream": {
+      "name": "@singularity/plugin-framework-cli-upstream",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/plugin-id": {
       "name": "@singularity/plugin-framework-plugin-id",
       "version": "0.0.1",
@@ -3226,6 +3230,10 @@
     },
     "plugins/infra/plugins/git/plugins/git-watcher": {
       "name": "@singularity/plugin-infra-git-git-watcher",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/git/plugins/remotes": {
+      "name": "@singularity/plugin-infra-git-remotes",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/health": {
@@ -5280,6 +5288,10 @@
     },
     "plugins/ui/plugins/variant-region": {
       "name": "@singularity/plugin-ui-variant-region",
+      "version": "0.0.1",
+    },
+    "plugins/upstream": {
+      "name": "@singularity/plugin-upstream",
       "version": "0.0.1",
     },
   },
@@ -7393,6 +7405,8 @@
 
     "@singularity/plugin-framework-cli-test": ["@singularity/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
 
+    "@singularity/plugin-framework-cli-upstream": ["@singularity/plugin-framework-cli-upstream@workspace:plugins/framework/plugins/cli/plugins/upstream"],
+
     "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@singularity/plugin-framework-plugin-loader": ["@singularity/plugin-framework-plugin-loader@workspace:plugins/framework/plugins/plugin-loader"],
@@ -7644,6 +7658,8 @@
     "@singularity/plugin-infra-git-git-read-cache": ["@singularity/plugin-infra-git-git-read-cache@workspace:plugins/infra/plugins/git/plugins/git-read-cache"],
 
     "@singularity/plugin-infra-git-git-watcher": ["@singularity/plugin-infra-git-git-watcher@workspace:plugins/infra/plugins/git/plugins/git-watcher"],
+
+    "@singularity/plugin-infra-git-remotes": ["@singularity/plugin-infra-git-remotes@workspace:plugins/infra/plugins/git/plugins/remotes"],
 
     "@singularity/plugin-infra-health": ["@singularity/plugin-infra-health@workspace:plugins/infra/plugins/health"],
 
@@ -8592,6 +8608,8 @@
     "@singularity/plugin-ui-tweakcn-community-browser": ["@singularity/plugin-ui-tweakcn-community-browser@workspace:plugins/ui/plugins/tweakcn/plugins/community-browser"],
 
     "@singularity/plugin-ui-variant-region": ["@singularity/plugin-ui-variant-region@workspace:plugins/ui/plugins/variant-region"],
+
+    "@singularity/plugin-upstream": ["@singularity/plugin-upstream@workspace:plugins/upstream"],
 
     "@singularity/web": ["@singularity/web@workspace:plugins/framework/plugins/web-core"],
 

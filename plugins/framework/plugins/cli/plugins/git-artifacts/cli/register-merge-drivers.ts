@@ -1,14 +1,8 @@
 import {
-  spawnCaptured,
-  spawnExpectOk,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for the local `git` metadata reads in this file — orders of
-// magnitude above what any of them take, so only a wedged child trips it. A CLI
-// process owns no deadline of its own, but that is a reason to bound these, not
-// to leave them open: nothing else would ever break such a wedge (the
-// fleet-level op-wedge watchdog was retired 2026-07-28).
-const GIT_TIMEOUT_MS = 60_000;
+  gitConfigGet,
+  gitConfigSet,
+  gitConfigUnset,
+} from "@plugins/infra/plugins/git/plugins/remotes/core";
 
 interface Driver {
   name: string;
@@ -32,28 +26,6 @@ const DRIVERS: Driver[] = [
 
 const STALE_DRIVERS = ["regen-docs"];
 
-async function gitConfigGet(key: string, cwd: string): Promise<string | null> {
-  const result = await spawnCaptured(
-    ["git", "config", "--local", "--get", key],
-    {
-      cwd,
-      timeoutMs: GIT_TIMEOUT_MS,
-    },
-  );
-  return result.exitCode === 0 ? result.stdout.trim() : null;
-}
-
-async function gitConfigSet(
-  key: string,
-  value: string,
-  cwd: string,
-): Promise<void> {
-  await spawnExpectOk(["git", "config", "--local", key, value], {
-    cwd,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-}
-
 /**
  * Idempotently install custom merge drivers used by .gitattributes to
  * auto-resolve conflicts in deterministically-generated files (codegen
@@ -76,10 +48,7 @@ export async function registerMergeDrivers(root: string): Promise<void> {
   for (const name of STALE_DRIVERS) {
     const key = `merge.${name}.driver`;
     if (await gitConfigGet(key, root)) {
-      await spawnExpectOk(["git", "config", "--local", "--unset", key], {
-        cwd: root,
-        timeoutMs: GIT_TIMEOUT_MS,
-      });
+      await gitConfigUnset(key, root);
       console.log(`Removed stale merge driver: ${name}`);
     }
   }

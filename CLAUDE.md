@@ -31,7 +31,7 @@ RULES:
 
 - NEVER run `./singularity push` unless instructed to. The user needs to review your code first. (A Toolchain-category upgrade task counts as that instruction: its own text says when it may push. See `plugins/toolchain`.)
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
-- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`, and never `git reset` a branch onto `main` — that deletes the commits in between.
+- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`, and never `git reset` a branch onto `main` — that deletes the commits in between. One exception: `./singularity upstream merge` (see Upstream), where a rebase would replay the whole local history on every update.
 - NEVER run `drizzle-kit generate` or the migration runner manually — always go through `./singularity build`.
 - **Review diffs are against the worktree merge-base, not `main`.** Use `git diff $(git merge-base HEAD main)` — not `git diff main`, which includes unrelated commits merged into main after the branch point.
 
@@ -164,6 +164,12 @@ This will:
 > **CRITICAL — NEVER push or commit on your own initiative.** Wait for the user to ask.
 > NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
 > "push", "publish", "ship" all mean `./singularity push`.
+
+Steps 3, 4 and 6 are the only network git in the repo, and they run only when this checkout may write to its remote — probed once, cached in `.git/config` (`plugins/infra/plugins/git/plugins/remotes`). A clone with no write access lands the same work on local `main`, which is what main's auto-build watches, and pushes nothing.
+
+### Upstream
+
+For a checkout cloned from someone else's repo, that repo is **upstream**: read, never written. A daily main-only job records one report when it has new commits (no task is filed — the report's Investigate button mints one on demand). An update is an ordinary task: `./singularity upstream merge` in a worktree, resolve, build, review, then the user lands it with `push`. See `plugins/upstream`. In this checkout — the one that owns the canonical repo — there is no upstream and the job does nothing.
 
 ### `--from-main` (dangerous)
 

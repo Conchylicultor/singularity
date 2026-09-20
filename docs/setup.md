@@ -61,3 +61,9 @@ git config core.hooksPath .githooks
 The app is then at <http://singularity.localhost:9000>. `start` is a one-time,
 system-level step — it leaves a daemon running, and it does not survive a
 reboot, so run it again after one.
+
+## If you cloned someone else's repo
+
+Nothing extra to configure. The first `./singularity push` asks the remote whether this checkout may write to it (a dry-run push, which writes nothing) and records the answer in `.git/config` beside `core.hooksPath`. With no write access, push commits, rebases, runs the checks and fast-forwards your **local** `main` — which is what main's auto-build watches — and pushes nothing. It also stops fetching the other repo's `main` into yours, which would otherwise pull in changes you never reviewed and eventually break push outright.
+
+The repo you cloned from is then your **upstream**: a daily check records a report when it has new commits, and you update on your own terms with `./singularity upstream status` and `./singularity upstream merge` in a worktree. If you fork instead, point `origin` at your fork; push publishes there, and `upstream` is added for you.
