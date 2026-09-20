@@ -9,9 +9,8 @@ import { formatDurationMs } from "./format-duration";
 /**
  * Route deadline announcements from the parent's seam into the reports engine.
  *
- * Registered in `onReady` and cleared in `onShutdown`, exactly like
- * `removal-audit`'s `registerRemovalChannel`. Until it is registered the seam is
- * a no-op that returns `undefined`, and the parent treats that as its explicit
+ * Registered in `onReady` and cleared in `onShutdown`. Until it is registered
+ * the seam is a no-op that returns `undefined`, and the parent treats that as its explicit
  * fallback branch (`reportServerError`) — so a deadline firing before this
  * plugin is ready is still loud, it just lands as a plain server error instead
  * of a typed report.

@@ -202,7 +202,6 @@ count accumulates across drops.
     - `infra/events-test`
     - `infra/host/duress`
     - `infra/jobs`
-    - `infra/worktree/removal-audit`
     - `page/annotations/agent-access`
     - `primitives/live-state`
     - `release`

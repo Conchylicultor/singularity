@@ -56,8 +56,8 @@ Two details that look fussy and are not:
   converge to on retry and nothing to push.
 - **No namespace probe, no `git worktree lock`:** it serves no namespace, and it
   lives outside `.claude/worktrees/` — the directory Claude Code sweeps, and the
-  only one `removal-audit` and `worktree-cleanup` watch. So neither audit sees
-  it, which is intended.
+  only one `worktree-cleanup` reaps. So the reaper never sees it, which is
+  intended.
 - **Not a clone:** `worktree add` shares the object store, so creating one costs
   a checkout of the files, not a fetch.
 

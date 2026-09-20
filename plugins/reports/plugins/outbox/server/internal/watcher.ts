@@ -14,8 +14,8 @@ import { checkStaleness } from "./staleness";
 let watcher: FileWatcher | null = null;
 // Passes are serialized: two overlapping passes would both read an entry
 // before either deleted it, and record it twice. A flag pair rather than a
-// promise chain, for removal-audit's reason — a rejected chain would disarm
-// every future pass.
+// promise chain: a rejected chain would short-circuit and silently disarm every
+// future pass for the rest of the process's life.
 let draining = false;
 let rerun = false;
 

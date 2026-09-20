@@ -12,7 +12,6 @@ import type { HoldClass } from "../../core/hold";
  * It is the wrong layering. `jobs` is load-bearing infrastructure and must not
  * name the observability stack; `reports` owns interpretation — kinds,
  * fingerprints, duress shedding, the bell, task filing. This is the same rule
- * `removal-seam.ts` states for `infra/worktree`, and the same one
  * `queue-health/CLAUDE.md` gives as the reason for its own placement. It also
  * has a concrete cost: naming `reports` here would force every composition
  * containing `jobs` to also contain `reports`, `shell/notifications` and

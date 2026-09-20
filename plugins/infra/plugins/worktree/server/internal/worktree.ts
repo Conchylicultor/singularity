@@ -7,13 +7,6 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
 import { withWorktreeMutateSlot } from "./mutate-gate";
-import {
-  beginInAppRemoval,
-  finishInAppRemoval,
-  setRemovalBranch,
-  withCheckoutClaim,
-  type InAppRemovalRecord,
-} from "./removal-seam";
 
 let cachedRepoRoot: string | null = null;
 
@@ -90,7 +83,7 @@ export class WorktreeGitTimeoutError extends Error {
 // would read as "git tracks nothing" — which in removeWorktree selects the
 // recursive-delete branch. A failure here must never be mistaken for evidence.
 //
-// The tightest bound in the file, because `removeWorktreeUnlogged` calls it from
+// The tightest bound in the file, because `removeWorktree` calls it from
 // INSIDE the mutate gate: a wedge here holds one of three host-wide slots while
 // doing nothing but reading metadata.
 async function worktreeListPaths(
@@ -168,10 +161,9 @@ const WORKTREE_LOCK_REASON = "singularity agent worktree";
  *
  * `<repo>/.claude/worktrees/` is Claude Code's OWN worktree directory, not ours:
  * it sweeps that path periodically and removes any worktree holding no work —
- * which is every one of ours the moment its branch merges. That is the observed
- * cause of the `worktree-removed-externally` reports (16 checkouts, every one
- * fully merged, all deleted by a git-aware remover on a cadence no job of ours
- * runs on).
+ * which is every one of ours the moment its branch merges. Observed directly in
+ * 2026-08: 16 checkouts, every one fully merged, all deleted by a git-aware
+ * remover on a cadence no job of ours runs on.
  *
  * A lock is the documented opt-out: the sweep skips a locked worktree and never
  * releases a lock it did not set. So every checkout we create stays locked for
@@ -435,19 +427,13 @@ export async function setupWorktree(
     // The branch is created before the checkout is written, so a killed add
     // leaves "branch, no checkout" — check the existing branch out rather than
     // asking git to create it again. Also the right answer when the branch
-    // outlived a reaped checkout: its commits are this attempt's work, and this
-    // is the same command the external-removal report prints as the recovery.
-    // Read inside the gate, like the registration check in `removeWorktreeUnlogged`.
+    // outlived a reaped checkout: its commits are this attempt's work, and
+    // `git worktree add <path> claude-web/<name>` is how one is recovered.
+    // Read inside the gate, like the registration check in `removeWorktree`.
     const addArgv = (await attemptBranchExists(repoRoot, id, signal))
       ? [GIT, "-C", repoRoot, "worktree", "add", wtPath, branch]
       : [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"];
-    // Claimed on the removal seam for the whole add, cleanup included: a failed
-    // add deletes its own partial checkout (git from its signal handler, or the
-    // `rm` below after a timeout), and without the claim the removal audit would
-    // report our own rollback as an outside deletion.
-    await withCheckoutClaim(wtPath, () =>
-      addCheckout(id, repoRoot, wtPath, addArgv, signal),
-    );
+    await addCheckout(id, repoRoot, wtPath, addArgv, signal);
     // Locked inside the same gate hold as the checkout that created it: the
     // window between "the directory exists" and "the directory is protected" is
     // exactly the window an outside sweep can take it, so it is closed here
@@ -481,31 +467,6 @@ export async function removeWorktree(
   signal?: AbortSignal,
 ): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
-  // Attribution, recorded BEFORE anything destructive runs and before we queue
-  // on the mutate gate. Two reasons for the ordering: a removal that dies
-  // mid-flight is still attributable, and the audit watcher can observe the
-  // directory vanishing while this call is still in progress — a record written
-  // afterwards would lose that race and read as an external deletion.
-  //
-  // Deliberately unconditional: the whole point is that EVERY in-app removal
-  // leaves a line, so a disappearance with no line is proof of an outside actor
-  // rather than something to reconstruct from timestamps later.
-  const removal = beginInAppRemoval(wtPath);
-  try {
-    await removeWorktreeUnlogged(wtPath, repoRoot, removal, signal);
-  } catch (err) {
-    finishInAppRemoval(removal, { ok: false, error: String(err) });
-    throw err;
-  }
-  finishInAppRemoval(removal, { ok: true });
-}
-
-async function removeWorktreeUnlogged(
-  wtPath: string,
-  repoRoot: string,
-  removal: InAppRemovalRecord,
-  signal?: AbortSignal,
-): Promise<void> {
   // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
   // as `add` — one shared budget bounds add+remove contention across all callers.
   await withWorktreeMutateSlot(async () => {
@@ -534,7 +495,6 @@ async function removeWorktreeUnlogged(
           `refusing to remove non-canonical worktree path ${wtPath} (not a direct child of ${gitWorktreesDir(repoRoot)})`,
         );
       }
-      setRemovalBranch(removal, "rm-and-prune");
       await rm(wtPath, { recursive: true, force: true });
       // Drop any stale administrative entry left behind in .git/worktrees.
       //
@@ -569,7 +529,6 @@ async function removeWorktreeUnlogged(
     // a lock, and `git worktree unlock` on one fails with "is not a working
     // tree" — a confusing warning for a state that cannot be locked.
     await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
-    setRemovalBranch(removal, "git-worktree-remove");
     // Demoted (`background: true` applies backgroundArgv/darwinbg): removal is
     // cleanup/reap work, never interactive.
     //

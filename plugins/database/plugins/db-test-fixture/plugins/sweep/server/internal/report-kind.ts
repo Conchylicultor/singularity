@@ -16,10 +16,8 @@ const NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
  *
  * WHY A REPORT AND NOT A LOG LINE. Dropping a database is a destructive act; a
  * destructive act nobody is told about is indistinguishable from data quietly
- * going missing. `removal-audit` states the same rule from the other direction —
- * *"a durable line in a JSONL nobody opens is exactly how 22 deleted checkouts
- * went unnoticed for a week"* — and that was for something the app did not even
- * do itself. This sweep DOES the deletion, so it owes a receipt.
+ * going missing, and a durable line in a JSONL nobody opens is how that goes
+ * unnoticed for a week. This sweep DOES the deletion, so it owes a receipt.
  *
  * The report is also the only surviving evidence: the database is gone, and its
  * name (which carried the suite and the pid) went with it.

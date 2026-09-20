@@ -6,9 +6,8 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * for as long as the checkout is in use.
  *
  * Not `.claude/worktrees/`: that directory is Claude Code's own and is swept by
- * it, and every audit there (removal-audit, worktree-cleanup) is about agent
- * checkouts. A release checkout is scratch build input with no branch and no
- * task.
+ * it, and the reaper there (worktree-cleanup) is about agent checkouts. A
+ * release checkout is scratch build input with no branch and no task.
  */
 export const releaseCheckoutsDir = defineDataDir({
   kind: "cache",

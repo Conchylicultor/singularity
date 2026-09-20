@@ -11,15 +11,6 @@ export {
 } from "./internal/worktree";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {
-  recentInAppRemovals,
-  worktreeRemovalSink,
-} from "./internal/removal-seam";
-export type {
-  InAppRemovalRecord,
-  RemovalBranch,
-  WorktreeRemovalEvent,
-} from "./internal/removal-seam";
-export {
   type WorktreeOp,
   type WorktreeOpPhase,
   type WorktreeOpInfo,

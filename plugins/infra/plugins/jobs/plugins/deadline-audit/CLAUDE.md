@@ -14,8 +14,7 @@ a human happening to look could find.
 `jobs` is load-bearing infrastructure and must not name the observability stack.
 `reports` owns interpretation — kinds, fingerprints, duress shedding, the bell,
 task filing — and `jobs` owns mechanism. That is the same rule
-`infra/worktree/server/internal/removal-seam.ts` states for `removeWorktree` and
-that `queue-health/CLAUDE.md` gives as the reason for its own placement.
+`queue-health/CLAUDE.md` gives as the reason for its own placement.
 
 It is also a cycle if written the other way. `reports` already imports `jobs` by
 two independent routes (`record-report.ts` → `shell/notifications/server` →

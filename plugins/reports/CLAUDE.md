@@ -144,7 +144,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `debug/worktree-cleanup`
     - `infra/boot-snapshot`
     - `infra/jobs/deadline-audit`
-    - `infra/worktree/removal-audit`
     - `reports/adaptive-bar`
     - `reports/caret-flight`
     - `reports/check-thread-stall`

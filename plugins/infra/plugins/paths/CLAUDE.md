@@ -352,7 +352,6 @@ run everywhere.
     - `infra/launcher`
     - `infra/worktree`
     - `infra/worktree/reclaim`
-    - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-health`
     - `plugin-meta/plugin-tree`
     - `primitives/commit-list`

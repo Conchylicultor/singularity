@@ -9,7 +9,6 @@ exactly the ones that kill it, restart it, or happen while it is down.
 | monitor | question | shape |
 |---|---|---|
 | [`fd/`](fd/CLAUDE.md) | which process is leaking file descriptors before a "too many files open" crash? | LaunchAgent, polls every 5s |
-| [`worktree-removal/`](worktree-removal/CLAUDE.md) | who deletes `.claude/worktrees/<name>` out from under a live conversation? | LaunchDaemon (root), long-lived event stream |
 
 ## Conventions
 
