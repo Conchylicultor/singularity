@@ -20207,13 +20207,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
-    - **`wall-clock`** — Wall clock → UTC instant for an IANA zone, without a timezone database: the offset is read back out of Intl at the candidate instant and iterated to a fixed point, so DST is handled by the platform's own zone data rather than by a shipped table.
+    - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Core:
         - Exports (types): `WallClock`
         - Exports (values):
           - `isRealWallClock`
+          - `startOfLocalDay`
           - `wallClockToInstant`
           - `zoneOffsetMs`
+          - `zoneWallClock`
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
       - Core:
         - Exports (types): `ZodParser`

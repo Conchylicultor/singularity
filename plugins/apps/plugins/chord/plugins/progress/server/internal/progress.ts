@@ -9,6 +9,7 @@ import {
   ChordTokenSchema,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { startOfLocalDay } from "@plugins/packages/plugins/wall-clock/core";
 import {
   MASTERY_WINDOW,
   chordMastery,
@@ -17,7 +18,6 @@ import {
   type ChordProgress,
   type ChordProgressParams,
 } from "../../core";
-import { startOfLocalDay } from "./local-day";
 
 const RecentAnswerRowSchema = z.object({
   token: ChordTokenSchema,

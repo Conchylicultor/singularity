@@ -58,11 +58,11 @@ order sorts it itself.
 
 - **Per chord**: one lateral index scan of `(token, answered_at desc,
   position desc)`, `LIMIT 20` per token.
-- **Today**: since local midnight in `timeZone` — today's date there from
-  `Intl.DateTimeFormat`, turned into an instant by `wallClockToInstant`, so the
-  host's zone never matters. On a day whose midnight is skipped by a clock
-  change, the day starts at the first wall time that exists. `songs` counts
-  checked rounds.
+- **Today**: since the local day began in `timeZone`, from
+  [`startOfLocalDay`](../../../../../packages/plugins/wall-clock/CLAUDE.md), so
+  the host's zone never matters — including on the two days a year the clocks
+  move, where the day may begin at 01:00 rather than midnight, or at the first
+  of two midnights. `songs` counts checked rounds.
 - **All time**: plain counts, which grow with the history. At one learner's
   scale that is small; revisit with a rollup if it ever is not.
 

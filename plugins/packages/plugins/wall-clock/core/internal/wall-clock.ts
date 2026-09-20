@@ -31,6 +31,13 @@ function fill(w: WallClock): FullWallClock {
   };
 }
 
+/** A wall clock as a message reads it, for the two errors below. */
+function spell(w: FullWallClock): string {
+  return `${w.year}-${w.month}-${w.day} ${w.hour}:${w.minute}:${w.second}`;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * The instant a UTC clock reads `w` — the one place the 1-based month of this
  * API is converted to the 0-based month `Date.UTC` takes.
@@ -68,9 +75,19 @@ export function isRealWallClock(w: WallClock): boolean {
   return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
 }
 
-/** The offset of `zone` at `instant`, in ms, positive east of Greenwich. */
-export function zoneOffsetMs(instant: Date, zone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
+/**
+ * One formatter per zone, kept because building it is the expensive part and a
+ * single conversion reads the zone three times. Formatters are immutable and
+ * the key set is the IANA zone names, so this is a memo, not state: the same
+ * arguments give the same answer with or without it.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function zoneFormatter(zone: string): Intl.DateTimeFormat {
+  const cached = formatters.get(zone);
+  if (cached !== undefined) return cached;
+  // An unresolvable zone throws here, and is never cached.
+  const made = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
     hour12: false,
     year: "numeric",
@@ -79,7 +96,17 @@ export function zoneOffsetMs(instant: Date, zone: string): number {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  }).formatToParts(instant);
+  });
+  formatters.set(zone, made);
+  return made;
+}
+
+/** What a clock in `zone` reads at `instant` — the inverse of `wallClockToInstant`. */
+export function zoneWallClock(
+  instant: Date,
+  zone: string,
+): Required<WallClock> {
+  const parts = zoneFormatter(zone).formatToParts(instant);
 
   const read = (type: Intl.DateTimeFormatPartTypes): number => {
     const part = parts.find((p) => p.type === type);
@@ -89,7 +116,7 @@ export function zoneOffsetMs(instant: Date, zone: string): number {
     return Number(part.value);
   };
 
-  const wallClock = utcMs({
+  return {
     year: read("year"),
     month: read("month"),
     day: read("day"),
@@ -97,39 +124,81 @@ export function zoneOffsetMs(instant: Date, zone: string): number {
     hour: read("hour") % 24,
     minute: read("minute"),
     second: read("second"),
-  });
-  return wallClock - instant.getTime();
+  };
+}
+
+/** The offset of `zone` at `instant`, in ms, positive east of Greenwich. */
+export function zoneOffsetMs(instant: Date, zone: string): number {
+  return utcMs(zoneWallClock(instant, zone)) - instant.getTime();
 }
 
 /**
- * The UTC instant at which the clock in `zone` reads `w`.
+ * The UTC instant at which the clock in `zone` reads `w`. Same choice as
+ * `Temporal`'s `compatible` for the two wall times that have no single answer.
  *
- * Iterated rather than solved: the offset depends on the instant, which is what
- * we are computing. One correction settles every ordinary date; the second
- * settles a wall time that lands near a DST transition.
+ * Enumerated rather than iterated. The offsets a day either side of `w` bracket
+ * every offset the zone can have at that wall time, so `w` has at most two
+ * candidate instants — one per offset. Each is then *verified*: an instant is
+ * an answer only if the zone really has, at that instant, the offset the
+ * candidate was built from.
  *
- * Neither transition leaves a clean answer, and both resolutions here are the
- * conventional ones. A wall time inside the spring-forward **gap** does not
- * exist at all — the loop lands past the gap, shifted forward by the amount the
- * clocks jumped. A wall time inside the autumn **overlap** happens twice — the
- * loop settles on the second of the two, the one after the clocks went back.
+ * - **Ordinary wall time.** One candidate survives. It is the answer.
+ * - **Autumn overlap.** 2026-10-25 02:30 Paris happens twice, at 00:30Z and
+ *   01:30Z. Both survive, and the answer is the **first** — so a day whose
+ *   midnight repeats begins at its first midnight rather than an hour into
+ *   itself.
+ * - **Spring-forward gap.** 2026-03-29 02:30 Paris never happens: the clocks
+ *   jump 02:00 → 03:00. Neither candidate survives, and the answer is `w`
+ *   carried forward by the hour the clocks skipped — reading 03:30. A wall
+ *   time at the very start of a gap therefore lands exactly on the jump, which
+ *   is what makes a skipped midnight still the start of its own day.
  *
- * Throws `RangeError` on a wall clock that does not exist in any zone.
+ * Throws `RangeError` on a wall clock that does not exist in any zone, and a
+ * plain `Error` on a zone whose data this does not model, rather than returning
+ * an unverified instant.
  */
 export function wallClockToInstant(w: WallClock, zone: string): Date {
-  if (!isRealWallClock(w)) {
-    const { year, month, day, hour, minute, second } = fill(w);
-    throw new RangeError(
-      `Not a real wall clock: ${year}-${month}-${day} ${hour}:${minute}:${second}`,
-    );
+  const full = fill(w);
+  if (!isRealWallClock(full)) {
+    throw new RangeError(`Not a real wall clock: ${spell(full)}`);
   }
 
-  const naive = utcMs(fill(w));
-  let instant = naive;
-  for (let pass = 0; pass < 2; pass++) {
-    const corrected = naive - zoneOffsetMs(new Date(instant), zone);
-    if (corrected === instant) break;
-    instant = corrected;
+  const naive = utcMs(full);
+  const before = zoneOffsetMs(new Date(naive - DAY_MS), zone);
+  const after = zoneOffsetMs(new Date(naive + DAY_MS), zone);
+
+  const real = (before === after ? [before] : [before, after])
+    .map((offset) => naive - offset)
+    .filter(
+      (instant) => zoneOffsetMs(new Date(instant), zone) === naive - instant,
+    );
+  if (real.length > 0) return new Date(Math.min(...real));
+
+  // Nothing reads `w`: it was skipped by a clock change. Held on the offset in
+  // force before the jump, `w` lands past the gap — carried forward by exactly
+  // the amount the clocks moved — which is why it must already be on the offset
+  // in force after the jump.
+  const carried = naive - before;
+  if (zoneOffsetMs(new Date(carried), zone) !== after) {
+    throw new Error(
+      `${zone} has no instant reading ${spell(full)}, and no single clock change over it`,
+    );
   }
-  return new Date(instant);
+  return new Date(carried);
+}
+
+/**
+ * The instant today began in `zone`: the date a clock there shows at `instant`,
+ * at the earliest wall time that date has. The host's own time zone never
+ * enters.
+ *
+ * Usually that wall time is midnight. In a zone whose clocks jump at midnight
+ * the day starts at the instant of the jump (Santiago springs forward 00:00 →
+ * 01:00, so the day starts at 01:00), and in one whose clocks go back onto
+ * midnight it starts at the first of the two (Havana) — both of which fall out
+ * of `wallClockToInstant` rather than being special-cased here.
+ */
+export function startOfLocalDay(instant: Date, zone: string): Date {
+  const { year, month, day } = zoneWallClock(instant, zone);
+  return wallClockToInstant({ year, month, day }, zone);
 }
