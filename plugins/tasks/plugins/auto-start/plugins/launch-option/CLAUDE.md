@@ -8,7 +8,7 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
 
 ## Plugin reference
 
-- Description: Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), or clears the marker when the draft says Off.
+- Description: Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
 - Web:
   - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
   - Uses:

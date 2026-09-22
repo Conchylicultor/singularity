@@ -99,6 +99,8 @@
     - `ConversationCreatedPayload`
     - `ConversationRuntime`
     - `ConversationTurnCompletedPayload`
+    - `IfAlreadyStarted`
+    - `LaunchTaskNowResult`
     - `RuntimeInfo`
     - `Turn`
     - `UserTurnSentPayload`
@@ -113,6 +115,7 @@
     - `flushInteractivePrompt`
     - `getConversationRow`
     - `interruptConversation`
+    - `launchTaskNow`
     - `maybeLaunchTaskJob`
     - `previewRewind`
     - `readConversationTurns`
@@ -144,7 +147,6 @@
 - Core:
   - Uses:
     - `config_v2.defineConfig`
-    - `conversations/effort-provider.EffortLevelSchema`
     - `conversations/model-provider.ConversationModelSchema`
     - `fields/bool/config.boolField`
     - `fields/int/config.intField`

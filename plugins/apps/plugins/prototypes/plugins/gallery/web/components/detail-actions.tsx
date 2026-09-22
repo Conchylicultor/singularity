@@ -2,10 +2,8 @@ import { MdAutoAwesome } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   prototypeHistoryResource,
@@ -120,16 +118,6 @@ export function ImproveButton() {
         picks.pending ||
         (shownVersion !== null && history.pending)
       }
-      onLaunched={(conv) => {
-        toast({
-          type: "prototype",
-          title: "Improving prototype",
-          description:
-            "Agent launched in the background — open it from here or the bell.",
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
       getRequest={(userText) => {
         const parts = [improveText(name)];
         // Which variant is on screen, so "make this darker" lands on the one
@@ -169,7 +157,10 @@ export function ImproveButton() {
         if (options && options.length > 0) parts.push(currentPicksLine(name));
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
-        return { prompt: parts.join("\n\n") };
+        return {
+          prompt: parts.join("\n\n"),
+          categoryId: PROTOTYPES_CATEGORY_ID,
+        };
       }}
     />
   );

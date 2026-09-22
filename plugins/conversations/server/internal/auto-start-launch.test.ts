@@ -43,7 +43,7 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import { launchArmedTask } from "./auto-start-jobs";
+import { launchArmedTask, type IfAlreadyStarted } from "./auto-start-jobs";
 import type { PreparedConversation } from "./lifecycle";
 
 let t: TestDb;
@@ -155,19 +155,21 @@ const launchJobCount = (attemptId: string) =>
 /**
  * One runner: open a transaction on the throwaway, run the launch as a status
  * batch, then (optionally) hold the transaction open on `beforeCommit` so a
- * concurrent runner can be observed blocking on it.
+ * concurrent runner can be observed blocking on it. Runs as the queue does
+ * (`skip`) unless a case says otherwise.
  */
 function launch(
   taskId: string,
   p: PreparedConversation,
   beforeCommit?: () => Promise<void>,
+  ifAlreadyStarted: IfAlreadyStarted = "skip",
 ): Promise<boolean> {
   return raceDb.transaction(async (tx) => {
     // The throwaway's drizzle handle is schema-less; at runtime it is the same
     // node-postgres transaction every mutation takes.
     const exec = tx as unknown as DbExecutor;
     const launched = await runStatusBatchOn(exec, (batchTx) =>
-      launchArmedTask(batchTx, taskId, p),
+      launchArmedTask(batchTx, taskId, p, { ifAlreadyStarted }),
     );
     if (beforeCommit) await beforeCommit();
     return launched;
@@ -283,6 +285,35 @@ describe("launchArmedTask", () => {
 
     expect(await attemptCount(taskId)).toBe(1);
     expect(await conversationCount(taskId)).toBe(1);
+    expect(await launchJobCount(p.target.attemptId)).toBe(0);
+  });
+
+  test("an explicit launch of a task that already has an attempt starts another run", async () => {
+    // A second "Fix this crash" on one report reuses the report's live task:
+    // the user is asking for another run, so an attempt is no reason to refuse.
+    const taskId = await seedArmedTask();
+    await seedAttemptWithConversation(taskId);
+    const p = prepared(taskId);
+
+    expect(await launch(taskId, p, undefined, "launch")).toBe(true);
+
+    expect(await markerCount(taskId)).toBe(0);
+    expect(await attemptCount(taskId)).toBe(2);
+    expect(await conversationCount(taskId)).toBe(2);
+    expect(await launchJobCount(p.target.attemptId)).toBe(2);
+  });
+
+  test("an explicit launch still claims the arm exactly once", async () => {
+    // `launch` relaxes only the attempt check — with the marker already
+    // claimed, there is nothing to launch.
+    const taskId = await seedArmedTask();
+    expect(await launch(taskId, prepared(taskId), undefined, "launch")).toBe(
+      true,
+    );
+
+    const p = prepared(taskId);
+    expect(await launch(taskId, p, undefined, "launch")).toBe(false);
+    expect(await attemptCount(taskId)).toBe(1);
     expect(await launchJobCount(p.target.attemptId)).toBe(0);
   });
 });

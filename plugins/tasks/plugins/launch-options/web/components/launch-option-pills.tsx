@@ -4,11 +4,8 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
-import {
-  TaskLaunch,
-  launchOptionValue,
-  type LaunchOptionValues,
-} from "@plugins/tasks/plugins/launch-options/web";
+import { TaskLaunch } from "../slots";
+import { launchOptionValue, type LaunchOptionValues } from "../internal/values";
 
 /** One registered launch option, as the slot hands it over. */
 type OptionItem = ReturnType<typeof TaskLaunch.Option.useContributions>[number];
@@ -35,7 +32,9 @@ export interface LaunchOptionPillsProps {
 }
 
 /**
- * The draft card's launch options, as pills on its composer bar.
+ * The registered launch options, as pills on a composer bar — the task-draft
+ * card's and the launch-agent popover's alike. Controlled: the host owns the
+ * values, as it does for every launch control.
  *
  * It names no option. Everything it draws comes from what each option
  * *declared*: its glyph, its cluster, which end of the bar it sits on, and the
@@ -43,7 +42,7 @@ export interface LaunchOptionPillsProps {
  * option lands on this bar with no edit here — and an option that declared no
  * pill at all still appears, as its own control, inline.
  *
- * Rendered twice per card, once per side, because the two halves of the bar are
+ * Rendered twice per bar, once per side, because the two halves of the bar are
  * separate holes in the field: the leading one sits beside the prose controls
  * and the trailing one is flush right.
  */

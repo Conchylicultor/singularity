@@ -1173,7 +1173,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/zero-test`
               - `infra/events-test`
               - `primitives/css/layout-harness`
-    - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
+      - Server:
+        - Contributes: `taskCategory` "deploy"
+        - Uses: `tasks/task-category.TaskCategory`
+      - Core:
+        - Exports (values): `DEPLOY_CATEGORY_ID`
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
           - Plugins:
@@ -1459,7 +1464,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/deploy-history.DeployRunItemActions`
                   - `primitives/icon-button.IconButton`
                   - `primitives/launch.LaunchAgentPopover`
-                  - `shell/notifications.toast`
         - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
@@ -2717,7 +2721,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `fileExplorerApp`
-    - **`home`** — Home — app launcher and entry point.
+    - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+      - Server:
+        - Contributes: `taskCategory` "apps"
+        - Uses: `tasks/task-category.TaskCategory`
+      - Core:
+        - Exports (values): `APPS_CATEGORY_ID`
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
           - Web:
@@ -2739,7 +2748,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.LaunchAgentForm`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/scope/surface-id.useSurfaceTabId`
-              - `shell/notifications.toast`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
@@ -3587,7 +3595,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
-    - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+    - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+      - Server:
+        - Contributes: `taskCategory` "prototypes"
+        - Uses: `tasks/task-category.TaskCategory`
+      - Core:
+        - Exports (values): `PROTOTYPES_CATEGORY_ID`
       - Plugins:
         - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
           - Server:
@@ -7664,6 +7677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Contributes:
       - `ConfigV2.Register` "config"
+      - `taskCategory` "build"
       - `resource.declare` "build.history"
       - `trigger` "build.run"
     - Uses:
@@ -7687,6 +7701,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/worktree.readCompositionMarker`
       - `primitives/log-channels.Log`
       - `shell/notifications.recordNotification`
+      - `tasks/task-category.TaskCategory`
     - Register:
       - `defineJob('build.run')`
       - `defineJob('build.run.debounced')`
@@ -7704,6 +7719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.defineRoute`
     - Exports (types): `BuildRun`
     - Exports (values):
+      - `BUILD_CATEGORY_ID`
       - `BUILD_LOG_CHANNEL`
       - `buildDetailRoute`
       - `buildHistoryResource`
@@ -7765,7 +7781,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/launch.LaunchAgentPopover`
           - `primitives/live-state.useResource`
-          - `shell/notifications.toast`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
@@ -8549,7 +8564,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldShape`
           - `FieldShapeProps`
           - `FieldShapeRenderer`
-    - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
+    - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
       - Web:
         - Slots:
           - `configNavPane.Actions` ← `primitives.pane`
@@ -8614,6 +8629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigNav`
           - `configNavPane`
       - Server:
+        - Contributes: `taskCategory` "config"
         - Uses:
           - `config_v2.acknowledgeConflictByPath`
           - `config_v2.deleteOverrideByPath`
@@ -8621,6 +8637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.mergeConflictByPath`
           - `config_v2.resetConfigByPath`
           - `config_v2.setConfigByPath`
+          - `tasks/task-category.TaskCategory`
         - Routes:
           - `POST /api/config-v2/reset-field`
           - `POST /api/config-v2/acknowledge-conflict`
@@ -8631,6 +8648,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports (values):
           - `acknowledgeConflict`
+          - `CONFIG_CATEGORY_ID`
           - `deleteOverride`
           - `getConfigRawFile`
           - `mergeConflict`
@@ -8649,7 +8667,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings.ConfigDetailSlots`
               - `primitives/css/ui-kit.Button`
               - `primitives/launch.LaunchAgentPopover`
-              - `shell/notifications.toast`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Web:
@@ -8745,6 +8762,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConversationCreatedPayload`
       - `ConversationRuntime`
       - `ConversationTurnCompletedPayload`
+      - `IfAlreadyStarted`
+      - `LaunchTaskNowResult`
       - `RuntimeInfo`
       - `Turn`
       - `UserTurnSentPayload`
@@ -8759,6 +8778,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `flushInteractivePrompt`
       - `getConversationRow`
       - `interruptConversation`
+      - `launchTaskNow`
       - `maybeLaunchTaskJob`
       - `previewRewind`
       - `readConversationTurns`
@@ -8790,7 +8810,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `config_v2.defineConfig`
-      - `conversations/effort-provider.EffortLevelSchema`
       - `conversations/model-provider.ConversationModelSchema`
       - `fields/bool/config.boolField`
       - `fields/int/config.intField`
@@ -10640,7 +10659,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
                   - `primitives/launch.LaunchAgentPopover`
                   - `primitives/slot-render.useDispatchOutcome`
-                  - `shell/notifications.toast`
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
@@ -11925,10 +11943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SELECTABLE_EFFORTS`
           - `StoredEffortSchema`
       - Cross-plugin:
-        - Imported by:
-          - `conversations`
-          - `primitives/launch`
-          - `tasks/task-effort`
+        - Imported by: `tasks/task-effort`
     - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
@@ -12064,7 +12079,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations`
           - `conversations/conversation-preprompt`
-          - `primitives/launch`
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
@@ -14348,7 +14362,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/scope/tab-id.getTabId`
           - `reports.investigate`
           - `reports.Reports`
-          - `shell/notifications.toast`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
@@ -17926,6 +17939,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `improve/element-picker`
       - `screenshot/draw-on-app`
+  - Core:
+    - Exports (values): `IMPROVEMENTS_CATEGORY_ID`
   - Plugins:
     - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
       - Web:
@@ -18366,6 +18381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/responsiveness`
           - `stats/tasks`
           - `tasks`
+          - `tasks/launch-options`
           - `tasks/task-attachments`
           - `tasks/task-category`
           - `tasks/task-dependencies`
@@ -28331,7 +28347,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/crash`
           - `reports/launch-fix`
           - `shell/health-report`
-          - `tasks/task-draft-form`
+          - `tasks/launch-options`
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
       - Web:
         - Uses:
@@ -28758,13 +28774,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `conversations/conversation-view.conversationPane`
-          - `conversations/effort-provider.effortItems`
           - `conversations/model-provider.useDefaultModel`
-          - `conversations/model-provider.useModelItems`
           - `conversations/model-provider.useSetDefaultModel`
           - `conversations/model-provider.useVisibleModels`
-          - `conversations/preprompts.PrepromptGlyph`
-          - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
@@ -28787,10 +28799,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/text-editor/composer.ComposerField`
-          - `primitives/text-editor/composer/picker-pill.PickerPill`
+          - `tasks/launch-options.LaunchOptionPills`
+          - `tasks/launch-options.LaunchOptionValues`
+          - `tasks/launch-options.pickKnownOptions`
+          - `tasks/launch-options.TaskLaunch`
+          - `tasks/launch-options.useLaunchOptionDefaults`
         - Exports (types):
           - `LaunchAgentFormProps`
           - `LaunchAgentPopoverProps`
+          - `LaunchAgentRequest`
           - `LaunchControlProps`
           - `LaunchRequest`
           - `LaunchToggle`
@@ -29752,7 +29769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `primitives/css/ui-kit`
               - `primitives/error-boundary`
-              - `tasks/task-draft-form`
+              - `tasks/launch-options`
         - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
           - Web:
             - Uses:
@@ -31088,8 +31105,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values): `PickerPill`
               - Cross-plugin:
                 - Imported by:
-                  - `primitives/launch`
                   - `tasks/auto-start/launch-option`
+                  - `tasks/launch-options`
                   - `tasks/task-draft-form`
                   - `tasks/task-effort`
                   - `tasks/task-preprompt`
@@ -32108,7 +32125,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/error-boundary.ErrorBoundary`
           - `primitives/launch.LaunchAgentPopover`
           - `reports.investigate`
-          - `shell/notifications.toast`
     - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the 'Close (state unknown)' bug), plus the Debug → Reports summary view. Live-state stale-drop report kind: validates stale-drop payloads (a live-state HTTP body dropped by the version/epoch guard while the query still holds only its placeholder — the 'Close (state unknown)' wedge), fingerprints by key + reason (excluding the volatile params/counts/versions/epochs so one wedge = one row), and renders an investigation task. Re-arms periodically (6h) since a still-wedged resource keeps dropping.
       - Web:
         - Contributes:
@@ -32907,15 +32923,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deploy-history/investigate-failure`
-          - `apps/home/app-cards`
           - `apps/prototypes/gallery`
           - `apps/studio/compositions/release/release-logs`
           - `auth`
           - `build`
-          - `build/build-fix`
           - `build/build-logs`
-          - `config_v2/settings/conflict-agent`
           - `conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-view/branch`
@@ -32924,7 +32936,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/drop-dependents`
           - `conversations/conversation-view/exit`
           - `conversations/conversation-view/hold-and-exit`
-          - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-input`
@@ -32935,12 +32946,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/fork`
           - `debug/boot-profile`
           - `debug/queue`
-          - `debug/reports`
           - `history/dialog`
           - `infra/events-test`
           - `page/inline-date`
           - `reports`
-          - `reports/launch-fix`
           - `reports/mutation-errors`
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -33265,6 +33274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `useTask`
   - Server:
     - Uses:
+      - `conversations.launchTaskNow`
       - `conversations.maybeLaunchTaskJob`
       - `database.db`
       - `infra/attachments.getAttachment`
@@ -33279,8 +33289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/auto-start.listArmedTaskIds`
       - `tasks/auto-start.setTaskAutoStart`
       - `tasks/launch-options.inheritLaunchOptions`
-      - `tasks/launch-options.TaskLaunchServer`
-      - `tasks/launch-options.TaskLaunchServerEntry`
+      - `tasks/launch-options.resolveLaunchOptions`
       - `tasks/task-category.setTaskCategory`
       - `tasks/task-title.scheduleTaskTitleUpdate`
       - `tasks/task-title.synthesiseTitleFallback`
@@ -33307,6 +33316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GET /api/tasks`
       - `POST /api/tasks`
       - `POST /api/tasks/chain`
+      - `POST /api/tasks/launch`
       - `POST /api/tasks/insert-between`
       - `GET /api/tasks/:id`
       - `PATCH /api/tasks/:id`
@@ -33322,11 +33332,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/model-provider.ConversationModelSchema`
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
+      - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
       - `AddDependencyBody`
       - `CreateTaskBody`
       - `DepsMoveBody`
       - `InsertBetweenBody`
+      - `LaunchTaskBody`
+      - `LaunchTaskResponse`
       - `MoveTaskBody`
       - `SetAutoStartBody`
       - `TaskChainCard`
@@ -33348,6 +33361,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `getTask`
       - `InsertBetweenBodySchema`
       - `insertTaskBetween`
+      - `launchTask`
+      - `LaunchTaskBodySchema`
+      - `LaunchTaskResponseSchema`
       - `listTasks`
       - `moveTask`
       - `MoveTaskBodySchema`
@@ -33532,7 +33548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/auto-start/launch-option`
       - Plugins:
-        - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), or clears the marker when the draft says Off.
+        - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
           - Web:
             - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
             - Uses:
@@ -33558,36 +33574,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
-        - Uses: `primitives/slot-render.defineRenderSlot`
+        - Uses:
+          - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/overlay/overlay-boundary.OverlayBoundary`
+          - `primitives/slot-render.defineRenderSlot`
+          - `primitives/slot-render.renderIsolated`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
         - Exports (types):
           - `LaunchBinding`
           - `LaunchControlProps`
           - `LaunchOptionEntry`
           - `LaunchOptionInfo`
           - `LaunchOptionPill`
+          - `LaunchOptionPillsProps`
           - `LaunchOptionValues`
           - `TaskLaunchOption`
         - Exports (values):
+          - `LaunchOptionPills`
           - `launchOptionValue`
           - `pickKnownOptions`
           - `TaskLaunch`
           - `useLaunchOptionDefaults`
+      - Server:
+        - Uses: `infra/endpoints.HttpError`
+        - Exports (types):
+          - `ResolvedLaunchOption`
+          - `TaskLaunchContext`
+          - `TaskLaunchServerEntry`
+        - Exports (values):
+          - `inheritLaunchOptions`
+          - `resolveLaunchOptions`
+          - `TaskLaunchServer`
       - Cross-plugin:
         - Imported by:
           - `plugin-meta/plugin-health`
+          - `primitives/launch`
           - `tasks`
           - `tasks/auto-start/launch-option`
           - `tasks/task-description`
           - `tasks/task-draft-form`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
-      - Server:
-        - Exports (types):
-          - `TaskLaunchContext`
-          - `TaskLaunchServerEntry`
-        - Exports (values):
-          - `inheritLaunchOptions`
-          - `TaskLaunchServer`
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
@@ -33649,6 +33676,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskCategoryDefSchema`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy`
+          - `apps/home`
+          - `apps/prototypes`
+          - `build`
+          - `config_v2/settings`
           - `conversations`
           - `conversations/agents`
           - `improve`
@@ -33813,20 +33845,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
-          - `primitives/overlay/overlay-boundary.OverlayBoundary`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`
           - `primitives/slot-render.defineRenderSlot`
-          - `primitives/slot-render.renderIsolated`
           - `primitives/text-editor/composer.ComposerAttachButton`
           - `primitives/text-editor/composer.ComposerField`
           - `primitives/text-editor/composer.ComposerRule`
@@ -33834,6 +33863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/paste-images.extractAttachmentIds`
           - `shell/notifications.toast`
           - `tasks/launch-options.LaunchOptionInfo`
+          - `tasks/launch-options.LaunchOptionPills`
           - `tasks/launch-options.launchOptionValue`
           - `tasks/launch-options.LaunchOptionValues`
           - `tasks/launch-options.pickKnownOptions`

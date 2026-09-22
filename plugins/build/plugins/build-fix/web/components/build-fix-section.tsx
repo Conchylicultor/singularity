@@ -3,10 +3,11 @@ import { MdAutoFixHigh } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
+import {
+  BUILD_CATEGORY_ID,
+  type BuildRun,
+  buildHistoryResource,
+} from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
@@ -52,7 +53,8 @@ function formatBuildInfo(run: BuildRun): string {
   if (run.commitHash) lines.push(`Commit: ${run.commitHash}`);
   lines.push(`Exit code: ${run.exitCode}`);
   if (run.finishedAt) {
-    const durationMs = new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
+    const durationMs =
+      new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
     const durationSec = Math.round(durationMs / 1000);
     lines.push(`Duration: ${durationSec}s`);
   }
@@ -76,15 +78,6 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
       placeholder="Extra context (optional) — e.g. what changed, suspected cause…"
       align="start"
       width="3xl"
-      onLaunched={(conv) => {
-        toast({
-          type: "build",
-          title: "Investigating build failure",
-          description: "Agent launched in the background — open it from here or the bell.",
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
       getRequest={(userText) => {
         const failedSteps = logs?.steps.filter((s) => !s.success) ?? [];
         const errorText = failedSteps
@@ -97,9 +90,10 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
         const parts = ["Investigate and fix this build failure on main."];
         parts.push(`Build info:\n${formatBuildInfo(run)}`);
         if (errorText) parts.push(`Build output:\n\n${errorText}`);
-        if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
+        if (userText.trim())
+          parts.push(`Additional context: ${userText.trim()}`);
 
-        return { prompt: parts.join("\n\n") };
+        return { prompt: parts.join("\n\n"), categoryId: BUILD_CATEGORY_ID };
       }}
     />
   );

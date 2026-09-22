@@ -40,6 +40,8 @@
   - Imported by:
     - `improve/element-picker`
     - `screenshot/draw-on-app`
+- Core:
+  - Exports (values): `IMPROVEMENTS_CATEGORY_ID`
 - Sub-plugins:
   - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
 

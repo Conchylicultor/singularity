@@ -7,20 +7,23 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import type { PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
+import {
+  useOpenPane,
+  type PaneOpenMode,
+} from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  useDefaultModel,
-  useSetDefaultModel,
-} from "@plugins/conversations/plugins/model-provider/web";
-import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
-import { PrepromptPill } from "./preprompt-pill";
-import { RunPill } from "./run-pill";
-import { useLaunchConversation } from "./launch-control";
-import type { LaunchRequest } from "./launch-control";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+  LaunchOptionPills,
+  TaskLaunch,
+  pickKnownOptions,
+  useLaunchOptionDefaults,
+  type LaunchOptionValues,
+} from "@plugins/tasks/plugins/launch-options/web";
+import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
 
 /**
  * An on/off choice the caller adds to the form. The form draws it and hands
@@ -37,6 +40,16 @@ export type LaunchToggle = {
   defaultValue?: boolean;
 };
 
+/**
+ * What a launch from the form is about: the prompt, and the task it runs —
+ * either one that already exists, or a new one filed under `categoryId` and
+ * titled with the form's own `title`. There is no fork or attempt arm: the form
+ * always files a task, so a launch that must not mint one uses `LaunchControl`.
+ */
+export type LaunchAgentRequest = { prompt: string } & (
+  { taskId: string } | { categoryId: string }
+);
+
 export type LaunchAgentFormProps = {
   title: string;
   description: React.ReactNode;
@@ -45,14 +58,17 @@ export type LaunchAgentFormProps = {
   getRequest: (
     userText: string,
     toggles: Readonly<Record<string, boolean>>,
-  ) => LaunchRequest | Promise<LaunchRequest>;
+  ) => LaunchAgentRequest | Promise<LaunchAgentRequest>;
   toggles?: readonly LaunchToggle[];
   disabled?: boolean;
-  onLaunched?: (conversation: Conversation) => void;
-  /** Whether to show the preprompt picker. Defaults to `true`. */
-  showPreprompt?: boolean;
   /**
-   * Whether launching also OPENS the conversation it created. Defaults to
+   * Called once the task is filed. `started: false` is a legitimate outcome,
+   * not a failure: the user picked Off on the run pill, so the task was filed
+   * without starting.
+   */
+  onSubmitted?: (result: LaunchTaskResponse) => void;
+  /**
+   * Whether launching also OPENS the conversation it started. Defaults to
    * `false` — the fire-and-forget background launch every caller of
    * `LaunchAgentPopover` has always got, so hosting the form somewhere else is
    * what opts into the pane, never the other way round.
@@ -65,11 +81,13 @@ export type LaunchAgentFormProps = {
 /**
  * The launch FORM: what the user reads (title + description), one composer
  * field holding the free-form extra context and — on its own bar, inside the
- * same box — the preprompt and the model + thinking mode the launch will use,
+ * same box — the registered launch options (preprompt, model, thinking mode…),
  * then the caller's toggles, then the Launch button.
  *
- * It owns the context text and every one of those choices; the host owns where
- * the form sits and what happens after a launch.
+ * Submitting files a task carrying those options and starts it now, so they
+ * are the task's durable settings rather than one conversation's. It owns the
+ * context text and every one of those choices; the host owns where the form
+ * sits and what happens after a launch.
  *
  * It is a form and not a popover because a second host needs exactly this body
  * inside a popover it already owns (a container card's glyph panel), and an
@@ -82,40 +100,49 @@ export function LaunchAgentForm({
   getRequest,
   toggles = [],
   disabled,
-  onLaunched,
-  showPreprompt = true,
+  onSubmitted,
   openAfterLaunch = false,
-  openMode,
+  openMode = "push",
 }: LaunchAgentFormProps) {
   const [text, setText] = useState("");
-  const [prepromptId, setPrepromptId] = useState<string | null>(null);
-  const [effort, setEffort] = useState<EffortLevel | null>(null);
+  // Only what the user changed; the rest reads through to the registry's
+  // defaults, so an option registered after mount is still sent with its seed.
+  const defaults = useLaunchOptionDefaults();
+  const [picked, setPicked] = useState<LaunchOptionValues>({});
+  const options: LaunchOptionValues = { ...defaults, ...picked };
+  const registered = TaskLaunch.Option.useContributions();
   const [toggleValues, setToggleValues] = useState<Record<string, boolean>>(
     () =>
       Object.fromEntries(toggles.map((t) => [t.id, t.defaultValue ?? false])),
   );
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
+  const openPane = useOpenPane();
 
-  // The model the pill shows IS the persisted default, and picking one writes
-  // it — the behaviour the split button had, with no second copy of the value
-  // that could drift from it while the form is open.
-  const model = useDefaultModel();
-  const setDefaultModel = useSetDefaultModel();
-
-  const { launch } = useLaunchConversation({
-    openAfterLaunch,
-    openMode,
-    onLaunched,
-    getRequest: async () => {
-      const req = await getRequest(text, toggleValues);
-      return {
-        ...req,
-        ...(prepromptId ? { prepromptId } : {}),
-        ...(effort ? { effort } : {}),
-      };
-    },
-  });
+  const submit = async () => {
+    const req = await getRequest(text, toggleValues);
+    const result = await fetchEndpoint(
+      launchTask,
+      {},
+      {
+        body: {
+          prompt: req.prompt,
+          options: pickKnownOptions(options, registered),
+          task:
+            "taskId" in req
+              ? { id: req.taskId }
+              : { title, categoryId: req.categoryId },
+        },
+      },
+    );
+    onSubmitted?.(result);
+    if (result.started && openAfterLaunch)
+      openPane(
+        conversationPane,
+        { convId: result.conversation.id },
+        { mode: openMode },
+      );
+  };
 
   return (
     <Stack gap="md">
@@ -136,21 +163,19 @@ export function LaunchAgentForm({
         maxHeight="16rem"
         namespace={`launch-agent-form-${editorId}`}
         barStart={
-          showPreprompt ? (
-            <PrepromptPill
-              value={prepromptId}
-              onChange={setPrepromptId}
-              disabled={disabled}
-            />
-          ) : undefined
+          <LaunchOptionPills
+            side="start"
+            values={options}
+            onChange={setPicked}
+            disabled={disabled ?? false}
+          />
         }
         barEnd={
-          <RunPill
-            model={model}
-            onModelChange={setDefaultModel}
-            effort={effort}
-            onEffortChange={setEffort}
-            disabled={disabled}
+          <LaunchOptionPills
+            side="end"
+            values={options}
+            onChange={setPicked}
+            disabled={disabled ?? false}
           />
         }
       />
@@ -168,9 +193,9 @@ export function LaunchAgentForm({
         {/* The empty flexible cell: the button sits flush right in its own
             track rather than floating over the toggles above it. */}
         <Fill />
-        {/* `launch` returns a promise, so the button pends and locks itself for
+        {/* `submit` returns a promise, so the button pends and locks itself for
             the whole round trip with no wiring of our own. */}
-        <Button disabled={disabled} onClick={() => launch(model)}>
+        <Button disabled={disabled} onClick={submit}>
           Launch
         </Button>
       </Line>
@@ -214,7 +239,7 @@ function LaunchToggleRow({
 /**
  * The popover's props are the form's, MINUS the two knobs about opening the
  * launched conversation: this surface is always a fire-and-forget background
- * launch (callers surface a confirmation toast via `onLaunched`), so neither is
+ * launch (the "Conversation started" notification confirms it), so neither is
  * a caller's to set.
  */
 export type LaunchAgentPopoverProps = Omit<
@@ -230,7 +255,7 @@ export function LaunchAgentPopover({
   trigger,
   align = "start",
   width = "3xl",
-  onLaunched,
+  onSubmitted,
   ...form
 }: LaunchAgentPopoverProps) {
   const [open, setOpen] = useState(false);
@@ -245,9 +270,11 @@ export function LaunchAgentPopover({
     >
       <LaunchAgentForm
         {...form}
-        onLaunched={(conv) => {
+        onSubmitted={(result) => {
+          // Either outcome ends the popover's job: the task is filed, started
+          // or not.
           setOpen(false);
-          onLaunched?.(conv);
+          onSubmitted?.(result);
         }}
       />
     </InlinePopover>

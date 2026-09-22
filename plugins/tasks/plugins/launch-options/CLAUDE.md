@@ -42,36 +42,47 @@ Ordering for both surfaces lives in
 - Description: Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
 - Web:
   - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
-  - Uses: `primitives/slot-render.defineRenderSlot`
+  - Uses:
+    - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/overlay/overlay-boundary.OverlayBoundary`
+    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.renderIsolated`
+    - `primitives/text-editor/composer/picker-pill.PickerPill`
   - Exports (types):
     - `LaunchBinding`
     - `LaunchControlProps`
     - `LaunchOptionEntry`
     - `LaunchOptionInfo`
     - `LaunchOptionPill`
+    - `LaunchOptionPillsProps`
     - `LaunchOptionValues`
     - `TaskLaunchOption`
   - Exports (values):
+    - `LaunchOptionPills`
     - `launchOptionValue`
     - `pickKnownOptions`
     - `TaskLaunch`
     - `useLaunchOptionDefaults`
+- Server:
+  - Uses: `infra/endpoints.HttpError`
+  - Exports (types):
+    - `ResolvedLaunchOption`
+    - `TaskLaunchContext`
+    - `TaskLaunchServerEntry`
+  - Exports (values):
+    - `inheritLaunchOptions`
+    - `resolveLaunchOptions`
+    - `TaskLaunchServer`
 - Cross-plugin:
   - Imported by:
     - `plugin-meta/plugin-health`
+    - `primitives/launch`
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/task-description`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`
-- Server:
-  - Exports (types):
-    - `TaskLaunchContext`
-    - `TaskLaunchServerEntry`
-  - Exports (values):
-    - `inheritLaunchOptions`
-    - `TaskLaunchServer`
 - Core:
   - Exports (types): `LaunchOptionDef`
   - Exports (values): `defineLaunchOption`

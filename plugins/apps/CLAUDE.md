@@ -10,13 +10,13 @@
   - **`browser`** — Minimal iframe-based web browser app.
   - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
   - **`debug`** — Debug app.
-  - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+  - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
   - **`events`** — Events — track events from pluggable sources in one database.
   - **`file-explorer`** — File explorer app.
-  - **`home`** — Home — app launcher and entry point.
+  - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
   - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
-  - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+  - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
   - **`settings`** — Settings app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.

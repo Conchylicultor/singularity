@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
 import { handleCreateChain } from "./internal/handle-create-chain";
+import { handleLaunchTask } from "./internal/handle-launch-task";
 import { handleClearAutoStart } from "./internal/handle-clear-auto-start";
 import { handleSetAutoStart } from "./internal/handle-set-auto-start";
 import { handleGet } from "./internal/handle-get";
@@ -20,6 +21,7 @@ import {
   listTasks,
   createTask,
   createTaskChain,
+  launchTask,
   insertTaskBetween,
   getTask,
   updateTask,
@@ -40,6 +42,7 @@ export default {
     [listTasks.route]: handleList,
     [createTask.route]: handleCreate,
     [createTaskChain.route]: handleCreateChain,
+    [launchTask.route]: handleLaunchTask,
     [insertTaskBetween.route]: handleInsertBetween,
     [getTask.route]: handleGet,
     [updateTask.route]: handleUpdate,

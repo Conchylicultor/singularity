@@ -244,6 +244,7 @@ The two other edges of the same argument:
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
+    - `taskCategory` "build"
     - `resource.declare` "build.history"
     - `trigger` "build.run"
   - Uses:
@@ -267,6 +268,7 @@ The two other edges of the same argument:
     - `infra/worktree.readCompositionMarker`
     - `primitives/log-channels.Log`
     - `shell/notifications.recordNotification`
+    - `tasks/task-category.TaskCategory`
   - Register:
     - `defineJob('build.run')`
     - `defineJob('build.run.debounced')`
@@ -284,6 +286,7 @@ The two other edges of the same argument:
     - `primitives/pane.defineRoute`
   - Exports (types): `BuildRun`
   - Exports (values):
+    - `BUILD_CATEGORY_ID`
     - `BUILD_LOG_CHANNEL`
     - `buildDetailRoute`
     - `buildHistoryResource`

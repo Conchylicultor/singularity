@@ -51,8 +51,8 @@ hand-rolled its own checkmarks.
   - Exports (values): `PickerPill`
 - Cross-plugin:
   - Imported by:
-    - `primitives/launch`
     - `tasks/auto-start/launch-option`
+    - `tasks/launch-options`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`

@@ -61,7 +61,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/scope/tab-id.getTabId`
     - `reports.investigate`
     - `reports.Reports`
-    - `shell/notifications.toast`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`

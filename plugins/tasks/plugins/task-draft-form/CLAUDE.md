@@ -72,20 +72,17 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.renderIsolated`
     - `primitives/text-editor/composer.ComposerAttachButton`
     - `primitives/text-editor/composer.ComposerField`
     - `primitives/text-editor/composer.ComposerRule`
@@ -93,6 +90,7 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/text-editor/paste-images.extractAttachmentIds`
     - `shell/notifications.toast`
     - `tasks/launch-options.LaunchOptionInfo`
+    - `tasks/launch-options.LaunchOptionPills`
     - `tasks/launch-options.launchOptionValue`
     - `tasks/launch-options.LaunchOptionValues`
     - `tasks/launch-options.pickKnownOptions`

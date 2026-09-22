@@ -1,10 +1,29 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { setConfigField } from "@plugins/config_v2/core";
-import { resetConfigField, acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../core";
-import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride, handleMergeConflict, handleGetRawFile } from "./internal/handlers";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import {
+  resetConfigField,
+  acknowledgeConflict,
+  deleteOverride,
+  mergeConflict,
+  getConfigRawFile,
+  CONFIG_CATEGORY_ID,
+} from "../core";
+import {
+  handleSetField,
+  handleResetField,
+  handleAcknowledgeConflict,
+  handleDeleteOverride,
+  handleMergeConflict,
+  handleGetRawFile,
+} from "./internal/handlers";
 
 export default {
-  description: "HTTP endpoints for setting and resetting config_v2 field values.",
+  description:
+    "HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.",
+  contributions: [
+    TaskCategory({ id: CONFIG_CATEGORY_ID, label: "Config", order: 10 }),
+  ],
   httpRoutes: {
     [setConfigField.route]: handleSetField,
     [resetConfigField.route]: handleResetField,

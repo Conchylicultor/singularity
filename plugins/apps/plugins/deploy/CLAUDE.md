@@ -4,7 +4,12 @@
 
 ## Plugin reference
 
-- Description: Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+- Description: The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
+- Server:
+  - Contributes: `taskCategory` "deploy"
+  - Uses: `tasks/task-category.TaskCategory`
+- Core:
+  - Exports (values): `DEPLOY_CATEGORY_ID`
 - Sub-plugins:
   - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
     - Plugins:

@@ -12,9 +12,7 @@ import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surfa
 import { MdAdd } from "react-icons/md";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
 import {
   mintPrototypeFolder,
   newPrototypePrompt,
@@ -81,8 +79,9 @@ function newAppPrompt(userText: string, prototypeId: string | null): string {
 /** Opens the launch-agent form for a new app. A dialog rather than a popover,
  *  because the create affordance renders in several shapes (the capsule's round
  *  `+`, the no-match empty state's "Build one?") and a dialog serves them all
- *  from one callback. Launching runs in the background and toasts a link to the
- *  conversation, like "New prototype". */
+ *  from one callback. Launching files a task under the Apps category and starts
+ *  it in the background; the bell announces the conversation, like "New
+ *  prototype". */
 function newApp(): void {
   void openDialog(
     (close) => (
@@ -104,21 +103,14 @@ function newApp(): void {
           const prototypeId = toggles[PROTOTYPE_FIRST]
             ? await mintPrototypeFolder()
             : null;
-          return { prompt: newAppPrompt(userText, prototypeId) };
+          return {
+            prompt: newAppPrompt(userText, prototypeId),
+            categoryId: APPS_CATEGORY_ID,
+          };
         }}
-        onLaunched={(conv) => {
-          close();
-          toast({
-            type: "new-app",
-            title: "Building your app",
-            description:
-              "Agent launched in the background — open it from here or the bell.",
-            variant: "info",
-            linkTo: conversationRoute.link(agentManagerApp, {
-              convId: conv.id,
-            }),
-          });
-        }}
+        // Close on either outcome: the task is filed whether or not the
+        // agent started.
+        onSubmitted={() => close()}
       />
     ),
     { size: "lg" },

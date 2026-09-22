@@ -12,13 +12,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`chord`** [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [17 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
-    - **`home`** [2 sub-plugins] — Home — app launcher and entry point.
+    - **`home`** [2 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [14 sub-plugins] — Notion-like pages app.
-    - **`prototypes`** [10 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+    - **`prototypes`** [10 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
@@ -434,7 +434,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Plugins:
-        - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), or clears the marker when the draft says Off.
+        - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
     - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.

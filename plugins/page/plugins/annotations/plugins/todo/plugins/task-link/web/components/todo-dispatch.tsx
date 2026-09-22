@@ -49,8 +49,8 @@ export function TodoDispatch({
         openAfterLaunch
         openMode="push"
         // The launched conversation opens in a column beside the page, so the
-        // panel that opened it must get out of the way.
-        onLaunched={close}
+        // panel that opened it must get out of the way — on either outcome.
+        onSubmitted={close}
       />
     </Stack>
   );

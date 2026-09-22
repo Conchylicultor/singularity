@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 // --- Body schemas ---
@@ -21,8 +20,6 @@ export const CreateConversationBodySchema = z
     // With `forkFromConversationId`: fork from just before this user message (its
     // transcript line uuid, carried by the `user-text` row) rather than the end.
     forkAtMessageUuid: z.string().optional(),
-    prepromptId: z.string().optional(),
-    effort: EffortLevelSchema.optional(),
   })
   .refine((b) => !b.forkAtMessageUuid || !!b.forkFromConversationId, {
     message: "forkAtMessageUuid requires forkFromConversationId",

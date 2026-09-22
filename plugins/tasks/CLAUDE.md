@@ -20,6 +20,7 @@
     - `useTask`
 - Server:
   - Uses:
+    - `conversations.launchTaskNow`
     - `conversations.maybeLaunchTaskJob`
     - `database.db`
     - `infra/attachments.getAttachment`
@@ -34,8 +35,7 @@
     - `tasks/auto-start.listArmedTaskIds`
     - `tasks/auto-start.setTaskAutoStart`
     - `tasks/launch-options.inheritLaunchOptions`
-    - `tasks/launch-options.TaskLaunchServer`
-    - `tasks/launch-options.TaskLaunchServerEntry`
+    - `tasks/launch-options.resolveLaunchOptions`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-title.scheduleTaskTitleUpdate`
     - `tasks/task-title.synthesiseTitleFallback`
@@ -62,6 +62,7 @@
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `POST /api/tasks/chain`
+    - `POST /api/tasks/launch`
     - `POST /api/tasks/insert-between`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
@@ -77,11 +78,14 @@
     - `conversations/model-provider.ConversationModelSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
+    - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `AddDependencyBody`
     - `CreateTaskBody`
     - `DepsMoveBody`
     - `InsertBetweenBody`
+    - `LaunchTaskBody`
+    - `LaunchTaskResponse`
     - `MoveTaskBody`
     - `SetAutoStartBody`
     - `TaskChainCard`
@@ -103,6 +107,9 @@
     - `getTask`
     - `InsertBetweenBodySchema`
     - `insertTaskBetween`
+    - `launchTask`
+    - `LaunchTaskBodySchema`
+    - `LaunchTaskResponseSchema`
     - `listTasks`
     - `moveTask`
     - `MoveTaskBodySchema`

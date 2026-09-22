@@ -39,7 +39,11 @@ import { autoAnswerConfig } from "../shared/config";
 import { queryConversations } from "@plugins/conversations/plugins/all-conversations/core";
 import { handleQuery } from "@plugins/conversations/plugins/all-conversations/server";
 
-export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
+export { maybeLaunchTaskJob, launchTaskNow } from "./internal/auto-start-jobs";
+export type {
+  IfAlreadyStarted,
+  LaunchTaskNowResult,
+} from "./internal/auto-start-jobs";
 export {
   createConversation,
   deleteConversation,

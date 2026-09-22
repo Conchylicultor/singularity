@@ -12,7 +12,7 @@ import {
   setImproveOpen,
   subscribeImproveOpen,
 } from "../internal/open-store";
-import { IMPROVEMENTS_CATEGORY_ID } from "../../shared/constants";
+import { IMPROVEMENTS_CATEGORY_ID } from "../../core";
 import { ImproveSlots } from "../slots";
 
 /**

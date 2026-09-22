@@ -10,6 +10,20 @@ export interface TaskLaunchContext {
   taskId: string;
   /** Provenance threaded into whatever the apply enqueues (`user-launch`, …). */
   cause: string;
+  /**
+   * Who starts this task: the queue, once its dependencies clear — or the
+   * caller, inline, immediately after this apply returns. An option that ARMS
+   * a launch records its value either way, but must not enqueue when the
+   * caller is about to claim that arm itself, or two runners race for it.
+   *
+   * The race is real, not theoretical: the queued job runs in the same
+   * process's worker, and the claim is exactly-once — so if the job wins, the
+   * inline caller finds its arm already consumed and has no conversation to
+   * return, even though one was launched.
+   *
+   * Required, not defaulted, so every host has to say which it is.
+   */
+  start: "queued" | "now";
 }
 
 /**

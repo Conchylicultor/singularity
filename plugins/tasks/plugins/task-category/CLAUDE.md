@@ -80,6 +80,11 @@ Consumers read only the generic aggregate:
     - `TaskCategoryDefSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy`
+    - `apps/home`
+    - `apps/prototypes`
+    - `build`
+    - `config_v2/settings`
     - `conversations`
     - `conversations/agents`
     - `improve`

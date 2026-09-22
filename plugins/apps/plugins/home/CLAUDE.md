@@ -34,7 +34,12 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
 
 ## Plugin reference
 
-- Description: Home — app launcher and entry point.
+- Description: Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+- Server:
+  - Contributes: `taskCategory` "apps"
+  - Uses: `tasks/task-category.TaskCategory`
+- Core:
+  - Exports (values): `APPS_CATEGORY_ID`
 - Sub-plugins:
   - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
   - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.

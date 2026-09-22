@@ -6,6 +6,8 @@ export type {
   TaskLaunchServerEntry,
 } from "./internal/contribution";
 export { inheritLaunchOptions } from "./internal/inherit";
+export { resolveLaunchOptions } from "./internal/resolve";
+export type { ResolvedLaunchOption } from "./internal/resolve";
 
 export default {
   description:

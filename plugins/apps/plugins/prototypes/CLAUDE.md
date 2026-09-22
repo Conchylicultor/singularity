@@ -59,7 +59,12 @@ whose app surface still stands).
 
 ## Plugin reference
 
-- Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+- Description: The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+- Server:
+  - Contributes: `taskCategory` "prototypes"
+  - Uses: `tasks/task-category.TaskCategory`
+- Core:
+  - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
   - **`compare`** — The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.

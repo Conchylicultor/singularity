@@ -19,8 +19,6 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
@@ -227,18 +225,6 @@ function Investigate({ report }: { report: Report }) {
         }
         placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
         align="start"
-        onLaunched={(conv) => {
-          toast({
-            type: "crash",
-            title: "Investigating report",
-            description:
-              "Agent launched in the background — open it from here or the bell.",
-            variant: "info",
-            linkTo: conversationRoute.link(agentManagerApp, {
-              convId: conv.id,
-            }),
-          });
-        }}
         getRequest={async (userText) => {
           const { taskId } = await investigate(report.id);
           const parts: string[] = [];

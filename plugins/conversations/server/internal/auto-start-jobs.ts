@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import {
+  getConversation,
   getTask,
   hasBlockingDep,
   listAttemptsForTask,
@@ -13,6 +14,7 @@ import {
 import {
   buildTaskPrompt,
   TaskStatusSchema,
+  type Conversation,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   claimAutoStart,
@@ -41,10 +43,22 @@ import {
 //
 // `tx` must be a status batch's executor (`withTaskStatusBatch` /
 // `runStatusBatchOn`) — the launch's status-changing writes assert it.
+//
+// `ifAlreadyStarted` says what an existing attempt on the task means, and the
+// caller must say it because the two callers mean opposite things. For the
+// queue (`skip`) an attempt is a manual start that raced in — the task has its
+// launch, starting it again would double it. For an explicit user launch
+// (`launch`) the user is asking for ANOTHER run of a task that already has one
+// (a second "Fix this crash" on the same report reuses the report's task), so
+// an attempt is no reason to refuse. The claim stays the exactly-once gate in
+// both modes: it is what stops two runners launching one ARM.
+export type IfAlreadyStarted = "skip" | "launch";
+
 export async function launchArmedTask(
   tx: DbExecutor,
   taskId: string,
   prepared: PreparedConversation,
+  opts: { ifAlreadyStarted: IfAlreadyStarted },
 ): Promise<boolean> {
   // Backstop for a launch that stalls between statements (the 2026-09-15
   // incident hung mid-launch for 2.5 hours): Postgres kills an idle-in-
@@ -56,12 +70,89 @@ export async function launchArmedTask(
   // Another runner claimed it (and committed), or it was cancelled.
   if (!(await claimAutoStart(taskId, tx))) return false;
 
-  // A manual start raced in before our claim. Returning commits the consumed
-  // marker, as before: the task already has its launch, just not ours.
-  if ((await listAttemptsForTask(taskId, tx)).length > 0) return false;
+  // Queue only: a manual start raced in before our claim. Returning commits
+  // the consumed marker, as before: the task already has its launch, just not
+  // ours.
+  if (
+    opts.ifAlreadyStarted === "skip" &&
+    (await listAttemptsForTask(taskId, tx)).length > 0
+  ) {
+    return false;
+  }
 
   await commitConversation(tx, prepared);
   return true;
+}
+
+export type LaunchTaskNowResult =
+  | { started: true; conversation: Conversation }
+  // `not-armed` is a legitimate outcome, not a failure: the task carries no
+  // auto-start marker (the user picked Off, or it was cancelled or already
+  // launched). `claimed-elsewhere`: another runner claimed the marker first, or
+  // (`ifAlreadyStarted: "skip"` only) the task already had an attempt — either
+  // way it has its launch, not ours.
+  | { started: false; reason: "not-armed" | "claimed-elsewhere" };
+
+// Start an armed task NOW: read the model off its marker, prepare, then claim
+// the marker and commit the launch on one transaction (`launchArmedTask`). THE
+// launch path for an armed task — the auto-start queue calls it once the task's
+// gates pass, and an inline "file it and start it" caller calls it directly
+// after writing the marker itself. Either way the claim is the exactly-once
+// gate, so the two can never both launch one task.
+//
+// `prompt` defaults to the task's own (`buildTaskPrompt`); a caller that
+// already holds the prompt passes it and saves the task read.
+//
+// The caller owns the policy gates (main-only, dropped / held, blocking deps):
+// the queue must wait on them, while an inline launch the user asked for has
+// nothing to wait for. Likewise `ifAlreadyStarted` (see `launchArmedTask`):
+// required, because the queue and a user launch mean opposite things by it.
+export async function launchTaskNow(
+  taskId: string,
+  opts: { prompt?: string; cause: string; ifAlreadyStarted: IfAlreadyStarted },
+): Promise<LaunchTaskNowResult> {
+  const ext = await getTaskAutoStart(taskId);
+  if (!ext) return { started: false, reason: "not-armed" };
+
+  let prompt = opts.prompt;
+  if (prompt === undefined) {
+    const task = await getTask(taskId);
+    if (!task) throw new Error(`launchTaskNow: task ${taskId} not found`);
+    prompt = buildTaskPrompt(task);
+  }
+
+  // Reads first, outside any transaction: nothing slow runs while the
+  // marker's row lock is held. A duplicate runner prepares too and then
+  // loses the claim — it has written nothing, so that costs nothing.
+  const prepared = await prepareConversation({
+    taskId,
+    model: ext.autoStartModel,
+    prompt,
+    spawnedBy: opts.cause,
+  });
+
+  // The marker and the launch commit together (see `launchArmedTask`). A
+  // throw rolls back with the task still armed; under the queue graphile
+  // retries, and if every attempt fails the row dead-letters (reported by queue
+  // health) and the next boot's reconcile tries again.
+  const launched = await withTaskStatusBatch((tx) =>
+    launchArmedTask(tx, taskId, prepared, {
+      ifAlreadyStarted: opts.ifAlreadyStarted,
+    }),
+  );
+  if (!launched) return { started: false, reason: "claimed-elsewhere" };
+  await finishConversation(prepared);
+
+  // `launchArmedTask` answers only whether THIS call launched; the committed
+  // row is the conversation. It was written on the transaction that just
+  // committed, so a miss here is a broken invariant, not an outcome.
+  const conversation = await getConversation(prepared.conversationId);
+  if (!conversation) {
+    throw new Error(
+      `launchTaskNow: conversation ${prepared.conversationId} for task ${taskId} committed but not found`,
+    );
+  }
+  return { started: true, conversation };
 }
 
 // Job that launches a queued task once all its dependencies are non-blocking.
@@ -120,24 +211,16 @@ export const maybeLaunchTaskJob = defineJob({
     // Some other dep is still blocking; another trigger will fire later.
     if (await hasBlockingDep(taskId, db)) return;
 
-    // Reads first, outside any transaction: nothing slow runs while the
-    // marker's row lock is held. A duplicate runner prepares too and then
-    // loses the claim — it has written nothing, so that costs nothing.
-    const prepared = await prepareConversation({
-      taskId,
-      model: ext.autoStartModel,
+    // `launchTaskNow` reads the marker again for its model: one indexed read,
+    // and it keeps `not-armed` launchTaskNow's own answer rather than an
+    // assumption about its caller. A lost claim is the concurrent-runner case
+    // this job's header describes — nothing to do. `skip`: an attempt here is
+    // a manual start that beat the queue, so the task already has its launch.
+    await launchTaskNow(taskId, {
       prompt: buildTaskPrompt(t),
-      spawnedBy: cause,
+      cause,
+      ifAlreadyStarted: "skip",
     });
-
-    // The marker and the launch commit together (see `launchArmedTask`). A
-    // throw rolls back with the task still armed and graphile retries; if every
-    // attempt fails the row dead-letters (reported by queue health) and the
-    // next boot's reconcile tries again.
-    const launched = await withTaskStatusBatch((tx) =>
-      launchArmedTask(tx, taskId, prepared),
-    );
-    if (launched) await finishConversation(prepared);
   },
 });
 

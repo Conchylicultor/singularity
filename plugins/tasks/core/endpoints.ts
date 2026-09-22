@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { dateString } from "@plugins/infra/plugins/endpoints/core";
+import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   TaskChainSubmitBodySchema,
   TaskChainSubmitResponseSchema,
@@ -82,6 +83,29 @@ export const DepsMoveBodySchema = z.object({
 });
 export type DepsMoveBody = z.infer<typeof DepsMoveBodySchema>;
 
+// File a task with its launch options, then start it now. `task` names the
+// task to launch: an existing one by id, or a new one to file under a category.
+export const LaunchTaskBodySchema = z.object({
+  prompt: z.string().min(1),
+  // Contributed launch-option values, keyed by option id — the same shape as a
+  // chain card's `options` (see `TaskChainCardSchema`): the registry in
+  // `tasks/launch-options` owns what an id means, and an unknown id is a 400.
+  options: z.record(z.string(), z.unknown()),
+  task: z.union([
+    z.object({ id: z.string().min(1) }),
+    z.object({ title: z.string().min(1), categoryId: z.string().min(1) }),
+  ]),
+});
+export type LaunchTaskBody = z.infer<typeof LaunchTaskBodySchema>;
+
+// `started: false` is a filed task that did not start — the drafted options
+// left it unarmed (auto-start Off), or another runner launched it first.
+export const LaunchTaskResponseSchema = z.discriminatedUnion("started", [
+  z.object({ started: z.literal(true), conversation: ConversationSchema }),
+  z.object({ started: z.literal(false), taskId: z.string() }),
+]);
+export type LaunchTaskResponse = z.infer<typeof LaunchTaskResponseSchema>;
+
 // Wire-format response schema: plain JSON types (no Rank class, no Date class).
 // Consumers that need the rich domain types should parse via TaskSchema locally.
 export const TaskResponseSchema = z.object({
@@ -119,6 +143,12 @@ export const createTaskChain = defineEndpoint({
   route: "POST /api/tasks/chain",
   body: TaskChainSubmitBodySchema,
   response: TaskChainSubmitResponseSchema,
+});
+
+export const launchTask = defineEndpoint({
+  route: "POST /api/tasks/launch",
+  body: LaunchTaskBodySchema,
+  response: LaunchTaskResponseSchema,
 });
 
 export const insertTaskBetween = defineEndpoint({

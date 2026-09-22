@@ -5,6 +5,7 @@ import { refAdvanced } from "@plugins/infra/plugins/git/plugins/git-watcher/serv
 import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { handleBuild } from "./internal/handle-build";
 import { handleServeComposition } from "./internal/handle-serve-composition";
 import { buildJob } from "./internal/run-build";
@@ -18,10 +19,12 @@ import {
   triggerBuildEndpoint,
   serveCompositionEndpoint,
 } from "../core/endpoints";
+import { BUILD_CATEGORY_ID } from "../core/task-category";
 
 export default {
   contributions: [
     ConfigV2.Register({ descriptor: buildConfig }),
+    TaskCategory({ id: BUILD_CATEGORY_ID, label: "Build", order: 7 }),
     Resource.Declare(buildHistoryResource),
     Trigger({
       on: refAdvanced.where({ refName: "refs/heads/main" }),

@@ -19,8 +19,6 @@ export const handleCreate = implement(
         model: body.model,
         forkFromConversationId: body.forkFromConversationId,
         forkAtMessageUuid: body.forkAtMessageUuid,
-        prepromptId: body.prepromptId,
-        effort: body.effort,
       });
     } catch (err) {
       // The message cannot be cut at (it is the first one, it left the

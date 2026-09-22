@@ -3,9 +3,7 @@ import { MdBugReport } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import {
   DEPLOY_LOG_CHANNEL,
   type DeployRunRecord,
@@ -104,16 +102,10 @@ export function InvestigateFailureAction({
           tooltip={`Launch an agent to investigate this failed ${row.verb}`}
         />
       }
-      onLaunched={(conv) => {
-        toast({
-          type: "deploy",
-          title: "Investigating deploy failure",
-          description: `Agent launched for the failed ${row.verb} of ${row.compositionId} — open it from here or the bell.`,
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
-      getRequest={(userText) => ({ prompt: brief(row, userText) })}
+      getRequest={(userText) => ({
+        prompt: brief(row, userText),
+        categoryId: DEPLOY_CATEGORY_ID,
+      })}
     />
   );
 }

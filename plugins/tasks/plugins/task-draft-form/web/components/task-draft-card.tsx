@@ -20,8 +20,10 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
-import { LaunchOptionPills } from "./launch-option-pills";
+import {
+  LaunchOptionPills,
+  type LaunchOptionValues,
+} from "@plugins/tasks/plugins/launch-options/web";
 import { DependencyPill } from "./dependency-pill";
 import {
   InsertBeforeChildren,

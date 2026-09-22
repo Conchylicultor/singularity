@@ -15,10 +15,8 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
 import {
   prototypeStatusesResource,
   prototypesResource,
@@ -141,22 +139,15 @@ export function PrototypeGallery() {
       description="Launch an agent to scaffold a new throwaway UI prototype."
       placeholder="Extra context (optional) — e.g. desired style, layout, reference…"
       align="end"
-      onLaunched={(conv) => {
-        toast({
-          type: "prototype",
-          title: "Creating prototype",
-          description:
-            "Agent launched in the background — open it from here or the bell.",
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
       getRequest={async (userText) => {
         const id = await mintPrototypeFolder();
         const parts = [newPrototypePrompt(id)];
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
-        return { prompt: parts.join("\n\n") };
+        return {
+          prompt: parts.join("\n\n"),
+          categoryId: PROTOTYPES_CATEGORY_ID,
+        };
       }}
     />
   );

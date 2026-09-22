@@ -78,8 +78,6 @@ export interface CreateConversationOpts {
    * a truncated copy of the source's transcript; the source is untouched.
    */
   forkAtMessageUuid?: string;
-  prepromptId?: string;
-  effort?: EffortLevel;
 }
 
 // The `runtime.create` options a launch spawns with — the spawn job's `create`
@@ -255,15 +253,13 @@ export async function prepareConversation(
     ? (await resolveAttachmentRefs(opts.prompt)).text
     : undefined;
 
-  // Resolve the preprompt (config list-item id → text). An explicit
-  // opts.prepromptId (ad-hoc launch input) takes precedence over the task
-  // default. A dangling or empty selection resolves to undefined → nothing is
-  // injected.
-  const prepromptId =
-    opts.prepromptId ??
-    (effectiveTaskId
-      ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId
-      : undefined);
+  // Resolve the preprompt (config list-item id → text). It comes only from the
+  // launching task — a launch has no preprompt of its own, so a conversation
+  // can never run under one its task does not show. A dangling or empty
+  // selection resolves to undefined → nothing is injected.
+  const prepromptId = effectiveTaskId
+    ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId
+    : undefined;
   const preprompt = resolvePreprompt(prepromptId);
 
   // Bake the preprompt into the FIRST user turn (wrapped in
@@ -279,10 +275,10 @@ export async function prepareConversation(
       : wrapPreprompt(preprompt);
   }
 
-  // Thinking mode: an explicit opts.effort (ad-hoc launch input) wins; otherwise
-  // the launching task's default. Threaded to the runtime as CLI args; no prompt
-  // mutation (unlike preprompt, ultracode rides --settings, not the transcript).
-  const effort = opts.effort ?? (await resolveTaskEffort(effectiveTaskId));
+  // Thinking mode: the launching task's, for the same reason as the preprompt.
+  // Threaded to the runtime as CLI args; no prompt mutation (unlike preprompt,
+  // ultracode rides --settings, not the transcript).
+  const effort = await resolveTaskEffort(effectiveTaskId);
 
   return {
     runtimeId,

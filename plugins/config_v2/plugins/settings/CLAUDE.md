@@ -67,7 +67,7 @@ contributor that hands a conflict to an agent.
 
 ## Plugin reference
 
-- Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
+- Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
 - Web:
   - Slots:
     - `configNavPane.Actions` ← `primitives.pane`
@@ -132,6 +132,7 @@ contributor that hands a conflict to an agent.
     - `ConfigNav`
     - `configNavPane`
 - Server:
+  - Contributes: `taskCategory` "config"
   - Uses:
     - `config_v2.acknowledgeConflictByPath`
     - `config_v2.deleteOverrideByPath`
@@ -139,6 +140,7 @@ contributor that hands a conflict to an agent.
     - `config_v2.mergeConflictByPath`
     - `config_v2.resetConfigByPath`
     - `config_v2.setConfigByPath`
+    - `tasks/task-category.TaskCategory`
   - Routes:
     - `POST /api/config-v2/reset-field`
     - `POST /api/config-v2/acknowledge-conflict`
@@ -149,6 +151,7 @@ contributor that hands a conflict to an agent.
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values):
     - `acknowledgeConflict`
+    - `CONFIG_CATEGORY_ID`
     - `deleteOverride`
     - `getConfigRawFile`
     - `mergeConflict`

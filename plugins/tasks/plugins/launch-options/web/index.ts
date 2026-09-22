@@ -16,6 +16,10 @@ export {
   pickKnownOptions,
 } from "./internal/values";
 export type { LaunchOptionValues } from "./internal/values";
+export {
+  LaunchOptionPills,
+  type LaunchOptionPillsProps,
+} from "./components/launch-option-pills";
 
 export default {
   description:

@@ -2,6 +2,7 @@ export {
   listTasks,
   createTask,
   createTaskChain,
+  launchTask,
   insertTaskBetween,
   getTask,
   updateTask,
@@ -19,6 +20,8 @@ export {
   SetAutoStartBodySchema,
   AddDependencyBodySchema,
   DepsMoveBodySchema,
+  LaunchTaskBodySchema,
+  LaunchTaskResponseSchema,
 } from "./endpoints";
 export type {
   CreateTaskBody,
@@ -28,6 +31,8 @@ export type {
   SetAutoStartBody,
   AddDependencyBody,
   DepsMoveBody,
+  LaunchTaskBody,
+  LaunchTaskResponse,
 } from "./endpoints";
 export {
   TaskChainTargetSchema,

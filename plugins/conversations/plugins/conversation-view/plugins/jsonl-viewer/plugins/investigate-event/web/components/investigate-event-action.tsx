@@ -2,9 +2,7 @@ import { MdAutoAwesome } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { rowActionClass } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
@@ -42,15 +40,6 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
           <MdAutoAwesome className="size-3" />
         </button>
       }
-      onLaunched={(conv) => {
-        toast({
-          type: "add-renderer",
-          title: "Building a renderer",
-          description: `Agent launched for \`${label}\` — open it from here or the bell.`,
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
       getRequest={(userText) => {
         const body = userText.trim();
         const prompt = [
@@ -78,7 +67,7 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
           "```",
           ...(body ? ["", "## What the user asked for", "", body] : []),
         ].join("\n");
-        return { prompt };
+        return { prompt, categoryId: IMPROVEMENTS_CATEGORY_ID };
       }}
     />
   );

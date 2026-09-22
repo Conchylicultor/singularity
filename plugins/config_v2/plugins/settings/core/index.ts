@@ -5,3 +5,4 @@ export {
   mergeConflict,
   getConfigRawFile,
 } from "./internal/endpoints";
+export { CONFIG_CATEGORY_ID } from "./internal/task-category";

@@ -6,15 +6,25 @@ import { autoStartLaunchOption } from "../core";
 
 export default {
   description:
-    "Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), or clears the marker when the draft says Off.",
+    "Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.",
   contributions: [
     TaskLaunchServer({
       def: autoStartLaunchOption,
-      apply: async ({ taskId, cause }, model) => {
+      apply: async ({ taskId, cause, start }, model) => {
+        if (!model) {
+          await setTaskAutoStart(taskId, null);
+          return;
+        }
+        // The caller claims this arm itself right after we return (the launch
+        // popover's inline start): record the model on the marker, but do NOT
+        // enqueue — a queued `tasks.maybe-launch` would race the caller's claim.
+        if (start === "now") {
+          await setTaskAutoStart(taskId, { model });
+          return;
+        }
         // Arming (not a bare `setTaskAutoStart`) is what actually enqueues the
         // launch when no dependency blocks the task.
-        if (model) await armTaskAutoStart({ taskId, model, cause });
-        else await setTaskAutoStart(taskId, null);
+        await armTaskAutoStart({ taskId, model, cause });
       },
       // NO `inherit`, deliberately — and the omission is the declaration. This
       // apply ARMS a launch, so inheriting it would start an agent for every

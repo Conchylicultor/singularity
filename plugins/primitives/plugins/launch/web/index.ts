@@ -11,6 +11,7 @@ export {
   LaunchAgentForm,
   type LaunchAgentPopoverProps,
   type LaunchAgentFormProps,
+  type LaunchAgentRequest,
   type LaunchToggle,
 } from "./components/launch-agent-popover";
 

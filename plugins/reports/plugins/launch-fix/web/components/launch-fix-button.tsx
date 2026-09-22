@@ -5,9 +5,6 @@ import type { ReportContext } from "@plugins/reports/web";
 import { investigate } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { conversationRoute } from "@plugins/conversations/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 
 export function LaunchFixButton({
   report,
@@ -26,7 +23,9 @@ export function LaunchFixButton({
     <LaunchAgentPopover
       trigger={
         <button
-          title={disabled ? "Recording crash…" : "Launch an agent to fix this crash"}
+          title={
+            disabled ? "Recording crash…" : "Launch an agent to fix this crash"
+          }
           aria-label="Launch fix agent"
           disabled={disabled}
           className="rounded-md px-xs py-2xs underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
@@ -47,15 +46,6 @@ export function LaunchFixButton({
       placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
       align="end"
       disabled={disabled}
-      onLaunched={(conv) => {
-        toast({
-          type: "crash",
-          title: "Fixing crash",
-          description: "Agent launched in the background — open it from here or the bell.",
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
       getRequest={async (userText) => {
         // Investigate first so the launched conversation is bound to the report's
         // task (idempotent server-side: re-clicking reuses the existing task).
