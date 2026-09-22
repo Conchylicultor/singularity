@@ -525,6 +525,11 @@ Getting that right means separating "the text" from "its spelling" throughout an
 that asserts eight policies, and it deserves its own pass and its own review rather
 than being carried in on the back of this one.
 
+**Done** in `research/2026-09-22-page-agent-access-e2e-round-trip-fixture.md`: the
+fixture holds a soft-broken line and a line another block type would claim, each
+use picks the row's text or its markdown spelling, and a named precondition keeps
+E4 from running on a page it cannot fail on.
+
 ## Verification
 
 1. `./singularity test plugins/page` — the fuzzed round-trip property is the

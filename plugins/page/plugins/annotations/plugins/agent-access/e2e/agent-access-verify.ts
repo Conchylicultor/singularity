@@ -74,6 +74,21 @@
 //      call proving the tag round trip, id-pinning and alignment together — and
 //      leaves the same five-column snapshot behind.
 //
+//      Only as strong as the page it runs on: a fixture of plain words passes on
+//      any serializer, which is how E4 passed through both round-trip losses it
+//      exists to catch. So the prose (`PROSE`) holds one line of each class
+//      whose markdown spelling differs from its stored text — a soft line break
+//      (`research/2026-09-10-page-soft-break-markdown-round-trip.md`) and a
+//      paragraph another block type would claim on parse — and a named
+//      precondition checks the live page still has both before E4 runs.
+//      Measured with the line-claim escape disabled: the loss surfaces even
+//      earlier, as `markdown-apply`'s own round-trip refusal of the FIRST
+//      page-rooted edit (naming the row it would drop) — the engine asks this
+//      same question before every write. E4 is the assertion that a passing
+//      round trip is also a fixed point. A new loss class is one more `PROSE`
+//      entry
+//      (`research/2026-09-22-page-agent-access-e2e-round-trip-fixture.md`).
+//
 // Manual only. Requires `./singularity build` first.
 // Usage: bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
@@ -88,6 +103,7 @@ import {
   blockIdOf,
   editableBlocks,
   openBlankPage,
+  typeLines,
 } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "@plugins/page/plugins/editor-collab/e2e";
 import { plainOf, type Block } from "@plugins/page/plugins/editor/core";
@@ -99,7 +115,36 @@ const CONVERSATION = "e2e-agent-access";
 
 /** Set on the page row, so the `# Title` banner is a line worth attacking. */
 const TITLE = "Parser notes";
-const LINES = ["alpha one", "bravo two", "charlie three"];
+/**
+ * One prose line: what its row STORES, and how `read_page` SPELLS it.
+ *
+ * Both, because for these lines they differ, and each use below compares one of
+ * them: a stored row, the rendered editor and the typing take `text`; every
+ * `old_string` anchor and every check on the read take `md`. There is
+ * deliberately no single string to reach for.
+ *
+ * The spellings are written out by hand rather than asked of the serializer:
+ * this is the independent statement of the contract, and a spelling computed by
+ * the code under test would agree with whatever that code does.
+ */
+interface ProseLine {
+  text: string;
+  md: string;
+}
+const PROSE: readonly ProseLine[] = [
+  // Shift+Enter inside one paragraph (`typeLines` types a `\n` that way): ONE
+  // block whose text holds a soft break. The read spells the break as the two
+  // characters `\n`, so the block stays one markdown line.
+  { text: "alpha one\nstill alpha", md: "alpha one\\nstill alpha" },
+  // Plain on purpose: the card is minted after it, BEFORE E4. An anchor that
+  // depends on a spelling would make a lost spelling bail the whole run there,
+  // and E4 would never get to say what was lost.
+  { text: "bravo two", md: "bravo two" },
+  // Typed as prose — only `1. ` is a typing shortcut, so `2. ` stays a
+  // paragraph. A numbered list claims this line on parse, so the read escapes it
+  // with one leading backslash. T3 below moves it under the card, indented.
+  { text: "2. charlie three", md: "\\2. charlie three" },
+];
 const SECRET = "do not tell the agent";
 // What an agent actually writes: a paragraph, a blank line, then a list. Under
 // the blank-line dialect that is FOUR blocks — the blank line is an empty
@@ -593,26 +638,39 @@ await withBrowser(async (h) => {
   const { page } = await h.session({ label: "reader" });
   const { pageId } = await openBlankPage(page, { settleMs: 2500 });
 
-  // Three ordinary paragraphs, typed like a human so their docs are real
-  // browser-authored CRDT state (not a server seed).
-  for (const [i, line] of LINES.entries()) {
-    if (i > 0) {
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(150);
-    }
-    await page.keyboard.type(line, { delay: 10 });
-  }
+  // Ordinary paragraphs, typed like a human so their docs are real
+  // browser-authored CRDT state (not a server seed) — the soft break included.
+  await typeLines(
+    page,
+    PROSE.map((p) => p.text),
+  );
   // Long enough for the ~300ms doc flush AND the ~1s data.text projection.
   await page.waitForTimeout(2500);
 
   const blocks = editableBlocks(page);
   const proseIds: string[] = [];
-  for (let i = 0; i < LINES.length; i++)
+  for (let i = 0; i < PROSE.length; i++)
     proseIds.push(await blockIdOf(blocks.nth(i)));
   r.ok(
-    "three prose blocks typed",
-    proseIds.length === 3 && new Set(proseIds).size === 3,
+    `${PROSE.length} prose blocks typed`,
+    new Set(proseIds).size === PROSE.length,
     JSON.stringify(proseIds),
+  );
+  // The fixture is what it claims to be: one row per line, each holding exactly
+  // its text — the soft break as a `\n` INSIDE one row, not a second row.
+  const typedRows = await fetchBlocks(pageId);
+  r.ok(
+    "fixture: every prose row stores exactly its line's text",
+    proseIds.every((id, i) => {
+      const row = typedRows.find((b) => b.id === id);
+      return row !== undefined && rowText(row) === PROSE[i]!.text;
+    }),
+    JSON.stringify(
+      proseIds.map((id) => {
+        const row = typedRows.find((b) => b.id === id);
+        return row ? rowText(row) : null;
+      }),
+    ),
   );
 
   await setPageTitle(page, pageId, TITLE);
@@ -632,11 +690,11 @@ await withBrowser(async (h) => {
   const beforeCreate = await snapshot(pageId);
   const created = await mustWrite("edit_page", {
     block_id: pageId,
-    old_string: LINES[1]!,
+    old_string: PROSE[1]!.md,
     // One `\n`, not two: a blank line here is an empty paragraph at ROOT, outside
     // every card, which the notes-only rule refuses — and the refusal would look
     // nothing like this case's subject.
-    new_string: `${LINES[1]!}\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
+    new_string: `${PROSE[1]!.md}\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
   });
   const noteId = created.note_ids?.[0];
   if (noteId === undefined) {
@@ -705,9 +763,12 @@ await withBrowser(async (h) => {
 
   // --- P1. lossless AND redacting, in one output ----------------------------
   const markdown = await mustCall("read_page", { block_id: pageId });
+  // A WHOLE line each, not a substring: a soft break fanned out into two lines,
+  // or a claimed line whose escape was dropped, still contains every word.
+  const markdownLines = markdown.split("\n");
   r.ok(
-    "P1: read_page returns the page's prose and its title banner",
-    LINES.every((line) => markdown.includes(line)) &&
+    "P1: read_page returns the page's prose, one markdown line per block, and its title banner",
+    PROSE.every((p) => markdownLines.includes(p.md)) &&
       markdown.startsWith(`# ${TITLE}`),
     JSON.stringify(markdown),
   );
@@ -736,6 +797,20 @@ await withBrowser(async (h) => {
   }
 
   // --- E4. the round trip is a fixed point ----------------------------------
+  // Precondition, from the LIVE page rather than from `PROSE`: there is
+  // something for the round trip to lose. Without it, E4 passes on a serializer
+  // that drops every escape — which is how it once passed through both losses.
+  const e4Rows = await fetchBlocks(pageId);
+  const e4Prose = proseIds.map((id) => {
+    const row = e4Rows.find((b) => b.id === id);
+    return row === undefined ? null : rowText(row);
+  });
+  r.ok(
+    "E4 precondition: the page holds a soft break inside one row, and a read line that opens with an escape",
+    e4Prose.some((text) => text?.includes("\n") === true) &&
+      markdownLines.some((line) => line.startsWith("\\")),
+    JSON.stringify({ rows: e4Prose, markdown }),
+  );
   // `read_page`'s ENTIRE output goes back in as `old_string`, replaced by itself
   // plus one trailing newline — the smallest change the tool's "old and new must
   // differ" contract accepts, and one a markdown parse cannot see. So what is
@@ -788,8 +863,8 @@ await withBrowser(async (h) => {
   // The prose line that FOLLOWS the card, and the same line moved inside it —
   // written the way the serializer writes a card's children (one two-space
   // indent), so the parse reads it as a child rather than as a stray line.
-  const closeThenProse = `</${CARD_TAG}>\n${LINES[2]!}`;
-  const proseIntoCard = `  ${LINES[2]!}\n</${CARD_TAG}>`;
+  const closeThenProse = `</${CARD_TAG}>\n${PROSE[2]!.md}`;
+  const proseIntoCard = `  ${PROSE[2]!.md}\n</${CARD_TAG}>`;
   r.ok(
     "the T3 attack is expressible against the document as read",
     markdown.includes(closeThenProse),
@@ -815,7 +890,7 @@ await withBrowser(async (h) => {
     [
       "P2: rewriting a prose block",
       "edit_page",
-      { block_id: pageId, old_string: LINES[0]!, new_string: "hijacked" },
+      { block_id: pageId, old_string: PROSE[0]!.md, new_string: "hijacked" },
       /outside every agent-authored block/,
     ],
     [
@@ -938,7 +1013,7 @@ await withBrowser(async (h) => {
     "E1: every prose block kept its id AND its text",
     proseIds.every((id, i) => {
       const row = rowsAfterEdit.find((b) => b.id === id);
-      return row !== undefined && rowText(row) === LINES[i];
+      return row !== undefined && rowText(row) === PROSE[i]!.text;
     }),
     JSON.stringify(rowsAfterEdit.map((b) => [b.id, b.type, rowText(b)])),
   );
@@ -968,7 +1043,8 @@ await withBrowser(async (h) => {
 
   // --- E3. the open editor converged ---------------------------------------
   // By block id, not by position: the card sits between `bravo` and `charlie`,
-  // so the editable-line order is no longer the prose order.
+  // so the editable-line order is no longer the prose order. Compared with the
+  // TEXT: the soft break renders as a `<br>`, which `innerText` reads as `\n`.
   const rendered: string[] = [];
   for (const id of proseIds) {
     rendered.push(
@@ -979,7 +1055,7 @@ await withBrowser(async (h) => {
   }
   r.ok(
     "E3: the already-open editor still shows the prose it had",
-    JSON.stringify(rendered) === JSON.stringify(LINES),
+    JSON.stringify(rendered) === JSON.stringify(PROSE.map((p) => p.text)),
     JSON.stringify(rendered),
   );
   r.ok(
@@ -1154,9 +1230,9 @@ await withBrowser(async (h) => {
   const beforeMint = await snapshot(pageId);
   const minted = await mustWrite("edit_page", {
     block_id: pageId,
-    old_string: LINES[0]!,
+    old_string: PROSE[0]!.md,
     new_string:
-      `${LINES[0]!}\n<${AGENT_PAGE_TAG} title="${AGENT_PAGE_TITLE}">\n` +
+      `${PROSE[0]!.md}\n<${AGENT_PAGE_TAG} title="${AGENT_PAGE_TITLE}">\n` +
       `  ${AGENT_PAGE_FIRST}\n  - checked decode.ts\n</${AGENT_PAGE_TAG}>`,
   });
   const agentPageId = minted.created_page_ids?.[0];

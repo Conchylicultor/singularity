@@ -18,7 +18,11 @@
 import type { Page } from "playwright";
 
 /**
- * One visible line. `indent` presses Tab (`"in"`) or Shift+Tab (`"out"`) before
+ * One block. Its `text` is exactly what the block will hold: a `\n` inside it is
+ * a SOFT line break, typed as Shift+Enter, so the line stays one block. (A bare
+ * `keyboard.type("\n")` presses a plain Enter, which is a split — a second
+ * spelling of the separator between lines, and not what a `\n` in a block's text
+ * means anywhere else.) `indent` presses Tab (`"in"`) or Shift+Tab (`"out"`) before
  * typing it, so the line sits one level deeper / shallower than the one above.
  * The block type is inherited across the Enter, so an indented continuation of a
  * list must NOT re-type its markdown prefix.
@@ -56,7 +60,10 @@ export async function typeLines(
       typeof line === "string" ? { text: line, indent: undefined } : line;
     if (indent === "in") await page.keyboard.press("Tab");
     if (indent === "out") await page.keyboard.press("Shift+Tab");
-    await page.keyboard.type(text);
+    for (const [j, segment] of text.split("\n").entries()) {
+      if (j > 0) await page.keyboard.press("Shift+Enter");
+      await page.keyboard.type(segment);
+    }
   }
   if (opts.trailingEnter) await page.keyboard.press("Enter");
 }
