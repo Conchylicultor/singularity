@@ -1010,6 +1010,7 @@ See "Open questions" in the design doc.
     - `conversations/conversation-view/markdown-extensions`
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-profiling`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/vscode`
     - `conversations/conversations-view`

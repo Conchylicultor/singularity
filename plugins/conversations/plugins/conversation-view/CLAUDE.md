@@ -9,7 +9,7 @@
   - Slots:
     - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
     - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
-    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.turn-summary`
+    - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.running-agents`, `conversations.conversation-view.turn-summary`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conversation"
@@ -98,6 +98,7 @@
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/rewind`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/status`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
@@ -144,6 +145,7 @@
   - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
   - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
   - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
+  - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, and what it last did. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running.
   - **`status`** — Displays the conversation status as a colored badge in the toolbar.
   - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
   - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.

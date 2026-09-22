@@ -21,6 +21,7 @@ export {
   subagentActivityResource,
   subagentTranscriptResource,
 } from "./protocol";
+export { AGENT_TOOL_NAME, agentCallsIn, agentCallForSubagent } from "./join";
 export { classifyLastStep, lastStepOfLines, formatLastStep } from "./last-step";
 export type { SubagentRunState, SubagentRunStateInput } from "./run-state";
 export { subagentRunState } from "./run-state";

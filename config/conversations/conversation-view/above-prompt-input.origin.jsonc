@@ -1,4 +1,4 @@
-// @hash 1e0885f5553d
+// @hash f9b900e5aa51
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "conversations.conversation-view.notes:notes",
     "conversations.conversation-view.op-status:op-status",
+    "conversations.conversation-view.running-agents:running-agents",
     "conversations.conversation-view.turn-summary:turn-summary"
   ]
 }

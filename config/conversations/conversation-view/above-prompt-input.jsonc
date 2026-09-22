@@ -1,8 +1,11 @@
-// @hash 1e0885f5553d
+// @hash f9b900e5aa51
 {
   "items": [
     "conversations.conversation-view.op-status:op-status",
     "conversations.conversation-view.turn-summary:turn-summary",
-    "conversations.conversation-view.notes:notes"
+    "conversations.conversation-view.notes:notes",
+    // Closest to the composer: the one card that is about work happening right
+    // now, so it sits where the eye already is when you start typing.
+    "conversations.conversation-view.running-agents:running-agents"
   ]
 }

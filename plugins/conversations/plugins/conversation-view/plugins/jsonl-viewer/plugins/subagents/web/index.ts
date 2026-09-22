@@ -4,7 +4,12 @@ export { SubagentPaneBody } from "./components/subagent-pane-body";
 export { SubagentDuration } from "./components/subagent-duration";
 export { SubagentLastStep } from "./components/subagent-last-step";
 export { useSubagentStatus } from "./internal/use-subagent-status";
-export type { SubagentStatus } from "./internal/use-subagent-status";
+export { useConversationSubagents } from "./internal/use-subagent-statuses";
+export type {
+  SubagentStatus,
+  SubagentEntry,
+  ConversationSubagents,
+} from "./internal/use-subagent-statuses";
 export { subagentStateDisplay } from "./internal/run-state-display";
 export type { SubagentStateDisplay } from "./internal/run-state-display";
 

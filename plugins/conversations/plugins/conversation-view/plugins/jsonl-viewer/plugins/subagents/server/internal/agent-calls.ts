@@ -1,4 +1,5 @@
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
+import { AGENT_TOOL_NAME } from "../../core";
 import {
   readChainLines,
   resolveConversationTranscriptPaths,
@@ -78,7 +79,7 @@ export async function scanAgentCallNames(
     for (const block of content) {
       if (typeof block !== "object" || block === null) continue;
       const b = block as Record<string, unknown>;
-      if (b.type !== "tool_use" || b.name !== "Agent") continue;
+      if (b.type !== "tool_use" || b.name !== AGENT_TOOL_NAME) continue;
       const input = b.input;
       if (
         typeof b.id !== "string" ||

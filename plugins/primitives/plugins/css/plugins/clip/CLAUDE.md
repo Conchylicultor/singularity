@@ -59,6 +59,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/terminal-pane`
     - `debug/profiling`
     - `debug/profiling/build`

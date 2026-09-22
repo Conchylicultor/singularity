@@ -1778,6 +1778,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-rewind",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/running-agents": {
+      "name": "@singularity/plugin-conversations-conversation-view-running-agents",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/status": {
       "name": "@singularity/plugin-conversations-conversation-view-status",
       "version": "0.0.1",
@@ -6704,6 +6708,8 @@
     "@singularity/plugin-conversations-conversation-view-resume": ["@singularity/plugin-conversations-conversation-view-resume@workspace:plugins/conversations/plugins/conversation-view/plugins/resume"],
 
     "@singularity/plugin-conversations-conversation-view-rewind": ["@singularity/plugin-conversations-conversation-view-rewind@workspace:plugins/conversations/plugins/conversation-view/plugins/rewind"],
+
+    "@singularity/plugin-conversations-conversation-view-running-agents": ["@singularity/plugin-conversations-conversation-view-running-agents@workspace:plugins/conversations/plugins/conversation-view/plugins/running-agents"],
 
     "@singularity/plugin-conversations-conversation-view-status": ["@singularity/plugin-conversations-conversation-view-status@workspace:plugins/conversations/plugins/conversation-view/plugins/status"],
 

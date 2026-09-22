@@ -134,6 +134,7 @@ primitive exists to name.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view`
     - `conversations/recover`

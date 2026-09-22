@@ -1,0 +1,12 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "list",
+      "name": "Agents",
+      // Source order is launch order, which is how the band reads: the agent
+      // you started first is the one at the top.
+      "view": { "type": "list", "sort": [] }
+    }
+  ]
+}

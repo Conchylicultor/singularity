@@ -29,10 +29,8 @@ import {
   type SubagentRequestShape,
   type SubagentTranscript,
 } from "../../core";
-import {
-  useSubagentStatus,
-  type SubagentStatus,
-} from "../internal/use-subagent-status";
+import { useSubagentStatus } from "../internal/use-subagent-status";
+import type { SubagentStatus } from "../internal/use-subagent-statuses";
 import { subagentStateDisplay } from "../internal/run-state-display";
 import { SubagentDuration } from "./subagent-duration";
 import { SubagentLastStep } from "./subagent-last-step";

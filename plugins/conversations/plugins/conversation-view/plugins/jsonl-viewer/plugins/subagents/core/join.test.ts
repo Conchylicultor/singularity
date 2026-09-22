@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { agentCallJoin, describedSubagent } from "./protocol";
+import { agentCallForSubagent } from "./join";
 import type { SubagentActivityRow } from "./protocol";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
@@ -126,5 +127,63 @@ describe("describedSubagent", () => {
         toolUseId: "toolu_x",
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("agentCallForSubagent", () => {
+  const calls = [
+    agentCall("toolu_1", { subagent_type: "Explore" }),
+    agentCall("toolu_2", { name: "live-probe" }),
+  ];
+
+  test("a row carrying an id joins to the call with that id", () => {
+    expect(
+      agentCallForSubagent(row({ agentId: "a", toolUseId: "toolu_1" }), calls)
+        ?.toolUseId,
+    ).toBe("toolu_1");
+  });
+
+  test("a named teammate joins to the call that asked for its name", () => {
+    // The teammate's meta records no tool-use id at all, so the name is the
+    // only key it has — and without the call there is no completion signal.
+    expect(
+      agentCallForSubagent(row({ agentId: "mate", name: "live-probe" }), calls)
+        ?.toolUseId,
+    ).toBe("toolu_2");
+  });
+
+  test("a row whose call is not in the transcript joins to nothing", () => {
+    expect(
+      agentCallForSubagent(row({ agentId: "a", toolUseId: "gone" }), calls),
+    ).toBeUndefined();
+    expect(
+      agentCallForSubagent(row({ agentId: "a", name: "unnamed-here" }), calls),
+    ).toBeUndefined();
+  });
+
+  test("two calls asking for one name refuse to join, rather than guess", () => {
+    const twins = [
+      agentCall("toolu_a", { name: "twin" }),
+      agentCall("toolu_b", { name: "twin" }),
+    ];
+    expect(
+      agentCallForSubagent(row({ agentId: "a", name: "twin" }), twins),
+    ).toBeUndefined();
+  });
+
+  test("an undescribed row has no key to join on", () => {
+    const broken: SubagentActivityRow = {
+      kind: "undescribed",
+      agentId: "broken",
+      reason: "not valid JSON",
+      startedAt: "2026-09-20T10:00:00.000Z",
+      lastActivityAt: "2026-09-20T10:01:00.000Z",
+      lastStep: null,
+    };
+    expect(agentCallForSubagent(broken, calls)).toBeUndefined();
+  });
+
+  test("a row with no id and no name joins to nothing", () => {
+    expect(agentCallForSubagent(row({ agentId: "a" }), calls)).toBeUndefined();
   });
 });

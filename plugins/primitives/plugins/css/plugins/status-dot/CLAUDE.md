@@ -43,6 +43,7 @@ no-provider default is `md`.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/jsonl-viewer/task-notification`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`
     - `debug/health-monitor`
     - `debug/live-state-health`

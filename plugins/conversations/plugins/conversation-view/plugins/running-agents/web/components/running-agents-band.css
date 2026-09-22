@@ -1,0 +1,25 @@
+/* The band's one piece of motion: a small ring that turns while sub-agents are
+   working. Written here rather than reached for as a utility because a ring is
+   a border-colour trick (a transparent ring with one bright edge) that no
+   layout primitive owns, and because the reduced-motion answer belongs beside
+   it: under `prefers-reduced-motion` the ring is held still rather than hidden,
+   so the marker stays where the reader expects and simply stops moving.
+   Plugin-local per the theme rule — keyframes live in the consuming plugin. */
+@keyframes running-agents-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.running-agents-ring {
+  border-radius: 9999px;
+  border: 1.5px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  animation: running-agents-spin 900ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-agents-ring {
+    animation: none;
+  }
+}

@@ -25,15 +25,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { agentReportPane } from "../panes";
-
-interface AgentInput {
-  prompt: string;
-  description?: string;
-  subagent_type?: string;
-  model?: string;
-  isolation?: string;
-  run_in_background?: boolean;
-}
+import { AgentInputSchema, DEFAULT_AGENT_TYPE } from "../../core";
 
 function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
@@ -54,10 +46,10 @@ function MetaBadge({ children }: { children: React.ReactNode }) {
 }
 
 export function AgentToolView({ event }: ToolRendererProps) {
-  const input = event.input as AgentInput;
-  const agentType = input.subagent_type ?? "general-purpose";
+  const input = AgentInputSchema.parse(event.input);
+  const agentType = input.subagent_type ?? DEFAULT_AGENT_TYPE;
   const description = input.description ?? "";
-  const prompt = input.prompt ?? "";
+  const prompt = input.prompt;
   const result = event.result;
 
   // The sub-agent behind this card. The join is the tool-use id, and every card

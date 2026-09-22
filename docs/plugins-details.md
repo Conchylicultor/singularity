@@ -9477,7 +9477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
           - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
-          - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.turn-summary`
+          - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.running-agents`, `conversations.conversation-view.turn-summary`
           - `conversationPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "conversation"
@@ -9566,6 +9566,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/rewind`
+          - `conversations/conversation-view/running-agents`
           - `conversations/conversation-view/status`
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/terminal-pane`
@@ -10798,6 +10799,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.formatElapsed`
                   - `primitives/relative-time.useNow`
                 - Exports (types):
+                  - `ConversationSubagents`
+                  - `SubagentEntry`
                   - `SubagentStateDisplay`
                   - `SubagentStatus`
                 - Exports (values):
@@ -10805,6 +10808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SubagentLastStep`
                   - `SubagentPaneBody`
                   - `subagentStateDisplay`
+                  - `useConversationSubagents`
                   - `useSubagentStatus`
               - Core:
                 - Uses:
@@ -10824,7 +10828,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SubagentTranscript`
                   - `UndescribedSubagent`
                 - Exports (values):
+                  - `AGENT_TOOL_NAME`
+                  - `agentCallForSubagent`
                   - `agentCallJoin`
+                  - `agentCallsIn`
                   - `classifyLastStep`
                   - `describedSubagent`
                   - `DescribedSubagentSchema`
@@ -10842,7 +10849,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `toolResultIsOutcome`
                   - `UndescribedSubagentSchema`
               - Cross-plugin:
-                - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+                  - `conversations/conversation-view/running-agents`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -10970,7 +10979,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.useOpenPane`
                     - Exports (values): `agentReportPane`
                   - Cross-plugin:
-                    - Imported by: `conversations/conversation-view/jsonl-viewer/task-notification`
+                    - Imported by:
+                      - `conversations/conversation-view/jsonl-viewer/task-notification`
+                      - `conversations/conversation-view/running-agents`
+                  - Core:
+                    - Exports (types): `AgentInput`
+                    - Exports (values):
+                      - `AGENT_TOOL_NAME`
+                      - `AgentInputSchema`
+                      - `DEFAULT_AGENT_TYPE`
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
                     - Contributes:
@@ -11670,6 +11687,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `rewindConversationEndpoint`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+        - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, and what it last did. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running.
+          - Web:
+            - Contributes: `Conversation.AbovePromptInput` → `RunningAgentsBand`
+            - Uses:
+              - `conversations/conversation-view.Conversation`
+              - `conversations/conversation-view/jsonl-viewer/subagents.SubagentDuration`
+              - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
+              - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.useCollapsible`
+              - `primitives/collapsible.UseCollapsibleReturn`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/pane.useOpenPane`
+              - `primitives/relative-time.ElapsedTime`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
             - Contributes: `Conversation.Header` → `StatusBadge`
@@ -23897,6 +23937,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/agents`
           - `conversations/conversation-view/jsonl-viewer/collapsible-card`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/running-agents`
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
           - `plugin-meta/facets/exports/render-detail`
@@ -24376,6 +24417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/terminal-pane`
               - `debug/profiling`
               - `debug/profiling/build`
@@ -24710,6 +24752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
               - `conversations/recover`
@@ -25055,6 +25098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversations-view`
               - `debug/broadcasts`
               - `debug/memory`
@@ -25394,6 +25438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/turn-summary`
               - `conversations/recover`
               - `debug/broadcasts`
@@ -26048,6 +26093,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/jsonl-viewer/task-notification`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
               - `debug/health-monitor`
               - `debug/live-state-health`
@@ -26343,6 +26389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/push-profiling`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/turn-summary`
               - `conversations/recover`
@@ -26836,6 +26883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/rewind`
+              - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/conversation-view/turn-summary`
@@ -27216,7 +27264,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×38: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×39: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -27404,7 +27452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×38: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×39: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -27432,6 +27480,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/all-conversations`
+          - `conversations/conversation-view/running-agents`
           - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
@@ -30198,6 +30247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/markdown-extensions`
           - `conversations/conversation-view/open-app`
           - `conversations/conversation-view/push-profiling`
+          - `conversations/conversation-view/running-agents`
           - `conversations/conversation-view/terminal-pane`
           - `conversations/conversation-view/vscode`
           - `conversations/conversations-view`
@@ -30461,6 +30511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/op-status`
+          - `conversations/conversation-view/running-agents`
           - `debug/boot-profile`
           - `debug/claude-cli-calls`
           - `debug/config-orphans`

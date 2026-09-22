@@ -361,6 +361,7 @@ fixed raw size escapes per-site via
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/pending-turn`
     - `conversations/conversation-view/push-profiling`
+    - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/turn-summary`
     - `conversations/recover`

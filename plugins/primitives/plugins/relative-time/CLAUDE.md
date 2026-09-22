@@ -37,6 +37,7 @@
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/running-agents`
     - `debug/boot-profile`
     - `debug/claude-cli-calls`
     - `debug/config-orphans`
