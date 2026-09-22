@@ -28,11 +28,15 @@ generates **no migration at all**.
   is no "view registered in a module nothing imported" footgun. (This replaced
   the old `defineView()` import-side-effect registry, whose registration
   silently depended on something importing `views.ts`.)
-- `rebuildDerivedViews(db)` (server) is called in the database plugin's
-  `onReadyBlocking`, right after `runMigrations(db)`. It reads
-  `View.getContributions()`, then in one transaction `DROP VIEW IF EXISTS`s every
+- `rebuildDerivedViews(db, views)` (server) is called in the database plugin's
+  `onReadyBlocking`, right after `runMigrations(db)`, with
+  `View.getContributions()`. In one transaction it `DROP VIEW IF EXISTS`s every
   view in **reverse** dependency order and `CREATE VIEW`s them in forward order.
   Any failure throws and blocks boot.
+- The view set is an argument, not read inside the rebuild, because the
+  `migration-applies-clean` check also rebuilds the views (in its rolled-back
+  dry-run on main's DB) from a process that never boots. It gathers the same set
+  with `View.from(definitions)` over main's server barrels.
 - The view body is compiled from the drizzle `pgView` object via
   `compileCreateView` (core), which inlines all params into standalone DDL.
 - `dependsOn` lists the SQL **name** strings of other views (e.g. `"attempts_v"`),
@@ -99,6 +103,7 @@ and re-export it from `core/index.ts`. See
 - Description: Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
 - Server:
   - Uses: `primitives/log-channels.defineLogSink`
+  - Exports (types): `DeclaredView`
   - Exports (values):
     - `rebuildDerivedViews`
     - `relationIdentityBase`

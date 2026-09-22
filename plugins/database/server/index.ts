@@ -10,7 +10,10 @@ import {
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
-import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
+import {
+  rebuildDerivedViews,
+  View,
+} from "@plugins/database/plugins/derived-views/server";
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
 
 export {
@@ -66,7 +69,7 @@ export default {
     // plugins/database/plugins/derived-views/CLAUDE.md.
     await withQueryDeadline(
       { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: derived-views rebuild" },
-      () => rebuildDerivedViews(db),
+      () => rebuildDerivedViews(db, View.getContributions()),
     );
     // Last, because every relation a loader can read now exists. This is the
     // snapshot that tells an unquoted table name in a loader's raw SQL apart

@@ -115,7 +115,9 @@ before push:
   and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which replays
   only the pending delta (every pending migration in **one** transaction, so a
   later one sees an earlier one's DDL, then `rebuildDerivedViews`) and **always
-  rolls back** via a sentinel throw. Applying against main's real schema + data
+  rolls back** via a sentinel throw. The check process never boots, so it hands
+  the dry-run the view set itself, read from main's server barrels
+  (`check/internal/declared-views.ts`) — `View.getContributions()` throws there. Applying against main's real schema + data
   reproduces the boot failure exactly, while the rollback leaves main untouched. A
   real apply error is surfaced with the offending filename + the pg error.
 - `SET LOCAL statement_timeout = '60s'` is the load-bearing bound on how long the
@@ -254,6 +256,7 @@ only agreement that matters.
 - Description: DDL lifecycle: migration runner and SQL files.
 - Server:
   - Uses:
+    - `database/derived-views.DeclaredView`
     - `database/derived-views.rebuildDerivedViews`
     - `primitives/log-channels.defineLogSink`
   - Exports (values):

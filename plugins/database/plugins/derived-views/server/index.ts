@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { rebuildDerivedViews } from "./internal/rebuild";
+export type { DeclaredView } from "./internal/rebuild";
 export { View } from "./internal/contribution";
 export { relationIdentityBase } from "./internal/relation-identity";
 

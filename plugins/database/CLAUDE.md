@@ -241,6 +241,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `database/connection.withQueryDeadline`
     - `database/derived-tables.rebuildDerivedTables`
     - `database/derived-views.rebuildDerivedViews`
+    - `database/derived-views.View`
     - `database/migrations.runMigrations`
     - `primitives/log-channels.defineLogSink`
   - Exports (types): `DbExecutor`

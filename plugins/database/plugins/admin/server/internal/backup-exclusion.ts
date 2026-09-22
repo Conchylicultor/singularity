@@ -48,18 +48,16 @@ export interface BackupExclusions {
 
 // The declared exclusion set.
 //
-// THROWS on an empty set, like `forkExclusions()`. `getContributions()` answers
-// `[]` in a process that never collected contributions, and "leave nothing out"
-// there would be a full backup that looks like it worked. `traces` guarantees a
-// non-empty set in any process that did collect them — the backup body runs in
-// `./singularity supervised-exec`, which does.
+// THROWS on an empty set, like `forkExclusions()`. A process that never
+// collected contributions already throws inside `getContributions()`; an empty
+// collected set would mean "leave nothing out", a full backup that looks like it
+// worked. `traces` guarantees a non-empty set in any process that collects — the
+// backup body runs in `./singularity supervised-exec`, which does.
 export function backupExclusions(): BackupExclusions {
   const tables = ExcludeFromBackup.getContributions();
   if (tables.length === 0) {
     throw new Error(
-      "backupExclusions(): no backup exclusions are registered. Server contributions " +
-        "have not been collected in this process — call this only from a booted " +
-        "backend, or run collectContributions() first.",
+      "backupExclusions(): no backup exclusions are registered by any loaded plugin.",
     );
   }
   return { tables: tables.map((c) => tableLabel(c.table)) };

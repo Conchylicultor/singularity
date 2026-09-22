@@ -43,7 +43,7 @@ import { changeFeedLog as log } from "./log-sink";
 // (e.g. high-churn observability counters) — keeping THIS plugin from naming any
 // consumer table (collection-consumer separation). Both are built at CALL time
 // (not module load) so the contribution sets are read after collectContributions
-// has run, the same way rebuildDerivedViews reads View.getContributions() lazily.
+// has run (reading them earlier throws).
 // `live_state_trigger_state` (this layer's own content signature — see
 // `rebuildTriggers`) is denylisted for the same reason as the snapshot table: it
 // is written only by the rebuild itself and read only at boot, so it is pure

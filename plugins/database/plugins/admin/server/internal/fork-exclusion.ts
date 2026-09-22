@@ -126,22 +126,17 @@ export interface ForkExclusions {
 
 // The declared exclusion set.
 //
-// THROWS on an empty set. `getContributions()` answers `[]` when
-// `collectContributions()` has not run, and that only happens in a process that
-// never booted the server (a CLI, a script). Silently returning "exclude
-// nothing" there would produce a full ~2 GB fork that looks like it worked —
-// exactly the silent-empty-registry footgun the change-feed exclusion warns
-// about. The declarations in this repo guarantee a non-empty set in any booted
-// backend, so empty means "you are calling this from the wrong kind of process",
-// which is worth a loud failure.
+// THROWS on an empty set. A process that never booted (a CLI, a script) already
+// throws inside `getContributions()`; this guards the remaining case, a booted
+// graph that declares no exclusion at all. Silently returning "exclude nothing"
+// would produce a full ~2 GB fork that looks like it worked. The declarations in
+// this repo guarantee a non-empty set in any booted backend.
 export function forkExclusions(): ForkExclusions {
   const tables = ExcludeFromFork.getContributions();
   const schemas = ExcludeSchemaDataFromFork.getContributions();
   if (tables.length === 0 && schemas.length === 0) {
     throw new Error(
-      "forkExclusions(): no fork exclusions are registered. Server contributions " +
-        "have not been collected in this process — call this only from a booted " +
-        "backend, or run collectContributions() first.",
+      "forkExclusions(): no fork exclusions are registered by any loaded plugin.",
     );
   }
   return {

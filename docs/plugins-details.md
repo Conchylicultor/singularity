@@ -12405,6 +12405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/connection.withQueryDeadline`
       - `database/derived-tables.rebuildDerivedTables`
       - `database/derived-views.rebuildDerivedViews`
+      - `database/derived-views.View`
       - `database/migrations.runMigrations`
       - `primitives/log-channels.defineLogSink`
     - Exports (types): `DbExecutor`
@@ -12736,6 +12737,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
+        - Exports (types): `DeclaredView`
         - Exports (values):
           - `rebuildDerivedViews`
           - `relationIdentityBase`
@@ -12847,6 +12849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Uses:
+          - `database/derived-views.DeclaredView`
           - `database/derived-views.rebuildDerivedViews`
           - `primitives/log-channels.defineLogSink`
         - Exports (values):

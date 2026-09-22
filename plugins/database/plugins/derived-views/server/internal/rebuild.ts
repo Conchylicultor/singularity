@@ -11,7 +11,10 @@ import {
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { z } from "zod";
-import { View } from "./contribution";
+import type { View } from "./contribution";
+
+// One declared view, as a `View` contribution carries it.
+export type DeclaredView = ReturnType<typeof View.getContributions>[number];
 
 const log = defineLogSink({
   id: "derived-views",
@@ -33,6 +36,12 @@ const log = defineLogSink({
 // `db` is passed in (like runMigrations) so this module never imports
 // @plugins/database/server — that would form a cycle (database/server calls us).
 //
+// `views` is passed in too, never read from `View.getContributions()` here. That
+// table is filled only by a booted backend's `collectContributions`; a process
+// that never boots (the `migration-applies-clean` check) gathers the same set
+// from the server barrels instead. Reading it here made the check's dry-run
+// rebuild zero views and pass without testing any.
+//
 // SKIP WHEN UNCHANGED. The DROP+CREATE holds an AccessExclusive lock over each
 // view until commit. During a hot-swap restart the *previous* backend is still
 // serving reads of those same views against the same DB, so the exclusive
@@ -42,17 +51,15 @@ const log = defineLogSink({
 // rebuild entirely when it matches what is already live — removing the lock
 // window from the steady-state restart path. The rebuild (and its brief
 // deadlock risk) now only runs on a genuine view edit, not every restart.
-export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
-  // Views are declared via the `View` server contribution on each owning
-  // plugin's definition. The framework collects all contributions before any
-  // onReadyBlocking runs, so this list is complete regardless of import order.
-  const declared: RegisteredView[] = View.getContributions().map(
-    ({ view, dependsOn }) => ({
-      name: getViewConfig(view).name,
-      view,
-      dependsOn: dependsOn ?? [],
-    }),
-  );
+export async function rebuildDerivedViews(
+  db: NodePgDatabase,
+  views: readonly DeclaredView[],
+): Promise<void> {
+  const declared: RegisteredView[] = views.map(({ view, dependsOn }) => ({
+    name: getViewConfig(view).name,
+    view,
+    dependsOn: dependsOn ?? [],
+  }));
   const ordered = topoSortViews(declared);
   if (ordered.length === 0) return;
 

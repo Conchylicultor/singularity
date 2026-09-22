@@ -11,6 +11,7 @@ import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 import dataMigrationResetStableCheck from "./data-migration-reset-stable";
 import { withDirectDb } from "./internal/direct-db";
+import { declaredViews } from "./internal/declared-views";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -89,7 +90,13 @@ const check: Check = {
     ]);
     if (diff.code === 0) return { ok: true };
 
-    // SLOW PATH: a migration differs from main → replay the pending delta against
+    // SLOW PATH, first the derived views main's next boot rebuilds after the
+    // migrations. Read from the server barrels because this process never boots, so
+    // `View.getContributions()` has nothing collected (and throws).
+    const declared = await declaredViews(root);
+    if (!declared.ok) return { ok: false, message: declared.message };
+
+    // Then a migration differs from main → replay the pending delta against
     // main's live DB inside a transaction that always rolls back, over a direct
     // (non-pgbouncer) connection so the multi-statement dry-run transaction
     // stays on one backend. withDirectDb separates a connectivity failure
@@ -99,13 +106,15 @@ const check: Check = {
       MAIN_DB_NAME,
       async (pool): Promise<CheckResult> => {
         try {
-          await dryRunPendingMigrations(drizzle(pool));
+          await dryRunPendingMigrations(drizzle(pool), {
+            views: declared.views,
+          });
           return { ok: true };
         } catch (e) {
           return {
             ok: false,
             message: (e as Error).message,
-            hint: "This migration would fail to apply and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/.",
+            hint: "This migration (or the derived-view rebuild after it) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the view in its plugin's views.ts.",
           };
         }
       },

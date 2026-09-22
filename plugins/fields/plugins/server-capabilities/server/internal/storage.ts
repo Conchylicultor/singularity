@@ -80,6 +80,12 @@ export interface FieldStorageToken {
     _pluginId?: string;
     _pluginDescription?: string;
   })[];
+  getContributionsIfCollected():
+    | (FieldStorageContribution & {
+        _pluginId?: string;
+        _pluginDescription?: string;
+      })[]
+    | undefined;
 }
 
 // Wrap the raw contribution token so DECLARING a contribution also records it in
@@ -93,7 +99,10 @@ const StorageToken = Object.assign(
     eager.set(props.type.id, props as FieldStorageContribution);
     return storageToken(props as FieldStorageContribution);
   },
-  { getContributions: storageToken.getContributions },
+  {
+    getContributions: storageToken.getContributions,
+    getContributionsIfCollected: storageToken.getContributionsIfCollected,
+  },
 ) as unknown as FieldStorageToken;
 
 export const Fields = {
@@ -112,7 +121,7 @@ export const Fields = {
 export function resolveFieldStorage(
   typeId: string,
 ): FieldStorageContribution | undefined {
-  const live = Fields.Storage.getContributions().find(
+  const live = Fields.Storage.getContributionsIfCollected()?.find(
     (c) => c.type.id === typeId,
   );
   return live ?? eager.get(typeId);

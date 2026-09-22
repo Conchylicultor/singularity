@@ -3,7 +3,10 @@ import { join } from "path";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
+import {
+  rebuildDerivedViews,
+  type DeclaredView,
+} from "@plugins/database/plugins/derived-views/server";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
@@ -204,8 +207,13 @@ const ROLLBACK = Symbol("dry-run-rollback");
 // Note: a rolled-back INSERT still advances any serial/identity sequence
 // (nextval is non-transactional), so a dry-run can leave harmless ID gaps. No
 // data is changed; this is expected and ignorable.
+//
+// `views` is the derived-view set main's next boot would rebuild. The caller
+// supplies it because this runs in a process that never booted, where
+// `View.getContributions()` has nothing collected.
 export async function dryRunPendingMigrations(
   db: NodePgDatabase,
+  { views }: { views: readonly DeclaredView[] },
 ): Promise<{ pending: number }> {
   const applied = await getAppliedHashes(db);
   // Same skip-by-hash logic as runMigrations: two pending files sharing a sha8
@@ -237,7 +245,7 @@ export async function dryRunPendingMigrations(
       // Mirror onReadyBlocking's next step (runMigrations → rebuildDerivedViews):
       // a view referencing a column a migration drops would also crash boot. Also
       // rolled back.
-      await rebuildDerivedViews(tx);
+      await rebuildDerivedViews(tx, views);
       throw ROLLBACK; // force ROLLBACK; never commit
     });
   } catch (e) {

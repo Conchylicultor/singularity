@@ -59,7 +59,11 @@ const FilterSqlToken = Object.assign(
     eager.set(props.type.id, props.operators);
     return filterSqlToken(props);
   },
-  { getContributions: filterSqlToken.getContributions },
+  {
+    getContributions: filterSqlToken.getContributions,
+    getContributionsIfCollected: filterSqlToken.getContributionsIfCollected,
+    from: filterSqlToken.from,
+  },
 ) as unknown as ServerContributionToken<FieldFilterSqlContribution>;
 
 /** The server-owned field capability namespace. `Storage` is composed in from
@@ -81,7 +85,7 @@ export function resolveFieldFilterSql(
   typeId: string,
   operatorId: string,
 ): FilterSqlBuilder | undefined {
-  const live = Fields.FilterSql.getContributions().find(
+  const live = Fields.FilterSql.getContributionsIfCollected()?.find(
     (c) => c.type.id === typeId,
   )?.operators;
   const operators = live ?? eager.get(typeId);
