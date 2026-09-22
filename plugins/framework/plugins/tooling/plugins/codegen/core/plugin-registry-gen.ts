@@ -14,7 +14,11 @@ import {
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  PLUGIN_FOLDERS,
+  type PluginFolder,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -101,22 +105,40 @@ function collectedDirCandidates(
 // First positional string argument of a `defineCollectedDir("<dir>")` call.
 const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
 
-/** The collected dirs the candidates' `text` declares. Pure. */
+const PLUGIN_FOLDER_SET: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
+const isPluginFolder = (name: string): name is PluginFolder =>
+  PLUGIN_FOLDER_SET.has(name);
+
+/**
+ * The collected dirs the candidates' `text` declares. Pure. A declared name
+ * that is not a `PluginFolder` throws naming the file: a collected dir is a
+ * plugin folder, and a plugin folder needs its row in the boundary table. The
+ * typed marker already makes that a tsc error; this covers the untyped copy.
+ */
 function collectedDirsFrom(
   root: string,
   sources: Iterable<CollectedDirCandidate & { text: string }>,
 ): DiscoveredCollectedDir[] {
   const pluginsRoot = resolve(root, "plugins");
   const out: DiscoveredCollectedDir[] = [];
-  for (const { pluginPath, text } of sources) {
+  for (const { rel, pluginPath, text } of sources) {
     // Fast-path: skip files that can't contain the marker. Correctness still
     // comes from `findMarkerCalls`, which ignores comment/string/regex matches.
     if (!text.includes("defineCollectedDir")) continue;
     for (const call of findMarkerCalls(text, "defineCollectedDir")) {
       const arg = FIRST_STRING_ARG_RE.exec(call.argsText);
       if (!arg) continue;
+      const dir = arg[1]!;
+      if (!isPluginFolder(dir)) {
+        throw new Error(
+          `${rel} declares collected dir "${dir}", which is not a plugin folder. ` +
+            `Declare it in LEAF_FOLDERS (plugin-id/core) and give it a row in the ` +
+            `boundary table (boundaries/core/boundary-config.ts). Known folders: ` +
+            `${PLUGIN_FOLDERS.join(", ")}.`,
+        );
+      }
       out.push({
-        dir: arg[1]!,
+        dir,
         _brand: "CollectedDirDef",
         ownerDir: join(pluginsRoot, pluginPath),
       });
@@ -206,39 +228,29 @@ export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
 
 // ── Standard plugin folders ────────────────────────────────────────
 
-// The set of directory names considered "standard" inside a plugin. Two parts:
-//   1. The collected-dir / runtime names (web, server, central, facet, check,
-//      lint, …) discovered generically via `defineCollectedDir`. This part
-//      AUTO-GROWS — registering a new runtime or collected-dir type adds its
-//      folder name here with zero edits, which is the friction being removed.
-//   2. A fixed set of stable structural conventions (core, shared, plugins, bin,
-//      scripts, e2e) that are not runtime/collected-dir types and never grow when
-//      a new such type is added — so listing them here is not the friction.
-//      `e2e` holds a plugin's Playwright scripts; it is deliberately NOT a
-//      collected dir (there is nothing to register — a collected dir would
-//      generate an empty registry for it).
-function standardDirsWith(defs: DiscoveredCollectedDir[]): Set<string> {
-  return new Set([
-    ...defs.map((d) => d.dir),
-    "core",
-    "shared",
-    "plugins",
-    "bin",
-    "scripts",
-    "e2e",
-  ]);
-}
+// The set of directory names considered "standard" inside a plugin: the
+// plugin-folder vocabulary (`PLUGIN_FOLDERS`, owned by plugin-id/core) plus
+// `plugins/`, which holds child plugins rather than code. Discovered collected
+// dirs do not widen it — discovery throws on a name outside the vocabulary —
+// so the fronts below still run discovery: an undeclared collected dir fails
+// every reader of this set, not only codegen.
+const STANDARD_DIRS: ReadonlySet<string> = new Set([
+  ...PLUGIN_FOLDERS,
+  "plugins",
+]);
 
 /** The standard plugin folder names, from the run's file set. */
 export async function standardPluginDirsIn(
   repo: RepoFiles,
 ): Promise<Set<string>> {
-  return standardDirsWith(await discoverCollectedDirsIn(repo));
+  await discoverCollectedDirsIn(repo); // throws on an undeclared name
+  return new Set(STANDARD_DIRS);
 }
 
 /** The standard plugin folder names, for callers that cannot await. */
 export function standardPluginDirs(root: string): Set<string> {
-  return standardDirsWith(discoverCollectedDirs(root));
+  discoverCollectedDirs(root); // throws on an undeclared name
+  return new Set(STANDARD_DIRS);
 }
 
 // One answer per snapshot: a snapshot is one tree build's frozen read of the
@@ -266,12 +278,12 @@ export function standardPluginDirsFromSnapshot(
   const candidates = collectedDirCandidates(texts.keys(), (rel) =>
     texts.has(rel),
   );
-  const std = standardDirsWith(
-    collectedDirsFrom(
-      root,
-      candidates.map((c) => ({ ...c, text: texts.get(c.rel)! })),
-    ),
+  // Throws on an undeclared name.
+  collectedDirsFrom(
+    root,
+    candidates.map((c) => ({ ...c, text: texts.get(c.rel)! })),
   );
+  const std = new Set(STANDARD_DIRS);
   snapshotStandardDirs.set(fs, std);
   return std;
 }

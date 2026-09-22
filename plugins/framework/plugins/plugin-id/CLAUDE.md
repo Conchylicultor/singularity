@@ -7,6 +7,7 @@
 - Description: Canonical plugin identity: the branded PluginId type and its derived path encodings.
 - Cross-plugin:
   - Imported by:
+    - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
     - `framework/web-sdk`
     - `plugin-meta/closure`
@@ -15,12 +16,16 @@
     - `plugin-meta/plugin-tree`
 - Core:
   - Exports (types):
+    - `LeafFolder`
+    - `PluginFolder`
     - `PluginId`
     - `RuntimeFolder`
   - Exports (values):
     - `asFsPath`
     - `asPath`
     - `asPluginId`
+    - `LEAF_FOLDERS`
+    - `PLUGIN_FOLDERS`
     - `pluginIdSegments`
     - `RUNTIME_FOLDERS`
     - `SHIPPED_RUNTIME_FOLDERS`

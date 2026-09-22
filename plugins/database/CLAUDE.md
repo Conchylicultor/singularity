@@ -3,7 +3,7 @@
 Owns all database infrastructure for the Singularity server:
 
 - **Connection pooling** — `db` (Drizzle instance), `pool` / `adminPool` (raw pg pools), `openShortLivedClient`, `connectionString`, `libpqSubprocessEnv`, `isTransientPgError`, `awaitPgReady`.
-- **Migrations** — SQL files live in `plugins/database/plugins/migrations/data/`; `drizzle.config.ts` lives at `plugins/database/plugins/migrations/drizzle.config.ts`. The migration runner lives in `plugins/database/plugins/migrations/server/`.
+- **Migrations** — SQL files live in `plugins/database/plugins/migrations/data/`; `drizzle.config.ts` lives at `plugins/database/plugins/migrations/core/drizzle.config.ts`. The migration runner lives in `plugins/database/plugins/migrations/server/`.
 - **Embedded Postgres constants & helpers** — `plugins/database/plugins/embedded/`.
 - **DB query MCP tool** — `plugins/database/plugins/query/` (read-only agent inspection tool).
 

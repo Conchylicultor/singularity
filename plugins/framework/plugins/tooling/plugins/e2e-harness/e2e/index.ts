@@ -5,7 +5,7 @@
  * `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e`.
  *
  * The `e2e` runtime may reach other plugins' `core` and `e2e` barrels only
- * (see boundary-config.ts): an end-to-end test drives the deployed app through
+ * (see boundaries/core/boundary-config.ts): an end-to-end test drives the deployed app through
  * the browser, so it must never import the `web`/`server` code under test.
  */
 export { arg, numArg, flag, requireArg, usage } from "./args";

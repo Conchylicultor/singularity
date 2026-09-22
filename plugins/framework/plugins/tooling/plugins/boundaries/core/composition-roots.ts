@@ -1,4 +1,4 @@
-import boundaryConfig from "../boundary-config";
+import boundaryConfig from "./boundary-config";
 
 // The composition roots that wire plugins together, derived from the single
 // source of truth: the `exclude` list in boundary-config.ts. These files are

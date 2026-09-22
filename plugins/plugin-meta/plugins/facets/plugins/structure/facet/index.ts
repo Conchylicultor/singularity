@@ -5,7 +5,7 @@ import {
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   readIfExists,
   type FsSnapshot,

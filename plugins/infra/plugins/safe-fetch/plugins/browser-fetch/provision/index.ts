@@ -17,7 +17,8 @@
  * no job, invisible even to the queue-health watchdog (a `setInterval` on the
  * loop it blocks). Downloading and installing is provisioning; provisioning is
  * install-time work. Here, no runtime can call it: `provision` is a declared
- * runtime in `boundary-config.ts` and no other runtime may import it.
+ * runtime in `boundaries/core/boundary-config.ts` and no other folder may
+ * import it.
  *
  * A runtime that finds no binary therefore FAILS, loudly, naming this command —
  * see `errors.ts:browserUnavailable`. That is honest: `bun install` runs

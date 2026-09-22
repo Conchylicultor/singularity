@@ -26,6 +26,7 @@ describe("drizzleGenerateArgv", () => {
       "--bun",
       DRIZZLE_KIT_BIN,
       "generate",
+      "--config=core/drizzle.config.ts",
     ]);
   });
 
@@ -59,6 +60,7 @@ describe("drizzleGenerateArgv", () => {
       "--custom",
       "--name",
       "wipe_rows",
+      "--config=core/drizzle.config.ts",
     ]);
     expect(
       drizzleGenerateArgv({ configPath: ".check-x/drizzle.config.ts" }),

@@ -204,7 +204,7 @@ server deps (e.g. `bun-pty`) go in the plugin's own `package.json` — no alias 
 Drizzle ORM + Postgres, one DB per namespace — the process's own runtime namespace picks the database name.
 
 - Each plugin defines its tables in `plugins/{name}/server/internal/tables.ts` and any derived views/Zod schemas in `plugins/{name}/server/internal/schema.ts`.
-- `plugins/database/plugins/migrations/drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.
+- `plugins/database/plugins/migrations/core/drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.
 - `@plugins/database/server` exports `db = drizzle(pool)` without a schema object — the codebase uses the SQL builder API (`db.select().from(...)`), not drizzle's relational query API (`db.query.<table>`), so no runtime schema aggregation is needed.
 - Migrations live in `plugins/database/plugins/migrations/data/` (committed to git).
 

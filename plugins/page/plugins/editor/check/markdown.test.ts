@@ -4,11 +4,11 @@ import {
   conversionPrefixesOf,
   defineBlock,
   type BlockHandle,
-} from "./define-block";
-import { textDataSchema } from "./text-data";
-import { plainOf, type RichText } from "./rich-text";
-import type { SerializedBlock } from "./serialized-block";
-import { withMintedIds } from "./serialized-block";
+} from "../core/define-block";
+import { textDataSchema } from "../core/text-data";
+import { plainOf, type RichText } from "../core/rich-text";
+import type { SerializedBlock } from "../core/serialized-block";
+import { withMintedIds } from "../core/serialized-block";
 import {
   parseMarkdownToForest,
   serializeForestToMarkdown,
@@ -21,19 +21,20 @@ import {
   type BlockTagSpelling,
   type MarkdownContext,
   type MarkdownNode,
-} from "./markdown";
-import { loadBlockHandles } from "../check/block-handles";
+} from "../core/markdown";
+import { loadBlockHandles } from "./block-handles";
 
 // The orchestrator is parameterized on `BlockHandle[]`, and this suite hands it
 // the REAL ONES: every block type the app ships, read off the plugin tree by
 // `loadBlockHandles()`, which imports each contributing plugin's web barrel and
 // throws rather than handing back an empty set.
 //
-// It is imported RELATIVELY (`../check`), which is this same plugin — so no
-// cross-plugin edge exists to be a cycle, and the boundary checker, which only
-// tracks `@plugins/…` specifiers, has nothing to say about it. A static import
-// of the block plugins' own cores would be the cycle: each of them imports
-// `defineBlock` from here.
+// The suite lives in `check/`, beside the loader, because that loader is
+// host-only (it walks the plugin tree and imports web barrels) and `core/` may
+// import only `core/`. Everything it tests is imported from this plugin's own
+// `../core`, so no cross-plugin edge exists to be a cycle. A static import of
+// the block plugins' own cores would be the cycle: each of them imports
+// `defineBlock` from this plugin's core.
 //
 // WHAT THIS REPLACED, because it is the reason for the cost below: a
 // hand-written copy of 26 handles, which was wrong about exactly the tags

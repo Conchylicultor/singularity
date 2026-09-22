@@ -1,4 +1,5 @@
-import type { Edge } from "./types";
+import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
+import type { BoundaryConfig, Edge } from "./types";
 import { matchZone } from "./match";
 
 export type EdgeResult = "allow" | "deny" | "default-deny";
@@ -20,27 +21,23 @@ export function evaluateEdges(
 }
 
 export function checkRuntime(
-  runtimes: Record<string, string[]>,
-  sourceRuntime: string | null,
-  targetRuntime: string | null,
+  folders: BoundaryConfig["folders"],
+  source: PluginFolder,
+  target: PluginFolder,
 ): boolean {
-  if (!sourceRuntime || !targetRuntime) return true;
-  const allowed = runtimes[sourceRuntime];
-  if (!allowed) return false;
-  return allowed.includes(targetRuntime);
+  // Widened so a leaf target is a legal argument (and always false).
+  const allowed: readonly PluginFolder[] = folders[source];
+  return allowed.includes(target);
 }
 
 export function isRuntimeException(
   exceptions: Set<string>,
   sourceZone: string,
-  sourceRuntime: string | null,
+  source: PluginFolder,
   targetZone: string,
-  targetRuntime: string | null,
+  target: PluginFolder,
 ): boolean {
-  if (!sourceRuntime || !targetRuntime) return false;
-  const fullSource = `${sourceZone}.${sourceRuntime}`;
-  const fullTarget = `${targetZone}.${targetRuntime}`;
-  return exceptions.has(`${fullSource}\0${fullTarget}`);
+  return exceptions.has(`${sourceZone}.${source}\0${targetZone}.${target}`);
 }
 
 export function detectCycle(

@@ -9,8 +9,9 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import { PLUGIN_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import type { BoundaryConfig } from "./types";
-import { buildZoneMap } from "./resolve";
+import { buildZoneMap, type UnfolderedReason } from "./resolve";
 import {
   checkRuntime,
   detectCycle,
@@ -62,6 +63,15 @@ function formatViolations(vs: Violation[]): string {
   return lines.join("\n");
 }
 
+const LEGAL_FOLDERS = `${PLUGIN_FOLDERS.join(", ")}, or a child plugin under plugins/`;
+
+const UNFOLDERED_WHY: Record<UnfolderedReason, (name: string) => string> = {
+  "loose-file": (name) =>
+    name ? `loose file "${name}" at the plugin root` : "the plugin root itself",
+  "unknown-folder": (name) => `folder "${name}/" is not a plugin folder`,
+  "not-in-child-plugin": () => "under plugins/ but inside no child plugin",
+};
+
 function parseRuntimeException(expr: string): {
   source: string;
   target: string;
@@ -87,12 +97,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const pluginTree = existsSync(pluginsRoot)
         ? await buildStructureTreeOnce(pluginsRoot)
         : null;
-      const zoneMap = buildZoneMap(
-        root,
-        config.zones,
-        pluginTree,
-        new Set(Object.keys(config.runtimes)),
-      );
+      const zoneMap = buildZoneMap(root, config.zones, pluginTree);
 
       const rtExceptions = new Set<string>();
       for (const expr of config.runtimeExceptions ?? []) {
@@ -103,11 +108,6 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const excludeSet = new Set(config.exclude ?? []);
       const violations: Violation[] = [];
       const realizedEdges = new Set<string>();
-
-      // The checker treats runtime names as opaque strings parsed from file paths
-      // and specifiers, so read the (now key-typed) boundary map through the same
-      // widened view that checkRuntime() uses for its lookups.
-      const runtimeMap: Record<string, string[]> = config.runtimes;
 
       // The candidate set is the run's shared file set (never a private
       // listing) — every `.ts`/`.tsx` git lists, tracked + untracked-not-
@@ -128,7 +128,19 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
         if (excludeSet.has(relFile)) continue;
 
         const source = zoneMap.resolveFile(relFile);
-        if (!source) continue;
+        if (source.kind === "outside") continue;
+
+        // Every file inside a plugin sits in a folder with a row. One that
+        // does not has no rule to read its imports against, so it is the
+        // violation, and its imports are not evaluated.
+        if (source.kind === "unfoldered") {
+          violations.push({
+            file: relFile,
+            message: `no plugin folder: ${UNFOLDERED_WHY[source.why](source.name)} (${source.zone})`,
+            fix: `move it into one of the plugin's folders: ${LEGAL_FOLDERS}. A new kind of folder is declared in plugin-id/core (LEAF_FOLDERS) with its row in boundary-config.ts`,
+          });
+          continue;
+        }
 
         const src = await repo.read(relFile);
         if (!src) continue;
@@ -137,37 +149,48 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
 
         for (const specifier of imports) {
           const target = zoneMap.resolveImport(relFile, specifier);
-          if (!target) continue;
+          if (target.kind === "outside") continue;
 
-          // The runtime table applies to EVERY import, including one that stays
+          if (target.kind === "unfoldered") {
+            violations.push({
+              file: relFile,
+              message: `import lands in no plugin folder: ${UNFOLDERED_WHY[target.why](target.name)} (${target.zone}, import "${specifier}")`,
+              fix: `import a plugin folder instead: ${LEGAL_FOLDERS}`,
+            });
+            continue;
+          }
+
+          // The folder table applies to EVERY import, including one that stays
           // inside the plugin (`core/` reaching its own `../server/x`): a folder
-          // may import the same folders whichever plugin they belong to.
+          // may import the same folders whichever plugin they belong to. The
+          // one import no row states is a folder's own files: a leaf row cannot
+          // list its own folder (nothing imports a leaf), yet `check/index.ts`
+          // must still reach `./my-check`.
           const samePlugin = source.zone === target.zone;
-          const rtExempt = isRuntimeException(
-            rtExceptions,
-            source.zone,
-            source.runtime,
-            target.zone,
-            target.runtime,
-          );
+          const ownFolder = samePlugin && source.folder === target.folder;
+          const rtExempt =
+            ownFolder ||
+            isRuntimeException(
+              rtExceptions,
+              source.zone,
+              source.folder,
+              target.zone,
+              target.folder,
+            );
 
           if (
             !rtExempt &&
-            !checkRuntime(config.runtimes, source.runtime, target.runtime)
+            !checkRuntime(config.folders, source.folder, target.folder)
           ) {
-            const srcLabel = source.runtime
-              ? `${source.zone}.${source.runtime}`
-              : source.zone;
-            const tgtLabel = target.runtime
-              ? `${target.zone}.${target.runtime}`
-              : target.zone;
+            const srcLabel = `${source.zone}.${source.folder}`;
+            const tgtLabel = `${target.zone}.${target.folder}`;
             const where = samePlugin
               ? `same plugin, ${srcLabel} → ${tgtLabel}`
               : `${srcLabel} → ${tgtLabel}`;
             violations.push({
               file: relFile,
-              message: `runtime isolation: ${source.runtime} cannot import ${target.runtime} (${where}, import "${specifier}")`,
-              fix: `${source.runtime} can only import from [${(runtimeMap[source.runtime!] ?? []).join(", ")}]. The channels between folders are core/ (public) and shared/ (plugin-private). If this is legitimate, add a runtimeException in boundary-config.ts`,
+              message: `runtime isolation: ${source.folder} cannot import ${target.folder} (${where}, import "${specifier}")`,
+              fix: `${source.folder} can only import from [${config.folders[source.folder].join(", ")}]. The channels between folders are core/ (public) and shared/ (plugin-private). If this is legitimate, add a runtimeException in boundary-config.ts`,
             });
             continue;
           }
@@ -179,13 +202,9 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
           const result = evaluateEdges(config.edges, source.zone, target.zone);
 
           if (result === "allow") {
-            const srcKey = source.runtime
-              ? `${source.zone}.${source.runtime}`
-              : source.zone;
-            const tgtKey = target.runtime
-              ? `${target.zone}.${target.runtime}`
-              : target.zone;
-            realizedEdges.add(`${srcKey}\0${tgtKey}`);
+            realizedEdges.add(
+              `${source.zone}.${source.folder}\0${target.zone}.${target.folder}`,
+            );
             continue;
           }
 

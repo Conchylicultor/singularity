@@ -3,7 +3,7 @@
  *
  * Two independent consumers read this and MUST agree, or the schema-glob checks
  * inspect a different file set than migration generation does — a silent partial DROP:
- *   1. `../../drizzle.config.ts` → drizzle-kit's `schema:` array (authoritative)
+ *   1. `../drizzle.config.ts` → drizzle-kit's `schema:` array (authoritative)
  *   2. `./schema-glob.ts` → `schemaGlobFiles()`, used by `schema-files-loadable`
  *      and `table-defs-in-schema-glob`.
  * The `database-migrations:drizzle-config-schema-globs` check proves they agree.

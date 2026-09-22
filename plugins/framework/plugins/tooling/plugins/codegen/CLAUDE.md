@@ -20,6 +20,8 @@
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.PLUGIN_FOLDERS`
+    - `framework/plugin-id.PluginFolder`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
     - `framework/slot-declaration.declaredSlotSources`

@@ -7,13 +7,15 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // A plugin-runtime specifier: contains `/plugins/`, or starts with the
 // workspace-name (`@singularity/plugin-`) or `@plugins/` alias forms.
-const PLUGIN_IMPORT_SPEC_RE = /(?:\/plugins\/|^@singularity\/plugin-|^@plugins\/)/;
+const PLUGIN_IMPORT_SPEC_RE =
+  /(?:\/plugins\/|^@singularity\/plugin-|^@plugins\/)/;
 
-const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
+const ALLOWED_PLUGIN_IMPORT_RE =
+  /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
 
 const ALLOWED_DIRS = ["plugins/"];
 // Composition roots that legitimately wire plugins together are exempt. The
-// single source of truth is boundary-config.ts's `exclude` list (same set the
+// single source of truth is boundaries/core/boundary-config.ts's `exclude` list (same set the
 // boundary checker skips) — never maintain a parallel copy here.
 const COMPOSITION_ROOTS = compositionRoots;
 

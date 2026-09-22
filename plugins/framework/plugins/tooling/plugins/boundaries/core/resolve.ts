@@ -1,20 +1,77 @@
 import { sep } from "path";
+import {
+  PLUGIN_FOLDERS,
+  type PluginFolder,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { ZoneDefinition } from "./types";
 
-export interface ResolvedZone {
-  zone: string;
-  runtime: string | null;
-}
+/** Why a path inside a plugin has no folder. */
+export type UnfolderedReason =
+  /** A file directly in a plugin directory. */
+  | "loose-file"
+  /** The first segment under the plugin is not in `PLUGIN_FOLDERS`. */
+  | "unknown-folder"
+  /** Under the plugin's `plugins/`, but inside no discovered child plugin. */
+  | "not-in-child-plugin";
+
+/**
+ * Where a path lands. There is no "no folder" arm: a path inside a plugin
+ * either sits in one of the plugin's folders, or is `unfoldered` and gets
+ * reported.
+ */
+export type Resolved =
+  /** Not under a plugin: an npm package, a file outside `plugins/`. */
+  | { kind: "outside" }
+  | { kind: "folder"; zone: string; folder: PluginFolder }
+  | {
+      kind: "unfoldered";
+      zone: string;
+      why: UnfolderedReason;
+      /** The segment that decided it: the file name, or the folder name. */
+      name: string;
+    };
 
 export interface ZoneMap {
   allZones: Set<string>;
-  resolveFile(relFile: string): ResolvedZone | null;
+  resolveFile(relFile: string): Resolved;
   /**
-   * The zone and runtime folder an import lands in, from the importing file
-   * (repo-relative) and its specifier. Relative and `@plugins/…` specifiers
-   * resolve; anything else (npm packages, a path leaving `plugins/`) is null.
+   * Where an import lands, from the importing file (repo-relative) and its
+   * specifier. Relative and `@plugins/…` specifiers are classified exactly
+   * like a file; anything else (npm packages, a path leaving `plugins/`) is
+   * `outside`.
    */
-  resolveImport(fromRelFile: string, specifier: string): ResolvedZone | null;
+  resolveImport(fromRelFile: string, specifier: string): Resolved;
+}
+
+const OUTSIDE: Resolved = { kind: "outside" };
+const FOLDERS: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
+const isPluginFolder = (name: string): name is PluginFolder =>
+  FOLDERS.has(name);
+
+/**
+ * Classify the path inside one plugin (the segments after the plugin's own
+ * directory). The longest-prefix plugin match already chose the deepest
+ * plugin, so a first segment of `plugins` here means no child claimed it.
+ *
+ * A lone folder name is the folder itself: a barrel specifier
+ * (`@plugins/x/web`) or a directory import (`../shared`), i.e. its index. A
+ * real loose file always carries its extension, so it never reads as one.
+ */
+function classify(zone: string, inside: string[]): Resolved {
+  const [first = "", ...rest] = inside;
+  if (isPluginFolder(first)) return { kind: "folder", zone, folder: first };
+  if (rest.length === 0) {
+    return { kind: "unfoldered", zone, why: "loose-file", name: first };
+  }
+  if (first === "plugins") {
+    return {
+      kind: "unfoldered",
+      zone,
+      why: "not-in-child-plugin",
+      name: first,
+    };
+  }
+  return { kind: "unfoldered", zone, why: "unknown-folder", name: first };
 }
 
 /**
@@ -25,26 +82,18 @@ export interface PluginDirs {
   byDir: ReadonlyMap<string, { id: string; path: string }>;
 }
 
-interface ZoneEntry {
-  name: string;
-  match: string;
-}
-
 export function buildZoneMap(
   _root: string,
   zones: ZoneDefinition[],
   pluginTree: PluginDirs | null,
-  runtimes: ReadonlySet<string>,
 ): ZoneMap {
   const allZones = new Set<string>();
-  const entries: ZoneEntry[] = [];
 
   const pluginHierarchyToZone = new Map<string, string>();
   const pluginRelPathToHierarchy = new Map<string, string>();
 
   for (const z of zones) {
     allZones.add(z.name);
-    entries.push({ name: z.name, match: z.match });
 
     if (z.discover === "plugin-tree" && pluginTree) {
       for (const node of pluginTree.byDir.values()) {
@@ -64,48 +113,40 @@ export function buildZoneMap(
     (a, b) => b.length - a.length,
   );
 
-  function resolveFile(relFile: string): ResolvedZone | null {
+  function resolveFile(relFile: string): Resolved {
     const norm = relFile.split(sep).join("/");
 
     if (pluginDirPrefix && norm.startsWith(pluginDirPrefix)) {
       const rest = norm.slice(pluginDirPrefix.length);
       for (const pluginPath of sortedPluginPaths) {
-        if (rest.startsWith(pluginPath + "/") || rest === pluginPath) {
-          const id = pluginRelPathToHierarchy.get(pluginPath)!;
-          const afterPlugin = rest.slice(pluginPath.length + 1);
-          const rtSegment = afterPlugin.split("/")[0];
-          if (rtSegment && runtimes.has(rtSegment)) {
-            return { zone: `${pluginZoneName}.${id}`, runtime: rtSegment };
-          }
-          return { zone: `${pluginZoneName}.${id}`, runtime: null };
+        const zone = `${pluginZoneName}.${pluginRelPathToHierarchy.get(pluginPath)!}`;
+        // The plugin directory itself (a relative `../..` import): its index.
+        if (rest === pluginPath) return classify(zone, []);
+        if (rest.startsWith(pluginPath + "/")) {
+          return classify(zone, rest.slice(pluginPath.length + 1).split("/"));
         }
       }
-      return null;
+      // Under `plugins/` but inside no plugin: `plugins/` is a container of
+      // plugins at every level, including the top.
+      return {
+        kind: "unfoldered",
+        zone: pluginZoneName,
+        why: "not-in-child-plugin",
+        name: rest.split("/")[0]!,
+      };
     }
 
-    const sortedEntries = [...entries].sort(
-      (a, b) => b.match.length - a.match.length,
-    );
-    for (const entry of sortedEntries) {
-      if (norm.startsWith(entry.match + "/") || norm === entry.match) {
-        return { zone: entry.name, runtime: null };
-      }
-    }
-
-    return null;
+    return OUTSIDE;
   }
 
-  function resolveImport(
-    fromRelFile: string,
-    specifier: string,
-  ): ResolvedZone | null {
+  function resolveImport(fromRelFile: string, specifier: string): Resolved {
     // A relative specifier is read the same way as the file it points at:
     // resolve it against the importing file's directory, then classify that
     // path. So `../server/x` from `core/` lands in the plugin's own `server`
-    // runtime, and `../../..` out of a child plugin lands in its parent.
+    // folder, and `../../..` out of a child plugin lands in its parent.
     if (specifier.startsWith("./") || specifier.startsWith("../")) {
       const target = joinRelative(fromRelFile, specifier);
-      return target === null ? null : resolveFile(target);
+      return target === null ? OUTSIDE : resolveFile(target);
     }
 
     if (specifier.startsWith("@plugins/")) {
@@ -122,19 +163,16 @@ export function buildZoneMap(
         }
       }
 
-      if (!bestHierarchy) return null;
+      if (!bestHierarchy) return OUTSIDE;
 
-      const remaining = parts.slice(bestLen);
-      if (remaining.length > 0 && runtimes.has(remaining[0]!)) {
-        return {
-          zone: `${pluginZoneName}.${bestHierarchy}`,
-          runtime: remaining[0]!,
-        };
-      }
-      return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: null };
+      // `@plugins/x` alone names the plugin, not a folder of it.
+      return classify(
+        `${pluginZoneName}.${bestHierarchy}`,
+        parts.slice(bestLen),
+      );
     }
 
-    return null;
+    return OUTSIDE;
   }
 
   return { allZones, resolveFile, resolveImport };

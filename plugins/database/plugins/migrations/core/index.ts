@@ -13,8 +13,12 @@ export { MIGRATIONS_PLUGIN_DIR } from "./internal/schema-glob-patterns";
 // no caller can produce a subcommand other than `generate` — the dialing ones
 // are unsupported through drizzle.config.ts's sentinel credentials.
 // `DRIZZLE_KIT_BIN` stays internal: its only other reader is this plugin's own
-// lint rule, which imports it relatively.
-export { drizzleGenerateArgv } from "./internal/drizzle-cli";
+// lint rule, which imports it relatively. `DRIZZLE_CONFIG_PATH` is public for
+// migrations-in-sync, whose throwaway config extends the real one.
+export {
+  drizzleGenerateArgv,
+  DRIZZLE_CONFIG_PATH,
+} from "./internal/drizzle-cli";
 export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
 export { classifyMigrationSql } from "./internal/destructive";
 export type {

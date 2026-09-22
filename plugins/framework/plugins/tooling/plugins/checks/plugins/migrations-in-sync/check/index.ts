@@ -18,6 +18,7 @@ import { libpqEnv } from "@plugins/database/core";
 // typed flags, so this check cannot express a subcommand that would dial the
 // sentinel credentials in drizzle.config.ts.
 import {
+  DRIZZLE_CONFIG_PATH,
   drizzleGenerateArgv,
   MIGRATIONS_PLUGIN_DIR,
 } from "@plugins/database/plugins/migrations/core";
@@ -52,7 +53,7 @@ const check: Check = {
       cpSync(committed, tmpOut, { recursive: true });
 
       const tmpConfig = join(tmp, "drizzle.config.ts");
-      const realConfig = resolve(migrationsPluginDir, "drizzle.config.ts");
+      const realConfig = resolve(migrationsPluginDir, DRIZZLE_CONFIG_PATH);
       writeFileSync(
         tmpConfig,
         `import base from ${JSON.stringify(realConfig)};\nexport default { ...base, out: ${JSON.stringify(tmpOut)} };\n`,

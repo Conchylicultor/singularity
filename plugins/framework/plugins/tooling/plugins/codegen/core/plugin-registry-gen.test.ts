@@ -13,7 +13,10 @@ import { test, expect, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPluginId,
+  PLUGIN_FOLDERS,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -81,7 +84,7 @@ const sortedDirs = (defs: DiscoveredCollectedDir[]) =>
 test("discovery ignores commented/stringified markers but finds real calls", async () => {
   const repo = memRepo("/repo", {
     [pj("real/core/index.ts")]:
-      'export const realDir = defineCollectedDir("widget");',
+      'export const realDir = defineCollectedDir("check");',
     [pj("phantoms/core/index.ts")]: [
       '// defineCollectedDir("phantom")',
       "const s = \"defineCollectedDir('stringed')\";",
@@ -90,7 +93,7 @@ test("discovery ignores commented/stringified markers but finds real calls", asy
   });
   // Only the genuine call is discovered; the comment- and string-embedded
   // markers must not produce phantom collected dirs.
-  expect(sortedDirs(await discoverCollectedDirsIn(repo))).toEqual(["widget"]);
+  expect(sortedDirs(await discoverCollectedDirsIn(repo))).toEqual(["check"]);
 });
 
 test("discovery reads only core files at a plugin position whose core has a barrel", async () => {
@@ -98,11 +101,11 @@ test("discovery reads only core files at a plugin position whose core has a barr
     Array.from({ length: n }, (_, i) => `d${i + 1}`).join("/plugins/");
   const repo = memRepo("/repo", {
     [pj("real/core/index.ts")]: "export {};",
-    [pj("real/core/dirs.ts")]: 'defineCollectedDir("widget");',
+    [pj("real/core/dirs.ts")]: 'defineCollectedDir("check");',
     // A nested sub-plugin is a plugin position; its parent needs no core.
-    [pj("outer/plugins/inner/core/index.ts")]: 'defineCollectedDir("nested");',
+    [pj("outer/plugins/inner/core/index.ts")]: 'defineCollectedDir("lint");',
     // Ten names deep is the deepest position; eleven is past it.
-    [`plugins/${deep(10)}/core/index.ts`]: 'defineCollectedDir("ten");',
+    [`plugins/${deep(10)}/core/index.ts`]: 'defineCollectedDir("facet");',
     [`plugins/${deep(11)}/core/index.ts`]: 'defineCollectedDir("eleven");',
     // No barrel → not a core a collected dir can live in.
     [pj("nobarrel/core/dirs.ts")]: 'defineCollectedDir("orphan");',
@@ -115,8 +118,8 @@ test("discovery reads only core files at a plugin position whose core has a barr
   });
 
   const defs = await discoverCollectedDirsIn(repo);
-  expect(sortedDirs(defs)).toEqual(["nested", "ten", "widget"]);
-  expect(defs.find((d) => d.dir === "nested")?.ownerDir).toBe(
+  expect(sortedDirs(defs)).toEqual(["check", "facet", "lint"]);
+  expect(defs.find((d) => d.dir === "lint")?.ownerDir).toBe(
     "/repo/plugins/outer/plugins/inner",
   );
   // Nothing outside the candidates was opened.
@@ -130,35 +133,76 @@ test("discovery reads only core files at a plugin position whose core has a barr
   );
 });
 
-test("the standard folder set is the fixed conventions plus every discovered dir", async () => {
+test("the standard folder set is the plugin-folder vocabulary plus plugins/", async () => {
   const repo = memRepo("/repo", {
-    [pj("sdk/core/index.ts")]: 'defineCollectedDir("widget");',
+    [pj("sdk/core/index.ts")]: 'defineCollectedDir("check");',
   });
   expect([...(await standardPluginDirsIn(repo))].sort()).toEqual(
-    ["bin", "core", "e2e", "plugins", "scripts", "shared", "widget"].sort(),
+    [...PLUGIN_FOLDERS, "plugins"].sort(),
+  );
+});
+
+/**
+ * Await `p` and return the Error it rejected with; throw if it resolved.
+ * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so this asserts
+ * the rejection for real.
+ */
+async function rejection(p: Promise<unknown>): Promise<Error> {
+  try {
+    await p;
+  } catch (err) {
+    return err as Error;
+  }
+  throw new Error("expected the promise to reject, but it resolved");
+}
+
+test("an undeclared collected-dir name throws, naming the file", async () => {
+  const file = pj("sdk/core/dirs.ts");
+  const files = {
+    [pj("sdk/core/index.ts")]: "export {};",
+    [file]: 'defineCollectedDir("widget");',
+  };
+  const repo = memRepo("/repo", files);
+  expect((await rejection(discoverCollectedDirsIn(repo))).message).toMatch(
+    new RegExp(`${file}.*"widget".*not a plugin folder`),
+  );
+  expect((await rejection(standardPluginDirsIn(repo))).message).toMatch(
+    /not a plugin folder/,
+  );
+  // The sync and snapshot fronts share the same pure core.
+  const root = gitFixture(files);
+  expect(() => discoverCollectedDirs(root)).toThrow(/not a plugin folder/);
+  const fs = {
+    files: new Map(
+      Object.entries(files).map(([rel, text]) => [`/repo/${rel}`, text]),
+    ),
+    dirs: new Map(),
+  };
+  expect(() => standardPluginDirsFromSnapshot("/repo", fs)).toThrow(
+    /not a plugin folder/,
   );
 });
 
 test("the sync front lists the same universe from git: untracked counts, gitignored does not", () => {
   const root = gitFixture({
     ".gitignore": "plugins/ignored/\n",
-    [pj("fresh/core/index.ts")]: 'defineCollectedDir("widget");',
+    [pj("fresh/core/index.ts")]: 'defineCollectedDir("check");',
     [pj("ignored/core/index.ts")]: 'defineCollectedDir("hidden");',
   });
-  expect(sortedDirs(discoverCollectedDirs(root))).toEqual(["widget"]);
+  expect(sortedDirs(discoverCollectedDirs(root))).toEqual(["check"]);
 });
 
 test("the snapshot front answers from a tree build's snapshot alone", () => {
   const root = "/repo";
   const fs = {
     files: new Map([
-      [`${root}/plugins/sdk/core/index.ts`, 'defineCollectedDir("widget");'],
+      [`${root}/plugins/sdk/core/index.ts`, 'defineCollectedDir("check");'],
       [`${root}/plugins/sdk/web/index.ts`, 'defineCollectedDir("notcore");'],
     ]),
     dirs: new Map(),
   };
   const std = standardPluginDirsFromSnapshot(root, fs);
-  expect(std.has("widget")).toBe(true);
+  expect(std.has("check")).toBe(true);
   expect(std.has("notcore")).toBe(false);
   // One answer per snapshot.
   expect(standardPluginDirsFromSnapshot(root, fs)).toBe(std);

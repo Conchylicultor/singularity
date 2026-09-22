@@ -15,8 +15,9 @@ export const asFsPath = (id: PluginId): string =>
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
 
 /** The plugin source/barrel runtime folders — the isolation + bundling vocabulary
- *  and single source of truth. boundary-config keys and every per-runtime grouping
- *  derive from this; never hardcode the list elsewhere.
+ *  and single source of truth. Every per-runtime grouping derives from this;
+ *  never hardcode the list elsewhere. (The boundary table's keys are the wider
+ *  `PLUGIN_FOLDERS` below.)
  *
  *  `e2e` holds a plugin's Playwright scripts. It is a first-class runtime because
  *  its `e2e/index.ts` barrel is genuine cross-plugin API (one plugin's e2e script
@@ -44,6 +45,33 @@ export const RUNTIME_FOLDERS = [
   "cli",
 ] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
+
+/** The plugin folders that are NOT barrels: each is found by discovery (a
+ *  collected-dir loader, a process entry point, a script run by path), and
+ *  nothing imports it. `check/` and `lint/` are collected by the check runner
+ *  and the ESLint config, `facet/` by the facet pipeline, `fixtures/`,
+ *  `vite/` and `prewarm/` by their own collected dirs; `bin/` and `scripts/`
+ *  are run by path.
+ *
+ *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
+ *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
+ *  The boundary table is keyed on it, so a folder name added here is a type
+ *  error until it declares what it may import. */
+export const LEAF_FOLDERS = [
+  "check",
+  "lint",
+  "facet",
+  "bin",
+  "scripts",
+  "fixtures",
+  "vite",
+  "prewarm",
+] as const;
+export type LeafFolder = (typeof LEAF_FOLDERS)[number];
+
+/** Every folder of code a plugin may contain: the barrels and the leaves. */
+export const PLUGIN_FOLDERS = [...RUNTIME_FOLDERS, ...LEAF_FOLDERS] as const;
+export type PluginFolder = RuntimeFolder | LeafFolder;
 
 /** Whether a runtime folder's facts belong in the GENERATED plugin docs
  *  (`docs/plugins-details.md` and each plugin's `CLAUDE.md` reference block).

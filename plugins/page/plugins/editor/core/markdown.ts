@@ -12,7 +12,7 @@
 // fenced code, indentation→nesting) becomes a `SerializedBlock[]`; copying blocks
 // emits markdown as the `text/plain` representation.
 //
-// Pure module (no React, no DB): unit-tested directly in `markdown.test.ts`.
+// Pure module (no React, no DB): unit-tested directly in `../check/markdown.test.ts`.
 
 import { plainOf, runsOf, type RichText } from "./rich-text";
 import {

@@ -8,13 +8,20 @@
 // local one-liner in every runtime's collected-dir.ts, and defined in codegen/core
 // — which the runtimes could not import without forming a cycle through
 // plugin-tree/facets).
+//
+// The name must be a declared plugin folder (`PluginFolder`, owned by
+// plugin-id/core), so a collected dir cannot exist without its row in the
+// boundary table. Codegen's discovery enforces the same for call sites tsc
+// cannot type (the lint collected dir's inline copy of this marker).
+
+import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
 
 export interface CollectedDirDef {
-  readonly dir: string;
+  readonly dir: PluginFolder;
   readonly _brand: "CollectedDirDef";
 }
 
-export function defineCollectedDir(dir: string): CollectedDirDef {
+export function defineCollectedDir(dir: PluginFolder): CollectedDirDef {
   return { dir, _brand: "CollectedDirDef" };
 }
 

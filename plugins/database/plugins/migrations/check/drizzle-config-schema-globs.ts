@@ -84,7 +84,7 @@ const check: Check = {
     //    graph. Note this compares PATTERNS, not expanded file sets; only
     //    running drizzle-kit proves the expansion, which `migrations-in-sync`
     //    already does.
-    const config = (await import("../drizzle.config")).default;
+    const config = (await import("../core/drizzle.config")).default;
     const schema: unknown = config.schema;
     if (!Array.isArray(schema) || schema.some((g) => typeof g !== "string")) {
       return {

@@ -12862,12 +12862,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DrizzleGenerateOptions`
         - Exports (values):
           - `classifyMigrationSql`
+          - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
           - `MIGRATIONS_PLUGIN_DIR`
           - `schemaGlobFiles`
       - Structure:
         - Non-standard folders: `data/`
-        - Loose top-level files: `drizzle.config.ts`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
         - Imported by:
@@ -16864,6 +16864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
+          - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
           - `framework/web-sdk`
           - `plugin-meta/closure`
@@ -16872,12 +16873,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
+          - `LeafFolder`
+          - `PluginFolder`
           - `PluginId`
           - `RuntimeFolder`
         - Exports (values):
           - `asFsPath`
           - `asPath`
           - `asPluginId`
+          - `LEAF_FOLDERS`
+          - `PLUGIN_FOLDERS`
           - `pluginIdSegments`
           - `RUNTIME_FOLDERS`
           - `SHIPPED_RUNTIME_FOLDERS`
@@ -17062,6 +17067,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
             - Uses:
+              - `framework/plugin-id.PLUGIN_FOLDERS`
+              - `framework/plugin-id.PluginFolder`
+              - `framework/plugin-id.RUNTIME_FOLDERS`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
               - `plugin-meta/parse-utils.findImports`
@@ -17081,8 +17089,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deny`
               - `runtimeNames`
               - `zone`
-          - Structure:
-            - Loose top-level files: `boundary-config.ts`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses:
@@ -17257,6 +17263,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`
+              - `framework/plugin-id.PLUGIN_FOLDERS`
+              - `framework/plugin-id.PluginFolder`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
               - `framework/slot-declaration.declaredSlotSources`

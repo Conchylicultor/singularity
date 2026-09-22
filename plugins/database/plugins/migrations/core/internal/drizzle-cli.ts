@@ -4,7 +4,7 @@
  * `generate` is the only subcommand this repo supports: it is a pure filesystem
  * operation (snapshot diff → SQL) that opens no connection. Every OTHER
  * subcommand (`push`, `migrate`, `studio`, `pull`) DIALS the database in
- * `dbCredentials`, which `../../drizzle.config.ts` deliberately sets to a
+ * `dbCredentials`, which `../drizzle.config.ts` deliberately sets to a
  * non-resolving `.invalid` sentinel — so pointing one at this config fails by
  * design. Migrations are APPLIED by the runner (`server/internal/runner.ts`) on
  * boot, over the backend's own connection.
@@ -37,6 +37,16 @@ export const DRIZZLE_KIT_BIN = "drizzle-kit";
 /** The only subcommand supported through `drizzle.config.ts`. */
 const GENERATE = "generate";
 
+/**
+ * The config every run reads, relative to the child's cwd
+ * (`MIGRATIONS_PLUGIN_DIR`). Always passed: drizzle-kit only finds a
+ * `drizzle.config.ts` on its own when it sits in the cwd, and the config lives
+ * in `core/` (a plugin has no loose root files). The cwd stays the plugin
+ * directory, because drizzle-kit reads the config's `schema` globs and `out`
+ * against its cwd, not against the config file's directory.
+ */
+export const DRIZZLE_CONFIG_PATH = "core/drizzle.config.ts";
+
 export interface DrizzleGenerateOptions {
   /** `--custom` — emit an empty data/backfill migration instead of a schema diff. */
   custom?: boolean;
@@ -44,8 +54,8 @@ export interface DrizzleGenerateOptions {
   name?: string | null;
   /**
    * `--config=<path>` — an alternate config, relative to the child's cwd
-   * (`MIGRATIONS_PLUGIN_DIR`). Used by `migrations-in-sync`, which generates into
-   * a throwaway `out` dir.
+   * (`MIGRATIONS_PLUGIN_DIR`), in place of `DRIZZLE_CONFIG_PATH`. Used by
+   * `migrations-in-sync`, which generates into a throwaway `out` dir.
    */
   configPath?: string | null;
 }
@@ -68,6 +78,6 @@ export function drizzleGenerateArgv(
   const argv = [process.execPath, "x", "--bun", DRIZZLE_KIT_BIN, GENERATE];
   if (opts.custom) argv.push("--custom");
   if (opts.name) argv.push("--name", opts.name);
-  if (opts.configPath) argv.push(`--config=${opts.configPath}`);
+  argv.push(`--config=${opts.configPath ?? DRIZZLE_CONFIG_PATH}`);
   return argv;
 }

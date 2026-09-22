@@ -240,14 +240,14 @@ export async function loadTreeSnapshot(
 // the prefix pins it. (Its runtime-facet code path is skipped by boundaries'
 // `skipBarrelImport`, but hashing the whole subtree is the sound superset.)
 //
-// `migrations/core/` + `migrations/drizzle.config.ts`. `schema-files-loadable` and
+// `migrations/core/` (which holds `drizzle.config.ts`). `schema-files-loadable` and
 // `table-defs-in-schema-glob` enumerate their scan surface through
 // `schemaGlobFiles()`, whose glob patterns are now a CONSTANT in
 // `plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts` —
 // code, invisible to the `FileSystemView`. Narrowing a pattern would shrink the
 // inspected file set with NO recorded tree-fact change → a stale PASS on a
-// narrowed domain. Scoped to `core/` and the config file specifically, NOT the
-// whole migrations plugin: that would swallow `data/*.sql`, flipping `sourceHash`
+// narrowed domain. Scoped to `core/` specifically, NOT the whole migrations
+// plugin: that would swallow `data/*.sql`, flipping `sourceHash`
 // on every migration commit and over-invalidating every input-keyed check
 // (`type-check` included) for a reason unrelated to their verdicts. (Neither check
 // is `inputKeyed` today — this closes the landmine before someone flips them.)
@@ -268,7 +268,6 @@ const CHECK_SOURCE_PREFIXES = [
   "plugins/plugin-meta/plugins/parse-utils/",
   "plugins/plugin-meta/plugins/plugin-tree/",
   "plugins/database/plugins/migrations/core/",
-  "plugins/database/plugins/migrations/drizzle.config.ts",
   "plugins/database/plugins/derived-views/core/",
 ];
 

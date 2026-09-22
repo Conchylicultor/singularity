@@ -4,7 +4,7 @@
 // Nothing here imports `playwright` — not even lazily. The chromium binary is
 // provisioned at INSTALL time (`../provision`), never from a runtime path, so
 // the function that downloads it is not reachable from `web/`, `server/` or
-// `core/` at all; `boundary-config.ts` enforces that.
+// `core/` at all; `boundaries/core/boundary-config.ts` enforces that.
 
 export { detectBotMitigation } from "./internal/bot-mitigation";
 export type {

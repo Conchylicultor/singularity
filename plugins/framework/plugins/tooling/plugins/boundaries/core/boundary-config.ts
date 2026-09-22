@@ -1,10 +1,12 @@
-import { defineBoundaries, zone, allow } from "./core/config";
+import { defineBoundaries, zone, allow } from "./config";
 
 export default defineBoundaries({
   zones: [zone("plugin", { match: "plugins", discover: "plugin-tree" })],
 
-  // Layer 1: Runtime isolation (default-deny — unlisted = blocked)
-  runtimes: {
+  // Layer 1: Folder isolation (default-deny — unlisted = blocked). One row per
+  // folder a plugin may contain (`PluginFolder`), and a row can only list
+  // barrel folders (`RuntimeFolder`): nothing imports a leaf folder.
+  folders: {
     // `data-dirs` is absent from `web` and `core` ON PURPOSE. A data-dir
     // declaration reaches `paths/core`, which calls `homedir()` at module scope
     // — a single such edge into the web bundle breaks it at module eval. `core`
@@ -35,14 +37,12 @@ export default defineBoundaries({
     // render called it, so a missing binary blocked a backend's event loop for
     // a ~150 MB download (see that plugin's `provision/index.ts`).
     //
-    // Listing it here does a second thing: `checkRuntime` returns true when the
-    // source runtime is null, and every `provision/` file resolved to null
-    // before this row — so a provisioning step could import `@plugins/x/web`,
-    // or its own `../web`, and nothing would say a word. Now it is policed in
-    // both directions.
+    // The row polices it in both directions: a provisioning step may not import
+    // `@plugins/x/web` or its own `../web`, and no other folder's row lists
+    // `provision`.
     //
-    // `runtimeNames` derives from these keys, so `@plugins/<p>/provision` also
-    // becomes a legal cross-plugin barrel (plugin-boundaries R4) — which is how
+    // `runtimeNames` derives from `RUNTIME_FOLDERS`, so `@plugins/<p>/provision`
+    // is also a legal cross-plugin barrel (plugin-boundaries R4) — which is how
     // two plugins share ONE installer instead of copying it. Its R6 DAG edges
     // are tagged `provision` and fall outside the web/server/central cycle
     // graphs; a provisioning graph is a handful of leaf steps, not a lattice.
@@ -67,7 +67,7 @@ export default defineBoundaries({
     // `cli` barrels. That last edge is the point: shared CLI machinery lives in
     // a `cli/` barrel rather than being copied, exactly as `provision` shares one
     // chromium installer and `tooling/e2e-harness` shares one Playwright harness.
-    // `runtimeNames` derives from these keys, so `@plugins/<p>/cli` becomes a
+    // `runtimeNames` derives from `RUNTIME_FOLDERS`, so `@plugins/<p>/cli` is a
     // legal cross-plugin barrel with no other edit.
     //
     // `web` is denied: a terminal verb that reached a browser barrel would drag
@@ -83,6 +83,19 @@ export default defineBoundaries({
     // STATIC closure only. An implementation sitting next to the declaration is
     // free to reach `server`; the declaration reaching it is the error.
     cli: ["cli", "core", "shared", "data-dirs", "server"],
+
+    // Leaf folders (`LEAF_FOLDERS`): found by discovery or run by path, never
+    // imported. `shared` in a row is the plugin's own; plugin-boundaries R10
+    // forbids reaching another plugin's. `web` is in no host-process row.
+    lint: ["core"],
+    check: ["core", "shared", "data-dirs", "server"],
+    facet: ["core"],
+    bin: ["core", "shared", "data-dirs", "server", "central", "cli"],
+    scripts: ["core", "shared", "data-dirs", "server"],
+    // Layout-harness fixtures render real components in the browser.
+    fixtures: ["web", "core"],
+    vite: ["core"],
+    prewarm: ["core", "shared"],
   },
 
   runtimeExceptions: [

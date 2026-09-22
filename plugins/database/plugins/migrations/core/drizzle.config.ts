@@ -2,7 +2,7 @@ import { defineConfig } from "drizzle-kit";
 import {
   REPO_ROOT_FROM_MIGRATIONS_DIR,
   SCHEMA_GLOBS,
-} from "./core/internal/schema-glob-patterns";
+} from "./internal/schema-glob-patterns";
 
 /**
  * CODEGEN config for `drizzle-kit generate` — and ONLY that subcommand.
@@ -26,7 +26,7 @@ import {
  * backend's own connection.
  *
  * That invariant is enforced twice over, and neither half is a text scan.
- * `core/internal/drizzle-cli.ts` OWNS the argv — the binary name and `generate`
+ * `internal/drizzle-cli.ts` OWNS the argv — the binary name and `generate`
  * are one literal there, and callers pass typed flags, so no argument shape can
  * express another subcommand. The one remaining way to reach the tool, spelling
  * its name into your own spawn, is caught by the
@@ -39,9 +39,10 @@ export default defineConfig({
   // routes, and other server init code that shouldn't run during codegen).
   //
   // SCHEMA_GLOBS is the single source of truth, shared verbatim with
-  // `core/internal/schema-glob.ts` (the enumerator the schema-glob checks use). The
-  // patterns are repo-root-relative; drizzle-kit anchors a relative glob at its CWD,
-  // which is this directory — hence the prefix. NEVER inline a literal array here: the
+  // `internal/schema-glob.ts` (the enumerator the schema-glob checks use). The
+  // patterns are repo-root-relative; drizzle-kit anchors a relative glob at its CWD
+  // — the plugin directory (`MIGRATIONS_PLUGIN_DIR`), not this file's `core/` —
+  // hence the prefix. `out` is read against the same CWD. NEVER inline a literal array here: the
   // `database-migrations:drizzle-config-schema-globs` check proves this equals
   // SCHEMA_GLOBS and fails loudly if it doesn't.
   schema: SCHEMA_GLOBS.map((g) => `${REPO_ROOT_FROM_MIGRATIONS_DIR}/${g}`),

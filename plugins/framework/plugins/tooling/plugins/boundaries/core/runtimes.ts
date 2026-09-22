@@ -1,9 +1,8 @@
-import boundaryConfig from "../boundary-config";
+import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 
-// The runtime folder names, derived from the single source of truth: the
-// `runtimes` isolation-policy map in boundary-config.ts. Each key is a runtime
-// whose import permissions the map declares.
-// Adding a runtime means editing only that map — no other list to keep in sync.
-export const runtimeNames: ReadonlySet<string> = new Set(
-  Object.keys(boundaryConfig.runtimes),
-);
+// The folder names a `@plugins/<p>/<folder>` specifier may end in: the barrel
+// folders, from the single source of truth in `plugin-id/core`. Deliberately
+// NOT the boundary table's keys, which also hold the leaf folders (`check/`,
+// `lint/`, `bin/`, …) — nothing imports a leaf, so `@plugins/x/check` stays an
+// illegal specifier.
+export const runtimeNames: ReadonlySet<string> = new Set(RUNTIME_FOLDERS);
