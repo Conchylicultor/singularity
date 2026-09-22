@@ -49,7 +49,7 @@ import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/
  *      tree is `git add -A`-seeded), so a brand-new uncommitted file is seen.
  *
  *  (b) CONTENT of every file whose BYTES the verdict reads: the .ts/.tsx sources
- *      the walk parses (R4–R12 import grammar, R3 barrel purity, the cross-plugin
+ *      the walk parses (R4–R10 import grammar, R3 barrel purity, the cross-plugin
  *      re-export provenance chase, discoverCollectedDirs' `defineCollectedDir`
  *      scan of core/*.ts) AND every package.json (R1 naming + the compositionRoot
  *      marker buildPluginTree reads). A change to any of them can flip the verdict

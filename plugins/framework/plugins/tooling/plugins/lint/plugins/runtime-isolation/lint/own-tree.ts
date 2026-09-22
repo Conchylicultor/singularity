@@ -1,13 +1,13 @@
 /**
  * Where a source file and an import specifier sit inside a plugin's own tree —
- * the one reading of the plugin-dir grammar both runtime-isolation rules share.
+ * the one reading of the plugin-dir grammar `no-deep-own-folder-import` uses.
  *
- * Pure segment arithmetic (no node:path, no filesystem) so the rules stay
- * dependency-free: they dual-load under jiti and Bun, and folder names are all
- * they need.
+ * Pure segment arithmetic (no node:path, no filesystem) so the rule stays
+ * dependency-free: it dual-loads under jiti and Bun, and folder names are all
+ * it needs.
  */
 
-/** Normalize a path to `/` separators (the rules reason in posix segments). */
+/** Normalize a path to `/` separators (the rule reasons in posix segments). */
 export function toPosix(p: string): string {
   return p.split("\\").join("/");
 }

@@ -2,10 +2,7 @@ import { existsSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import {
-  runtimeNames,
-  sharedImporters,
-} from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   findImports,
   maskSource,
@@ -131,7 +128,7 @@ const check: Check = {
     // Composition roots (the SPA bootstrap / CLI entry) self-declare via the
     // package.json `singularity.compositionRoot` marker. They are exempt from
     // structural conformance (R1 package naming, R3 required barrel, R11 unknown
-    // dirs) but still subject to the per-file import grammar (R4–R12).
+    // dirs) but still subject to the per-file import grammar (R4–R10).
 
     // R1: package.json naming
     for (const p of plugins) {
@@ -248,42 +245,6 @@ const check: Check = {
         }
       }
 
-      // R12: shared/ is plugin-private, and only importable from the runtimes
-      // whose `boundary-config.runtimes` row lists `shared` — today web/,
-      // server/, central/ and cli/. That set is DERIVED (`sharedImporters`), not
-      // restated here: this rule used to carry its own literal copy, which
-      // stopped agreeing with the config the day `cli` was added to it.
-      // (Cross-plugin shared/ imports are caught by R10 via the alias form and
-      // by R8 via relative paths.)
-      if (sourcePlugin) {
-        const sourceRuntime = runtimeForPath(relFile, pluginSet);
-        if (sourceRuntime && !sharedImporters.has(sourceRuntime)) {
-          const sharedPrefix = `plugins/${sourcePlugin}/shared`;
-          for (const relImp of extractRelativeImports(src)) {
-            const resolvedAbs = resolve(dirname(absFile), relImp);
-            const resolvedRel = relative(root, resolvedAbs)
-              .split(sep)
-              .join("/");
-            if (
-              resolvedRel === sharedPrefix ||
-              resolvedRel.startsWith(sharedPrefix + "/")
-            ) {
-              violations.push({
-                rule: "shared-wrong-runtime",
-                file: relFile,
-                message: `\`${sourceRuntime}/\` cannot import from shared/ — only ${[
-                  ...sharedImporters,
-                ]
-                  .sort()
-                  .map((r) => `${r}/`)
-                  .join(", ")} may`,
-                fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
-              });
-            }
-          }
-        }
-      }
-
       // R9: forbid inline import-type expressions targeting plugin barrels. They
       // bypass the static import scanner and make cross-plugin deps invisible to
       // the boundary system. Use a top-level `import type { X } from "…"` instead.
@@ -309,31 +270,18 @@ const check: Check = {
         const resolved = resolveImport(imp.path, pluginSet);
         if (!resolved) continue;
 
-        // Intra-plugin imports (source is the same plugin) are unrestricted,
-        // EXCEPT: shared/ must use relative paths, not the @plugins alias.
+        // Intra-plugin imports (source is the same plugin) are unrestricted
+        // here, EXCEPT: shared/ must use relative paths, not the @plugins
+        // alias. Which own folder a runtime may reach is `boundary-rules`'
+        // job — it applies the runtime table inside a plugin too.
         if (sourcePlugin === resolved.pluginPath) {
           if (resolved.suffixHead === "shared") {
-            const sourceRuntime = runtimeForPath(relFile, pluginSet);
-            if (sourceRuntime && !sharedImporters.has(sourceRuntime)) {
-              violations.push({
-                rule: "shared-wrong-runtime",
-                file: relFile,
-                message: `\`${sourceRuntime}/\` cannot import from shared/ — only ${[
-                  ...sharedImporters,
-                ]
-                  .sort()
-                  .map((r) => `${r}/`)
-                  .join(", ")} may`,
-                fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
-              });
-            } else {
-              violations.push({
-                rule: "shared-use-relative",
-                file: relFile,
-                message: `use a relative import instead of \`${imp.path}\``,
-                fix: `shared/ is plugin-private — import via relative path (e.g. \`../shared${resolved.tail ? "/" + resolved.tail : ""}\`) instead of the @plugins alias`,
-              });
-            }
+            violations.push({
+              rule: "shared-use-relative",
+              file: relFile,
+              message: `use a relative import instead of \`${imp.path}\``,
+              fix: `shared/ is plugin-private — import via relative path (e.g. \`../shared${resolved.tail ? "/" + resolved.tail : ""}\`) instead of the @plugins alias`,
+            });
           }
           continue;
         }

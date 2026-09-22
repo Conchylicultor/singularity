@@ -31,7 +31,7 @@ import { locate, ownTargetOf, toPosix } from "./own-tree";
  *     plugins — the boundary check's business) and `node_modules/`. CSS and
  *     `?query` imports are skipped exactly as the builder skips them.
  *   - Type-only imports included: a type that crosses a folder is that folder's
- *     public API, same argument as `no-cross-runtime-import`.
+ *     public API, and belongs in its barrel like any other export.
  *
  * The autofix rewrites the specifier to the barrel — the module the browser
  * already loads, so it changes nothing at runtime; `tsc` then names any symbol

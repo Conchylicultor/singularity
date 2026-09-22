@@ -17089,7 +17089,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineBoundaries`
               - `deny`
               - `runtimeNames`
-              - `sharedImporters`
               - `zone`
           - Structure:
             - Loose top-level files: `boundary-config.ts`
@@ -17680,7 +17679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
-            - **`runtime-isolation`** — runtime-isolation lint rules: no-cross-runtime-import, no-deep-own-folder-import
+            - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render

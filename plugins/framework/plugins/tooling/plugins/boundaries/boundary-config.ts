@@ -12,15 +12,10 @@ export default defineBoundaries({
     // transitively; the browser names a directory through the `paths/display`
     // string literals instead.
     //
-    // KNOW WHAT THIS DOES AND DOES NOT CATCH. The evaluator only extracts
-    // specifiers matching `ZONE_SPECIFIER_RE` (`boundaries/core/check.ts`) and
-    // short-circuits when source and target zones are equal, so it polices the
-    // CROSS-PLUGIN alias form (`@plugins/other/data-dirs` from a `core/` file)
-    // and not a plugin reaching its own `../data-dirs` relatively. The
-    // cross-plugin form is the one that matters — it is how a genuinely
-    // web-reachable `core/` would acquire this edge — and the same-plugin
-    // relative form was never policed for `paths/core` either (`checks/core`
-    // imports it directly today). Do not read this row as airtight.
+    // The row holds inside a plugin too: `boundary-rules` reads a plugin's own
+    // relative imports, so `core/` reaching its own `../data-dirs` is flagged
+    // like `@plugins/other/data-dirs` is. The known exceptions are the
+    // host-only `core/` files listed under `runtimeExceptions` below.
     web: ["web", "core", "shared"],
     server: ["server", "core", "shared", "data-dirs"],
     central: ["central", "core", "shared", "data-dirs"],
@@ -42,8 +37,9 @@ export default defineBoundaries({
     //
     // Listing it here does a second thing: `checkRuntime` returns true when the
     // source runtime is null, and every `provision/` file resolved to null
-    // before this row — so a provisioning step could import `@plugins/x/web`
-    // and nothing would say a word. Now it is policed in both directions.
+    // before this row — so a provisioning step could import `@plugins/x/web`,
+    // or its own `../web`, and nothing would say a word. Now it is policed in
+    // both directions.
     //
     // `runtimeNames` derives from these keys, so `@plugins/<p>/provision` also
     // becomes a legal cross-plugin barrel (plugin-boundaries R4) — which is how
@@ -91,6 +87,19 @@ export default defineBoundaries({
 
   runtimeExceptions: [
     "plugin.infra.secrets.central -> plugin.infra.paths.server",
+
+    // Host-only (Node) code that sits in `core/` and reads its own plugin's
+    // data-dir declaration. `core/` has two meanings today: code the browser
+    // and the host share, and Node-only code that is not tied to one server
+    // runtime. These files are the second kind. No `web/` file imports any of
+    // these `core/` barrels, so the browser never loads `paths/core` through
+    // them. Each line is scoped to one plugin's own `data-dirs`, never
+    // `core -> data-dirs` at large.
+    "plugin.database.core -> plugin.database.data-dirs",
+    "plugin.framework.tooling.checks.core -> plugin.framework.tooling.checks.data-dirs",
+    "plugin.framework.tooling.web-artifacts.core -> plugin.framework.tooling.web-artifacts.data-dirs",
+    "plugin.packages.signal-origin.sink.core -> plugin.packages.signal-origin.sink.data-dirs",
+    "plugin.reports.outbox.core -> plugin.reports.outbox.data-dirs",
   ],
 
   // Layer 2: Zone DAG (first-match, default-deny)

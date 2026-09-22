@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { Midi } from "@tonejs/midi";
 import { resolvePedalSustain } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { buildBachPreludeTracks } from "../server/internal/bach-prelude";
-import { parseMidi } from "./parse";
+import { buildBachPreludeTracks } from "./internal/bach-prelude";
+import { parseMidi } from "../shared/parse";
 
 describe("bach starter pedal round-trip", () => {
   test("addCC → toArray → parseMidi yields pedal events that extend notes", () => {

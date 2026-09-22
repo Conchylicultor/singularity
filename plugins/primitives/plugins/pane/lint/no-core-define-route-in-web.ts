@@ -60,7 +60,7 @@ function toPosix(p: string): string {
 /**
  * Walk the alternating `<name>(/plugins/<name>)*` grammar a plugin dir follows,
  * from `segs[start]`, and return the index of the plugin dir's LAST segment.
- * Mirrors `runtime-isolation/no-cross-runtime-import`, copied rather than
+ * The same walk as `runtime-isolation`'s `own-tree.ts`, copied rather than
  * imported: `jiti` cannot resolve `@plugins/*` inside a lint rule file.
  */
 function pluginDirEnd(segs: string[], start: number): number {

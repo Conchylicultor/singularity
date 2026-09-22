@@ -1,4 +1,4 @@
-// Which files plugin-boundaries parses for the import-grammar rules (R4–R12).
+// Which files plugin-boundaries parses for the import-grammar rules (R4–R10).
 //
 // The set is SELECTED from `listRepoFiles`'s one git-backed enumeration, never
 // walked. That is not a convenience: this check is `inputKeyed`, and its

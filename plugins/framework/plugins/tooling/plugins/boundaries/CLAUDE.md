@@ -2,15 +2,22 @@
 
 `boundary-config.ts`'s `runtimes` map is the single source for what a runtime
 folder may import. **Derive from it; never restate a slice of it as a literal.**
-`core/runtimes.ts` holds the derivations — `runtimeNames` (the folder-name set)
-and `sharedImporters` (the runtimes whose row admits `shared`, read by the
-`shared-wrong-runtime` rule in `checks/plugin-boundaries`).
+`core/runtimes.ts` holds the derivation — `runtimeNames`, the folder-name set.
 
-That second one exists because the rule used to carry its own
-`web | server | central | shared`, which stopped agreeing with the map the day
-`cli` was added to it: the config permitted `cli/ → shared/` and the check
-rejected it. A contradiction between the two reads, to whoever hits it, as their
-own design being wrong — so adding a runtime must stay one edit to the map.
+## One table, inside and across plugins
+
+`boundary-rules` resolves every import it reads — `@plugins/…` and relative
+(`./x`, `../server/y`) alike — to a plugin and a folder, then applies the same
+`runtimes` row whether or not the target is in the same plugin. So `core/`
+importing its own `../server/x` fails exactly like `core/` importing
+`@plugins/other/server`. Only the zone edges (`allow`/`deny`) and the cycle
+graph stay cross-plugin: they say which plugins may depend on each other.
+Folders with no row (`check/`, `lint/`, `bin/`, loose root files) are not
+policed, as importer or as target.
+
+Two things differ inside a plugin, and `checks/plugin-boundaries` owns both:
+`shared/` is reachable only from its own plugin, and deep paths are allowed
+only there.
 
 ## Which files `boundary-rules` reads
 
@@ -44,7 +51,6 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `defineBoundaries`
     - `deny`
     - `runtimeNames`
-    - `sharedImporters`
     - `zone`
 - Structure:
   - Loose top-level files: `boundary-config.ts`

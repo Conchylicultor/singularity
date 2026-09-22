@@ -29,15 +29,18 @@ interface Violation {
   fix?: string;
 }
 
-// Alias specifiers the zone map can resolve; every other specifier (relative,
-// bare npm) resolves to null downstream, so filtering here is just an early cut.
-const ZONE_SPECIFIER_RE = /^@(?:plugins|core|server|central)(?:\/|$)/;
+// Specifiers the zone map can resolve: the `@plugins/…` alias, and a relative
+// path (`./x`, `../server/y`) inside the repo. Every other specifier (bare npm)
+// resolves to null downstream, so filtering here is just an early cut.
+const ZONE_SPECIFIER_RE = /^(?:@plugins(?:\/|$)|\.\.?\/)/;
 
-function extractCrossZoneImports(rawSrc: string): string[] {
+function extractImports(rawSrc: string): string[] {
   // `findImports` masks comments/regex AND string interiors, then reads each
   // specifier back by offset — so a `from "@plugins/…"` written inside a string
   // or template literal (test fixture, docs snippet) is never mistaken for a
   // real import, while genuine imports (including in test files) are still caught.
+  // It covers `export … from` and `import()` too, and `import type` is read the
+  // same as a value import: a type that crosses a runtime is still a dependency.
   return findImports(rawSrc)
     .map((i) => i.specifier)
     .filter((s) => ZONE_SPECIFIER_RE.test(s));
@@ -130,14 +133,16 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
         const src = await repo.read(relFile);
         if (!src) continue;
 
-        const imports = extractCrossZoneImports(src);
+        const imports = extractImports(src);
 
         for (const specifier of imports) {
-          const target = zoneMap.resolveImport(specifier);
+          const target = zoneMap.resolveImport(relFile, specifier);
           if (!target) continue;
 
-          if (source.zone === target.zone) continue;
-
+          // The runtime table applies to EVERY import, including one that stays
+          // inside the plugin (`core/` reaching its own `../server/x`): a folder
+          // may import the same folders whichever plugin they belong to.
+          const samePlugin = source.zone === target.zone;
           const rtExempt = isRuntimeException(
             rtExceptions,
             source.zone,
@@ -156,13 +161,20 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
             const tgtLabel = target.runtime
               ? `${target.zone}.${target.runtime}`
               : target.zone;
+            const where = samePlugin
+              ? `same plugin, ${srcLabel} → ${tgtLabel}`
+              : `${srcLabel} → ${tgtLabel}`;
             violations.push({
               file: relFile,
-              message: `runtime isolation: ${source.runtime} cannot import ${target.runtime} (${srcLabel} → ${tgtLabel}, import "${specifier}")`,
-              fix: `${source.runtime} can only import from [${(runtimeMap[source.runtime!] ?? []).join(", ")}]. If this is legitimate, add a runtimeException in boundary.config.ts`,
+              message: `runtime isolation: ${source.runtime} cannot import ${target.runtime} (${where}, import "${specifier}")`,
+              fix: `${source.runtime} can only import from [${(runtimeMap[source.runtime!] ?? []).join(", ")}]. The channels between folders are core/ (public) and shared/ (plugin-private). If this is legitimate, add a runtimeException in boundary-config.ts`,
             });
             continue;
           }
+
+          // Allow/deny edges and the cycle graph are about which PLUGINS may
+          // depend on each other, so an import inside one plugin stops here.
+          if (samePlugin) continue;
 
           const result = evaluateEdges(config.edges, source.zone, target.zone);
 

@@ -1,5 +1,4 @@
 import { sep } from "path";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { ZoneDefinition } from "./types";
 
 export interface ResolvedZone {
@@ -10,7 +9,20 @@ export interface ResolvedZone {
 export interface ZoneMap {
   allZones: Set<string>;
   resolveFile(relFile: string): ResolvedZone | null;
-  resolveImport(specifier: string): ResolvedZone | null;
+  /**
+   * The zone and runtime folder an import lands in, from the importing file
+   * (repo-relative) and its specifier. Relative and `@plugins/…` specifiers
+   * resolve; anything else (npm packages, a path leaving `plugins/`) is null.
+   */
+  resolveImport(fromRelFile: string, specifier: string): ResolvedZone | null;
+}
+
+/**
+ * The part of the plugin tree the zone map reads: each plugin's id and its
+ * path under `plugins/`. A full `PluginTree` satisfies it.
+ */
+export interface PluginDirs {
+  byDir: ReadonlyMap<string, { id: string; path: string }>;
 }
 
 interface ZoneEntry {
@@ -21,7 +33,7 @@ interface ZoneEntry {
 export function buildZoneMap(
   _root: string,
   zones: ZoneDefinition[],
-  pluginTree: PluginTree | null,
+  pluginTree: PluginDirs | null,
   runtimes: ReadonlySet<string>,
 ): ZoneMap {
   const allZones = new Set<string>();
@@ -71,7 +83,9 @@ export function buildZoneMap(
       return null;
     }
 
-    const sortedEntries = [...entries].sort((a, b) => b.match.length - a.match.length);
+    const sortedEntries = [...entries].sort(
+      (a, b) => b.match.length - a.match.length,
+    );
     for (const entry of sortedEntries) {
       if (norm.startsWith(entry.match + "/") || norm === entry.match) {
         return { zone: entry.name, runtime: null };
@@ -81,7 +95,19 @@ export function buildZoneMap(
     return null;
   }
 
-  function resolveImport(specifier: string): ResolvedZone | null {
+  function resolveImport(
+    fromRelFile: string,
+    specifier: string,
+  ): ResolvedZone | null {
+    // A relative specifier is read the same way as the file it points at:
+    // resolve it against the importing file's directory, then classify that
+    // path. So `../server/x` from `core/` lands in the plugin's own `server`
+    // runtime, and `../../..` out of a child plugin lands in its parent.
+    if (specifier.startsWith("./") || specifier.startsWith("../")) {
+      const target = joinRelative(fromRelFile, specifier);
+      return target === null ? null : resolveFile(target);
+    }
+
     if (specifier.startsWith("@plugins/")) {
       const rest = specifier.slice("@plugins/".length);
       const parts = rest.split("/");
@@ -100,7 +126,10 @@ export function buildZoneMap(
 
       const remaining = parts.slice(bestLen);
       if (remaining.length > 0 && runtimes.has(remaining[0]!)) {
-        return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: remaining[0]! };
+        return {
+          zone: `${pluginZoneName}.${bestHierarchy}`,
+          runtime: remaining[0]!,
+        };
       }
       return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: null };
     }
@@ -109,4 +138,20 @@ export function buildZoneMap(
   }
 
   return { allZones, resolveFile, resolveImport };
+}
+
+/**
+ * Resolve a relative specifier against a repo-relative file, in posix
+ * segments. Null when it climbs above the repo root.
+ */
+function joinRelative(fromRelFile: string, specifier: string): string | null {
+  const out = fromRelFile.split(sep).join("/").split("/").slice(0, -1);
+  for (const seg of specifier.split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg === "..") {
+      if (out.length === 0) return null;
+      out.pop();
+    } else out.push(seg);
+  }
+  return out.join("/");
 }
