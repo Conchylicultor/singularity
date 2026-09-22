@@ -18,7 +18,10 @@ export const dividerBlock = defineBlock({
   // paste can't inject the unknown-key the write boundary rejects).
   markdown: {
     serialize: () => "---",
-    parseLine: (line) => (line.trim() === "---" ? {} : null),
+    parseLine: {
+      claims: ["---"],
+      parse: (line) => (line.trim() === "---" ? {} : null),
+    },
   },
   // Typing --- at the start of a text block converts it into a divider. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.

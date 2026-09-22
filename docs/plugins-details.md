@@ -21565,6 +21565,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listBlocks`
           - `listPages`
           - `MARK_ORDER`
+          - `markdownLineClaim`
           - `markdownParseTagNames`
           - `markdownTagIsIdentified`
           - `markdownTagNameOf`
@@ -22723,6 +22724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/namespace.asNamespace`
           - `infra/runtime-identity.declareRuntimeNamespace`
+          - `infra/runtime-identity.hasRuntimeNamespace`
           - `infra/stack-sampler.withThreadActivity`
           - `packages/macrotask-yield.yieldMacrotask`
           - `packages/semaphore.createSemaphore`

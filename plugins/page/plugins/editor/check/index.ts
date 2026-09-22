@@ -1,10 +1,7 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join } from "path";
-import {
-  buildEnrichedTree,
-  declareSlotsFromBarrels,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import {
@@ -14,22 +11,31 @@ import {
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   conversionPrefixesOf,
+  markdownLineClaim,
   markdownParseTagNames,
   type BlockHandle,
+  type MarkdownContext,
 } from "../core";
+import {
+  collectBlockHandles,
+  resolveBlockSlots,
+  WEB_BLOCK_FRAME_SLOT,
+  WEB_BLOCK_SLOT,
+} from "./block-handles";
 import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import noTokenIdentityOutsideOwner from "./no-token-identity-outside-owner";
 
-// Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
-// server/internal/block-registry.ts}). Both sides carry the block TYPE as their
-// contribution's doc label — web `docLabel: (c) => c.block?.type`, server
-// `docLabel: (h) => h.type` — which is the join key this check is built on.
-const WEB_BLOCK_SLOT = "page.editor.block"; // Editor.Block  (web dispatch slot id)
+// The SERVER half's canonical slot token (see
+// plugins/page/plugins/editor/server/internal/block-registry.ts). Both sides
+// carry the block TYPE as their contribution's doc label — web
+// `docLabel: (c) => c.block?.type`, server `docLabel: (h) => h.type` — which is
+// the join key the first check below is built on. The two WEB tokens, and the
+// slot-object resolution they feed, live beside the handle loader in
+// `./block-handles.ts`.
 const SERVER_BLOCK_DATA_SLOT = "page.block-data"; // Editor.BlockData (server _kind)
-const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (web dispatch slot id)
 
 // The `editor` plugin ITSELF registers `Editor.BlockData("page")` (page rows are
 // written by editor server code directly, so page creation must not depend on the
@@ -37,55 +43,6 @@ const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (we
 // absence means barrel import saw no BlockData contributions at all, i.e. the
 // server scan silently degraded. Used as a health canary, not a hardcoded rule.
 const CANARY_SERVER_TYPE = "page";
-
-/**
- * The two web block SLOT OBJECTS, resolved once per call from the declaration
- * pass that named them, so every loop below compares by IDENTITY instead of
- * against an id string.
- *
- * Identity is the point, not ergonomics. These loops used to read `c._slotId` —
- * a field that stopped existing when contributions moved to `_slot: SlotHandle`
- * — so the predicate was always true, `handles` was always empty, and two checks
- * verified nothing for as long as it took to notice. There is no field name and
- * no id string left in the loop to go stale: a wrong id fails HERE, at one named
- * line, and a wrong field is a type error.
- *
- * `"registry"` scope, and it costs nothing: every caller has already awaited
- * `buildEnrichedTree`, which awaits this very memoized pass. It is the DECLARING
- * plugin — the editor — that must be in scope, never the candidate plugin whose
- * barrel is read: a contribution carries the same slot OBJECT whether or not its
- * own plugin is disabled, so identity still catches a disabled block type.
- *
- * A miss returns `{ ok: false }` and never throws: the runner awaits every check
- * under `Promise.all` and rethrows, so one throw in here would kill every other
- * check's reporting.
- */
-async function resolveBlockSlots(
-  root: string,
-): Promise<
-  | { ok: true; block: SlotHandle; frame: SlotHandle }
-  | { ok: false; message: string }
-> {
-  const naming = await declareSlotsFromBarrels(root, "registry");
-  const block = naming.findSlot(WEB_BLOCK_SLOT);
-  const frame = naming.findSlot(WEB_BLOCK_FRAME_SLOT);
-  const missing = [
-    block === undefined ? WEB_BLOCK_SLOT : null,
-    frame === undefined ? WEB_BLOCK_FRAME_SLOT : null,
-  ].filter((id): id is string => id !== null);
-  if (block === undefined || frame === undefined) {
-    return {
-      ok: false,
-      message:
-        `No slot is declared under ${missing.map((id) => `"${id}"`).join(" / ")} in the ` +
-        "registry-scoped declaration pass, so no block contribution could be recognized and " +
-        "nothing was verified. An id derives from its declaring plugin's id plus its `slots` " +
-        "key, so moving or renaming the editor renames it. This is a check/tooling failure, " +
-        "not a clean pass.",
-    };
-  }
-  return { ok: true, block, frame };
-}
 
 // Server `Editor.BlockData` contributions are now read off the SAME contributions
 // facet as the web `Editor.Block` half (see the loop below). The facet's runtime
@@ -415,100 +372,6 @@ const markdownTagNamesUnique: Check = {
 };
 
 /**
- * At most ONE block type may declare any given conversion prefix.
- *
- * `MarkdownShortcutPlugin` flattens every handle's prefixes into one
- * longest-first list and converts on the FIRST match, so a duplicated prefix
- * resolves by registration order — i.e. by nothing the author of either block
- * type controls, and silently. Typing `> ` would mint a toggle or a quote
- * depending on which plugin the registry happened to walk first, and the loser's
- * shortcut would simply never fire.
- *
- * The union is read through `conversionPrefixesOf`, the SAME resolution the
- * runtime uses, so the check cannot drift from what it checks — both prefix
- * fields are covered, and a prefix moved between them stays covered.
- */
-/**
- * Every registered block handle, with the plugin id that declared it.
- *
- * The three handle-reading checks below all need the same thing: import each web
- * barrel that contributes `Editor.Block` and read the handles off it. A static
- * source scan cannot recover a handle's fields from
- * `Editor.Block({ match: fooBlock.type, block: fooBlock })`, and ad-hoc marker
- * scanning is banned outright — so importing is the only way, and doing it once
- * is what keeps a new check from re-deriving "which dirs" and drifting on the
- * empty-set failure mode. Barrel modules are Bun-cached, so the repeat imports
- * across checks cost nothing.
- *
- * Fails (`{ ok: false }`) rather than returning an empty list — whether the block
- * slot could not be resolved, the facet yielded no candidate dirs, or those dirs
- * yielded no handles: a check that verified NOTHING must fail loudly rather than
- * pass vacuously. Each caller words the failure in its own terms and appends
- * `reason`, so the three degradations stay distinguishable instead of collapsing
- * into one message that names only the likeliest of them.
- */
-async function collectBlockHandles(): Promise<
-  | { ok: true; handles: { pluginId: string; handle: BlockHandle<unknown> }[] }
-  | { ok: false; reason: string }
-> {
-  const root = await getWorktreeRoot();
-  const tree = await buildEnrichedTree(root);
-  registerBarrelStubs(root);
-
-  const slots = await resolveBlockSlots(root);
-  if (!slots.ok) return { ok: false, reason: slots.message };
-
-  const candidateDirs = new Set<string>();
-  for (const [dir, node] of tree.byDir) {
-    const facet = getFacet(node, contributionsFacetDef);
-    if (!facet) continue;
-    for (const c of facet.runtime) {
-      if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
-        if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
-        break;
-      }
-    }
-  }
-  if (candidateDirs.size === 0) {
-    return {
-      ok: false,
-      reason:
-        "no plugin in the enriched tree contributes `Editor.Block` — the barrel-imported " +
-        "contributions facet is empty.",
-    };
-  }
-
-  const handles: { pluginId: string; handle: BlockHandle<unknown> }[] = [];
-  for (const dir of candidateDirs) {
-    const mod = await importBarrel(join(dir, "web", "index.ts"));
-    const def = mod.default as { contributions?: unknown } | undefined;
-    if (!Array.isArray(def?.contributions)) continue;
-    for (const raw of def.contributions) {
-      const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
-      if (c._slot !== slots.block || !c.block) continue;
-      handles.push({
-        pluginId: tree.byDir.get(dir)?.id ?? dir,
-        handle: c.block,
-      });
-    }
-  }
-  // An empty handle set is the SAME degradation as an empty candidate set, one
-  // level down: the dirs were found but no contribution off them was recognized
-  // as an `Editor.Block`, so the callers below would iterate nothing and report
-  // a clean pass having verified nothing. (That is exactly what a stale field
-  // read on the contribution did — silently, for as long as it took to notice.)
-  if (handles.length === 0) {
-    return {
-      ok: false,
-      reason:
-        `${candidateDirs.size} candidate dir(s) were found, but no contribution off them was ` +
-        "recognized as an `Editor.Block`.",
-    };
-  }
-  return { ok: true, handles };
-}
-
-/**
  * A declared SPLIT TARGET must be a text-bearing type.
  *
  * `applySplit` writes the post-caret runs onto the tail row it mints, whose type
@@ -588,6 +451,20 @@ const splitTargetsAreTextBearing: Check = {
   },
 };
 
+/**
+ * At most ONE block type may declare any given conversion prefix.
+ *
+ * `MarkdownShortcutPlugin` flattens every handle's prefixes into one
+ * longest-first list and converts on the FIRST match, so a duplicated prefix
+ * resolves by registration order — i.e. by nothing the author of either block
+ * type controls, and silently. Typing `> ` would mint a toggle or a quote
+ * depending on which plugin the registry happened to walk first, and the loser's
+ * shortcut would simply never fire.
+ *
+ * The union is read through `conversionPrefixesOf`, the SAME resolution the
+ * runtime uses, so the check cannot drift from what it checks — both prefix
+ * fields are covered, and a prefix moved between them stays covered.
+ */
 const blockPrefixesUnique: Check = {
   id: "page.editor:block-prefixes-unique",
   description:
@@ -637,11 +514,148 @@ const blockPrefixesUnique: Check = {
   },
 };
 
+/**
+ * Every line a block type CLAIMS is really claimed by it, and one leading
+ * backslash defeats every claimer.
+ *
+ * The serializer escapes a paragraph whose words open like another type's line
+ * (`\3. x`) by asking who would claim the line it just wrote and putting ONE
+ * backslash at index 0. Two facts have to hold for that to be a round trip, and
+ * neither is stated anywhere a type can see:
+ *
+ * - **A declared sample is claimed by its declarer.** A `markdownPrefixes` entry
+ *   IS its own declaration (`prefix + "x"` is a sample of it), but a hand-written
+ *   `markdown.parseLine` is a closure nobody can enumerate — so it declares the
+ *   lines it takes as `parseLine.claims`, and a sample its own declarer does not
+ *   claim is a lie in the declaration. This also pins the PRECEDENCE order, which
+ *   nothing else checks: `- [ ] x` is `to-do`'s sample and `- ` is
+ *   `bulleted-list`'s prefix, so the two really do overlap, and the only thing
+ *   deciding it is `markdown.precedence`.
+ * - **`"\\" + sample` is claimed by nobody.** This is the escape's correctness
+ *   proof and the one fact `markdownPrefixes` cannot yield: every claimer either
+ *   anchors at `^` or compares `trim()`, but that is a property of each regex
+ *   rather than something declared, so it is asserted over the real set.
+ *
+ * `markdownLineClaim` is the SAME authority both directions of the round trip
+ * run — the serializer's escape probe and the parser's dispatch — imported
+ * rather than restated, so the check cannot drift from what it checks.
+ */
+const markdownClaimsAreEscapable: Check = {
+  id: "page.editor:markdown-claims-are-escapable",
+  description:
+    "every line a block type declares it claims (`markdown.parseLine.claims`, `markdownPrefixes`) is claimed by that type, and stops being claimed once escaped with one leading backslash",
+  async run(): Promise<CheckResult> {
+    const collected = await collectBlockHandles();
+    if (!collected.ok) {
+      return {
+        ok: false,
+        message:
+          "No block handles could be read, so markdown line claims were NOT verified — " +
+          `${collected.reason} This is a check/tooling failure, not a clean pass.`,
+      };
+    }
+
+    // The three dialect fields are inert for a claim question and are picked to
+    // match the round trip's own document anyway. A claim never reaches them:
+    // `blankLines` decides what an EMPTY line parses as, `emptyBlocks` and
+    // `softBreaks` are read on SERIALIZE only, and the claim probe runs against
+    // the module's own stub parse context, so `protectedSpans` is never read
+    // either (it only ever feeds `ctx.runs`, which a claimant fills its text
+    // from after it has already decided).
+    const ctx: MarkdownContext = {
+      handles: collected.handles.map((h) => h.handle),
+      protectedSpans: [],
+      blankLines: "empty-block",
+      emptyBlocks: "pinned",
+      softBreaks: "escaped",
+    };
+
+    // Every sample, with the field that declared it — the two forms fail for
+    // different reasons and the reader has to be sent to the right one.
+    const samples: {
+      pluginId: string;
+      type: string;
+      field: string;
+      line: string;
+    }[] = [];
+    for (const { pluginId, handle } of collected.handles) {
+      for (const line of handle.markdown?.parseLine?.claims ?? [])
+        samples.push({
+          pluginId,
+          type: handle.type,
+          field: "markdown.parseLine.claims",
+          line,
+        });
+      for (const prefix of handle.markdownPrefixes ?? [])
+        samples.push({
+          pluginId,
+          type: handle.type,
+          field: "markdownPrefixes",
+          line: `${prefix}x`,
+        });
+    }
+
+    // No sample at all is the same degradation as no handles, one level down:
+    // every claiming type would have had to drop both declarations at once, and
+    // the loop below would then verify nothing while reporting a clean pass.
+    if (samples.length === 0) {
+      return {
+        ok: false,
+        message:
+          `${collected.handles.length} block handle(s) were read, but not one of them declares a ` +
+          "line it claims (`markdown.parseLine.claims` / `markdownPrefixes`), so the escape was " +
+          "NOT verified. This is a check/tooling failure, not a clean pass.",
+      };
+    }
+
+    // Report EVERY failing sample, not the first: a precedence change breaks a
+    // whole family at once, and a reader fixing them one run at a time is being
+    // told a quarter of the story per run.
+    const bad: string[] = [];
+    for (const { pluginId, type, field, line } of samples) {
+      const claimant = markdownLineClaim(line, ctx);
+      if (claimant !== type) {
+        bad.push(
+          `  "${line}" is declared by "${type}" (${pluginId}, \`${field}\`), but ` +
+            (claimant === undefined
+              ? "nothing claims it — it parses back as an ordinary paragraph"
+              : `"${claimant}" claims it`),
+        );
+      }
+      const escaped = markdownLineClaim(`\\${line}`, ctx);
+      if (escaped !== undefined) {
+        bad.push(
+          `  "\\${line}" (the escaped form of "${type}"'s sample, ${pluginId}, \`${field}\`) is ` +
+            `still claimed, by "${escaped}"`,
+        );
+      }
+    }
+
+    if (bad.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message:
+        `${bad.length} markdown line claim(s) do not hold, so a paragraph opening with one of ` +
+        `these lines cannot survive being written out and read back:\n${bad.join("\n")}`,
+      hint:
+        "A sample its declarer does not claim means the declaration and the parser disagree: " +
+        "either the sample is wrong (fix the `claims` entry, or the `markdownPrefixes` entry it " +
+        "was built from), or another type outranks this one and the two need a `markdown." +
+        "precedence` between them (`to-do` sits above `bulleted-list` that way). An escaped " +
+        "sample that is still claimed is the serious half: the serializer escapes a paragraph " +
+        "opening with a claimed line by putting ONE backslash at index 0, so a claimer that " +
+        "does not anchor at `^` (or compare `trim()`) silently steals the paragraph back and " +
+        "the block loses its id, its content doc and its children on the way in.",
+    };
+  },
+};
+
 export default [
   check,
   anchorHasDecoration,
   markdownTagNamesUnique,
   blockPrefixesUnique,
+  markdownClaimsAreEscapable,
   splitTargetsAreTextBearing,
   noTokenIdentityOutsideOwner,
 ];

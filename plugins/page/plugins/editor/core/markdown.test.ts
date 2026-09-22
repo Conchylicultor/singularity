@@ -5,14 +5,15 @@ import {
   defineBlock,
   type BlockHandle,
 } from "./define-block";
-import { textBlockSchema, textDataSchema } from "./text-data";
-import { plainOf, runsLength, type RichText } from "./rich-text";
+import { textDataSchema } from "./text-data";
+import { plainOf, type RichText } from "./rich-text";
 import type { SerializedBlock } from "./serialized-block";
 import { withMintedIds } from "./serialized-block";
 import {
   parseMarkdownToForest,
   serializeForestToMarkdown,
   defaultTextHandle,
+  markdownLineClaim,
   markdownParseTagNames,
   markdownTagIsIdentified,
   markdownTagNameOf,
@@ -21,357 +22,54 @@ import {
   type MarkdownContext,
   type MarkdownNode,
 } from "./markdown";
-import { PageDataSchema, pageBlockAuthor, pageBlockMarkdown } from "./schemas";
+import { loadBlockHandles } from "../check/block-handles";
 
-// The orchestrator is parameterized on `BlockHandle[]`, so the test builds
-// handles LOCALLY with the real `defineBlock` (mirroring the block plugins'
-// declarations). Importing the block plugins' cores here would form a plugin
-// import cycle (each imports the editor's `defineBlock`) — the boundary checker
-// scans test files, so a local reconstruction is the boundary-legal way to
-// exercise the real per-type `markdown` shape through the real orchestrator.
+// The orchestrator is parameterized on `BlockHandle[]`, and this suite hands it
+// the REAL ONES: every block type the app ships, read off the plugin tree by
+// `loadBlockHandles()`, which imports each contributing plugin's web barrel and
+// throws rather than handing back an empty set.
+//
+// It is imported RELATIVELY (`../check`), which is this same plugin — so no
+// cross-plugin edge exists to be a cycle, and the boundary checker, which only
+// tracks `@plugins/…` specifiers, has nothing to say about it. A static import
+// of the block plugins' own cores would be the cycle: each of them imports
+// `defineBlock` from here.
+//
+// WHAT THIS REPLACED, because it is the reason for the cost below: a
+// hand-written copy of 26 handles, which was wrong about exactly the tags
+// `edit_page` depends on. It spelled the agent's card `<agent-notes>` where the
+// real one is `<agent-inline id="…">`, gave `<todo>` and `<human>` no row id at
+// all, knew two of the callout's five colours, and did not have `instructions`
+// or `place` in it. So the round-trip property — the executable statement that
+// markdown is a lossless projection of the forest — was a statement about a
+// document nobody ever writes. A slow honest test is worth more than a fast one
+// about a fiction.
+//
+// The load is a TOP-LEVEL `await`, deliberately not a `beforeAll`: it takes
+// ~11 s (it builds the enriched plugin tree, then evaluates 28 web barrels,
+// `lexical` and `react-icons` among them), and Bun's default per-test timeout is
+// 5 s, which nothing in this repo overrides. At module scope no test timer
+// covers it; inside a hook one would, and every run would fail on the clock.
+const handles = await loadBlockHandles();
 
-const text = defineBlock({
-  type: "text",
-  schema: textDataSchema,
-  defaultText: true,
-  empty: () => ({ text: [] }),
-  // An EMPTY paragraph is a blank line; anything else is ordinary prose. The tag
-  // is what the `"pinned"` dialect emits where a blank line cannot state the
-  // block's position, and `<text/>` parses either way. `attrs` emits nothing, or
-  // the derived projection would spell it `<text data="{&quot;text&quot;:[]}"/>`.
-  // Mirrors `page/text`'s real declaration.
-  markdown: {
-    serialize: (d, ctx) => (runsLength(d.text) === 0 ? "" : ctx.md(d.text)),
-    tag: {
-      name: "text",
-      body: "none",
-      attrs: () => ({}),
-      parseAttrs: () => ({ text: [] }),
-    },
-  },
-});
-
-const bulletedList = defineBlock({
-  type: "bulleted-list",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  marker: "•",
-  markdownPrefixes: ["* ", "- ", "+ "],
-});
-
-const heading1 = defineBlock({
-  type: "heading-1",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  markdownPrefixes: ["# "],
-});
-
-// H2 and H3 are mirrored too, because the line-claim escape below reads the
-// WHOLE prefix set: a paragraph reading `## x` comes back a heading, and a
-// mirror holding only `# ` would let that case pass vacuously.
-const heading2 = defineBlock({
-  type: "heading-2",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  markdownPrefixes: ["## "],
-});
-
-const heading3 = defineBlock({
-  type: "heading-3",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  markdownPrefixes: ["### "],
-});
-
-const toDo = defineBlock({
-  type: "to-do",
-  schema: textBlockSchema({ checked: z.boolean().default(false) }),
-  empty: () => ({ text: [], checked: false }),
-  markdown: {
-    precedence: 10,
-    serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.md(d.text),
-    parseLine: (line, ctx) => {
-      const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
-      if (!m) return null;
-      return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
-    },
-  },
-  typingPrefixes: ["[] ", "[ ] "],
-});
-
-const numberedList = defineBlock({
-  type: "numbered-list",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  markdown: {
-    serialize: (d, ctx) => `${ctx.ordinal}. ` + ctx.md(d.text),
-    parseLine: (line, ctx) => {
-      const m = /^\d+[.)]\s+(.*)$/.exec(line);
-      return m ? { text: ctx.runs(m[1]!) } : null;
-    },
-  },
-  markdownPrefixes: ["1. "],
-});
-
-const toggle = defineBlock({
-  type: "toggle",
-  schema: textBlockSchema({}),
-  empty: () => ({ text: [] }),
-  markdownPrefixes: ["> "],
-  collapsible: "always",
-});
-
-// `quote` is a VOID CONTAINER (the real one goes through
-// `defineContainerBlock`): the quoted passage IS its children, so its tag
-// carries THEM. It declares no `markdownPrefixes` — the canonical `> ` belongs
-// to `toggle` — and its `| ` is a `typingPrefixes` entry, which the clipboard
-// pipeline never reads: `| ` is a markdown TABLE ROW.
-const quote = defineBlock({
-  type: "quote",
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  typingPrefixes: ["| "],
-  markdown: { tag: { body: "children" } },
-});
-
-// `prompt` is now the ONLY text-bearing type with no markdown prefix of its own,
-// so without a tag it serialized as a bare paragraph and came back as `text`.
-// `body: "text"` is the fix.
-const prompt = defineBlock({
-  type: "prompt",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
-  markdown: { tag: { body: "text" } },
-});
-
-// A VOID container, exactly as the real callout is: appearance only, its content
-// IS its children — and it declares NO markdown at all, so it exercises the
-// DERIVED tag (the branch that used to emit a blank line).
-const callout = defineBlock({
-  type: "callout",
-  schema: z.object({
-    icon: z.string().nullable().default(null),
-    iconSvgNodes: z
-      .array(z.object({ tag: z.string() }))
-      .nullable()
-      .default(null),
-    color: z.enum(["default", "info"]).default("default"),
-  }),
-  empty: () => ({ icon: null, iconSvgNodes: null, color: "default" as const }),
-  anchor: true,
-});
-
-// The four annotation containers' shape: a void container with an explicit tag.
-// All four are present, because they are what the identified-tag property below
-// runs over — three plain, one `identified`, so every assertion has both arms.
-const context = defineBlock({
-  type: "context",
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  typingPrefixes: ["TODO "],
-  markdown: { tag: { body: "children" } },
-});
-
-const privateNotes = defineBlock({
-  type: "private-notes",
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  markdown: { tag: { body: "children" } },
-});
-
-// The ONE annotated type, mirroring the real `todo`: a card an agent can be
-// dispatched from, whose linked task and that task's status live in ANOTHER
-// table. Neither is in `data` (which is `z.object({})` and stays so), so the two
-// attributes are supplied to the serialize walk and reserved on the way back in.
-const todo = defineBlock({
-  type: "todo",
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  markdown: { tag: { body: "children", annotated: ["task_id", "status"] } },
-});
-
-// The ONE identified type: `<agent-notes id="…">` carries the row it addresses,
-// because it is the one card an agent may write back to and an edit therefore
-// has to be able to NAME it. Everything else in this file — its sibling
-// annotations included — is content-addressed, which is exactly the contrast the
-// property test needs.
-const agentNotes = defineBlock({
-  type: "agent-notes",
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  markdown: { tag: { body: "children", identified: true } },
-});
-
-// The media/void family — no markdown declaration anywhere, all covered by the
-// derived tag. `image` carries a non-string field (`width`), which is what the
-// JSON `data` attribute exists for.
-const image = defineBlock({
-  type: "image",
-  schema: z.object({
-    attachmentId: z.string().optional(),
-    width: z.number().int().positive().optional(),
-    alt: z.string().optional(),
-  }),
-  empty: () => ({}),
-});
-
-const video = defineBlock({
-  type: "video",
-  schema: z.object({
-    attachmentId: z.string().optional(),
-    mime: z.string().optional(),
-  }),
-  empty: () => ({}),
-});
-
-const audio = defineBlock({
-  type: "audio",
-  schema: z.object({
-    attachmentId: z.string().optional(),
-    mime: z.string().optional(),
-  }),
-  empty: () => ({}),
-});
-
-const file = defineBlock({
-  type: "file",
-  schema: z.object({
-    attachmentId: z.string().optional(),
-    filename: z.string().optional(),
-    size: z.number().optional(),
-  }),
-  empty: () => ({}),
-});
-
-const embed = defineBlock({
-  type: "embed",
-  schema: z.object({ url: z.string().optional() }),
-  empty: () => ({}),
-});
-
-const bookmark = defineBlock({
-  type: "bookmark",
-  schema: z.object({
-    url: z.string().optional(),
-    title: z.string().optional(),
-    fetched: z.boolean().optional(),
-    attachmentIds: z.array(z.string()).optional(),
-  }),
-  empty: () => ({}),
-});
-
-// The two `<page …>` halves: the sub-page SERIALIZES the tag (identity from
-// `ctx.id`), `page-link` OWNS it on parse. The page handle is built from the REAL
-// shared declarations (`pageBlockMarkdown`, `pageBlockAuthor` — same plugin, so
-// no cycle), because its second spelling `<agent-page>` is what this suite pins
-// and a local copy would pin the copy.
-const page = defineBlock({
-  type: "page",
-  schema: PageDataSchema,
-  markdown: pageBlockMarkdown,
-  ...pageBlockAuthor,
-});
-
-const pageLink = defineBlock({
-  type: "page-link",
-  schema: z.object({ pageId: z.string() }),
-  empty: () => ({ pageId: "" }),
-  markdown: {
-    tag: {
-      name: "page",
-      body: "none",
-      // Mirrors `page-link`'s real declaration: the TARGET's title, read-only.
-      annotated: ["title"],
-      attrs: (data) => ({ id: data.pageId }),
-      parseAttrs: (attrs) => {
-        const id = attrs.id;
-        if (id === undefined || id === "")
-          throw new Error("<page/> needs an `id`");
-        return { pageId: id };
-      },
-    },
-  },
-});
-
-const codeBlock = defineBlock({
-  type: "code-block",
-  schema: z.object({
-    code: z.string().default(""),
-    language: z.string().optional(),
-  }),
-  empty: () => ({ code: "" }),
-  markdown: {
-    fence: {
-      open: "```",
-      close: "```",
-      parseFenced: (info, body) => ({
-        code: body,
-        ...(info ? { language: info } : {}),
-      }),
-    },
-    serialize: (d) => "```" + (d.language ?? "") + "\n" + d.code + "\n```",
-  },
-  typingPrefixes: ["```"],
-});
-
-const equation = defineBlock({
-  type: "equation",
-  schema: z.object({ expression: z.string().default("") }),
-  empty: () => ({ expression: "" }),
-  markdown: {
-    serialize: (d) => "$$" + d.expression,
-    parseLine: (line) =>
-      line.startsWith("$$") ? { expression: line.slice(2).trim() } : null,
-  },
-  typingPrefixes: ["$$"],
-});
-
-const divider = defineBlock({
-  type: "divider",
-  schema: z.object({}),
-  empty: () => ({}),
-  markdown: {
-    serialize: () => "---",
-    parseLine: (line) => (line.trim() === "---" ? {} : null),
-  },
-  typingPrefixes: ["---"],
-});
-
-// Registration order: bulleted-list BEFORE to-do, so a test that `- [ ] x` parses
-// as a to-do proves `precedence` (not order) is what wins.
-const handles: BlockHandle<unknown>[] = [
-  text,
-  bulletedList,
-  heading1,
-  heading2,
-  heading3,
-  toDo,
-  numberedList,
-  toggle,
-  quote,
-  prompt,
-  callout,
-  context,
-  privateNotes,
-  todo,
-  agentNotes,
-  codeBlock,
-  equation,
-  divider,
-  image,
-  video,
-  audio,
-  file,
-  embed,
-  bookmark,
-  page,
-  pageLink,
-] as BlockHandle<unknown>[];
+/**
+ * The real handle for one block type, or a THROW naming what IS registered.
+ *
+ * Every per-type assertion below looks its subject up through this instead of
+ * holding a module variable, so a type that is renamed or removed fails HERE —
+ * once, saying so — rather than making whichever expectation happened to
+ * mention it read as a markdown bug.
+ */
+function byType(type: string): BlockHandle<unknown> {
+  const found = handles.find((h) => h.type === type);
+  if (!found) {
+    throw new Error(
+      `No block handle of type "${type}" is registered. Registered types: ` +
+        handles.map((h) => h.type).join(", "),
+    );
+  }
+  return found;
+}
 
 // No token extensions in the pure suite: `protectedSpans` is exercised directly
 // in `inline-markdown.test.ts`, where the masking rule lives.
@@ -420,7 +118,7 @@ const dataText = (b: SerializedBlock): string =>
 
 describe("defaultTextHandle", () => {
   test("selects the block declaring `defaultText`", () => {
-    expect(defaultTextHandle(handles)).toBe(text as BlockHandle<unknown>);
+    expect(defaultTextHandle(handles)).toBe(byType("text"));
   });
 });
 
@@ -678,7 +376,9 @@ describe("line claims (a paragraph that opens like a list)", () => {
       empty: () => ({ text: [] }),
       markdown: {
         serialize: (d, ctx) => "- " + ctx.md(d.text),
-        parseLine: () => null,
+        // No samples, because the whole point of the fixture is a claimer that
+        // claims NOTHING while emitting a line `bulleted-list` claims.
+        parseLine: { claims: [], parse: () => null },
       },
     });
     const ctx: MarkdownContext = {
@@ -708,10 +408,13 @@ describe("line claims (a paragraph that opens like a list)", () => {
       empty: () => ({ text: [] }),
       markdown: {
         serialize: (d, ctx) => "<tagish>" + ctx.md(d.text),
-        parseLine: (line, ctx) =>
-          line.startsWith("<tagish>")
-            ? { text: ctx.runs(line.slice(8)) }
-            : null,
+        parseLine: {
+          claims: ["<tagish>x"],
+          parse: (line, ctx) =>
+            line.startsWith("<tagish>")
+              ? { text: ctx.runs(line.slice(8)) }
+              : null,
+        },
       },
     });
     const ctx: MarkdownContext = {
@@ -1029,7 +732,15 @@ describe("the derived tag: the nine types that used to serialize to a blank line
     const forest: SerializedBlock[] = [
       {
         type: "callout",
-        data: { icon: "info", iconSvgNodes: [{ tag: "path" }], color: "info" },
+        // A whole `SvgNode`: the real icon payload is a recursive
+        // `{tag, attr, child}` record, and the JSON `data` attribute is what
+        // carries it — an attribute value is a string both ways, so nothing
+        // nested could be a plain one.
+        data: {
+          icon: "info",
+          iconSvgNodes: [{ tag: "path", attr: { d: "M0 0" }, child: [] }],
+          color: "warning",
+        },
         expanded: true,
         children: [node("text", { text: runs("Watch out.") })],
       },
@@ -1037,7 +748,8 @@ describe("the derived tag: the nine types that used to serialize to a blank line
     const md = serialize(forest);
     expect(md).toBe(
       [
-        '<callout icon="info" color="info" data="{\\"iconSvgNodes\\":[{\\"tag\\":\\"path\\"}]}">',
+        '<callout icon="info" color="warning" data="{\\"iconSvgNodes\\":' +
+          '[{\\"tag\\":\\"path\\",\\"attr\\":{\\"d\\":\\"M0 0\\"},\\"child\\":[]}]}">',
         "  Watch out.",
         "</callout>",
       ].join("\n"),
@@ -1102,9 +814,7 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
     ];
     const md = serialize(forest);
     expect(md).toBe(
-      ["<context>", "  # Conventions", "  * always run X", "</context>"].join(
-        "\n",
-      ),
+      ["<human>", "  # Conventions", "  * always run X", "</human>"].join("\n"),
     );
     expect(parse(md)).toEqual(forest);
   });
@@ -1139,7 +849,7 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
         data: {},
         expanded: true,
         children: [
-          node("code-block", { code: 'print("</context>")', language: "py" }),
+          node("code-block", { code: 'print("</human>")', language: "py" }),
           node("text", { text: runs("after the code") }),
         ],
       },
@@ -1178,20 +888,20 @@ describe("identified tags (the row id, both ways)", () => {
   test("the row id is emitted as the FIRST attribute and comes back as `ref`", () => {
     const md = serializeForestToMarkdown(
       [
-        withId("block-card", "agent-notes", {}, [
+        withId("block-card", "agent-note", {}, [
           withId("c1", "text", { text: runs("found it") }),
         ]),
       ],
       mdCtx,
     );
     expect(md).toBe(
-      ['<agent-notes id="block-card">', "  found it", "</agent-notes>"].join(
+      ['<agent-inline id="block-card">', "  found it", "</agent-inline>"].join(
         "\n",
       ),
     );
     expect(parse(md)).toEqual([
       {
-        type: "agent-notes",
+        type: "agent-note",
         data: {},
         expanded: true,
         ref: "block-card",
@@ -1204,7 +914,7 @@ describe("identified tags (the row id, both ways)", () => {
     // The whole reason the attribute is lifted OFF the record before `dataOf`.
     // `z.object({})` would have STRIPPED it, leaving the tag decorative: the
     // document would say which card it means and nothing downstream would hear.
-    const parsed = parse('<agent-notes id="block-card"/>')[0]!;
+    const parsed = parse('<agent-inline id="block-card"/>')[0]!;
     expect(parsed.data).toEqual({});
     expect(parsed.ref).toBe("block-card");
   });
@@ -1214,14 +924,16 @@ describe("identified tags (the row id, both ways)", () => {
     // deliberately not an error the way an id-less `<page/>` is.
     const forest: SerializedBlock[] = [
       {
-        type: "agent-notes",
+        type: "agent-note",
         data: {},
         expanded: true,
         children: [node("text", { text: runs("fresh") })],
       },
     ];
     const md = serialize(forest);
-    expect(md).toBe(["<agent-notes>", "  fresh", "</agent-notes>"].join("\n"));
+    expect(md).toBe(
+      ["<agent-inline>", "  fresh", "</agent-inline>"].join("\n"),
+    );
     const parsed = parse(md);
     expect(parsed).toEqual(forest);
     // Structurally absent, not `ref: undefined` — `toEqual` would accept either.
@@ -1229,21 +941,23 @@ describe("identified tags (the row id, both ways)", () => {
   });
 
   test("an EMPTY id is the same as no id", () => {
-    const parsed = parse('<agent-notes id=""/>')[0]!;
+    const parsed = parse('<agent-inline id=""/>')[0]!;
     expect("ref" in parsed).toBe(false);
   });
 
   test("a non-identified sibling annotation carries no id, in or out", () => {
-    // `identified` is opt-in per type, so `<context>` / `<todo>` /
-    // `<private-notes>` stay content-addressed: the row id is not emitted…
+    // `identified` is opt-in per type. The agent-facing cards all take it — an
+    // agent editing around one has to echo its id back exactly — and
+    // `<private-note>`, which no agent ever reads, stays content-addressed: the
+    // row id is not emitted…
     expect(
-      serializeForestToMarkdown([withId("block-x", "context", {})], mdCtx),
-    ).toBe("<context/>");
+      serializeForestToMarkdown([withId("block-x", "private-note", {})], mdCtx),
+    ).toBe("<private-note/>");
     // …and one written by hand is SILENTLY DROPPED by the void schema, yielding
     // no `ref`. That is exactly the failure `identified` exists to close, stated
     // as a fact rather than left to be rediscovered: without the opt-in the
     // attribute is decorative, and a card would be re-paired by content alone.
-    const parsed = parse('<context id="block-x"/>')[0]!;
+    const parsed = parse('<private-note id="block-x"/>')[0]!;
     expect(parsed.data).toEqual({});
     expect("ref" in parsed).toBe(false);
   });
@@ -1253,10 +967,15 @@ describe("identified tags (the row id, both ways)", () => {
     // naming a block type (and so a rename cannot silently stop the pinning).
     // `page` is in it through its `<agent-page>` spelling alone: any spelling
     // that round-trips a row id makes the type identified.
-    expect(handles.filter(markdownTagIsIdentified).map((h) => h.type)).toEqual([
-      "agent-notes",
-      "page",
-    ]);
+    //
+    // Sorted, because the registry's own order is its plugins' ids — moving a
+    // plugin would reorder this list without changing anything it is about.
+    expect(
+      handles
+        .filter(markdownTagIsIdentified)
+        .map((h) => h.type)
+        .sort(),
+    ).toEqual(["agent-note", "context", "instructions", "page", "todo"]);
   });
 
   test("a handle declaring `identified` beside an `id` field is a LOUD failure", () => {
@@ -1278,7 +997,7 @@ describe("identified tags (the row id, both ways)", () => {
     // `withMintedIds` is shared with clipboard paste. A card copied out of a page
     // and pasted back arrives carrying the ORIGINAL card's row id in `ref`; the
     // mint must still produce a fresh identity, and merely carry the ref through.
-    const [minted] = withMintedIds(parse('<agent-notes id="block-card"/>'));
+    const [minted] = withMintedIds(parse('<agent-inline id="block-card"/>'));
     expect(minted!.id).not.toBe("block-card");
     expect(minted!.ref).toBe("block-card");
   });
@@ -1520,23 +1239,20 @@ describe("typingPrefixes never reach the markdown pipeline", () => {
   });
 
   test("`| ` is a conversion prefix but not a markdown one", () => {
-    expect(conversionPrefixesOf(quote as BlockHandle<unknown>)).toEqual(["| "]);
-    expect(quote.markdownPrefixes).toBeUndefined();
+    expect(conversionPrefixesOf(byType("quote"))).toEqual(["| "]);
+    expect(byType("quote").markdownPrefixes).toBeUndefined();
   });
 
   test("markdown syntax is ALSO a typing shortcut — the union is a superset", () => {
     // A `markdownPrefixes` entry needs no restating: anything the parser claims
     // is by definition something the user can type.
-    expect(conversionPrefixesOf(bulletedList as BlockHandle<unknown>)).toEqual([
+    expect(conversionPrefixesOf(byType("bulleted-list"))).toEqual([
       "* ",
       "- ",
       "+ ",
     ]);
     // …while a type carrying only input-only entries hands back exactly those.
-    expect(conversionPrefixesOf(toDo as BlockHandle<unknown>)).toEqual([
-      "[] ",
-      "[ ] ",
-    ]);
+    expect(conversionPrefixesOf(byType("to-do"))).toEqual(["[] ", "[ ] "]);
     // Ordering when a type declares BOTH: markdown syntax first, input-only after.
     const both = defineBlock({
       type: "both",
@@ -1763,15 +1479,15 @@ describe("page spellings: `<page>` and `<agent-page>` are one row type", () => {
   });
 
   test("the registry answers per spelling: names, the row's name, identity, authorship", () => {
-    expect(markdownParseTagNames(page)).toEqual([
+    expect(markdownParseTagNames(byType("page"))).toEqual([
       "agent-page",
       "instructions-page",
     ]);
-    expect(markdownParseTagNames(pageLink)).toEqual(["page"]);
-    expect(markdownTagNameOf(page, human)).toBe("page");
-    expect(markdownTagNameOf(page, agent)).toBe("agent-page");
+    expect(markdownParseTagNames(byType("page-link"))).toEqual(["page"]);
+    expect(markdownTagNameOf(byType("page"), human)).toBe("page");
+    expect(markdownTagNameOf(byType("page"), agent)).toBe("agent-page");
     // Identified through `<agent-page>` alone — the primary is not.
-    expect(markdownTagIsIdentified(page)).toBe(true);
+    expect(markdownTagIsIdentified(byType("page"))).toBe(true);
     const agentTags = markdownTagNamesAuthoredBy(handles, "agent");
     expect(agentTags).toContain("agent-page");
     expect(agentTags).not.toContain("page");
@@ -1825,7 +1541,9 @@ describe("page spellings: `<instructions-page>` is a pointer an agent cannot min
   });
 
   test("an instructions page declares the HUMAN, so it is closed inside an agent page", () => {
-    expect(markdownTagNameOf(page, instructions)).toBe("instructions-page");
+    expect(markdownTagNameOf(byType("page"), instructions)).toBe(
+      "instructions-page",
+    );
     expect(markdownTagNamesAuthoredBy(handles, "human")).toContain(
       "instructions-page",
     );
@@ -1872,7 +1590,10 @@ describe("tag spellings: resolution refuses what could not read back", () => {
     }) as BlockHandle<unknown>;
   const ctxWith = (h: BlockHandle<unknown>): MarkdownContext => ({
     ...mdCtx,
-    handles: [text, h],
+    // The REAL default-text handle plus the fixture: the refusals below are
+    // about the fixture's own declaration, and a paragraph type has to be there
+    // for a line to fall through to.
+    handles: [byType("text"), h],
   });
 
   test("a spelling round-trips, and its preset keys are not re-emitted as attributes", () => {
@@ -2132,19 +1853,19 @@ describe("tag leniency: an unregistered or malformed tag is prose", () => {
   });
 
   test("an UNTERMINATED registered tag stays text rather than swallowing the document", () => {
-    // The claim is DECLINED (there is no `</context>`), so the line falls
+    // The claim is DECLINED (there is no `</human>`), so the line falls
     // through to prose and the indented lines nest under it as ordinary
     // indentation would — never a container that runs to the end of the file.
-    const forest = parse("<context>\n  a\n  b");
+    const forest = parse("<human>\n  a\n  b");
     expect(forest).toHaveLength(1);
     expect(forest[0]!.type).toBe("text");
-    expect(dataText(forest[0]!)).toBe("<context>");
+    expect(dataText(forest[0]!)).toBe("<human>");
     expect(forest[0]!.children.map(dataText)).toEqual(["a", "b"]);
   });
 
   test("a paragraph that genuinely begins with `<` is escaped on the way out", () => {
-    const forest = [node("text", { text: runs("<context> is a tag") })];
-    expect(serialize(forest)).toBe("\\<context> is a tag");
+    const forest = [node("text", { text: runs("<human> is a tag") })];
+    expect(serialize(forest)).toBe("\\<human> is a tag");
     expect(parse(serialize(forest))).toEqual(forest);
   });
 });
@@ -2174,20 +1895,55 @@ describe("round-trip property (fuzzed forest)", () => {
     };
   };
 
-  // Words chosen so no generated line can be claimed by a PREFIX parser: nothing
-  // starts with `- `, `# `, `1. `, `> `, `$$`, `---`, `[ ] ` or a space. That is
-  // a genuine (pre-existing) lossiness of markdown itself — a paragraph reading
-  // "- x" is a bullet — not of this mechanism.
+  // Every line the REAL registry says it takes away from plain prose: each
+  // hand-written claimer's declared samples (`markdown.parseLine.claims`), plus
+  // `prefix + "x"` for every `markdownPrefixes` entry — a prefix IS its own
+  // declaration, so it needs no second one.
   //
-  // One more constraint since soft breaks joined the alphabet: a break may not
-  // sit at a word's START or END. `hoistBoundaryWhitespace` trims with
-  // `trimStart`/`trimEnd`, which treat `\n` as whitespace, so a MARKED run
-  // ending in a break canonicalizes to a bold run plus a bare one — a
-  // legitimate canonical-form rewrite (pinned in `inline-markdown.test.ts`), not
-  // a defect, and this property asserts the exact round trip. Hence one word
-  // with an INTERIOR break and no bare `"\n"` entry: `pick` could make a bare
-  // one the only word and then mark it, failing an assertion that is not about
-  // this feature.
+  // This is where the generator's alphabet comes from now, and it is the whole
+  // point of this pass. It used to come from a word list chosen so that no
+  // generated paragraph COULD open with a block marker, under a comment calling
+  // that "a genuine lossiness of markdown itself". That premise was the bug:
+  // CommonMark spells a literal marker with one leading backslash, the
+  // serializer writes that now, and the property could never see any of it
+  // because the fuzzer was built never to emit a line anybody would claim.
+  const CLAIM_LINES: readonly string[] = [
+    ...new Set(
+      handles.flatMap((h) => [
+        ...(h.markdown?.parseLine?.claims ?? []),
+        ...(h.markdownPrefixes ?? []).map((prefix) => prefix + "x"),
+      ]),
+    ),
+  ];
+
+  test("every declared claim line really IS claimed — no stale alphabet", () => {
+    // Asserted before anything is generated from it. A sample that stopped
+    // being claimed would quietly turn every paragraph built from it into an
+    // ordinary one: the escape would have nothing to fire on, and the property
+    // below would keep passing while testing nothing.
+    expect(CLAIM_LINES.length).toBeGreaterThan(10);
+    for (const line of CLAIM_LINES) {
+      expect({ line, claimed: markdownLineClaim(line, mdCtx) !== undefined }) //
+        .toEqual({ line, claimed: true });
+    }
+  });
+
+  // Ordinary prose, and it no longer has to dodge anything — `pick` opens
+  // roughly one text in four with a `CLAIM_LINES` entry instead.
+  //
+  // What the list still avoids is a soft break at a word's START or END.
+  // `hoistBoundaryWhitespace` trims with `trimStart`/`trimEnd`, which treat
+  // `\n` as whitespace, so a MARKED run ending in a break canonicalizes to a
+  // bold run plus a bare one — a legitimate canonical-form rewrite (pinned in
+  // `inline-markdown.test.ts`), not a defect, and this property asserts the
+  // EXACT round trip. Hence one word with an INTERIOR break and no bare `"\n"`
+  // entry, and no word starting with a space.
+  //
+  // The old list also excluded `[ ] ` and `* `, under the same heading, and
+  // that half was simply FALSE. `[`, `]` and `*` are inline escape spellings,
+  // so by the time a line exists they read `\[`, `\]` and `\*` and no claimer
+  // can reach the line's first character. They were never claimable and never
+  // lossy.
   const words = [
     "alpha",
     "bravo",
@@ -2198,12 +1954,45 @@ describe("round-trip property (fuzzed forest)", () => {
     "golf\nhotel",
   ];
 
+  /**
+   * The callout's real colour set, READ OFF its registered schema rather than
+   * copied into this file. A colour is not a block TYPE, so the coverage
+   * assertion below would never notice a sixth one — reading the enum is what
+   * stops this generator drifting the way the hand-written copy did, which knew
+   * two of the five.
+   */
+  const CALLOUT_COLORS: readonly string[] = (() => {
+    const color = (
+      byType("callout").schema as unknown as {
+        shape: Record<
+          string,
+          { removeDefault?: () => { options?: readonly string[] } } | undefined
+        >;
+      }
+    ).shape.color;
+    const options = color?.removeDefault?.().options;
+    if (!options?.length) {
+      throw new Error(
+        "page/callout no longer declares `color` as a defaulted enum, so the " +
+          "round-trip generator cannot read its colour set off the schema.",
+      );
+    }
+    return options;
+  })();
+
   const gens: {
     type: string;
     data(r: () => number): unknown;
     children: boolean;
   }[] = [
     { type: "text", data: (r) => ({ text: pick(r) }), children: true },
+    // A paragraph that ALWAYS opens with a line another type would claim — the
+    // shape the escape exists for, and precisely the one the old word list was
+    // built to make impossible. `pick` reaches it about one text in four, which
+    // over the whole corpus came out at thirteen lines; this entry makes it a
+    // first-class member so the non-vacuity count below is a real sample rather
+    // than a handful of accidents.
+    { type: "text", data: (r) => ({ text: claimOpening(r) }), children: true },
     // An empty paragraph is a BLANK LINE where one can state its position, and
     // the handle's `<text/>` tag where one cannot (first, last, or carrying
     // children — see the pin in `describe("empty paragraphs")`). So it may own
@@ -2242,6 +2031,8 @@ describe("round-trip property (fuzzed forest)", () => {
     },
     { type: "bulleted-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "heading-1", data: (r) => ({ text: pick(r) }), children: true },
+    { type: "heading-2", data: (r) => ({ text: pick(r) }), children: true },
+    { type: "heading-3", data: (r) => ({ text: pick(r) }), children: true },
     { type: "numbered-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "toggle", data: (r) => ({ text: pick(r) }), children: true },
     { type: "quote", data: () => ({}), children: true },
@@ -2269,18 +2060,34 @@ describe("round-trip property (fuzzed forest)", () => {
       type: "callout",
       data: (r) => ({
         icon: r() < 0.5 ? null : "info",
-        iconSvgNodes: r() < 0.5 ? null : [{ tag: "path" }],
-        color: r() < 0.5 ? ("default" as const) : ("info" as const),
+        // A whole recursive `SvgNode`, which is what the real schema takes —
+        // the JSON `data` attribute is the only thing that could carry it.
+        iconSvgNodes:
+          r() < 0.5 ? null : [{ tag: "path", attr: { d: "M0 0" }, child: [] }],
+        color: CALLOUT_COLORS[Math.floor(r() * CALLOUT_COLORS.length)]!,
       }),
       children: true,
     },
+    // The annotation family, under the names and tags the app really ships:
+    // `<human>`, `<private-note>`, `<todo>`, `<instructions>` and the agent's
+    // own `<agent-inline>`. The old copy of this suite had four of them under
+    // invented types and tags, so what round-tripped here was a document
+    // nothing ever writes.
     { type: "context", data: () => ({}), children: true },
-    { type: "private-notes", data: () => ({}), children: true },
+    { type: "private-note", data: () => ({}), children: true },
     { type: "todo", data: () => ({}), children: true },
+    // `global` is emitted ONLY when true, so `{global: false}` comes back `{}`
+    // — a real, narrow round-trip loss in the instructions card, named here
+    // rather than hidden by a generator that avoids the value by accident.
+    {
+      type: "instructions",
+      data: (r) => (r() < 0.5 ? {} : { global: true }),
+      children: true,
+    },
     // Id-less here, which is the point: the fuzz forest exercises the OMIT
     // branch of the identified tag — a card with no row id still serializes,
     // and comes back with no `ref` key at all.
-    { type: "agent-notes", data: () => ({}), children: true },
+    { type: "agent-note", data: () => ({}), children: true },
     {
       type: "image",
       data: (r) => ({
@@ -2309,6 +2116,31 @@ describe("round-trip property (fuzzed forest)", () => {
       type: "embed",
       data: () => ({ url: "https://example.com/e" }),
       children: true,
+    },
+    // `place` is the one type whose tag declares NON-STRING attributes of its
+    // own: `lat`/`lng` as numbers, and the resolve stamp as an ISO 8601 date
+    // rather than the epoch milliseconds the row stores. Both directions are
+    // hand-written, so both are exercised — a fractional coordinate, a negative
+    // one, and a timestamp with milliseconds on it.
+    //
+    // `children: false` for `page-link`'s reason: `body: "none"` self-closes,
+    // so a child would be CONSUMED rather than emitted. A place is one object,
+    // with no content of its own to nest under.
+    {
+      type: "place",
+      data: (r) => ({
+        providerId: "google",
+        placeId: `pid_${Math.floor(r() * 999)}`,
+        name: 'Caf\u00e9 "du coin"',
+        address: "1 rue de la Paix",
+        ...(r() < 0.5 ? { category: "Coffee shop" } : {}),
+        ...(r() < 0.5 ? { mapsUrl: "https://maps.example/x" } : {}),
+        ...(r() < 0.5
+          ? { lat: 48.8566, lng: -2.3522 }
+          : { lat: -33.8688, lng: 151.2093 }),
+        ...(r() < 0.5 ? { fetchedAt: 1755518400123 } : {}),
+      }),
+      children: false,
     },
     {
       type: "bookmark",
@@ -2343,7 +2175,31 @@ describe("round-trip property (fuzzed forest)", () => {
     },
   ];
 
+  /**
+   * A run opening with a declared claim line, and nothing before it. Only the
+   * DEFAULT-TEXT type can ever be escaped — every other type emits its own
+   * prefix first, so its line is claimed by itself — which is why this shape
+   * only means anything on a `text` block.
+   */
+  function claimOpening(r: () => number): RichText {
+    const claim = CLAIM_LINES[Math.floor(r() * CLAIM_LINES.length)]!;
+    const body = words[Math.floor(r() * words.length)]!;
+    return [{ text: r() < 0.3 ? claim : claim + " " + body }];
+  }
+
   function pick(r: () => number): RichText {
+    // One text in four OPENS with a line another block type would claim. Both
+    // halves of that are load-bearing:
+    //
+    //  - FIRST, because a claimer anchors at the line's start (or compares its
+    //    `trim()`), so a marker anywhere else is just words;
+    //  - UNMARKED, because the mark's own delimiters would be there first —
+    //    `**3. x**` is claimed by nobody, and a generator that marked the claim
+    //    would exercise the escape exactly as often as the old word list did.
+    const claim =
+      r() < 0.25
+        ? CLAIM_LINES[Math.floor(r() * CLAIM_LINES.length)]!
+        : undefined;
     const n = 1 + Math.floor(r() * 3);
     const parts: string[] = [];
     for (let i = 0; i < n; i++)
@@ -2354,7 +2210,17 @@ describe("round-trip property (fuzzed forest)", () => {
         : r() < 0.4
           ? ["italic" as const]
           : undefined;
-    return [{ text: parts.join(" "), ...(marks ? { marks } : {}) }];
+    const body = parts.join(" ");
+    if (claim === undefined)
+      return [{ text: body, ...(marks ? { marks } : {}) }];
+    // With marks the claim is its own leading run; without them it has to be
+    // the SAME run as the words, or the parse coalesces two adjacent unmarked
+    // runs back into one and the exact round trip would fail on a rewrite this
+    // property is not about. Sometimes it is the whole text, which is the only
+    // way to reach a claimer that reads the whole line (`divider` compares
+    // `trim() === "---"`, so `--- alpha` is prose).
+    if (marks) return [{ text: claim + " " }, { text: body, marks }];
+    return [{ text: r() < 0.5 ? claim : claim + " " + body }];
   }
 
   const build = (r: () => number, depth: number): SerializedBlock => {
@@ -2371,6 +2237,78 @@ describe("round-trip property (fuzzed forest)", () => {
       children: kids,
     };
   };
+
+  test("the generator covers EVERY registered block type", () => {
+    // The one thing a fuzzer cannot tell you is what it never generated. With
+    // the registry right here, a 29th block type arrives as a failing test
+    // rather than as silence — which is the other half of running on the real
+    // handles, since loading them proves nothing if the generator ignores half.
+    expect([...new Set(gens.map((g) => g.type))].sort()).toEqual(
+      handles.map((h) => h.type).sort(),
+    );
+  });
+
+  test("the corpus really contains escaped lines — the alphabet is not vacuous", () => {
+    // The assertion this whole pass exists for. If the generator ever stops
+    // producing paragraphs that open like a list, the property below keeps
+    // passing and says nothing at all about the escape — which is exactly how
+    // the line-claim loss survived a fuzzed round-trip property for months.
+    //
+    // A line-claim escape is a backslash at the line's start whose NEXT
+    // character is not one of the nine the inline table spells (the ESCAPES
+    // table in `inline-markdown.ts`). Excluding all nine makes this a LOWER
+    // bound — a paragraph reading "* x" is line-claim escaped too and is not
+    // counted here — and a lower bound is the safe direction for a count whose
+    // job is to catch zero.
+    const inlineSpellings = new Set([
+      "\\",
+      "*",
+      "_",
+      "~",
+      "`",
+      "[",
+      "]",
+      "<",
+      "n",
+    ]);
+    let escaped = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const r = rng(seed);
+      const forest: SerializedBlock[] = [];
+      const roots = 1 + Math.floor(r() * 4);
+      for (let i = 0; i < roots; i++) forest.push(build(r, 0));
+      for (const line of serialize(forest).split("\n")) {
+        const escape = /^\s*\\(.)/.exec(line);
+        if (escape && !inlineSpellings.has(escape[1]!)) escaped++;
+      }
+    }
+    expect(escaped).toBeGreaterThan(50);
+  });
+
+  test("one backslash defeats EVERY claimer, over every string of length <= 4", () => {
+    // The statement the declared samples cannot make. A sample proves the
+    // escape on the line somebody remembered to write down; this proves it over
+    // a COMPUTED set — every string up to four characters long built from the
+    // characters the claims are themselves made of, plus a space, a digit and a
+    // letter. ~89k probes, each a handful of anchored regexes.
+    //
+    // One `expect` at the end rather than one per probe: 89k assertions cost
+    // more than the probes do, and a list of counterexamples reads better than
+    // the first one.
+    const alphabet = [...new Set([...CLAIM_LINES.join(""), " ", "2", "a"])];
+    const stillClaimed: string[] = [];
+    let probes = 0;
+    const sweep = (s: string): void => {
+      probes++;
+      if (markdownLineClaim("\\" + s, mdCtx) !== undefined)
+        stillClaimed.push(s);
+      if (s.length === 4) return;
+      for (const c of alphabet) sweep(s + c);
+    };
+    sweep("");
+    expect(stillClaimed).toEqual([]);
+    expect(probes).toBeGreaterThan(50_000);
+  });
 
   test("parse(serialize(forest)) === forest, over 400 seeds", () => {
     for (let seed = 1; seed <= 400; seed++) {

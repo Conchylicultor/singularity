@@ -15,8 +15,11 @@ export const equationBlock = defineBlock({
   // former copy-as-empty-`$$` bug, where generic code read `d.text`.
   markdown: {
     serialize: (d) => "$$" + d.expression,
-    parseLine: (line) =>
-      line.startsWith("$$") ? { expression: line.slice(2).trim() } : null,
+    parseLine: {
+      claims: ["$$x"],
+      parse: (line) =>
+        line.startsWith("$$") ? { expression: line.slice(2).trim() } : null,
+    },
   },
   // Typing `$$` at the start of a text block converts it into an equation block.
   // The generic MarkdownShortcutPlugin reads this off the slot — no editor changes.

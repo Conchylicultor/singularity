@@ -71,10 +71,13 @@ const toDo = defineBlock({
   markdown: {
     precedence: 10,
     serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.md(d.text),
-    parseLine: (line, ctx) => {
-      const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
-      if (!m) return null;
-      return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
+    parseLine: {
+      claims: ["- [ ] x", "[ ] x", "* [X] x", "+ [x] x"],
+      parse: (line, ctx) => {
+        const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
+        if (!m) return null;
+        return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
+      },
     },
   },
   markdownPrefixes: ["[] ", "[ ] "],
@@ -139,7 +142,10 @@ const divider = defineBlock({
   empty: () => ({}),
   markdown: {
     serialize: () => "---",
-    parseLine: (line) => (line.trim() === "---" ? {} : null),
+    parseLine: {
+      claims: ["---"],
+      parse: (line) => (line.trim() === "---" ? {} : null),
+    },
   },
   markdownPrefixes: ["---"],
 });

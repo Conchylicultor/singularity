@@ -77,6 +77,14 @@ export interface BlockHandle<T> {
    * so a field rename is a compile error in the block's own function instead of a
    * silent empty line — the class of bug the June-16 `data.text` string→runs
    * migration caused when generic code duck-typed `data.text`.
+   *
+   * A hand-written `markdown.parseLine` must also declare the lines it takes
+   * (`parseLine.claims`), because a closure's language cannot be enumerated:
+   * `markdownPrefixes` states its own claim, `/^\d+[.)]\s+(.*)$/` states it to
+   * nobody but the regex engine, and the serializer's escape rests on knowing
+   * who claims a line. `page.editor:markdown-claims-are-escapable` holds every
+   * declared sample to being claimed by its declarer and to being defeated by
+   * one leading backslash.
    */
   markdown?: BlockMarkdown<T>;
   /**

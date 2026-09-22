@@ -365,8 +365,27 @@ export interface BlockMarkdown<T> {
   /**
    * Claim one line → this type's data payload, or `null` to decline. Default for
    * text-bearing types: a `markdownPrefixes` match → `{ ...empty(), text: runs }`.
+   *
+   * `claims` is why this is a PAIR rather than a bare function. A hand-written
+   * `parse` is a closure, and nothing outside it can enumerate the lines it
+   * takes — a `markdownPrefixes` claimer IS its own declaration (`prefix + "x"`
+   * is a sample of it), but `/^\d+[.)]\s+(.*)$/` says nothing to anybody but the
+   * regex engine. So the samples are the declaration: the escape check reads
+   * them to assert one leading backslash really defeats this claimer, and the
+   * round-trip generator reads them to produce paragraphs that open like a
+   * claimed line. Required rather than optional, because a declaration a caller
+   * may omit is one nobody writes.
+   *
+   * What it does NOT buy, so nobody over-reads it: samples make a claim
+   * *declared*, never *complete*. A regex claiming more lines than its samples
+   * name is still possible — a closure's language cannot be enumerated — so a
+   * check over them covers what was declared and nothing else.
    */
-  parseLine?(line: string, ctx: MdParseCtx): T | null;
+  parseLine?: {
+    /** Lines this claimer takes. At least one; each must really be claimed by it. */
+    claims: readonly string[];
+    parse(line: string, ctx: MdParseCtx): T | null;
+  };
   /** Fenced multi-line: the walk accumulates open→close, then calls `parseFenced`. */
   fence?: {
     open: string;
@@ -850,6 +869,31 @@ export function markdownTagNameOf(
 }
 
 /**
+ * Which block TYPE would CLAIM this line away from plain prose, or `undefined`
+ * when the line is ordinary prose. The line is taken as the parse walk sees it
+ * — its own leading whitespace is stripped before anybody is offered it.
+ *
+ * The one question the escape mechanism asks, in both directions, exported so a
+ * check and the round-trip suite ask it of the REAL registry rather than of a
+ * re-implementation. It is {@link stealerOf} with the winner reduced to its type
+ * — deliberately NOT {@link claimantOf}, whose answer for an unclaimed line is
+ * the default-text handle, so "is this line claimed" asked as "is the answer
+ * defined" comes out true of every line ever written. That is the trap; this
+ * function exists so nobody has to avoid it twice.
+ *
+ * Builds the dispatch per call, so a caller asking about many lines pays for one
+ * `claimersOf` each. That is the honest cost of taking a `MarkdownContext`
+ * rather than a pre-built dispatch nobody outside this module can hold, and the
+ * two callers are a build-time check and a test — neither is a hot path.
+ */
+export function markdownLineClaim(
+  line: string,
+  ctx: MarkdownContext,
+): string | undefined {
+  return stealerOf(line, claimersOf(ctx.handles))?.type;
+}
+
+/**
  * Whether ANY spelling of this handle's markdown tag carries its row id — see
  * {@link BlockTag.identified}.
  *
@@ -921,7 +965,7 @@ function serializerFor(h: Handle, data: unknown): ResolvedSerializer {
 function parserFor(
   h: Handle,
 ): (line: string, ctx: MdParseCtx) => unknown | null {
-  if (h.markdown?.parseLine) return h.markdown.parseLine;
+  if (h.markdown?.parseLine) return h.markdown.parseLine.parse;
   const lens = h.text;
   if (lens) {
     const prefixes = derivedParsePrefixes(h);

@@ -3477,8 +3477,12 @@ recursively) instead of `() => ""` — which is why a type with no markdown
 declaration at all (callout, image, video, audio, file, embed, bookmark) is
 covered. Design:
 [`research/2026-08-03-page-markdown-block-roundtrip.md`](../../../../research/2026-08-03-page-markdown-block-roundtrip.md);
-`markdown.test.ts`'s fuzzed round-trip property test is the executable statement
-— extend it for a new block type rather than adding a one-off case.
+`markdown.test.ts`'s fuzzed round-trip property test is the executable statement,
+and it runs against the REAL block registry — the handles the app ships, read
+through `check/block-handles.ts`, rather than a hand-written copy of them. So a
+new block type is added to the suite's GENERATOR rather than as a one-off case:
+the generator's type set is asserted equal to the registry's, so a type that
+gains no generator fails the suite instead of quietly going untested.
 
 - **Only STRING fields become plain attributes**; everything else (numbers,
   booleans, `null`, objects) is JSON-encoded into one `data` attribute. An
@@ -3622,8 +3626,24 @@ covered. Design:
     a multi-line formula into sibling blocks otherwise), and a `lines` line never
     opens with `<` — which is what lets the claim authority skip the multi-line
     tag branch honestly.
+  - **A hand-written claimer DECLARES the lines it claims.**
+    `markdown.parseLine` is a `{claims, parse}` pair: a `markdownPrefixes` entry
+    already states its own claim (`prefix + "x"` is a sample of it), but
+    `/^\d+[.)]\s+(.*)$/` states it to nobody but the regex engine, and the
+    escape rests on knowing who claims a line.
+    `page.editor:markdown-claims-are-escapable` reads those declarations off the
+    REAL handles and asserts both halves: every declared sample is claimed by the
+    type that declared it — which is also the only thing pinning `to-do` above
+    `bulleted-list` on `- [ ] x` — and one leading backslash leaves the same line
+    claimed by nobody, the half `markdownPrefixes` cannot yield. The round-trip
+    property runs on that same real registry, with its fuzz alphabet drawn from
+    the same declarations; the hand-written copy it replaced picked its words so
+    that no generated paragraph could open with a claimed line, which is exactly
+    what let this bug through.
   Design:
-  [`research/2026-09-20-page-markdown-line-claim-escape.md`](../../../../research/2026-09-20-page-markdown-line-claim-escape.md).
+  [`research/2026-09-20-page-markdown-line-claim-escape.md`](../../../../research/2026-09-20-page-markdown-line-claim-escape.md)
+  and
+  [`research/2026-09-20-page-markdown-claims-against-real-registry.md`](../../../../research/2026-09-20-page-markdown-claims-against-real-registry.md).
 
 ### The page tags
 
@@ -4104,6 +4124,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `listBlocks`
     - `listPages`
     - `MARK_ORDER`
+    - `markdownLineClaim`
     - `markdownParseTagNames`
     - `markdownTagIsIdentified`
     - `markdownTagNameOf`

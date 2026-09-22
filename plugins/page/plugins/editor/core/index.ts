@@ -180,6 +180,7 @@ export {
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
+  markdownLineClaim,
   markdownParseTagNames,
   markdownTagIsIdentified,
   markdownTagNameOf,

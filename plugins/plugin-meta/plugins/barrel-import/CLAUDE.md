@@ -33,6 +33,7 @@ mark the check-thread watch could only call that time `native (anonymous)`.
   - Uses:
     - `infra/namespace.asNamespace`
     - `infra/runtime-identity.declareRuntimeNamespace`
+    - `infra/runtime-identity.hasRuntimeNamespace`
     - `infra/stack-sampler.withThreadActivity`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/semaphore.createSemaphore`

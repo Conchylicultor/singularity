@@ -1,8 +1,13 @@
 import { MdCheckBox } from "react-icons/md";
 import { z } from "zod";
-import { defineBlock, textBlockSchema } from "@plugins/page/plugins/editor/core";
+import {
+  defineBlock,
+  textBlockSchema,
+} from "@plugins/page/plugins/editor/core";
 
-export const toDoDataSchema = textBlockSchema({ checked: z.boolean().default(false) });
+export const toDoDataSchema = textBlockSchema({
+  checked: z.boolean().default(false),
+});
 
 export const toDoBlock = defineBlock({
   type: "to-do",
@@ -18,10 +23,13 @@ export const toDoBlock = defineBlock({
   markdown: {
     precedence: 10,
     serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.md(d.text),
-    parseLine: (line, ctx) => {
-      const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
-      if (!m) return null;
-      return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
+    parseLine: {
+      claims: ["- [ ] x", "[ ] x", "* [X] x", "+ [x] x"],
+      parse: (line, ctx) => {
+        const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
+        if (!m) return null;
+        return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
+      },
     },
   },
   // Typing `[] ` or `[ ] ` at the start of a block converts it into a to-do,

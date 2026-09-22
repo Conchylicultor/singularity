@@ -1,6 +1,9 @@
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  declareRuntimeNamespace,
+  hasRuntimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { withThreadActivity } from "@plugins/infra/plugins/stack-sampler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { relative, resolve } from "node:path";
@@ -47,10 +50,22 @@ export function registerBarrelStubs(_repoRoot: string): void {
   // Several server modules resolve the process's runtime namespace at module
   // eval (config_v2's config dir), and the database pool needs one on its first
   // query. Declare a dummy so they evaluate; pg.Pool connections are lazy, so no
-  // real DB connect happens. Idempotent, so a second `registerBarrelStubs` in a
-  // process that already declared its own namespace is a no-op only when the two
-  // agree — and a disagreement is a genuine bug worth the throw.
-  declareRuntimeNamespace(asNamespace(BARREL_STUB_WORKTREE));
+  // real DB connect happens.
+  //
+  // The stub is a FALLBACK, not an answer. A process that was already told who
+  // it is — a `bun test` through its preload, an exec child through its spawner
+  // — keeps that identity, because a placeholder must never contest a real
+  // declaration: `declareRuntimeNamespace` throws on a second, DIFFERENT value,
+  // so an unconditional stub killed every test that imports a barrel before it
+  // reached a single line of the logic under test. Only a process with no answer
+  // of its own gets the placeholder.
+  //
+  // The guard the throw really defends — two different REAL answers, which is a
+  // genuine bug — is untouched: nothing below asks for the sentinel a second
+  // time, and a real declaration still collides with a real one.
+  if (!hasRuntimeNamespace()) {
+    declareRuntimeNamespace(asNamespace(BARREL_STUB_WORKTREE));
+  }
 
   const noop = () => {};
   const identity = <T>(x: T): T => x;

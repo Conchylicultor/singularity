@@ -17,9 +17,12 @@ export const numberedListBlock = defineBlock({
   // positional, derived at render.
   markdown: {
     serialize: (d, ctx) => `${ctx.ordinal}. ` + ctx.md(d.text),
-    parseLine: (line, ctx) => {
-      const m = /^\d+[.)]\s+(.*)$/.exec(line);
-      return m ? { text: ctx.runs(m[1]!) } : null;
+    parseLine: {
+      claims: ["1. x", "10) x"],
+      parse: (line, ctx) => {
+        const m = /^\d+[.)]\s+(.*)$/.exec(line);
+        return m ? { text: ctx.runs(m[1]!) } : null;
+      },
     },
   },
   // Drives ONLY the live `1. ` markdown shortcut; clipboard markdown is owned by
