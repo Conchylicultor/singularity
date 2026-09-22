@@ -72,6 +72,7 @@
     - `history/dialog`
     - `page/attachment-block`
     - `page/bookmark`
+    - `page/editor`
     - `page/inline-page-link`
     - `page/page-link`
     - `page/place`

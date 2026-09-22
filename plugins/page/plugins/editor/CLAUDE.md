@@ -3318,6 +3318,47 @@ restore.
   it shows up as a `stale-entry` conflict and is applied over (see the undo
   section's policy).
 
+## Zoom (`rootId`)
+
+`<BlockEditor pageId rootId>` opens ONE block as the whole editor: the root at
+depth 0 and its descendants, editable, persisting to the page's own rows. Design:
+[`research/2026-09-22-global-open-block-as-page.md`](../../../../research/2026-09-22-global-open-block-as-page.md).
+
+> **The data stays whole; only the view is scoped.** The store, the reducer and
+> the endpoints still work on the FULL page, so the client's predicted forest is
+> the server's. `BlockEditorInner` renders `flattenVisible(subtreeOf(tree,
+> rootId))`; `setRows` keeps every row, `setFlatOrder` gets the scoped list, so
+> arrows, Cmd+A and the caret surfaces are scoped for free.
+
+- **One backstop: `scopeAdmits`** (`internal/zoom-scope.ts`). A write is refused
+  if the root's parent or rank changes, a row in the subtree ends up outside it, a
+  new row lands outside it, or a row outside it changes in anything but its fold
+  (`expanded` is exempt because the reducer itself opens the containers around a
+  split). It runs at every structural chokepoint — `dispatchOp` (beside the
+  empty-diff refusal), `applyOverlay`, the mounted merge (asked BEFORE the append,
+  or the text would land with the source row still there) and `commitRows`.
+  Undo/redo patches are exempt: they restore recorded states. `admits(op)` on the
+  context asks the same question ahead of time, for affordances.
+- **The gesture layer maps what it can onto in-scope ops**, so the backstop is
+  rarely what the user meets: the top level is `scope.contentParentId` (the root)
+  for `insert`, `insertFirst` and the anchorless paste; "below the root"
+  (`insertAfter`, a paste anchored on it, the lower half of its row on a drop) is
+  its FIRST child; the root drags nothing and a bulk drag drops it; a selection
+  delete or duplicate naming it acts on its children; its ⋮⋮ menu hides Remove,
+  Delete, wrapping conversions and `TurnInto`.
+- **The keystroke resolver sees only the view** (`scopeNodes`: the root lifted to
+  `parentId: null`) plus `IntentContext.scopeRootId`, which is what makes the
+  root's children top level (no Shift+Tab out, no excess-indentation outdent),
+  keeps the root's first line from unwrapping a zoomed container, and makes Enter
+  on the root nest its tail.
+- **A root not in the loaded rows is `gone`** — deleted, or moved to another page
+  — and renders as such, never as an empty list (`subtreeOf` returns `null`).
+- **Known gaps**, all refused by the backstop rather than escaping: a slash-menu
+  wrap (`/callout`) on the root line strips its query and then does nothing, and
+  a caret cut of the root copies without removing. `Editor.InsertAction` server
+  ops (`/page`, `/agent-page`) on the root line bypass the backstop entirely —
+  they are not structural ops on this page's lane.
+
 ## In-memory mode (`persist={false}`)
 
 `<BlockEditor persist={false} initialContent={…} enabledBlockTypes={…}>` is a
@@ -3354,7 +3395,9 @@ the whole document lives in React state and is discarded on unmount.
 - **`Editor.TurnInto` gated.** A `TurnInto` contribution converts a block into
   something the pure `convertTo` cannot express — a server-backed transition
   (today: into a sub-page, re-partitioning `page_id` across a page boundary). The
-  block-actions menu renders that whole zone only when `serverSync`.
+  block-actions menu renders that whole zone only when `serverSync` — and
+  `Editor.BlockMenuItem` (actions on a block's row, e.g. open-as-page, rendered in
+  the menu's last section in both arms) the same way.
 
 ## The inline-token registry exists in BOTH runtimes
 
@@ -3765,6 +3808,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
     - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
+    - `Editor.BlockMenuItem` ← `page.open-as-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
     - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`, `page.turn-into-page`
   - Uses:
@@ -3783,6 +3827,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.insetClass`
@@ -3874,6 +3919,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `CaretSurfaceRef`
     - `CollabHydrationReason`
     - `CollabHydrationReport`
+    - `EditorScope`
     - `FormatToolbarValue`
     - `FrameGeometry`
     - `FramePad`
@@ -3934,6 +3980,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useBlockFeet`
     - `useBlockPlainText`
     - `useCaretEscape`
+    - `useEditorScope`
     - `useFormatToolbar`
     - `useFramedBlockTypes`
     - `useFrameGeometry`
@@ -4256,6 +4303,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/math/equation`
     - `page/math/inline`
     - `page/numbered-list`
+    - `page/open-as-page`
     - `page/page-link`
     - `page/place`
     - `page/prompt/block`

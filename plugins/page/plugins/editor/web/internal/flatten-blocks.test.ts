@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { buildTree } from "@plugins/primitives/plugins/tree/core";
-import { childrenOf, visibleChildrenOf, type Block, type BlockNode } from "../../core";
-import { flattenVisible } from "./flatten-blocks";
+import {
+  childrenOf,
+  visibleChildrenOf,
+  type Block,
+  type BlockNode,
+} from "../../core";
+import { flattenVisible, subtreeOf } from "./flatten-blocks";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -46,7 +51,9 @@ function sortByRank(rows: Block[]): Block[] {
 }
 
 function flatIds(rows: Block[]): string[] {
-  return flattenVisible(buildTree(sortByRank(rows)), anchorTypes).map((f) => f.block.id);
+  return flattenVisible(buildTree(sortByRank(rows)), anchorTypes).map(
+    (f) => f.block.id,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +104,10 @@ describe("flattenVisible — a collapsed container folds to its borrowed line", 
   });
 
   test("a childless container still emits its own row (the one-line fallback box)", () => {
-    const rows = forest(row("A", null, { type: ANCHOR, expanded: false }), row("X", null));
+    const rows = forest(
+      row("A", null, { type: ANCHOR, expanded: false }),
+      row("X", null),
+    );
     expect(flatIds(rows)).toEqual(["A", "X"]);
   });
 });
@@ -114,7 +124,8 @@ describe("flattenVisible ≡ visibleChildrenOf", () => {
     let collapsedAnchorSeeds = 0;
     for (let seed = 1; seed <= 400; seed++) {
       const rows = randomForest(seed);
-      if (rows.some((r) => r.type === ANCHOR && !r.expanded)) collapsedAnchorSeeds++;
+      if (rows.some((r) => r.type === ANCHOR && !r.expanded))
+        collapsedAnchorSeeds++;
 
       const flat = flattenVisible(buildTree(sortByRank(rows)), anchorTypes);
       const nodes = rows as unknown as BlockNode[];
@@ -140,6 +151,116 @@ describe("flattenVisible ≡ visibleChildrenOf", () => {
     }
     expect(checked).toBeGreaterThan(2000);
     expect(collapsedAnchorSeeds).toBeGreaterThan(200);
+  });
+});
+
+describe("subtreeOf — the zoomed view's forest", () => {
+  function zoomIds(rows: Block[], rootId: string): string[] | null {
+    const view = subtreeOf(buildTree(sortByRank(rows)), rootId);
+    return view === null
+      ? null
+      : flattenVisible(view, anchorTypes).map((f) => f.block.id);
+  }
+
+  test("finds a nested block and renders it at depth 0 with its subtree below", () => {
+    const rows = forest(
+      row("A", null),
+      row("B", "A"),
+      row("B1", "B"),
+      row("B1a", "B1"),
+      row("B2", "B"),
+      row("C", null),
+    );
+    const view = subtreeOf(buildTree(sortByRank(rows)), "B")!;
+    const flat = flattenVisible(view, anchorTypes);
+    expect(flat.map((f) => [f.block.id, f.depth])).toEqual([
+      ["B", 0],
+      ["B1", 1],
+      ["B1a", 2],
+      ["B2", 1],
+    ]);
+  });
+
+  test("a top-level block zooms to itself and its children only", () => {
+    const rows = forest(row("A", null), row("A1", "A"), row("C", null));
+    expect(zoomIds(rows, "A")).toEqual(["A", "A1"]);
+  });
+
+  test("a leaf zooms to its one line", () => {
+    const rows = forest(row("A", null), row("A1", "A"));
+    expect(zoomIds(rows, "A1")).toEqual(["A1"]);
+  });
+
+  test("a collapsed root still folds — the fold is the block's own state", () => {
+    const rows = forest(row("A", null, { expanded: false }), row("A1", "A"));
+    expect(zoomIds(rows, "A")).toEqual(["A"]);
+  });
+
+  test("a zoomed CONTAINER shows its box's lines — its own row renders no line", () => {
+    const rows = forest(
+      row("X", null),
+      row("K", null, { type: ANCHOR }),
+      row("K1", "K"),
+      row("K2", "K"),
+    );
+    expect(zoomIds(rows, "K")).toEqual(["K", "K1", "K2"]);
+  });
+
+  test("a missing root is null — the gone state, never an empty view", () => {
+    const rows = forest(row("A", null), row("A1", "A"));
+    expect(zoomIds(rows, "ghost")).toBeNull();
+  });
+
+  test("≡ the matching run of the full flatten, depth shifted, over a fuzz forest", () => {
+    // The zoom must show exactly what the page shows under that block — no
+    // line more, no line less. Checked for every root that renders UNFOLDED on
+    // the page (no collapsed ancestor): a root inside a fold is not on screen
+    // there at all, and a borrowed line of a collapsed card shows no children
+    // on the page while its zoom — where the card is not in view — does.
+    let checkedRoots = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const rows = randomForest(seed);
+      const tree = buildTree(sortByRank(rows));
+      const full = flattenVisible(tree, anchorTypes);
+      const byRowId = new Map(rows.map((r) => [r.id, r]));
+      const unfolded = (id: string): boolean => {
+        let cur = byRowId.get(id)!.parentId;
+        while (cur !== null) {
+          const p = byRowId.get(cur)!;
+          if (!p.expanded) return false;
+          cur = p.parentId;
+        }
+        return true;
+      };
+      for (const r of rows) {
+        if (!unfolded(r.id)) continue;
+        const at = full.findIndex((f) => f.block.id === r.id);
+        expect(at).toBeGreaterThanOrEqual(0);
+        const rootDepth = full[at]!.depth;
+        let end = at + 1;
+        while (end < full.length && full[end]!.depth > rootDepth) end++;
+        const expected = full.slice(at, end).map((f, i) => ({
+          id: f.block.id,
+          depth: f.depth - rootDepth,
+          childCount: f.childCount,
+          firstVisibleChildType: f.firstVisibleChildType,
+          // The root's ordinal restarts: it has no siblings in its own view.
+          ordinal: i === 0 ? 1 : f.ordinal,
+        }));
+        const zoom = flattenVisible(subtreeOf(tree, r.id)!, anchorTypes).map(
+          (f) => ({
+            id: f.block.id,
+            depth: f.depth,
+            childCount: f.childCount,
+            firstVisibleChildType: f.firstVisibleChildType,
+            ordinal: f.ordinal,
+          }),
+        );
+        expect(zoom).toEqual(expected);
+        checkedRoots++;
+      }
+    }
+    expect(checkedRoots).toBeGreaterThan(1000);
   });
 });
 

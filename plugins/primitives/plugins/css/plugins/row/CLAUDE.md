@@ -185,6 +185,7 @@ genuine transient-chrome list escapes with
     - `page/annotations/todo`
     - `page/editor`
     - `page/inline-date`
+    - `page/open-as-page`
     - `page/page-link`
     - `page/place`
     - `page/sub-page`

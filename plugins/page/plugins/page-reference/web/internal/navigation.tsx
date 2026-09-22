@@ -32,6 +32,14 @@ export interface PageNavigation {
    * the capability is MISSING, and the affordance for it then does not appear.
    */
   openAside?(pageId: string): void;
+  /**
+   * Open ONE BLOCK of a page as a page of its own — that block and its nested
+   * lines, editable, saving to the page that holds it — beside the current one.
+   *
+   * Optional for the same reason as `openAside`: a host with nowhere to put a
+   * block view declares none, and the "Open as page" affordance is then absent.
+   */
+  openBlock?(blockId: string): void;
 }
 
 const PageNavigationContext = createContext<PageNavigation | undefined>(

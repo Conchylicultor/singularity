@@ -41,6 +41,14 @@ import { blockEntries } from "../internal/block-sections";
  * payload is `{}`) and must still get the structural actions. Ownership itself
  * is not resolved here — `RailSeat.owner` already did it, with the whole flatten
  * in view; this component only ever sees the block the rail acts on.
+ *
+ * On the ZOOM ROOT (`EditorScope.rootId`) the menu offers only what keeps the
+ * root where it is: a plain type conversion keeps its id and its place, so it
+ * stays, while Remove (which dissolves it), Delete (which removes the view),
+ * a wrapping conversion (which reparents it) and the `TurnInto` transitions
+ * (which re-partition its subtree) do not. The zoom's admission rule would
+ * refuse them anyway; hiding them is what stops the menu offering clicks that
+ * do nothing.
  */
 export function BlockActionsMenu({
   trigger,
@@ -67,14 +75,26 @@ export function BlockActionsMenu({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
-  // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
-  // passes one label-less section and ignores the config's group boundaries
-  // while still inheriting the flattened config order.
-  const sections = useMemo(() => blockEntries([{ blocks }]), [blocks]);
-  const { serverSync, unwrapBlock } = useBlockEditor();
+  const { serverSync, unwrapBlock, scope } = useBlockEditor();
   const handle = useBlockHandles().get(block.type);
   const ContainerMenu = useBlockFrameMenus().get(block.type);
   const isContainer = handle?.anchor === true;
+  const isScopeRoot = block.id === scope.rootId;
+
+  // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
+  // passes one label-less section and ignores the config's group boundaries
+  // while still inheriting the flattened config order.
+  const sections = useMemo(
+    () =>
+      blockEntries([
+        {
+          // A `wrapOnConvert` target mints a container and reparents the block
+          // into it — for the zoom root, a move out of its own view.
+          blocks: isScopeRoot ? blocks.filter((b) => !b.wrapOnConvert) : blocks,
+        },
+      ]),
+    [blocks, isScopeRoot],
+  );
 
   // A page row is not convertible. Converting it away from `page` would orphan
   // every row keyed `page_id = <this block's id>` — that subtree lives in
@@ -165,12 +185,14 @@ export function BlockActionsMenu({
                 what Backspace at the start of the first child resolves to);
                 Delete takes the subtree with it, exactly as any other block's
                 Delete does. A single "delete the container" would conflate them. */}
-            <Row
-              icon={<MdRemoveCircleOutline />}
-              onMouseDown={commit(() => unwrapBlock(block.id))}
-            >
-              {`Remove ${containerName}`}
-            </Row>
+            {!isScopeRoot && (
+              <Row
+                icon={<MdRemoveCircleOutline />}
+                onMouseDown={commit(() => unwrapBlock(block.id))}
+              >
+                {`Remove ${containerName}`}
+              </Row>
+            )}
           </ControlPanel.Section>
         </>
       ) : convertible ? (
@@ -194,7 +216,7 @@ export function BlockActionsMenu({
               transition (today: into a sub-page, re-partitioning `page_id`
               across a page boundary). None of that exists without rows, so the
               whole zone is gated on `serverSync` rather than per-contributor. */}
-          {serverSync ? (
+          {serverSync && !isScopeRoot ? (
             <Editor.TurnInto.Render>
               {(a) => <a.component block={block} api={api} close={close} />}
             </Editor.TurnInto.Render>
@@ -202,6 +224,14 @@ export function BlockActionsMenu({
         </ControlPanel.Section>
       ) : null}
       <ControlPanel.Section>
+        {/* Contributed actions on the block (open-as-page, …), in both arms.
+            Gated on `serverSync` like `TurnInto`: an in-memory block has no row
+            anything outside this editor could act on. */}
+        {serverSync ? (
+          <Editor.BlockMenuItem.Render>
+            {(item) => <item.component block={block} close={close} />}
+          </Editor.BlockMenuItem.Render>
+        ) : null}
         {/* The popover closes on commit, so the hook's own `copied` flash is
             never seen — the toast is the feedback. */}
         <Row
@@ -213,13 +243,15 @@ export function BlockActionsMenu({
         >
           Copy block ID
         </Row>
-        <Row
-          className="text-destructive"
-          icon={<MdDelete />}
-          onMouseDown={commit(() => api.remove())}
-        >
-          Delete
-        </Row>
+        {!isScopeRoot && (
+          <Row
+            className="text-destructive"
+            icon={<MdDelete />}
+            onMouseDown={commit(() => api.remove())}
+          >
+            Delete
+          </Row>
+        )}
       </ControlPanel.Section>
     </ControlPanelPopover>
   );

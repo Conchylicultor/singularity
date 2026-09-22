@@ -86,7 +86,8 @@ export { BlockTextRenderer } from "./components/block-text-renderer";
 // component affordance outright (prompt was its only external consumer).
 export { TextBlockLayout } from "./components/text-block-layout";
 export type { TextBlockLayoutProps } from "./components/text-block-layout";
-export { useBlockEditor } from "./block-editor-context";
+export { useBlockEditor, useEditorScope } from "./block-editor-context";
+export type { EditorScope } from "./block-editor-context";
 // `BlockCaretHost` is deliberately NOT exported: it is what the editor mounts
 // around a `caret: "editor"` block's row, and a block that could mount one for
 // itself could equally forget to — which is the whole class of bug the `caret`

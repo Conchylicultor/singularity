@@ -41,6 +41,7 @@ import {
   registerMarkDepth,
 } from "../internal/mark-depth";
 import { toNodes } from "../internal/optimistic-block-ops";
+import { scopeNodes } from "../internal/zoom-scope";
 import {
   resolveKeystroke,
   type KeyIntent,
@@ -63,8 +64,9 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit } =
+  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit, scope } =
     useBlockEditor();
+  const scopeRootId = scope.rootId;
   const recordDocEditRef = useLatestRef(recordDocEdit);
   const unwrapRef = useRef(unwrapBlock);
   unwrapRef.current = unwrapBlock;
@@ -267,7 +269,10 @@ export function KeyboardPlugin({
         readMarkDepth(lexicalEditor),
       );
       if (!caret) return false;
-      const nodes = toNodes(rowsRef.current);
+      // Zoomed, the ladders see only the view — see `IntentContext.nodes`.
+      const allNodes = toNodes(rowsRef.current);
+      const nodes =
+        scopeRootId === null ? allNodes : scopeNodes(allNodes, scopeRootId);
       // Resolve the current block's declarative edit policy from the registry.
       // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
       // flag), so it folds into the same policy here rather than being drilled.
@@ -288,6 +293,7 @@ export function KeyboardPlugin({
       };
       const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
         nodes,
+        scopeRootId,
         blockId: blockIdRef.current,
         // Type facts from the same registry, resolved per node (the ladders ask
         // about OTHER blocks — the line above, the line below, the parent — not
@@ -372,7 +378,7 @@ export function KeyboardPlugin({
     return () => {
       for (const u of unregister) u();
     };
-  }, [lexicalEditor, rowsRef, recordDocEditRef]);
+  }, [lexicalEditor, rowsRef, recordDocEditRef, scopeRootId]);
 
   // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled per-block. With no
   // Lexical `HistoryPlugin`, nothing here consumes those keystrokes, so the native

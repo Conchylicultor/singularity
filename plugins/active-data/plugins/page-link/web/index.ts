@@ -10,7 +10,7 @@ export { PageLinkChip };
 
 export default {
   description:
-    "Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.",
+    "Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Models emit the bare id, no tag wrapping needed.",
   contributions: [
     InlineChip.Tag(
       inlineChip({

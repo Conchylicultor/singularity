@@ -743,7 +743,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-progress`
     - `conversations/conversation-view`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/code/docs-button`

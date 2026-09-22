@@ -40,7 +40,11 @@ export function flattenVisible(
       hasChildren: node.children.length > 0,
     });
     const kids =
-      show === "all" ? node.children : show === "first" ? node.children.slice(0, 1) : [];
+      show === "all"
+        ? node.children
+        : show === "first"
+          ? node.children.slice(0, 1)
+          : [];
     out.push({
       block: node,
       depth,
@@ -48,7 +52,29 @@ export function flattenVisible(
       ordinal,
       firstVisibleChildType: kids[0]?.type ?? null,
     });
-    if (kids.length > 0) flattenVisible(kids, anchorTypes, depth + 1, out, sealedBelow);
+    if (kids.length > 0)
+      flattenVisible(kids, anchorTypes, depth + 1, out, sealedBelow);
   }
   return out;
+}
+
+/**
+ * The zoomed view's forest: the one node `rootId` names, found anywhere in
+ * `nodes`, as a single-root forest — so `flattenVisible` renders it at depth 0
+ * and its descendants below it exactly as they would render on the full page.
+ *
+ * `null` when no such node exists: the block was deleted, or moved to another
+ * page. That is the zoom's "gone" state, which the surface renders as such — an
+ * empty forest would instead read as a block with nothing in it.
+ */
+export function subtreeOf(
+  nodes: TreeNode<Block>[],
+  rootId: string,
+): TreeNode<Block>[] | null {
+  for (const node of nodes) {
+    if (node.id === rootId) return [node];
+    const found = subtreeOf(node.children, rootId);
+    if (found) return found;
+  }
+  return null;
 }

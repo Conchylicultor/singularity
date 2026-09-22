@@ -10,7 +10,7 @@ renders no reference, ships no action and declares no kind.
 ## Navigation is declared by the host, once
 
 `PageNavigationProvider` / `usePageNavigation()` carry a `PageNavigation`
-(`open`, optionally `openAside`) from the surface hosting the editor down to
+(`open`, optionally `openAside` and `openBlock`) from the surface hosting the editor down to
 every reference under it.
 
 It replaced an `onOpenPage?: (pageId) => void` prop threaded from `<BlockEditor>`
@@ -22,7 +22,9 @@ crosses the composite store for free.
 `openAside` is optional on purpose: a single-surface host (the Story editor, the
 website's editor toy) has nowhere to put a second page, and opening "aside" into
 the same box is a different action, not a degraded one. The absent capability
-stays absent, and the affordance for it never appears.
+stays absent, and the affordance for it never appears. `openBlock` (open one
+block of a page as a page of its own) is optional the same way, and is what the
+block menu's **Open as page** (`page/open-as-page`) reads.
 
 ## Actions are a frontier, not a button
 
@@ -111,6 +113,7 @@ carrying the same actions — a separate feature.
     - `page/annotations/instructions/instructions-page`
     - `page/inline-page-link`
     - `page/links`
+    - `page/open-as-page`
     - `page/page-link`
     - `page/page-reference/open-aside`
     - `page/sub-page`

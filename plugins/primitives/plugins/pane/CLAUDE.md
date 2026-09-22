@@ -724,6 +724,7 @@ See "Open questions" in the design doc.
     - `mail-root.actions` "title" → `PaneTitleItem`
     - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
+    - `blockDetailPane.Actions` "title" → `PaneTitleItem`
     - `pagesTreePane.Actions` "title" → `PaneTitleItem`
     - `pages-root.actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
@@ -919,7 +920,6 @@ See "Open questions" in the design doc.
   - Imported by:
     - `active-data/attempt`
     - `active-data/commit-link`
-    - `active-data/page-link`
     - `active-data/plugin-link`
     - `active-data/prototype`
     - `active-data/task`
@@ -995,7 +995,6 @@ See "Open questions" in the design doc.
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-view`
-    - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/skill`

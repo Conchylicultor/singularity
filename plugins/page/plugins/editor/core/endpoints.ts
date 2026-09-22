@@ -78,7 +78,14 @@ export const listBlocks = defineEndpoint({
 // bookmark) is allowed to name a block that is gone.
 export const BlockPageSchema = z.discriminatedUnion("found", [
   z.object({ found: z.literal(false) }),
-  z.object({ found: z.literal(true), pageId: z.string(), isPage: z.boolean() }),
+  z.object({
+    found: z.literal(true),
+    pageId: z.string(),
+    isPage: z.boolean(),
+    // The block's own type, so a surface can NAME the block (its type's label,
+    // e.g. "TODO") before the page holding it has loaded.
+    type: z.string(),
+  }),
 ]);
 export type BlockPage = z.infer<typeof BlockPageSchema>;
 

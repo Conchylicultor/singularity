@@ -193,6 +193,7 @@ function mount(initialBlocks: Block[]): Harness {
         store={spied}
         pageId={PAGE_ID}
         serverSync={false}
+        rootId={null}
       >
         <RowsProbe
           onCtx={(next) => {

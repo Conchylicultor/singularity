@@ -22,6 +22,7 @@ import {
   type KeystrokeKey,
 } from "./keystroke-intent";
 import type { CaretContext } from "./caret-geometry";
+import { scopeNodes } from "./zoom-scope";
 import type { MarkBoundary } from "./mark-boundary";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,9 @@ const ANCHOR_CTX = { anchorTypes: ANCHOR_TYPES };
 const TYPE_FACTS = {
   acceptsText: (n: BlockNode) => !VOID_TYPES.has(n.type),
   isAnchor: (n: BlockNode) => ANCHOR_TYPES.has(n.type),
+  // Not a type fact, but carried beside them for the same reason: every spec
+  // here resolves on the whole page unless it says otherwise (see "zoomed").
+  scopeRootId: null,
 };
 
 function ctx(
@@ -2203,5 +2207,174 @@ describe("traversal symmetry, mirrored (the marked run on the RIGHT)", () => {
 test("unknown block id → passthrough", () => {
   expect(resolveKeystroke("Enter", NO_SHIFT, caret(), ctx("ghost"))).toEqual({
     type: "passthrough",
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Zoomed: the editor shows one block (the root) and its descendants. The
+// resolver sees only that view (`scopeNodes` — the root lifted to the top
+// level) plus `scopeRootId`, and every ladder has to stay inside it.
+// ---------------------------------------------------------------------------
+
+describe("zoomed (scopeRootId)", () => {
+  const r1 = Rank.between(null, null).toJSON();
+  const r2 = Rank.between(Rank.from(r1), null).toJSON();
+  const rankS = Rank.between(Rank.from(rankA), null).toJSON();
+
+  /**
+   *   page
+   *   ├─ P ("parent")
+   *   │  └─ R ("root")          ← the zoom root
+   *   │     ├─ R1 ("one")
+   *   │     └─ R2 ("two")
+   *   │        └─ R2a ("deep")
+   *   └─ S ("sibling")
+   */
+  function page(): BlockNode[] {
+    return [
+      mk("P", PAGE, rankA, { text: "parent", expanded: true }),
+      mk("R", "P", rankChild, { text: "root", expanded: true }),
+      mk("R1", "R", r1, { text: "one" }),
+      mk("R2", "R", r2, { text: "two", expanded: true }),
+      mk("R2a", "R2", rankChild, { text: "deep" }),
+      mk("S", PAGE, rankS, { text: "sibling" }),
+    ];
+  }
+
+  function zoomed(
+    blockId: string,
+    nodes = page(),
+    rootId = "R",
+  ): IntentContext {
+    return {
+      ...TYPE_FACTS,
+      nodes: scopeNodes(nodes, rootId),
+      scopeRootId: rootId,
+      blockId,
+    };
+  }
+  const whole = (blockId: string, nodes = page()): IntentContext => ({
+    ...TYPE_FACTS,
+    nodes,
+    blockId,
+  });
+
+  test("Enter on the root nests its tail — a sibling would land outside", () => {
+    for (const at of [
+      caret({ offset: 2 }),
+      caret({ offset: 4, atEnd: true }),
+      caret({ offset: 0, atStart: true }),
+    ]) {
+      expect(
+        resolveKeystroke("Enter", NO_SHIFT, at, zoomed("R")),
+      ).toMatchObject({
+        type: "split",
+        asChild: true,
+      });
+    }
+    // On the whole page the same mid-line Enter is a plain sibling split.
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), whole("R")),
+    ).toMatchObject({ type: "split", asChild: false });
+  });
+
+  test("Backspace at the root's start goes nowhere — there is no line above in view", () => {
+    const at = caret({ atStart: true });
+    expect(resolveKeystroke("Backspace", NO_SHIFT, at, zoomed("R"))).toEqual({
+      type: "nav",
+      dir: "left",
+    });
+    // The whole page merges R up into its parent P.
+    expect(resolveKeystroke("Backspace", NO_SHIFT, at, whole("R"))).toEqual({
+      type: "merge",
+    });
+  });
+
+  test("Backspace on the root's first child merges it INTO the root line", () => {
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        zoomed("R1"),
+      ),
+    ).toEqual({ type: "merge" });
+  });
+
+  test("the root's last child is top level: no excess-indentation outdent out of the view", () => {
+    // R2 with its child removed is the last visible line directly under R. On
+    // the whole page it is excess-indented and would outdent out of R; zoomed,
+    // R is the top level, so the line break above (R1) is what goes.
+    const nodes = page().filter((n) => n.id !== "R2a");
+    const at = caret({ atStart: true });
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, at, whole("R2", nodes)),
+    ).toEqual({
+      type: "outdent",
+    });
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, at, zoomed("R2", nodes)),
+    ).toEqual({ type: "merge" });
+  });
+
+  test("a line nested deeper than the root's children still outdents — inside the view", () => {
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        zoomed("R2a"),
+      ),
+    ).toEqual({ type: "outdent" });
+  });
+
+  test("Delete at the end of the last line does not reach the block after the view", () => {
+    const at = caret({ atEnd: true });
+    expect(resolveKeystroke("Delete", NO_SHIFT, at, zoomed("R2a"))).toEqual({
+      type: "nav",
+      dir: "right",
+    });
+    // The whole page pulls S up into R2a.
+    expect(resolveKeystroke("Delete", NO_SHIFT, at, whole("R2a"))).toEqual({
+      type: "mergeNext",
+    });
+  });
+
+  test("Shift+Tab on a root child has nowhere to go; Tab on the root has nothing to nest under", () => {
+    expect(resolveKeystroke("Tab", SHIFT, caret(), zoomed("R1"))).toEqual({
+      type: "noop",
+    });
+    expect(resolveKeystroke("Tab", SHIFT, caret(), whole("R1"))).toEqual({
+      type: "outdent",
+    });
+    expect(resolveKeystroke("Tab", SHIFT, caret(), zoomed("R"))).toEqual({
+      type: "noop",
+    });
+    expect(resolveKeystroke("Tab", NO_SHIFT, caret(), zoomed("R"))).toEqual({
+      type: "noop",
+    });
+  });
+
+  test("a zoomed CONTAINER is never unwrapped from its first line", () => {
+    const k1 = Rank.between(null, null).toJSON();
+    const k2 = Rank.between(Rank.from(k1), null).toJSON();
+    const boxed: BlockNode[] = [
+      { ...mk("CA", PAGE, rankA), type: "callout", expanded: true },
+      mk("X", "CA", k1, { text: "first" }),
+      mk("Y", "CA", k2, { text: "second" }),
+    ];
+    const at = caret({ atStart: true });
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, at, whole("X", boxed)),
+    ).toEqual({ type: "unwrap", blockId: "CA" });
+    // Dissolving the root would dissolve the view: the anchor owns no text and
+    // nothing is above it, so the ladder ends at a plain caret move.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, at, zoomed("X", boxed, "CA")),
+    ).toEqual({ type: "nav", dir: "left" });
+    // Its first line is top level too: Shift+Tab takes it nowhere.
+    expect(
+      resolveKeystroke("Tab", SHIFT, caret(), zoomed("X", boxed, "CA")),
+    ).toEqual({ type: "noop" });
   });
 });

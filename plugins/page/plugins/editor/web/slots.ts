@@ -384,6 +384,22 @@ export const Editor = {
     }>;
   }>(),
   /**
+   * Extra rows in the block-actions menu's LAST section, ahead of "Copy block
+   * ID" — actions ON a block that are neither a conversion nor structural (e.g.
+   * open-as-page, which opens the block in a view of its own). Rendered for
+   * both arms of the menu, ordinary blocks and containers alike, and only on a
+   * `serverSync` editor, like `TurnInto`: a block of an in-memory document has
+   * no row anything outside the editor could act on.
+   *
+   * No `api`, deliberately: an item that edits the block belongs in a section
+   * that says so. An item that must know where it is renders inside the editor
+   * and can read `useEditorScope()` (e.g. to hide itself on the zoom root). It
+   * owns its own commit, and calls `close` when done.
+   */
+  BlockMenuItem: defineRenderSlot<{
+    component: ComponentType<{ block: Block; close: () => void }>;
+  }>(),
+  /**
    * Toolbar controls for the floating selection format bar. Each contribution
    * renders one control (typically a `<MarkButton/>` reading `useFormatToolbar()`
    * for live active state). The bar is rendered by `FormatToolbarPlugin` only when

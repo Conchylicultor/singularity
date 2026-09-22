@@ -67,6 +67,12 @@
       "parent": "backup"
     },
     {
+      "paneId": "block-detail",
+      "segment": "block/:blockId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "build",
       "segment": "build",
       "appIndex": false,

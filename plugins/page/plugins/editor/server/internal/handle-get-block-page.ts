@@ -35,10 +35,20 @@ export const handleGetBlockPage = implement(
 
     if (!row) return MISS;
     if (row.type === PAGE_BLOCK_TYPE)
-      return { found: true, pageId: row.id, isPage: true } as const;
+      return {
+        found: true,
+        pageId: row.id,
+        isPage: true,
+        type: row.type,
+      } as const;
     // A non-page block with no page ancestor sits at the forest root and is
     // displayed by no page — the same "nothing to open" answer as a miss.
     if (row.pageId === null) return MISS;
-    return { found: true, pageId: row.pageId, isPage: false } as const;
+    return {
+      found: true,
+      pageId: row.pageId,
+      isPage: false,
+      type: row.type,
+    } as const;
   },
 );

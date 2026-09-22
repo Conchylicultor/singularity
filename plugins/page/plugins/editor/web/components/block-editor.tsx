@@ -29,6 +29,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   buildTree,
@@ -77,7 +78,7 @@ import {
   useFrameGeometry,
 } from "../slots";
 import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
-import { flattenVisible } from "../internal/flatten-blocks";
+import { flattenVisible, subtreeOf } from "../internal/flatten-blocks";
 import { resolveFramePadInsets, resolveRailSeats } from "../internal/rail-seat";
 import { resolveFrameFeet, type FootSeat } from "../internal/frame-foot";
 import { resolveSelectionBands } from "../internal/selection-bands";
@@ -304,12 +305,21 @@ export interface BlockEditorHandle extends CaretSurface {
  * its start — or the last block forwards lands there instead of stopping at the
  * editor's edge. Omit them (the story host, the in-memory demo) and those
  * keystrokes simply do nothing.
+ *
+ * `rootId` ZOOMS the editor into one block: it shows and edits that block (at
+ * depth 0) and its descendants, and nothing else, while every write still
+ * persists to the page's own rows. A gesture that would write outside the view
+ * lands inside it where it can (a line "below" the root is its first child) and
+ * is refused where it cannot (see `internal/zoom-scope.ts`). If the block is gone
+ * — deleted, or moved to another page — the editor says so instead of rendering
+ * an empty list.
  */
 type BlockEditorProps = {
   contentClassName?: ClassName;
   ref?: Ref<BlockEditorHandle>;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
+  rootId?: string;
 } & (
   | {
       /** Persistent mode (default): read/write `blocksResource` + endpoints. */
@@ -343,6 +353,7 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
         contentClassName={props.contentClassName}
         caretBefore={props.caretBefore}
         caretAfter={props.caretAfter}
+        rootId={props.rootId}
         handleRef={ref}
       />
     );
@@ -356,6 +367,7 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
       pageId={props.pageId}
       caretBefore={props.caretBefore}
       caretAfter={props.caretAfter}
+      rootId={props.rootId}
     >
       <BlockEditorInner
         contentClassName={props.contentClassName}
@@ -378,6 +390,7 @@ function MemoryBlockEditor({
   contentClassName,
   caretBefore,
   caretAfter,
+  rootId,
   handleRef,
 }: {
   initialContent?: SerializedBlock[];
@@ -385,6 +398,7 @@ function MemoryBlockEditor({
   contentClassName?: ClassName;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
+  rootId?: string;
   handleRef?: Ref<BlockEditorHandle>;
 }) {
   // Synthetic and never persisted, but still an id in the block namespace — the
@@ -412,6 +426,7 @@ function MemoryBlockEditor({
       enabledBlockTypes={enabledBlockTypes}
       caretBefore={caretBefore}
       caretAfter={caretAfter}
+      rootId={rootId}
     >
       <BlockEditorInner
         contentClassName={contentClassName}
@@ -439,6 +454,7 @@ function BlockEditorInner({
     insertFirst,
     focusBlock,
     focusBlockBoundary,
+    scope,
   } = useBlockEditor();
 
   // The Cmd+Z / Cmd+Shift+Z / Cmd+Y bindings are NOT registered here — they are
@@ -459,16 +475,24 @@ function BlockEditorInner({
   // on a line that is not on screen.
   const anchorTypes = useAnchorTypes();
 
-  const { rows, flat } = useMemo(() => {
+  // `rows` stays the FULL page — every structural op resolves against the
+  // whole forest, so the prediction is the server's. Only `flat`, what renders
+  // and what the caret and the selection walk, is scoped to the zoom: the root
+  // at depth 0 and what it shows below it. A root that is not in the rows once
+  // they have loaded is `gone`.
+  const { rows, flat, gone } = useMemo(() => {
     if (pending) {
-      return { rows: [] as Block[], flat: [] as FlatBlock[] };
+      return { rows: [] as Block[], flat: [] as FlatBlock[], gone: false };
     }
     const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
+    const tree = buildTree(sorted);
+    const view = scope.rootId === null ? tree : subtreeOf(tree, scope.rootId);
     return {
       rows: sorted,
-      flat: flattenVisible(buildTree(sorted), anchorTypes),
+      flat: view === null ? [] : flattenVisible(view, anchorTypes),
+      gone: view === null,
     };
-  }, [blocks, pending, anchorTypes]);
+  }, [blocks, pending, anchorTypes, scope]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -516,6 +540,9 @@ function BlockEditorInner({
   if (pending) {
     return <Loading variant="rows" />;
   }
+  if (gone) {
+    return <Placeholder>This block no longer exists.</Placeholder>;
+  }
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
@@ -551,6 +578,8 @@ function SelectionLayer({
     focusedBlockId,
     allowAttachments,
     attachContainer,
+    scope,
+    admits,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   // ONE `type → handle` view of the `Editor.Block` registry (`useBlockHandles`),
@@ -589,8 +618,21 @@ function SelectionLayer({
     () => blockSelectionRoots(nodes, selectedIds, isAnchorNode),
     [nodes, selectedIds, isAnchorNode],
   );
-  const indentable = useMemo(() => canIndent(nodes, roots), [nodes, roots]);
-  const outdentable = useMemo(() => canOutdent(nodes, roots), [nodes, roots]);
+  // The reducer's own fold answers "would it move anything"; `admits` adds
+  // "and stay inside the zoom" — an outdent of the root's children would leave
+  // the view, and the key it mirrors is refused for the same reason.
+  const indentable = useMemo(
+    () =>
+      canIndent(nodes, roots) &&
+      (scope.rootId === null || admits({ kind: "indent", blockIds: roots })),
+    [nodes, roots, scope, admits],
+  );
+  const outdentable = useMemo(
+    () =>
+      canOutdent(nodes, roots) &&
+      (scope.rootId === null || admits({ kind: "outdent", blockIds: roots })),
+    [nodes, roots, scope, admits],
+  );
 
   // The centered block-content wrapper the marquee overlay is positioned within,
   // published into `blockContentScope` so readers OUTSIDE this subtree — the
@@ -1319,14 +1361,26 @@ function SelectionLayer({
       if (target.id === activeId) return null;
       if (isDescendant(rows, activeId, target.id)) return null;
     }
+    // Nothing can land ABOVE the zoom root — that is outside the view — so the
+    // top half of its row offers no drop at all. Its bottom half is "below the
+    // root", which `onDragEnd` lands as its first child.
+    if (target.id === scope.rootId && target.zone === "before") return null;
     return target;
   };
 
   const onDragStart = (event: DragStartEvent) => {
     const id = (event.active.data.current?.id as string | undefined) ?? null;
     setActiveId(id);
-    if (id && selection.has(id)) {
-      const roots = blockSelectionRoots(nodes, selectedIds, isAnchorNode);
+    // The zoom root is the view itself and has no drag handle; a selection
+    // holding it (everything in view) drags without it, which leaves nothing
+    // to drag as a set — the grabbed block then moves alone.
+    const roots =
+      id && selection.has(id)
+        ? blockSelectionRoots(nodes, selectedIds, isAnchorNode).filter(
+            (r) => r !== scope.rootId,
+          )
+        : [];
+    if (roots.length > 0) {
       const subtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
       setBulkDragState({ roots, subtree });
     } else {
@@ -1355,6 +1409,19 @@ function SelectionLayer({
     setActiveId(null);
     setBulkDragState(null);
     if (!dragged || !target) return;
+
+    // Below the zoom root (the only half of its row `currentTarget` offers) is
+    // the START of its children — after it would be outside the view. One
+    // `bulkMove` spells that for a single block and a set alike: `move` has no
+    // "first child of" form, only "before/after a sibling".
+    if (target.id === scope.rootId) {
+      bulkMove({
+        ids: bulk?.roots ?? [dragged],
+        parentId: target.id,
+        afterId: null,
+      });
+      return;
+    }
 
     if (bulk) {
       const targetRow = rows.find((r) => r.id === target.id);
@@ -1391,12 +1458,16 @@ function SelectionLayer({
   // sibling right below the target; "before" anchors after the target's previous
   // sibling (same parent), or at the parent's start when it's the first child —
   // mirroring the bulk-reorder before/after computation. A null target (empty
-  // page / no rows) lands at the page's top level.
+  // page / no rows) lands at the view's top level — `paste` defaults the parent.
   const externalDropPosition = useCallback(
     (
       target: DropTarget | null,
     ): { afterId: string | null; parentId: string | null } => {
       if (!target) return { afterId: null, parentId: null };
+      // Over the zoom root, either half: its children's start — above or after
+      // it would be outside the view.
+      if (target.id === scope.rootId)
+        return { afterId: null, parentId: scope.rootId };
       const targetRow = rowsRef.current.find((r) => r.id === target.id);
       if (!targetRow) return { afterId: null, parentId: null };
       if (target.zone === "after") {
@@ -1411,7 +1482,7 @@ function SelectionLayer({
         parentId: targetRow.parentId,
       };
     },
-    [],
+    [scope],
   );
 
   const onExternalDragOver = useCallback(

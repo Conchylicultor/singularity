@@ -1,6 +1,7 @@
 // Verifies the `block-<id>` inline chip: a block id written in a conversation
-// renders as a chip labelled with the page's title, and clicking it opens the
-// page-detail column beside the conversation (`…/page/<pageId>`).
+// renders as a labelled chip, and clicking it opens a column beside the
+// conversation: the page (`…/page/<pageId>`) for a page id, the block view
+// (`…/block/<blockId>`) for a content-block id.
 //
 // Both id kinds are asserted — a PAGE id (resolved client-side from the pages
 // resource) and a CONTENT-block id (resolved through GET /api/blocks/:id/page),
@@ -55,7 +56,7 @@ await withBrowser(async (h) => {
     return chips.first();
   }
 
-  async function verify(kind: string, id: string, expectedPageId: string) {
+  async function verify(kind: string, id: string, expectedPath: string) {
     const chip = await chipFor(id);
     const count = await page.locator(`button[title*="${id}"]`).count();
     r.ok(`${kind}: chip rendered for ${id}`, count > 0);
@@ -75,8 +76,8 @@ await withBrowser(async (h) => {
     await snap(page, OUT, `${kind}-opened`);
 
     r.ok(
-      `${kind}: click opened the page column`,
-      page.url().includes(`/page/${expectedPageId}`),
+      `${kind}: click opened the ${expectedPath} column`,
+      page.url().includes(expectedPath),
       `url=${page.url()}`,
     );
     const ids: string[] = await page
@@ -95,10 +96,10 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(waitMs);
   }
 
-  await verify("page-id", PAGE_ID, PAGE_ID);
+  await verify("page-id", PAGE_ID, `/page/${PAGE_ID}`);
   if (BLOCK_ID) {
-    // A content block resolves to its OWNING page — the endpoint's answer, so
-    // the expected id is read from it rather than assumed.
+    // A content block opens as a page of its own — the block view — once the
+    // endpoint has resolved it to the page holding it.
     const res = await agentFetch(`/api/blocks/${BLOCK_ID}/page`);
     const body = (await res.json()) as { found: boolean; pageId?: string };
     r.ok(
@@ -106,7 +107,8 @@ await withBrowser(async (h) => {
       body.found,
       JSON.stringify(body),
     );
-    if (body.pageId) await verify("content-block", BLOCK_ID, body.pageId);
+    if (body.found)
+      await verify("content-block", BLOCK_ID, `/block/${BLOCK_ID}`);
   }
 });
 

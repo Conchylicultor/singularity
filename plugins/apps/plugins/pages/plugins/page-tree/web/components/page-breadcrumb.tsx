@@ -5,7 +5,11 @@ import {
   Breadcrumb,
   type BreadcrumbSegment,
 } from "@plugins/primitives/plugins/breadcrumb/web";
-import { pagesResource, pageData, type Block } from "@plugins/page/plugins/editor/core";
+import {
+  pagesResource,
+  pageData,
+  type Block,
+} from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { pageAncestors } from "../ancestors";
@@ -31,7 +35,17 @@ function SegmentLabel({ page }: { page: Block }): ReactElement {
  * carries only the per-segment weight/color baked into the Breadcrumb primitive,
  * never its own size or inset.
  */
-export function PageBreadcrumb({ pageId }: { pageId: string }): ReactElement | null {
+export function PageBreadcrumb({
+  pageId,
+  leaf,
+}: {
+  pageId: string;
+  /**
+   * A trailing crumb past the page — the block a block view is zoomed into. The
+   * page then becomes a navigable ancestor and this is the inert leaf.
+   */
+  leaf?: BreadcrumbSegment;
+}): ReactElement | null {
   const openPane = useOpenPane();
   const result = useResource(pagesResource);
   if (result.pending) return null;
@@ -45,6 +59,7 @@ export function PageBreadcrumb({ pageId }: { pageId: string }): ReactElement | n
     key: page.id,
     label: <SegmentLabel page={page} />,
   }));
+  if (leaf !== undefined) segments.push(leaf);
 
   return (
     <Breadcrumb

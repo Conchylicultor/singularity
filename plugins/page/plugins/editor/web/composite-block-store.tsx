@@ -19,8 +19,10 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { blocksResource, moveBlock, patchBlocks, type Block } from "../core";
-import { BlockEditorProviderInner } from "./block-editor-context";
-import type { CaretSurfaceRef } from "./caret-surface";
+import {
+  BlockEditorProviderInner,
+  type ProviderHostViewProps,
+} from "./block-editor-context";
 import { useServerBlockStore, type BlockStore } from "./block-store";
 import type { BlockOverlayOp } from "./internal/optimistic-block-ops";
 import {
@@ -87,14 +89,13 @@ export function CompositeServerProviderHost({
   enabledBlockTypes,
   caretBefore,
   caretAfter,
+  rootId,
   children,
 }: {
   pageId: string;
   enabledBlockTypes?: readonly string[];
-  caretBefore?: CaretSurfaceRef;
-  caretAfter?: CaretSurfaceRef;
   children: ReactNode;
-}) {
+} & ProviderHostViewProps) {
   const [feeds, setFeeds] = useState<ReadonlyMap<string, FeedSnapshot>>(
     () => new Map<string, FeedSnapshot>(),
   );
@@ -327,6 +328,7 @@ export function CompositeServerProviderHost({
         enabledBlockTypes={enabledBlockTypes}
         caretBefore={caretBefore}
         caretAfter={caretAfter}
+        rootId={rootId}
       >
         {children}
       </BlockEditorProviderInner>

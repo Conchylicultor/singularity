@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdDescription } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
-import { pageDetailPane, pagesTreePane } from "./panes";
+import { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
 import {
   BacklinksSection,
@@ -13,7 +13,14 @@ import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
 
 export { PageDetail, PageTree } from "./slots";
-export { pageDetailPane, pagesTreePane } from "./panes";
+export { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
+export {
+  useBlockTarget,
+  useBlockTargetTitle,
+  useBlockTypeLabel,
+  useOpenBlockTarget,
+  type BlockTarget,
+} from "./internal/block-target";
 export {
   createPageWithSeed,
   type PageSeedBlock,
@@ -21,9 +28,10 @@ export {
 
 export default {
   description:
-    "Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.",
+    "Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.",
   contributions: [
     Pane.Register({ pane: pageDetailPane }),
+    Pane.Register({ pane: blockDetailPane }),
     Pane.Register({ pane: pagesTreePane }),
     Pages.Sidebar({
       id: "pages",
@@ -44,6 +52,7 @@ export default {
     ...PageDetail,
     ...PageTree,
     "page-detail": pageDetailPane,
+    "block-detail": blockDetailPane,
     "pages-tree": pagesTreePane,
   },
 } satisfies PluginDefinition;

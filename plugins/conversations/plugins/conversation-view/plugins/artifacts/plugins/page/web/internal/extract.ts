@@ -97,8 +97,9 @@ function relationOf(event: ToolCall, writes: boolean): Relation {
  *
  * Known seam: a write is keyed by the page the apply reported, while a read is
  * keyed by whatever `block_id` it was given. So reading one card of a page and
- * then editing it can list the page twice — once under the card's id — until
- * the read carries a report of its own.
+ * then editing the page lists two rows — the page, and the card (titled
+ * "<page> › <block type>", opening the block view). Both are real and both open;
+ * they merge only once the read carries a report of its own.
  */
 export function extractPageHits(event: JsonlEvent): ArtifactHit[] {
   if (event.kind !== "tool-call") return [];

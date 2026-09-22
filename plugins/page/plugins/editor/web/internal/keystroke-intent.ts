@@ -145,8 +145,22 @@ export type KeyIntent =
   | { type: "passthrough" };
 
 export interface IntentContext {
-  /** The live block forest (reducer-shape nodes). */
+  /**
+   * The live block forest (reducer-shape nodes) — in a ZOOMED editor, only what
+   * the view shows: the root and its descendants, the root lifted to the top
+   * level (`scopeNodes`, `internal/zoom-scope.ts`). Every ladder then stays
+   * inside the view by construction: the root has no line above to merge into
+   * and no sibling to indent under, and the last line has none below.
+   */
   nodes: BlockNode[];
+  /**
+   * The zoom root, or null for the whole page. What a lifted root cannot say on
+   * its own: that its CHILDREN are the view's top level (their `parentId` still
+   * names it), so they are not indented — Shift+Tab has nowhere to take them
+   * and Backspace never outdents them — and that the root's own Enter must nest
+   * its tail (a sibling of the root would land outside the view).
+   */
+  scopeRootId: string | null;
   /** The block whose editor fired the keystroke. */
   blockId: string;
   /**
@@ -203,21 +217,31 @@ export interface IntentContext {
  * page. Per-row (`node.pageId` is the nearest page ancestor), so over a spliced
  * multi-page union an inner page's top-level block is NOT indented — its parent
  * is its own page's shell row, and outdenting would cross the page boundary.
+ * The same holds for the zoom root's children: the root is the view's top, and
+ * outdenting past it would leave the view.
  */
-function isIndented(node: BlockNode): boolean {
-  return node.parentId !== null && node.parentId !== node.pageId;
+function isIndented(ctx: IntentContext, node: BlockNode): boolean {
+  return (
+    node.parentId !== null &&
+    node.parentId !== node.pageId &&
+    node.parentId !== ctx.scopeRootId
+  );
 }
 
 /**
  * The container ANCHOR `node` is the first child of, or null. Rank-first among
  * the anchor's children, so a later child is not one (its Backspace has a visible
  * line above it inside the box and takes the ordinary ladder).
+ *
+ * Never the zoom root: dissolving it would dissolve the view, so its first
+ * line's Backspace falls through to the ladder below — which, the root owning
+ * no text and having nothing above it, lands on a plain `nav left`.
  */
 function firstChildAnchor(
   ctx: IntentContext,
   node: BlockNode,
 ): BlockNode | null {
-  if (node.parentId === null) return null;
+  if (node.parentId === null || node.parentId === ctx.scopeRootId) return null;
   const parent = ctx.nodes.find((n) => n.id === node.parentId);
   if (!parent || !ctx.isAnchor(parent)) return null;
   return childrenOf(ctx.nodes, parent.id)[0]?.id === node.id ? parent : null;
@@ -412,7 +436,7 @@ export function resolveKeystroke(
       // empty-Enter escapes nesting outward. Empty == the caret is at both the
       // start and the end. Blocks without the policy fall straight through to split.
       if (caret.atStart && caret.atEnd && p?.breakOutOnEmptyEnter) {
-        if (isIndented(node)) return { type: "outdent" };
+        if (isIndented(ctx, node)) return { type: "outdent" };
         if (node.type !== p.breakOutOnEmptyEnter)
           return { type: "convertTo", to: p.breakOutOnEmptyEnter };
         // Already top-level and already the target type: fall through to split.
@@ -424,9 +448,11 @@ export function resolveKeystroke(
       //
       // Honor an explicit policy `asChild`; otherwise nest the split-off content
       // as the first child only when splitting at the very end of a block that
-      // has visible children (Notion's Enter-at-end behavior).
+      // has visible children (Notion's Enter-at-end behavior). The zoom root
+      // always nests: a sibling of the root is outside the view.
       const asChild =
-        p?.asChild ?? (hasVisibleChildren(ctx, node) && caret.atEnd);
+        node.id === ctx.scopeRootId ||
+        (p?.asChild ?? (hasVisibleChildren(ctx, node) && caret.atEnd));
       // Enter mints a TAIL: the block that carries the text after the caret, or
       // — when the caret is at the end of the line — the empty block the user
       // types the next thing into. `splitInto` is that tail's type (a heading
@@ -526,7 +552,7 @@ export function resolveKeystroke(
       // A block with no next visible line at all is excess-indented against the top
       // level, which is the pre-existing "peel one level per press, then merge"
       // ladder — unchanged.
-      if (isIndented(node) && hasExcessIndentation(ctx, node))
+      if (isIndented(ctx, node) && hasExcessIndentation(ctx, node))
         return { type: "outdent" };
       // Merge lands on the previous VISIBLE line (`applyMerge`'s own resolution),
       // so gate on that line, not the previous sibling: over a spliced multi-page
@@ -543,7 +569,7 @@ export function resolveKeystroke(
       // indentation gets its turn as the FALLBACK rung. Without this, deferring
       // outdent below merge would silently REMOVE the only way such a block can
       // escape its nesting — e.g. the line below a divider inside a container.
-      if (isIndented(node)) return { type: "outdent" };
+      if (isIndented(ctx, node)) return { type: "outdent" };
       // No same-page line to merge into: the first top-level block, or a page
       // boundary directly above. Backspace here means exactly what ArrowLeft
       // means — step backwards out to whatever caret surface precedes (the page
@@ -588,7 +614,7 @@ export function resolveKeystroke(
         // (`outdentOne`), i.e. re-nest hidden content under the escaping block.
         const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
         if (closed) return { type: "expand", blockId: closed.id };
-        return isIndented(node) ? { type: "outdent" } : { type: "noop" };
+        return isIndented(ctx, node) ? { type: "outdent" } : { type: "noop" };
       }
       return hasPrevSibling(ctx.nodes, node)
         ? { type: "indent" }

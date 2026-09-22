@@ -2,24 +2,21 @@
 
 Renders raw `block-<id>` strings (e.g. `block-2b45803b-6360-4fec-b10e-611cf21e83ab`) inline as
 clickable chips. Agents write the bare id — no tag wrapping — and the
-active-data linkify primitive replaces matches at render time. Clicking opens
-`pageDetailPane` (`page/:pageId`) with `mode: "push"`, so the page appears as a
-column beside the surface the text was read in:
-`/agents/c/<convId>/page/block-…`.
+active-data linkify primitive replaces matches at render time. Clicking opens a
+column beside the surface the text was read in (`mode: "push"`).
 
 **One id space, two kinds of row.** A page IS a block (`type="page"`), so a
 `block-…` id may name either a page or a content block inside one. The pattern
-cannot tell them apart and does not try — the chip resolves whichever it got to
-*the page that displays it*, and both open the same pane. Resolution is
-two-tiered:
+cannot tell them apart and does not try — the chip asks page-tree's shared
+resolver, `useBlockTarget`, what the id opens:
 
-- `pagesResource` answers a **page** id for free (already subscribed app-wide,
-  live titles, zero requests) — the common case, since that is what URLs and
-  the sidebar expose.
-- `GET /api/blocks/:id/page` (page/editor) is the reverse lookup for a
-  **content** block, which the pages resource structurally cannot answer: it
-  carries only `type="page"` rows. Fired only on a resource miss, so a
-  transcript full of page links costs no requests at all.
+- a **page** id opens `pageDetailPane` (`page/:pageId`), labelled with the
+  page's title. `pagesResource` answers it for free (already subscribed
+  app-wide, live titles, zero requests) — the common case.
+- a **content block** id opens `blockDetailPane` (`block/:blockId`) — that block
+  and its nested lines as a page of their own — labelled "<page> › <block
+  type>". `GET /api/blocks/:id/page` is the reverse lookup, fired only on a
+  resource miss, so a transcript full of page links costs no requests at all.
 
 Unresolvable ids (trashed, purged, or a false-positive match in prose) render
 as the plain raw string — the plugin-link precedent: a chip that opens nothing
@@ -41,17 +38,16 @@ read-surface chip for a bare id written anywhere active-data renders.
 
 ## Plugin reference
 
-- Description: Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
+- Description: Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Models emit the bare id, no tag wrapping needed.
 - Web:
   - Contributes: `InlineChip.Tag` "page-link" → `PageLinkChip`
   - Uses:
-    - `apps/pages/page-tree.pageDetailPane`
-    - `infra/endpoints.useEndpoint`
+    - `apps/pages/page-tree.useBlockTarget`
+    - `apps/pages/page-tree.useBlockTargetTitle`
+    - `apps/pages/page-tree.useOpenBlockTarget`
     - `page/editor.PageIcon`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
-    - `primitives/pane.useOpenPane`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`
   - Exports (values): `PageLinkChip`

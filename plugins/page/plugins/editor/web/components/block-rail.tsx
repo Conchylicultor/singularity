@@ -90,11 +90,14 @@ function RailButton({ left, className, ref, ...rest }: RailButtonProps) {
  * before writing a raw `<button>` beside them.
  */
 export function BlockRail({ seat }: { seat: RailSeat }) {
-  const { makeBlockAPI } = useBlockEditor();
+  const { makeBlockAPI, scope } = useBlockEditor();
   const insertBelow = useInsertBlockBelow();
   const owner = seat.owner.block;
   const chevron = seat.chevron;
   const api = useMemo(() => makeBlockAPI(owner.id), [makeBlockAPI, owner.id]);
+  // The zoom root IS the view: there is nowhere inside it to drag it to. The
+  // handle stays — it is also the actions menu's trigger — but it drags nothing.
+  const isScopeRoot = owner.id === scope.rootId;
 
   const {
     attributes,
@@ -103,6 +106,7 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
   } = useDraggable({
     id: `drag:${owner.id}`,
     data: { id: owner.id },
+    disabled: isScopeRoot,
   });
 
   return (
@@ -170,7 +174,7 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
             {...attributes}
             {...listeners}
             className={cn(
-              "cursor-grab active:cursor-grabbing",
+              !isScopeRoot && "cursor-grab active:cursor-grabbing",
               REVEAL_ON_ROW_HOVER,
             )}
           >

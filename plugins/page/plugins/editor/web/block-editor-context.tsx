@@ -75,6 +75,7 @@ import type {
   CaretSurfaceRef,
 } from "./caret-surface";
 import { useBlockHandles, useBlockOpContext } from "./internal/block-handles";
+import { scopeAdmits } from "./internal/zoom-scope";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
 import type { BlockEditorAPI } from "./types";
@@ -292,8 +293,40 @@ interface RecordEntryArgs {
   coalesceKey?: string;
 }
 
+/**
+ * What an editor shows: the whole page, or — zoomed — one block and its
+ * descendants (`BlockEditor`'s `rootId`). Readable from anything rendered inside
+ * the editor through {@link useEditorScope}.
+ */
+export interface EditorScope {
+  /** The zoomed block, rendered at depth 0; null for the whole page. */
+  rootId: string | null;
+  /**
+   * The parent a TOP-LEVEL insert lands under: the page's own id on the whole
+   * page (the reducer's forest excludes the page row, so its id is how the
+   * content top level is addressed), the root's id when zoomed — so a click
+   * below the last line, a paste with no anchor and an external drop over
+   * nothing all land inside the view.
+   */
+  contentParentId: string;
+}
+
 interface BlockEditorContextValue {
   pageId: string;
+  /** See {@link EditorScope}. */
+  scope: EditorScope;
+  /**
+   * Would this op change anything, and stay inside the zoom? The reducer run
+   * once over the current rows, then `scopeAdmits` — the same two gates every
+   * structural write passes, asked ahead of time so an affordance (the
+   * selection bar's indent, a menu item) can hide or disable itself rather than
+   * offer a click that is refused. Always the reducer's answer alone on an
+   * unzoomed editor.
+   *
+   * Reads the RENDER-FRESH rows, so it is safe to call during render; it does
+   * not see a mutation issued earlier in the same synchronous turn.
+   */
+  admits: (op: BlockOp) => boolean;
   /** Server truth with all pending structural ops replayed optimistically. */
   blocks: Block[];
   /**
@@ -575,6 +608,19 @@ export function useBlockEditor(): BlockEditorContextValue {
 }
 
 /**
+ * The {@link EditorScope} of the enclosing editor — whether it shows the whole
+ * page or one zoomed block, and where its top level is. For components a block
+ * or a slot contribution renders inside the editor (a block-menu item that must
+ * not offer to open the block the view is already zoomed into).
+ */
+export function useEditorScope(): EditorScope {
+  const ctx = useContext(BlockEditorContext);
+  if (!ctx)
+    throw new Error("useEditorScope must be used within a BlockEditorProvider");
+  return ctx.scope;
+}
+
+/**
  * The insertable-type allowlist of the nearest `BlockEditorProvider`, or
  * undefined outside one / when unrestricted. Read by `useInsertableBlocks` so the
  * palette filter applies to every block-type picker with no per-menu wiring.
@@ -595,6 +641,8 @@ type BlockEditorProviderProps = {
   /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
+  /** See `BlockEditor`'s props — the block this editor is zoomed into. */
+  rootId?: string;
   children: ReactNode;
 } & (
   | { persist?: true; pageId: string }
@@ -612,6 +660,7 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
         enabledBlockTypes={props.enabledBlockTypes}
         caretBefore={props.caretBefore}
         caretAfter={props.caretAfter}
+        rootId={props.rootId ?? null}
       >
         {props.children}
       </MemoryProviderHost>
@@ -626,16 +675,22 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
       enabledBlockTypes={props.enabledBlockTypes}
       caretBefore={props.caretBefore}
       caretAfter={props.caretAfter}
+      rootId={props.rootId ?? null}
     >
       {props.children}
     </CompositeServerProviderHost>
   );
 }
 
-/** The flanking caret surfaces are storage-agnostic — both hosts thread them. */
-interface ProviderHostCaretProps {
+/**
+ * The storage-agnostic props both hosts thread through to the inner provider:
+ * the flanking caret surfaces and the zoom root.
+ */
+export interface ProviderHostViewProps {
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
+  /** The zoomed block (see `EditorScope`); null for the whole page. */
+  rootId: string | null;
 }
 
 function MemoryProviderHost({
@@ -644,13 +699,14 @@ function MemoryProviderHost({
   enabledBlockTypes,
   caretBefore,
   caretAfter,
+  rootId,
   children,
 }: {
   pageId: string;
   initialBlocks: Block[];
   enabledBlockTypes?: readonly string[];
   children: ReactNode;
-} & ProviderHostCaretProps) {
+} & ProviderHostViewProps) {
   const store = useMemoryBlockStore({ initialBlocks });
   return (
     <BlockEditorProviderInner
@@ -660,6 +716,7 @@ function MemoryProviderHost({
       enabledBlockTypes={enabledBlockTypes}
       caretBefore={caretBefore}
       caretAfter={caretAfter}
+      rootId={rootId}
     >
       {children}
     </BlockEditorProviderInner>
@@ -676,6 +733,7 @@ export function BlockEditorProviderInner({
   enabledBlockTypes,
   caretBefore,
   caretAfter,
+  rootId,
   children,
 }: {
   store: BlockStore;
@@ -691,6 +749,11 @@ export function BlockEditorProviderInner({
   /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
+  /**
+   * The zoomed block (see `EditorScope`), or null for the whole page. Required
+   * rather than optional so each host states which it is.
+   */
+  rootId: string | null;
   children: ReactNode;
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
@@ -732,6 +795,55 @@ export function BlockEditorProviderInner({
   // deleted row as still alive. `useLatestRef` writes during the provider's
   // render, which precedes those unmount cleanups in the same commit.
   const liveRowsRef = useLatestRef(store.data);
+
+  // --- The zoom -------------------------------------------------------------
+  // The store, the reducer and the endpoints stay on the FULL page (so the
+  // predicted forest is the server's); only the view is scoped. What keeps a
+  // zoomed write inside the view is `admitsRows`, checked at every structural
+  // write chokepoint below — `dispatchOp`, `applyOverlay`, the mounted merge and
+  // `commitRows` — beside the reducer's own "wrote nothing" refusal. Undo/redo
+  // patches are exempt: they restore states this editor already recorded.
+  const scope = useMemo<EditorScope>(
+    () => ({ rootId, contentParentId: rootId ?? pageId }),
+    [rootId, pageId],
+  );
+  const admitsRows = useCallback(
+    (before: readonly Block[], after: readonly Block[]) =>
+      rootId === null || scopeAdmits(before, after, rootId),
+    [rootId],
+  );
+
+  /**
+   * The insert fields that land a new row FIRST under `parentId`: before its
+   * current first child, or — childless — as its only one. The page's top line
+   * (`insertFirst`) and "right below the zoom root" (an insert or paste
+   * anchored ON the root, which would otherwise land after it, outside the view)
+   * are the same position.
+   */
+  const firstUnder = useCallback(
+    (parentId: string): { beforeId: string } | { parentId: string } => {
+      const first = childrenOf(toNodes(rowsRef.current), parentId)[0];
+      return first ? { beforeId: first.id } : { parentId };
+    },
+    [],
+  );
+
+  /**
+   * A selection delete or duplicate naming the zoom root acts on its CHILDREN
+   * instead: the root is the view itself, so removing it would leave nothing to
+   * show and cloning it would land the copy outside. Selecting the root selects
+   * everything in view, so "delete everything I see" empties the root.
+   */
+  const withoutScopeRoot = useCallback(
+    (ids: string[]): string[] => {
+      if (rootId === null || !ids.includes(rootId)) return ids;
+      const kids = childrenOf(toNodes(rowsRef.current), rootId).map(
+        (c) => c.id,
+      );
+      return [...ids.filter((id) => id !== rootId), ...kids];
+    },
+    [rootId],
+  );
 
   // Ids the SERVER has committed (see the interface doc) — recomputed on each
   // authoritative push, so the "row is now real" edge (the doc-init FK gate)
@@ -1266,6 +1378,10 @@ export function BlockEditorProviderInner({
       );
       const { redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
       if (isEmptyPatch(redoPatch)) return;
+      // A direct row write is held to the zoom like an op is: a `wrapOnConvert`
+      // conversion of the root would reparent it under a fresh container,
+      // outside the view.
+      if (!admitsRows(before, after)) return;
       advanceRows(after);
       if (opts.record !== false) {
         recordEntry({
@@ -1278,7 +1394,14 @@ export function BlockEditorProviderInner({
       }
       dispatchPatch(redoPatch);
     },
-    [recordEntry, dispatchPatch, liveRowsRef, advanceRows, conformRowText],
+    [
+      recordEntry,
+      dispatchPatch,
+      liveRowsRef,
+      advanceRows,
+      conformRowText,
+      admitsRows,
+    ],
   );
 
   // The one-row case of `commitRows`: rewrite exactly the target row and land
@@ -1364,6 +1487,10 @@ export function BlockEditorProviderInner({
       // do-nothing entry on the undo stack. `written`, not `vars.targets`: the
       // latter also carries the rows the op merely NAMES, so it is never empty.
       if (written.length === 0) return;
+      // The zoom's refusal, for the same reason and in the same place: an op
+      // that would write outside the view never reaches the undo stack, the
+      // overlay or the network.
+      if (!admitsRows(before, after)) return;
       advanceRows(after);
       recordStructural(
         before,
@@ -1373,7 +1500,18 @@ export function BlockEditorProviderInner({
       );
       store.dispatch(vars);
     },
-    [store, recordStructural, opCtx, advanceRows],
+    [store, recordStructural, opCtx, advanceRows, admitsRows],
+  );
+
+  // See the context field. `liveRowsRef`, not `rowsRef`: an affordance asks
+  // during RENDER, before the consumer effect that refreshes `rowsRef` has run.
+  const admits = useCallback(
+    (op: BlockOp): boolean => {
+      const before = liveRowsRef.current;
+      const { after, written } = predictOp(op, before, opCtx);
+      return written.length > 0 && admitsRows(before, after);
+    },
+    [liveRowsRef, opCtx, admitsRows],
   );
 
   // The three drag/selection writers are ORDINARY OPS, which is the whole point:
@@ -1386,12 +1524,13 @@ export function BlockEditorProviderInner({
 
   const bulkDelete = useCallback(
     (ids: string[]) => {
-      if (ids.length === 0) return;
+      const blockIds = withoutScopeRoot(ids);
+      if (blockIds.length === 0) return;
       // ONE op, so one gesture is one undo entry and one server transaction
       // however many roots it names — never N single deletes.
-      dispatchOp({ kind: "delete", blockIds: ids });
+      dispatchOp({ kind: "delete", blockIds });
     },
-    [dispatchOp],
+    [dispatchOp, withoutScopeRoot],
   );
 
   const bulkMove = useCallback(
@@ -1453,17 +1592,31 @@ export function BlockEditorProviderInner({
       );
       if (forest.length === 0) return;
       markCutsPasted(pageSourcesOf(args.blocks));
-      // `parentId` defaults to the PAGE's own id, not null: the reducer's forest
-      // excludes the page row, so the page id is how "the content top level" is
-      // addressed (see the `paste` op's `parentId` doc).
+      // Anchored ON the zoom root, a paste would land after it — outside the
+      // view — so it lands at the START of the root's children instead, which
+      // is where "right below this line" is inside a zoom (anchorless paste
+      // inserts at the start of `parentId`).
+      if (args.afterId !== null && args.afterId === scope.rootId) {
+        dispatchOp({
+          kind: "paste",
+          forest,
+          afterId: null,
+          parentId: scope.rootId,
+        });
+        return;
+      }
+      // `parentId` defaults to the content top level (`contentParentId`), not
+      // null: the reducer's forest excludes the page row, so the page id is how
+      // "the content top level" is addressed (see the `paste` op's `parentId`
+      // doc) — and inside a zoom the top level is the root.
       dispatchOp({
         kind: "paste",
         forest,
         afterId: args.afterId,
-        parentId: args.parentId ?? pageId,
+        parentId: args.parentId ?? scope.contentParentId,
       });
     },
-    [dispatchOp, pageId],
+    [dispatchOp, scope],
   );
 
   // Duplicate a selection — one `dispatchOp` for the whole gesture, for paste's
@@ -1474,7 +1627,8 @@ export function BlockEditorProviderInner({
   //
   // MUST stay below `dispatchOp` — it closes over it.
   const bulkDuplicate = useCallback(
-    (ids: string[]) => {
+    (selected: string[]) => {
+      const ids = withoutScopeRoot(selected);
       if (ids.length === 0) return;
       const before = rowsRef.current;
       // Document-ordered for determinism and to match every other
@@ -1499,7 +1653,7 @@ export function BlockEditorProviderInner({
         })),
       });
     },
-    [dispatchOp, isAnchorNode],
+    [dispatchOp, isAnchorNode, withoutScopeRoot],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab
@@ -1536,15 +1690,20 @@ export function BlockEditorProviderInner({
   // write in memory), and return both snapshots for the combined record.
   // NOT used by the mounted-merge site, whose dispatch is deliberately deferred
   // into a microtask after the append lands (see the merge executor, issue #7).
+  //
+  // `null` when the zoom refuses the op: nothing was dispatched, and the caller
+  // must not go on to the content-doc half of its gesture (a split's
+  // truncation, a merge's record) — the rows it would describe never changed.
   const applyOverlay = useCallback(
-    (op: BlockOp): { before: Block[]; after: Block[] } => {
+    (op: BlockOp): { before: Block[]; after: Block[] } | null => {
       const before = rowsRef.current;
       const { after, vars } = predictOp(op, before, opCtx);
+      if (!admitsRows(before, after)) return null;
       advanceRows(after);
       store.dispatch(vars);
       return { before, after };
     },
-    [store, opCtx, advanceRows],
+    [store, opCtx, advanceRows, admitsRows],
   );
 
   // Move the caret into a freshly-minted block by its known id. The block does
@@ -1563,36 +1722,44 @@ export function BlockEditorProviderInner({
     [authority],
   );
 
-  // Insert a new block at the end of the page. Top-level page content is
+  // Insert a new block at the end of the view. Top-level page content is
   // parented to the page block (`parentId: pageId`), since `computePageId(null)`
-  // is null. Omitting `afterId` lets the reducer append it after the last
-  // existing sibling under the page. The id is minted up front so focus does not
-  // wait on the server round-trip.
+  // is null — and inside a zoom the top level is the root, so the new block is
+  // its last child (`contentParentId`). Omitting `afterId` lets the reducer
+  // append it after the last existing sibling. The id is minted up front so
+  // focus does not wait on the server round-trip.
   const insert = useCallback(
     (type: string, data: unknown) => {
       const newId = newBlockId();
       focusNew(newId);
-      dispatchOp({ kind: "insert", newId, type, data, parentId: pageId });
+      dispatchOp({
+        kind: "insert",
+        newId,
+        type,
+        data,
+        parentId: scope.contentParentId,
+      });
     },
-    [pageId, dispatchOp, focusNew],
+    [scope, dispatchOp, focusNew],
   );
 
-  // Insert a new block at the TOP of the page, before the current first
-  // top-level block (`beforeId` — the reducer ranks it ahead of that sibling).
-  // An empty page has no such sibling, so it falls back to the plain
-  // parent-append, which is equivalent there.
+  // Insert a new block at the TOP of the view, before the current first
+  // top-level block (`beforeId` — the reducer ranks it ahead of that sibling);
+  // inside a zoom, as the root's first child. An empty view has no such
+  // sibling, so it falls back to the plain parent-append, equivalent there.
   const insertFirst = useCallback(
     (type: string, data: unknown) => {
       const newId = newBlockId();
       focusNew(newId);
-      const first = childrenOf(toNodes(rowsRef.current), pageId)[0];
-      dispatchOp(
-        first
-          ? { kind: "insert", newId, type, data, beforeId: first.id }
-          : { kind: "insert", newId, type, data, parentId: pageId },
-      );
+      dispatchOp({
+        kind: "insert",
+        newId,
+        type,
+        data,
+        ...firstUnder(scope.contentParentId),
+      });
     },
-    [pageId, dispatchOp, focusNew],
+    [scope, dispatchOp, focusNew, firstUnder],
   );
 
   // The `wrapOnConvert` half of `convertTo`: mint a container row of `type` and
@@ -1692,6 +1859,13 @@ export function BlockEditorProviderInner({
       const mergingRuns = runs ?? runsOfNode(block);
       const targetHandle = authority.surgeryOf(target.id);
       const op: BlockOp = { kind: "merge", blockId: sourceId, runs };
+      // Both branches append the source's text into the target's DOC before the
+      // structural delete, so the zoom has to be asked FIRST: a refusal found
+      // only at dispatch time would leave the text appended to the target while
+      // the source row — still holding it — stays.
+      const before = rowsRef.current;
+      const { after, vars } = predictOp(op, before, opCtx);
+      if (!admitsRows(before, after)) return;
       if (targetHandle?.appendRunsAtEnd) {
         // Mounted target: drive its bound editor (append + caret at the live
         // join). Append-FIRST ordering (issue #7): the append rides a microtask
@@ -1704,8 +1878,6 @@ export function BlockEditorProviderInner({
         // the pre-merge rows; the dispatch is kept explicit here (not
         // `applyOverlay`) precisely because its ordering is deferred.
         const append = targetHandle.appendRunsAtEnd;
-        const before = rowsRef.current;
-        const { after, vars } = predictOp(op, before, opCtx);
         queueMicrotask(() => {
           // The target's runs before the append come from its DOC (the
           // authority, memoized), never from its ~1 s-lagged row. The append
@@ -1753,12 +1925,25 @@ export function BlockEditorProviderInner({
         void spliceStoredBlockDoc(targetId, targetDataText(), (current) =>
           mergeRuns(current, mergingRuns),
         ).then(({ before: targetBefore, after: targetAfter }) => {
-          const { before, after } = applyOverlay(op);
+          const applied = applyOverlay(op);
+          // Admitted above, against the rows of that turn. A refusal now means
+          // the page moved under the round trip; the append has landed and its
+          // runs edit is real, so it is recorded as the text entry it is.
+          if (!applied) {
+            recordTextEdit({
+              blockId: targetId,
+              before: targetBefore,
+              after: targetAfter,
+            });
+            return;
+          }
           recordEntry({
             label: OP_LABELS.merge,
             focusId: sourceId,
-            before,
-            after,
+            // The rows `applyOverlay` really diffed, which may be later than
+            // the admission's snapshot above: the append was a round trip.
+            before: applied.before,
+            after: applied.after,
             runsEdits: [
               { blockId: targetId, before: targetBefore, after: targetAfter },
             ],
@@ -1766,7 +1951,16 @@ export function BlockEditorProviderInner({
         });
       }
     },
-    [store, applyOverlay, recordEntry, opCtx, isAnchorNode, authority],
+    [
+      store,
+      applyOverlay,
+      recordEntry,
+      recordTextEdit,
+      opCtx,
+      isAnchorNode,
+      authority,
+      admitsRows,
+    ],
   );
 
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
@@ -1904,7 +2098,14 @@ export function BlockEditorProviderInner({
         // them: `focusNew` also arms a pending focus that fires when the block
         // mounts on the confirming push, stealing focus back after the fact.
         if (opts?.focus !== false) focusNew(newId);
-        dispatchOp({ kind: "insert", newId, type, data, afterId: blockId });
+        // "Below" the zoom root is its first child: after it would be outside
+        // the view. This is the rail `+`, a void block's Enter and every other
+        // "new line below this one" anchored on the root.
+        dispatchOp(
+          blockId === scope.rootId
+            ? { kind: "insert", newId, type, data, ...firstUnder(blockId) }
+            : { kind: "insert", newId, type, data, afterId: blockId },
+        );
         return newId;
       },
       split(
@@ -1949,12 +2150,25 @@ export function BlockEditorProviderInner({
         // from empty-block Enter (position 0 but nothing after the caret), which
         // must keep spawning a plain empty sibling BELOW with the caret moving down.
         if (!asChild && position === 0 && runsLength(opts?.runs ?? []) > 0) {
-          const { before, after } = applyOverlay(op);
-          recordStructural(before, after, OP_LABELS.split, blockId);
+          const applied = applyOverlay(op);
+          if (applied)
+            recordStructural(
+              applied.before,
+              applied.after,
+              OP_LABELS.split,
+              blockId,
+            );
           return;
         }
 
         // --- existing path (mid/end split, empty-block Enter, asChild) ---
+        // Dispatched BEFORE the caret claims the new block, so a split the zoom
+        // refuses claims nothing and truncates nothing — the origin keeps its
+        // text and its caret. Same synchronous turn either way, so the landing
+        // still precedes the commit that mounts the new block.
+        const applied = applyOverlay(op);
+        if (!applied) return;
+        const { before, after } = applied;
         focusNew(newId);
         // The reducer left the HEAD in this block's row, but the bound editor
         // ignores rows — the LIVE content must be truncated from the caret
@@ -1982,7 +2196,6 @@ export function BlockEditorProviderInner({
         // the row is a lagged projection, either of which can differ from what
         // the doc holds by the time the cut lands. No owner ⇒ no doc to edit
         // and nothing to replay: the entry stays structural.
-        const { before, after } = applyOverlay(op);
         queueMicrotask(() => {
           const owner = blockDocOwnerOf(blockId);
           const truncate = (): void => {
@@ -2128,12 +2341,16 @@ export function BlockEditorProviderInner({
       mergeBlock,
       isAnchorNode,
       authority,
+      scope,
+      firstUnder,
     ],
   );
 
   const value = useMemo<BlockEditorContextValue>(
     () => ({
       pageId,
+      scope,
+      admits,
       blocks: store.data,
       serverIds,
       rowTruthOf,
@@ -2177,6 +2394,8 @@ export function BlockEditorProviderInner({
     }),
     [
       pageId,
+      scope,
+      admits,
       store.data,
       serverIds,
       rowTruthOf,
