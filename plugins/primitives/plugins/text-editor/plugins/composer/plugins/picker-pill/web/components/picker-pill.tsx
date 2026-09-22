@@ -102,7 +102,7 @@ export function PickerPill({
           />
         }
       >
-        <Icon aria-hidden />
+        <Icon aria-hidden className="size-3.5" />
         {values.length > 0 ? (
           values.map((value, i) => cloneElement(value, { key: value.key ?? i }))
         ) : (

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
-import { MdStickyNote2 } from "react-icons/md";
+import { MdOutlineArticle } from "react-icons/md";
 import { prepromptLaunchOption } from "../core";
 import { PrepromptLaunchControl } from "./components/preprompt-control";
 import {
@@ -27,7 +27,7 @@ export default {
       // what the agent is told, which belongs beside the prose rather than with
       // the run controls.
       pill: {
-        icon: MdStickyNote2,
+        icon: MdOutlineArticle,
         Value: PrepromptPillValue,
         MenuGroup: PrepromptPillMenu,
         side: "start",

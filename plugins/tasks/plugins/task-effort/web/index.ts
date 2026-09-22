@@ -4,7 +4,7 @@ import {
   EFFORT_REGISTRY,
   EFFORT_UNSET_LABEL,
 } from "@plugins/conversations/plugins/effort-provider/core";
-import { MdBarChart } from "react-icons/md";
+import { MdSignalCellularAlt } from "react-icons/md";
 import { effortLaunchOption } from "../core";
 import { EffortLaunchControl } from "./components/effort-control";
 import { EffortPillValue, EffortPillMenu } from "./components/effort-pill";
@@ -27,7 +27,7 @@ export default {
       // Shares the `run` cluster with the auto-start model: on a composer bar
       // the two read as one control — the model, then how hard it thinks.
       pill: {
-        icon: MdBarChart,
+        icon: MdSignalCellularAlt,
         Value: EffortPillValue,
         // Fused with the model, so it is always on screen: unset it reads
         // "Auto" rather than disappearing out from under the user.

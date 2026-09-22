@@ -74,7 +74,16 @@ export function ComposerField({
               </Cluster>
             )}
             {hasBar && (
-              <Line className={cn("gap-xs", insetClass({ x: "xs", y: "xs" }))}>
+              // The bar owns its icons' tone the way it owns their density:
+              // every glyph on it — a pill's, an icon button's — sits dimmed
+              // beside the labels, so one control cannot read brighter than
+              // its neighbours because it happens to be a different widget.
+              <Line
+                className={cn(
+                  "gap-xs [&_svg]:opacity-70",
+                  insetClass({ x: "xs", y: "xs" }),
+                )}
+              >
                 {barStart}
                 {/* The empty flexible cell: everything after it sits flush
                     right, in its own track rather than floating over the

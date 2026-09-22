@@ -1,5 +1,9 @@
 import type { IconType } from "react-icons";
-import { MdArrowDownward, MdArrowUpward, MdTripOrigin } from "react-icons/md";
+import {
+  MdAdjust,
+  MdSubdirectoryArrowRight,
+  MdTurnRight,
+} from "react-icons/md";
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
@@ -19,19 +23,19 @@ const CHOICES: DependencyChoice[] = [
     value: undefined,
     label: "As separate task",
     short: "Separate",
-    icon: MdTripOrigin,
+    icon: MdAdjust,
   },
   {
     value: "followup",
     label: "As follow up",
     short: "Follow-up",
-    icon: MdArrowDownward,
+    icon: MdSubdirectoryArrowRight,
   },
   {
     value: "prerequisite",
     label: "As prerequisite",
     short: "Prerequisite",
-    icon: MdArrowUpward,
+    icon: MdTurnRight,
   },
 ];
 
@@ -49,7 +53,7 @@ export interface DependencyPillProps {
  *
  * Unset it reads "Dependency" and stays plain — an independent task is the
  * absence of an edge, not a choice you made. Pick either edge and the trigger
- * reads it back and tints, so a card that will be wired to another task says so
+ * reads it back — its icon and its name — and tints, so a card that will be wired to another task says so
  * without opening anything.
  */
 export function DependencyPill({
@@ -65,7 +69,7 @@ export function DependencyPill({
 
   return (
     <PickerPill
-      icon={MdTripOrigin}
+      icon={chosen ? chosen.icon : MdAdjust}
       placeholder="Dependency"
       highlight={value !== undefined}
       disabled={disabled}
