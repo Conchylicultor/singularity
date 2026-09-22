@@ -58,7 +58,6 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `tasks/task-description`
-    - `tasks/task-draft-form`
     - `ui/tab-bar`
     - `ui/tab-bar/chip`
     - `ui/tab-bar/connected`

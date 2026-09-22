@@ -128,7 +128,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `screenshot`
     - `shell/health-report`
     - `shell/notifications`
-    - `tasks/task-draft-form`
     - `tasks/task-graph`
     - `tasks/task-status`
     - `ui/tab-bar`

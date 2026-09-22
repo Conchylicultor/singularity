@@ -6,6 +6,7 @@ export type {
   PickerPillValueProps,
   PickerPillGroupProps,
   PickerPillItemProps,
+  PickerPillCheckProps,
 } from "./components/picker-pill";
 
 export default {

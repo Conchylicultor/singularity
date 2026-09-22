@@ -1,26 +1,14 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { CSSProperties } from "react";
-import { MdClose, MdDragIndicator } from "react-icons/md";
+import { MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
 import { TaskDraftComposer } from "./task-draft-composer";
-import {
-  InsertBeforeChildren,
-  type ChildEntry,
-} from "./insert-before-children";
+import type { DependencyExtras } from "./dependency-pill";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 export interface TaskDraftCardProps {
@@ -30,11 +18,11 @@ export interface TaskDraftCardProps {
   /** Contributed launch-option values, keyed by option id. */
   launchOptions: LaunchOptionValues;
   autoFocus: boolean;
-  removable: boolean;
+  /** Whether the card shows its drag grip — only when there is something to reorder against. */
+  movable: boolean;
   disabled: boolean;
   onTextChange: (next: string) => void;
   onLaunchOptionsChange: (next: LaunchOptionValues) => void;
-  onRemove: () => void;
   onSubmitChord: () => void;
   isHead?: boolean;
   /**
@@ -54,14 +42,8 @@ export interface TaskDraftCardProps {
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
   showIndependentRelate?: boolean;
-  // Insert-before-children (follow-up with children).
-  relateTaskChildren?: ChildEntry[];
-  insertBeforeIds?: Set<string>;
-  onInsertBeforeChange?: (next: Set<string>) => void;
-  // Standalone prerequisite.
-  standalone?: boolean;
-  onStandaloneChange?: (next: boolean) => void;
-  showStandalone?: boolean;
+  /** The mode's extra choices, shown inside the Dependency menu. */
+  relateExtras?: DependencyExtras | undefined;
 }
 
 export function TaskDraftCard({
@@ -70,11 +52,10 @@ export function TaskDraftCard({
   text,
   launchOptions,
   autoFocus,
-  removable,
+  movable,
   disabled,
   onTextChange,
   onLaunchOptionsChange,
-  onRemove,
   onSubmitChord,
   isHead = false,
   insertRef: hostInsertRef,
@@ -83,17 +64,13 @@ export function TaskDraftCard({
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
-  relateTaskChildren,
-  insertBeforeIds,
-  onInsertBeforeChange,
-  standalone,
-  onStandaloneChange,
-  showStandalone,
+  relateExtras,
 }: TaskDraftCardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -112,87 +89,53 @@ export function TaskDraftCard({
       ref={setNodeRef}
       style={style}
       data-card-index={index}
-      {...attributes}
-      {...listeners}
       className={cn(
         // No border and no padding of its own: the composer field below is the
-        // card's only box. What is left here is the drag host — the thing you
-        // grab, and what the hover affordances at its corner hang off.
-        hoverRevealGroup,
-        "relative cursor-grab active:cursor-grabbing",
+        // card's only box. This is the box that moves while dragging, and what
+        // the grip is pinned to — the grip alone starts a drag, so selecting
+        // text in the field never does.
+        "group/card relative",
         isDragging && "opacity-50 shadow-lg",
       )}
     >
-      {/* Remove and the drag hint, together at the card's top-right corner and
-          revealed on hover — the field's bar has no room for chrome that is
-          about the card rather than about the task. */}
-      <Pin to="top-right" offset="xs">
-        <Line className={cn("gap-2xs", hoverRevealTarget)}>
-          {removable && (
-            <IconButton
-              icon={MdClose}
-              label="Remove task"
-              onClick={onRemove}
-              disabled={disabled}
-            />
-          )}
-          <MdDragIndicator
-            aria-hidden
-            className="pointer-events-none size-3 text-muted-foreground/30"
-          />
-        </Line>
-      </Pin>
-      <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
-        <TaskDraftComposer
-          cardId={cardId}
-          text={text}
-          launchOptions={launchOptions}
-          autoFocus={autoFocus}
-          disabled={disabled}
-          onTextChange={onTextChange}
-          onLaunchOptionsChange={onLaunchOptionsChange}
-          onSubmitChord={onSubmitChord}
-          isHead={isHead}
-          insertRef={hostInsertRef}
-          includeUrl={includeUrl}
-          onToggleUrl={onToggleUrl}
-          relate={
-            showRelate
-              ? {
-                  value: relateMode,
-                  onChange: onRelateModeChange!,
-                  showIndependent: showIndependentRelate,
-                }
-              : null
-          }
-        />
-      </div>
-      {relateTaskChildren &&
-        relateTaskChildren.length > 0 &&
-        insertBeforeIds &&
-        onInsertBeforeChange && (
-          <InsertBeforeChildren
-            children={relateTaskChildren}
-            selectedIds={insertBeforeIds}
-            onChange={onInsertBeforeChange}
+      <TaskDraftComposer
+        cardId={cardId}
+        text={text}
+        launchOptions={launchOptions}
+        autoFocus={autoFocus}
+        disabled={disabled}
+        onTextChange={onTextChange}
+        onLaunchOptionsChange={onLaunchOptionsChange}
+        onSubmitChord={onSubmitChord}
+        isHead={isHead}
+        insertRef={hostInsertRef}
+        includeUrl={includeUrl}
+        onToggleUrl={onToggleUrl}
+        relate={
+          showRelate
+            ? {
+                value: relateMode,
+                onChange: onRelateModeChange!,
+                showIndependent: showIndependentRelate,
+                extras: relateExtras,
+              }
+            : null
+        }
+      />
+      {/* Always visible once there is a second card — a hover-only handle reads
+          as "there is no handle" — and dimmed until the card is hovered. */}
+      {movable && (
+        <Pin to="top-right" offset="xs">
+          <IconButton
+            ref={setActivatorNodeRef}
+            icon={MdDragIndicator}
+            label="Drag to reorder"
             disabled={disabled}
+            {...attributes}
+            {...listeners}
+            className="cursor-grab opacity-60 transition-opacity focus-visible:opacity-100 active:cursor-grabbing group-hover/card:opacity-100"
           />
-        )}
-      {showStandalone && onStandaloneChange && (
-        <Inset x="sm" y="xs">
-          <Text as="label" variant="caption" tone="muted">
-            <Stack direction="row" align="center" gap="xs">
-              <input
-                type="checkbox"
-                className="h-3 w-3"
-                checked={!!standalone}
-                disabled={disabled}
-                onChange={(e) => onStandaloneChange(e.target.checked)}
-              />
-              Standalone (don't inherit existing dependencies)
-            </Stack>
-          </Text>
-        </Inset>
+        </Pin>
       )}
     </Stack>
   );

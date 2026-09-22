@@ -21,6 +21,13 @@ The head card honors one extra knob:
   `follow-up` makes the new task wait on `relate.taskId`. `prerequisite` makes
   `relate.taskId` wait on the new task.
 
+  The mode's extra choices live inside that Dependency menu, as checkbox rows
+  that toggle without closing it: a follow-up of a task with children gets an
+  "Insert before" group (one box per child, all checked by default); a
+  prerequisite of a task that already has dependencies gets "Standalone —
+  don't inherit existing dependencies". The form builds them as the head card's
+  `DependencyExtras`; nothing about them renders under the card.
+
 Every card carries one context toggle — **URL**, which attaches
 `window.location.href` to the filed task. It is not configurable per host: every
 surface that drafts a task is somewhere, and that somewhere is worth recording.
@@ -30,18 +37,40 @@ tracks the app the form is rendered in rather than the stale localStorage draft.
 
 Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
-## Card vs composer, and the composer specimen
+## Card vs composer, and the two specimens
 
-A card is two layers. `TaskDraftCard` is the chain chrome: drag handle, remove
-button, the head card's insert-before / standalone extras. `TaskDraftComposer`
-is the task itself: the field, the URL toggle, the prose actions and the
-launch-option pills — with no dnd-kit dependency, so it renders on its own.
+A card is two layers. `TaskDraftCard` is the chain chrome: only the drag grip,
+pinned to its top-right corner. The grip is the one place a drag starts (so
+selecting text in the field never drags), it shows only once there are 2+ cards,
+and it is always visible — dimmed until the card is hovered. A focused grip also
+reorders from the keyboard (Space, ↑/↓, Space). `TaskDraftComposer` is the task
+itself: the field, the URL toggle, the prose actions and the launch-option pills
+— with no dnd-kit dependency, so it renders on its own.
 
-That is what the plugin exhibits as a specimen (`plugin-meta/specimens`, id
-`task-draft/composer`): `ComposerSpecimen` holds its own text / options / URL
-state, seeded from the same defaults, and never submits. A prototype mocking
-the Improve composer compares against it with
+Removing a task is not the card's job. Between two cards sits a
+`ChainConnector`, a labelled row ("Then, once task 1 is done", or "In parallel —
+doesn't wait for task 1" with a dashed rule) with three always-visible buttons:
+link/unlink, insert a task here, and remove the task BELOW it. The first card has
+no connector, so the form header's × covers it: with 2+ tasks it removes task 1
+(task 2 becomes the head and takes over the head-only controls), with one task
+left it closes the popover. Every task therefore has exactly one ×, and its
+label says which action a click will take.
+
+The footer holds "+ Follow-up task" (appends a card) on the left, then Cancel and
+"Create task" / "Create N tasks" with its ⌘↵ hint.
+
+The composer alone is what the plugin exhibits as a specimen
+(`plugin-meta/specimens`, id `task-draft/composer`): `ComposerSpecimen` holds
+its own text / options / URL state, seeded from the same defaults, and never
+submits. A prototype mocking the Improve composer compares against it with
 `<meta name="mocks" content="component:task-draft/composer">`.
+
+The whole form is the second specimen, id `task-draft/form`: `FormSpecimen`
+renders `TaskDraftForm` (header, chain, connectors, footer) over local card
+state, with the Dependency pill on as when Improve is opened from a task. Add,
+reorder, link and remove all work; Create and Cancel do nothing. A prototype
+mocking the Improve popover compares against it with
+`<meta name="mocks" content="component:task-draft/form">`.
 
 ## Inserting into a draft
 
@@ -71,6 +100,7 @@ silently destroy work in progress — hence a request type rather than an `initi
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `Specimens.Specimen` "task-draft/composer" → `ComposerSpecimen`
+    - `Specimens.Specimen` "task-draft/form" → `FormSpecimen`
   - Uses:
     - `apps-core.useCurrentAppId`
     - `config_v2.ConfigV2`
@@ -78,23 +108,20 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `plugin-meta/specimens.Specimens`
-    - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
-    - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`

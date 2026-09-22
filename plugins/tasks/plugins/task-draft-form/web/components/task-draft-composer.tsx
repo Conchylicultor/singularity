@@ -9,7 +9,7 @@ import {
   LaunchOptionPills,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
-import { DependencyPill } from "./dependency-pill";
+import { DependencyPill, type DependencyExtras } from "./dependency-pill";
 import { TaskDraftFormSlots } from "../slots";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
@@ -39,6 +39,7 @@ export interface TaskDraftComposerProps {
     value: TaskChainRelateMode | undefined;
     onChange: (next: TaskChainRelateMode | undefined) => void;
     showIndependent?: boolean | undefined;
+    extras?: DependencyExtras | undefined;
   } | null;
 }
 
@@ -170,6 +171,7 @@ function CardBarStart({
           value={relate.value}
           onChange={relate.onChange}
           showIndependent={relate.showIndependent}
+          extras={relate.extras}
           disabled={disabled}
         />
       )}

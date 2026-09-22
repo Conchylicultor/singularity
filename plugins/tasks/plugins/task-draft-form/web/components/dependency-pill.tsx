@@ -39,12 +39,34 @@ const CHOICES: DependencyChoice[] = [
   },
 ];
 
+/** A task that already follows the current one — a candidate to insert before. */
+export interface ChildEntry {
+  id: string;
+  title: string;
+}
+
+/**
+ * Per-mode options shown under the menu's choices, each only while its mode is
+ * picked. Absent (or an empty child list) means the mode has none.
+ */
+export interface DependencyExtras {
+  /** Follow-up: which of the current task's dependents the new task goes before. */
+  insertBefore?: {
+    children: ChildEntry[];
+    selected: Set<string>;
+    onChange: (next: Set<string>) => void;
+  };
+  /** Prerequisite: skip inheriting the current task's own dependencies. */
+  standalone?: { checked: boolean; onChange: (next: boolean) => void };
+}
+
 export interface DependencyPillProps {
   value: TaskChainRelateMode | undefined;
   onChange: (next: TaskChainRelateMode | undefined) => void;
   /** Offer the "As separate task" row — only where dropping the edge is allowed. */
   showIndependent?: boolean;
   disabled?: boolean;
+  extras?: DependencyExtras;
 }
 
 /**
@@ -55,17 +77,28 @@ export interface DependencyPillProps {
  * absence of an edge, not a choice you made. Pick either edge and the trigger
  * reads it back — its icon and its name — and tints, so a card that will be wired to another task says so
  * without opening anything.
+ *
+ * The picked mode's options sit under the choices in the same menu, as check
+ * rows that toggle without closing it: follow-up lists the current task's
+ * dependents to insert the new task before, prerequisite offers "Standalone".
+ * A mode with nothing to offer adds no group.
  */
 export function DependencyPill({
   value,
   onChange,
   showIndependent,
   disabled,
+  extras,
 }: DependencyPillProps) {
   const choices = showIndependent
     ? CHOICES
     : CHOICES.filter((choice) => choice.value !== undefined);
   const chosen = value && CHOICES.find((choice) => choice.value === value);
+  const insertBefore =
+    value === "followup" && extras?.insertBefore?.children.length
+      ? extras.insertBefore
+      : undefined;
+  const standalone = value === "prerequisite" ? extras?.standalone : undefined;
 
   return (
     <PickerPill
@@ -89,6 +122,40 @@ export function DependencyPill({
           </PickerPill.Item>
         ))}
       </PickerPill.Group>
+      {insertBefore && (
+        <PickerPill.Group title="Insert before">
+          {insertBefore.children.map((child) => (
+            <PickerPill.Check
+              key={child.id}
+              checked={insertBefore.selected.has(child.id)}
+              onCheckedChange={(checked) => {
+                const next = new Set(insertBefore.selected);
+                if (checked) next.add(child.id);
+                else next.delete(child.id);
+                insertBefore.onChange(next);
+              }}
+              disabled={disabled}
+            >
+              <span title={child.title}>{truncate(child.title, 50)}</span>
+            </PickerPill.Check>
+          ))}
+        </PickerPill.Group>
+      )}
+      {standalone && (
+        <PickerPill.Group title="Options">
+          <PickerPill.Check
+            checked={standalone.checked}
+            onCheckedChange={standalone.onChange}
+            disabled={disabled}
+          >
+            Standalone — don't inherit existing dependencies
+          </PickerPill.Check>
+        </PickerPill.Group>
+      )}
     </PickerPill>
   );
+}
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max - 1) + "…";
 }

@@ -24411,7 +24411,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot`
               - `shell/health-report`
               - `shell/notifications`
-              - `tasks/task-draft-form`
               - `tasks/task-graph`
               - `tasks/task-status`
               - `ui/tab-bar`
@@ -24995,7 +24994,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `runs/run-outcome`
               - `tasks/attempt-view`
               - `tasks/task-deps-tree`
-              - `tasks/task-draft-form`
               - `tasks/task-status`
               - `ui/segmented-progress-bar/dots`
               - `ui/theme-engine/theme-customizer`
@@ -28572,7 +28570,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/inline-chip`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
-          - `tasks/task-draft-form`
           - `ui/tab-bar`
           - `ui/tab-bar/chip`
           - `ui/tab-bar/connected`
@@ -29969,6 +29966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/search`
               - `primitives/sync-status`
               - `primitives/ui-context/element-picker`
+              - `tasks/task-draft-form`
               - `ui/segmented-progress-bar/dots`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
@@ -31167,12 +31165,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/css/ui-kit.DropdownMenu`
+                  - `primitives/css/ui-kit.DropdownMenuCheckboxItem`
                   - `primitives/css/ui-kit.DropdownMenuContent`
                   - `primitives/css/ui-kit.DropdownMenuItem`
                   - `primitives/css/ui-kit.DropdownMenuSection`
                   - `primitives/css/ui-kit.DropdownMenuSeparator`
                   - `primitives/css/ui-kit.DropdownMenuTrigger`
                 - Exports (types):
+                  - `PickerPillCheckProps`
                   - `PickerPillGroupProps`
                   - `PickerPillItemProps`
                   - `PickerPillProps`
@@ -33906,6 +33906,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `ConfigV2.WebRegister` "config"
           - `Specimens.Specimen` "task-draft/composer" → `ComposerSpecimen`
+          - `Specimens.Specimen` "task-draft/form" → `FormSpecimen`
         - Uses:
           - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
@@ -33913,23 +33914,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
           - `plugin-meta/specimens.Specimens`
-          - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
-          - `primitives/css/inline.Inline`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/overlay/tooltip.Kbd`
           - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`

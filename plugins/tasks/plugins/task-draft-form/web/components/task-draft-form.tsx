@@ -1,8 +1,9 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { MdAdd, MdScience } from "react-icons/md";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { MdAdd, MdClose, MdScience } from "react-icons/md";
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -11,14 +12,18 @@ import {
 import {
   SortableContext,
   arrayMove,
+  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
-import type { ChildEntry } from "./insert-before-children";
+import type { ChildEntry, DependencyExtras } from "./dependency-pill";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 import {
   useLaunchOptionDefaults,
@@ -62,7 +67,6 @@ export interface TaskDraftFormProps {
   onStandaloneChange?: (next: boolean) => void;
   showStandalone?: boolean;
   heading?: string;
-  footerStart?: ReactNode;
   /**
    * Receives the head card editor's insert-at-caret handle while it is mounted,
    * so the host can route programmatic inserts (see `TaskDraftPopover`'s insert
@@ -110,13 +114,16 @@ export function TaskDraftForm({
   onStandaloneChange,
   showStandalone,
   heading,
-  footerStart,
   headInsertRef,
 }: TaskDraftFormProps) {
   const isAgentWorktree = useIsAgentWorktree();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    // A focused grip moves with Space, then ↑/↓, then Space to drop.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   useEffect(() => {
@@ -172,6 +179,28 @@ export function TaskDraftForm({
     onCardsChange(next);
   };
 
+  // The mode's extra choices ride in the head card's Dependency menu: which of
+  // the related task's children a follow-up goes before, and whether a
+  // prerequisite stands alone. Each only when it has something to say.
+  const headExtras: DependencyExtras = {
+    insertBefore:
+      relateMode === "followup" &&
+      relateTaskChildren &&
+      relateTaskChildren.length > 0 &&
+      insertBeforeIds &&
+      onInsertBeforeChange
+        ? {
+            children: relateTaskChildren,
+            selected: insertBeforeIds,
+            onChange: onInsertBeforeChange,
+          }
+        : undefined,
+    standalone:
+      relateMode === "prerequisite" && showStandalone && onStandaloneChange
+        ? { checked: !!standalone, onChange: onStandaloneChange }
+        : undefined,
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
     setDraggingId(null);
     const { active, over } = event;
@@ -200,13 +229,26 @@ export function TaskDraftForm({
           </Text>
         </Stack>
       )}
-      <Text
-        as="div"
-        variant="caption"
-        className="text-muted-foreground font-medium"
-      >
-        {heading ?? "Draft tasks"}
-      </Text>
+      <Line className="gap-sm">
+        <Fill>
+          <Text as="h2" variant="subheading">
+            {heading ?? "Draft tasks"}
+          </Text>
+        </Fill>
+        {/* The first card has no connector to carry its ×, so the header's
+            stands in: with a chain it drops task 1 (task 2 becomes the head);
+            with one task left there is nothing to drop, so it closes. */}
+        {isMulti ? (
+          <IconButton
+            icon={MdClose}
+            label="Remove task 1"
+            onClick={() => removeAt(0)}
+            disabled={submitting}
+          />
+        ) : (
+          <IconButton icon={MdClose} label="Close" onClick={onCancel} />
+        )}
+      </Line>
 
       <DndContext
         sensors={sensors}
@@ -226,9 +268,11 @@ export function TaskDraftForm({
                   {idx > 0 && (
                     <ChainConnector
                       linked={card.linkedToPrev}
+                      prevNumber={idx}
                       onToggle={() => toggleLink(idx)}
-                      disabled={submitting || !!draggingId}
                       onInsert={() => insertAt(idx)}
+                      onRemove={() => removeAt(idx)}
+                      disabled={submitting || !!draggingId}
                     />
                   )}
                   <TaskDraftCard
@@ -239,13 +283,12 @@ export function TaskDraftForm({
                     text={card.text}
                     launchOptions={card.options}
                     autoFocus={autoFocusId === card.localId}
-                    removable={cards.length > 1}
+                    movable={isMulti}
                     disabled={submitting}
                     onTextChange={(t) => updateCard(idx, { text: t })}
                     onLaunchOptionsChange={(o) =>
                       updateCard(idx, { options: o })
                     }
-                    onRemove={() => removeAt(idx)}
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();
                     }}
@@ -256,30 +299,7 @@ export function TaskDraftForm({
                     showIndependentRelate={
                       isHead ? showIndependentRelate : undefined
                     }
-                    relateTaskChildren={
-                      isHead && relateMode === "followup"
-                        ? relateTaskChildren
-                        : undefined
-                    }
-                    insertBeforeIds={isHead ? insertBeforeIds : undefined}
-                    onInsertBeforeChange={
-                      isHead ? onInsertBeforeChange : undefined
-                    }
-                    standalone={
-                      isHead && relateMode === "prerequisite"
-                        ? standalone
-                        : undefined
-                    }
-                    onStandaloneChange={
-                      isHead && relateMode === "prerequisite"
-                        ? onStandaloneChange
-                        : undefined
-                    }
-                    showStandalone={
-                      isHead && relateMode === "prerequisite"
-                        ? showStandalone
-                        : undefined
-                    }
+                    relateExtras={isHead ? headExtras : undefined}
                   />
                 </Fragment>
               );
@@ -288,33 +308,28 @@ export function TaskDraftForm({
         </SortableContext>
       </DndContext>
 
-      <Stack align="start" gap="none">
+      <Line className="gap-sm">
         <Button
           variant="ghost"
           onClick={appendChainCard}
           loading={submitting}
           className="text-muted-foreground"
         >
-          <MdAdd className="size-3.5" />+ task
+          <MdAdd className="size-3.5" />
+          Follow-up task
         </Button>
-      </Stack>
-
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        className="border-border border-t pt-sm"
-      >
-        {footerStart}
-        {/* Empty grow cell: it absorbs the slack so Cancel/Submit sit flush-right. */}
+        {/* Empty grow cell: it absorbs the slack so Cancel/Create sit flush-right. */}
         <Fill />
         <Button variant="ghost" onClick={onCancel} loading={submitting}>
           Cancel
         </Button>
         <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
-          {isMulti ? "Submit chain" : "Submit"}
+          {isMulti ? `Create ${cards.length} tasks` : "Create task"}
+          <Kbd className="border-transparent bg-primary-foreground/15 text-primary-foreground">
+            ⌘↵
+          </Kbd>
         </Button>
-      </Stack>
+      </Line>
     </Stack>
   );
 }

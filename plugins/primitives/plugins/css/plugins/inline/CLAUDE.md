@@ -125,7 +125,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `runs/run-outcome`
     - `tasks/attempt-view`
     - `tasks/task-deps-tree`
-    - `tasks/task-draft-form`
     - `tasks/task-status`
     - `ui/segmented-progress-bar/dots`
     - `ui/theme-engine/theme-customizer`

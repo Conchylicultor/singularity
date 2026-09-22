@@ -1,84 +1,100 @@
-import { MdAdd, MdArrowDownward, MdLink, MdLinkOff } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import {
+  MdAdd,
+  MdArrowDownward,
+  MdClose,
+  MdLink,
+  MdLinkOff,
+  MdPause,
+} from "react-icons/md";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
 export interface ChainConnectorProps {
+  /** Whether the task below waits for the task above. */
   linked: boolean;
+  /** The 1-based number of the task above; the task below is `prevNumber + 1`. */
+  prevNumber: number;
   onToggle: () => void;
-  disabled?: boolean;
   onInsert: () => void;
+  /** Removes the task BELOW this connector — the one it belongs to. */
+  onRemove: () => void;
+  disabled?: boolean;
 }
 
-export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainConnectorProps) {
-  if (!linked) {
-    return (
-      <Center className={cn(hoverRevealGroup, "group/connector relative h-3")}>
-        <div className="border-muted-foreground/20 w-full border-t border-dashed" />
-        <Pin
-          to="center"
-          as="span"
-          className="text-muted-foreground/40 text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0"
-        >
-          ∥ parallel
-        </Pin>
-        <Pin to="center">
-          <button
-            type="button"
-            onClick={onToggle}
-            disabled={disabled}
-            aria-label="Link tasks (run sequentially)"
-            title="Link tasks (run sequentially)"
-            className={cn(hoverRevealTarget, "text-muted-foreground hover:text-foreground size-5 rounded-full focus-visible:opacity-100 disabled:pointer-events-none")}
-          >
-            <Center className="size-full">
-              <MdLink className="size-3.5" />
-            </Center>
-          </button>
-        </Pin>
-      </Center>
-    );
-  }
-
+/**
+ * The row between two cards. It says, in words, whether the task below waits
+ * for the one above, and carries the three things you can do at that spot:
+ * flip the link, insert a task here, remove the task below. The buttons are
+ * always visible — a connector whose actions only appear on hover reads as a
+ * decoration.
+ *
+ * It owns the task below's ×, so every card but the first has exactly one; the
+ * first card's is the form header's.
+ */
+export function ChainConnector({
+  linked,
+  prevNumber,
+  onToggle,
+  onInsert,
+  onRemove,
+  disabled,
+}: ChainConnectorProps) {
+  const LeadIcon = linked ? MdArrowDownward : MdPause;
   return (
-    <Center className={cn(hoverRevealGroup, "group/connector relative h-3")}>
-      <Inline
-        gap="2xs"
-        className="text-muted-foreground/60 text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0"
-      >
-        <MdArrowDownward className="size-3" />
-        <span>blocks</span>
-      </Inline>
-      <Pin to="center" className={hoverRevealTarget}>
-        <Inline gap="lg">
-          <button
-            type="button"
+    <Line className="gap-sm py-2xs text-muted-foreground">
+      <LeadIcon aria-hidden className="size-3" />
+      <Text variant="caption" tone="muted">
+        {linked
+          ? `Then, once task ${prevNumber} is done`
+          : `In parallel — doesn't wait for task ${prevNumber}`}
+      </Text>
+      {/* The hairline takes the row's slack, pushing the actions flush-right. */}
+      <Fill>
+        <div
+          aria-hidden
+          className={cn(
+            "border-t",
+            linked
+              ? "border-border"
+              : "border-dashed border-muted-foreground/40",
+          )}
+        />
+      </Fill>
+      <ControlSizeProvider size="xs">
+        {linked ? (
+          <IconButton
+            icon={MdLinkOff}
+            label="Unlink tasks (run in parallel)"
             onClick={onToggle}
             disabled={disabled}
-            aria-label="Unlink tasks (run in parallel)"
-            title="Unlink tasks (run in parallel)"
-            className="text-muted-foreground hover:text-foreground size-5 rounded-full transition-colors disabled:pointer-events-none"
-          >
-            <Center className="size-full">
-              <MdLinkOff className="size-3.5" />
-            </Center>
-          </button>
-          <button
-            type="button"
-            onClick={onInsert}
+          />
+        ) : (
+          <IconButton
+            icon={MdLink}
+            label="Link tasks (run sequentially)"
+            onClick={onToggle}
             disabled={disabled}
-            aria-label="Insert task here"
-            title="Insert task here"
-            className="bg-primary text-primary-foreground size-5 rounded-full shadow disabled:pointer-events-none"
-          >
-            <Center className="size-full">
-              <MdAdd className="size-3.5" />
-            </Center>
-          </button>
-        </Inline>
-      </Pin>
-    </Center>
+          />
+        )}
+        <IconButton
+          icon={MdAdd}
+          label="Insert a task here"
+          onClick={onInsert}
+          disabled={disabled}
+        />
+        <IconButton
+          icon={MdClose}
+          label={`Remove task ${prevNumber + 1}`}
+          onClick={onRemove}
+          disabled={disabled}
+        />
+      </ControlSizeProvider>
+    </Line>
   );
 }

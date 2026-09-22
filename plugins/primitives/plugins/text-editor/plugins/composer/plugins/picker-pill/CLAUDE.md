@@ -22,6 +22,8 @@ hand-rolled its own checkmarks.
 - **No `Value` children ⇒ the muted `placeholder`.** That is the unset look.
 - **`highlight`** paints the accent-tinted set state. One pill, one highlight —
   so a fused pill never tints (which group would it be claiming?).
+- **A `Check` row toggles without closing the menu** — an independent on/off
+  option inside a group, beside the group's mutually exclusive `Item`s.
 - A child that is neither `Value` nor `Group` **throws**: silently dropping it
   would look exactly like the value being unset.
 
@@ -38,12 +40,14 @@ hand-rolled its own checkmarks.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DropdownMenu`
+    - `primitives/css/ui-kit.DropdownMenuCheckboxItem`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuSection`
     - `primitives/css/ui-kit.DropdownMenuSeparator`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
   - Exports (types):
+    - `PickerPillCheckProps`
     - `PickerPillGroupProps`
     - `PickerPillItemProps`
     - `PickerPillProps`

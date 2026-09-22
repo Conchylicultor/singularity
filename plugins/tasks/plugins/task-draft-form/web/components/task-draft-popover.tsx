@@ -68,7 +68,6 @@ export interface TaskDraftPopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
-  footerStart?: ReactNode;
   onSuccess?: (taskIds: string[]) => void;
 }
 
@@ -96,7 +95,6 @@ function TaskDraftFormContent({
   setStandalone,
   target,
   heading,
-  footerStart,
   onSuccess,
   headInsertRef,
 }: {
@@ -121,7 +119,6 @@ function TaskDraftFormContent({
   setStandalone: (v: boolean) => void;
   target: TaskChainTarget;
   heading: string | undefined;
-  footerStart: ReactNode;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
@@ -184,7 +181,6 @@ function TaskDraftFormContent({
       relateTaskChildren={relateTaskChildren}
       relateTaskHasDeps={relateTaskHasDeps}
       heading={heading}
-      footerStart={footerStart}
       onSuccess={onSuccess}
       headInsertRef={headInsertRef}
     />
@@ -217,7 +213,6 @@ function InsertBeforeForm({
   relateTaskChildren,
   relateTaskHasDeps,
   heading,
-  footerStart,
   onSuccess,
   headInsertRef,
 }: {
@@ -243,7 +238,6 @@ function InsertBeforeForm({
   relateTaskChildren: { id: string; title: string }[];
   relateTaskHasDeps: boolean;
   heading: string | undefined;
-  footerStart: ReactNode;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
@@ -353,7 +347,6 @@ function InsertBeforeForm({
       onStandaloneChange={setStandalone}
       showStandalone={relateTaskHasDeps}
       heading={heading}
-      footerStart={footerStart}
       headInsertRef={headInsertRef}
     />
   );
@@ -368,7 +361,6 @@ export function TaskDraftPopover({
   open: controlledOpen,
   onOpenChange,
   heading,
-  footerStart,
   onSuccess,
 }: TaskDraftPopoverProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -526,7 +518,6 @@ export function TaskDraftPopover({
             setStandalone={setStandalone}
             target={target}
             heading={heading}
-            footerStart={footerStart}
             onSuccess={onSuccess}
             headInsertRef={headInsertRef}
           />

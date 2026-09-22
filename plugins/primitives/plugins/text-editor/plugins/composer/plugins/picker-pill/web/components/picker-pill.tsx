@@ -2,6 +2,7 @@ import {
   Button,
   cn,
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSection,
@@ -55,6 +56,15 @@ export interface PickerPillItemProps {
   /** Dim trailing hint ("default", a shortcut, …), shown when not selected. */
   note?: string;
   onSelect: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+export interface PickerPillCheckProps {
+  /** Optional leading glyph for this row. */
+  icon?: React.ReactNode;
+  checked: boolean;
+  onCheckedChange: (next: boolean) => void;
   disabled?: boolean;
   children: React.ReactNode;
 }
@@ -176,6 +186,34 @@ function PickerPillItem({
   );
 }
 
+/**
+ * A checkbox row of a group: an independent on/off option rather than one of a
+ * group's mutually exclusive picks. Toggling it leaves the menu open, so
+ * several checks can be flipped in one visit.
+ */
+function PickerPillCheck({
+  icon,
+  checked,
+  onCheckedChange,
+  disabled,
+  children,
+}: PickerPillCheckProps) {
+  return (
+    <DropdownMenuCheckboxItem
+      checked={checked}
+      onCheckedChange={(next) => onCheckedChange(next)}
+      closeOnClick={false}
+      disabled={disabled}
+      className="gap-lg"
+    >
+      {/* The checkbox item's grid already makes the label its one flexible
+          (truncating) cell, with the check in its own track flush right. */}
+      {icon}
+      {children}
+    </DropdownMenuCheckboxItem>
+  );
+}
+
 type PillChild = React.ReactElement<
   PickerPillValueProps | PickerPillGroupProps
 >;
@@ -223,3 +261,4 @@ function walk(node: React.ReactNode, visit: (child: PillChild) => void): void {
 PickerPill.Value = PickerPillValue;
 PickerPill.Group = PickerPillGroup;
 PickerPill.Item = PickerPillItem;
+PickerPill.Check = PickerPillCheck;
