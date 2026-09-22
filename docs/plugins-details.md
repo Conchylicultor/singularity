@@ -10987,6 +10987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/conversation-view/pending-turn.defineTurnDelivery`
                       - `conversations/conversation-view/pending-turn.sendConversationTurn`
+                      - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `infra/endpoints.fetchEndpoint`
                       - `infra/endpoints.useEndpointMutation`
                       - `primitives/css/badge.Badge`
@@ -11000,9 +11001,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/ui-kit.Button`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
+                      - `primitives/css/ui-kit.DropdownMenu`
+                      - `primitives/css/ui-kit.DropdownMenuContent`
+                      - `primitives/css/ui-kit.DropdownMenuItem`
+                      - `primitives/css/ui-kit.DropdownMenuTrigger`
                       - `primitives/css/ui-kit.Input`
                       - `primitives/live-state.useResource`
                       - `primitives/persistent-draft.useDraft`
+                      - `primitives/persistent-draft.writeDraft`
                       - `shell/notifications.toast`
                     - Exports (values): `answerQuestionDelivery`
                   - Server:
@@ -11624,7 +11630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `resumeConversationEndpoint`
-        - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.
+        - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
           - Web:
             - Contributes: `JsonlRowActions.Item` "rewind" → `RewindAction`
             - Uses:
@@ -11643,6 +11649,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.useLaunchConversation`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `shell/notifications.toast`
+            - Exports (types): `RewindMode`
+            - Exports (values): `useGoBackToMessage`
           - Server:
             - Uses:
               - `conversations.previewRewind`
@@ -11662,6 +11670,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `previewRewindEndpoint`
               - `rewindConversationEndpoint`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
             - Contributes: `Conversation.Header` → `StatusBadge`

@@ -7,12 +7,13 @@ import { ANSWER_MARKER } from "../../shared";
  * scans forward from the tool-call, bounded by the next tool-call (the window
  * for this question), and returns the first `user-text` event whose trimmed
  * text starts with `ANSWER_MARKER`. A windowed, marker-keyed lookup — not a
- * blind positional scan. Returns the event's text, or null.
+ * blind positional scan. Returns the event (its `uuid` is what a rewind cuts
+ * at), or null.
  */
 export function findAnswerTurn(
   events: JsonlEvent[] | undefined,
   toolUseId: string,
-): string | null {
+): Extract<JsonlEvent, { kind: "user-text" }> | null {
   if (!events) return null;
   const startIdx = events.findIndex(
     (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
@@ -22,7 +23,7 @@ export function findAnswerTurn(
     const e = events[i]!;
     if (e.kind === "tool-call") break; // window boundary: next tool-call
     if (e.kind === "user-text" && e.text.trim().startsWith(ANSWER_MARKER)) {
-      return e.text;
+      return e;
     }
   }
   return null;

@@ -11,6 +11,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { AnswerForm } from "./answer-form";
+import { ChangeAnswersButton } from "./change-answers-button";
 import { OptionBody, OptionRow } from "./option-row";
 import { findAnswerTurn } from "./awaiting";
 import {
@@ -112,7 +113,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   //   question with no answer turn): empty map → question rendered read-only.
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
-    answerMap = parseMarkerAnswer(answerTurn, questions);
+    answerMap = parseMarkerAnswer(answerTurn.text, questions);
   } else if (
     event.result != null &&
     !resultIsInterrupt &&
@@ -225,6 +226,18 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           <Text as="p" variant="caption" tone="destructive">
             {event.result.content}
           </Text>
+        )}
+        {/* Only an answer sent from here is a message a rewind can cut at; one
+            given in the terminal lives inside the tool result. */}
+        {answerTurn != null && (
+          <Stack direction="row" gap="none" justify="end">
+            <ChangeAnswersButton
+              convId={convId}
+              toolUseId={event.toolUseId}
+              answerUuid={answerTurn.uuid}
+              questions={questions}
+            />
+          </Stack>
         )}
       </Stack>
     </ToolCallCard>

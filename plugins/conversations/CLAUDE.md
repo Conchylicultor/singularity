@@ -344,7 +344,7 @@
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
-      - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.
+      - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
       - **`status`** — Displays the conversation status as a colored badge in the toolbar.
       - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
       - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.

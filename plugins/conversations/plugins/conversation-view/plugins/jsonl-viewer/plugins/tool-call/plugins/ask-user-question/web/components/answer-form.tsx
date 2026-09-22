@@ -11,19 +11,12 @@ import { ANSWER_MARKER } from "../../shared";
 import { answerQuestionDelivery } from "../internal/delivery";
 import { OptionBody, OptionRow } from "./option-row";
 import { type Question } from "./answer-model";
-
-// Persisted shape: `selected` is a string[] (not a Set) so the draft survives a
-// JSON round-trip through localStorage via useDraft. `otherText` is a buffer
-// that is ALWAYS preserved — selecting a preset never clears it. For
-// single-select questions, `otherActive` is the pointer that says which of the
-// two buffers (a preset in `selected`, or `otherText`) is the live answer, so
-// the user can flip between a preset and their typed text without losing
-// either. Multi-select ignores `otherActive`: there the freeform is additive.
-interface QuestionAnswer {
-  selected: string[];
-  otherText: string;
-  otherActive: boolean;
-}
+import {
+  ANSWER_DRAFT_KEY,
+  answerDraftScope,
+  emptyAnswers,
+  type QuestionAnswer,
+} from "./answer-draft";
 
 // Is the freeform "Other" row the active choice? Multi-select: active whenever
 // there is text (it's additive). Single-select: only when the pointer says so.
@@ -88,19 +81,13 @@ export function AnswerForm({
   convId: string;
   toolUseId: string;
 }) {
-  // Persist the in-progress answer like the prompt draft. Scoping by the
-  // tool-use id (unique per question) means a restored draft always belongs to
-  // the exact question still on screen, and never collides with another
-  // question in the same conversation.
+  // Persist the in-progress answer like the prompt draft (see answer-draft.ts
+  // for the scope). A rewind from the answered card writes this same draft, so
+  // the reopened form starts from the previous answer.
   const [answers, setAnswers, clearDraft] = useDraft<QuestionAnswer[]>(
-    "ask-user-question:answer",
-    () =>
-      questions.map(() => ({
-        selected: [],
-        otherText: "",
-        otherActive: false,
-      })),
-    { scope: `${convId}:${toolUseId}` },
+    ANSWER_DRAFT_KEY,
+    () => emptyAnswers(questions),
+    { scope: answerDraftScope(convId, toolUseId) },
   );
 
   const updateAnswer = (qi: number, next: QuestionAnswer) => {
