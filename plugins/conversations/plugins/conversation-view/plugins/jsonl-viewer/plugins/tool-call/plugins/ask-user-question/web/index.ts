@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { AskUserQuestionToolView } from "./components/ask-user-question-tool-view";
 import { AnswerHereButton } from "./components/answer-here-button";
+import { ChangeAnswersAction } from "./components/change-answers-action";
 import { ANSWER_MARKER } from "../shared";
 
 // Re-exported so the module EVALUATES at plugin load rather than when the
@@ -19,6 +21,10 @@ export default {
     JsonlViewerTool.Renderer({
       match: "AskUserQuestion",
       component: AskUserQuestionToolView,
+    }),
+    JsonlRowActions.Item({
+      id: "change-answers",
+      component: ChangeAnswersAction,
     }),
     JsonlViewer.PendingPrompt({
       match: "question",

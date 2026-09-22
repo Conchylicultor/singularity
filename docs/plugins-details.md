@@ -10738,7 +10738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
             - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
               - Web:
-                - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`, `conversations.conversation-view.rewind`
+                - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.user-text`, `conversations.conversation-view.rewind`
                 - Uses:
                   - `primitives/copy-to-clipboard.useCopyToClipboard`
                   - `primitives/css/ui-kit.Button`
@@ -10761,6 +10761,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card`
                   - `conversations/conversation-view/jsonl-viewer/investigate-event`
                   - `conversations/conversation-view/jsonl-viewer/tool-call`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
@@ -10996,12 +10997,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Web:
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
+                      - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
                     - Uses:
                       - `conversations/conversation-view.conversationPane`
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                      - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                      - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/conversation-view/pending-turn.defineTurnDelivery`

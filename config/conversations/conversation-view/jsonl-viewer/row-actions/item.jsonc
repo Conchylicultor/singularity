@@ -1,4 +1,4 @@
-// @hash 823a0d834b6d
+// @hash b1fc77d469c8
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -8,7 +8,8 @@
   // metadata → inspection → view toggles → copy → launch-an-agent actions, so
   // the consequential actions sit last, furthest from the pointer's resting
   // position: the two that create a conversation, then rewind — which can also
-  // remove messages from this one — at the very end.
+  // remove messages from this one — at the very end. A question's "change
+  // answers" is that same rewind for the hidden answer turn, so it sits beside it.
   "items": [
     "conversations.conversation-view.jsonl-viewer:timestamp",
     "conversations.conversation-view.jsonl-viewer:raw-json",
@@ -19,6 +20,7 @@
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
     "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
     "conversations.conversation-view.fork-session:fork-session",
-    "conversations.conversation-view.rewind:rewind"
+    "conversations.conversation-view.rewind:rewind",
+    "conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question:change-answers"
   ]
 }

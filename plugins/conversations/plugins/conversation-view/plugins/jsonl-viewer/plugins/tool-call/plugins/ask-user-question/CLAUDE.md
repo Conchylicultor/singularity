@@ -29,7 +29,9 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
 
 ## Changing an answer
 
-An answered card shows **Change answers**: go back to just before the answer
+An answered card carries a **Change answers** row action — the same small
+history glyph and menu as the rewind on the user's own messages, revealed on
+hover in the card header, never a button in the card body. It goes back to just before the answer
 was sent — in this conversation (the agent forgets everything since) or in a
 fork — and the question's form reopens with the previous answer filled in.
 
@@ -51,12 +53,15 @@ lives inside the tool result, not in a message a rewind can cut at.
 - Web:
   - Contributes:
     - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
+    - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
   - Uses:
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `conversations/conversation-view/pending-turn.defineTurnDelivery`
