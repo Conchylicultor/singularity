@@ -1,6 +1,11 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Dirent } from "node:fs";
+import {
+  isTestCodePath,
+  TESTS_DIR,
+  TESTING_FOLDER,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
@@ -23,15 +28,16 @@ import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
  */
 
 // Same directory-skip rules as `walkFiles` (`node_modules` / `plugins` /
-// `__tests__`), plus dot-dirs and build output (`dist*`) which are never plugin
-// source. `plugins` is skipped because each sub-plugin dir is walked from its
-// own root (every plugin dir is passed in), so descending into it would
-// double-read.
+// test-code dirs), plus dot-dirs and build output (`dist*`) which are never
+// plugin source. `plugins` is skipped because each sub-plugin dir is walked
+// from its own root (every plugin dir is passed in), so descending into it
+// would double-read.
 function isSkippedDir(name: string): boolean {
   return (
     name === "node_modules" ||
     name === "plugins" ||
-    name === "__tests__" ||
+    name === TESTS_DIR ||
+    name === TESTING_FOLDER ||
     name.startsWith(".") ||
     name.startsWith("dist")
   );
@@ -39,14 +45,16 @@ function isSkippedDir(name: string): boolean {
 
 // Only the file kinds the scanners pass to `readIfExists` / surface from
 // `walkFiles`. Keeps the snapshot tight while covering every read. Mirrors
-// `walkFiles`' exclusion of co-located bun:test files (`*.test.ts(x)`), which are
-// never part of a plugin's API/dep surface.
+// `walkFiles`' exclusion of test code (via `isTestCodePath`), which is never
+// part of a plugin's API/dep surface.
 function shouldRead(name: string): boolean {
   if (name === "package.json") return true;
-  return /\.(ts|tsx)$/.test(name) && !/\.test\.(ts|tsx)$/.test(name);
+  return /\.(ts|tsx)$/.test(name) && !isTestCodePath([name]);
 }
 
-export async function buildFsSnapshot(pluginDirs: string[]): Promise<FsSnapshot> {
+export async function buildFsSnapshot(
+  pluginDirs: string[],
+): Promise<FsSnapshot> {
   const files = new Map<string, string>();
   const dirs = new Map<string, Dirent[]>();
 

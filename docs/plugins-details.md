@@ -16883,6 +16883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
+          - `framework/tooling/web-artifacts`
           - `framework/web-sdk`
           - `plugin-meta/closure`
           - `plugin-meta/facets/cross-refs`
@@ -17288,9 +17289,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`
+              - `framework/plugin-id.isTestCodePath`
               - `framework/plugin-id.PLUGIN_FOLDERS`
               - `framework/plugin-id.PluginFolder`
               - `framework/plugin-id.PluginId`
+              - `framework/plugin-id.TESTING_FOLDER`
+              - `framework/plugin-id.TESTS_DIR`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
               - `framework/slot-declaration.declaredSlotSources`
               - `framework/slot-declaration.declarePluginSlots`
@@ -17759,6 +17763,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses:
+              - `framework/plugin-id.isTestCodePath`
+              - `framework/plugin-id.TESTING_FOLDER`
+              - `framework/plugin-id.TESTS_DIR`
               - `framework/web-core.findViteContributions`
               - `framework/web-core.loadBabelContributions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
@@ -23434,7 +23441,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
+          - `framework/plugin-id.isTestCodePath`
           - `framework/plugin-id.PluginId`
+          - `framework/plugin-id.TESTING_FOLDER`
+          - `framework/plugin-id.TESTS_DIR`
           - `framework/slot-declaration.declaredSlotSources`
           - `framework/slot-declaration.declarePluginSlots`
           - `packages/macrotask-yield.createTimeSlicer`

@@ -131,6 +131,9 @@ Key invariants:
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
   - Uses:
+    - `framework/plugin-id.isTestCodePath`
+    - `framework/plugin-id.TESTING_FOLDER`
+    - `framework/plugin-id.TESTS_DIR`
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
     - `infra/namespace.MAIN_COMPOSITION_ID`

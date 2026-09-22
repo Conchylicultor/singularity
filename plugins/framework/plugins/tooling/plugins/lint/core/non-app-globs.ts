@@ -24,6 +24,8 @@ export const NON_APP_FILE_GLOBS: readonly string[] = [
   "**/e2e/**/*.{ts,tsx}",
   // jsdom/React suites (plugins/<path>/web/__tests__/**) and their helpers.
   "**/__tests__/**/*.{ts,tsx}",
+  // Per-runtime test helper barrels (plugins/<path>/<runtime>/testing/).
+  "**/testing/**/*.{ts,tsx}",
   // Co-located bun:test suites (plugins/<path>/**/<name>.test.ts).
   "**/*.test.{ts,tsx}",
   // The repo-wide vitest setup/harness.

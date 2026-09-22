@@ -1,4 +1,5 @@
 import { join } from "path";
+import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   createFacet,
   getFacet,
@@ -212,7 +213,7 @@ function apiPrefixesUsedIn(dir: string): string[] {
     // not a real caller, and (unlike a marker-value scan) full masking can't
     // exclude it since the URL genuinely lives in a string — so drop the
     // fixture leg of the false positive by path.
-    if (/\.test\.tsx?$/.test(f) || f.includes("/__tests__/")) continue;
+    if (isTestCodePath(f.split("/"))) continue;
     const raw = readIfExists(f);
     // Most files name no endpoint; skip masking them.
     if (!raw?.includes("/api/")) continue;

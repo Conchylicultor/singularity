@@ -1,3 +1,4 @@
+import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
@@ -77,8 +78,7 @@ export function isImperativeReadHandle(
  */
 export function isCandidatePath(path: string, globFiles: Set<string>): boolean {
   if (!/\/server\//.test(path)) return false;
-  if (path.endsWith(".test.ts")) return false;
-  if (/\/__tests__\//.test(path)) return false;
+  if (isTestCodePath(path.split("/"))) return false;
   if (globFiles.has(path)) return false;
   return true;
 }

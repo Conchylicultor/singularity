@@ -9,6 +9,7 @@
   - Imported by:
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
+    - `framework/tooling/web-artifacts`
     - `framework/web-sdk`
     - `plugin-meta/closure`
     - `plugin-meta/facets/cross-refs`

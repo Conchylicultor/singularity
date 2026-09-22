@@ -75,7 +75,10 @@ dynamic value.
 - Core:
   - Uses:
     - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.PluginId`
+    - `framework/plugin-id.TESTING_FOLDER`
+    - `framework/plugin-id.TESTS_DIR`
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
     - `packages/macrotask-yield.createTimeSlicer`

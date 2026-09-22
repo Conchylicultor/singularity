@@ -1,3 +1,4 @@
+import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   maskSource,
@@ -49,8 +50,7 @@ const check: Check = {
     // deliberate edge-case resource shapes (including the now-banned flat keyed
     // form) precisely to exercise the runtime's defensive paths — they are not
     // app resource declarations.
-    const isTestPath = (rel: string) =>
-      /\.test\.tsx?$/.test(rel) || rel.includes("__tests__/");
+    const isTestPath = (rel: string) => isTestCodePath(rel.split("/"));
     const candidatePaths = [...new Set(matches.map((m) => m.path))].filter(
       (rel) => !isTestPath(rel),
     );

@@ -1,4 +1,9 @@
 import { join } from "path";
+import {
+  isTestCodePath,
+  TESTS_DIR,
+  TESTING_FOLDER,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { writeGenerated } from "./write-generated";
@@ -250,12 +255,16 @@ function pluginImportedIdents(src: string): Set<string> {
 const PLUGIN_SCAN_WIDTH = 16;
 
 // parse-utils' `walkFiles` predicate, over the file set instead of a directory
-// walk: `.ts`/`.tsx` that is not a co-located `*.test.ts(x)`, skipping
+// walk: `.ts`/`.tsx` that is not test code (via `isTestCodePath`), skipping
 // `node_modules`, nested `plugins/` (sub-plugins are their own nodes) and
-// `__tests__`.
+// test-code directories.
 const SOURCE_FILE_RE = /\.tsx?$/;
-const TEST_FILE_RE = /\.test\.tsx?$/;
-const SKIPPED_DIRS = new Set(["node_modules", "plugins", "__tests__"]);
+const SKIPPED_DIRS = new Set([
+  "node_modules",
+  "plugins",
+  TESTS_DIR,
+  TESTING_FOLDER,
+]);
 
 /** A plugin's source files under each of `subs`, in `subs` order. */
 function sourceFilesUnder(
@@ -269,7 +278,7 @@ function sourceFilesUnder(
     for (const rel of repo.under(base)) {
       const segments = rel.slice(base.length + 1).split("/");
       const name = segments.pop()!;
-      if (!SOURCE_FILE_RE.test(name) || TEST_FILE_RE.test(name)) continue;
+      if (!SOURCE_FILE_RE.test(name) || isTestCodePath([name])) continue;
       if (segments.some((s) => SKIPPED_DIRS.has(s))) continue;
       out.push(rel);
     }

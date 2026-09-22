@@ -19,13 +19,22 @@
 
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import {
+  isTestCodePath,
+  TESTS_DIR,
+  TESTING_FOLDER,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { computeOwnHash, type OwnFile } from "../hash";
 import { inlinedRootsFor, type ArtifactKind } from "../own-roots";
 import type { FingerprintCache, FingerprintRecord } from "./store";
 
-const SKIP_DIRS = new Set(["node_modules", "__tests__", "public"]);
-const TEST_FILE_RE = /\.test\.[jt]sx?$/;
+const SKIP_DIRS = new Set([
+  "node_modules",
+  TESTS_DIR,
+  TESTING_FOLDER,
+  "public",
+]);
 
 // Bounds concurrent file-system calls FROM THIS MODULE. Only the leaf I/O
 // calls (one `readdir` per directory, one `stat`/`readFile` per file) take a
@@ -61,7 +70,7 @@ async function walkFiles(dir: string, out: string[]): Promise<void> {
         continue;
       subdirs.push(p);
     } else if (e.isFile()) {
-      if (TEST_FILE_RE.test(e.name) || e.name === ".DS_Store") continue;
+      if (isTestCodePath([e.name]) || e.name === ".DS_Store") continue;
       out.push(p);
     }
   }

@@ -1,4 +1,8 @@
 import {
+  TESTS_DIR,
+  TESTING_FOLDER,
+} from "@plugins/framework/plugins/plugin-id/core";
+import {
   findMarkerCalls,
   lineAt,
   parseStringField,
@@ -30,6 +34,8 @@ export const SINK_PATHSPECS = [
   "*.tsx",
   ":(exclude)*.test.ts",
   ":(exclude)*.test.tsx",
+  `:(exclude)**/${TESTS_DIR}/**`,
+  `:(exclude)**/${TESTING_FOLDER}/**`,
 ];
 
 /**
