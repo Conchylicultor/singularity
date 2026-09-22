@@ -15,7 +15,8 @@ This plugin owns four things and names no kind of counterpart:
 2. **Dispatching on the kind.** `Counterpart.Kind` (`web/slots.tsx`) is a
    dispatch slot keyed on the tag. A kind is a child plugin under `plugins/`
    contributing `{ match: "<tag>", label, example, component }`. Shipped kinds:
-   `fixture` (a layout-harness fixture), `route` / `app` (the running app
+   `fixture` (a layout-harness fixture), `component` (a real component a
+   plugin exhibits as a specimen, rendered inline in the app), `route` / `app` (the running app
    at a path — the screen alone, or the whole app with its rail and tab bar;
    one plugin, two contributions), and `version` (another version of the
    prototype itself). Another kind is a new folder here and no edit to this
@@ -209,7 +210,7 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
 
 - Description: The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
 - Web:
-  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
+  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
   - Contributes:
     - `PrototypeStages.Stage` "Compare" → `CompareStage`
     - `PrototypeDetailScope` → `CompareAgainstProvider`
@@ -247,6 +248,7 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
     - `useCounterpartKinds`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/compare/component`
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/compare/version`
@@ -259,6 +261,7 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
     - `COMPARE_STATUS_ATTR`
     - `compareHalfSelector`
 - Sub-plugins:
+  - **`component`** — The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
   - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
   - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
   - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options — or the version on screen itself as another variant, with option picks of its own (version:shown). Never declared by a page: offered as "Latest version" and "Another variant" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.

@@ -18,7 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [14 sub-plugins] — Notion-like pages app.
-    - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+    - **`prototypes`** [12 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
@@ -240,6 +240,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+    - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:

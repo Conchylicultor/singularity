@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { taskDraftConfig } from "../shared/config";
+import { Specimens } from "@plugins/plugin-meta/plugins/specimens/web";
 import { TaskDraftFormSlots as TaskDraftFormSlotGroup } from "./slots";
+import { ComposerSpecimen } from "./components/composer-specimen";
 
 export { TaskDraftPopover } from "./components/task-draft-popover";
 export type {
@@ -25,6 +27,14 @@ export type { TaskDraftInsert } from "./insert-request";
 export default {
   description:
     "Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.",
-  contributions: [ConfigV2.WebRegister({ descriptor: taskDraftConfig })],
+  contributions: [
+    ConfigV2.WebRegister({ descriptor: taskDraftConfig }),
+    Specimens.Specimen({
+      match: "task-draft/composer",
+      label: "Task composer (Improve)",
+      widths: [360, 480, 640, 900],
+      component: ComposerSpecimen,
+    }),
+  ],
   slots: TaskDraftFormSlotGroup,
 } satisfies PluginDefinition;

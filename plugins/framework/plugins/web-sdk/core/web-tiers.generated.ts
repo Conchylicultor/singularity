@@ -92,6 +92,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/pages/plugins/welcome/plugins/quick-create",
   "apps/plugins/pages/plugins/welcome/plugins/recent-pages",
   "apps/plugins/prototypes/plugins/compare",
+  "apps/plugins/prototypes/plugins/compare/plugins/component",
   "apps/plugins/prototypes/plugins/compare/plugins/fixture",
   "apps/plugins/prototypes/plugins/compare/plugins/route",
   "apps/plugins/prototypes/plugins/compare/plugins/version",

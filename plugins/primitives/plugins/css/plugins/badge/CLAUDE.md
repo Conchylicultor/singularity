@@ -74,6 +74,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/mail/attachments`
     - `apps/mail/search`
     - `apps/prototypes/compare`
+    - `apps/prototypes/compare/component`
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/compare/version`

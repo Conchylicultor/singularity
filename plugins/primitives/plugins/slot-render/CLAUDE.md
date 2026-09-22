@@ -299,6 +299,7 @@ the outcome too, with no separate code path.
     - `improve`
     - `page/editor`
     - `page/page-reference`
+    - `plugin-meta/specimens`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/breadcrumb`

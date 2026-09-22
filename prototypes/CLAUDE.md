@@ -122,6 +122,10 @@ The gallery reads these out of your HTML — there is no metadata file.
     Lab fixture id.
   - `route:/agents/c/123` — a whole app **screen**: the running app itself,
     framed at that in-app path (no rail, no tab bar).
+  - `component:task-draft/composer` — one real app **component** as the
+    running app renders it (real slots, config, data), by the id its owning
+    plugin exhibits it under (`plugin-meta/specimens`). For an element that
+    lives inside a popover or deep in a screen, which `route:` cannot reach.
   - `app:/agents` — the **whole app**, chrome included: the running app at that
     path with its rail, tab bar and action bar, as a person sees it in their own
     tab. For a mock of the chrome itself, or of a theme across chrome and screen.

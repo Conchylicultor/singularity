@@ -3616,7 +3616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Register: `defineJob('prototypes.checkpoint-turn')`
         - **`compare`** — The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
           - Web:
-            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
+            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
             - Contributes:
               - `PrototypeStages.Stage` "Compare" → `CompareStage`
               - `PrototypeDetailScope` → `CompareAgainstProvider`
@@ -3654,6 +3654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useCounterpartKinds`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/compare/component`
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
               - `apps/prototypes/compare/version`
@@ -3666,6 +3667,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `COMPARE_STATUS_ATTR`
               - `compareHalfSelector`
           - Plugins:
+            - **`component`** — The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
+              - Web:
+                - Contributes: `Counterpart.Kind` "Live component" → `ComponentCounterpart`
+                - Uses:
+                  - `apps/prototypes/compare.Counterpart`
+                  - `plugin-meta/specimens.SpecimenLookup`
+                  - `plugin-meta/specimens.Specimens`
+                  - `plugin-meta/specimens.useSpecimen`
+                  - `primitives/css/badge.Badge`
             - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
               - Web:
                 - Contributes: `Counterpart.Kind` "App component" → `FixtureCounterpart`
@@ -23571,6 +23581,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/pane.useOpenPane`
+    - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
+      - Web:
+        - Slots: `Specimens.Specimen` ← `tasks.task-draft-form`
+        - Uses: `primitives/slot-render.defineDispatchSlot`
+        - Exports (types):
+          - `SpecimenInfo`
+          - `SpecimenLookup`
+          - `SpecimenMeta`
+          - `SpecimenProps`
+        - Exports (values):
+          - `lookupSpecimen`
+          - `Specimens`
+          - `useSpecimen`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/prototypes/compare/component`
+          - `tasks/task-draft-form`
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
@@ -24074,6 +24101,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/attachments`
               - `apps/mail/search`
               - `apps/prototypes/compare`
+              - `apps/prototypes/compare/component`
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
               - `apps/prototypes/compare/version`
@@ -30861,6 +30889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve`
           - `page/editor`
           - `page/page-reference`
+          - `plugin-meta/specimens`
           - `primitives/adaptive-bar`
           - `primitives/app-shell`
           - `primitives/breadcrumb`
@@ -33839,13 +33868,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
-        - Contributes: `ConfigV2.WebRegister` "config"
+        - Contributes:
+          - `ConfigV2.WebRegister` "config"
+          - `Specimens.Specimen` "task-draft/composer" → `ComposerSpecimen`
         - Uses:
           - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
+          - `plugin-meta/specimens.Specimens`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`

@@ -1,13 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type CSSProperties, useRef } from "react";
-import { MdAdd, MdClose, MdDragIndicator, MdLink } from "react-icons/md";
+import type { CSSProperties } from "react";
+import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  ComposerField,
-  ComposerAttachButton,
-  ComposerRule,
-} from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Stack,
@@ -20,16 +15,12 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import {
-  LaunchOptionPills,
-  type LaunchOptionValues,
-} from "@plugins/tasks/plugins/launch-options/web";
-import { DependencyPill } from "./dependency-pill";
+import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
+import { TaskDraftComposer } from "./task-draft-composer";
 import {
   InsertBeforeChildren,
   type ChildEntry,
 } from "./insert-before-children";
-import { TaskDraftFormSlots } from "../slots";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 export interface TaskDraftCardProps {
@@ -113,19 +104,6 @@ export function TaskDraftCard({
     transition,
   };
 
-  // Drives the head-card action slot (e.g. the element picker): the snippet
-  // lands at the caret, deserialized into its chip by the editor's node
-  // extensions. Falls back to the end of the document when the editor was never
-  // focused (no live selection). The host may own the handle instead, so its own
-  // programmatic inserts go through this exact path.
-  const localInsertRef = useRef<((snippet: string) => void) | null>(null);
-  const insertRef = hostInsertRef ?? localInsertRef;
-  const insertText = (snippet: string) => {
-    const insert = insertRef.current;
-    if (!insert) throw new Error("TaskDraftCard: editor not mounted");
-    insert(snippet);
-  };
-
   const showRelate = isHead && !!onRelateModeChange;
 
   return (
@@ -165,52 +143,27 @@ export function TaskDraftCard({
         </Line>
       </Pin>
       <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
-        <ComposerField
-          value={text}
-          onChange={onTextChange}
-          onSubmit={onSubmitChord}
-          submitMode="cmd-enter"
-          placeholder={isHead ? "Describe the task…" : "Next task…"}
-          disabled={disabled}
+        <TaskDraftComposer
+          cardId={cardId}
+          text={text}
+          launchOptions={launchOptions}
           autoFocus={autoFocus}
-          minRows={isHead ? 5 : 2}
-          maxHeight={isHead ? "20rem" : "8rem"}
-          namespace={`task-draft-card-${cardId}`}
-          insertRef={insertRef}
-          attach={
-            <ComposerAttachButton
-              icon={MdAdd}
-              activeIcon={MdLink}
-              label="Attach page URL"
-              active={includeUrl}
-              onToggle={onToggleUrl}
-              disabled={disabled}
-            />
-          }
-          barStart={
-            <CardBarStart
-              insertText={insertText}
-              values={launchOptions}
-              onChange={onLaunchOptionsChange}
-              disabled={disabled}
-              relate={
-                showRelate
-                  ? {
-                      value: relateMode,
-                      onChange: onRelateModeChange!,
-                      showIndependent: showIndependentRelate,
-                    }
-                  : null
-              }
-            />
-          }
-          barEnd={
-            <LaunchOptionPills
-              side="end"
-              values={launchOptions}
-              onChange={onLaunchOptionsChange}
-              disabled={disabled}
-            />
+          disabled={disabled}
+          onTextChange={onTextChange}
+          onLaunchOptionsChange={onLaunchOptionsChange}
+          onSubmitChord={onSubmitChord}
+          isHead={isHead}
+          insertRef={hostInsertRef}
+          includeUrl={includeUrl}
+          onToggleUrl={onToggleUrl}
+          relate={
+            showRelate
+              ? {
+                  value: relateMode,
+                  onChange: onRelateModeChange!,
+                  showIndependent: showIndependentRelate,
+                }
+              : null
           }
         />
       </div>
@@ -242,65 +195,5 @@ export function TaskDraftCard({
         </Inset>
       )}
     </Stack>
-  );
-}
-
-/**
- * The leading half of the card's bar: the contributed actions that write into
- * the prose (the element picker), then — past a hairline — the pills that
- * configure what submitting it does.
- *
- * Every card carries the action slot, not just the head: each card owns its own
- * caret-insert handle, so a picked element lands in the prose you are actually
- * writing. (The HOST's funnel is the head card's alone — that is where an
- * insert fired from outside the form has to go, since it must pick one card.)
- *
- * It draws no hairline when nothing contributed to the slot: a rule with
- * nothing on one side of it is just a mark.
- */
-function CardBarStart({
-  insertText,
-  values,
-  onChange,
-  disabled,
-  relate,
-}: {
-  insertText: (text: string) => void;
-  values: LaunchOptionValues;
-  onChange: (next: LaunchOptionValues) => void;
-  disabled: boolean;
-  relate: {
-    value: TaskChainRelateMode | undefined;
-    onChange: (next: TaskChainRelateMode | undefined) => void;
-    showIndependent?: boolean;
-  } | null;
-}) {
-  const actions = TaskDraftFormSlots.Action.useContributions();
-  const showActions = actions.length > 0;
-  return (
-    <>
-      {showActions && (
-        <>
-          <TaskDraftFormSlots.Action.Render>
-            {(item) => <item.component insertText={insertText} />}
-          </TaskDraftFormSlots.Action.Render>
-          <ComposerRule />
-        </>
-      )}
-      <LaunchOptionPills
-        side="start"
-        values={values}
-        onChange={onChange}
-        disabled={disabled}
-      />
-      {relate && (
-        <DependencyPill
-          value={relate.value}
-          onChange={relate.onChange}
-          showIndependent={relate.showIndependent}
-          disabled={disabled}
-        />
-      )}
-    </>
   );
 }

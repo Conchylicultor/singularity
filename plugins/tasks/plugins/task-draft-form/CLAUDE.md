@@ -30,6 +30,19 @@ tracks the app the form is rendered in rather than the stale localStorage draft.
 
 Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
+## Card vs composer, and the composer specimen
+
+A card is two layers. `TaskDraftCard` is the chain chrome: drag handle, remove
+button, the head card's insert-before / standalone extras. `TaskDraftComposer`
+is the task itself: the field, the URL toggle, the prose actions and the
+launch-option pills — with no dnd-kit dependency, so it renders on its own.
+
+That is what the plugin exhibits as a specimen (`plugin-meta/specimens`, id
+`task-draft/composer`): `ComposerSpecimen` holds its own text / options / URL
+state, seeded from the same defaults, and never submits. A prototype mocking
+the Improve composer compares against it with
+`<meta name="mocks" content="component:task-draft/composer">`.
+
 ## Inserting into a draft
 
 Text is added two ways, and the difference is which card it lands in.
@@ -55,13 +68,16 @@ silently destroy work in progress — hence a request type rather than an `initi
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
   - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
-  - Contributes: `ConfigV2.WebRegister` "config"
+  - Contributes:
+    - `ConfigV2.WebRegister` "config"
+    - `Specimens.Specimen` "task-draft/composer" → `ComposerSpecimen`
   - Uses:
     - `apps-core.useCurrentAppId`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `plugin-meta/specimens.Specimens`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
