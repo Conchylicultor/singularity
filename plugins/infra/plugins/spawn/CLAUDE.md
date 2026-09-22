@@ -31,6 +31,11 @@ machinery in either direction**, so there is nothing for the exit-during-pull
 race to wedge. Temp files orphaned by a hard crash are reclaimed by the OS
 tmpdir sweep (repo convention).
 
+**Every child runs with `GIT_OPTIONAL_LOCKS=0`** (`core/internal/child-env.ts`),
+on top of whatever `env` it gets. Don't remove it: otherwise a `git status` in
+main's checkout (main's auto-build) takes `.git/index.lock` and a concurrent
+push's merge into main fails. Real writes still lock.
+
 ## API (`@plugins/infra/plugins/spawn/core`)
 
 - **`spawnCaptured(argv, opts) → Promise<SpawnResult>`** — capture-shaped

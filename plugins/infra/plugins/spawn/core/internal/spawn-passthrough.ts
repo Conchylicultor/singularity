@@ -1,4 +1,5 @@
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
+import { childEnv } from "./child-env";
 import { readResourceUsage } from "./resource-usage";
 import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
 
@@ -18,7 +19,7 @@ export async function spawnPassthrough(
 ): Promise<SpawnPassthroughResult> {
   const proc = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
     cwd: opts.cwd,
-    env: opts.env,
+    env: childEnv(opts.env),
     stdin: opts.stdin ?? "ignore",
     stdout: "inherit",
     stderr: "inherit",

@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
+import { childEnv } from "./child-env";
 import { readResourceUsage } from "./resource-usage";
 import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
@@ -130,7 +131,7 @@ export async function spawnCaptured(
       errFd = opts.mergeStderr ? outFd : openSync(errPath, "w");
       const child = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
         cwd: opts.cwd,
-        env: opts.env,
+        env: childEnv(opts.env),
         stdin: inFd ?? "ignore",
         stdout: outFd,
         stderr: errFd,

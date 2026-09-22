@@ -19,6 +19,8 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  utimesSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +29,7 @@ import {
   spawnExpectOk,
   SpawnFailedError,
 } from "./internal/spawn-captured";
+import { spawnPassthrough } from "./internal/spawn-passthrough";
 
 /**
  * The bound every test here that is NOT about bounds uses. These children are
@@ -148,6 +151,44 @@ test("env is a full replacement, same contract as Bun.spawn", async () => {
     },
   );
   expect(result.stdout).toBe("visible");
+});
+
+test("every child runs with git's optional locks off, whatever env the caller passes", async () => {
+  const probe = ["sh", "-c", 'printf %s "$GIT_OPTIONAL_LOCKS"'];
+  expect((await spawnCaptured(probe, BOUND)).stdout).toBe("0");
+  expect(
+    (await spawnCaptured(probe, { ...BOUND, env: { PATH: process.env.PATH } }))
+      .stdout,
+  ).toBe("0");
+  expect(
+    (await spawnPassthrough(["sh", "-c", 'test "$GIT_OPTIONAL_LOCKS" = 0']))
+      .exitCode,
+  ).toBe(0);
+});
+
+test("a git status run through the primitive never rewrites the index", async () => {
+  // Plain `git status` on a file whose stat changed rewrites .git/index (taking
+  // index.lock) — the write that broke concurrent pushes into main.
+  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-git-"));
+  try {
+    const git = (...args: string[]) =>
+      spawnExpectOk(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", ...args],
+        { ...BOUND, cwd: dir },
+      );
+    await git("init", "-q");
+    writeFileSync(join(dir, "f"), "a");
+    await git("add", "f");
+    await git("commit", "-qm", "x");
+    const index = join(dir, ".git", "index");
+    const before = readFileSync(index);
+    // Same content, new stat: the index's cached stat is now stale.
+    utimesSync(join(dir, "f"), new Date(0), new Date(0));
+    await git("status", "--porcelain");
+    expect(readFileSync(index).equals(before)).toBe(true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("resourceUsage reports the child's peak RSS", async () => {
