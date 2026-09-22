@@ -22,8 +22,8 @@ import {
  *
  * Consequently the dialing subcommands (`push`, `migrate`, `studio`, `pull`) are
  * UNSUPPORTED through this config and must never be wired up: migrations are
- * applied by the runner in `server/internal/runner.ts` (on boot) or by
- * `./singularity apply-migrations`, both of which build their own connection.
+ * applied by the runner in `server/internal/runner.ts` on boot, over the
+ * backend's own connection.
  *
  * That invariant is enforced twice over, and neither half is a text scan.
  * `core/internal/drizzle-cli.ts` OWNS the argv — the binary name and `generate`

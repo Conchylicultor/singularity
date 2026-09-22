@@ -6,9 +6,8 @@
  * subcommand (`push`, `migrate`, `studio`, `pull`) DIALS the database in
  * `dbCredentials`, which `../../drizzle.config.ts` deliberately sets to a
  * non-resolving `.invalid` sentinel — so pointing one at this config fails by
- * design. Migrations are APPLIED by the runner (`server/internal/runner.ts`, on
- * boot) or `./singularity apply-migrations`, both of which build their own
- * connection.
+ * design. Migrations are APPLIED by the runner (`server/internal/runner.ts`) on
+ * boot, over the backend's own connection.
  *
  * That invariant used to be a text scan over the repo — a check that paired each
  * occurrence of the binary's name with the nearest subcommand token within 8

@@ -14,7 +14,6 @@ export interface CollectedEntry {
 
 export const cliEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/cli"), dependsOn: [] },
-  { pluginPath: "framework/plugins/cli/plugins/apply-migrations", id: "framework.cli.apply-migrations", loader: () => import("@plugins/framework/plugins/cli/plugins/apply-migrations/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/await", id: "framework.cli.await", loader: () => import("@plugins/framework/plugins/cli/plugins/await/cli"), dependsOn: ["framework/plugins/cli/plugins/test"] },
   { pluginPath: "framework/plugins/cli/plugins/build", id: "framework.cli.build", loader: () => import("@plugins/framework/plugins/cli/plugins/build/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/check", id: "framework.cli.check", loader: () => import("@plugins/framework/plugins/cli/plugins/check/cli"), dependsOn: [] },

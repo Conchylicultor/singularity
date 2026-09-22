@@ -16566,7 +16566,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/tooling/import-closure`
       - Plugins:
-        - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). Has no caller: every database gets its schema from the first backend that boots against it.
         - **`await`** — `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
           - Core:
             - Exports (types):

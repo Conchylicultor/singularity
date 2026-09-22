@@ -103,7 +103,7 @@ export default createRule({
         "MIGRATIONS_PLUGIN_DIR, which is equally load-bearing (the wrong cwd globs no " +
         "schema files and exits 0 with no migration). To GENERATE a migration by hand, " +
         "run `./singularity build --migration-name <slug>`; to APPLY one, use the " +
-        "runner (it runs on server boot) or `./singularity apply-migrations`. Naming " +
+        "runner, which runs on server boot. Naming " +
         "the binary somewhere that is NOT a spawn argv — a table of command names, a " +
         "message — is not an invocation and is not flagged.",
     },
