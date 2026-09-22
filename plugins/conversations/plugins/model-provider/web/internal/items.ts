@@ -1,21 +1,25 @@
-import { MODEL_REGISTRY, type ConversationModel } from "../../core";
+import { choiceHint, choiceLabel, type ModelChoice } from "../../core";
 import { useVisibleModels } from "./hooks";
 
-/** One selectable model, as a menu/list row. */
+/** One selectable model choice, as a menu/list row. */
 export interface ModelItem {
-  value: ConversationModel;
+  value: ModelChoice;
+  /** "Opus" for a family, "Opus 5" for a pinned version. */
   label: string;
+  /** The version a family runs today ("5.5"), rendered muted beside the label. */
+  hint?: string;
 }
 
 /**
- * The visible models as rows, in registry order — the one reader every surface
- * that draws a model list shares (the launch popover, the composer's run pill),
- * so none of them re-derives "which models, under which labels" from the
- * registry itself.
+ * The visible choices as rows, in picker order — the one reader every surface
+ * that draws a model list shares (the launch popover, the composer's run pill,
+ * the model select), so none of them re-derives "which models, under which
+ * labels" from the registry itself.
  */
 export function useModelItems(): ModelItem[] {
-  return useVisibleModels().map((value) => ({
-    value,
-    label: MODEL_REGISTRY[value].label,
-  }));
+  return useVisibleModels().map(modelItem);
+}
+
+export function modelItem(value: ModelChoice): ModelItem {
+  return { value, label: choiceLabel(value), hint: choiceHint(value) };
 }

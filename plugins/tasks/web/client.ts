@@ -6,7 +6,7 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { updateTask, setTaskAutoStart, clearTaskAutoStart } from "../core";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
 // No `rank`: repositioning goes through the `moveTask` endpoint, which carries
 // positional intent and mints the rank server-side against the complete sibling
@@ -19,7 +19,7 @@ export type TaskPatch = Partial<{
   folderId: string | null;
 }>;
 
-export type AutoStartModel = ConversationModel | "none";
+export type AutoStartModel = ModelChoice | "none";
 
 export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
   await fetchEndpoint(updateTask, { id }, { body: patch });

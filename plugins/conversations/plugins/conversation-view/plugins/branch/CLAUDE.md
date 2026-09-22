@@ -9,6 +9,7 @@
   - Contributes: `Conversation.PromptBar` "Branch" → `BranchButtons`
   - Uses:
     - `conversations/conversation-view.Conversation`
+    - `conversations/model-provider.ModelChoiceLabel`
     - `conversations/model-provider.useDefaultModel`
     - `conversations/model-provider.useVisibleModels`
     - `primitives/css/spacing.Stack`

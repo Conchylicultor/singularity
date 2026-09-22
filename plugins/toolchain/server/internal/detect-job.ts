@@ -10,7 +10,7 @@ import {
   tasksCategory,
 } from "@plugins/tasks/plugins/task-category/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
 import {
   HOLDS,
   TOOLCHAIN_CATEGORY_ID,
@@ -110,7 +110,7 @@ export const detectOutdatedToolchainJob = defineJob({
     await setTaskCategory(task.id, TOOLCHAIN_CATEGORY_ID);
     await armTaskAutoStart({
       taskId: task.id,
-      model: DEFAULT_MODEL,
+      model: DEFAULT_MODEL_CHOICE,
       cause: "toolchain-outdated",
     });
     log.publish(

@@ -6,7 +6,10 @@ import {
   getTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
-import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  ModelChoiceSchema,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { inheritLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
@@ -39,19 +42,19 @@ Controls how the new task connects to the target:
 
 **Follow-up (the common case):**
 
-  { "title": "Add dark mode support", "description": "... Plan first.", "autostart": "opus-4-8" }
+  { "title": "Add dark mode support", "description": "... Plan first.", "autostart": "opus" }
 
 **Linear chain** — use \`target\` to chain off the previous task:
 
-  { "title": "Step 1", "autostart": "opus-4-8" }              → id: "X1"
-  { "title": "Step 2", "target": "X1", "autostart": "opus-4-8" }  → id: "X2"
-  { "title": "Step 3", "target": "X2", "autostart": "opus-4-8" }  → id: "X3"
+  { "title": "Step 1", "autostart": "opus" }              → id: "X1"
+  { "title": "Step 2", "target": "X1", "autostart": "opus" }  → id: "X2"
+  { "title": "Step 3", "target": "X2", "autostart": "opus" }  → id: "X3"
 
 If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
 
 **Prerequisite** — insert before the current task:
 
-  { "title": "Write design doc", "relation": "prerequisite", "autostart": "opus-4-8" }
+  { "title": "Write design doc", "relation": "prerequisite", "autostart": "opus" }
 
 A now depends on the new task. A's old deps are rewired to the new task.
 
@@ -77,30 +80,28 @@ first or to disable autostart to avoid launching agents prematurely.`,
       .optional()
       .describe(
         "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it. " +
-        "End with \"Plan first.\" to instruct the executing agent to write its own plan before implementing — " +
-        "do this for any non-mechanical task, even if a broader plan already exists."
+          'End with "Plan first." to instruct the executing agent to write its own plan before implementing — ' +
+          "do this for any non-mechanical task, even if a broader plan already exists.",
       ),
     relation: z
       .enum(["followup", "prerequisite"])
       .default("followup")
       .describe(
         "`followup` (default): new task depends on target, target's dependents rewired. " +
-        "`prerequisite`: target depends on new task, target's deps transfer."
+          "`prerequisite`: target depends on new task, target's deps transfer.",
       ),
     target: z
       .string()
       .optional()
       .describe(
         "Task ID to relate to. Defaults to the current conversation's task. " +
-        "Use a previous call's task_id to chain follow-ups linearly."
+          "Use a previous call's task_id to chain follow-ups linearly.",
       ),
-    autostart: z
-      .string()
-      .default(DEFAULT_MODEL)
-      .describe(
-        "Auto-launch model id (e.g. \"opus-4-8\", \"sonnet-4-6\"). Defaults to the configured default. " +
-        "Use a Sonnet model only for purely mechanical refactoring (no design decisions, no unknowns)."
-      ),
+    autostart: ModelChoiceSchema.default(DEFAULT_MODEL_CHOICE).describe(
+      'Auto-launch model: a family ("opus", "sonnet", "fable") runs that family\'s newest version ' +
+        'when the task launches — use one unless a specific version is required (e.g. "opus-5"). Defaults to "opus". ' +
+        "Use Sonnet only for purely mechanical refactoring (no design decisions, no unknowns).",
+    ),
   },
   async handler(
     { title, description, relation, target, autostart },
@@ -138,8 +139,11 @@ first or to disable autostart to avoid launching agents prematurely.`,
       rewireDependencies({ newTaskId: task.id, targetId, relation }),
     );
 
-    const model = normalizeModel(autostart);
-    await armTaskAutoStart({ taskId: task.id, model, cause: "mcp-add-task" });
+    await armTaskAutoStart({
+      taskId: task.id,
+      model: autostart,
+      cause: "mcp-add-task",
+    });
 
     return {
       content: [
@@ -149,7 +153,7 @@ first or to disable autostart to avoid launching agents prematurely.`,
             task_id: task.id,
             relation,
             group_id: currentTaskId,
-            autostart: model,
+            autostart,
           }),
         },
       ],

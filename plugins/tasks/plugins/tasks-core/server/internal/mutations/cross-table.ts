@@ -1,5 +1,8 @@
 import { db } from "@plugins/database/server";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  resolveModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _tasks } from "../tables";
 import { conversations } from "../views";
 import type { Conversation } from "../schema";
@@ -107,7 +110,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         status: input.status,
         title: input.title ?? null,
         spawnedBy: "poller",
-        model: DEFAULT_MODEL,
+        model: resolveModel(DEFAULT_MODEL_CHOICE),
       },
       { ignoreConflict: true },
     );
@@ -132,7 +135,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
           status: input.status,
           title: input.title ?? null,
           spawnedBy: "poller",
-          model: DEFAULT_MODEL,
+          model: resolveModel(DEFAULT_MODEL_CHOICE),
         },
         { ignoreConflict: true },
       );

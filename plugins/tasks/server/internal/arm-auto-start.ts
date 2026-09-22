@@ -1,6 +1,6 @@
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
 // Mark a task as queued for auto-launch, then wake the launcher.
 //
@@ -20,7 +20,7 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 // and the status event now covers every task an edit affected.)
 export async function armTaskAutoStart(args: {
   taskId: string;
-  model: ConversationModel;
+  model: ModelChoice;
   cause: string;
 }): Promise<void> {
   const { taskId, model, cause } = args;

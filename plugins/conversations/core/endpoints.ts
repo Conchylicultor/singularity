@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 // --- Body schemas ---
 
@@ -12,10 +12,10 @@ export const CreateConversationBodySchema = z
     prompt: z.string().optional(),
     runtime: z.string().optional(),
     // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
-    // boundary (400) rather than silently coerced to DEFAULT_MODEL. This is an
-    // *input* schema; stored model fields read back from the DB stay tolerant via
-    // StoredModelSchema / normalizeModel.
-    model: ConversationModelSchema.optional(),
+    // boundary (400) rather than silently coerced to the default. A family
+    // ("opus") or a pinned version; the spawn resolves it. This is an *input*
+    // schema; stored model fields read back from the DB stay tolerant.
+    model: ModelChoiceSchema.optional(),
     forkFromConversationId: z.string().optional(),
     // With `forkFromConversationId`: fork from just before this user message (its
     // transcript line uuid, carried by the `user-text` row) rather than the end.

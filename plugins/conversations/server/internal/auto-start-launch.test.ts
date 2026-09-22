@@ -42,7 +42,12 @@ import {
   runStatusBatchOn,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  resolveModel,
+} from "@plugins/conversations/plugins/model-provider/core";
+
+const MODEL = resolveModel(DEFAULT_MODEL_CHOICE);
 import { launchArmedTask, type IfAlreadyStarted } from "./auto-start-jobs";
 import type { PreparedConversation } from "./lifecycle";
 
@@ -83,7 +88,7 @@ async function seedArmedTask(): Promise<string> {
   `);
   await t.db.execute(sql`
     INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model)
-    VALUES (${id}, now(), ${DEFAULT_MODEL})
+    VALUES (${id}, now(), ${DEFAULT_MODEL_CHOICE})
   `);
   return id;
 }
@@ -99,7 +104,7 @@ async function seedAttemptWithConversation(
   `);
   await t.db.execute(sql`
     INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conversationId}, ${attemptId}, 'working', 'tmux', ${DEFAULT_MODEL}, 'test')
+    VALUES (${conversationId}, ${attemptId}, 'working', 'tmux', ${MODEL}, 'test')
   `);
   return attemptId;
 }
@@ -109,7 +114,7 @@ function prepared(taskId: string): PreparedConversation {
   return {
     runtimeId: "tmux",
     conversationId: nextId("conv"),
-    model: DEFAULT_MODEL,
+    model: MODEL,
     spawnedBy: "test",
     kind: "user",
     rawPrompt: "do the thing",
@@ -118,7 +123,7 @@ function prepared(taskId: string): PreparedConversation {
     target: { kind: "new", attemptId, taskId },
     create: {
       prompt: "do the thing",
-      model: DEFAULT_MODEL,
+      model: MODEL,
       forkSession: false,
     },
   };

@@ -147,7 +147,7 @@
 - Core:
   - Uses:
     - `config_v2.defineConfig`
-    - `conversations/model-provider.ConversationModelSchema`
+    - `conversations/model-provider.ModelChoiceSchema`
     - `fields/bool/config.boolField`
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`

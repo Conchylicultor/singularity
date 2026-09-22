@@ -12,8 +12,9 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
 - Web:
   - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
   - Uses:
+    - `conversations/model-provider.ModelChoiceLabel`
     - `conversations/model-provider.ModelSelect`
-    - `conversations/model-provider.useModelItems`
+    - `conversations/model-provider.useVisibleModels`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `tasks.setAutoStart`
     - `tasks/auto-start.useTaskAutoStart`
@@ -26,9 +27,9 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
     - `tasks/launch-options.TaskLaunchServer`
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModel`
-    - `conversations/model-provider.ConversationModelSchema`
-    - `conversations/model-provider.DEFAULT_MODEL`
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+    - `conversations/model-provider.ModelChoice`
+    - `conversations/model-provider.ModelChoiceSchema`
     - `tasks/launch-options.defineLaunchOption`
   - Exports (values): `autoStartLaunchOption`
 

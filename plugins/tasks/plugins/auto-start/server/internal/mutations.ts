@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
 export async function getTaskAutoStart(id: string) {
   return tasksAutoStart.get(id);
@@ -21,7 +21,7 @@ export async function listArmedTaskIds(): Promise<string[]> {
 
 export async function setTaskAutoStart(
   id: string,
-  autoStart: { model: ConversationModel } | null,
+  autoStart: { model: ModelChoice } | null,
 ): Promise<boolean> {
   const [task] = await db
     .select({ id: _tasks.id })

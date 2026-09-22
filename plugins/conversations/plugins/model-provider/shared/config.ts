@@ -2,25 +2,45 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { objectField } from "@plugins/fields/plugins/object/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "../core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  SELECTABLE_CHOICES,
+  choiceHint,
+  choiceLabel,
+  isModelFamily,
+} from "../core";
 
-// SELECTABLE_MODELS already excludes print-only models (e.g. haiku), which are
-// valid persisted ids but never session-selectable — so they never appear in
-// the launch dropdown or these config options.
-const modelEntries = SELECTABLE_MODELS.map((id) => [id, MODEL_REGISTRY[id]] as const);
+// "Opus · 5.5" for a family (the version it runs today), "Opus 5" for a pinned
+// version. SELECTABLE_CHOICES already excludes print-only models (haiku).
+function optionLabel(choice: (typeof SELECTABLE_CHOICES)[number]): string {
+  const hint = choiceHint(choice);
+  return hint ? `${choiceLabel(choice)} · ${hint}` : choiceLabel(choice);
+}
 
 export const modelProviderConfig = defineConfig({
   fields: {
     defaultModel: enumField({
       label: "Default model",
-      description: "Model fired by the launch button and pre-selected in the dropdown.",
-      options: modelEntries.map(([value, m]) => ({ value, label: m.label })),
-      default: DEFAULT_MODEL,
+      description:
+        'Model fired by the launch button and pre-selected in the dropdown. A family ("opus") always runs its newest version.',
+      options: SELECTABLE_CHOICES.map((value) => ({
+        value,
+        label: optionLabel(value),
+      })),
+      default: DEFAULT_MODEL_CHOICE,
     }),
     visibleModels: objectField({
       label: "Models shown in the launch dropdown",
+      // Families are on by default; a pinned version is off until the user
+      // turns it on — pinning is a deliberate choice, never the default.
       subFields: Object.fromEntries(
-        modelEntries.map(([id, m]) => [id, boolField({ label: m.label, default: !m.defaultHidden })]),
+        SELECTABLE_CHOICES.map((choice) => [
+          choice,
+          boolField({
+            label: optionLabel(choice),
+            default: isModelFamily(choice),
+          }),
+        ]),
       ),
     }),
   },

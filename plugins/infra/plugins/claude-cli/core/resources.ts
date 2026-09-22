@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import {
-  DEFAULT_MODEL,
+  DEFAULT_MODEL_CHOICE,
   StoredModelSchema,
+  resolveModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import {
   fieldsToZodObject,
@@ -25,12 +26,11 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 //
 // `model` is a plain `text` column in the DDL, decoded by the tolerant
 // `StoredModelSchema` — so the `ConversationModel` in its type is what really
-// runs on every read and write, and a legacy/coarse-tier id written before the
-// ids were versioned (e.g. `"opus"`) normalizes instead of being handed to
-// typed code as if it were a live model. That is the same guard the wire schema
+// runs on every read and write, and an unknown stored id normalizes (and is
+// reported) instead of being handed to typed code as if it were a live model. That is the same guard the wire schema
 // used to carry alone, now one layer lower, where the server-side readers are.
 //
-// `DEFAULT_MODEL` is the wire/backfill default, where the tuple form silently
+// The current default version is the wire/backfill default, where the tuple form silently
 // gave `"fable-5-1"` — the first entry of the enum, i.e. tuple order rather than
 // anyone's decision. Nothing observable changes: the column is notNull with no
 // DB default, so every row carries a model and the wire schema's `.default()`
@@ -38,7 +38,9 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 export const claudeCliCallFields = {
   id: uuidField(),
   createdAt: dateField(),
-  model: parsedTextField(StoredModelSchema, { default: DEFAULT_MODEL }),
+  model: parsedTextField(StoredModelSchema, {
+    default: resolveModel(DEFAULT_MODEL_CHOICE),
+  }),
   sourceName: textField(),
   sourceContext: nullable(
     jsonField<Record<string, unknown>>({

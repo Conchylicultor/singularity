@@ -8838,7 +8838,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `config_v2.defineConfig`
-      - `conversations/model-provider.ConversationModelSchema`
+      - `conversations/model-provider.ModelChoiceSchema`
       - `fields/bool/config.boolField`
       - `fields/int/config.intField`
       - `infra/endpoints.defineEndpoint`
@@ -8979,7 +8979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/header.Conversation`
-          - `conversations/model-provider.useVisibleModels`
+          - `conversations/model-provider.ModelSelect`
           - `fields/avatar/table.avatarFieldDef`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/avatar.Avatar`
@@ -9045,6 +9045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
+          - `database/sql-column.parsedText`
           - `infra/attachments.Attachments`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -9096,7 +9097,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/agents/:id/launches`
       - Core:
         - Uses:
-          - `conversations/model-provider.ConversationModelSchema`
+          - `conversations/model-provider.ModelChoiceSchema`
+          - `conversations/model-provider.StoredModelChoiceSchema`
           - `infra/endpoints.defineEndpoint`
           - `primitives/rank.RankSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
@@ -9174,8 +9176,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `conversations-revision` (push)
       - Core:
         - Uses:
+          - `conversations/model-provider.isModelFamily`
           - `conversations/model-provider.modelDisplayLabel`
-          - `conversations/model-provider.SELECTABLE_MODELS`
+          - `conversations/model-provider.SELECTABLE_CHOICES`
           - `infra/endpoints.defineEndpoint`
           - `primitives/data-view.FilterGroupSchema`
           - `primitives/live-state.resourceDescriptor`
@@ -9736,6 +9739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Conversation.PromptBar` "Branch" → `BranchButtons`
             - Uses:
               - `conversations/conversation-view.Conversation`
+              - `conversations/model-provider.ModelChoiceLabel`
               - `conversations/model-provider.useDefaultModel`
               - `conversations/model-provider.useVisibleModels`
               - `primitives/css/spacing.Stack`
@@ -12066,6 +12070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ModelSelectProps`
         - Exports (values):
           - `familyClass`
+          - `ModelChoiceLabel`
           - `ModelSelect`
           - `useDefaultModel`
           - `useModelItems`
@@ -12079,21 +12084,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/live-state.tolerantEnum`
         - Exports (types):
           - `ConversationModel`
+          - `ModelChoice`
           - `ModelMeta`
           - `ModelTier`
         - Exports (values):
+          - `choiceFamily`
+          - `choiceHint`
+          - `choiceIconSize`
+          - `choiceLabel`
           - `cliFlagFor`
           - `ConversationModelSchema`
-          - `currentModelForTier`
-          - `DEFAULT_MODEL`
+          - `DEFAULT_MODEL_CHOICE`
           - `idForCliName`
+          - `isModelFamily`
           - `MODEL_REGISTRY`
           - `MODEL_TIERS`
+          - `ModelChoiceSchema`
           - `modelDisplayLabel`
           - `normalizeModel`
+          - `normalizeModelChoice`
           - `registerModelCorruptionReporter`
-          - `reportUnknownModel`
-          - `SELECTABLE_MODELS`
+          - `resolveModel`
+          - `SELECTABLE_CHOICES`
+          - `StoredModelChoiceSchema`
           - `StoredModelSchema`
       - Cross-plugin:
         - Imported by:
@@ -12958,6 +12971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
           - `backup`
+          - `conversations/agents`
           - `conversations/conversation-category`
           - `debug/latency-ledger`
           - `fields/json/storage`
@@ -18118,7 +18132,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useClaudeCliCalls`
       - Core:
         - Uses:
-          - `conversations/model-provider.DEFAULT_MODEL`
+          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+          - `conversations/model-provider.resolveModel`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
@@ -28832,6 +28847,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `conversations/conversation-view.conversationPane`
+          - `conversations/model-provider.ModelChoiceLabel`
           - `conversations/model-provider.useDefaultModel`
           - `conversations/model-provider.useSetDefaultModel`
           - `conversations/model-provider.useVisibleModels`
@@ -33387,7 +33403,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GET /api/repo-info`
   - Core:
     - Uses:
-      - `conversations/model-provider.ConversationModelSchema`
+      - `conversations/model-provider.ModelChoiceSchema`
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
       - `tasks/tasks-core.ConversationSchema`
@@ -33610,8 +33626,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
             - Uses:
+              - `conversations/model-provider.ModelChoiceLabel`
               - `conversations/model-provider.ModelSelect`
-              - `conversations/model-provider.useModelItems`
+              - `conversations/model-provider.useVisibleModels`
               - `primitives/text-editor/composer/picker-pill.PickerPill`
               - `tasks.setAutoStart`
               - `tasks/auto-start.useTaskAutoStart`
@@ -33624,9 +33641,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/launch-options.TaskLaunchServer`
           - Core:
             - Uses:
-              - `conversations/model-provider.ConversationModel`
-              - `conversations/model-provider.ConversationModelSchema`
-              - `conversations/model-provider.DEFAULT_MODEL`
+              - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+              - `conversations/model-provider.ModelChoice`
+              - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
@@ -34391,7 +34408,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useTaskConversations`
       - Core:
         - Uses:
-          - `conversations/model-provider.DEFAULT_MODEL`
+          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+          - `conversations/model-provider.resolveModel`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.fieldsToZodObject`
           - `fields.nullable`

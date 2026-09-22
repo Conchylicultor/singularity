@@ -6,19 +6,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  MODEL_REGISTRY,
-  normalizeModel,
-  type ConversationModel,
-} from "../../core";
+import { choiceLabel, ModelChoiceSchema, type ModelChoice } from "../../core";
 import { useVisibleModels } from "../internal/hooks";
+import { ModelChoiceLabel } from "./model-choice-label";
 
 const OFF = "none";
 
 export interface ModelSelectProps {
-  /** The selected model, or `null` for the Off option. */
-  value: ConversationModel | null;
-  onChange: (model: ConversationModel | null) => void;
+  /** The selected model choice, or `null` for the Off option. */
+  value: ModelChoice | null;
+  onChange: (model: ModelChoice | null) => void;
   /** Label for the Off option. Defaults to "Off". */
   offLabel?: string;
   ariaLabel?: string;
@@ -28,9 +25,9 @@ export interface ModelSelectProps {
 
 /**
  * Controlled model picker shared by every "auto-launch with" surface
- * (task auto-start, task-draft form, agent auto-launch). Lists exactly the
- * models the launch dropdown shows (`useVisibleModels`) plus an Off option,
- * so all model pickers stay in lockstep with the registry.
+ * (task auto-start, agent). Lists exactly the choices the launch dropdown
+ * shows (`useVisibleModels`) plus an Off option, so all model pickers stay in
+ * lockstep with the registry.
  */
 export function ModelSelect({
   value,
@@ -41,18 +38,15 @@ export function ModelSelect({
   className,
 }: ModelSelectProps) {
   const visibleModels = useVisibleModels();
-  const selected = value != null ? normalizeModel(value) : OFF;
+  const selected = value ?? OFF;
 
   // base-ui resolves the collapsed trigger label from `items`, not from the
-  // (unmounted) option list. Map every registry id — not just visible ones —
-  // so a stored hidden model still shows its label.
+  // (unmounted) option list. Map every choice — not just visible ones — so a
+  // stored hidden pinned version still shows its label.
   const items: Record<string, string> = {
     [OFF]: offLabel,
     ...Object.fromEntries(
-      (Object.keys(MODEL_REGISTRY) as ConversationModel[]).map((m) => [
-        m,
-        MODEL_REGISTRY[m].label,
-      ]),
+      ModelChoiceSchema.options.map((m) => [m, choiceLabel(m)]),
     ),
   };
 
@@ -62,7 +56,7 @@ export function ModelSelect({
       value={selected}
       onValueChange={(v: string | null) => {
         if (!v) return;
-        onChange(v === OFF ? null : (v as ConversationModel));
+        onChange(v === OFF ? null : ModelChoiceSchema.parse(v));
       }}
       disabled={disabled}
     >
@@ -73,7 +67,7 @@ export function ModelSelect({
         <SelectItem value={OFF}>{offLabel}</SelectItem>
         {visibleModels.map((m) => (
           <SelectItem key={m} value={m}>
-            {MODEL_REGISTRY[m].label}
+            <ModelChoiceLabel choice={m} />
           </SelectItem>
         ))}
       </SelectContent>

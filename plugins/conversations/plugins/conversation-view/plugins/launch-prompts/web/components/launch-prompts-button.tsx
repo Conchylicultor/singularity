@@ -18,8 +18,9 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { createConversation } from "@plugins/conversations/core";
 import {
-  MODEL_REGISTRY,
-  normalizeModel,
+  choiceFamily,
+  choiceLabel,
+  normalizeModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";
@@ -44,9 +45,9 @@ export function LaunchPromptsButton({
         {
           body: {
             // item.model is a stored config value (enum-constrained at authoring
-            // time but typed as string) — normalize on read to a concrete
-            // ConversationModel before it enters the strict createConversation body.
-            model: normalizeModel(item.model),
+            // time but typed as string) — normalize on read to a ModelChoice
+            // before it enters the strict createConversation body.
+            model: normalizeModelChoice(item.model),
             prompt: item.prompt,
             attemptId: conversation.attemptId,
           },
@@ -98,10 +99,10 @@ export function LaunchPromptsButton({
                 flush-right without a justify-between on the menu item chrome. */}
             <Fill as="span">{item.title}</Fill>
             {(() => {
-              const meta = MODEL_REGISTRY[normalizeModel(item.model)];
+              const choice = normalizeModelChoice(item.model);
               return (
-                <Badge colorClass={familyClass(meta.family)}>
-                  {meta.label}
+                <Badge colorClass={familyClass(choiceFamily(choice))}>
+                  {choiceLabel(choice)}
                 </Badge>
               );
             })()}

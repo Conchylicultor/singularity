@@ -8,11 +8,9 @@ import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 import {
-  MODEL_REGISTRY,
-  type ConversationModel,
-} from "@plugins/conversations/plugins/model-provider/core";
-import {
+  ModelChoiceLabel,
   useVisibleModels,
   useDefaultModel,
 } from "@plugins/conversations/plugins/model-provider/web";
@@ -86,7 +84,7 @@ export function BranchButtons({
           namespace="branch-prompt"
         />
         <Stack direction="row" gap="sm" justify="end">
-          {visibleModels.map((model: ConversationModel) => (
+          {visibleModels.map((model: ModelChoice) => (
             <Button
               key={model}
               variant="outline"
@@ -94,9 +92,13 @@ export function BranchButtons({
               disabled={!canSubmit}
               onClick={(e) => void launch(model, e)}
             >
-              {launching === model
-                ? "Branching…"
-                : `Branch → ${MODEL_REGISTRY[model].label}`}
+              {launching === model ? (
+                "Branching…"
+              ) : (
+                <>
+                  Branch → <ModelChoiceLabel choice={model} />
+                </>
+              )}
             </Button>
           ))}
         </Stack>

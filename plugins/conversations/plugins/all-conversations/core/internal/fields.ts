@@ -3,7 +3,8 @@ import {
   ConversationKindSchema,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  SELECTABLE_MODELS,
+  SELECTABLE_CHOICES,
+  isModelFamily,
   modelDisplayLabel,
 } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -38,13 +39,24 @@ const kindOptions = ConversationKindSchema.options.map((k) => ({
   value: k,
   label: cap(k),
 }));
-const modelOptions = SELECTABLE_MODELS.map((m) => ({
-  value: m,
-  label: modelDisplayLabel(m),
-}));
+// A conversation's model is the concrete version it ran, so the filter offers
+// versions, never families.
+const modelOptions = SELECTABLE_CHOICES.filter((m) => !isModelFamily(m)).map(
+  (m) => ({
+    value: m,
+    label: modelDisplayLabel(m),
+  }),
+);
 
 export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
-  { id: "title", label: "Title", type: "text", sortable: true, primary: true, nullable: true },
+  {
+    id: "title",
+    label: "Title",
+    type: "text",
+    sortable: true,
+    primary: true,
+    nullable: true,
+  },
   { id: "status", label: "Status", type: "enum", options: statusOptions },
   { id: "model", label: "Model", type: "enum", options: modelOptions },
   { id: "kind", label: "Kind", type: "enum", options: kindOptions },

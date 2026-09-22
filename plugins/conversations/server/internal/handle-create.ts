@@ -6,7 +6,7 @@ import { createConversation, TranscriptCutError } from "./lifecycle";
 export const handleCreate = implement(
   createConversationEndpoint,
   async ({ body }) => {
-    // body.model is already a validated ConversationModel | undefined (the endpoint
+    // body.model is already a validated ModelChoice | undefined (the endpoint
     // body schema is the strict enum), so no normalization/coercion is needed here —
     // an unknown id was already rejected with a 400 before reaching this handler.
     let session;

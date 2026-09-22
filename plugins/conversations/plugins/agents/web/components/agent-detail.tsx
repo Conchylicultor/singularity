@@ -28,8 +28,8 @@ import {
   launchAgent,
   updateAgent,
 } from "@plugins/conversations/plugins/agents/core";
-import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
-import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
@@ -37,7 +37,7 @@ import { AgentLaunches } from "./agent-launches";
 type Patch = Partial<{
   name: string;
   prompt: string | null;
-  model: string | null;
+  model: ModelChoice | null;
   icon: string | null;
   iconColor: string | null;
   iconSvgNodes: string | null;
@@ -80,8 +80,7 @@ function AgentDetailInner({
   agent: Agent;
 }) {
   const launchesQ = useResource(agentLaunchesResource);
-  const visibleModels = useVisibleModels();
-  const [model, setModel] = useState<string | null>(agent.model ?? null);
+  const [model, setModel] = useState<ModelChoice | null>(agent.model);
   const [launching, setLaunching] = useState(false);
 
   const save = useCallback(
@@ -108,8 +107,7 @@ function AgentDetailInner({
     onSave: (v) => save({ prompt: v }),
   });
 
-  const onModelChange = async (v: string) => {
-    const newModel = v === "" ? null : v;
+  const onModelChange = async (newModel: ModelChoice | null) => {
     setModel(newModel);
     await save({ model: newModel });
   };
@@ -173,20 +171,12 @@ function AgentDetailInner({
         </Stack>
         <Stack gap="xs">
           <SectionLabel as="label">Model</SectionLabel>
-          <select
-            value={model ?? ""}
-            onChange={(e) => void onModelChange(e.target.value)}
-            className="focus:ring-ring w-fit rounded-md border bg-transparent px-sm py-xs text-body outline-none focus:ring-1"
-          >
-            <option key="" value="">
-              Default
-            </option>
-            {visibleModels.map((m) => (
-              <option key={m} value={m}>
-                {MODEL_REGISTRY[m].label}
-              </option>
-            ))}
-          </select>
+          <ModelSelect
+            value={model}
+            onChange={(m) => void onModelChange(m)}
+            offLabel="Default"
+            ariaLabel="Model"
+          />
         </Stack>
         <Stack gap="xs">
           <SectionLabel as="label">Prompt</SectionLabel>

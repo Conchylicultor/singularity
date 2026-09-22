@@ -52,8 +52,9 @@
   - Resources: `conversations-revision` (push)
 - Core:
   - Uses:
+    - `conversations/model-provider.isModelFamily`
     - `conversations/model-provider.modelDisplayLabel`
-    - `conversations/model-provider.SELECTABLE_MODELS`
+    - `conversations/model-provider.SELECTABLE_CHOICES`
     - `infra/endpoints.defineEndpoint`
     - `primitives/data-view.FilterGroupSchema`
     - `primitives/live-state.resourceDescriptor`

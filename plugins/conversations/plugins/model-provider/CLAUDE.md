@@ -1,13 +1,93 @@
 # model-provider
 
-Single source of truth for `ConversationModel` — now **concrete versioned ids** (`fable-5-1`, `fable-5`, `opus-5-5`, `opus-5`, `opus-4-8`, `opus-4-7`, `opus-4-6`, `sonnet-5`, `sonnet-4-6`, `haiku-4-5`). Owns the Zod schema, the `DEFAULT_MODEL`, the `MODEL_REGISTRY` (id → `{ cliFlag, label, family, iconSize, defaultHidden }`), and `normalizeModel()`.
+Single source of truth for the models an agent can run, and for what the user asked for.
 
-Consumers import the type/registry/`normalizeModel` from `@plugins/conversations/plugins/model-provider/core` (depends only on `live-state/core`, which is zod-only — safe for `tasks-core` and other low-level plugins). Web consumers get config-driven pickers via `useVisibleModels()` / `useDefaultModel()` / `useSetDefaultModel()` from `@plugins/conversations/plugins/model-provider/web`.
+- **Two types.** `ConversationModel` is a concrete version (`opus-5-5`): what a conversation RAN (`conversations.model`, `claude_cli_calls.model`, the spawn job, `--model`). `ModelChoice` is what the user ASKED for: a family (`opus`, `sonnet`, `fable`: whatever version is current at spawn) or a pinned version. Every saved preference is a choice: the auto-start marker, an agent, a launch prompt, the `defaultModel` config, and every launch endpoint's input.
+- **`resolveModel(choice)` is the only way from a choice to a version.** `prepareConversation` calls it once, at spawn, so an armed task launches the version current when it LAUNCHES, not when it was armed. The spawn path's types accept only a concrete version, so tsc forces every launch through it.
+- **A family's current version is its first entry in `MODEL_DEFS`** (registry order = newest first within a family). **To release a model:** add one line above the version it supersedes (and the id to `ConversationModelSchema`). Every family choice follows it; nothing else changes. `label` is derived as `${family} ${version}`, never written by hand.
+- **Pickers:** families show as "Opus" with today's version as a muted hint ("· 5.5") via `ModelChoiceLabel`; pinned versions are hidden until turned on in Settings → Model Provider (`visibleModels`, families default on, versions default off). `useVisibleModels()` / `useModelItems()` / `<ModelSelect>` are the shared readers.
+- **Stored fields use the tolerant schemas:** `StoredModelSchema` (concrete) or `StoredModelChoiceSchema` (choice). An unknown stored value degrades to the default and is reported, instead of throwing on the WS push path and blanking the whole resource. Request-input schemas stay strict (`ModelChoiceSchema`).
 
-- **The exact model is pinned per conversation in the DB.** `normalizeModel()` is the boundary guard for any *stored* model string read back (legacy rows stored coarse `"opus"`/`"sonnet"`, which alias to `opus-4-6`/`sonnet-4-6`).
-- **`StoredModelSchema` is THE schema for a persisted model field surfaced through a live-state resource** (conversation `model`, claude-cli call `model`, auto-start `autoStartModel`). It wraps `ConversationModelSchema` in `tolerantEnum(normalizeModel, reportUnknownModel)` so a legacy/unknown stored value normalizes (and reports) instead of throwing on the WS push path and blanking the whole array. Use it — never the raw strict `ConversationModelSchema` — for stored fields; keep request-input/API-body schemas strict.
-- **To add a model:** add a row to `MODEL_REGISTRY` (+ the id to `ConversationModelSchema`) in `core/registry.ts`. Every picker (launch, auto-start, task-draft, launch-prompts, agent) and the Settings show/hide toggles pick it up automatically; mark older versions `defaultHidden: true`.
-- Which versions appear in the launch dropdown and which is the default are user config (`defaultModel` + `visibleModels`), edited in Settings → Model Provider.
+## Plugin reference
+
+- Description: Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
+- Web:
+  - Contributes:
+    - `ConfigV2.WebRegister` "config"
+    - `Core.Root` → `ModelCorruptionReporter`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `config_v2.useSetConfig`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Select`
+    - `primitives/css/ui-kit.SelectContent`
+    - `primitives/css/ui-kit.SelectItem`
+    - `primitives/css/ui-kit.SelectTrigger`
+    - `primitives/css/ui-kit.SelectValue`
+    - `reports.report`
+  - Exports (types):
+    - `ModelItem`
+    - `ModelSelectProps`
+  - Exports (values):
+    - `familyClass`
+    - `ModelChoiceLabel`
+    - `ModelSelect`
+    - `useDefaultModel`
+    - `useModelItems`
+    - `useSetDefaultModel`
+    - `useVisibleModels`
+- Server:
+  - Contributes: `ConfigV2.Register` "config"
+  - Uses: `config_v2.ConfigV2`
+  - Exports (values): `resolveCliFlag`
+- Core:
+  - Uses: `primitives/live-state.tolerantEnum`
+  - Exports (types):
+    - `ConversationModel`
+    - `ModelChoice`
+    - `ModelMeta`
+    - `ModelTier`
+  - Exports (values):
+    - `choiceFamily`
+    - `choiceHint`
+    - `choiceIconSize`
+    - `choiceLabel`
+    - `cliFlagFor`
+    - `ConversationModelSchema`
+    - `DEFAULT_MODEL_CHOICE`
+    - `idForCliName`
+    - `isModelFamily`
+    - `MODEL_REGISTRY`
+    - `MODEL_TIERS`
+    - `ModelChoiceSchema`
+    - `modelDisplayLabel`
+    - `normalizeModel`
+    - `normalizeModelChoice`
+    - `registerModelCorruptionReporter`
+    - `resolveModel`
+    - `SELECTABLE_CHOICES`
+    - `StoredModelChoiceSchema`
+    - `StoredModelSchema`
+- Cross-plugin:
+  - Imported by:
+    - `conversations`
+    - `conversations/agents`
+    - `conversations/all-conversations`
+    - `conversations/conversation-view/branch`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/launch-prompts`
+    - `conversations/conversations-view`
+    - `conversations/runtime-tmux`
+    - `debug/claude-cli-calls`
+    - `infra/claude-cli`
+    - `primitives/launch`
+    - `tasks`
+    - `tasks/auto-start/launch-option`
+    - `tasks/tasks-core`
+
+<!-- AUTOGENERATED:END -->
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -34,6 +114,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
     - `ModelSelectProps`
   - Exports (values):
     - `familyClass`
+    - `ModelChoiceLabel`
     - `ModelSelect`
     - `useDefaultModel`
     - `useModelItems`
@@ -47,21 +128,29 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
   - Uses: `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `ConversationModel`
+    - `ModelChoice`
     - `ModelMeta`
     - `ModelTier`
   - Exports (values):
+    - `choiceFamily`
+    - `choiceHint`
+    - `choiceIconSize`
+    - `choiceLabel`
     - `cliFlagFor`
     - `ConversationModelSchema`
-    - `currentModelForTier`
-    - `DEFAULT_MODEL`
+    - `DEFAULT_MODEL_CHOICE`
     - `idForCliName`
+    - `isModelFamily`
     - `MODEL_REGISTRY`
     - `MODEL_TIERS`
+    - `ModelChoiceSchema`
     - `modelDisplayLabel`
     - `normalizeModel`
+    - `normalizeModelChoice`
     - `registerModelCorruptionReporter`
-    - `reportUnknownModel`
-    - `SELECTABLE_MODELS`
+    - `resolveModel`
+    - `SELECTABLE_CHOICES`
+    - `StoredModelChoiceSchema`
     - `StoredModelSchema`
 - Cross-plugin:
   - Imported by:

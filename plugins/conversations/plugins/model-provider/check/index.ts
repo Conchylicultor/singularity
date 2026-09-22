@@ -43,7 +43,7 @@ const check: Check = {
     return {
       ok: false,
       message: `hardcoded Claude model CLI flag found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Resolve CLI flags through cliFlagFor()/currentModelForTier() in model-provider/core/registry.ts — never hardcode claude-* flags.",
+      hint: "Resolve CLI flags through cliFlagFor()/resolveModel() in model-provider/core/registry.ts — never hardcode claude-* flags.",
     };
   },
 };

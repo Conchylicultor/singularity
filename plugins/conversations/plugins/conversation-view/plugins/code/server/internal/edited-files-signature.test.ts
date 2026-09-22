@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { db } from "@plugins/database/server";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  resolveModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import {
   _tasks,
   createAttempt,
@@ -13,7 +16,10 @@ import {
   insertConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { editedFilesSignature } from "./edited-files-signature";
-import { editedFilesSignatureFor, loadEditedFilesFor } from "./edited-files-resource";
+import {
+  editedFilesSignatureFor,
+  loadEditedFilesFor,
+} from "./edited-files-resource";
 
 // Real throwaway git repos (no fixture helper exists for this shape — the nearest
 // precedent is commit-list's run-git.test.ts, which also mkdtemps a repo under
@@ -52,7 +58,8 @@ function shaPart(signature: string): string {
 afterAll(async () => {
   await Promise.all(repos.map((d) => rm(d, { recursive: true, force: true })));
   // Deleting the task cascades to its attempt + conversation (FK onDelete cascade).
-  for (const id of seededTasks) await db.delete(_tasks).where(eq(_tasks.id, id));
+  for (const id of seededTasks)
+    await db.delete(_tasks).where(eq(_tasks.id, id));
 });
 
 describe("editedFilesSignature", () => {
@@ -129,7 +136,7 @@ describe("editedFilesSignature", () => {
   });
 });
 
-describe("unresolvable worktree — one consistent (unresolved, \"no-worktree\") pair", () => {
+describe('unresolvable worktree — one consistent (unresolved, "no-worktree") pair', () => {
   // An unresolvable worktree means the edited-file set is UNKNOWN, not empty. The
   // loader now SAYS SO in the payload (`unresolved`) instead of throwing (the old
   // wedge) or lying with `[]`; the revalidate collapses onto the constant
@@ -137,16 +144,17 @@ describe("unresolvable worktree — one consistent (unresolved, \"no-worktree\")
   // they are one consistent signature/value pair — never a fresh ETag over a stale
   // value. `[]` / `"none"` would render a legitimate "no changes" and arm the
   // destructive Drop & Close.
-  const NO_SUCH_CONVERSATION = "edited-files-signature-test-no-such-conversation";
+  const NO_SUCH_CONVERSATION =
+    "edited-files-signature-test-no-such-conversation";
 
-  test("no worktree at all: loader → unresolved, revalidate → \"no-worktree\"", async () => {
+  test('no worktree at all: loader → unresolved, revalidate → "no-worktree"', async () => {
     const files = await loadEditedFilesFor(NO_SUCH_CONVERSATION);
     const signature = await editedFilesSignatureFor(NO_SUCH_CONVERSATION);
     expect(files.resolved).toBe(false);
     expect(signature).toBe("no-worktree");
   });
 
-  test("worktree reaped mid-compute: same (unresolved, \"no-worktree\") pair", async () => {
+  test('worktree reaped mid-compute: same (unresolved, "no-worktree") pair', async () => {
     // A conversation whose worktreePath resolves in the DB but whose directory is
     // gone — the reap the `onWorktree` catch handles (git shelled in a vanished
     // cwd throws WorktreeGoneError), distinct from the never-had-a-worktree branch
@@ -163,7 +171,7 @@ describe("unresolvable worktree — one consistent (unresolved, \"no-worktree\")
       id: convId,
       attemptId,
       runtime: "tmux",
-      model: DEFAULT_MODEL,
+      model: resolveModel(DEFAULT_MODEL_CHOICE),
       spawnedBy: "edited-files-signature-test",
     });
 

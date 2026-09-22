@@ -1,7 +1,4 @@
-import {
-  normalizeModel,
-  type ConversationModel,
-} from "@plugins/conversations/plugins/model-provider/core";
+import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import type { LaunchControlProps } from "@plugins/tasks/plugins/launch-options/web";
 
@@ -13,11 +10,10 @@ export function AutoStartLaunchControl({
   value,
   onChange,
   disabled,
-}: LaunchControlProps<ConversationModel | null>) {
+}: LaunchControlProps<ModelChoice | null>) {
   return (
     <ModelSelect
-      // A legacy/unknown stored model normalizes rather than showing as Off.
-      value={value != null ? normalizeModel(value) : null}
+      value={value}
       onChange={onChange}
       ariaLabel="Auto-start model"
       disabled={disabled}

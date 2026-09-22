@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { AgentSchema, AgentLaunchWithStatusSchema } from "./schemas";
 
 // --- Body schemas ---
 //
-// `model` is the strict ConversationModel enum on every input schema: an
-// unknown/typo id is rejected loudly at the endpoint boundary (400) rather than
-// stored or launched as a silent DEFAULT_MODEL fallback. Stored agent.model
-// values read back at launch time stay tolerant via normalizeModel.
+// `model` is the strict ModelChoice enum (a family or a pinned version) on
+// every input schema: an unknown/typo id is rejected loudly at the endpoint
+// boundary (400) rather than stored or launched as a silent default. Stored
+// agent.model values read back stay tolerant via StoredModelChoiceSchema.
 
 export const CreateAgentBodySchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -18,7 +18,7 @@ export const CreateAgentBodySchema = z.object({
   afterId: z.string().optional(),
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
-  model: ConversationModelSchema.nullable().optional(),
+  model: ModelChoiceSchema.nullable().optional(),
   icon: z.string().nullable().optional(),
   iconColor: z.string().nullable().optional(),
   iconSvgNodes: z.string().nullable().optional(),
@@ -31,7 +31,7 @@ export type CreateAgentBody = z.infer<typeof CreateAgentBodySchema>;
 export const UpdateAgentBodySchema = z.object({
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
-  model: ConversationModelSchema.nullable().optional(),
+  model: ModelChoiceSchema.nullable().optional(),
   icon: z.string().nullable().optional(),
   iconColor: z.string().nullable().optional(),
   iconSvgNodes: z.string().nullable().optional(),
@@ -55,7 +55,7 @@ export const MoveAgentBodySchema = z.object({
 export type MoveAgentBody = z.infer<typeof MoveAgentBodySchema>;
 
 export const LaunchAgentBodySchema = z.object({
-  model: ConversationModelSchema.optional(),
+  model: ModelChoiceSchema.optional(),
 });
 export type LaunchAgentBody = z.infer<typeof LaunchAgentBodySchema>;
 

@@ -1,5 +1,5 @@
-import { MODEL_REGISTRY, normalizeModel, type ConversationModel } from "../../core";
+import { MODEL_REGISTRY, type ConversationModel } from "../../core";
 
 export function resolveCliFlag(model: ConversationModel): string {
-  return MODEL_REGISTRY[normalizeModel(model)].cliFlag;
+  return MODEL_REGISTRY[model].cliFlag;
 }

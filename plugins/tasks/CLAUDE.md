@@ -75,7 +75,7 @@
     - `GET /api/repo-info`
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModelSchema`
+    - `conversations/model-provider.ModelChoiceSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
     - `tasks/tasks-core.ConversationSchema`

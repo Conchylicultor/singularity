@@ -349,7 +349,8 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `useTaskConversations`
 - Core:
   - Uses:
-    - `conversations/model-provider.DEFAULT_MODEL`
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+    - `conversations/model-provider.resolveModel`
     - `conversations/model-provider.StoredModelSchema`
     - `fields.fieldsToZodObject`
     - `fields.nullable`

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
-import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
+import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { MdOutlineAutoAwesome } from "react-icons/md";
 import { autoStartLaunchOption } from "../core";
 import { AutoStartLaunchControl } from "./components/auto-start-control";
@@ -34,7 +34,7 @@ export default {
         side: "end",
       },
       useTaskBinding: useTaskAutoStartBinding,
-      summarize: (model) => (model ? modelDisplayLabel(model) : null),
+      summarize: (model) => (model ? choiceLabel(model) : null),
     }),
   ],
 } satisfies PluginDefinition;

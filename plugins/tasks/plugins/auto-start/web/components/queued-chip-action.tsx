@@ -1,4 +1,4 @@
-import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
@@ -12,7 +12,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
 
   if (!queuedModel) return null;
 
-  const label = MODEL_REGISTRY[normalizeModel(queuedModel)].label;
+  const label = choiceLabel(queuedModel);
   return (
     <Badge
       as="button"

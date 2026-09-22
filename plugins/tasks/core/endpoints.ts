@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { dateString } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -23,7 +23,7 @@ export const CreateTaskBodySchema = z.object({
   dependencies: z.array(z.string()).optional(),
   autoStart: z
     .object({
-      model: ConversationModelSchema.optional(),
+      model: ModelChoiceSchema.optional(),
     })
     .optional(),
   attachmentIds: z.array(z.string()).optional(),
@@ -65,7 +65,7 @@ export const InsertBetweenBodySchema = z.object({
 export type InsertBetweenBody = z.infer<typeof InsertBetweenBodySchema>;
 
 export const SetAutoStartBodySchema = z.object({
-  model: ConversationModelSchema,
+  model: ModelChoiceSchema,
 });
 export type SetAutoStartBody = z.infer<typeof SetAutoStartBodySchema>;
 

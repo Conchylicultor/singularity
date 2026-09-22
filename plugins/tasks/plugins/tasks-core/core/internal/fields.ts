@@ -9,8 +9,9 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import {
-  DEFAULT_MODEL,
+  DEFAULT_MODEL_CHOICE,
   StoredModelSchema,
+  resolveModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { ConversationStatusSchema } from "../conversation-status";
 
@@ -83,21 +84,25 @@ export const conversationFields = {
   // value type is derived rather than asserted.
   status: enumTextField(ConversationStatusSchema.options),
   runtime: textField(),
+  // The concrete version the conversation RAN — never a family: a model choice
+  // ("opus") is resolved at spawn, before this row is written.
+  //
   // TOLERANT on purpose, unlike its siblings. Model ids get renamed and rows
-  // outlive the rename: a live row still holds the pre-versioning `"opus"`,
-  // which is a LEGACY_ALIASES key and NOT in `ConversationModelSchema.options`.
-  // A strict decoder here would throw on reading that row. `StoredModelSchema`
-  // normalizes it and fires the deduped corruption report — the same guard the
+  // outlive the rename. A strict decoder here would throw on reading such a
+  // row; `StoredModelSchema` normalizes it and fires the deduped corruption
+  // report — the same guard the
   // live-state resource already carried, moved down to the column so it reaches
   // the server-side readers too.
   //
-  // `DEFAULT_MODEL` is now the wire/backfill default, where the tuple form
+  // The current default version is the wire/backfill default, where the tuple form
   // silently gave `"fable-5-1"` — the first entry of the enum, i.e. tuple order
   // rather than anyone's decision. Nothing observable changes: the column is
-  // notNull with no DB default, so every row carries a model and the wire
-  // schema's `.default()` never fires. The general factory just makes the value
+  // notNull with no DB default (every insert passes the resolved version), so
+  // every row carries a model and the wire schema's `.default()` never fires. The general factory just makes the value
   // something someone had to choose.
-  model: parsedTextField(StoredModelSchema, { default: DEFAULT_MODEL }),
+  model: parsedTextField(StoredModelSchema, {
+    default: resolveModel(DEFAULT_MODEL_CHOICE),
+  }),
   kind: enumTextField(["user", "agent", "system"] as const),
   claudeSessionId: nullable(textField()),
   waitingFor: nullable(textField()),

@@ -4,7 +4,7 @@ import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   cliFlagFor,
-  currentModelForTier,
+  resolveModel,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { recordClaudeCliCall } from "./record-call";
@@ -58,7 +58,7 @@ export async function runClaudePrint(
   input: RunClaudePrintInput,
 ): Promise<string> {
   const timeoutMs = input.timeoutMs ?? 15_000;
-  const resolvedModel = currentModelForTier(input.tier);
+  const resolvedModel = resolveModel(input.tier);
   const cliFlag = cliFlagFor(resolvedModel);
   // `--tools ""` disables every tool so the model can't go off and plan/edit;
   // `--system-prompt` replaces (not appends) the default system prompt so the

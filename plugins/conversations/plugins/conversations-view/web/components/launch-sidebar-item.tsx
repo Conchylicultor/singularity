@@ -14,7 +14,7 @@ import {
   LaunchModelMenuContent,
   useLaunchConversation,
 } from "@plugins/primitives/plugins/launch/web";
-import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/web";
 
 /**
@@ -43,7 +43,7 @@ import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/w
 export function LaunchSidebarItem() {
   const { launch, launching } = useLaunchConversation({});
   const defaultModel = useDefaultModel();
-  const label = MODEL_REGISTRY[defaultModel].label;
+  const label = choiceLabel(defaultModel);
 
   return (
     <SidebarMenu>

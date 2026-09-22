@@ -4,10 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { createConversation } from "@plugins/conversations/server";
-import {
-  DEFAULT_MODEL,
-  normalizeModel,
-} from "@plugins/conversations/plugins/model-provider/core";
+import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
@@ -32,10 +29,8 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     throw new HttpError(400, "Agent has no prompt (folder node)");
   }
 
-  // body.model is a validated ConversationModel (strict enum) — use it as-is.
-  // Only the stored agent.model fallback (a DB value that may hold a legacy id)
-  // goes through normalizeModel.
-  const model = body.model ?? normalizeModel(agent.model ?? DEFAULT_MODEL);
+  // A model choice (family or pinned version); the spawn resolves it.
+  const model = body.model ?? agent.model ?? DEFAULT_MODEL_CHOICE;
 
   const now = new Date();
   const task = await createTask({

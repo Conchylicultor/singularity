@@ -1,16 +1,28 @@
 export {
   ConversationModelSchema,
-  DEFAULT_MODEL,
+  ModelChoiceSchema,
+  DEFAULT_MODEL_CHOICE,
   MODEL_REGISTRY,
-  SELECTABLE_MODELS,
+  SELECTABLE_CHOICES,
   MODEL_TIERS,
   normalizeModel,
-  reportUnknownModel,
+  normalizeModelChoice,
   StoredModelSchema,
+  StoredModelChoiceSchema,
   registerModelCorruptionReporter,
   cliFlagFor,
-  currentModelForTier,
+  resolveModel,
+  isModelFamily,
+  choiceFamily,
+  choiceLabel,
+  choiceHint,
+  choiceIconSize,
   idForCliName,
   modelDisplayLabel,
 } from "./registry";
-export type { ConversationModel, ModelMeta, ModelTier } from "./registry";
+export type {
+  ConversationModel,
+  ModelChoice,
+  ModelMeta,
+  ModelTier,
+} from "./registry";

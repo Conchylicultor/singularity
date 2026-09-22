@@ -104,7 +104,8 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `useClaudeCliCalls`
 - Core:
   - Uses:
-    - `conversations/model-provider.DEFAULT_MODEL`
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+    - `conversations/model-provider.resolveModel`
     - `conversations/model-provider.StoredModelSchema`
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`

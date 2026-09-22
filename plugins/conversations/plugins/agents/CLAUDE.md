@@ -45,7 +45,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.Conversation`
-    - `conversations/model-provider.useVisibleModels`
+    - `conversations/model-provider.ModelSelect`
     - `fields/avatar/table.avatarFieldDef`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/avatar.Avatar`
@@ -111,6 +111,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `database.db`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
+    - `database/sql-column.parsedText`
     - `infra/attachments.Attachments`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -162,7 +163,8 @@ drag-reparent behavior. Do not reintroduce it; see
     - `GET /api/agents/:id/launches`
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModelSchema`
+    - `conversations/model-provider.ModelChoiceSchema`
+    - `conversations/model-provider.StoredModelChoiceSchema`
     - `infra/endpoints.defineEndpoint`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`

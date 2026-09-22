@@ -1,0 +1,1 @@
+ALTER TABLE "conversations" ALTER COLUMN "model" DROP DEFAULT;

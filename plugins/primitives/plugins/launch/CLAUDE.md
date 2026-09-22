@@ -43,6 +43,7 @@ started" notification confirms it), so its props are the form's minus
 - Web:
   - Uses:
     - `conversations/conversation-view.conversationPane`
+    - `conversations/model-provider.ModelChoiceLabel`
     - `conversations/model-provider.useDefaultModel`
     - `conversations/model-provider.useSetDefaultModel`
     - `conversations/model-provider.useVisibleModels`

@@ -1,14 +1,9 @@
-import {
-  type AnyPgColumn,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { type AnyPgColumn, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import {
   taskFields,
   attemptFields,
@@ -20,9 +15,7 @@ import {
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can
 // depend on it without forming a cycle. Views, Zod schemas, and types live in
-// `./schema.ts` (now a shim over `core/internal/schema.ts`). The
-// model-provider/core import (DEFAULT_MODEL) is safe — it has zero plugin deps
-// and introduces no cycle.
+// `./schema.ts` (now a shim over `core/internal/schema.ts`).
 //
 // These five tables form a single FK cluster and are co-located here to
 // eliminate the cycle that existed when _conversations lived in the
@@ -38,10 +31,16 @@ const tasksEntity = defineEntity("tasks", taskFields, {
   primaryKey: "id",
   columns: {
     folderId: {
-      references: { column: (): AnyPgColumn => tasksEntity.table.id, onDelete: "cascade" },
+      references: {
+        column: (): AnyPgColumn => tasksEntity.table.id,
+        onDelete: "cascade",
+      },
     },
     groupId: {
-      references: { column: (): AnyPgColumn => tasksEntity.table.id, onDelete: "set null" },
+      references: {
+        column: (): AnyPgColumn => tasksEntity.table.id,
+        onDelete: "set null",
+      },
     },
     titleAuto: { default: true },
     createdAt: { default: defaultNow() },
@@ -75,26 +74,33 @@ const attemptsEntity = defineEntity("attempts", attemptFields, {
 });
 export const _attempts = attemptsEntity.table;
 
-const taskDependenciesEntity = defineEntity("task_dependencies", taskDependencyFields, {
-  primaryKey: ["taskId", "dependsOnTaskId"],
-  columns: {
-    taskId: {
-      references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
+const taskDependenciesEntity = defineEntity(
+  "task_dependencies",
+  taskDependencyFields,
+  {
+    primaryKey: ["taskId", "dependsOnTaskId"],
+    columns: {
+      taskId: {
+        references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
+      },
+      dependsOnTaskId: {
+        references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
+      },
+      createdAt: { default: defaultNow() },
     },
-    dependsOnTaskId: {
-      references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
-    },
-    createdAt: { default: defaultNow() },
+    indexes: (t) => [index("task_deps_depends_on_idx").on(t.dependsOnTaskId)],
   },
-  indexes: (t) => [index("task_deps_depends_on_idx").on(t.dependsOnTaskId)],
-});
+);
 export const _taskDependencies = taskDependenciesEntity.table;
 
 const pushesEntity = defineEntity("pushes", pushFields, {
   primaryKey: "id",
   columns: {
     attemptId: {
-      references: { column: () => attemptsEntity.table.id, onDelete: "cascade" },
+      references: {
+        column: () => attemptsEntity.table.id,
+        onDelete: "cascade",
+      },
     },
     // conversationId carries NO FK (soft attribution so the conversations table
     // can own its own lifecycle).
@@ -114,11 +120,13 @@ const conversationsEntity = defineEntity("conversations", conversationFields, {
   primaryKey: "id",
   columns: {
     attemptId: {
-      references: { column: () => attemptsEntity.table.id, onDelete: "cascade" },
+      references: {
+        column: () => attemptsEntity.table.id,
+        onDelete: "cascade",
+      },
     },
     status: { default: "starting" },
     runtime: { default: "tmux" },
-    model: { default: DEFAULT_MODEL },
     kind: { default: "user" },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },

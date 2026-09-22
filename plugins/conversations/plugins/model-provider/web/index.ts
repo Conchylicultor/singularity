@@ -13,6 +13,7 @@ export { familyClass } from "./internal/family-class";
 export { useModelItems } from "./internal/items";
 export type { ModelItem } from "./internal/items";
 export { ModelSelect } from "./components/model-select";
+export { ModelChoiceLabel } from "./components/model-choice-label";
 export type { ModelSelectProps } from "./components/model-select";
 
 export default {

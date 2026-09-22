@@ -1,9 +1,11 @@
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
-import { useModelItems } from "@plugins/conversations/plugins/model-provider/web";
 import {
-  modelDisplayLabel,
-  normalizeModel,
-  type ConversationModel,
+  ModelChoiceLabel,
+  useVisibleModels,
+} from "@plugins/conversations/plugins/model-provider/web";
+import {
+  choiceLabel,
+  type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
 import type { LaunchControlProps } from "@plugins/tasks/plugins/launch-options/web";
 
@@ -19,10 +21,8 @@ export const AUTO_START_OFF_LABEL = "Off";
  * a solo pill, its placeholder) there instead, so this only ever sees a real
  * model.
  */
-export function AutoStartPillValue({ value }: { value: ConversationModel }) {
-  // A legacy or unknown stored id still reads as a name, exactly as the select
-  // in the task detail does.
-  return <>{modelDisplayLabel(value)}</>;
+export function AutoStartPillValue({ value }: { value: ModelChoice }) {
+  return <>{choiceLabel(value)}</>;
 }
 
 /**
@@ -34,19 +34,18 @@ export function AutoStartPillMenu({
   value,
   onChange,
   disabled,
-}: LaunchControlProps<ConversationModel | null>) {
-  const models = useModelItems();
-  const selected = value != null ? normalizeModel(value) : null;
+}: LaunchControlProps<ModelChoice | null>) {
+  const models = useVisibleModels();
   return (
     <>
       {models.map((model) => (
         <PickerPill.Item
-          key={model.value}
-          selected={selected === model.value}
-          onSelect={() => onChange(model.value)}
+          key={model}
+          selected={value === model}
+          onSelect={() => onChange(model)}
           disabled={disabled}
         >
-          {model.label}
+          <ModelChoiceLabel choice={model} />
         </PickerPill.Item>
       ))}
       <PickerPill.Item

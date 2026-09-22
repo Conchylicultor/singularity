@@ -4,8 +4,8 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import {
-  DEFAULT_MODEL,
-  StoredModelSchema,
+  DEFAULT_MODEL_CHOICE,
+  StoredModelChoiceSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
 
 // One task's auto-start marker, stored in the `tasks_ext_auto_start`
@@ -15,15 +15,15 @@ export const taskAutoStartShape = defineExtensionShape({
   key: "taskId",
   fields: {
     autoStartAt: dateField(),
-    // The tolerant schema, not the strict one: model ids get renamed and stored
-    // rows outlive them. Normalizing at the COLUMN is what reaches the
-    // server-side readers too — the launch job looks this id up in
-    // MODEL_REGISTRY — and on the wire a legacy/unknown stored model normalizes
-    // instead of rejecting the row, which would blank the whole resource.
-    // `default` is only the wire default the field record requires; the column
-    // has no DB default.
-    autoStartModel: parsedTextField(StoredModelSchema, {
-      default: DEFAULT_MODEL,
+    // A model CHOICE — a family ("opus", resolved to its newest version when
+    // the task launches) or a pinned version. The tolerant schema, not the
+    // strict one: model ids get renamed and stored rows outlive them.
+    // Normalizing at the COLUMN is what reaches the server-side readers too, and
+    // on the wire an unknown stored value normalizes instead of rejecting the
+    // row, which would blank the whole resource. `default` is only the wire
+    // default the field record requires; the column has no DB default.
+    autoStartModel: parsedTextField(StoredModelChoiceSchema, {
+      default: DEFAULT_MODEL_CHOICE,
     }),
   },
 });

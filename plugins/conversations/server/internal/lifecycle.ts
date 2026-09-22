@@ -18,9 +18,10 @@ import {
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { Runtime } from "./runtime";
 import {
-  DEFAULT_MODEL,
-  normalizeModel,
+  DEFAULT_MODEL_CHOICE,
+  resolveModel,
   type ConversationModel,
+  type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
 import {
   newAttemptId,
@@ -68,7 +69,8 @@ export interface CreateConversationOpts {
   taskId?: string;
   attemptId?: string;
   prompt?: string;
-  model?: ConversationModel;
+  /** A family ("opus") or a pinned version; resolved to what runs here, once. */
+  model?: ModelChoice;
   spawnedBy?: string;
   kind?: ConversationKind;
   forkFromConversationId?: string;
@@ -178,7 +180,7 @@ export async function prepareConversation(
     }
     attemptId = source.attemptId;
     resumeSessionId = source.claudeSessionId;
-    inheritedModel = normalizeModel(source.model);
+    inheritedModel = source.model;
 
     if (opts.forkAtMessageUuid) {
       // Fork from a chosen message: resume OUR truncated copy rather than let
@@ -210,10 +212,13 @@ export async function prepareConversation(
       resumeSessionId = newSessionId;
     }
   }
-  // Normalize on write too: callers like the auto-start job pass a model read
-  // straight from a side-table that may still hold a legacy ("opus") value
-  // queued before model flattening. Keep persisted rows on concrete ids.
-  const model = normalizeModel(opts.model ?? inheritedModel ?? DEFAULT_MODEL);
+  // THE point a model choice becomes the version that runs: a family ("opus")
+  // resolves to its current version NOW, at spawn — not when the task was
+  // armed. The conversation row records the concrete version it ran; a fork
+  // keeps its source's version unless the caller picked one.
+  const model = resolveModel(
+    opts.model ?? inheritedModel ?? DEFAULT_MODEL_CHOICE,
+  );
 
   // The namespace of the backend doing the creating, unless the caller named
   // one. `runtimeNamespace()` throws rather than answering with a guess, so

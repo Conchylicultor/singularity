@@ -19,10 +19,12 @@ import { type Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { createConversation } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  MODEL_REGISTRY,
-  type ConversationModel,
+  choiceIconSize,
+  choiceLabel,
+  type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
 import {
+  ModelChoiceLabel,
   useVisibleModels,
   useDefaultModel,
   useSetDefaultModel,
@@ -66,8 +68,9 @@ export type LaunchControlProps = {
 };
 
 /**
- * The launch action, generalized over any concrete model. `launch(model, e?)`
- * creates a conversation pinned to that model. This is the common action the
+ * The launch action, generalized over any model choice. `launch(model, e?)`
+ * creates a conversation with that choice — a family ("opus") runs its newest
+ * version, resolved by the server at spawn. This is the common action the
  * launch plugin exposes; custom UIs (fork-session, branch) consume it directly.
  */
 export function useLaunchConversation({
@@ -79,10 +82,10 @@ export function useLaunchConversation({
   LaunchControlProps,
   "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched"
 >) {
-  const [launching, setLaunching] = useState<ConversationModel | null>(null);
+  const [launching, setLaunching] = useState<ModelChoice | null>(null);
   const openPane = useOpenPane();
 
-  const launch = async (model: ConversationModel, e?: React.MouseEvent) => {
+  const launch = async (model: ModelChoice, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (launching) return;
     setLaunching(model);
@@ -117,10 +120,7 @@ export function useLaunchConversation({
 export function LaunchModelMenuContent({
   launch,
 }: {
-  launch: (
-    model: ConversationModel,
-    e?: React.MouseEvent,
-  ) => Promise<void> | void;
+  launch: (model: ModelChoice, e?: React.MouseEvent) => Promise<void> | void;
 }) {
   const defaultModel = useDefaultModel();
   const visibleModels = useVisibleModels();
@@ -155,13 +155,13 @@ export function LaunchModelMenuContent({
             gap="xs"
             className={fillClasses("x")}
           >
-            {MODEL_REGISTRY[id].label}
+            <ModelChoiceLabel choice={id} />
             {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
           </Stack>
           <Stack as="span" direction="row" align="center" gap="xs">
             <IconButton
               icon={MdPlayArrow}
-              label={`Launch ${MODEL_REGISTRY[id].label}`}
+              label={`Launch ${choiceLabel(id)}`}
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
@@ -182,7 +182,7 @@ export function LaunchModelMenuContent({
 
 /**
  * Split [ <model dropdown> | <launch> ] control. The dropdown lists the visible
- * concrete models; clicking a row sets it as the persisted default; the hover
+ * model choices; clicking a row sets it as the persisted default; the hover
  * launch icon on each row fires that model one-time; the main launch button
  * fires the current default.
  */
@@ -222,11 +222,11 @@ export function LaunchControl({
           variant="ghost"
           aspect="icon"
           disabled={busy}
-          aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
-          title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
+          aria-label={`Launch ${choiceLabel(defaultModel)}`}
+          title={`Launch ${choiceLabel(defaultModel)}`}
           onClick={() => launch(defaultModel)}
         >
-          <MdPlayArrow className={MODEL_REGISTRY[defaultModel].iconSize} />
+          <MdPlayArrow className={choiceIconSize(defaultModel)} />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -265,7 +265,7 @@ export function LaunchControl({
             />
           }
         >
-          {MODEL_REGISTRY[defaultModel].label}
+          {choiceLabel(defaultModel)}
           <MdExpandMore className="size-4 opacity-80" />
         </DropdownMenuTrigger>
         {rows}
@@ -274,8 +274,8 @@ export function LaunchControl({
       <Button
         variant={btnVariant}
         disabled={busy}
-        aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
-        title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
+        aria-label={`Launch ${choiceLabel(defaultModel)}`}
+        title={`Launch ${choiceLabel(defaultModel)}`}
         onClick={() => launch(defaultModel)}
         className={cn(
           "px-sm",

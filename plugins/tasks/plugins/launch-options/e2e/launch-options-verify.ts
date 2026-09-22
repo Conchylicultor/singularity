@@ -54,8 +54,8 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
-  DEFAULT_MODEL,
-  modelDisplayLabel,
+  DEFAULT_MODEL_CHOICE,
+  choiceLabel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { EFFORT_UNSET_LABEL } from "@plugins/conversations/plugins/effort-provider/core";
 import type { Locator, Page } from "playwright";
@@ -97,7 +97,7 @@ const OPTIONS: ExpectedOption[] = [
     control: "Auto-start model",
     label: "Auto-start",
     pill: "Auto-start",
-    value: modelDisplayLabel(DEFAULT_MODEL),
+    value: choiceLabel(DEFAULT_MODEL_CHOICE),
   },
   {
     control: "Task preprompt",

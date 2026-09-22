@@ -1,31 +1,36 @@
 import { useCallback } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
-  SELECTABLE_MODELS,
-  normalizeModel,
-  type ConversationModel,
+  SELECTABLE_CHOICES,
+  isModelFamily,
+  normalizeModelChoice,
+  type ModelChoice,
 } from "../../core";
 import { modelProviderConfig } from "../../shared/config";
 
-/** Models to show in the launch dropdown, in registry order, filtered by config. */
-export function useVisibleModels(): ConversationModel[] {
+/** Choices to show in every model picker — families first, then the pinned versions the user turned on. */
+export function useVisibleModels(): ModelChoice[] {
   const { visibleModels } = useConfig(modelProviderConfig);
-  const visible = SELECTABLE_MODELS.filter((id) => visibleModels[id] !== false);
-  // Never present an empty dropdown — fall back to all selectable models if config hides everything.
-  return visible.length > 0 ? visible : SELECTABLE_MODELS;
+  const visible = SELECTABLE_CHOICES.filter(
+    (choice) => visibleModels[choice] ?? isModelFamily(choice),
+  );
+  // Never present an empty dropdown — fall back to the families if config hides everything.
+  return visible.length > 0
+    ? visible
+    : SELECTABLE_CHOICES.filter((choice) => isModelFamily(choice));
 }
 
 /** The user-chosen default model fired by the main launch button. */
-export function useDefaultModel(): ConversationModel {
+export function useDefaultModel(): ModelChoice {
   const { defaultModel } = useConfig(modelProviderConfig);
-  return normalizeModel(defaultModel);
+  return normalizeModelChoice(defaultModel);
 }
 
 /** Persist a new default model. */
-export function useSetDefaultModel(): (model: ConversationModel) => void {
+export function useSetDefaultModel(): (model: ModelChoice) => void {
   const setConfig = useSetConfig(modelProviderConfig);
   return useCallback(
-    (model: ConversationModel) => setConfig("defaultModel", model),
+    (model: ModelChoice) => setConfig("defaultModel", model),
     [setConfig],
   );
 }

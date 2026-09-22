@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
+import { StoredModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 // Pure Zod schemas for agent types — no drizzle imports, safe to use in
 // core/, shared/, and web/. The server schema.ts imports from here and wraps
@@ -11,7 +12,8 @@ export const AgentSchema = z.object({
   parentId: z.string().nullable(),
   name: z.string(),
   prompt: z.string().nullable(),
-  model: z.string().nullable(),
+  // A family ("sonnet" — its newest version) or a pinned version; null = default.
+  model: StoredModelChoiceSchema.nullable(),
   icon: z.string().nullable(),
   iconColor: z.string().nullable(),
   iconSvgNodes: z.string().nullable(),
