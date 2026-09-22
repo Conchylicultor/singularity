@@ -161,3 +161,34 @@ const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
  *  edge classifier walks instead of every runtime's `apiUses`. */
 export const SHIPPED_RUNTIME_FOLDERS: readonly RuntimeFolder[] =
   RUNTIME_FOLDERS.filter((rt) => RUNTIME_FOLDER_SHIPPED[rt]);
+
+/** The directory a runtime folder publishes its test helpers from:
+ *  `<runtime>/testing/index.ts`, imported as `@plugins/<p>/<runtime>/testing`.
+ *  It sits directly under a runtime folder (never under `e2e/`) and nowhere
+ *  else, so the name means the same thing wherever it appears and a file walker
+ *  may skip it by name, as it skips `__tests__`. */
+export const TESTING_FOLDER = "testing";
+
+/** The directory vitest's jsdom suites live in (see `test-layout`). */
+export const TESTS_DIR = "__tests__";
+
+const TEST_FILE_RE = /\.test(\.tsx?)?$/;
+
+/** Whether a path inside a plugin (its segments below the plugin directory, the
+ *  file name last) is TEST CODE: a `*.test.ts(x)` file, or anything under a
+ *  `__tests__/` or `testing/` directory. A relative specifier's segments work
+ *  too — its extension is optional, and a directory specifier (`…/testing`)
+ *  names that directory's index. This is the one definition; test code
+ *  follows its folder's boundary row, and only code that verifies may import it. */
+export function isTestCodePath(segments: readonly string[]): boolean {
+  if (TEST_FILE_RE.test(segments.at(-1) ?? "")) return true;
+  // Every segment, the last included: `@plugins/x/core/testing` and
+  // `../core/testing` name the directory itself (its index).
+  return segments.some((s) => s === TESTS_DIR || s === TESTING_FOLDER);
+}
+
+/** The plugin folders whose ORDINARY files verify rather than ship, and so may
+ *  import test code like a test may. A check reads code and never runs in the
+ *  product. `e2e` is deliberately absent: it verifies by driving the running
+ *  app, not by importing code. */
+export const VERIFYING_FOLDERS: readonly PluginFolder[] = ["check"];

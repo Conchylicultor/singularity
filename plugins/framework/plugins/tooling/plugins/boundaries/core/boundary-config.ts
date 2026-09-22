@@ -6,6 +6,12 @@ export default defineBoundaries({
   // Layer 1: Folder isolation (default-deny — unlisted = blocked). One row per
   // folder a plugin may contain (`PluginFolder`), and a row can only list
   // barrel folders (`RuntimeFolder`): nothing imports a leaf folder.
+  //
+  // Test code (`isTestCodePath`: `*.test.ts(x)`, `__tests__/`, `<runtime>/testing/`)
+  // has NO rows of its own: it follows the row of the folder it sits in. The one
+  // extra rule — only code that verifies (test code, `VERIFYING_FOLDERS`) may
+  // import test code — is `judgeImport`'s first step, so a test reaches exactly
+  // the `testing` barrels of the folders its row already allows.
   folders: {
     // `data-dirs` is absent from `web` and `core` ON PURPOSE. A data-dir
     // declaration reaches `paths/core`, which calls `homedir()` at module scope

@@ -1,6 +1,9 @@
 import { sep } from "path";
 import {
   PLUGIN_FOLDERS,
+  RUNTIME_FOLDERS,
+  TESTING_FOLDER,
+  isTestCodePath,
   type PluginFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { ZoneDefinition } from "./types";
@@ -12,7 +15,10 @@ export type UnfolderedReason =
   /** The first segment under the plugin is not in `PLUGIN_FOLDERS`. */
   | "unknown-folder"
   /** Under the plugin's `plugins/`, but inside no discovered child plugin. */
-  | "not-in-child-plugin";
+  | "not-in-child-plugin"
+  /** A `testing/` directory that is not directly under a runtime folder, or
+   *  sits under `e2e/` (which verifies by driving the app, not by importing). */
+  | "misplaced-testing";
 
 /**
  * Where a path lands. There is no "no folder" arm: a path inside a plugin
@@ -22,7 +28,14 @@ export type UnfolderedReason =
 export type Resolved =
   /** Not under a plugin: an npm package, a file outside `plugins/`. */
   | { kind: "outside" }
-  | { kind: "folder"; zone: string; folder: PluginFolder }
+  | {
+      kind: "folder";
+      zone: string;
+      folder: PluginFolder;
+      /** Test code (`isTestCodePath`): follows `folder`'s row, and only code
+       *  that verifies may import it. */
+      test: boolean;
+    }
   | {
       kind: "unfoldered";
       zone: string;
@@ -45,6 +58,11 @@ export interface ZoneMap {
 
 const OUTSIDE: Resolved = { kind: "outside" };
 const FOLDERS: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
+// The folders a `testing/` directory may sit directly under: every barrel
+// folder but `e2e`, whose scripts get no test helpers.
+const TESTING_HOSTS: ReadonlySet<string> = new Set(
+  RUNTIME_FOLDERS.filter((f) => f !== "e2e"),
+);
 const isPluginFolder = (name: string): name is PluginFolder =>
   FOLDERS.has(name);
 
@@ -59,7 +77,23 @@ const isPluginFolder = (name: string): name is PluginFolder =>
  */
 function classify(zone: string, inside: string[]): Resolved {
   const [first = "", ...rest] = inside;
-  if (isPluginFolder(first)) return { kind: "folder", zone, folder: first };
+  if (isPluginFolder(first)) {
+    const at = rest.indexOf(TESTING_FOLDER);
+    if (at > 0 || (at === 0 && !TESTING_HOSTS.has(first))) {
+      return {
+        kind: "unfoldered",
+        zone,
+        why: "misplaced-testing",
+        name: [first, ...rest.slice(0, at + 1)].join("/"),
+      };
+    }
+    return {
+      kind: "folder",
+      zone,
+      folder: first,
+      test: isTestCodePath(inside),
+    };
+  }
   if (rest.length === 0) {
     return { kind: "unfoldered", zone, why: "loose-file", name: first };
   }

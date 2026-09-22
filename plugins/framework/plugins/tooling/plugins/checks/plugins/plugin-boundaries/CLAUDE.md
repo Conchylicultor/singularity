@@ -4,6 +4,14 @@ Implements the cross-plugin boundary rules (R1–R10) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
 root `CLAUDE.md`.
 
+## Testing barrels
+
+A runtime folder may publish test helpers from `<runtime>/testing/index.ts`.
+R4 accepts `@plugins/<p>/<runtime>/testing` as a legal ending; R3 requires the
+`index.ts` once `testing/` holds TypeScript and applies barrel purity and the
+cross-plugin re-export rule to it. Who may import a testing barrel (test code
+and `check/` only) is `boundary-rules`' job, not this check's.
+
 ## Cross-plugin re-export (provenance-based)
 
 The `cross-plugin-reexport` rule is **name-level and transitive**, not a

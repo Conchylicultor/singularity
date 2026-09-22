@@ -24,6 +24,27 @@ The folder vocabulary lives in `plugin-id/core`: `RUNTIME_FOLDERS` (barrels:
   claims is reported, and so is an import that lands on one. Adding a new kind of
   folder is one edit to `LEAF_FOLDERS` (or `RUNTIME_FOLDERS`), then its row.
 
+## Test code
+
+Test code is a second dimension beside the folder, defined once by
+`isTestCodePath` in `plugin-id/core`: a `*.test.ts(x)` file, or anything under
+`__tests__/` or `testing/`.
+
+- **It follows its folder's row.** A helper in `server/testing/` gets the
+  `server` row. No row mentions test code.
+- **Only code that verifies may import it.** That is test code itself plus
+  `VERIFYING_FOLDERS` (`check/`). Everything else ships — `e2e/` included, since
+  it drives the running app rather than importing code — and importing test
+  code is a violation, even from the same folder. `judgeImport`
+  (`core/evaluate.ts`) asks this before the own-folder exemption.
+- **`testing/` sits directly under a runtime folder, never under `e2e/`.**
+  Anywhere else it is reported (`misplaced-testing`). That keeps the name
+  unambiguous, so walkers (`parse-utils`' `walkFiles`) skip it by name, which
+  keeps a harness's imports out of a plugin's docs and composition closure.
+- `@plugins/<p>/<runtime>/testing` is the one legal import ending beyond the
+  barrel (plugin-boundaries R4), and the testing barrel is held to R3 like any
+  barrel.
+
 ## One table, inside and across plugins
 
 `boundary-rules` resolves every import it reads — `@plugins/…` and relative
@@ -51,9 +72,12 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
   - Uses:
+    - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.PLUGIN_FOLDERS`
     - `framework/plugin-id.PluginFolder`
     - `framework/plugin-id.RUNTIME_FOLDERS`
+    - `framework/plugin-id.TESTING_FOLDER`
+    - `framework/plugin-id.VERIFYING_FOLDERS`
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/parse-utils.findImports`

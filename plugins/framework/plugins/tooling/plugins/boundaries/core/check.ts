@@ -9,15 +9,13 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { PLUGIN_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  PLUGIN_FOLDERS,
+  VERIFYING_FOLDERS,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap, type UnfolderedReason } from "./resolve";
-import {
-  checkRuntime,
-  detectCycle,
-  evaluateEdges,
-  isRuntimeException,
-} from "./evaluate";
+import { detectCycle, evaluateEdges, judgeImport } from "./evaluate";
 
 const PUSH_BACK_HINT =
   "Do NOT work around boundary violations by editing the boundary check or config " +
@@ -70,6 +68,8 @@ const UNFOLDERED_WHY: Record<UnfolderedReason, (name: string) => string> = {
     name ? `loose file "${name}" at the plugin root` : "the plugin root itself",
   "unknown-folder": (name) => `folder "${name}/" is not a plugin folder`,
   "not-in-child-plugin": () => "under plugins/ but inside no child plugin",
+  "misplaced-testing": (name) =>
+    `"${name}/" — a testing/ folder sits directly under a runtime folder (not e2e/), e.g. core/testing/`,
 };
 
 function parseRuntimeException(expr: string): {
@@ -137,7 +137,10 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
           violations.push({
             file: relFile,
             message: `no plugin folder: ${UNFOLDERED_WHY[source.why](source.name)} (${source.zone})`,
-            fix: `move it into one of the plugin's folders: ${LEGAL_FOLDERS}. A new kind of folder is declared in plugin-id/core (LEAF_FOLDERS) with its row in boundary-config.ts`,
+            fix:
+              source.why === "misplaced-testing"
+                ? `move the test helpers to <runtime>/testing/ (e.g. core/testing/index.ts), imported as @plugins/<plugin>/<runtime>/testing`
+                : `move it into one of the plugin's folders: ${LEGAL_FOLDERS}. A new kind of folder is declared in plugin-id/core (LEAF_FOLDERS) with its row in boundary-config.ts`,
           });
           continue;
         }
@@ -162,31 +165,31 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
 
           // The folder table applies to EVERY import, including one that stays
           // inside the plugin (`core/` reaching its own `../server/x`): a folder
-          // may import the same folders whichever plugin they belong to. The
-          // one import no row states is a folder's own files: a leaf row cannot
-          // list its own folder (nothing imports a leaf), yet `check/index.ts`
-          // must still reach `./my-check`.
+          // may import the same folders whichever plugin they belong to. Test
+          // code is gated first: only code that verifies may import it.
+          const verdict = judgeImport(
+            config.folders,
+            rtExceptions,
+            source,
+            target,
+          );
           const samePlugin = source.zone === target.zone;
-          const ownFolder = samePlugin && source.folder === target.folder;
-          const rtExempt =
-            ownFolder ||
-            isRuntimeException(
-              rtExceptions,
-              source.zone,
-              source.folder,
-              target.zone,
-              target.folder,
-            );
+          const srcLabel = `${source.zone}.${source.folder}`;
+          const tgtLabel = `${target.zone}.${target.folder}`;
+          const where = samePlugin
+            ? `same plugin, ${srcLabel} → ${tgtLabel}`
+            : `${srcLabel} → ${tgtLabel}`;
 
-          if (
-            !rtExempt &&
-            !checkRuntime(config.folders, source.folder, target.folder)
-          ) {
-            const srcLabel = `${source.zone}.${source.folder}`;
-            const tgtLabel = `${target.zone}.${target.folder}`;
-            const where = samePlugin
-              ? `same plugin, ${srcLabel} → ${tgtLabel}`
-              : `${srcLabel} → ${tgtLabel}`;
+          if (verdict.kind === "test-code") {
+            violations.push({
+              file: relFile,
+              message: `test code: shipping code cannot import test code (${where}, import "${specifier}")`,
+              fix: `only test files (*.test.ts(x), __tests__/, <runtime>/testing/) and ${VERIFYING_FOLDERS.map((f) => `${f}/`).join(", ")} may import test code. If shipping code needs the helper, it is not a test helper: move it out of test code`,
+            });
+            continue;
+          }
+
+          if (verdict.kind === "runtime") {
             violations.push({
               file: relFile,
               message: `runtime isolation: ${source.folder} cannot import ${target.folder} (${where}, import "${specifier}")`,
@@ -197,7 +200,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
 
           // Allow/deny edges and the cycle graph are about which PLUGINS may
           // depend on each other, so an import inside one plugin stops here.
-          if (samePlugin) continue;
+          if (verdict.kind === "ok") continue;
 
           const result = evaluateEdges(config.edges, source.zone, target.zone);
 

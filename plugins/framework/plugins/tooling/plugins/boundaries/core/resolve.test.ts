@@ -29,10 +29,11 @@ const PLUGINS = "plugins";
 const ALPHA_CORE = `${PLUGINS}/alpha/core/internal/thing.ts`;
 const BETA_WEB = `${PLUGINS}/alpha/plugins/beta/web/components/view.tsx`;
 
-const folder = (zone: string, f: PluginFolder): Resolved => ({
+const folder = (zone: string, f: PluginFolder, test = false): Resolved => ({
   kind: "folder",
   zone,
   folder: f,
+  test,
 });
 
 describe("resolveImport — relative specifiers", () => {
@@ -147,6 +148,58 @@ describe("resolveFile — every file in a plugin has a folder or is reported", (
     expect(zoneMap.resolveFile("eslint.config.ts")).toEqual({
       kind: "outside",
     });
+  });
+});
+
+describe("test code", () => {
+  test("a test file, a __tests__ file and a testing/ file are test code", () => {
+    expect(zoneMap.resolveFile(`${PLUGINS}/alpha/core/a.test.ts`)).toEqual(
+      folder("plugin.alpha", "core", true),
+    );
+    expect(
+      zoneMap.resolveFile(`${PLUGINS}/alpha/web/__tests__/fixture.tsx`),
+    ).toEqual(folder("plugin.alpha", "web", true));
+    expect(
+      zoneMap.resolveFile(`${PLUGINS}/alpha/server/testing/index.ts`),
+    ).toEqual(folder("plugin.alpha", "server", true));
+  });
+
+  test("an ordinary file is not", () => {
+    expect(zoneMap.resolveFile(ALPHA_CORE)).toEqual(
+      folder("plugin.alpha", "core"),
+    );
+  });
+
+  test("a testing barrel resolves as test code, by alias or relatively", () => {
+    expect(
+      zoneMap.resolveImport(
+        ALPHA_CORE,
+        "@plugins/alpha/plugins/beta/core/testing",
+      ),
+    ).toEqual(folder("plugin.alpha.beta", "core", true));
+    expect(zoneMap.resolveImport(ALPHA_CORE, "../testing")).toEqual(
+      folder("plugin.alpha", "core", true),
+    );
+    expect(zoneMap.resolveImport(ALPHA_CORE, "./x.test")).toEqual(
+      folder("plugin.alpha", "core", true),
+    );
+  });
+
+  test("testing/ anywhere but directly under a runtime folder is reported", () => {
+    expect(
+      zoneMap.resolveFile(`${PLUGINS}/alpha/core/internal/testing/x.ts`),
+    ).toEqual({
+      kind: "unfoldered",
+      zone: "plugin.alpha",
+      why: "misplaced-testing",
+      name: "core/internal/testing",
+    });
+    expect(
+      zoneMap.resolveFile(`${PLUGINS}/alpha/e2e/testing/x.ts`),
+    ).toMatchObject({ kind: "unfoldered", why: "misplaced-testing" });
+    expect(
+      zoneMap.resolveFile(`${PLUGINS}/alpha/check/testing/x.ts`),
+    ).toMatchObject({ kind: "unfoldered", why: "misplaced-testing" });
   });
 });
 

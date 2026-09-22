@@ -1,5 +1,9 @@
-import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  VERIFYING_FOLDERS,
+  type PluginFolder,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { BoundaryConfig, Edge } from "./types";
+import type { Resolved } from "./resolve";
 import { matchZone } from "./match";
 
 export type EdgeResult = "allow" | "deny" | "default-deny";
@@ -38,6 +42,55 @@ export function isRuntimeException(
   target: PluginFolder,
 ): boolean {
   return exceptions.has(`${sourceZone}.${source}\0${targetZone}.${target}`);
+}
+
+type InFolder = Extract<Resolved, { kind: "folder" }>;
+
+/** What the folder rules say about one import between two plugin folders. */
+export type ImportVerdict =
+  /** Allowed, and inside one plugin: nothing else to ask. */
+  | { kind: "ok" }
+  /** Allowed by the folder rules, across plugins: the zone edges decide next. */
+  | { kind: "cross-plugin" }
+  /** Code that ships reaching test code. */
+  | { kind: "test-code" }
+  /** The source folder's row does not list the target folder. */
+  | { kind: "runtime" };
+
+/**
+ * The folder rules for one import, in order:
+ *
+ * 1. Test code is importable only by code that verifies — test code itself,
+ *    or a folder in `VERIFYING_FOLDERS`. This runs BEFORE the own-folder
+ *    exemption, so `core/x.ts` reaching its own `./testing` fails too.
+ * 2. A folder's own files are always reachable (a leaf row cannot list its
+ *    own folder, yet `check/index.ts` must reach `./my-check`).
+ * 3. A declared runtime exception.
+ * 4. The source folder's row. Test code follows its folder's row, so this is
+ *    also what limits WHICH `testing` barrels a test may reach.
+ */
+export function judgeImport(
+  folders: BoundaryConfig["folders"],
+  exceptions: Set<string>,
+  source: InFolder,
+  target: InFolder,
+): ImportVerdict {
+  const samePlugin = source.zone === target.zone;
+  const verifies = source.test || VERIFYING_FOLDERS.includes(source.folder);
+  if (target.test && !verifies) return { kind: "test-code" };
+
+  const allowed =
+    (samePlugin && source.folder === target.folder) ||
+    isRuntimeException(
+      exceptions,
+      source.zone,
+      source.folder,
+      target.zone,
+      target.folder,
+    ) ||
+    checkRuntime(folders, source.folder, target.folder);
+  if (!allowed) return { kind: "runtime" };
+  return samePlugin ? { kind: "ok" } : { kind: "cross-plugin" };
 }
 
 export function detectCycle(

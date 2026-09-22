@@ -4,6 +4,10 @@ import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree
 import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
+  RUNTIME_FOLDERS,
+  TESTING_FOLDER,
+} from "@plugins/framework/plugins/plugin-id/core";
+import {
   findImports,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -196,6 +200,43 @@ const check: Check = {
         }
         await maybeYield();
       }
+
+      // R3 for testing barrels: `<runtime>/testing/index.ts` is how a plugin
+      // publishes test helpers (`@plugins/<p>/<runtime>/testing`), so it is a
+      // barrel like `<runtime>/index.ts` — required once the folder holds
+      // TypeScript, pure, and never proxying another plugin's symbols.
+      // `shared/testing` is plugin-private (reached relatively), and `e2e/`
+      // hosts no `testing/` (boundary-rules reports one).
+      for (const runtime of RUNTIME_FOLDERS) {
+        if (runtime === "e2e" || runtime === "shared") continue;
+        const runtimeRel = `${pluginRel}/${runtime}`;
+        if (!repo.subdirs(runtimeRel).has(TESTING_FOLDER)) continue;
+        const testingRel = `${runtimeRel}/${TESTING_FOLDER}`;
+        const barrelRel = `${testingRel}/index.ts`;
+        if (!repoFiles.has(barrelRel)) {
+          if (repo.containsTsFiles(testingRel)) {
+            violations.push({
+              rule: "barrel-required",
+              file: `${testingRel}/`,
+              message: `missing \`index.ts\` barrel in \`${runtime}/${TESTING_FOLDER}/\``,
+              fix: `create \`${barrelRel}\` — the barrel is the only legal cross-plugin entry point for this runtime's test helpers`,
+            });
+          }
+          continue;
+        }
+        await checkBarrelPurity(barrelRel, violations, repoFiles);
+        for (const v of await collectForeignReexports({
+          barrelRel,
+          ownPlugin: p.relPath,
+          runtime: `${runtime}/${TESTING_FOLDER}`,
+          pluginSet,
+          readFile: (relPath) => repoFiles.read(relPath),
+          exceptions: REEXPORT_EXCEPTIONS,
+        })) {
+          violations.push(v);
+        }
+        await maybeYield();
+      }
     }
 
     // R4 + R5 + R6 + R7: read every source file, extract cross-plugin imports.
@@ -306,17 +347,20 @@ const check: Check = {
         const isAssetImport =
           imp.kind === "side-effect" && isAssetSpecifier(imp.path);
 
-        // R4: grammar — the import must end at `<runtime>`, nothing deeper.
+        // R4: grammar — the import must end at `<runtime>` or at
+        // `<runtime>/testing` (the runtime's test-helper barrel), nothing
+        // deeper. WHO may import a testing barrel is boundary-rules' job.
         if (
           !frameworkExempt &&
           !isAssetImport &&
-          (!runtimeNames.has(resolved.suffixHead) || resolved.tail !== "")
+          (!runtimeNames.has(resolved.suffixHead) ||
+            (resolved.tail !== "" && resolved.tail !== TESTING_FOLDER))
         ) {
           violations.push({
             rule: "grammar",
             file: relFile,
             message: `cross-plugin import into non-barrel path: \`${imp.path}\``,
-            fix: `import from the plugin's barrel (\`@plugins/${resolved.pluginPath}/${resolved.suffixHead || "<runtime>"}\`) and re-export the needed symbol from the target plugin's \`index.ts\` if it isn't already public`,
+            fix: `import from the plugin's barrel (\`@plugins/${resolved.pluginPath}/${resolved.suffixHead || "<runtime>"}\`, or its \`/${TESTING_FOLDER}\` barrel from test code) and re-export the needed symbol from the target plugin's \`index.ts\` if it isn't already public`,
           });
         }
 

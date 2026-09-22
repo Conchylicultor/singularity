@@ -1,6 +1,11 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
 import { readdir } from "fs/promises";
 import { dirname, join } from "path";
+import {
+  TESTING_FOLDER,
+  TESTS_DIR,
+  isTestCodePath,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { maskSource } from "./mask-source";
 import { markerCallSpans, type MarkerCallSpan } from "./find-marker-calls";
 
@@ -575,9 +580,19 @@ export function parseBarrelExports(src: string): BarrelExport[] {
 
 function isSkippedWalkDir(name: string): boolean {
   // `plugins` = sub-plugin trees (scanned as their own plugins); `__tests__`
-  // = co-located test files, which are not part of a plugin's API/dep
-  // surface and must not pollute its facets (Uses, exports, routes, …).
-  return name === "node_modules" || name === "plugins" || name === "__tests__";
+  // and `testing` = test code (`isTestCodePath`), which is not part of a
+  // plugin's API/dep surface and must not pollute its facets (Uses, exports,
+  // routes, …). `testing/` matters beyond docs: the cross-refs facet feeds the
+  // composition closure, so a harness's imports (build tooling, fixtures)
+  // would otherwise become shipped edges. The name is reserved — boundary-rules
+  // reports a `testing/` anywhere but directly under a runtime folder — so
+  // skipping it by name alone is exact.
+  return (
+    name === "node_modules" ||
+    name === "plugins" ||
+    name === TESTS_DIR ||
+    name === TESTING_FOLDER
+  );
 }
 
 // A plugin's API/dep surface excludes co-located bun:test files (`*.test.ts(x)`,
@@ -587,7 +602,7 @@ function isSkippedWalkDir(name: string): boolean {
 // a test fixture (e.g. a `queryResourceDescriptor("qr-mismatch-test", …)` in a
 // `*.test.ts`) or a test-only import from leaking into a plugin's docs.
 function isSourceFile(name: string): boolean {
-  return /\.(ts|tsx)$/.test(name) && !/\.test\.(ts|tsx)$/.test(name);
+  return /\.(ts|tsx)$/.test(name) && !isTestCodePath([name]);
 }
 
 export function walkFiles(dir: string, out: string[]): void {

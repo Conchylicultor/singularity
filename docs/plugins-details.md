@@ -16887,6 +16887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/closure`
           - `plugin-meta/facets/cross-refs`
           - `plugin-meta/facets/exports`
+          - `plugin-meta/parse-utils`
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
@@ -16898,12 +16899,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `asFsPath`
           - `asPath`
           - `asPluginId`
+          - `isTestCodePath`
           - `LEAF_FOLDERS`
           - `PLUGIN_FOLDERS`
           - `pluginIdSegments`
           - `RUNTIME_FOLDERS`
           - `SHIPPED_RUNTIME_FOLDERS`
+          - `TESTING_FOLDER`
+          - `TESTS_DIR`
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
+          - `VERIFYING_FOLDERS`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
         - Imported by: `framework/web-sdk`
@@ -17084,9 +17089,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
             - Uses:
+              - `framework/plugin-id.isTestCodePath`
               - `framework/plugin-id.PLUGIN_FOLDERS`
               - `framework/plugin-id.PluginFolder`
               - `framework/plugin-id.RUNTIME_FOLDERS`
+              - `framework/plugin-id.TESTING_FOLDER`
+              - `framework/plugin-id.VERIFYING_FOLDERS`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
               - `plugin-meta/parse-utils.findImports`
@@ -23308,14 +23316,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
     - **`parse-utils`**
-      - Cross-plugin:
-        - Imported by:
-          - `framework/tooling/boundaries`
-          - `framework/tooling/checks`
-          - `framework/tooling/codegen`
-          - `framework/tooling/test-layout`
-          - `plugin-meta/plugin-tree`
       - Core:
+        - Uses:
+          - `framework/plugin-id.isTestCodePath`
+          - `framework/plugin-id.TESTING_FOLDER`
+          - `framework/plugin-id.TESTS_DIR`
         - Exports (types):
           - `BarrelExport`
           - `DefaultExportObject`
@@ -23347,6 +23352,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `unresolvableCallIdMessage`
           - `walkFiles`
           - `walkFilesAsync`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/boundaries`
+          - `framework/tooling/checks`
+          - `framework/tooling/codegen`
+          - `framework/tooling/test-layout`
+          - `plugin-meta/plugin-tree`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
