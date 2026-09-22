@@ -1,7 +1,34 @@
-// Shared vitest setup: pin the clock and stub browser APIs missing from jsdom
-// (loaded by every DOM suite via the root vitest.config.ts `setupFiles`).
+// Shared vitest setup: pin the clock, assert the pinned locale and timezone, and
+// stub browser APIs missing from jsdom (loaded by every DOM suite via the root
+// vitest.config.ts `setupFiles`).
 
 import { afterEach, beforeEach, vi } from "vitest";
+
+// The locale and timezone are pinned by `vitest.config.ts` (`test.env`), not
+// here: a process reads its default locale once, when it starts, and nothing
+// this file does can change it. What this file CAN do is refuse to run on a
+// worker the pin did not reach — a `threads` pool, where `test.env` lands in
+// `process.env` after the locale was already fixed, or a runner started some
+// other way — so a locale-dependent failure never gets as far as looking like a
+// real one. It compares what ICU resolved against what the config asked for,
+// so the values live in the config alone (their constants are in
+// test-layout/core, whose barrel this file cannot load: it needs Bun).
+function assertLocalePinned(): void {
+  const { LC_ALL: lcAll, TZ: tz } = process.env;
+  // `en_US.UTF-8` → `en-US`: drop the encoding, BCP 47 separator.
+  const wantLocale = lcAll?.split(".")[0]?.replace("_", "-");
+  const got = new Intl.DateTimeFormat().resolvedOptions();
+  if (wantLocale && tz && got.locale === wantLocale && got.timeZone === tz)
+    return;
+  throw new Error(
+    `jsdom test worker is not running in the pinned locale and timezone: ` +
+      `LC_ALL=${lcAll ?? "(unset)"} TZ=${tz ?? "(unset)"}, but it resolved ` +
+      `locale "${got.locale}", timezone "${got.timeZone}". vitest.config.ts pins ` +
+      "both through `test.env`, which only reaches a worker vitest starts as its " +
+      'own process — keep `pool: "forks"` and the `env` block there.',
+  );
+}
+assertLocalePinned();
 
 // The instant every jsdom test starts at. A test must not be able to depend on
 // what day it is run on — the failure mode is a suite that is green for a month

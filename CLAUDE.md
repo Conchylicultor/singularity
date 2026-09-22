@@ -325,9 +325,11 @@ root `vitest.config.ts`, no per-plugin config). Never run a bare `bun test` /
 
 Every jsdom test starts on a pinned clock (fixed instant, `Date` only, still
 ticking), so a suite can never depend on the day it runs on — a suite needing a
-specific "today" pins its own.
+specific "today" pins its own. Every jsdom worker also runs in a pinned locale
+(`en-US`) and timezone (`UTC`), so a suite that formats a date gets the same
+result for every runner, whatever their `LANG`.
 
-The split itself (which runner owns which path, the pinned clock, and the
+The split itself (which runner owns which path, the pinned clock and locale, and the
 `test-layout:runner-split` check binding them) lives in
 [`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
 

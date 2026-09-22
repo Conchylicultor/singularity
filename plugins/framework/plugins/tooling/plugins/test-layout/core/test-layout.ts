@@ -47,6 +47,41 @@ export const DOM_TEST_SETUP_FILE = "test/setup.ts";
  */
 export const DOM_TEST_CLOCK_PIN = "vi.setSystemTime(TEST_NOW)";
 
+/**
+ * The locale every jsdom test worker runs in, as the process environment spells
+ * it (`LC_ALL`) and as ICU resolves it (`Intl…resolvedOptions().locale`).
+ *
+ * A formatter called with the default locale (`toLocaleDateString(undefined,
+ * …)`) is right in the app — it follows the viewer — and a test of it then
+ * passes or fails according to whoever runs it: `LANG=C.UTF-8`, the norm in
+ * agent sessions and CI, resolves the ICU root locale `und` and renders
+ * `M06 17` where a laptop renders `Jun 17`.
+ *
+ * Unlike the clock, this cannot be pinned from the setup file: the default
+ * locale is read once when the process starts, and assigning
+ * `process.env.LC_ALL` afterwards changes nothing. So `vitest.config.ts` hands
+ * it to each worker as `test.env` — the environment vitest starts every fork
+ * with — and the setup file asserts it arrived. Rule (g) asserts the config
+ * still carries it.
+ */
+export const DOM_TEST_LC_ALL = "en_US.UTF-8";
+export const DOM_TEST_LOCALE = "en-US";
+
+/**
+ * The timezone every jsdom test worker runs in. The pinned clock is "local
+ * noon", so without this the pinned instant itself moved with the runner's
+ * `TZ`. Pinned beside the locale, through the same `test.env`.
+ */
+export const DOM_TEST_TIME_ZONE = "UTC";
+
+/**
+ * The pool `vitest.config.ts` must name. `test.env` is a fork's STARTUP
+ * environment only under process pools; a `threads` worker shares the parent
+ * process, whose locale was fixed when it started, so the pin would silently do
+ * nothing there.
+ */
+export const DOM_TEST_POOL = "forks";
+
 /** Every test file, either runner. The enumeration glob used to build a bucket list. */
 export const TEST_FILE_GLOB = "**/*.test.{ts,tsx}";
 

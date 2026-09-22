@@ -65,12 +65,33 @@ Rule **f** keeps the pin from being deleted: the setup file exists and still
 contains `vi.setSystemTime(TEST_NOW)` — the same comment-stripped substring
 assert as **d**, so it guards the statement and not the prose explaining it.
 
+## The jsdom locale and timezone are pinned (rule g)
+
+Every jsdom worker runs in locale `en-US` and timezone `UTC`. Code that formats
+with the default locale (`toLocaleDateString(undefined, …)`) is right in the app,
+where it follows the viewer. Without the pin, a test of that code passes or fails
+depending on who runs it. `LANG=C.UTF-8`, the norm in agent sessions and CI,
+resolves the ICU root locale `und` and renders `M06 17` where a laptop renders
+`Jun 17`. The timezone rides along because the pinned clock is "local noon".
+
+The pin cannot live beside the clock. A process reads its default locale once,
+when it starts, so assigning `process.env.LC_ALL` in the setup file changes
+nothing. It lives in `vitest.config.ts` instead, as `test.env`: vitest starts
+every fork with that as its environment. `pool: "forks"` is named explicitly,
+because a `threads` worker shares the parent process, whose locale was fixed
+before the config was read. The setup file then asserts the pin arrived, and
+throws before any suite runs if it did not.
+
+Rule **g** keeps the pin from being deleted. `vitest.config.ts` must still
+contain the `pool`, `LC_ALL` and `TZ` directives (the values are in `core/`),
+checked with the same comment-stripped substring assert as **d** and **f**.
+
 **Why a check, not a lint rule.** Rule files are dual-loaded under jiti, which
 cannot resolve `@plugins/*` — a rule could not import `core/` and would have to
 duplicate the two literals plus add an in-sync check to keep the copies honest.
 Rule **d** (the config files still contain the literals; each failure message
 names the *other* file) is out of ESLint's reach anyway, and it is the
-load-bearing one: a–c guard today's files, while **d** and **f** stop the fixes
+load-bearing one: a–c guard today's files, while **d**, **f** and **g** stop the fixes
 themselves from being quietly deleted later. Rule **d** strips comments before
 the substring assert — both config files explain the pair in a comment that
 quotes the literal, so a whole-file `includes` would keep passing after the live
@@ -92,7 +113,11 @@ reads the two config files directly, so its reads bypass the recording
     - `BUN_TEST_IGNORE`
     - `DOM_TEST_CLOCK_PIN`
     - `DOM_TEST_INCLUDE`
+    - `DOM_TEST_LC_ALL`
+    - `DOM_TEST_LOCALE`
+    - `DOM_TEST_POOL`
     - `DOM_TEST_SETUP_FILE`
+    - `DOM_TEST_TIME_ZONE`
     - `FAKE_DOM_GLOBALS`
     - `fakeDomInstalls`
     - `isBunTestPath`

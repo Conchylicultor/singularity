@@ -17688,7 +17688,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `BUN_TEST_IGNORE`
               - `DOM_TEST_CLOCK_PIN`
               - `DOM_TEST_INCLUDE`
+              - `DOM_TEST_LC_ALL`
+              - `DOM_TEST_LOCALE`
+              - `DOM_TEST_POOL`
               - `DOM_TEST_SETUP_FILE`
+              - `DOM_TEST_TIME_ZONE`
               - `FAKE_DOM_GLOBALS`
               - `fakeDomInstalls`
               - `isBunTestPath`

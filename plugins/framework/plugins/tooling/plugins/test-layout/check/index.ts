@@ -17,7 +17,10 @@ import {
   BUN_TEST_IGNORE,
   DOM_TEST_CLOCK_PIN,
   DOM_TEST_INCLUDE,
+  DOM_TEST_LC_ALL,
+  DOM_TEST_POOL,
   DOM_TEST_SETUP_FILE,
+  DOM_TEST_TIME_ZONE,
   isBunTestPath,
   isDomTestPath,
 } from "../core/test-layout";
@@ -41,7 +44,7 @@ const VITEST_CONFIG = "vitest.config.ts";
  * vitest-only jsdom suites and produced a wall of failures indistinguishable
  * from real ones.
  *
- * Six rules, every offender reported:
+ * Seven rules, every offender reported:
  *   (a) no bun:test file imports `vitest`      — the direct guard on that bug
  *   (b) no vitest file imports `bun:test`      — the mirror direction
  *   (c) no test file sits under a `__tests__/` dir that is not
@@ -56,6 +59,10 @@ const VITEST_CONFIG = "vitest.config.ts";
  *       pin is a few lines in a file otherwise full of DOM stubs, easy to delete
  *       while chasing something else. The bill arrives much later, as a suite
  *       that goes red for everyone on a date nobody edited.
+ *   (g) the vitest config still pins the workers' locale and timezone — the
+ *       clock's twin, living in the config rather than the setup file because
+ *       a process's default locale is fixed when it starts. Without it a suite
+ *       passes on a laptop and fails under `LANG=C.UTF-8` with no code change.
  *
  * NOT `inputKeyed`: unlike the `grepCode`-only pattern checks, this one
  * discovers files via `git ls-files` and reads `bunfig.toml` /
@@ -66,7 +73,7 @@ const VITEST_CONFIG = "vitest.config.ts";
 const check: Check = {
   id: "test-layout:runner-split",
   description:
-    "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, and the shared vitest setup still pins the clock",
+    "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, the shared vitest setup still pins the clock, and vitest.config.ts still pins the workers' locale and timezone",
   async run(): Promise<CheckResult> {
     const root = REPO_ROOT;
     const sections: string[] = [];
@@ -160,12 +167,16 @@ const check: Check = {
     const clockDrift = await checkClockPin(root);
     if (clockDrift !== null) sections.push(clockDrift);
 
+    // ---- rule (g): the pinned jsdom locale and timezone -------------------
+    const localeDrift = await checkLocalePin(root);
+    if (localeDrift !== null) sections.push(localeDrift);
+
     if (sections.length === 0) return { ok: true };
 
     return {
       ok: false,
       message: `test-runner layout violations:\n  ${sections.join("\n  ")}`,
-      hint: `The runner is chosen by where the file lives: pure-logic tests are \`*.test.ts(x)\` next to their source and run under \`bun:test\`; jsdom/React tests live in the plugin's \`web/__tests__/\` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a \`__tests__/\` dir outside \`web/\`. The two scope literals in \`bunfig.toml\` and \`vitest.config.ts\` are a complementary pair; edit neither alone. And \`${DOM_TEST_SETUP_FILE}\` must keep pinning the clock: every jsdom suite starts on a fixed instant so none of them can depend on the day it is run on — a suite that reads the wall clock is green until the calendar moves, then red for everyone with no code change. Change the pinned instant if you must, but keep the pin.`,
+      hint: `The runner is chosen by where the file lives: pure-logic tests are \`*.test.ts(x)\` next to their source and run under \`bun:test\`; jsdom/React tests live in the plugin's \`web/__tests__/\` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a \`__tests__/\` dir outside \`web/\`. The two scope literals in \`bunfig.toml\` and \`vitest.config.ts\` are a complementary pair; edit neither alone. And \`${DOM_TEST_SETUP_FILE}\` must keep pinning the clock: every jsdom suite starts on a fixed instant so none of them can depend on the day it is run on — a suite that reads the wall clock is green until the calendar moves, then red for everyone with no code change. Change the pinned instant if you must, but keep the pin. Likewise \`${VITEST_CONFIG}\` must keep starting its workers in a fixed locale and timezone (\`pool\` + \`env\`), or a date-formatting suite passes or fails according to the \`LANG\` of whoever runs it.`,
     };
   },
 };
@@ -311,6 +322,31 @@ async function checkClockPin(root: string): Promise<string | null> {
   if (setup.includes(DOM_TEST_CLOCK_PIN)) return null;
 
   return `(f) \`${DOM_TEST_SETUP_FILE}\` no longer pins the clock — \`${DOM_TEST_CLOCK_PIN}\` is gone. Every jsdom suite now reads the ambient wall clock again, so a test may quietly depend on the day it runs on: green today, red on some later date, for everyone, with no code change to point at.`;
+}
+
+/**
+ * Rule (g). The same comment-stripped substring assert as (d) and (f), over the
+ * three directives that together pin a worker's locale and timezone: the env
+ * values themselves, and the process pool that makes `test.env` a worker's
+ * STARTUP environment. Any one missing and the pin is gone — `threads` keeps the
+ * env lines but they no longer reach ICU.
+ */
+async function checkLocalePin(root: string): Promise<string | null> {
+  const vitestPath = join(root, VITEST_CONFIG);
+  // A missing config is already rule (d)'s report.
+  if (!existsSync(vitestPath)) return null;
+
+  const vitestConfig = maskSource(await Bun.file(vitestPath).text(), {
+    strings: false,
+  });
+  const missing = [
+    `pool: "${DOM_TEST_POOL}"`,
+    `LC_ALL: "${DOM_TEST_LC_ALL}"`,
+    `TZ: "${DOM_TEST_TIME_ZONE}"`,
+  ].filter((directive) => !vitestConfig.includes(directive));
+  if (missing.length === 0) return null;
+
+  return `(g) \`${VITEST_CONFIG}\` no longer pins the jsdom workers' locale and timezone — missing ${missing.map((d) => `\`${d}\``).join(", ")}. A worker then starts in the runner's own locale, so a suite that formats a date passes on a laptop and fails under \`LANG=C.UTF-8\` (agent sessions, CI) with no code change. The pin has to be in the config: a process's default locale is fixed when it starts, so \`${DOM_TEST_SETUP_FILE}\` is too late to set it (it only asserts it).`;
 }
 
 /**
