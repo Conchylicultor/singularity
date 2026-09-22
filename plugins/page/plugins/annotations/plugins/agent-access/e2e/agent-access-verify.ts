@@ -61,6 +61,13 @@
 //      are edited, both conversations get them again: the writer is refused
 //      once more, and the reader's next read carries them. An MCP `initialize`
 //      carries the page-instructions section.
+// P12. **Indentation is forgiven by a uniform shift**
+//      (`research/2026-09-22-page-edit-page-indent-tolerant-match.md`). A nested
+//      line copied WITH its indentation from the page's read, edited through its
+//      PARENT's id (whose read holds only what is nested under it, at depth zero
+//      — as a `<todo>` card's does), still matches: the result says `reindented`,
+//      and the new line lands as the nested line's child. The reverse — copied
+//      from the parent's read, edited through the page — works the same way. Text that matches at two depths is refused, writing nothing.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -262,6 +269,8 @@ interface ApplySummary {
   created_page_ids?: string[];
   /** The page's new title, when an `edit_page` renamed an agent page (P10). */
   renamed_to?: string;
+  /** Leading-whitespace lengths, when `old_string` matched at another depth (P12). */
+  reindented?: { from: number; to: number };
 }
 
 /** A write that must succeed, with its summary parsed. */
@@ -1724,6 +1733,106 @@ await withBrowser(async (h) => {
     "P11: an MCP initialize carries the page-instructions section",
     initInstructions.includes("## Page instructions"),
     initInstructions,
+  );
+
+  // --- P12. a uniform indentation shift in old_string is forgiven -----------
+  // Seed a nested list in the agent page, through the page's own id.
+  await mustWrite("edit_page", {
+    block_id: agentPageId,
+    old_string: "another paragraph",
+    new_string:
+      "another paragraph\n\n- indent parent\n  - indent child\n\n- twin\n  - twin",
+  });
+  const indentRead = await mustCall("read_page", { block_id: agentPageId });
+  const readLines = indentRead.split("\n");
+  const childLine = readLines.find((l) =>
+    l.trimStart().endsWith("indent child"),
+  );
+  const parentLine = readLines.find((l) =>
+    l.trimStart().endsWith("indent parent"),
+  );
+  const seeded = await fetchBlocks(agentPageId);
+  const childRow = seeded.find((b) => rowText(b) === "indent child");
+  const parentRow = seeded.find((b) => rowText(b) === "indent parent");
+  if (
+    childLine === undefined ||
+    parentLine === undefined ||
+    !childRow ||
+    !parentRow
+  ) {
+    return await bail("P12: seed: a nested list in the agent page", indentRead);
+  }
+  const leadOf = (line: string) => line.length - line.trimStart().length;
+  const unit = " ".repeat(leadOf(childLine) - leadOf(parentLine));
+  r.ok(
+    "P12: seed: the child line is indented in the page's read",
+    unit.length > 0,
+    JSON.stringify({ parentLine, childLine }),
+  );
+  const marker = childLine.trimStart().slice(0, 1);
+
+  // Page read → edit through the parent's id. A block's read holds only what is
+  // nested UNDER it, so the child line sits at depth zero there — the shape of
+  // the original failure, a line copied from the page and edited through the
+  // `<todo>` card around it.
+  const deeper = await mustWrite("edit_page", {
+    block_id: parentRow.id,
+    old_string: childLine,
+    new_string: `${childLine}\n${" ".repeat(leadOf(childLine))}${unit}${marker} indent grandchild`,
+  });
+  r.eq(
+    "P12: a line copied from the page's read matches through its parent's id, reindented",
+    deeper.reindented,
+    { from: leadOf(childLine), to: 0 },
+  );
+  const grandchild = (await fetchBlocks(agentPageId)).find(
+    (b) => rowText(b) === "indent grandchild",
+  );
+  r.ok(
+    "P12: …and the new line lands as the child's child",
+    grandchild?.parentId === childRow.id,
+    JSON.stringify(grandchild ?? null),
+  );
+
+  // The reverse: the parent's read → edit through the page.
+  const parentRead = await mustCall("read_page", { block_id: parentRow.id });
+  const snippet = parentRead.trimEnd();
+  const shallower = await mustWrite("edit_page", {
+    block_id: agentPageId,
+    old_string: snippet,
+    new_string: snippet.replace(
+      "indent grandchild",
+      "indent grandchild, revised",
+    ),
+  });
+  r.eq(
+    "P12: text from a block's read matches through the page, reindented",
+    [shallower.reindented, counts(shallower)],
+    [
+      { from: 0, to: leadOf(childLine) },
+      { created: 0, deleted: 0, moved: 0, text_edited: 1 },
+    ],
+  );
+
+  // The same line at two depths: refused, and nothing written.
+  const twinLine = readLines.find((l) => l.trimStart().endsWith("twin"));
+  const beforeTwin = await snapshot(agentPageId);
+  const twin = await callTool("edit_page", {
+    block_id: agentPageId,
+    old_string: `${unit}${unit}${twinLine?.trimStart() ?? "- twin"}`,
+    new_string: `${unit}${unit}${marker} renamed twin`,
+  });
+  r.ok(
+    "P12: refused: text matching at two depths, naming both",
+    !twin.ok &&
+      /matches 2 times/.test(twin.text) &&
+      /indentation/.test(twin.text),
+    twin.text,
+  );
+  r.ok(
+    "P12: …and the refusal wrote nothing",
+    snapshotDiff(beforeTwin, await snapshot(agentPageId)).length === 0,
+    JSON.stringify(snapshotDiff(beforeTwin, await snapshot(agentPageId))),
   );
 
   await snap(page, out, "after-notes");

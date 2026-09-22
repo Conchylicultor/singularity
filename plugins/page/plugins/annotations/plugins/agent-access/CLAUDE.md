@@ -226,6 +226,15 @@ would produce by itself before the predicate judges anything (the engine's own
 enforces is unchanged; what changed is that it is now enforced against the
 caller's edit rather than against the round trip.
 
+**Indentation is matched up to a uniform shift** (`server/internal/indent-match.ts`).
+A read scoped to a block holds what is nested under it, at depth zero, so a
+line inside a `<todo>` card reads `    * text` in the page's read and
+`  * text` in the card's. With no exact match,
+`old_string` is retried with every line shifted by one leading-whitespace
+prefix and `new_string` shifted with it; the indentation BETWEEN lines stays
+exact, because it decides nesting. The result says `reindented`, and a match at
+two depths is still non-unique.
+
 `write_agent_note` composes its document rather than editing one, so it passes no
 baseline — there is nothing to subtract, and its apply is rooted at one card
 anyway.

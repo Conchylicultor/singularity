@@ -25,6 +25,7 @@ import {
   deliverWithRead,
   renderGlobalSection,
 } from "./instructions-gate";
+import { findEdits } from "./indent-match";
 import {
   assertAgentAddressable,
   assertAgentAuthored,
@@ -100,18 +101,6 @@ function applySummary(
     // else in this response would show.
     absorbed_writes: report.absorbedWrites,
   };
-}
-
-/** Non-overlapping occurrences of `needle` in `haystack`. */
-function countOccurrences(haystack: string, needle: string): number {
-  let count = 0;
-  let from = 0;
-  for (;;) {
-    const at = haystack.indexOf(needle, from);
-    if (at < 0) return count;
-    count += 1;
-    from = at + needle.length;
-  }
 }
 
 /**
@@ -591,6 +580,12 @@ Contract, matching the \`Edit\` file tool:
 - It must be UNIQUE unless \`replace_all\` is true; a non-unique match is an
   error naming how many were found. Include surrounding lines to disambiguate.
 - \`old_string\` and \`new_string\` must differ.
+- Indentation may be off by a uniform amount. A read scoped to a block holds
+  what is nested under it, starting at depth zero, so a line copied from a
+  whole-page read carries leading spaces that read has not. With no exact match, \`old_string\` is tried
+  again with every line shifted by the same leading whitespace, and
+  \`new_string\` is shifted with it (the result then says \`reindented\`). The
+  indentation BETWEEN lines must still match exactly.
 
 Match against what \`read_page\` returns for this \`block_id\`, not against what
 you imagine it says. Everything outside your own blocks must come back
@@ -607,7 +602,7 @@ the author's even when it sits in yours.`,
       .string()
       .min(1)
       .describe(
-        "Exact text to replace, as it appears in `read_page`'s output.",
+        "Exact text to replace, as it appears in `read_page`'s output (a uniform indentation shift is tolerated).",
       ),
     new_string: z.string().describe("Replacement text."),
     replace_all: z
@@ -650,31 +645,50 @@ the author's even when it sits in yours.`,
       redact: redactHumanAudience,
     });
 
-    const matches = countOccurrences(markdown, oldString);
-    if (matches === 0) {
+    const found = findEdits(markdown, oldString, newString);
+    if (found.kind === "none") {
       throw new HttpError(
         400,
-        `edit_page: old_string was not found in ${blockId}. Call read_page on that ` +
-          `id and copy the text to replace out of its output verbatim — a card the ` +
-          `page's author addressed to themselves is not in it, so text you remember ` +
-          `from elsewhere may not be there.`,
+        `edit_page: old_string was not found in ${blockId}, not even with its ` +
+          `indentation shifted, so the difference is in the text itself. Call ` +
+          `read_page on that id and copy the text to replace out of its output ` +
+          `verbatim — a card the page's author addressed to themselves is not in ` +
+          `it, so text you remember from elsewhere may not be there.`,
       );
     }
+    if (found.kind === "new-string-shallower") {
+      throw new HttpError(
+        400,
+        `edit_page: old_string matched ${blockId} only at a different ` +
+          `indentation, and new_string has a line indented less than old_string's ` +
+          `lines, so there is no one depth to move it to: ${JSON.stringify(found.line)}. ` +
+          `Copy old_string from read_page on that id, and indent new_string from there.`,
+      );
+    }
+    const { edits } = found;
+    const matches = edits.length;
+    const shift = edits[0].shift;
     if (matches > 1 && !replaceAll) {
+      const depths =
+        shift === null
+          ? ""
+          : ` after shifting its indentation (at ${edits
+              .map((e) => `${e.shift?.to.length ?? 0}`)
+              .join(", ")} characters of indentation)`;
       throw new HttpError(
         400,
-        `edit_page: old_string matches ${matches} times in ${blockId}. Include more ` +
-          `surrounding text to make it unique, or pass replace_all: true.`,
+        `edit_page: old_string matches ${matches} times in ${blockId}${depths}. ` +
+          `Include more surrounding text to make it unique, or pass replace_all: true.`,
       );
     }
-    // `split`/`join` rather than `String.replace`, whose replacement string
-    // gives `$&`, `$1`, … a meaning the caller never asked for.
-    const at = markdown.indexOf(oldString);
-    const next = replaceAll
-      ? markdown.split(oldString).join(newString)
-      : markdown.slice(0, at) +
-        newString +
-        markdown.slice(at + oldString.length);
+    // Spliced by offset rather than `String.replace`, whose replacement string
+    // gives `$&`, `$1`, … a meaning the caller never asked for. Last edit first,
+    // so the earlier offsets still hold.
+    let next = markdown;
+    for (const edit of (replaceAll ? [...edits] : [edits[0]]).reverse()) {
+      next =
+        next.slice(0, edit.start) + edit.replacement + next.slice(edit.end);
+    }
 
     // The `# Title` banner is a READER-SIDE PREFIX, not a block: a page-rooted
     // read prepends it and the apply strips it back off by BYTE-IDENTITY. An edit
@@ -780,6 +794,12 @@ the author's even when it sits in yours.`,
     return jsonResult({
       ...(applySummary(report, noteIds) as object),
       replaced: replaceAll ? matches : 1,
+      // Said aloud rather than applied silently: the caller's snippet was at
+      // another depth than the text it matched (the first match's shift; with
+      // replace_all, later matches may sit at other depths).
+      ...(shift === null
+        ? {}
+        : { reindented: { from: shift.from.length, to: shift.to.length } }),
       ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
     });
   },
