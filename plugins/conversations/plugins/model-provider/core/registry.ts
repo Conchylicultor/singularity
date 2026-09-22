@@ -4,6 +4,7 @@ import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 export const ConversationModelSchema = z.enum([
   "fable-5-1",
   "fable-5",
+  "opus-5-5",
   "opus-5",
   "opus-4-8",
   "opus-4-7",
@@ -14,7 +15,7 @@ export const ConversationModelSchema = z.enum([
 ]);
 export type ConversationModel = z.infer<typeof ConversationModelSchema>;
 
-export const DEFAULT_MODEL: ConversationModel = "opus-5";
+export const DEFAULT_MODEL: ConversationModel = "opus-5-5";
 
 /** Capability tiers, ordered cheap/fast → smart. Drives filter chips and tier resolution. */
 export const MODEL_TIERS = ["haiku", "sonnet", "opus", "fable"] as const;
@@ -45,11 +46,18 @@ export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
     iconSize: "size-4",
     defaultHidden: true,
   },
+  "opus-5-5": {
+    cliFlag: "claude-opus-5-5",
+    label: "Opus 5.5",
+    family: "opus",
+    iconSize: "size-4",
+  },
   "opus-5": {
     cliFlag: "claude-opus-5",
     label: "Opus 5",
     family: "opus",
     iconSize: "size-4",
+    defaultHidden: true,
   },
   "opus-4-8": {
     cliFlag: "claude-opus-4-8",
@@ -185,7 +193,7 @@ export function currentModelForTier(tier: ModelTier): ConversationModel {
     case "fable":
       return "fable-5-1";
     case "opus":
-      return "opus-5";
+      return "opus-5-5";
     case "sonnet":
       return "sonnet-5";
     case "haiku":

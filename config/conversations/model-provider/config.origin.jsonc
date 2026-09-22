@@ -1,12 +1,13 @@
-// @hash ac8f5b865a5b
+// @hash 2b1a1275fe48
 {
   // Model fired by the launch button and pre-selected in the dropdown.
-  // Allowed values: "fable-5-1", "fable-5", "opus-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-5", "sonnet-4-6"
-  "defaultModel": "opus-5",
+  // Allowed values: "fable-5-1", "fable-5", "opus-5-5", "opus-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-5", "sonnet-4-6"
+  "defaultModel": "opus-5-5",
   "visibleModels": {
     "fable-5-1": true,
     "fable-5": false,
-    "opus-5": true,
+    "opus-5-5": true,
+    "opus-5": false,
     "opus-4-8": false,
     "opus-4-7": false,
     "opus-4-6": false,
