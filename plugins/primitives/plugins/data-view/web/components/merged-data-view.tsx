@@ -6,7 +6,7 @@ import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view
 import type {
   DataViewDensity,
   DataViewId,
-  ToolbarArrangement,
+  DataViewSurfaceChrome,
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
@@ -24,21 +24,22 @@ import type {
 import { DataViewShellFrame } from "./data-view";
 import { DataViewBody } from "./data-view-body";
 
-export interface MergedDataViewProps<THostProps> {
+/** The surface chrome (`title` / `actions` / `toolbar`) is the same union
+ *  `DataViewProps` takes — a hosted toolbar excludes `title` / `actions`. */
+export type MergedDataViewProps<THostProps> =
+  MergedDataViewBaseProps<THostProps> & DataViewSurfaceChrome;
+
+interface MergedDataViewBaseProps<THostProps> {
   storageKey: DataViewId;
   /** The per-consumer source slot minted by `defineDataViewSources`. */
   sources: DataViewSources<THostProps>;
   /** The host surface's own props, threaded verbatim to every source. */
   hostProps: THostProps;
-  title?: ReactNode;
-  actions?: ReactNode;
   defaultView?: string;
   /** The surface's density, forwarded to the shell exactly like `title` /
    *  `actions`. It is a property of the surface, so it applies whichever source
    *  the active view-instance binds to. */
   density?: DataViewDensity;
-  /** The surface's wide-toolbar arrangement, forwarded like `density`. */
-  toolbar?: ToolbarArrangement;
   /** The search placeholder, forwarded like `toolbar`. */
   searchPlaceholder?: string;
 }

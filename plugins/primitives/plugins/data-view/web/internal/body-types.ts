@@ -4,7 +4,7 @@ import type {
   DataViewDensity,
   DataViewId,
   DataViewProps,
-  ToolbarArrangement,
+  DataViewToolbarSpec,
   ToolbarParts,
 } from "../../core";
 import type { DataViewContribution } from "../slots";
@@ -33,9 +33,10 @@ export interface DataViewShellChrome {
    * single place the body reads it from. Absent ⇒ `"comfortable"`.
    */
   density?: DataViewDensity;
-  /** The surface's wide-toolbar arrangement (`DataViewProps.toolbar`); absent
-   *  ⇒ the default bar. A surface property, carried like `density`. */
-  toolbar?: ToolbarArrangement;
+  /** The surface's toolbar (`DataViewProps.toolbar`): a band arrangement, or a
+   *  hosted frame; absent ⇒ the default bar. A surface property, carried like
+   *  `density`. */
+  toolbar?: DataViewToolbarSpec;
   /** The search placeholder (`DataViewProps.searchPlaceholder`), a surface
    *  property carried like `toolbar`. Absent ⇒ `"Search…"`. */
   searchPlaceholder?: string;

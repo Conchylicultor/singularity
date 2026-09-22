@@ -13,8 +13,7 @@ import type {
   ToolbarArrangement,
   ToolbarParts,
 } from "../../../core";
-import { DataViewSlots } from "../../slots";
-import { useDataViewControls } from "../controls/controls-context";
+import { useToolbarControls } from "./use-toolbar-controls";
 import { CompactControls } from "./compact-controls";
 import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
@@ -115,25 +114,11 @@ export function DataViewToolbar({
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
   const compact =
     density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
-  const ctx = useDataViewControls();
-
-  // Applicability and ordering, once, for both layouts. `isApplicable` is pure
-  // and asked BEFORE anything mounts — a control that does not apply costs
-  // nothing, not even a mounted-then-null component.
-  const controls = DataViewSlots.Control.useContributions()
-    .filter((c) => c.isApplicable?.(ctx) ?? true)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-  // The compact trigger's badge: what the open panels would tell you, added up.
-  // Each control's own `summary` answers for itself (`count` defaults to the
-  // whole thing it describes), so a new control counts into the badge with no
-  // edit here — where the old `activeControlCount` prop hard-coded
-  // `filter.ruleCount + sort.ruleCount` in the host.
-  const activeCount =
-    controls.reduce((sum, c) => {
-      const s = c.summary?.(ctx) ?? null;
-      return sum + (s ? (s.count ?? 1 + (s.more ?? 0)) : 0);
-    }, 0) + (query.length > 0 ? 1 : 0);
+  // Applicability, ordering and the badge count, derived the one way the
+  // hosted trigger derives them too. A non-empty query counts toward the
+  // compact trigger's badge, since the fold hides the search field.
+  const { controls, activeCount: controlsCount } = useToolbarControls();
+  const activeCount = controlsCount + (query.length > 0 ? 1 : 0);
 
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. The compact fold has forms
@@ -241,7 +226,7 @@ export function DataViewToolbar({
             foldedControls={
               <CompactControls
                 controls={controls}
-                activeCount={activeCount - (query.length > 0 ? 1 : 0)}
+                activeCount={controlsCount}
                 searching={false}
                 revealOnHover={false}
                 form={forms.controls}

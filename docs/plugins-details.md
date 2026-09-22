@@ -27580,6 +27580,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewRenderProps`
           - `DataViewRowEntry`
           - `DataViewSection`
+          - `DataViewSurfaceChrome`
+          - `DataViewToolbarSpec`
           - `FieldDef`
           - `FieldExtensionProps`
           - `FieldExtensionsDescriptor`
@@ -27601,6 +27603,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GroupByRule`
           - `GroupingPlanContext`
           - `HierarchyConfig`
+          - `HostedToolbar`
+          - `HostedToolbarParts`
           - `ItemActionProps`
           - `ItemActionsDescriptor`
           - `ItemActionZone`
@@ -27625,6 +27629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterNodeSchema`
           - `FilterRuleSchema`
           - `IDENTITY_CODEC`
+          - `isHostedToolbar`
           - `orderFieldsBySection`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`

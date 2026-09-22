@@ -6,7 +6,7 @@ import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
-import type { ToolbarArrangement } from "./toolbar-arrangement";
+import type { HostedToolbar, ToolbarArrangement } from "./toolbar-arrangement";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -847,7 +847,38 @@ export interface ServerDataSourceSpec<TRow> {
   pageSize?: number;
 }
 
-export interface DataViewProps<TRow> {
+/**
+ * The surface's chrome: a toolbar band (optionally laid out by an arrangement)
+ * with its `title` / `actions`, or a {@link HostedToolbar} whose frame is the
+ * surface's own header — which is why `title` / `actions` do not type-check
+ * alongside it: the frame renders its own, and a second source would be
+ * silently dropped.
+ */
+export type DataViewSurfaceChrome =
+  | {
+      title?: ReactNode;
+      actions?: ReactNode;
+      /**
+       * How the WIDE toolbar band is laid out — pass an arrangement value (e.g.
+       * a plugin's exported arrangement), or a {@link HostedToolbar} for no band
+       * at all. Absent → the default bar. The compact fold
+       * (`density="compact"` or a narrow toolbar) applies whatever arrangement
+       * is passed here.
+       */
+      toolbar?: ToolbarArrangement;
+    }
+  | {
+      title?: never;
+      actions?: never;
+      /** No band: the surface's own frame places the options trigger. */
+      toolbar: HostedToolbar;
+    };
+
+export type DataViewProps<TRow> = DataViewBaseProps<TRow> &
+  DataViewSurfaceChrome;
+
+/** Every `DataViewProps` key except the surface chrome ({@link DataViewSurfaceChrome}). */
+export interface DataViewBaseProps<TRow> {
   rows: readonly TRow[];
   fields: FieldDef<TRow>[];
   rowKey: (row: TRow, index: number) => string;
@@ -872,8 +903,6 @@ export interface DataViewProps<TRow> {
    */
   pinnedView?: string;
   storageKey: DataViewId;
-  title?: ReactNode;
-  actions?: ReactNode;
   searchAccessor?: (row: TRow) => string;
   /**
    * Per-row emphasis — see {@link RowTone}. A data accessor closed over row
@@ -985,12 +1014,6 @@ export interface DataViewProps<TRow> {
    * `"comfortable"`.
    */
   density?: DataViewDensity;
-  /**
-   * How the WIDE toolbar is laid out — pass an arrangement value (e.g. a
-   * plugin's exported arrangement). Absent → the default bar. The compact fold
-   * (`density="compact"` or a narrow toolbar) applies whatever is passed here.
-   */
-  toolbar?: ToolbarArrangement;
   /**
    * The search field's placeholder, naming what this surface searches
    * ("Search apps"). Default `"Search…"`.

@@ -117,3 +117,15 @@ export function CreatorsControl({
     </DropdownMenu>
   );
 }
+
+/**
+ * A hosted surface's create affordance (`HostedToolbarParts.creators`): the
+ * compact form — a hosted frame is small chrome, like the band's fold — or
+ * `null` when the surface declares no creator, so the frame can tell "nothing
+ * to place" from a node that renders nothing.
+ */
+export function hostedCreators(creators?: CreateOption[]): ReactNode {
+  return creators && creators.length > 0 ? (
+    <CreatorsControl creators={creators} compact />
+  ) : null;
+}

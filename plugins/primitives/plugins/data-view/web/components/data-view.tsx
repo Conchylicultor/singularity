@@ -11,7 +11,8 @@ import {
   type DataViewDensity,
   type DataViewId,
   type DataViewProps,
-  type ToolbarArrangement,
+  type DataViewToolbarSpec,
+  isHostedToolbar,
 } from "../../core";
 import {
   CollapsedViewSwitcher,
@@ -27,7 +28,8 @@ import {
 } from "../internal/use-data-view-model";
 import type { DataViewShellChrome } from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
-import { CreatorsControl } from "./creators-control";
+import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import { CreatorsControl, hostedCreators } from "./creators-control";
 import { DataViewBody } from "./data-view-body";
 
 /**
@@ -103,7 +105,7 @@ export function DataViewShellFrame(props: {
   actions?: ReactNode;
   creators?: CreateOption[];
   density?: DataViewDensity;
-  toolbar?: ToolbarArrangement;
+  toolbar?: DataViewToolbarSpec;
   searchPlaceholder?: string;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
@@ -151,15 +153,34 @@ export function DataViewShellFrame(props: {
   // configured surface had nothing in it for the seconds before its config
   // landed. `Loading` fades in only after ~120ms, so the normal (already
   // hydrated) case still paints nothing at all.
-  if (!viewModel.ready) {
-    return (
+  // A hosted toolbar has no band: the surface's own frame is the header, in
+  // every state (so the card does not reflow as the config settles), and the
+  // root is the options trigger's hover-reveal group — the band that anchors it
+  // otherwise does not exist.
+  const hosted = isHostedToolbar(toolbar);
+  const rootClassName = hosted ? hoverRevealGroup : undefined;
+  // The chrome of a state with no active instance (loading, or no views
+  // authored): the band's stand-in toolbar, or the hosted frame without its
+  // options — there is no instance for them to act on yet.
+  const withoutInstance = (content: ReactNode): ReactNode =>
+    hosted ? (
+      <Stack gap="none" ref={rootRef} className={rootClassName}>
+        <toolbar.frame
+          options={null}
+          switcher={null}
+          creators={hostedCreators(creators)}
+          body={content}
+        />
+      </Stack>
+    ) : (
       <Stack gap="none" ref={rootRef}>
         <ShellToolbar title={title} actions={actions} creators={creators} />
-        <div className="rail-follow py-md">
-          <Loading variant="rows" />
-        </div>
+        <div className="rail-follow py-md">{content}</div>
       </Stack>
     );
+
+  if (!viewModel.ready) {
+    return withoutInstance(<Loading variant="rows" />);
   }
 
   const { instances, activeId } = viewModel;
@@ -185,25 +206,20 @@ export function DataViewShellFrame(props: {
   // if a config is authored-but-empty. Early-returning here (before the body
   // mounts) is the body's only gate.
   if (!activeInstance) {
-    return (
-      <Stack gap="none" ref={rootRef}>
-        <ShellToolbar title={title} actions={actions} creators={creators} />
-        <div className="rail-follow py-md">
-          <Placeholder>
-            {pinned ? (
-              <>
-                No view instance <code>{pinnedView}</code> in{" "}
-                <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
-              </>
-            ) : (
-              <>
-                No views configured — author{" "}
-                <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
-              </>
-            )}
-          </Placeholder>
-        </div>
-      </Stack>
+    return withoutInstance(
+      <Placeholder>
+        {pinned ? (
+          <>
+            No view instance <code>{pinnedView}</code> in{" "}
+            <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+          </>
+        ) : (
+          <>
+            No views configured — author{" "}
+            <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+          </>
+        )}
+      </Placeholder>,
     );
   }
 
@@ -244,7 +260,7 @@ export function DataViewShellFrame(props: {
     <Stack
       gap="none"
       ref={rootRef}
-      // The whole surface is the hover anchor for the compact fold's options
+      className={rootClassName}
       // Publish the measured sticky-toolbar height so grouped views stack their
       // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
       style={

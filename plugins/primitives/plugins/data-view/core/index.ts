@@ -7,7 +7,11 @@ export type {
   ToolbarArrangement,
   ToolbarParts,
   ToolbarPartForms,
+  HostedToolbar,
+  HostedToolbarParts,
+  DataViewToolbarSpec,
 } from "./internal/toolbar-arrangement";
+export { isHostedToolbar } from "./internal/toolbar-arrangement";
 
 export {
   FilterGroupSchema,
@@ -56,6 +60,7 @@ export type {
   DataViewAggregateConfig,
   DataViewRenderProps,
   DataViewProps,
+  DataViewSurfaceChrome,
   DataViewDensity,
   TableCellProps,
   CellEditorProps,

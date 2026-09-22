@@ -697,6 +697,39 @@ interface ToolbarParts {
   content rather than growing the pinned band, and drops it in the compact fold.
   Views start flush — a view never pads its own top to make room for a toolbar.
 
+## Hosted toolbar: no band
+
+`toolbar={{ kind: "hosted", frame }}` draws **no toolbar band at all**. For a
+small, fixed list embedded in someone else's chrome (a card of live agents above
+a prompt box), where search/filter/sort in a band of their own would be a strip
+that mostly does nothing. The surface's `frame` component is its own header, and
+the host hands it the parts to place (`HostedToolbarParts`,
+`core/internal/toolbar-arrangement.ts`):
+
+- **`options`** — the compact fold's one options trigger (`HostedOptions` →
+  `CompactControls`): search on its first page, one row per applicable control,
+  the same badge (controls + a non-empty query). It is the only way to reach the
+  controls, so the frame renders it. Hover-revealed off the DataView **root**
+  (the shell marks it `hoverRevealGroup` when hosted — there is no band to
+  anchor on), pinned visible while a query is typed. The controls provider wraps
+  this node alone, never the body.
+- **`switcher`** — the collapsed switcher chip when the surface authors more than
+  one view, else `null`.
+- **`creators`** — `creators` in their compact form, or `null`.
+- **`body`** — the rows. Loading and no-views states come through the same
+  frame (`options`/`switcher` `null`), so the card never reflows as config
+  settles.
+
+It is **not an arrangement**: an arrangement lays out a band and must render the
+switcher and search inline, and the compact fold ignores it. Hosted has no band,
+so neither applies. `title` / `actions` are a **type error** beside it
+(`DataViewSurfaceChrome` is a union): the frame is the header and renders its own.
+No sticky band means no measured header offset — `--dv-header-offset` is `0px`.
+
+Declare `frame` at module scope: it is a component, and a new identity per render
+remounts the whole card. **Config is unchanged** — a hosted surface still has
+its `defineDataView` id and authored config file like any other.
+
 ## Toolbar controls
 
 Every affordance in the toolbar that opens a panel — Filter, Sort, the view
@@ -1534,8 +1567,9 @@ layout frame (`use-dev-guards.ts`):
    can't see it: the surface is a runtime ancestor). Fix: route the wrapper through
    `<Surface>`.
 
-The toolbar, filter bar, and view switcher always render — there is no
-headless-chrome axis.
+The band (toolbar, filter bar, view switcher) renders unless the surface passes a
+hosted toolbar — see "Hosted toolbar: no band"; its controls then live behind
+the frame's options trigger, never nowhere.
 
 ## Row virtualization (`VirtualRows`)
 
@@ -1874,6 +1908,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewRenderProps`
     - `DataViewRowEntry`
     - `DataViewSection`
+    - `DataViewSurfaceChrome`
+    - `DataViewToolbarSpec`
     - `FieldDef`
     - `FieldExtensionProps`
     - `FieldExtensionsDescriptor`
@@ -1895,6 +1931,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `GroupByRule`
     - `GroupingPlanContext`
     - `HierarchyConfig`
+    - `HostedToolbar`
+    - `HostedToolbarParts`
     - `ItemActionProps`
     - `ItemActionsDescriptor`
     - `ItemActionZone`
@@ -1919,6 +1957,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterNodeSchema`
     - `FilterRuleSchema`
     - `IDENTITY_CODEC`
+    - `isHostedToolbar`
     - `orderFieldsBySection`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`

@@ -3,13 +3,14 @@ import { type ReactNode, useCallback, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import type {
-  DataViewRenderProps,
-  FieldDef,
-  FieldExtensionsDescriptor,
-  FilterGroup,
-  ManualOrderConfig,
-  SortRule,
+import {
+  isHostedToolbar,
+  type DataViewRenderProps,
+  type FieldDef,
+  type FieldExtensionsDescriptor,
+  type FilterGroup,
+  type ManualOrderConfig,
+  type SortRule,
 } from "../../core";
 import { DataViewSlots } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
@@ -28,6 +29,8 @@ import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
 import type { DataViewBodyProps } from "../internal/body-types";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
+import { HostedOptions } from "./toolbar/hosted-options";
+import { hostedCreators } from "./creators-control";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -404,31 +407,10 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           sort: sortController as SortController<unknown>,
         };
 
-        return (
+        const onQueryChange = (next: string) =>
+          viewModel.setQuery(activeViewId, next);
+        const body = (
           <>
-            {/* The toolbar folds when the surface ASKS for it (`density`) or when
-                it is genuinely too narrow for the wide inline row
-                (`COMPACT_BREAKPOINT`) — the folded single-bar compact form
-                (search + every control inside one `MdTune` options popover,
-                single-view switcher hidden). The host hands it NO control — the
-                toolbar reads `DataViewSlots.Control` itself and each control's
-                panel reads this provider's context, so adding a control is a
-                contribution and never an edit here. */}
-            <DataViewControlsProvider {...controlsContext}>
-              <DataViewToolbar
-                stickyRef={chrome.stickyRef}
-                title={chrome.title}
-                query={activeState.query}
-                onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}
-                switcher={chrome.switcher}
-                switcherCount={chrome.switcherCount}
-                actions={chrome.actions}
-                creators={creators}
-                density={chrome.density}
-                arrangement={chrome.toolbar}
-                searchPlaceholder={chrome.searchPlaceholder}
-              />
-            </DataViewControlsProvider>
             {/* One density for every view type, so a row's controls and decorations
                 (avatars, status dots, chips, buttons) look identical whether the same
                 data is shown as a table, tree, list, or gallery. The table view's
@@ -462,6 +444,58 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                 sentinel) that fetches the next page as it scrolls into view. Rendered
                 only on the server path; the in-memory path renders nothing. */}
             {server ? <InfiniteScrollFooter handle={server.scroll} /> : null}
+          </>
+        );
+
+        // Hosted: no band. The surface's frame is its own header and places the
+        // options trigger; the controls provider wraps that trigger alone, so the
+        // view body still sees only its `DataViewRenderProps` contract.
+        if (isHostedToolbar(chrome.toolbar)) {
+          const Frame = chrome.toolbar.frame;
+          return (
+            <Frame
+              options={
+                <DataViewControlsProvider {...controlsContext}>
+                  <HostedOptions
+                    query={activeState.query}
+                    onQueryChange={onQueryChange}
+                    searchPlaceholder={chrome.searchPlaceholder}
+                  />
+                </DataViewControlsProvider>
+              }
+              switcher={chrome.switcherCount > 1 ? chrome.switcher.chip : null}
+              creators={hostedCreators(creators)}
+              body={body}
+            />
+          );
+        }
+
+        return (
+          <>
+            {/* The toolbar folds when the surface ASKS for it (`density`) or when
+                it is genuinely too narrow for the wide inline row
+                (`COMPACT_BREAKPOINT`) — the folded single-bar compact form
+                (search + every control inside one `MdTune` options popover,
+                single-view switcher hidden). The host hands it NO control — the
+                toolbar reads `DataViewSlots.Control` itself and each control's
+                panel reads this provider's context, so adding a control is a
+                contribution and never an edit here. */}
+            <DataViewControlsProvider {...controlsContext}>
+              <DataViewToolbar
+                stickyRef={chrome.stickyRef}
+                title={chrome.title}
+                query={activeState.query}
+                onQueryChange={onQueryChange}
+                switcher={chrome.switcher}
+                switcherCount={chrome.switcherCount}
+                actions={chrome.actions}
+                creators={creators}
+                density={chrome.density}
+                arrangement={chrome.toolbar}
+                searchPlaceholder={chrome.searchPlaceholder}
+              />
+            </DataViewControlsProvider>
+            {body}
           </>
         );
       }}
