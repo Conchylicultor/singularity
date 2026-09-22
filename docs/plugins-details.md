@@ -17450,6 +17450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/thumbnails`
               - `apps/sonata/library`
               - `apps/sonata/look`
+              - `apps/sonata/piano-roll`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/progress/loop`
               - `apps/sonata/track-mixer`

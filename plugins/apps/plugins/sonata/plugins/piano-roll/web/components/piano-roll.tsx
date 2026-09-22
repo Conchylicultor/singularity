@@ -342,6 +342,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const [canvasNonce, setCanvasNonce] = useState(0);
   const handleContextLost = useCallback(() => setCanvasNonce((n) => n + 1), []);
 
+  // Set when the browser offers no GPU backend (neither WebGPU nor WebGL): the
+  // canvas creates no Pixi app and the lane shows a "GPU unavailable" message
+  // instead of the half-drawn roll Pixi's 2D fallback would give (letters, no
+  // notes). Only a reload / browser restart can change the answer — Pixi caches
+  // its WebGL probe per page — so there is no in-page way back to false.
+  const [gpuUnavailable, setGpuUnavailable] = useState(false);
+  const handleGpuUnavailable = useCallback(() => setGpuUnavailable(true), []);
+
   // Latest-geometry refs for the FX context. The context is identity-stable
   // (memoized on the pixi pair only) so effects never remount on resize —
   // instead its accessors read these refs, which mirror the freshest
@@ -562,6 +570,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             look={look}
             onSceneReady={setPixi}
             onContextLost={handleContextLost}
+            onGpuUnavailable={handleGpuUnavailable}
           />
 
           {/* Headless FX wiring — every PianoRollFx contribution, config-gated
@@ -612,8 +621,29 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             </Stack>
           </Pin>
 
-          {/* Empty-score affordance. */}
-          {score.notes.length === 0 ? (
+          {/* No GPU: nothing can draw the notes, so say so plainly (it takes
+              the empty-score slot — one centred message at most). */}
+          {gpuUnavailable ? (
+            <Layer decorative>
+              <Center className="h-full w-full">
+                <Stack gap="xs" align="center" className="max-w-md text-center">
+                  <Text as="span" variant="body">
+                    Can't draw notes: the browser has no GPU available.
+                  </Text>
+                  <Text
+                    as="span"
+                    variant="body"
+                    className="text-muted-foreground"
+                  >
+                    Graphics acceleration is off in this browser, often after a
+                    GPU crash. Restart the browser; chrome://gpu shows the
+                    details.
+                  </Text>
+                </Stack>
+              </Center>
+            </Layer>
+          ) : score.notes.length === 0 ? (
+            /* Empty-score affordance. */
             // Full-bleed layer over the lane (sibling of the canvas/scroll
             // layers), centering the empty-state message.
             <Layer decorative>
@@ -648,7 +678,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
  * The piano-roll Display. Renders notes Synthesia-style on a time (vertical) ×
  * pitch (horizontal full-keyboard) grid that falls toward a piano keyboard at
  * the bottom — notes/grid/labels on a PixiJS canvas (WebGPU-first, WebGL
- * fallback), chrome and overlays in DOM. Publishes a `Projection` (both
+ * fallback, never Pixi's 2D canvas renderer — a "GPU unavailable" message
+ * instead), chrome and overlays in DOM. Publishes a `Projection` (both
  * capabilities) and hosts capability-compatible overlays (over the lane) and
  * pitch-axis decorations (in the gutter).
  */

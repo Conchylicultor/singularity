@@ -23,7 +23,7 @@ import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { Application } from "pixi.js";
+import { Application, isWebGLSupported, isWebGPUSupported } from "pixi.js";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type {
   Note,
@@ -71,6 +71,15 @@ export interface PianoRollCanvasProps {
    * working one from the current props.
    */
   onContextLost: () => void;
+  /**
+   * Fired instead of `onSceneReady` when the browser offers neither WebGPU nor
+   * WebGL (e.g. Chrome turned hardware acceleration off after GPU-process
+   * crashes). No Pixi app is created: Pixi's last-resort 2D canvas renderer can
+   * draw the note LETTERS but not the notes themselves (their mesh is a GPU
+   * shader), so it is never a valid backend here — the parent renders a
+   * "GPU unavailable" state instead of a roll with labels and no notes.
+   */
+  onGpuUnavailable: () => void;
 }
 
 /**
@@ -141,15 +150,32 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   // Latest callbacks without retriggering the init effect.
   const onSceneReadyRef = useLatestRef(props.onSceneReady);
   const onContextLostRef = useLatestRef(props.onContextLost);
+  const onGpuUnavailableRef = useLatestRef(props.onGpuUnavailable);
 
   useEffect(() => {
     let disposed = false;
     let liveScene: PianoRollScene | null = null;
     let detachLoss = (): void => {};
     const app = new Application();
-    const ready = app
-      .init({
-        preference: "webgpu",
+    // Resolves true once the app initialized, false when there is no GPU
+    // backend (no app to tear down then).
+    const ready = (async (): Promise<boolean> => {
+      // The same probes Pixi's auto-detect runs (WebGL with our relaxed
+      // performance-caveat flag; Pixi caches that answer per page, so init
+      // below sees the same one). Neither ⇒ the GPU-unavailable state.
+      const hasGpu = (await isWebGPUSupported()) || isWebGLSupported(false);
+      if (!hasGpu) {
+        if (!disposed) {
+          clientLog("piano-roll", "pixi backend: none (gpu unavailable)");
+          onGpuUnavailableRef.current();
+        }
+        return false;
+      }
+      await app.init({
+        // GPU backends only — NOT Pixi's default trailing "canvas" fallback,
+        // which silently draws labels without notes. Should the probe above
+        // and init ever disagree, init throws "No available renderer" (loud).
+        preference: ["webgpu", "webgl"],
         backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
@@ -157,8 +183,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         // Accept a software WebGL context as a last resort: on a machine with no
         // WebGPU and no hardware WebGL, a slow canvas WITH notes beats Pixi's
         // default of bailing out (failIfMajorPerformanceCaveat = true) and
-        // leaving the lane blank. Auto-detect still prefers WebGPU → hardware
-        // WebGL first; this only relaxes the final fallback.
+        // falling to the GPU-unavailable state. Auto-detect still prefers
+        // WebGPU → hardware WebGL first; this only relaxes the final fallback.
         failIfMajorPerformanceCaveat: false,
         eventFeatures: {
           move: false,
@@ -166,36 +192,37 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
           click: false,
           wheel: false,
         },
-      })
-      .then(() => {
-        if (disposed) return;
-        const host = hostRef.current;
-        if (!host) {
-          throw new Error(
-            "PianoRollCanvas: host div vanished before init settled",
-          );
-        }
-        // Backend visibility: headless e2e exercises the WebGL fallback, real
-        // Chrome should pick WebGPU — log which one actually initialized.
-        console.info(`[piano-roll] pixi backend: ${app.renderer.name}`);
-        clientLog("piano-roll", `pixi backend: ${app.renderer.name}`);
-        app.canvas.style.pointerEvents = "none";
-        host.appendChild(app.canvas);
-        liveScene = createPianoRollScene(app);
-        setScene(liveScene);
-        onSceneReadyRef.current({ scene: liveScene, app });
-        // Self-heal a spontaneous GPU loss: Pixi won't, so we ask the parent to
-        // remount us and rebuild the app from the current props.
-        detachLoss = watchContextLoss(app, () => {
-          clientLog("piano-roll", "gpu context lost — reinitializing canvas");
-          onContextLostRef.current();
-        });
       });
+      if (disposed) return true;
+      const host = hostRef.current;
+      if (!host) {
+        throw new Error(
+          "PianoRollCanvas: host div vanished before init settled",
+        );
+      }
+      // Backend visibility: headless e2e exercises the WebGL fallback, real
+      // Chrome should pick WebGPU — log which one actually initialized.
+      console.info(`[piano-roll] pixi backend: ${app.renderer.name}`);
+      clientLog("piano-roll", `pixi backend: ${app.renderer.name}`);
+      app.canvas.style.pointerEvents = "none";
+      host.appendChild(app.canvas);
+      liveScene = createPianoRollScene(app);
+      setScene(liveScene);
+      onSceneReadyRef.current({ scene: liveScene, app });
+      // Self-heal a spontaneous GPU loss: Pixi won't, so we ask the parent to
+      // remount us and rebuild the app from the current props.
+      detachLoss = watchContextLoss(app, () => {
+        clientLog("piano-roll", "gpu context lost — reinitializing canvas");
+        onContextLostRef.current();
+      });
+      return true;
+    })();
     return () => {
       disposed = true;
       detachLoss();
       // Destroy only after init settles — tearing down mid-init crashes Pixi.
-      void ready.then(() => {
+      void ready.then((initialized) => {
+        if (!initialized) return;
         // Signal null only if WE published a scene: a StrictMode-killed first
         // instance never published (disposed flag), and its late cleanup must
         // not clobber the second instance's live handle.
