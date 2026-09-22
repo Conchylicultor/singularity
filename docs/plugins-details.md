@@ -9672,7 +9672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RELATION_LABEL`
               - `strongestRelation`
           - Plugins:
-            - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited it — created, when the text it wrote mints an <agent-page> — and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label).
+            - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label).
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Pages"
                 - Uses:
@@ -9681,6 +9681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/pages/page-tree.useOpenBlockTarget`
                   - `conversations/conversation-view/artifacts.ArtifactRow`
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
                   - `primitives/css/spacing.Stack`
                   - `primitives/loading.Loading`

@@ -12,12 +12,15 @@ predict.
 
 | The call | The relation |
 | --- | --- |
-| `write_agent_note` / `edit_page` | **edited** |
-| …whose written text mints a tagless `<agent-page title="…">` | **created** |
+| `write_agent_note` / `edit_page` | the page it wrote into: **edited** |
+| …whose report lists `created_page_ids` | each of those new sub-pages: **created** |
 | `read_page` | **referenced** |
 
-A pointer — `<agent-page id="…" …/>`, copied back out of what `read_page`
-emitted — is not a mint. The `id` attribute is the whole difference.
+A write that mints an `<agent-page>` yields two rows: the page it wrote into
+(edited) and the new sub-page (created). The new page's id comes only from the
+report, since it does not exist before the write lands — so a mint still in
+flight shows just the edited parent, and the created row appears when the call
+returns.
 
 ## Which page a row is
 
@@ -56,7 +59,7 @@ Two states are not a title and do not pretend to be one:
 
 ## Plugin reference
 
-- Description: Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited it — created, when the text it wrote mints an <agent-page> — and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label).
+- Description: Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label).
 - Web:
   - Contributes: `ConversationArtifacts.Kind` "Pages"
   - Uses:
@@ -65,6 +68,7 @@ Two states are not a title and do not pretend to be one:
     - `apps/pages/page-tree.useOpenBlockTarget`
     - `conversations/conversation-view/artifacts.ArtifactRow`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
     - `primitives/css/spacing.Stack`
     - `primitives/loading.Loading`

@@ -4,11 +4,13 @@ import { extractPageHits, PAGE_KIND } from "./extract";
 
 const PAGE = "block-7f1a2d3d-a3cd-4c21-9a7e-000000000001";
 const CARD = "block-11112222-a3cd-4c21-9a7e-000000000002";
+const SUB = "block-33334444-a3cd-4c21-9a7e-000000000003";
 const AT = "2026-09-19T10:00:00Z";
 
 /** The apply report a page write answers with, as JSON on the wire. */
-function report(pageId: string): string {
+function report(pageId: string, createdPageIds?: string[]): string {
   return JSON.stringify({
+    created_page_ids: createdPageIds,
     scope_id: CARD,
     page_id: pageId,
     survived: 3,
@@ -100,19 +102,31 @@ describe("extractPageHits — relation", () => {
     expect(rows(event)).toEqual([[PAGE, "referenced"]]);
   });
 
-  test("a write whose text mints an <agent-page> created one", () => {
+  test("a sub-page the write minted is its own created row", () => {
     const event = toolCall(
-      "mcp__singularity__write_agent_note",
+      "mcp__singularity__edit_page",
       {
-        block_id: CARD,
-        content: '<agent-page title="Findings">the body</agent-page>',
+        block_id: PAGE,
+        old_string: "x",
+        new_string: '<agent-page title="Findings">the body</agent-page>',
       },
-      { content: report(PAGE) },
+      { content: report(PAGE, [SUB]) },
     );
-    expect(rows(event)).toEqual([[PAGE, "created"]]);
+    expect(rows(event)).toEqual([
+      [PAGE, "edited"],
+      [SUB, "created"],
+    ]);
   });
 
-  test("an <agent-page> POINTER carried along is not a mint", () => {
+  test("a mint still in flight edits the page — the new id is not known yet", () => {
+    const event = toolCall("mcp__singularity__write_agent_note", {
+      block_id: PAGE,
+      content: '<agent-page title="Findings">the body</agent-page>',
+    });
+    expect(rows(event)).toEqual([[PAGE, "edited"]]);
+  });
+
+  test("a report without created_page_ids creates nothing", () => {
     const event = toolCall(
       "mcp__singularity__edit_page",
       {

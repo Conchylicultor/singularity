@@ -1,4 +1,7 @@
-import { parsePageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/web";
+import {
+  parsePageApplyReport,
+  type PageApplyReport,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type {
   ArtifactHit,
@@ -25,15 +28,6 @@ const PAGE_TOOLS: { readonly match: RegExp; readonly writes: boolean }[] = [
   { match: /read_page$/, writes: false },
 ];
 
-/**
- * A `<agent-page>` the write MINTS, as opposed to one it merely carries along.
- *
- * The distinction is the `id`: a tagless `<agent-page title="…">` asks for a
- * new sub-page, while `<agent-page id="…" …/>` is a pointer at one that already
- * exists, copied back out of what `read_page` emitted.
- */
-const MINTS_PAGE_RE = /<agent-page(?![^>]*\bid=)[^>]*>/;
-
 /** One string field of a tool call's input, or nothing when it is not one. */
 function stringField(input: unknown, key: string): string | undefined {
   if (typeof input !== "object" || input === null) return undefined;
@@ -50,15 +44,14 @@ function stringField(input: unknown, key: string): string | undefined {
  * flight, or one that failed, has no report, and then the block id is the only
  * name the row can carry.
  */
-function pageKey(event: ToolCall, writes: boolean): string | undefined {
-  if (writes) {
-    const report = parsePageApplyReport(event);
-    // The report is JSON off the wire, so its shape is checked rather than
-    // trusted: a tool that answered with some other JSON is not a page id.
-    if (typeof report?.page_id === "string" && report.page_id !== "") {
-      return report.page_id;
-    }
-  }
+function pageKey(
+  event: ToolCall,
+  report: PageApplyReport | null,
+): string | undefined {
+  // The report is JSON off the wire, so its shape is checked rather than
+  // trusted: a tool that answered with some other JSON is not a page id.
+  const reported = report?.page_id;
+  if (typeof reported === "string" && reported !== "") return reported;
   // `blockId` was the spelling in an earlier revision of these tools; old
   // transcripts carry it.
   return (
@@ -67,33 +60,29 @@ function pageKey(event: ToolCall, writes: boolean): string | undefined {
   );
 }
 
+/**
+ * The sub-pages a write minted, by the ids that open them — the report's
+ * `created_page_ids`, checked the same way as `page_id`. Only the report knows
+ * them: a new page's id does not exist until the write has landed.
+ */
+function createdPageIds(report: PageApplyReport | null): string[] {
+  const ids: unknown = report?.created_page_ids;
+  if (!Array.isArray(ids)) return [];
+  return ids.filter((id): id is string => typeof id === "string" && id !== "");
+}
+
 /** An empty id is no id — it names nothing a row could open. */
 function nonEmpty(value: string | undefined): string | undefined {
   return value === undefined || value === "" ? undefined : value;
 }
 
-/** The text a write puts ON the page — the only place a mint can be asked for. */
-function writtenText(event: ToolCall): string {
-  return (
-    stringField(event.input, "new_string") ??
-    stringField(event.input, "content") ??
-    ""
-  );
-}
-
-function relationOf(event: ToolCall, writes: boolean): Relation {
-  if (!writes) return "referenced";
-  return MINTS_PAGE_RE.test(writtenText(event)) ? "created" : "edited";
-}
-
 /**
- * The page one transcript event touched, and what it did to it.
+ * The pages one transcript event touched, and what it did to each.
  *
- * - `write_agent_note` / `edit_page` **edited** the page — or **created**, when
- *   the text they wrote mints an `<agent-page>`.
- * - `read_page` **referenced** it.
- *
- * At most one page per event: these tools take one scope each.
+ * - `write_agent_note` / `edit_page` **edited** the page they wrote into, and
+ *   **created** every `<agent-page>` their report says they minted — a new
+ *   sub-page is its own row, not a relabelling of its parent.
+ * - `read_page` **referenced** the page it read.
  *
  * Known seam: a write is keyed by the page the apply reported, while a read is
  * keyed by whatever `block_id` it was given. So reading one card of a page and
@@ -106,17 +95,22 @@ export function extractPageHits(event: JsonlEvent): ArtifactHit[] {
   const tool = PAGE_TOOLS.find((t) => t.match.test(event.name));
   if (tool === undefined) return [];
 
-  const key = pageKey(event, tool.writes);
-  // A call that names no page at all — nothing to list, and an empty row would
-  // be chrome standing in for information the transcript does not have.
-  if (key === undefined) return [];
+  // `read_page` answers with prose, never a report.
+  const report = tool.writes ? parsePageApplyReport(event) : null;
+  const hit = (key: string, relation: Relation): ArtifactHit => ({
+    kind: PAGE_KIND,
+    key,
+    relation,
+    at: event.at,
+  });
 
+  const key = pageKey(event, report);
   return [
-    {
-      kind: PAGE_KIND,
-      key,
-      relation: relationOf(event, tool.writes),
-      at: event.at,
-    },
+    // A call that names no page at all — nothing to list, and an empty row
+    // would be chrome standing in for information the transcript does not have.
+    ...(key === undefined
+      ? []
+      : [hit(key, tool.writes ? "edited" : "referenced")]),
+    ...createdPageIds(report).map((id) => hit(id, "created")),
   ];
 }

@@ -22,6 +22,12 @@ export type PageApplyReport = {
   moved: number;
   text_edited: number;
   created_ids?: readonly string[];
+  /**
+   * The pages among `created_ids`: each `<agent-page>` the write minted, by the
+   * id that opens it. Optional for the same reason as `note_ids` — older
+   * reports predate it.
+   */
+  created_page_ids?: readonly string[];
   /** `edit_page` only: how many occurrences of `old_string` were replaced. */
   replaced?: number;
 };
