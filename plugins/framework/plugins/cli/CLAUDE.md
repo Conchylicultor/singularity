@@ -10,6 +10,12 @@ A plugin ships `plugins/<name>/cli/index.ts` default-exporting
 `./singularity build` regenerates `core/cli.generated.ts` from the filesystem.
 Nothing here names it. `plugins/format/` is the reference shape.
 
+Deleting a command is just deleting its folder. Until the registry is
+regenerated it still lists the command; `bin/cli.ts` skips an entry whose
+`cli/index.ts` is gone (one stderr line names it) instead of failing startup, so
+`build` / `push` can run to regenerate it. A declaration that is present but
+throws still fails startup loudly.
+
 The declaration is **data only** — commander needs names and flags before it
 parses, so every plugin's `cli/index.ts` loads on every `./singularity`
 invocation, `build` included. The implementation sits behind the declaration's
@@ -421,9 +427,11 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `MergeMarkerKind`
   - Exports (values):
     - `clearMergeMarkers`
+    - `cliEntrySourcePath`
     - `defineCliCommand`
     - `findClaudeMdConflicts`
     - `isCliCommand`
+    - `isCliEntryPresent`
     - `MERGE_MARKER_KINDS`
     - `mergeMarkerDir`
     - `readMergeMarkers`

@@ -28,6 +28,10 @@ export { findClaudeMdConflicts } from "./internal/claudemd-conflicts";
 export type { ClaudeMdRepo } from "./internal/claudemd-conflicts";
 
 export { defineCliCommand, isCliCommand } from "./internal/command";
+export {
+  cliEntrySourcePath,
+  isCliEntryPresent,
+} from "./internal/registry-entry";
 export type {
   CliAction,
   CliArgumentSpec,

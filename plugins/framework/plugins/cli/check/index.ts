@@ -1,5 +1,5 @@
 import { builtinModules } from "node:module";
-import { join, relative } from "node:path";
+import { relative } from "node:path";
 import {
   postWebManifests,
   preBarrelManifests,
@@ -7,7 +7,12 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { isCliCommand, type CliCommand } from "../core";
+import {
+  cliEntrySourcePath,
+  isCliCommand,
+  isCliEntryPresent,
+  type CliCommand,
+} from "../core";
 import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { measureManifestFreeze, type FreezeFinding } from "./manifest-freeze";
 
@@ -418,8 +423,11 @@ const declarationsLightCheck: Check = {
     }
 
     const offenders: string[] = [];
+    // A stale entry (deleted command) has nothing to measure; the drift itself is
+    // `plugins-registry-in-sync`'s to report.
     for (const entry of cliEntries) {
-      const rel = join("plugins", entry.pluginPath, "cli", "index.ts");
+      if (!isCliEntryPresent(root, entry)) continue;
+      const rel = cliEntrySourcePath(entry);
       const { modules, external } = await importClosure(root, rel, {
         dynamicImports: "cut",
       });
@@ -483,11 +491,14 @@ const commandNamesUniqueCheck: Check = {
   description:
     "no two plugins may contribute the same ./singularity verb — commander keeps the first registration, so a collision silently deletes one plugin's command",
   async run() {
+    const root = await getWorktreeRoot();
     const { cliEntries } = await import("../core/cli.generated");
 
     // pluginPath -> the command names it claims, at each level of the tree.
     const claims = new Map<string, string[]>();
     for (const entry of cliEntries) {
+      // Stale entry (deleted command): it claims nothing.
+      if (!isCliEntryPresent(root, entry)) continue;
       const mod = (await entry.loader()) as { default?: unknown };
       const exported = mod.default;
       const commands = Array.isArray(exported)

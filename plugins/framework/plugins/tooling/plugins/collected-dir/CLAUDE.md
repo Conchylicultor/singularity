@@ -24,6 +24,15 @@ would report "unknown command" and a broken pipeline would read as a typo.
 Warn-and-continue stays the default: for facets and checks one bad contribution
 should cost a doc section, not the pass.
 
+`isPresent: (entry) => boolean` separates a **stale** entry from a **failed**
+one. An entry whose source is gone (its plugin was deleted, the generated
+registry not yet regenerated) is skipped without loading, reported once on
+stderr, and never counted as a `strict` failure — `strict` means "present but
+broken", `isPresent` means "listed but deleted". The CLI passes it because it is
+its own registry's only regenerator: failing strict on a deleted command left no
+`./singularity` command able to start, `build` and `push` included. The
+predicate is injected so this leaf stays free of `node:*` imports.
+
 ## Why this is its own leaf plugin
 
 The `CollectedDir` marker (`defineCollectedDir`) lives in `codegen/core`, but the

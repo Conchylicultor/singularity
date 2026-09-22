@@ -1,6 +1,6 @@
 import { program } from "commander";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import { isCliCommand, type CliCommand } from "../core";
+import { isCliCommand, isCliEntryPresent, type CliCommand } from "../core";
 import { cliEntries } from "../core/cli.generated";
 import { registerCommands } from "./register-commands";
 import { runCli } from "./run-cli";
@@ -32,10 +32,18 @@ program.name("singularity").description("Singularity agent CLI");
 // `strict`: a declaration that throws at load must not read as "that command
 // does not exist" — `./singularity build` reporting "unknown command" would
 // look like a typo rather than a broken tree.
+//
+// `isPresent`: an entry whose declaration file is GONE is the opposite case —
+// the command really does not exist, and the registry line is stale. It must be
+// skipped, not failed: this CLI is the only thing that regenerates the registry,
+// so failing here would leave no command able to start to repair it (`build`
+// and `push` included).
+const repoRoot = repoRootOf(import.meta.path);
 const contributed = await loadCollectedDir<CliCommand>(cliEntries, {
   isItem: isCliCommand,
   label: "cli command",
   strict: true,
+  isPresent: (entry) => isCliEntryPresent(repoRoot, entry),
 });
 
 assertUniqueNames(contributed);
@@ -49,6 +57,21 @@ registerCommands(
 );
 
 await runCli(program);
+
+/**
+ * The repo root, from this file's own location rather than the cwd (the CLI can
+ * be run from any directory). Throws if the file moved, rather than resolving
+ * every declaration against the wrong directory and skipping them all as stale.
+ */
+function repoRootOf(selfPath: string): string {
+  const suffix = "plugins/framework/plugins/cli/bin/cli.ts";
+  if (!selfPath.endsWith(suffix)) {
+    throw new Error(
+      `bin/cli.ts is at ${selfPath}, not at <root>/${suffix} — update repoRootOf.`,
+    );
+  }
+  return selfPath.slice(0, -suffix.length);
+}
 
 /**
  * Two plugins claiming one verb is a conflict with no correct resolution, and

@@ -48,6 +48,21 @@ export interface LoadCollectedDirOptions<T> {
    * rewrite.
    */
   strict?: boolean;
+  /**
+   * Is this entry's source still on disk? An entry for which this returns false
+   * is STALE — a leftover line in a derived registry whose plugin was deleted —
+   * and is skipped without being loaded, reported once on stderr, and never
+   * counted as a `strict` failure.
+   *
+   * `strict` answers "present but broken"; this answers "listed but deleted".
+   * They must stay apart wherever the registry's own regenerator runs through
+   * this loader: `./singularity`'s command registry is regenerated only by the
+   * CLI, so failing strict on a deleted command meant no `./singularity`
+   * command could start to regenerate it — `build` and `push` included.
+   *
+   * Injected rather than checked here so this leaf keeps no `node:*` import.
+   */
+  isPresent?: (entry: CollectedEntry) => boolean;
 }
 
 function topoSort(entries: CollectedEntry[]): CollectedEntry[] {
@@ -76,11 +91,23 @@ export async function loadCollectedDir<T>(
   entries: CollectedEntry[],
   opts: LoadCollectedDirOptions<T>,
 ): Promise<T[]> {
-  const ordered = opts.ordered ? topoSort(entries) : entries;
+  const label = opts.label ?? "collected-dir";
+  const present: CollectedEntry[] = [];
+  const stale: string[] = [];
+  for (const e of entries) {
+    if (opts.isPresent && !opts.isPresent(e)) stale.push(e.pluginPath);
+    else present.push(e);
+  }
+  if (stale.length > 0) {
+    console.warn(
+      `[${label}] registry lists ${stale.length} removed contribution(s), skipped: ` +
+        `${stale.join(", ")} — \`./singularity build\` regenerates the registry.`,
+    );
+  }
+  const ordered = opts.ordered ? topoSort(present) : present;
   const results = await Promise.allSettled(ordered.map((e) => e.loader()));
   const out: T[] = [];
   const seen = opts.dedupeKey ? new Set<string>() : null;
-  const label = opts.label ?? "collected-dir";
   // Only populated under `strict`; every failure is collected so one pass
   // reports all of the breakage rather than the first item of it.
   const failures: string[] = [];
