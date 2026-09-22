@@ -610,6 +610,10 @@
       "name": "@singularity/plugin-apps-prototypes-compare-version",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/copy-id": {
+      "name": "@singularity/plugin-apps-prototypes-copy-id",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/files": {
       "name": "@singularity/plugin-apps-prototypes-files",
       "version": "0.0.1",
@@ -6406,6 +6410,8 @@
     "@singularity/plugin-apps-prototypes-compare-route": ["@singularity/plugin-apps-prototypes-compare-route@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/route"],
 
     "@singularity/plugin-apps-prototypes-compare-version": ["@singularity/plugin-apps-prototypes-compare-version@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/version"],
+
+    "@singularity/plugin-apps-prototypes-copy-id": ["@singularity/plugin-apps-prototypes-copy-id@workspace:plugins/apps/plugins/prototypes/plugins/copy-id"],
 
     "@singularity/plugin-apps-prototypes-files": ["@singularity/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
 

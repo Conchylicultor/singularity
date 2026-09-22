@@ -18,7 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [14 sub-plugins] — Notion-like pages app.
-    - **`prototypes`** [10 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+    - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.

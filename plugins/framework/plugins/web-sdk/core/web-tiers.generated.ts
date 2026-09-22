@@ -95,6 +95,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/prototypes/plugins/compare/plugins/fixture",
   "apps/plugins/prototypes/plugins/compare/plugins/route",
   "apps/plugins/prototypes/plugins/compare/plugins/version",
+  "apps/plugins/prototypes/plugins/copy-id",
   "apps/plugins/prototypes/plugins/present",
   "apps/plugins/settings/plugins/accounts",
   "apps/plugins/settings/plugins/appearance",

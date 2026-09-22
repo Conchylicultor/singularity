@@ -1,4 +1,4 @@
-// @hash 1efa7ecba71f
+// @hash a449f0ac0f62
 // A horizontal pane header, read left to right. The pane's own title comes
 // first, then `view-mode` — which stage you are looking at is a choice about
 // the prototype itself, so it leads, beside the title. (It used to sit there
@@ -32,6 +32,10 @@
 // prototype you record, not a way of looking at it. Its label and glyph size
 // are the same in both states, so ticking it never changes the header's width.
 //
+// `copy-id` sits last: a small generic utility (copy the prototype's id for a
+// prompt or a CLI command), outboard of everything that acts on the prototype.
+// Its icon swaps to a check of the same size, so a click never moves the header.
+//
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 // Hide: { "item": "<key>", "hidden": true }
@@ -47,6 +51,7 @@
     { "type": "spacer", "id": "spacer-1" },
     "apps.prototypes.gallery:done",
     "apps.prototypes.present:present",
-    "apps.prototypes.gallery:improve"
+    "apps.prototypes.gallery:improve",
+    "apps.prototypes.copy-id:copy-id"
   ]
 }

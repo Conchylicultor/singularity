@@ -3713,6 +3713,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/live-state.useCombinedResources`
                   - `primitives/live-state.useResource`
                   - `primitives/overlay/popover.InlinePopover`
+        - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
+          - Web:
+            - Contributes: `prototypeDetailPane.Actions` "copy-id" → `CopyIdAction`
+            - Uses:
+              - `apps/prototypes/gallery.prototypeDetailPane`
+              - `apps/prototypes/gallery.usePrototypeDetail`
+              - `primitives/copy-to-clipboard.useCopyToClipboard`
+              - `primitives/icon-button.IconButton`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
@@ -3828,7 +3836,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
-              - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
+              - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
               - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
               - `PrototypeVersionActions` ← `apps.prototypes.compare.version`, `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
@@ -3937,6 +3945,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/home/app-cards`
               - `apps/prototypes/compare`
               - `apps/prototypes/compare/version`
+              - `apps/prototypes/copy-id`
               - `apps/prototypes/present`
               - `conversations/conversation-view/artifacts/prototype`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened in a new browser tab as a chromeless app page (present/<id>) that keeps the options picker. Contributed into the detail pane's Actions.
@@ -24017,6 +24026,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/pages/copy-id`
+          - `apps/prototypes/copy-id`
           - `apps/studio/compositions/release/release-logs`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -28540,6 +28550,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/prototypes/compare/version`
+          - `apps/prototypes/copy-id`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/audio/engine`

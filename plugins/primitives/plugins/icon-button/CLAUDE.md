@@ -85,6 +85,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/prototypes/compare/version`
+    - `apps/prototypes/copy-id`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/audio/engine`

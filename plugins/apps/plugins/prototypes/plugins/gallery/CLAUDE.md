@@ -267,7 +267,7 @@ honest — the prototype does exist — and it self-corrects.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
     - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
     - `PrototypeVersionActions` ← `apps.prototypes.compare.version`, `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
@@ -376,6 +376,7 @@ honest — the prototype does exist — and it self-corrects.
     - `apps/home/app-cards`
     - `apps/prototypes/compare`
     - `apps/prototypes/compare/version`
+    - `apps/prototypes/copy-id`
     - `apps/prototypes/present`
     - `conversations/conversation-view/artifacts/prototype`
 
