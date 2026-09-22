@@ -15,7 +15,7 @@ wonders why a table in their fork is empty.
 
 Both only ever empty tables. **There is no way to remove a schema**, and that is
 the point: publications and event triggers are database-level objects `pg_dump`
-emits regardless, so a missing schema dangles them (it broke Zero's restore on
+emits regardless, so a missing schema dangles them (it once broke a restore on
 seven statements), and a schema that is deleted needs an owner to put it back —
 which has no spelling in a contribution. `graphile_worker` is what that cost: a
 freshly-forked database could not accept a transactional enqueue until a backend
@@ -24,7 +24,7 @@ had booted against it.
 `keep` is what makes deleting unnecessary. Graphile's migration watermark lives
 in `graphile_worker.migrations`, inside the schema; keeping that one table hands
 a fork a schema graphile already considers installed, while main's pending jobs
-and crontab watermarks stay behind. `keep: []` (Zero) is required rather than
+and crontab watermarks stay behind. `keep: []` is required rather than
 optional — "nothing comes across" is the decision being asked for.
 
 **Exclude derived state together with its sources.** Keeping `live_state_snapshot`
@@ -41,17 +41,17 @@ were in it:
 
 | declaration | emitted |
 |---|---|
-| `keep: []` | `"zero_0/cdc".*` per matched schema |
+| `keep: []` | `"ext_0/log".*` per matched schema |
 | `keep: ["migrations"]` | one quoted `schema.table` per non-kept relation |
 | `ExcludeFromFork` | `public."traces"` plus every partition leaf under it |
 
 Three details that each fix a real silent miss:
 
 - **Quoting.** `pg_dump` parses a pattern with psql identifier rules, so an
-  unquoted `zero_0.changeLog` case-folds to `changelog` and matches nothing.
+  unquoted `ext_0.changeLog` case-folds to `changelog` and matches nothing.
 - **The wildcard for `keep: []`.** The catalog is read before the fork takes its
-  host-wide slot, and main's live zero-cache mints schemas on its own schedule;
-  deferring the relation set to dump time closes that window. The schema NAME is
+  host-wide slot, and a service can create tables in main's database in that
+  gap; deferring the relation set to dump time closes that window. The schema NAME is
   still catalog-derived, which is what the checks need.
 - **Partition expansion.** `--exclude-table-data` does not cascade, and a
   partition's rows are dumped under the LEAF's name — so naming only the parent
@@ -81,13 +81,14 @@ from *main's* database and those drift by construction:
 
 - **a non-system schema no declaration claims** (and that holds data — a schema
   of functions and types has no rows to copy). This is what catches narrowing
-  `zero*` to `zero_*`. Fatal was the first draft and it was wrong: a branch cut
+  a family glob like `ext*` to `ext_*`. Fatal was the first draft and it was wrong: a branch cut
   before a plugin landed, a plugin deleted while its schemas live on in main's
   database, or one stray `CREATE SCHEMA` would each have become "no worktree can
   be created on this host". The fork job raises a bell notification deduped per
   schema; the CLI prints it.
 - **a declaration matching nothing** — benign, and legitimate when a branch adds
-  a table main has not migrated yet, or zero-cache has never run on main.
+  a table main has not migrated yet, or the service that creates a declared
+  schema has never run on main.
 
 `COPIED_SCHEMAS` (currently just `public`) is the explicit list of schemas whose
 rows ARE app data. The rules are pure (`planForkExclusions`) and tested in
@@ -241,7 +242,6 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `database/fork`
     - `database/live-state-snapshot`
     - `database/query`
-    - `database/zero/cache-service`
     - `debug/boot-profile`
     - `debug/latency-ledger`
     - `debug/profiling/ops`

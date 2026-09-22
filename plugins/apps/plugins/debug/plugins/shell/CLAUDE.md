@@ -7,7 +7,7 @@
 - Description: App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
 - Web:
   - Slots:
-    - `DebugApp.Sidebar` ← `backup`, `build`, `conversations.recover`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `primitives.css.layout-harness`
+    - `DebugApp.Sidebar` ← `backup`, `build`, `conversations.recover`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `primitives.css.layout-harness`
     - `DebugApp.Toolbar`
   - Contributes: `Apps.App` "Debug" → `DebugLayout`
   - Uses:
@@ -42,7 +42,6 @@
     - `debug/reports`
     - `debug/trace/pane`
     - `debug/worktree-cleanup`
-    - `debug/zero-test`
     - `infra/events-test`
     - `primitives/css/layout-harness`
 

@@ -80,7 +80,7 @@ the user's?
 ## What the runtime tree carries
 
 The runtime tree is the gateway and everything it starts: every backend (main,
-central, each worktree), each zero-cache sidecar, and Postgres / PgBouncer. It
+central, each worktree) and Postgres / PgBouncer. It
 starts from a **declared** environment, never from whoever started it. (It used
 to inherit: `./singularity start` from an agent shell put that shell's
 `SINGULARITY_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the
@@ -108,7 +108,7 @@ Two boundaries, one declaration:
 2. **Gateway → every child.** It also passes the required
    `-child-env <runtimeEnvNames().join(",")>` (prefixes spelled `NAME_*`). The
    gateway holds no list of its own; it forwards only those names, plus its
-   per-child additions (`ZERO_*` for a zero-cache). A backend's socket path is
+   per-child additions. A backend's socket path is
    not one of them: it travels on argv (`--socket`). See `gateway/CLAUDE.md`.
 
 `PATH` is the one forwarded name not passed through verbatim.
@@ -181,7 +181,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/paths.setReleaseIdentity`
     - `infra/paths.worktreesDir`
     - `infra/worktree.writeWorktreeSpec`
-    - `infra/worktree.ZeroCacheSpec`
   - Exports (types): `ListenAddress`
   - Exports (values):
     - `assertSupportedHost`
@@ -205,7 +204,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `spawnGatewayDaemon`
     - `teardownSelfContainedApp`
     - `writeReleaseDatabaseConfig`
-    - `zeroCacheSpec`
 - Cross-plugin:
   - Imported by: `release`
 - Core:

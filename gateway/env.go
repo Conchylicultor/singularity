@@ -139,7 +139,7 @@ func (c ChildEnv) Names() []string {
 
 // With returns the base environment plus extra (`NAME=value` entries). An
 // extra replaces a same-named base entry rather than sitting beside it, so a
-// value the gateway sets per child (ZERO_PORT) always wins over
+// value the gateway sets for one child always wins over
 // one the starter happened to carry — even if the declaration ever grew to
 // include that name.
 //

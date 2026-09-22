@@ -102,7 +102,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/worktree-cleanup`
-    - `debug/zero-test`
     - `fields/json/config`
     - `infra/claude-cli`
     - `infra/events-test`

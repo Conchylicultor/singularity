@@ -9,9 +9,8 @@
 //
 // This lives in its own sub-plugin rather than in `infra/worktree` because five
 // CLI command files import that barrel, so anything added to it joins the CLI
-// PROCESS's static import closure. Reclaiming reaches `database/admin` and
-// `database/zero/.../cache-service`, and through them `infra/jobs` and the DB
-// pool — a large closure to graft onto a barrel the CLI freezes at load, and
+// PROCESS's static import closure. Reclaiming reaches `database/admin`, and
+// through it the DB pool — a large closure to graft onto a barrel the CLI freezes at load, and
 // exactly the surface `cli:codegen-manifests-not-frozen` guards.
 
 import { rm } from "node:fs/promises";
@@ -20,7 +19,6 @@ import {
   databaseExists,
   dropDatabase,
 } from "@plugins/database/plugins/admin/server";
-import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -128,15 +126,9 @@ export async function reclaimNamespace(
 
   onStep?.("database");
   // The database may already be gone — an earlier reclaim dropped it, or a
-  // legacy registry-only entry never had one. Guard the DB steps on existence:
-  // `dropZeroReplicationArtifacts` opens a client TO the database and would throw
-  // `database "<ns>" does not exist`, aborting the reclaim before the registry
-  // step below and leaving the gateway registration (and its fsnotify watch)
-  // anchored forever. When the database exists, drop Zero's replication slot(s) +
-  // publications FIRST: DROP DATABASE WITH (FORCE) terminates backends but does
-  // NOT drop replication slots, and a leftover slot makes the drop fail.
+  // legacy registry-only entry never had one — so the drop runs only when it
+  // exists.
   if (await databaseExists(ns)) {
-    await dropZeroReplicationArtifacts(ns);
     await dropDatabase(ns);
   }
 

@@ -779,7 +779,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/slow-ops/pane`
-    - `debug/zero-test`
     - `fields/secret/config`
     - `framework/web-core`
     - `infra/boot-snapshot`

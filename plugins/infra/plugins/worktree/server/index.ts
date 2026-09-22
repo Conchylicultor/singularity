@@ -31,7 +31,6 @@ export {
 } from "./internal/worktree-op";
 export {
   type WorktreeSpec,
-  type ZeroCacheSpec,
   writeWorktreeSpec,
   removeWorktreeSpec,
 } from "./internal/spec";

@@ -599,12 +599,6 @@
       "segment": "worktree-cleanup",
       "appIndex": false,
       "parent": null
-    },
-    {
-      "paneId": "zero-test",
-      "segment": "zero-test",
-      "appIndex": false,
-      "parent": null
     }
   ]
 }

@@ -230,7 +230,7 @@ export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
 /**
  * Root dir holding every worktree's per-worktree singularity state. Each
  * worktree owns `<worktreesDir()>/<name>/` (build/release artifacts, logs, ops
- * markers, the zero replica, …). THE single source of truth for the
+ * markers, …). THE single source of truth for the
  * `worktrees/<name>` layout — server plugins and the CLI both derive from it so
  * the base path can never diverge.
  *

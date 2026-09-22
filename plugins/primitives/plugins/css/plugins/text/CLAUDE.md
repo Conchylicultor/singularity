@@ -397,7 +397,6 @@ fixed raw size escapes per-site via
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
-    - `debug/zero-test`
     - `fields/color/table`
     - `fields/date/filter`
     - `fields/enum/column-config`

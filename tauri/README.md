@@ -93,10 +93,9 @@ session, which a headless/automation shell lacks.
   `-1712`), so the whole release runs to completion headlessly. The dmg is still
   **unsigned / un-notarized** — Gatekeeper behavior is unchanged; signing +
   notarization remains a separate follow-up.
-- **Embedded PG port is picked per launch.** The embedded Postgres opens a
-  loopback TCP listener (`listen_addresses=127.0.0.1`, present for Zero), which
-  would default to 5433 and collide with a dev cluster or another desktop
-  instance. The shell now picks a free port at setup and passes it as
+- **Embedded PG port is picked per launch.** The embedded Postgres binds no TCP
+  listener, but its port still names its Unix socket file and would default to
+  5433, the dev cluster's. The shell picks a free port at setup and passes it as
   `SINGULARITY_PG_PORT` to both `launch` and `teardown` (mirroring the web
   preview path, `plugins/release/server/internal/preview-manager.ts`), so the
   desktop app coexists with a running dev cluster and other instances.

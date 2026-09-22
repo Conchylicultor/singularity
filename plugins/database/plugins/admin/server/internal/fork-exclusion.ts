@@ -62,10 +62,10 @@ export const ExcludeFromFork = defineServerContribution<{
 //
 //   - Nothing can be left dangling. Publications and event triggers are
 //     database-level objects that `pg_dump` emits regardless, and each one
-//     naming a now-missing schema is a `pg_restore` error. Zero is exactly that
-//     case — its `_zero_metadata_0` publication and `zero_ddl_*_0` event
-//     triggers live outside its schemas and point back in — and removing the
-//     schemas broke the restore on seven statements.
+//     naming a now-missing schema is a `pg_restore` error. A runtime that
+//     installs a publication and event triggers outside its schemas, pointing
+//     back in, is exactly that case — removing such schemas once broke the
+//     restore on seven statements.
 //   - Nothing is born incomplete. A schema that is deleted needs an owner to put
 //     it back, and "who recreates it" has no spelling in a contribution — it was
 //     prose in a `reason` string. `graphile_worker` is what that cost: a
@@ -83,8 +83,8 @@ export const ExcludeFromFork = defineServerContribution<{
 // across" is the decision being asked for, and an omitted field is not a
 // decision.
 //
-// `schema` is a glob (`zero*` matches the whole `zero`, `zero_0`, `zero_0/cdc`,
-// `zero_0/cvr` family). It is matched by US against the source catalog, never by
+// `schema` is a glob (`ext*` matches a whole `ext`, `ext_0`, `ext_0/log`
+// family). It is matched by US against the source catalog, never by
 // `pg_dump` — see ./fork-plan, which also refuses a schema no declaration
 // matches at all.
 export const ExcludeSchemaDataFromFork = defineServerContribution<{

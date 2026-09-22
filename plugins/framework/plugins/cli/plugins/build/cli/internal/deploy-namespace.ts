@@ -8,7 +8,6 @@ import {
   writeWorktreeSpec,
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
-import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 import {
   namespaceUrl,
   type CheckoutRef,
@@ -530,11 +529,6 @@ export async function deployNamespace(
     // registry to load — the committed one for the main composition, the
     // filtered `<dir>.composition.<id>.generated.ts` for any other.
     composition: target.composition,
-    // Per-namespace zero-cache sidecar — present only under the
-    // SINGULARITY_ZERO_CACHE opt-in, and now passed for every target rather
-    // than omitted for compositions: under the opt-in each namespace gets its
-    // own sidecar, which is the right behaviour and one special case fewer.
-    zeroCache: zeroCacheSpec({ name: ns, repoRoot: root }),
   });
   endRegister();
 

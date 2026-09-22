@@ -62,7 +62,6 @@ the shape that would absorb it into "the setup succeeded".
     - `WorktreeOpInfo`
     - `WorktreeOpPhase`
     - `WorktreeSpec`
-    - `ZeroCacheSpec`
   - Exports (values):
     - `clearPushHolder`
     - `clearWorktreeOp`

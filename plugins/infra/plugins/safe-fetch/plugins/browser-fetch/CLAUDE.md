@@ -24,8 +24,8 @@ of TLS tunnelling plus a second copy of the pinning logic that can drift from
 the first.
 
 The secondary arguments agree: there is no precedent for a supervised
-long-lived child process inside a Bun `server/` process (`zero-cache`
-deliberately pushed supervision out to the Go gateway), and a warm browser would
+long-lived child process inside a Bun `server/` process (long-lived
+supervision belongs to the Go gateway), and a warm browser would
 need crash detection, restart backoff, zombie reaping across `./singularity
 build` restarts, and an idle timer — in up to ~16 worktree backends at once
 (~4 GB of idle Chromium). Amortization is near zero anyway: callers are

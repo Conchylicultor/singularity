@@ -270,7 +270,6 @@ code, that is the bug this section exists to prevent.
     - `database/admin.databaseExists`
     - `database/admin.dropDatabase`
     - `database/admin.ensureDatabase`
-    - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/endpoints.implement`
     - `infra/paths.checkoutRef`
     - `infra/paths.REPO_ROOT`

@@ -282,7 +282,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
-    - `debug/zero-test`
     - `fields/bool/filter`
     - `fields/color/table`
     - `fields/date/filter`

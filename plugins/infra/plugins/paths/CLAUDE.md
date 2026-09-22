@@ -331,7 +331,6 @@ run everywhere.
     - `conversations/conversation-view/op-status`
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
-    - `database/zero/cache-service`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
     - `debug/heap-snapshot`

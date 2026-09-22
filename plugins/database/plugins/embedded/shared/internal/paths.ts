@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { pgClusterDir } from "../../data-dirs";
 
 // Per-instance port override. Default 5433 (dev cluster). A local release preview
-// runs PG alongside the dev cluster on the same host, so its loopback TCP listener
-// (listen_addresses=127.0.0.1, present for Zero logical replication) would collide
-// on 5433 — the preview manager hands each preview a free port via this env var.
+// runs PG alongside the dev cluster on the same host; PG binds no TCP listener,
+// but the port still names its Unix socket file, so the preview manager hands
+// each preview its own port via this env var.
 // Frozen at import time, like every path constant; the launcher/start scripts set
 // it in the process env before this module is first imported.
 function resolvePgPort(): number {

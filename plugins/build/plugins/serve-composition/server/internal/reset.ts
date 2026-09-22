@@ -48,7 +48,6 @@ import {
   dropDatabase,
   ensureDatabase,
 } from "@plugins/database/plugins/admin/server";
-import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
 import {
   activatedCompositionIds,
   assertServableCompositionNamespace,
@@ -148,9 +147,8 @@ export async function resetCompositionData(id: string): Promise<void> {
 
   // Recipe — guards passed; the target is provably this one namespace.
   // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds the
-  // schema on next spawn). Zero replication artifacts must go before the drop.
+  // schema on next spawn).
   if (await databaseExists(ns)) {
-    await dropZeroReplicationArtifacts(ns);
     await dropDatabase(ns);
   }
   await ensureDatabase(ns);

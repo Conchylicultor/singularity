@@ -1,7 +1,7 @@
 // What environment does the runtime tree start from?
 //
 // The runtime tree is the gateway and everything it starts: every backend
-// (main, central, each worktree), each zero-cache, and Postgres / PgBouncer.
+// (main, central, each worktree) and Postgres / PgBouncer.
 // It used to start from whatever its STARTER happened to carry. The launcher
 // spawned the gateway with `{ ...process.env }`, and the gateway handed every
 // child its own `os.Environ()` plus a few additions. So `./singularity start`
@@ -16,8 +16,8 @@
 // gateway with exactly this subset of its own environment (`pickRuntimeEnv`),
 // and passes the names as the gateway's required `-child-env` flag
 // (`runtimeEnvNames`). The gateway holds no list of its own: it forwards to its
-// children only the names this file declares, plus what it sets per child
-// (ZERO_* for a zero-cache). That makes two boundaries, starter → gateway and
+// children only the names this file declares, plus what it sets per child.
+// That makes two boundaries, starter → gateway and
 // gateway → child, and one declaration for both.
 //
 // An allowlist, not a denylist of known-bad names: what a starter's environment
@@ -111,10 +111,6 @@ export const RUNTIME_FORWARDED_ENV = {
     "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
   SINGULARITY_WEB_DIST:
     "the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
-  SINGULARITY_ZERO_CACHE:
-    "the Zero opt-in, read by the backend, by the supervised Postgres start script and by a toolbar build (database/zero/core flag.ts, database/embedded/scripts/start.ts)",
-  SINGULARITY_ZERO_NODE:
-    "the Node binary zero-cache runs under, for the sidecar the gateway starts (database/zero/cache-service/scripts/start.ts)",
   SINGULARITY_CLAUDE_BIN:
     "where the backend finds the claude CLI (infra/paths/server bins.ts)",
   SINGULARITY_PROFILING:

@@ -9,9 +9,10 @@
  * ever could. `readSchemaCatalog`'s one SQL statement is exercised by every
  * real fork.
  *
- * The catalog below is the real one from main's database on 2026-08-21, which is
- * what makes the Zero cases meaningful: mixed-case table names and a `/` inside
- * a schema name are why the emitted patterns have to be quoted.
+ * The catalog below is main's real `graphile_worker` and `public` schemas, plus
+ * a hypothetical `ext*` family standing in for any service that owns a set of
+ * schemas: its mixed-case table names and the `/` inside a schema name are why
+ * the emitted patterns have to be quoted.
  *
  * KNOW WHAT THIS SUITE CANNOT SEE. A hand-built catalog is a well-formed one, so
  * nothing here can catch `readSchemaCatalog` handing the planner the wrong SHAPE
@@ -55,7 +56,10 @@ function schema(
   };
 }
 
-/** Main's schemas, trimmed to the tables the assertions talk about. */
+/**
+ * Main's schemas, trimmed to the tables the assertions talk about, plus the
+ * hypothetical `ext*` family.
+ */
 const CATALOG: SchemaCatalog = {
   schemas: [
     schema("graphile_worker", [
@@ -66,19 +70,22 @@ const CATALOG: SchemaCatalog = {
       "migrations",
     ]),
     schema("public", ["tasks", "traces", "mail_messages"]),
-    schema("zero", ["permissions"]),
-    schema("zero_0", ["clients", "publishedSchema", "versionHistory"]),
-    schema("zero_0/cdc", ["changeLog", "replicationState"]),
-    schema("zero_0/cvr", ["rowsVersion"]),
+    schema("ext", ["permissions"]),
+    schema("ext_0", ["clients", "publishedSchema", "versionHistory"]),
+    schema("ext_0/log", ["changeLog", "replicationState"]),
+    schema("ext_0/state", ["rowsVersion"]),
   ],
 };
 
-/** The declarations this repo actually ships. */
+/**
+ * The declarations this repo ships, plus one for the `ext*` family that keeps
+ * nothing.
+ */
 const DECLARED = {
   tables: ["traces", "mail_messages"],
   schemas: [
     { schema: "graphile_worker", keep: ["migrations"] },
-    { schema: "zero*", keep: [] },
+    { schema: "ext*", keep: [] },
   ],
 };
 
@@ -94,14 +101,14 @@ describe("planForkExclusions — what it emits", () => {
         '"graphile_worker"."_private_jobs"',
         '"graphile_worker"."_private_known_crontabs"',
         '"graphile_worker"."_private_tasks"',
-        // Zero keeps nothing, so each MATCHED schema collapses to `.*` — the
+        // `ext*` keeps nothing, so each MATCHED schema collapses to `.*` — the
         // schema name still comes from the catalog, but the relation set is
-        // resolved by pg_dump at dump time, closing the window in which
-        // zero-cache mints a table after we read the catalog.
-        '"zero".*',
-        '"zero_0".*',
-        '"zero_0/cdc".*',
-        '"zero_0/cvr".*',
+        // resolved by pg_dump at dump time, closing the window in which a
+        // service creates a table after we read the catalog.
+        '"ext".*',
+        '"ext_0".*',
+        '"ext_0/log".*',
+        '"ext_0/state".*',
         '"public"."mail_messages"',
         '"public"."traces"',
       ].sort(),
@@ -116,13 +123,13 @@ describe("planForkExclusions — what it emits", () => {
   });
 
   test("mixed-case and slashed names are quoted, so pg_dump does not case-fold them", () => {
-    // Unquoted, `zero_0.changeLog` folds to `zero_0.changelog` and matches
+    // Unquoted, `ext_0.changeLog` folds to `ext_0.changelog` and matches
     // nothing at all — the silent miss this design exists to remove.
     const plan = planForkExclusions(CATALOG, {
       tables: [],
-      schemas: [{ schema: "zero_0/cdc", keep: ["replicationState"] }],
+      schemas: [{ schema: "ext_0/log", keep: ["replicationState"] }],
     });
-    expect(plan.excludeTableData).toEqual(['"zero_0/cdc"."changeLog"']);
+    expect(plan.excludeTableData).toEqual(['"ext_0/log"."changeLog"']);
   });
 
   test("a declared table that is partitioned expands to its leaves", () => {
@@ -169,8 +176,8 @@ describe("planForkExclusions — what it refuses", () => {
       ...DECLARED,
       schemas: [
         { schema: "graphile_worker", keep: ["migrations"] },
-        { schema: "zero*", keep: [] },
-        { schema: "zero_0", keep: ["clients"] },
+        { schema: "ext*", keep: [] },
+        { schema: "ext_0", keep: ["clients"] },
       ],
     };
     expect(() => planForkExclusions(CATALOG, overlapping)).toThrow(/ambiguous/);
@@ -181,7 +188,7 @@ describe("planForkExclusions — what it refuses", () => {
       ...DECLARED,
       schemas: [
         { schema: "graphile_worker", keep: ["migration"] },
-        { schema: "zero*", keep: [] },
+        { schema: "ext*", keep: [] },
       ],
     };
     expect(() => planForkExclusions(CATALOG, typo)).toThrow(/"migration"/);
@@ -253,23 +260,23 @@ describe("planForkExclusions — a kept table linking to a left-out one", () => 
 
 describe("planForkExclusions — the schema nobody claimed", () => {
   test("is reported with its size, and does NOT stop the fork", () => {
-    // The mistake this exists for: narrowing `zero*` to `zero_*` reads as safer
-    // and silently drops the bare `zero` schema out of the exclusion set.
+    // The mistake this exists for: narrowing `ext*` to `ext_*` reads as safer
+    // and silently drops the bare `ext` schema out of the exclusion set.
     const narrowed = {
       ...DECLARED,
       schemas: [
         { schema: "graphile_worker", keep: ["migrations"] },
-        { schema: "zero_*", keep: [] },
+        { schema: "ext_*", keep: [] },
       ],
     };
     const plan = planForkExclusions(CATALOG, narrowed);
-    expect(plan.undeclaredSchemas.map((s) => s.schema)).toEqual(["zero"]);
+    expect(plan.undeclaredSchemas.map((s) => s.schema)).toEqual(["ext"]);
     expect(
       plan.undeclaredSchemas.map(describeUndeclaredSchema).join("\n"),
     ).toContain("1.0 MB");
     // …and the fork still runs, with the schemas that ARE claimed excluded.
-    expect(plan.excludeTableData).toContain('"zero_0".*');
-    expect(plan.excludeTableData).not.toContain('"zero".*');
+    expect(plan.excludeTableData).toContain('"ext_0".*');
+    expect(plan.excludeTableData).not.toContain('"ext".*');
   });
 
   test("public and an extension's own schema are never reported", () => {
@@ -320,7 +327,7 @@ describe("planForkExclusions — what it merely reports", () => {
       tables: [],
       schemas: [
         { schema: "graphile_worker", keep: ["migrations"] },
-        { schema: "zero*", keep: [] },
+        { schema: "ext*", keep: [] },
         { schema: "gone", keep: ["also_gone"] },
       ],
     });

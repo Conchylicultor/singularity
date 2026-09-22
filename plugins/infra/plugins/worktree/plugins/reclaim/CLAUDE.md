@@ -29,17 +29,14 @@ reclaimed too.
 ## Why a sub-plugin and not part of `infra/worktree`
 
 Five CLI command files import the parent barrel, so anything added to it joins
-the CLI **process**'s import closure. Reclaiming reaches `database/admin` and
-`database/zero/…/cache-service`, and through them `infra/jobs` and the DB pool —
+the CLI **process**'s import closure. Reclaiming reaches `database/admin`, and
+through it the DB pool —
 exactly the surface `cli:codegen-manifests-not-frozen` guards.
 
 ## Order is load-bearing
 
-Zero replication artifacts before the database (`DROP DATABASE WITH (FORCE)`
-does not drop replication slots, and a leftover slot fails the drop); both DB
-steps guarded on `databaseExists` (otherwise the reclaim aborts before the
-registry step and the gateway registration is anchored forever); filtered
-registries after the spec (the spec is what stops the backend, and the backend
+The database drop runs only when `databaseExists` (an earlier reclaim may have
+dropped it already); filtered registries after the spec (the spec is what stops the backend, and the backend
 reads its registry at spawn).
 
 No separate "dist" step: `removeWorktreeSpec` `rm -rf`s the whole namespace dir,
@@ -54,7 +51,6 @@ so dist and marker go with the step that deregisters.
   - Uses:
     - `database/admin.databaseExists`
     - `database/admin.dropDatabase`
-    - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/paths.worktreesDir`
     - `infra/worktree.CompositionMarker`
     - `infra/worktree.ensureMainWorktreeRoot`

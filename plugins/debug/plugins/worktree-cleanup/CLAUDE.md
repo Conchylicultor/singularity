@@ -106,7 +106,6 @@ the panel until it is given something to say.
     - `database/admin.databaseExists`
     - `database/admin.dropDatabase`
     - `database/admin.listDatabases`
-    - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/endpoints.implement`
     - `infra/host/host-read-pool.heavyReadSlotCount`
     - `infra/host/host-read-pool.withHeavyReadSlot`

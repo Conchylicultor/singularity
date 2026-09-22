@@ -1,4 +1,4 @@
-// @hash 7018dd022410
+// @hash 99559010f8f7
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -21,10 +21,10 @@
     "debug.memory:memory",
     "debug.worktree-cleanup:worktree-cleanup",
     "debug.config-orphans:config-orphans",
-    "debug.zero-test:zero-test",
     { "type": "spacer", "id": "spacer-1" },
     "conversations.recover:conversations-recover",
     "infra.events-test:events-test",
+    "primitives.css.layout-harness:layout-lab",
     "backup:backup"
   ]
 }

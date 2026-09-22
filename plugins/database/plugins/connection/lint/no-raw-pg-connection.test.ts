@@ -33,7 +33,7 @@ const EXEMPT_PATHS = [
   "plugins/database/plugins/connection/server/internal/client.ts",
   "plugins/framework/plugins/cli/plugins/apply-migrations/cli/run.ts",
   "plugins/database/plugins/migrations/check/internal/direct-db.ts",
-  "plugins/database/plugins/zero/plugins/cache-service/scripts/start.ts",
+  "plugins/database/plugins/embedded/scripts/start.ts",
   "plugins/database/plugins/admin/e2e/fork-bench.ts",
   "plugins/database/lint/no-pool-await-in-transaction.ts",
   "plugins/page/plugins/editor/server/internal/page-forest.test.ts",

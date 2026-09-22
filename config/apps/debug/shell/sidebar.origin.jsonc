@@ -1,4 +1,4 @@
-// @hash 7018dd022410
+// @hash 99559010f8f7
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -27,7 +27,6 @@
     "debug.reports:reports",
     "debug.trace.pane:trace-slow-events",
     "debug.worktree-cleanup:worktree-cleanup",
-    "debug.zero-test:zero-test",
     "infra.events-test:events-test",
     "primitives.css.layout-harness:layout-lab"
   ]

@@ -39,9 +39,9 @@ struct StackCtx {
 }
 
 /// Ask the OS for a free loopback TCP port (bind `:0`, read the assignment,
-/// release it). The embedded Postgres opens a loopback TCP listener for Zero, so
-/// without a per-instance port it always binds the default 5433 and collides
-/// with a dev cluster or another desktop instance. This mirrors how the web
+/// release it). The embedded Postgres binds no TCP listener, but its port still
+/// names its Unix socket file (`.s.PGSQL.<port>`) and defaults to 5433, the dev
+/// cluster's, so each desktop instance still gets its own. This mirrors how the web
 /// preview path hands each instance its own `SINGULARITY_PG_PORT`.
 fn pick_free_port() -> Option<u16> {
     std::net::TcpListener::bind("127.0.0.1:0")

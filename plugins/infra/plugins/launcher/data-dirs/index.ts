@@ -79,8 +79,8 @@ export const socketsDir = defineDataDir({
   // Live kernel objects with open file descriptors on both ends. Meaningless
   // once nothing is running, unsafe to touch while anything is.
   reclaim: { kind: "restart" },
-  // PERMANENT, not a to-do — the same grandfathering the postgres cluster and
-  // the zero replica carry, for the same reason. These are live IPC endpoints
+  // PERMANENT, not a to-do — the same grandfathering the postgres cluster
+  // carries, for the same reason. These are live IPC endpoints
   // the running gateway and every backend hold open; relocating them means
   // stopping the gateway and with it every backend on the host, so the entry
   // stays where those processes already have it.

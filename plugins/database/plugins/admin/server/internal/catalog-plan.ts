@@ -89,9 +89,9 @@ export const APP_SCHEMA = "public";
  *
  * `pg_dump` parses `--exclude-table-data` with psql's identifier rules, not as a
  * literal string: an unquoted portion is case-folded to lower case and `*`/`?`
- * are wildcards. Zero's tables are mixed-case (`changeLog`, `publishedSchema`)
- * and its schemas contain a slash (`zero_0/cdc`), so an unquoted
- * `zero_0.changeLog` folds to `zero_0.changelog` and matches nothing at all —
+ * are wildcards. A foreign runtime's tables can be mixed-case (`changeLog`) and
+ * its schema names can contain a slash (`ext_0/log`), so an unquoted
+ * `ext_0.changeLog` folds to `ext_0.changelog` and matches nothing at all —
  * the exact silent-miss the planners exist to make impossible.
  *
  * Inside double quotes every character is literal (wildcards included) and only

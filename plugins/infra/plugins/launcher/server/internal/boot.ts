@@ -17,10 +17,7 @@ import {
   ensureDatabase,
   getAdminPool,
 } from "@plugins/database/plugins/admin/server";
-import {
-  writeWorktreeSpec,
-  type ZeroCacheSpec,
-} from "@plugins/infra/plugins/worktree/server";
+import { writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceUrl,
   type Namespace,
@@ -43,11 +40,6 @@ import {
   PGBOUNCER_PORT,
   pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
-// The Zero opt-in switch is owned by the zero plugin (its single source of
-// truth), consulted here only to decide whether to compose the worktree spec's
-// `zeroCache` block. The same predicate gates the cache-service install-time
-// provision, so the fence stays consistent across runtime and build time.
-import { zeroCacheEnabled } from "@plugins/database/plugins/zero/core";
 import { dbConfigDir } from "@plugins/database/data-dirs";
 import { userConfigRelativeToRoot } from "@plugins/config_v2/data-dirs";
 import {
@@ -242,36 +234,6 @@ export function pgbouncerConnection() {
   return { host: PGBOUNCER_SOCKET_DIR, port: PGBOUNCER_PORT };
 }
 
-/**
- * Compose the optional per-worktree `zeroCache` spec block, or `undefined` when
- * the opt-in is unset (so the spec serializes byte-for-byte as before).
- *
- * `command` = `bun run <abs start.ts within THIS worktree repo>`; `cwd` = the
- * worktree repo root; `upstreamDb` = a loopback-TCP DSN to the worktree's fork
- * DB, built directly from the embedded constants (PG_USER@127.0.0.1:PG_PORT/<name>
- * — NOT pgbouncer, NOT the unix socket, `127.0.0.1` literally, no `?schema`).
- * The gateway adds ZERO_PORT (allocated) + ZERO_REPLICA_FILE (per-worktree) when
- * it spawns the command.
- */
-export function zeroCacheSpec(opts: {
-  name: string;
-  repoRoot: string;
-}): ZeroCacheSpec | undefined {
-  if (!zeroCacheEnabled()) return undefined;
-  return {
-    command: [
-      "bun",
-      "run",
-      join(
-        opts.repoRoot,
-        "plugins/database/plugins/zero/plugins/cache-service/scripts/start.ts",
-      ),
-    ],
-    upstreamDb: `postgresql://${PG_USER}@127.0.0.1:${PG_PORT}/${opts.name}`,
-    cwd: opts.repoRoot,
-  };
-}
-
 export function ensureDatabaseConfig(
   repoRoot: string,
   log: LogFn = noop,
@@ -290,9 +252,6 @@ export function ensureDatabaseConfig(
         changed = true;
         log("Updated database config: added PgBouncer");
       }
-      // zero-cache is no longer a global database.json service (Stage 2): it is
-      // a per-worktree gateway-owned sidecar, composed into the worktree spec's
-      // `zeroCache` block (see zeroCacheSpec). Nothing to add here.
       if (changed) {
         existing.services = nextServices;
         writeFileSync(
@@ -464,8 +423,8 @@ export async function buildOrLocateGateway(
  * Whatever else the starting shell carries — an agent's
  * `SINGULARITY_CONVERSATION_ID`, its `TMUX`, its `CLAUDE_*` — stays here instead
  * of reaching every backend on the host. `-child-env` hands the gateway the same
- * list of names, and the gateway forwards only those to the backends,
- * zero-cache sidecars and Postgres / PgBouncer it starts.
+ * list of names, and the gateway forwards only those to the backends and
+ * Postgres / PgBouncer it starts.
  *
  * `env` is still set EXPLICITLY, from the LIVE `process.env`. Bun snapshots the
  * real environment at process start, so runtime mutations to `process.env` (the
@@ -839,7 +798,6 @@ export async function bootSelfContainedApp(opts: {
     web,
     command,
     composition,
-    zeroCache: zeroCacheSpec({ name, repoRoot }),
   });
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 

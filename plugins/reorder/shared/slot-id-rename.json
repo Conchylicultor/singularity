@@ -885,11 +885,6 @@
     "to": "worktree-cleanup.actions"
   },
   {
-    "hier": "debug/zero-test",
-    "from": "pane.zero-test.actions",
-    "to": "zero-test.actions"
-  },
-  {
     "hier": "infra/events-test",
     "from": "pane.events-test.actions",
     "to": "events-test.actions"

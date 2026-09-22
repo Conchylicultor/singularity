@@ -180,7 +180,6 @@ genuine transient-chrome list escapes with
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `debug/trace/pane`
-    - `debug/zero-test`
     - `history/dialog`
     - `page/annotations/todo`
     - `page/editor`

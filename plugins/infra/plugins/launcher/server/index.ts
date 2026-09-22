@@ -19,7 +19,6 @@ export {
   propagateReleaseConfig,
   teardownSelfContainedApp,
   gatewayPidFile,
-  zeroCacheSpec,
 } from "./internal/boot";
 export {
   LISTEN_ENV,

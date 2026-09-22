@@ -231,27 +231,13 @@ function startPostmaster(binDir: string): void {
     rmSync(PG_PID_FILE, { force: true });
   }
 
-  // pg_ctl start -w: forks PG, waits for readiness, then exits. App traffic
-  // ALWAYS stays on the Unix socket (-k/-p). The loopback TCP listener
-  // (listen_addresses=127.0.0.1) + wal_level=logical exist ONLY to let a
-  // logical-replication client consume the cluster — today that is solely Zero's
-  // zero-cache (see zeroCacheSpec in launcher/server/internal/boot.ts), which
-  // can't traverse PgBouncer nor replicate over a Unix socket. Every other
-  // consumer connects over the socket. So both GUCs are gated on the same env
-  // switch Zero is gated on, read directly here (this standalone script can't
-  // import zeroCacheEnabled()). With Zero off — the default; no release / preview
-  // / Tauri boot ever sets it — PG binds NO TCP port, so a self-contained
-  // release's PG never collides with the dev cluster's 5433, another release's,
-  // or another preview's. Both GUCs are postmaster-start-only, so they take
-  // effect only on a full cluster (re)start.
+  // pg_ctl start -w: forks PG, waits for readiness, then exits. All traffic
+  // stays on the Unix socket (-k/-p); `listen_addresses=''` binds NO TCP port,
+  // so a self-contained release's PG never collides with the dev cluster's
+  // 5433, another release's, or another preview's. The GUC is
+  // postmaster-start-only, so it takes effect only on a full cluster (re)start.
   // PGHOST/PGPORT/PGUSER in env so pg_ctl's -w probe finds the socket.
-  const zeroCacheEnabled = process.env.SINGULARITY_ZERO_CACHE === "1";
-  const listenGucs = zeroCacheEnabled
-    ? "-c listen_addresses=127.0.0.1 -c wal_level=logical"
-    : "-c listen_addresses=''";
-  console.log(
-    `pg: starting (socket=${PG_SOCKET_DIR}, port=${PG_PORT}, tcp=${zeroCacheEnabled})`,
-  );
+  console.log(`pg: starting (socket=${PG_SOCKET_DIR}, port=${PG_PORT})`);
   const result = spawnSync(
     join(binDir, "pg_ctl"),
     [
@@ -261,7 +247,7 @@ function startPostmaster(binDir: string): void {
       "-l",
       PG_LOG_FILE,
       "-o",
-      `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} ${listenGucs}`,
+      `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=''`,
       "-w",
       "-t",
       String(READY_TIMEOUT_SEC),

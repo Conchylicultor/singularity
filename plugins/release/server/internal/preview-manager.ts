@@ -18,9 +18,9 @@ import { previews, previewStateResource } from "./preview-state-resource";
 
 // Never collide with the dev gateway (9000) or the baked release port (9100).
 const PREVIEW_PORT_FLOOR = 9101;
-// Per-instance embedded-PG TCP port floor. PG binds a loopback TCP listener
-// (listen_addresses=127.0.0.1, for Zero logical replication) that would collide
-// with the dev cluster's 5433, so each preview gets a free port from here up.
+// Per-instance embedded-PG port floor. PG binds no TCP listener, but the port
+// still names its Unix socket file and defaults to the dev cluster's 5433, so
+// each preview gets a free port from here up.
 const PREVIEW_PG_PORT_FLOOR = 5500;
 // Where preview data roots live. Literal `/tmp` (NOT os.tmpdir(), the long
 // /var/folders/... path on macOS): the embedded PG/gateway open Unix sockets under

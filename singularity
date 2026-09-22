@@ -2,11 +2,6 @@
 set -e
 cd "$(dirname "$0")"
 
-# The @rocicorp/zero-sqlite3 native binary needs a Node-24 ABI pin, but that pin
-# must NOT leak into the global `bun install` (it would mis-target any other
-# native dep bun loads at runtime). It is therefore scoped to a single subprocess
-# in the root `postinstall` step (ensure-zero-sqlite3.ts), not exported here.
-
 # ONE step, on purpose: nothing may run before the CLI process. This used to
 # `bun install --silent` first, and a failed install aborted the wrapper (set -e)
 # before `exec`, printing nothing — every subcommand then looked like it had

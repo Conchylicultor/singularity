@@ -21,9 +21,9 @@ export type { SchemaCatalog } from "./catalog-plan";
 // The old spelling handed every declared pattern straight to `pg_dump`, which
 // SILENTLY ACCEPTS a pattern that matches nothing. So a stale schema name, a
 // typo, or an over-narrowed glob all produced the same thing: a fork that
-// copied data nobody meant it to copy, with no error anywhere. `zero*` matches
-// `zero`, `zero_0`, `zero_0/cdc` and `zero_0/cvr`; narrowing it to `zero_*` for
-// apparent safety drops the bare `zero` schema out of the exclusion set
+// copied data nobody meant it to copy, with no error anywhere. A family glob
+// like `ext*` matches `ext`, `ext_0` and `ext_0/log`; narrowing it to `ext_*`
+// for apparent safety drops the bare `ext` schema out of the exclusion set
 // forever, and the only way to notice is to query the live database.
 //
 // The fix is that a declared pattern is now matched HERE, against the catalog,
@@ -81,9 +81,9 @@ export interface ForkPlan {
    * Reported, NOT fatal. A declaration matching nothing is benign — there is no
    * data to copy, so its intent already holds — and it happens legitimately: a
    * branch that adds a table together with its `ExcludeFromFork` forks from a
-   * main whose database has not run that migration yet, and `zero*` matches
-   * nothing on a database where zero-cache has never started. Failing here
-   * would break worktree creation in both cases.
+   * main whose database has not run that migration yet, and a schema pattern
+   * matches nothing on a database where the service that creates those schemas
+   * has never run. Failing here would break worktree creation in both cases.
    */
   readonly unmatched: readonly string[];
   /**
@@ -124,8 +124,8 @@ const COPIED_SCHEMAS: readonly string[] = [APP_SCHEMA];
  * enumerated form cannot win: the catalog is read before the fork acquires its
  * host-wide slot, so a table created in the gap would be copied in full and
  * would not even appear in {@link ForkPlan.unmatched}, because the matching
- * already ran. Main runs a live zero-cache that mints schemas and tables on its
- * own schedule, so that gap is real. The schema NAME still comes from the
+ * already ran. A service that creates tables on its own schedule in main's
+ * database makes that gap real. The schema NAME still comes from the
  * catalog — which is what every check below needs — while the table set is
  * resolved at the last possible instant.
  */
@@ -136,7 +136,7 @@ function schemaWildcardPattern(schema: string): string {
 /**
  * Does `pattern` match `name`?
  *
- * The declaration vocabulary is the glob authors already write (`zero*`), but
+ * The declaration vocabulary is the glob authors already write (`ext*`), but
  * the matching is OURS now, not `pg_dump`'s — so it is exact and
  * case-sensitive rather than psql's case-folding identifier parse. Every schema
  * in this repo is lower-case, so the two agree today; being case-sensitive is
@@ -261,7 +261,7 @@ export function planForkExclusions(
     }
     // (2) A keep entry must name a real table in at least one matched schema.
     // "At least one" rather than "all": a pattern may span a family of schemas
-    // (`zero*`) whose members do not share a table list.
+    // (`ext*`) whose members do not share a table list.
     for (const keep of decl.keep) {
       if (!matched.some((s) => s.tables.includes(keep))) {
         throw new ForkPlanError(

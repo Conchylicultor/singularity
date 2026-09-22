@@ -7,22 +7,6 @@ import {
   worktreesDir,
 } from "@plugins/infra/plugins/paths/server";
 
-/**
- * Optional per-worktree zero-cache sidecar descriptor. Present ONLY when the
- * SINGULARITY_ZERO_CACHE opt-in is set (composed by the launcher's zeroCacheSpec
- * helper). The gateway spawns `command` with cwd=`cwd` and env ZERO_UPSTREAM_DB=
- * `upstreamDb` (plus a gateway-allocated ZERO_PORT and a per-worktree
- * ZERO_REPLICA_FILE). On-disk JSON key is exactly `zeroCache`.
- */
-export interface ZeroCacheSpec {
-  /** Spawn argv: `["bun","run",<abs start.ts within this worktree repo>]`. */
-  command: string[];
-  /** Upstream DSN zero-cache replicates from (loopback TCP to the fork DB). */
-  upstreamDb: string;
-  /** Working dir for the spawn — the worktree repo root. */
-  cwd: string;
-}
-
 export interface WorktreeSpec {
   /** Namespace = subdomain = the backend's `--namespace`. Spec dir basename. */
   name: string;
@@ -37,12 +21,6 @@ export interface WorktreeSpec {
    * (the Go gateway reads it via `json:"command"`).
    */
   command?: string[];
-  /**
-   * Optional per-worktree zero-cache sidecar. Omitted unless the
-   * SINGULARITY_ZERO_CACHE opt-in is set — so an opted-out spec serializes
-   * byte-for-byte as before.
-   */
-  zeroCache?: ZeroCacheSpec;
   /**
    * WHICH APP this namespace serves. The BACKEND reads it back off this same
    * file at boot (`server-core/bin/spec-composition.ts`) and
@@ -88,7 +66,6 @@ export function writeWorktreeSpec({
   server,
   web,
   command,
-  zeroCache,
   composition,
 }: WorktreeSpec): string {
   // The path comes from `paths` (`worktreeArtifacts.spec`), not from a join
@@ -101,19 +78,16 @@ export function writeWorktreeSpec({
   const path = worktreeArtifacts.spec(asNamespace(name));
   mkdirSync(dirname(path), { recursive: true });
   // Build the spec object additively so absent keys are omitted entirely (no
-  // `web`/`command`/`zeroCache` when unset), since the gateway treats a missing `command` as
-  // "use the bun bin/index.ts convention" and a missing `zeroCache` as
-  // "no zero-cache sidecar for this worktree".
+  // `web`/`command` when unset), since the gateway treats a missing `command` as
+  // "use the bun bin/index.ts convention".
   const spec: {
     server: string;
     web?: string;
     command?: string[];
-    zeroCache?: ZeroCacheSpec;
     composition?: string;
   } = { server };
   if (web) spec.web = web;
   if (command) spec.command = command;
-  if (zeroCache) spec.zeroCache = zeroCache;
   if (composition) spec.composition = composition;
   // Atomically publish the spec (temp + rename in the same dir) so a concurrent
   // reader — the gateway registry's loadFile, its periodic reconcile, or a lazy
@@ -135,7 +109,7 @@ export function writeWorktreeSpec({
  */
 export async function removeWorktreeSpec(name: string): Promise<void> {
   const dir = worktreesDir();
-  // New layout: <worktreesDir>/<name>/ (spec.json + logs/ + ops/ + zero/replica.db).
+  // New layout: <worktreesDir>/<name>/ (spec.json + logs/ + ops/).
   await rm(join(dir, name), { recursive: true, force: true });
   // Legacy layout: flat <worktreesDir>/<name>.json written by old CLI versions.
   await rm(join(dir, `${name}.json`), { force: true });
