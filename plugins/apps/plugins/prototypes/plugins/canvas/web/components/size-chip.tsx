@@ -50,11 +50,7 @@ export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
       size="menu"
       label="Size and zoom"
       trigger={
-        <Button
-          variant="outline"
-          className="shadow-md"
-          aria-label="Size and zoom"
-        >
+        <Button variant="floating" aria-label="Size and zoom">
           <SizeIcon size={size} />
           <span>{sizeName(size)}</span>
           <span className="tabular-nums text-muted-foreground">

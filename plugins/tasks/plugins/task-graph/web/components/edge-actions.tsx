@@ -16,7 +16,12 @@ export type EdgeActionsProps = {
  * primitive owns the edge path, hit area, hover reveal, and mid-edge placement;
  * this owns only the buttons and their task-domain endpoint calls.
  */
-export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavigate }: EdgeActionsProps) {
+export function EdgeActions({
+  sourceTaskId,
+  targetTaskId,
+  targetFolderId,
+  onNavigate,
+}: EdgeActionsProps) {
   const [inserting, setInserting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -45,7 +50,10 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
       if (deleting) return;
       setDeleting(true);
       try {
-        await fetchEndpoint(removeTaskDependency, { id: targetTaskId, depId: sourceTaskId });
+        await fetchEndpoint(removeTaskDependency, {
+          id: targetTaskId,
+          depId: sourceTaskId,
+        });
       } finally {
         setDeleting(false);
       }
@@ -56,10 +64,10 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
   return (
     <>
       <Button
-        variant="ghost"
+        variant="floating"
         aspect="icon"
         // eslint-disable-next-line control-size/no-adhoc-density -- custom-chrome graph-node action, intentional fixed 24px
-        className="bg-background text-foreground hover:bg-primary hover:text-primary-foreground size-6 rounded-full border shadow-sm"
+        className="hover:bg-primary hover:text-primary-foreground size-6 rounded-full"
         disabled={inserting}
         onClick={handleInsert}
         aria-label="Insert task"
@@ -67,10 +75,10 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
         <Text variant="label">+</Text>
       </Button>
       <Button
-        variant="ghost"
+        variant="floating"
         aspect="icon"
         // eslint-disable-next-line control-size/no-adhoc-density -- custom-chrome graph-node action, intentional fixed 24px
-        className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-6 rounded-full border shadow-sm"
+        className="hover:bg-destructive hover:text-destructive-foreground size-6 rounded-full"
         disabled={deleting}
         onClick={handleDelete}
         aria-label="Remove dependency"

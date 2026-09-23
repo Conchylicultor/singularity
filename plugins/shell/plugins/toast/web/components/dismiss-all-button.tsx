@@ -30,9 +30,9 @@ export function DismissAllButton() {
   return (
     <ControlSizeProvider size="sm">
       <Button
-        variant="outline"
+        variant="floating"
         shape="pill"
-        className="pointer-events-auto shadow-md"
+        className="pointer-events-auto"
         onClick={() => sonnerToast.dismiss()}
       >
         <MdClearAll />

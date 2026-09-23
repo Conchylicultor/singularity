@@ -65,12 +65,7 @@ export function OptionsPill({
       align="center"
       width="builder"
       trigger={
-        <Button
-          variant="outline"
-          shape="pill"
-          className="shadow-md"
-          aria-label="Prototype options"
-        >
+        <Button variant="floating" shape="pill" aria-label="Prototype options">
           <MdTune />
           <PillSummary options={options} picks={picks} />
         </Button>

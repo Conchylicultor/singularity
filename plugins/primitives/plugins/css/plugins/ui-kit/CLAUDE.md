@@ -64,6 +64,12 @@ The global UI kit — one cohesive design-system unit. It owns:
   `--hover-fill`. Use it for a framed control on anything but the page canvas —
   `outline` paints the canvas (or `input/30` in dark mode) behind its label.
   The app chrome's Improve and Build pills are `frame`.
+- **`Button variant="floating"`** is the button that floats over content (a
+  zoom chip on a canvas, "Dismiss all" under the toasts, jump-to-bottom). It
+  paints the solid overlay fill (`bg-popover`) and carries its own shadow. Every
+  other bordered variant is see-through somewhere, so content scrolling
+  underneath would show behind its label. `ui-kit/no-button-shadow` rejects a
+  `shadow-*` in a Button's / IconButton's `className` and points here.
 - **`Button variant="dashed"`** is the *optional* affordance beside the main
   action (attach, add, point at): no fill, muted dashed hairline and label, full
   strength on hover. Use it instead of restyling an `outline` with

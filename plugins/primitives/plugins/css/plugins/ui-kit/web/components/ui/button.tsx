@@ -51,6 +51,16 @@ const buttonVariants = cva(
         // chrome's graphite bar — shows as a lighter patch behind the label.
         frame:
           "border-border hover:bg-hover-fill hover:text-foreground aria-expanded:bg-hover-fill aria-expanded:text-foreground",
+        // A control that FLOATS over content — a zoom chip on a canvas, a
+        // "Dismiss all" under the toast stack, a jump-to-bottom over a feed. It
+        // paints the overlay surface (`bg-popover`), which is solid in every
+        // scheme, and carries its own shadow. Every other bordered variant is
+        // see-through somewhere (`outline` is `input/30` in dark mode, `frame`
+        // and `ghost` have no fill), so whatever scrolls underneath shows
+        // through the label. `ui-kit/no-button-shadow` sends every
+        // `shadow-*` on a Button here.
+        floating:
+          "border-border bg-popover text-popover-foreground shadow-md hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // A text size is the density token group's bundle for that size: height

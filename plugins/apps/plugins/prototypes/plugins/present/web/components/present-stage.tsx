@@ -196,7 +196,7 @@ function PresentedFrame({
   );
 }
 
-/** The chrome's card look, shared by the tag and the Exit button. */
+/** The frame tag's card look (the Exit button beside it is `variant="floating"`). */
 const CHROME = "rounded-md border border-border bg-background shadow-md";
 
 /**
@@ -260,8 +260,8 @@ function FrameTag({
 function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
   return (
     <Button
-      variant="ghost"
-      className={CHROME}
+      variant="floating"
+      className="rounded-md"
       aria-label="Exit presentation (Esc)"
       onClick={onExit}
     >
