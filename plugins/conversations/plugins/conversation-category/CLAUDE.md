@@ -1,8 +1,9 @@
 # conversation-category
 
-Classifies each conversation along a **user-defined set of categories** and
-surfaces one chip per category in the conversation header. One category is
-chosen to paint the avatar on sidebar conversation rows.
+Classifies each conversation along a **user-defined set of categories**. One
+category is chosen to paint the avatar on sidebar conversation rows. (The
+per-category chips in the conversation header were removed; the classifications
+are still stored for every category.)
 
 Two words, used consistently everywhere:
 
@@ -29,8 +30,7 @@ sidebar avatar. `Item.Avatar` is a first-match-wins dispatch slot — exactly on
 disc per row — so making the choice explicit is what stops two categories from
 fighting over it. Unset is legal: rows fall back to the title glyph.
 
-The other categories are visible in the conversation header, not on the list
-rows.
+The other categories are classified and stored, but not currently shown.
 
 ## How classification fires
 
@@ -66,8 +66,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - The primary key is the derived `categoryRowId(conversationId, categoryId)`
   rather than a composite, because the live-state **point** resource requires its
   subscription key to be a single-column pk. That keeps reads bounded: a sidebar
-  row subscribes to the ONE avatar-category id, the header to the open
-  conversation's whole set.
+  row subscribes to the ONE avatar-category id.
 - A row whose category was deleted from config is **structurally invisible** —
   no subscribed id set can contain it. That is why nothing sweeps orphans: a
   config write fires on every debounce in the settings form, so an automatic
@@ -84,35 +83,23 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 
 ## Plugin reference
 
-- Description: Per-conversation categories: one chip per user-defined category in the conversation header, and the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn; manual override from each chip's popover. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.
+- Description: Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
 - Web:
   - Contributes:
-    - `Conversation.Header` → `CategoryChipToolbar`
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Avatar category"
     - `Item.Avatar` → `CategoryAvatarRow`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `config_v2/config-link.ConfigGearButton`
-    - `conversations.useConversationById`
     - `conversations/conversation-ui/item.CONV_STATUS_DOT`
     - `conversations/conversation-ui/item.ConversationItemConv`
     - `conversations/conversation-ui/item.Item`
-    - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `fields/dynamic-enum/config.DynamicEnum`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/avatar.Avatar`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/control-panel.ControlPanel`
-    - `primitives/css/control-panel.ControlPanelPopover`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResources`
-    - `shell/notifications.toast`
   - Exports (types):
     - `Category`
     - `CategoryItem`

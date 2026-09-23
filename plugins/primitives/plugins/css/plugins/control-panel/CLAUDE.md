@@ -629,7 +629,6 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps/sonata/view-options`
     - `config_v2/fields`
     - `config_v2/settings`
-    - `conversations/conversation-category`
     - `fields/date/filter`
     - `fullscreen`
     - `page/annotations/instructions`

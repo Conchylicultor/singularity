@@ -8590,7 +8590,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `backup`
-          - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
@@ -9264,35 +9263,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
-    - **`conversation-category`** — Per-conversation categories: one chip per user-defined category in the conversation header, and the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn; manual override from each chip's popover. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.
+    - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
-          - `Conversation.Header` → `CategoryChipToolbar`
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Avatar category"
           - `Item.Avatar` → `CategoryAvatarRow`
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `config_v2/config-link.ConfigGearButton`
-          - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItemConv`
           - `conversations/conversation-ui/item.Item`
-          - `conversations/conversation-view.conversationPane`
-          - `conversations/conversation-view/header.Conversation`
           - `fields/dynamic-enum/config.DynamicEnum`
-          - `infra/endpoints.fetchEndpoint`
           - `primitives/avatar.Avatar`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/control-panel.ControlPanel`
-          - `primitives/css/control-panel.ControlPanelPopover`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResources`
-          - `shell/notifications.toast`
         - Exports (types):
           - `Category`
           - `CategoryItem`
@@ -9596,7 +9583,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `code-explorer`
           - `conversations/agents`
           - `conversations/all-conversations`
-          - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `conversations/conversation-ui/chip`
@@ -10172,7 +10158,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.LaunchControl`
         - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
           - Web:
-            - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-category`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
+            - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
             - Uses:
               - `primitives/collapsible-wrap.CollapsibleWrap`
               - `primitives/css/spacing.Stack`
@@ -10183,7 +10169,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `conversations/agents`
-              - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
               - `conversations/conversation-view`
@@ -17622,7 +17607,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer`
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
-              - `conversations/conversation-category`
               - `conversations/conversation-ui/row`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/jsonl-viewer`
@@ -24383,7 +24367,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/runs-arm`
               - `build/serve-composition`
               - `config_v2/settings`
-              - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/allow-monitor`
@@ -24884,7 +24867,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/view-options`
               - `config_v2/fields`
               - `config_v2/settings`
-              - `conversations/conversation-category`
               - `fields/date/filter`
               - `fullscreen`
               - `page/annotations/instructions`
@@ -26083,7 +26065,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/config-link`
               - `config_v2/settings`
               - `conversations/agents`
-              - `conversations/conversation-category`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
               - `conversations/conversation-view/action-bar`
@@ -26593,7 +26574,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/all-conversations`
-              - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-ui/row`
@@ -33257,7 +33237,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-logs`
           - `conversations`
-          - `conversations/conversation-category`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/drop-and-exit`

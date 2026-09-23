@@ -191,7 +191,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `config_v2/config-link`
     - `config_v2/settings`
     - `conversations/agents`
-    - `conversations/conversation-category`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
     - `conversations/conversation-view/action-bar`

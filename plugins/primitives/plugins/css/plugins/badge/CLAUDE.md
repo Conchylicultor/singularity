@@ -100,7 +100,6 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `build/runs-arm`
     - `build/serve-composition`
     - `config_v2/settings`
-    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/allow-monitor`

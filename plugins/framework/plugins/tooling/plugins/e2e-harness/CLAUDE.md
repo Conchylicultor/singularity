@@ -277,7 +277,6 @@ skipped for those scripts, leaking a Chromium process per run.
     - `code-explorer`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`
-    - `conversations/conversation-category`
     - `conversations/conversation-ui/row`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/jsonl-viewer`

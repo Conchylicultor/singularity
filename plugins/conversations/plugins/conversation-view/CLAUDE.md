@@ -58,7 +58,6 @@
     - `code-explorer`
     - `conversations/agents`
     - `conversations/all-conversations`
-    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-ui/chip`

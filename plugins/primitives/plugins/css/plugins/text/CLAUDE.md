@@ -299,7 +299,6 @@ fixed raw size escapes per-site via
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/all-conversations`
-    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-ui/row`

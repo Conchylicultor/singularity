@@ -11,7 +11,7 @@ export const conversationCategoryConfig = defineConfig({
       default: true,
       label: "Auto-classify with Haiku",
       description:
-        "Automatically classify conversations after each assistant turn, one item per category. Manual re-classify is always available from the category chips in the conversation header.",
+        "Automatically classify conversations after each assistant turn, one item per category.",
     }),
     // Value is a category id (see `categories` below). The option list is not
     // known at declaration time — it is the user's own categories — so it is

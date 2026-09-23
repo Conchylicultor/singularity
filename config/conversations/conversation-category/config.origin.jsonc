@@ -1,6 +1,6 @@
 // @hash a5d932d95894
 {
-  // Automatically classify conversations after each assistant turn, one item per category. Manual re-classify is always available from the category chips in the conversation header.
+  // Automatically classify conversations after each assistant turn, one item per category.
   "autoClassify": true,
   // Which category paints the avatar on sidebar conversation rows. Only one category can, so two categories never fight over the same disc. The commits-by-category charts in Stats break down by every category, independently of this choice.
   "avatarCategory": "",

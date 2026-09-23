@@ -32,7 +32,7 @@ export { getItemMap } from "./internal/store";
 
 export default {
   description:
-    "Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.",
+    "Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.",
   contributions: [
     ConfigV2.Register({ descriptor: conversationCategoryConfig }),
     Resource.Declare(conversationCategoriesResource),

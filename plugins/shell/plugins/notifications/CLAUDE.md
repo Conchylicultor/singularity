@@ -68,7 +68,6 @@
     - `build`
     - `build/build-logs`
     - `conversations`
-    - `conversations/conversation-category`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`

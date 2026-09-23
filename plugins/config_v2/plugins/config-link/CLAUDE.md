@@ -77,7 +77,6 @@ and the editor.
 - Cross-plugin:
   - Imported by:
     - `backup`
-    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-templates`

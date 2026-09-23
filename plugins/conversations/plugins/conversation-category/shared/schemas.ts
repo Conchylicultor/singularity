@@ -34,8 +34,7 @@ export type ConversationCategoriesPayload = z.infer<
 // id set.
 //
 // Subscribers name the exact rows they render: a sidebar row asks for the ONE
-// avatar-category id (same per-row budget as before), the conversation header
-// asks for every configured category of the one open conversation. A row whose
+// avatar-category id (same per-row budget as before). A row whose
 // category was deleted from config is therefore structurally invisible — no
 // subscribed id set can contain it — which is why nothing sweeps orphans.
 //

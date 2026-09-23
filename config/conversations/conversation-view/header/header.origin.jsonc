@@ -1,4 +1,4 @@
-// @hash 0095aa93350a
+// @hash 708a28098242
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "conversations.agents:agent-avatar",
-    "conversations.conversation-category:category",
     "conversations.conversation-preprompt:preprompt",
     "conversations.conversation-progress:progress",
     "conversations.conversation-view:title",
