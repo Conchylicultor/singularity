@@ -156,6 +156,61 @@ export function BackupTargetsSection({ run }: { run: UnionRun }): ReactNode {
 }
 
 /**
+ * The collapsed-header verdict of a list section: how many of its entries
+ * failed, or that all of them went fine.
+ *
+ * It sits beside the title, so it is visible whether the card is open or shut.
+ * The open state is remembered per section rather than per run — someone who
+ * once folded Targets away sees it folded on every later run — so the header,
+ * not the body, is the only place a failure is guaranteed to be seen.
+ */
+function OutcomeSummary({
+  failed,
+  total,
+}: {
+  failed: number;
+  total: number;
+}): ReactNode {
+  if (failed === 0) {
+    return (
+      <Text as="span" variant="body" tone="muted">
+        {`${total} of ${total} ok`}
+      </Text>
+    );
+  }
+  return (
+    <Text as="span" variant="body" tone="destructive">
+      <Inline gap="xs">
+        <MdError className={cn("size-4", rigidClass())} />
+        <span>{`${failed} of ${total} failed`}</span>
+      </Inline>
+    </Text>
+  );
+}
+
+/** The Sources header's verdict: how many of the archive's sources failed. */
+export function BackupSourcesSummary({ run }: { run: UnionRun }): ReactNode {
+  const sources = backupSources(run);
+  return (
+    <OutcomeSummary
+      failed={sources.filter((s) => s.outcome === "failed").length}
+      total={sources.length}
+    />
+  );
+}
+
+/** The Targets header's verdict: how many targets the archive did not reach. */
+export function BackupTargetsSummary({ run }: { run: UnionRun }): ReactNode {
+  const results = backupTargetResults(run);
+  return (
+    <OutcomeSummary
+      failed={results.filter((t) => !t.ok).length}
+      total={results.length}
+    />
+  );
+}
+
+/**
  * How big the archive came out.
  *
  * A one-line section — the whole content is a number, so it declares no

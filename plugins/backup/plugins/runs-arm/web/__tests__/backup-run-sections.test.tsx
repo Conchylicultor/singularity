@@ -18,7 +18,9 @@ import type { UnionRun } from "@plugins/runs/core";
 import {
   BackupArchiveSize,
   BackupSourcesSection,
+  BackupSourcesSummary,
   BackupTargetsSection,
+  BackupTargetsSummary,
 } from "../components/backup-run-sections";
 import { backupArchiveSize } from "../internal/payload";
 
@@ -260,5 +262,17 @@ describe("backup run detail sections", () => {
 
     renderSection(<BackupArchiveSize run={run} />);
     expect(screen.queryByText(/B$|KB|MB|GB/)).toBeNull();
+  });
+
+  // The header verdicts sit beside the title, so a failure shows while the
+  // card is folded — the open state is remembered per section, not per run.
+  it("says in the Targets header how many targets failed", () => {
+    renderSection(<BackupTargetsSummary run={backupRun()} />);
+    expect(screen.getByText("1 of 2 failed")).not.toBeNull();
+  });
+
+  it("says in the Sources header that every source went fine", () => {
+    renderSection(<BackupSourcesSummary run={backupRun()} />);
+    expect(screen.getByText("2 of 2 ok")).not.toBeNull();
   });
 });

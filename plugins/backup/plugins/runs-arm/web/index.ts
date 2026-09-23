@@ -7,7 +7,9 @@ import { BackupRunFields } from "./components/backup-run-fields";
 import {
   BackupArchiveSize,
   BackupSourcesSection,
+  BackupSourcesSummary,
   BackupTargetsSection,
+  BackupTargetsSummary,
 } from "./components/backup-run-sections";
 import {
   backupArchiveSize,
@@ -53,16 +55,22 @@ export default {
       label: "Sources",
       icon: MdFolder,
       component: BackupSourcesSection,
+      // The verdict beside the title, so a failed source shows while the card
+      // is shut — the open state is remembered per section, not per run.
+      summary: BackupSourcesSummary,
       // Required rather than a `return null`: the host paints the card before
       // the body and cannot see through it, so an empty manifest would leave a
       // titled bar over nothing. A pre-manifest run has no sources yet.
       useAvailable: ({ run }) => backupSources(run).length > 0,
+      useDefaultOpen: ({ run }) =>
+        backupSources(run).some((s) => s.outcome === "failed"),
     }),
     BackupRunDetail.Section({
       id: "targets",
       label: "Targets",
       icon: MdCloudUpload,
       component: BackupTargetsSection,
+      summary: BackupTargetsSummary,
       useAvailable: ({ run }) => backupTargetResults(run).length > 0,
       // The section holding the only repair path opens itself when there is
       // something to repair. Someone whose backup just broke should not have to
