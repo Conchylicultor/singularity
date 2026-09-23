@@ -89,13 +89,14 @@ describe("a round with one asked box", () => {
   it("records only the asked box, and says how many were given", () => {
     const r = round();
     const sheet = fillSelected(emptySheet(r, [2]), IV, 900);
-    expect(recordRoundBody(sheet, r)).toEqual({
+    expect(recordRoundBody(sheet, r, "one")).toEqual({
       sectionId: "abc_123",
       videoId: "X1Fqn9du7xo",
       shape: "bars-4",
       startBeat: 1,
       answers: [{ position: 2, token: V, answer: IV, answerMs: 900 }],
       givenCount: 3,
+      blanks: "one",
     });
   });
 });
@@ -160,12 +161,12 @@ describe("a round asking for every box", () => {
       total: 4,
       totalMs: 4_000,
     });
-    expect(recordRoundBody(sheet, r).answers).toHaveLength(4);
-    expect(recordRoundBody(sheet, r).givenCount).toBe(0);
+    expect(recordRoundBody(sheet, r, "all").answers).toHaveLength(4);
+    expect(recordRoundBody(sheet, r, "all").givenCount).toBe(0);
   });
 
   it("refuses to record a sheet that is not checked", () => {
-    expect(() => recordRoundBody(emptySheet(r, ALL), r)).toThrow(
+    expect(() => recordRoundBody(emptySheet(r, ALL), r, "all")).toThrow(
       /not checked yet/,
     );
   });

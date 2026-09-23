@@ -1,79 +1,57 @@
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import {
-  curriculumFromSteps,
-  type Curriculum,
-  type NextStep,
-} from "../../core";
-import { _chordUnlocks } from "./tables";
+import { canonicalSelection, firstSelection, type Selection } from "../../core";
+import { _chordCurriculum } from "./tables";
 
-// ── Reading and writing the steps taken ──────────────────────────────────────
+// ── Reading and writing the selection ────────────────────────────────────────
 //
-// A handful of rows, in order. Every function takes the database as a
-// parameter so a suite can drive it on a throwaway.
+// Every function takes the database as a parameter so a suite can drive it on
+// a throwaway.
+
+const ROW_ID = 1;
+
+/** What the learner has chosen; `firstSelection()` until they first change anything. */
+export async function loadSelection(db: NodePgDatabase): Promise<Selection> {
+  const [row] = await db
+    .select({
+      chords: _chordCurriculum.chords,
+      blanks: _chordCurriculum.blanks,
+      modes: _chordCurriculum.modes,
+    })
+    .from(_chordCurriculum)
+    .where(eq(_chordCurriculum.id, ROW_ID));
+  return row === undefined ? firstSelection() : canonicalSelection(row);
+}
 
 /**
- * What the learner has unlocked, read back from their steps.
- *
- * The rows' levels must be exactly 2, 3, 4… : they are the ladder, and a gap
- * would mean a step was deleted from the middle, which nothing does. A gap
- * throws rather than being read over, since every level after it would then be
- * wrong.
+ * Change the selection in one transaction: read it (locking the row, so two
+ * tabs changing it at once apply one after the other), apply `change`, write
+ * the result back.
  */
-export async function loadCurriculum(db: NodePgDatabase): Promise<Curriculum> {
-  const rows = await db
-    .select({ position: _chordUnlocks.position, step: _chordUnlocks.step })
-    .from(_chordUnlocks)
-    .orderBy(_chordUnlocks.position);
-  rows.forEach((row, index) => {
-    const expected = index + 2;
-    if (row.position !== expected) {
-      throw new Error(
-        `chord_unlocks: expected level ${expected} as step ${index + 1}, found ${row.position} — the ladder has a gap`,
-      );
-    }
-  });
-  return curriculumFromSteps(rows.map((row) => row.step));
-}
-
-/** Record a step. Returns the level it reached. */
-export async function appendStep(
+export async function updateSelection(
   db: NodePgDatabase,
-  step: NextStep,
-): Promise<number> {
+  change: (current: Selection) => Selection,
+): Promise<Selection> {
   return db.transaction(async (tx) => {
-    const [last] = await tx
-      .select({ position: _chordUnlocks.position })
-      .from(_chordUnlocks)
-      .orderBy(desc(_chordUnlocks.position))
-      .limit(1);
-    const position = (last?.position ?? 1) + 1;
-    await tx.insert(_chordUnlocks).values({ position, step });
-    return position;
-  });
-}
-
-export type UndoResult =
-  /** The level the learner is back on. */
-  | { kind: "undone"; level: number; step: NextStep }
-  | { kind: "nothing-to-undo" };
-
-/** Drop the last step taken, so a mis-click costs nothing. */
-export async function dropLastStep(db: NodePgDatabase): Promise<UndoResult> {
-  return db.transaction(async (tx) => {
-    const [last] = await tx
-      .select({ position: _chordUnlocks.position, step: _chordUnlocks.step })
-      .from(_chordUnlocks)
-      .orderBy(desc(_chordUnlocks.position))
-      .limit(1);
-    if (last === undefined) return { kind: "nothing-to-undo" as const };
+    const [row] = await tx
+      .select({
+        chords: _chordCurriculum.chords,
+        blanks: _chordCurriculum.blanks,
+        modes: _chordCurriculum.modes,
+      })
+      .from(_chordCurriculum)
+      .where(eq(_chordCurriculum.id, ROW_ID))
+      .for("update");
+    const current =
+      row === undefined ? firstSelection() : canonicalSelection(row);
+    const next = canonicalSelection(change(current));
     await tx
-      .delete(_chordUnlocks)
-      .where(eq(_chordUnlocks.position, last.position));
-    return {
-      kind: "undone" as const,
-      level: last.position - 1,
-      step: last.step,
-    };
+      .insert(_chordCurriculum)
+      .values({ id: ROW_ID, ...next })
+      .onConflictDoUpdate({
+        target: _chordCurriculum.id,
+        set: { ...next, updatedAt: new Date() },
+      });
+    return next;
   });
 }

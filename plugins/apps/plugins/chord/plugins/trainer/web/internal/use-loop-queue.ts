@@ -38,8 +38,10 @@ export type LoopQueueState =
   | { kind: "ready"; loop: LoopCandidate; target: ChordToken }
   /** The index answered that it is not ready — the gate above should prevent it. */
   | { kind: "not-ready"; status: IndexStatus }
-  /** The index is ready and no loop fits the unlocked chords (and target). */
+  /** The index is ready and no loop fits the chords on (and target). */
   | { kind: "empty" }
+  /** No chord is practised, so there is nothing to ask. */
+  | { kind: "nothing-practised" }
   | { kind: "error"; message: string };
 
 export type LoopQueue = {
@@ -70,15 +72,19 @@ type Fetch =
 const IDLE: Fetch = { kind: "idle" };
 
 /**
- * The palette a batch was drawn from, as one comparable string: the unlocked
- * chords and the key modes, sorted. Compared by value and not by array
- * identity, so a render that rebuilds the same set changes nothing.
+ * The palette a batch was drawn from, as one comparable string: the chords a
+ * loop may hold, the practised ones (the target is drawn from them), and the
+ * key modes, sorted. Compared by value and not by array identity, so a render
+ * that rebuilds the same set changes nothing.
  */
 function paletteKey(
   unlocked: readonly ChordToken[],
+  practised: readonly ChordToken[],
   modes: readonly HookpadMode[],
 ): string {
-  return `${[...unlocked].sort().join(",")}|${[...modes].sort().join(",")}`;
+  return [unlocked, practised, modes]
+    .map((list) => [...list].sort().join(","))
+    .join("|");
 }
 
 /** The queued loops and the last query's outcome, stamped with their palette. */
@@ -92,9 +98,9 @@ type Batch = {
  * The batch as it stands for the palette now in force.
  *
  * **A new palette makes the waiting loops stale.** They were chosen from the
- * chords the learner had before, so after unlocking one they would keep
- * playing the old set for a whole batch — the opposite of what taking a step
- * promises. Everything behind the loop on screen goes, and a fresh query runs
+ * chords the learner had on before, so after turning one on they would keep
+ * playing the old set for a whole batch — the opposite of what changing the
+ * chords promises. Everything behind the loop on screen goes, and a fresh query runs
  * at once. The loop on screen stays: the learner may be halfway through
  * answering it, and pulling the song out from under them is its own bug.
  *
@@ -102,10 +108,10 @@ type Batch = {
  * have loops the old one had none of, so `exhausted` and `error` must not
  * carry over.
  *
- * **A palette that SHRANK takes the loop on screen too.** Undoing a step gives
- * back a chord the learner no longer has, and the round on screen may be built
- * on exactly that chord — it was very likely chosen for it. Keeping it would
- * ask them to name a chord that is no longer theirs, so a round the new
+ * **A palette that SHRANK takes the loop on screen too.** Turning a chord off
+ * (or from practise to hear only) may pull out the very chord the round on
+ * screen holds or was chosen for. Keeping it would play a chord the learner
+ * turned off, or ask about one they no longer practise, so a round the new
  * palette cannot hold goes with the rest.
  *
  * This is DERIVED, never written: there is no render in which a stale loop
@@ -114,24 +120,27 @@ type Batch = {
 function liveBatch(
   batch: Batch,
   palette: string,
-  unlocked: ReadonlySet<ChordToken>,
+  sets: PaletteSets,
 ): { loops: readonly QueuedLoop[]; fetch: Fetch } {
   if (batch.palette === palette) {
     return { loops: batch.loops, fetch: batch.fetch };
   }
   const current = batch.loops[0];
-  const keep = current !== undefined && playableNow(current, unlocked);
+  const keep = current !== undefined && playableNow(current, sets);
   return { loops: keep ? [current] : [], fetch: IDLE };
 }
 
-/** Whether this loop is still one the learner may be asked: every chord it holds, and the chord it practises, are unlocked. */
-function playableNow(
-  queued: QueuedLoop,
-  unlocked: ReadonlySet<ChordToken>,
-): boolean {
+/** The palette as sets, for the one question `liveBatch` asks of it. */
+type PaletteSets = {
+  unlocked: ReadonlySet<ChordToken>;
+  practised: ReadonlySet<ChordToken>;
+};
+
+/** Whether this loop is still one the learner may be asked: every chord it holds is on, and the chord it was chosen for is still practised. */
+function playableNow(queued: QueuedLoop, sets: PaletteSets): boolean {
   return (
-    unlocked.has(queued.target) &&
-    queued.loop.window.chordTokens.every((token) => unlocked.has(token))
+    sets.practised.has(queued.target) &&
+    queued.loop.window.chordTokens.every((token) => sets.unlocked.has(token))
   );
 }
 
@@ -144,29 +153,35 @@ function playableNow(
  * leaving out the sections of the last 20 loops moved past and of the loops
  * still queued. So moving on is instant while the query runs.
  *
- * The target is the learner's weakest unlocked chord (`weakestChord`), read
+ * The target is the learner's weakest practised chord (`weakestChord`), read
  * from `progress` at the moment a batch is asked for — so each batch follows
  * the learner. Nothing is asked while `progress` has not loaded. Each queued
  * loop keeps the target its batch was asked for, so the round asks about the
  * chord the loop was actually chosen for.
  *
- * Unlocking a chord (or a key mode) drops the loops still waiting and asks
- * again straight away, so the new chord arrives on the very next song — see
+ * Changing the chords (or the key modes) drops the loops still waiting and
+ * asks again straight away, so a new chord arrives on the very next song — see
  * `liveBatch`. What the learner has already played is remembered across the
  * change, so the next query still avoids the sections they just heard.
  */
 export function useLoopQueue(opts: {
+  /** Every chord a loop may hold: practised and heard. */
   unlocked: readonly ChordToken[];
+  /** The chords the target is drawn from. */
+  practised: readonly ChordToken[];
   modes: readonly HookpadMode[];
   progress: ResourceResult<ChordProgress>;
 }): LoopQueue {
-  const { unlocked, modes, progress } = opts;
-  const palette = paletteKey(unlocked, modes);
+  const { unlocked, practised, modes, progress } = opts;
+  const palette = paletteKey(unlocked, practised, modes);
   const paletteRef = useLatestRef(palette);
-  // The same set, for the one question `liveBatch` asks of it: is this loop
+  // The same sets, for the one question `liveBatch` asks of them: is this loop
   // still one the learner may be shown? The ref is what the callbacks read,
   // since a write can land after the palette has moved again.
-  const unlockedSet = useMemo(() => new Set(unlocked), [unlocked]);
+  const unlockedSet = useMemo(
+    () => ({ unlocked: new Set(unlocked), practised: new Set(practised) }),
+    [unlocked, practised],
+  );
   const unlockedRef = useLatestRef(unlockedSet);
   const [batch, setBatch] = useState<Batch>(() => ({
     palette,
@@ -188,14 +203,15 @@ export function useLoopQueue(opts: {
   });
   const { mutate, isPending } = find;
 
-  const wantsMore = fetchState.kind === "idle" && queue.length <= 1;
+  const wantsMore =
+    fetchState.kind === "idle" && queue.length <= 1 && practised.length > 0;
 
   useEffect(() => {
     if (!wantsMore || isPending) return;
     // The target is not known until the progress has loaded.
     if (progress.pending) return;
     const askedFor = palette;
-    const target = weakestChord(unlocked, progress.data.chords);
+    const target = weakestChord(practised, progress.data.chords);
     const exclude = [
       ...new Set([
         ...played.slice(-RECENT_SECTIONS),
@@ -261,6 +277,7 @@ export function useLoopQueue(opts: {
     isPending,
     progress,
     unlocked,
+    practised,
     modes,
     palette,
     paletteRef,
@@ -304,7 +321,11 @@ export function useLoopQueue(opts: {
     commit((live) => ({ ...live, fetch: IDLE })),
   );
 
-  return { state: stateOf(current, fetchState), next, skipVideo, retry };
+  const state: LoopQueueState =
+    practised.length === 0 && current === undefined
+      ? { kind: "nothing-practised" }
+      : stateOf(current, fetchState);
+  return { state, next, skipVideo, retry };
 }
 
 function stateOf(

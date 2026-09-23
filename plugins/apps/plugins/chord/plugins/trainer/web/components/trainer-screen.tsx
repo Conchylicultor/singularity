@@ -17,24 +17,18 @@ import type {
   LoopCandidate,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
+  PATH_TOKENS,
   askedPositions,
-  type Curriculum,
-  type NextStep,
+  playableChords,
+  practisedChords,
+  type Blanks,
+  type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
-import {
-  stepReadiness,
-  useCurriculum,
-  useNextStep,
-  useUndoStep,
-  useUnlockStep,
-  type NextStepRead,
-  type StepReadiness,
-} from "@plugins/apps/plugins/chord/plugins/curriculum/web";
+import { useCurriculum } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
 import {
   chordProgressResource,
   encodeProgressParams,
   recordRoundEndpoint,
-  type ChordStanding,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import { reportPlaybackEndpoint } from "@plugins/apps/plugins/chord/plugins/video-availability/core";
 import {
@@ -92,8 +86,11 @@ import "./trainer.css";
 
 /** One round's answers, tied to the loop they belong to. */
 type RoundSession = {
+  /** The loop and the boxes it asks: a change of blanks or chords re-deals the round. */
   key: string;
   sheet: AnswerSheet;
+  /** The blanks setting the asked boxes were chosen by: saved with the round. */
+  blanks: Blanks;
   /** How many times each box was filled (a new fill replays its pop). */
   fills: readonly number[];
   /**
@@ -117,9 +114,10 @@ type RoundSession = {
  * Flow and rules: `research/2026-09-18-apps-chord-trainer-app.md`, "How a
  * round works".
  *
- * Which chords play, and how much of a loop the learner names, come from the
- * curriculum. Until it has landed the screen shows a loading state: a palette
- * that is about to grow would be a claim about what this learner has.
+ * Which chords play, which are asked, and how much of a loop is blank come
+ * from the learner's selection (curriculum). Until it has landed the screen
+ * shows a loading state: buttons that are about to change would be a claim
+ * about what this learner has chosen.
  */
 export function TrainerScreen() {
   const curriculum = useCurriculum();
@@ -130,7 +128,7 @@ export function TrainerScreen() {
         <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_316px]">
           {matchResource(curriculum, {
             pending: () => <Loading variant="block" />,
-            ready: (c) => <TrainerBody curriculum={c} />,
+            ready: (c) => <TrainerBody selection={c} />,
           })}
         </div>
       </Inset>
@@ -138,70 +136,36 @@ export function TrainerScreen() {
   );
 }
 
-/** The two tracks of the page, once the curriculum is known. */
-function TrainerBody({ curriculum }: { curriculum: Curriculum }) {
-  const unlocked = useMemo(
-    () => curriculum.unlocked.map((u) => u.token),
-    [curriculum],
-  );
+/** The two tracks of the page, once the selection is known. */
+function TrainerBody({ selection }: { selection: Selection }) {
+  const unlocked = useMemo(() => playableChords(selection), [selection]);
+  const practised = useMemo(() => practisedChords(selection), [selection]);
+  // Every chord on, and every chord the path names: the panel's rows read the
+  // first, the path's map the second.
   const progressParams = useMemo(
     () =>
       encodeProgressParams({
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        tokens: unlocked,
+        tokens: [...unlocked, ...PATH_TOKENS],
       }),
     [unlocked],
   );
   const progress = useResource(chordProgressResource, progressParams);
   const queue = useLoopQueue({
     unlocked,
-    modes: curriculum.modes,
+    practised,
+    modes: selection.modes,
     progress,
   });
   // Kept above the round, which unmounts when the queue runs dry.
   const session = useSessionMemory();
 
-  const { read: nextStep } = useNextStep();
-  const { unlock, pending: adding } = useUnlockStep();
-  const undo = useUndoStep();
-
-  // Three answers, not two: while the standing is on its way nobody can say
-  // whether the learner is ready, and the Add controls show that rather than
-  // claiming they are behind.
-  const readiness = stepReadiness(unlocked, progress);
-  // The learner's standings, or that they have not landed. The round needs the
-  // target's answer count to know which boxes to ask about, so "not yet" has to
-  // be a state it can render, not a zero that would ask the target alone.
-  const standings: Standings = progress.pending
-    ? { known: false }
-    : { known: true, chords: progress.data.chords };
-
-  const onAdd = useEventCallback((step: NextStep) => unlock(step));
-
   return (
     <>
       <Stack gap="md" className={yieldClass("x")}>
-        <LoopArea
-          queue={queue}
-          memory={session}
-          curriculum={curriculum}
-          standings={standings}
-          nextStep={nextStep}
-          readiness={readiness}
-          adding={adding}
-          onAdd={onAdd}
-        />
+        <LoopArea queue={queue} memory={session} selection={selection} />
       </Stack>
-      <ProgressPanel
-        progress={progress}
-        curriculum={curriculum}
-        nextStep={nextStep}
-        readiness={readiness}
-        adding={adding}
-        undoing={undo.pending}
-        onAdd={onAdd}
-        onUndo={undo.run}
-      />
+      <ProgressPanel progress={progress} selection={selection} />
     </>
   );
 }
@@ -232,33 +196,16 @@ function useSessionMemory(): SessionMemory {
   );
 }
 
-/**
- * The learner's per-chord standings, or that they have not landed yet. A union
- * rather than an empty list: "no answers yet" and "not read yet" would ask for
- * different boxes, so nothing downstream may confuse them.
- */
-type Standings =
-  { known: false } | { known: true; chords: readonly ChordStanding[] };
-
-/** Everything the chord buttons and the round need from the curriculum. */
-type LadderProps = {
-  curriculum: Curriculum;
-  standings: Standings;
-  nextStep: NextStepRead;
-  readiness: StepReadiness;
-  adding: boolean;
-  onAdd: (step: NextStep) => void;
-};
-
 /** Where the loop goes: the round, or why there is none yet. */
 function LoopArea({
   queue,
   memory,
-  ...ladder
+  selection,
 }: {
   queue: LoopQueue;
   memory: SessionMemory;
-} & LadderProps) {
+  selection: Selection;
+}) {
   const { state } = queue;
   switch (state.kind) {
     case "ready":
@@ -268,7 +215,7 @@ function LoopArea({
           target={state.target}
           queue={queue}
           memory={memory}
-          {...ladder}
+          selection={selection}
         />
       );
     case "loading":
@@ -277,9 +224,23 @@ function LoopArea({
       return (
         <Notice
           title="No song fits these chords yet"
-          detail="Every loop is made only of the chords you have. None is left to play right now."
+          detail="Every loop is made only of the chords you have on. None is left to play right now — turn more chords on, or practise one you only hear."
           onRetry={queue.retry}
         />
+      );
+    case "nothing-practised":
+      return (
+        <Card className="rounded-2xl">
+          <Stack gap="sm" align="start">
+            <Text variant="heading" className="font-bold">
+              No chord is practised
+            </Text>
+            <Text variant="body" tone="muted" className="break-words">
+              Set at least one chord to Practise in the Path card: those are the
+              chords you name.
+            </Text>
+          </Stack>
+        </Card>
       );
     case "not-ready":
       return (
@@ -336,19 +297,15 @@ function Trainer({
   target,
   queue,
   memory,
-  curriculum,
-  standings,
-  nextStep,
-  readiness,
-  adding,
-  onAdd,
+  selection,
 }: {
   loop: LoopCandidate;
   /** The chord this loop was chosen for: the one the round asks about. */
   target: ChordToken;
   queue: LoopQueue;
   memory: SessionMemory;
-} & LadderProps) {
+  selection: Selection;
+}) {
   // The words to say a chord with. One speller per loop, shared by every box,
   // button and lit key, so nothing on screen can name a chord against a
   // different key from its neighbour — and one tonic under it, so nothing
@@ -387,31 +344,28 @@ function Trainer({
   );
   const round = roundResult.kind === "round" ? roundResult.round : null;
 
-  // Which boxes the round asks about. A chord unlocked above the level the ask
-  // rule was set at is asked alone until it has settled, so the rule needs how
-  // many answers the target already has — until the standings land there is no
-  // round to show yet, the same `null` the round itself uses.
-  const asked = useMemo(() => {
-    if (round === null || !standings.known) return null;
-    const targetAnswers =
-      standings.chords.find((c) => c.token === target)?.answers ?? 0;
-    const unlockedTarget = curriculum.unlocked.find((u) => u.token === target);
-    if (unlockedTarget === undefined) {
-      throw new Error(
-        `The round practises ${target}, which this learner has not unlocked`,
-      );
-    }
-    return askedPositions(round.boxes, {
-      windowBeats: round.grid.beats,
-      askRule: curriculum.askRule,
-      target,
-      targetLevel: unlockedTarget.level,
-      askRuleLevel: curriculum.askRuleLevel,
-      targetAnswers,
-    });
-  }, [round, curriculum, target, standings]);
+  // Which boxes the round asks about: the practised chords' boxes, narrowed
+  // by the blanks setting. The queue drops a loop whose target is no longer
+  // practised, so the target here always is.
+  const practised = useMemo(
+    () => new Set(practisedChords(selection)),
+    [selection],
+  );
+  const asked = useMemo(
+    () =>
+      round === null
+        ? null
+        : askedPositions(round.boxes, {
+            windowBeats: round.grid.beats,
+            blanks: selection.blanks,
+            practised,
+            target,
+          }),
+    [round, selection.blanks, practised, target],
+  );
 
-  const key = loopKey(loop);
+  // A change of blanks or chords asks different boxes: the round starts over.
+  const key = `${loopKey(loop)}|${asked?.join(",") ?? ""}`;
   const [stored, setStored] = useState<RoundSession | null>(null);
   const session: RoundSession | null =
     round === null || asked === null
@@ -421,6 +375,7 @@ function Trainer({
         : {
             key,
             sheet: emptySheet(round, asked),
+            blanks: selection.blanks,
             fills: round.boxes.map(() => 0),
             lastPlayed: null,
           };
@@ -495,14 +450,14 @@ function Trainer({
     const fills = session.fills.map((n, i) => (i === at ? n + 1 : n));
     setStored({ ...session, sheet, fills });
     // The last fill checks the round: saved once, in one call.
-    if (sheet.checked) record.mutate({ body: recordRoundBody(sheet, round) });
+    if (sheet.checked) {
+      record.mutate({ body: recordRoundBody(sheet, round, session.blanks) });
+    }
   });
 
-  // The keys: the chord's digit, and a second key when several chords share it.
-  const plan = useMemo(
-    () => chordKeyPlan(curriculum.unlocked.map((u) => u.token)),
-    [curriculum],
-  );
+  // One button per practised chord — the only chords a blank can hold. The
+  // keys: the chord's digit, and a second key when several chords share it.
+  const plan = useMemo(() => chordKeyPlan([...practised]), [practised]);
   const keys = useChordKeys({ plan, onPick: pick });
   const { cancel } = keys;
 
@@ -622,11 +577,6 @@ function Trainer({
   // away, rather than a guard somewhere that could be forgotten.
   const shownChord = !checked || session === null ? null : session.lastPlayed;
 
-  const step =
-    nextStep.kind === "answer" && nextStep.answer.kind === "step"
-      ? nextStep.answer.step
-      : null;
-
   return (
     <>
       <SongCard
@@ -674,17 +624,6 @@ function Trainer({
         lit={shownChord}
         picking={keys.picking}
         nameChord={words.nameChord}
-        nextStep={
-          step === null
-            ? null
-            : {
-                step,
-                level: curriculum.level + 1,
-                readiness,
-                adding,
-                onAdd: () => onAdd(step),
-              }
-        }
         onPick={pick}
       />
       <PianoCard

@@ -36,7 +36,11 @@ import {
   encodeProgressParams,
   type ChordProgress,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
-import { CurriculumSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import {
+  SelectionSchema,
+  playableChords,
+  practisedChords,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
   chordKeyPlan,
   chordLabel,
@@ -92,20 +96,20 @@ function parseKeyTag(text: string): { tonic: string; mode: HookpadMode } {
   return { tonic, mode };
 }
 
-/** The chords the learner has right now: the palette the progress is read for. */
+/** What the learner has chosen right now: the chords the progress is read for, and the ones the buttons answer. */
 async function readCurriculum() {
   const res = await agentFetch("/api/resources/chord.curriculum");
   if (!res.ok) {
     throw new Error(`GET /api/resources/chord.curriculum → HTTP ${res.status}`);
   }
   const { value } = z.object({ value: z.unknown() }).parse(await res.json());
-  return CurriculumSchema.parse(value);
+  return SelectionSchema.parse(value);
 }
 
 const curriculum = await readCurriculum();
 const progressParams = encodeProgressParams({
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  tokens: curriculum.unlocked.map((u) => u.token),
+  tokens: playableChords(curriculum),
 });
 
 async function readProgress(): Promise<ChordProgress> {
@@ -212,7 +216,7 @@ await withBrowser(async ({ session }) => {
   const total = await countBoxes();
   // Only the digits that answer on their own: a digit several chords share
   // arms a second keystroke, which this script has no reason to exercise.
-  const soloKeys = chordKeyPlan(curriculum.unlocked.map((u) => u.token))
+  const soloKeys = chordKeyPlan(practisedChords(curriculum))
     .filter((group) => group.tokens.length === 1)
     .map((group) => group.digit);
   const keys = soloKeys.length > 0 ? soloKeys : ["1"];
@@ -318,7 +322,7 @@ await withBrowser(async ({ session }) => {
 
     // A chord button whose digit answers on its own, so one click is one chord
     // and the token behind it is not in doubt.
-    const solo = chordKeyPlan(curriculum.unlocked.map((u) => u.token)).find(
+    const solo = chordKeyPlan(practisedChords(curriculum)).find(
       (group) => group.tokens.length === 1,
     );
     const token = solo?.tokens[0];

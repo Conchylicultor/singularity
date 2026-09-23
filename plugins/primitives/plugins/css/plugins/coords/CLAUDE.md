@@ -162,6 +162,7 @@ default is stated twice and can therefore drift.
     - `placedStyle`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/curriculum`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
     - `apps/sonata/notation`

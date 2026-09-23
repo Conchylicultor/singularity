@@ -1,43 +1,34 @@
 // Drives the Chord curriculum end to end against this checkout's deploy
-// (`research/2026-09-19-apps-chord-trainer-curriculum.md`, verification step 4).
+// (`research/2026-09-23-apps-chord-trainer-free-curriculum.md`, verification).
 //
 // What it checks, in the order it does it:
 //
-//   1. a learner at level 1 is asked for ONE chord: the boxes of the chord
-//      being practised wait, every other box is given and already shows its own
-//      chord, and the heading counts the asked ones only;
-//   2. filling the asked boxes checks the round and saves it — the saved body
-//      counts the asked boxes and the given ones separately, and
-//      `chord.progress` moves by exactly the asked boxes;
-//   3. **Add** takes the cadence rung: the level goes up, the next step moves
-//      on, and a round now asks the loop's second half;
-//   4. **Add** again takes the whole-loop rung, and a round asks every box;
-//   5. the next step is a chord; the ghost pad at the end of the grid adds it,
-//      a fourth chord button appears, and while the new chord is fresh a round
-//      asks only its boxes;
-//   6. **Undo** takes that step back: the palette and the next step return to
-//      what they were.
-//
-// The rungs only become visible once no chord is FRESH — a chord with fewer
-// than `FRESH_ANSWERS` answers is asked alone whatever the rung says — so the
-// script first plays rounds until every unlocked chord is past that threshold.
-// That is the warm-up, and it is the slow part of the run.
+//   1. the Path card opens, and holds the chord chips and the blanks control;
+//   2. Blanks → All: the next round asks every box of a practised chord, and
+//      gives only the chords that are not practised;
+//   3. Blanks → One: the next round asks exactly one box;
+//   4. Blanks → Half: the next round asks only boxes in the loop's second half;
+//   5. a round played saves the blanks it was asked under;
+//   6. a chord chip cycles Off → Practise → Hear only → Off, and its answer
+//      button comes and goes with Practise;
+//   7. a map cell (vi · One) sets both axes at once: vi practised alone, the
+//      home chords only heard, one box blank, one answer button.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
-//   … [--warmup-rounds 80] [--timeout-min 15] [--headed]
+//   … [--timeout-min 15] [--headed]
 //
-// Mutates server state. The steps it unlocks are undone before the verdict
-// prints (including after a crash), so the ladder is left where it was found.
-// The rounds it plays CANNOT be undone: the run prints how many rows it left.
+// Mutates server state. The selection it finds is put back before the verdict
+// prints (including after a crash). The rounds it plays CANNOT be undone: the
+// run prints how many rows it left.
 
 import type { Locator, Page } from "playwright";
 import { z } from "zod";
 import {
   agentFetch,
   boot,
-  numArg,
   onBeforeFinish,
+  numArg,
   pathUrl,
   report,
   waitFor,
@@ -49,15 +40,16 @@ import {
   encodeProgressParams,
   RecordRoundBodySchema,
   type ChordProgress,
-  type ChordStanding,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
 import {
-  CurriculumSchema,
-  FRESH_ANSWERS,
-  NextStepAnswerSchema,
-  type Curriculum,
-  type NextStep,
-  type NextStepAnswer,
+  SelectionSchema,
+  cellSelection,
+  chordState,
+  practisedChords,
+  sameSelection,
+  type Blanks,
+  type ChordState,
+  type Selection,
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
   chordDigit,
@@ -69,15 +61,16 @@ import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/
 
 const r = report("chord curriculum");
 const timeoutMs = numArg("timeout-min", 15) * 60_000;
-/** How many rounds the warm-up may play before it gives up (and fails). */
-const warmupBudget = numArg("warmup-rounds", 80);
 
 /** An answer box: "Chord 2, 4 beats" (plus ": IV", ", given", ", right"…). */
 const BOX = 'button[aria-label^="Chord "][aria-label*=" beat"]';
 /** The box strip, whose width turns a box's left edge into a place in the loop. */
 const STRIP = ".chord-strip-boxes";
-/** One chord button. The ghost next-step pad carries no key, so it is not one. */
+/** One chord answer button. */
 const PAD = '[aria-label="Chords to choose from"] button[aria-keyshortcuts]';
+
+const vi = "9:3-4/0" as ChordToken;
+const HOME = ["0:4-3/0", "5:4-3/0", "7:4-3/0"] as ChordToken[];
 
 // ── Reading the app from outside ─────────────────────────────────────────────
 
@@ -90,8 +83,8 @@ async function readResource(name: string, query = ""): Promise<unknown> {
   return value;
 }
 
-async function readCurriculum(): Promise<Curriculum> {
-  return CurriculumSchema.parse(await readResource("chord.curriculum"));
+async function readSelection(): Promise<Selection> {
+  return SelectionSchema.parse(await readResource("chord.curriculum"));
 }
 
 async function readProgress(
@@ -105,32 +98,26 @@ async function readProgress(
   return ChordProgressSchema.parse(await readResource("chord.progress", query));
 }
 
-/** The step on offer, as the panel reads it. A POST, but it writes nothing. */
-async function readNextStep(): Promise<NextStepAnswer> {
-  const res = await agentFetch("/api/chord/curriculum/next", {
+async function post(path: string, body: unknown): Promise<void> {
+  const res = await agentFetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(
-      `POST /api/chord/curriculum/next → HTTP ${res.status}: ${await res.text()}`,
-    );
+    throw new Error(`POST ${path} → HTTP ${res.status}: ${await res.text()}`);
   }
-  return NextStepAnswerSchema.parse(await res.json());
 }
 
-/** One step in a few words, for the transcript. */
-function stepText(step: NextStep): string {
-  if (step.kind === "ask") {
-    return step.rule === "half" ? "name the cadence" : "name the whole loop";
-  }
-  const chords = step.tokens.map((token) => chordLabel(token).text).join(" ");
-  const modes = step.modes.join(", ");
-  return [chords, modes].filter((part) => part !== "").join(" + ");
-}
-
-function answersOf(standings: readonly ChordStanding[]): number[] {
-  return standings.map((standing) => standing.answers);
+/** One selection in a few words, for the transcript. */
+function selectionText(s: Selection): string {
+  const chords = s.chords
+    .map(
+      (c) =>
+        `${chordLabel(c.token).text}${c.state === "hear" ? " (hear)" : ""}`,
+    )
+    .join(" ");
+  return `${chords} · blanks ${s.blanks} · modes ${s.modes.join(", ")}`;
 }
 
 // ── Reading the answer strip ─────────────────────────────────────────────────
@@ -160,9 +147,10 @@ type StripRead = {
 };
 
 // A box lasts a number of beats, which a chord shorter than the grid's beat
-// makes fractional ("Chord 4, 0.5 beats: I, given").
+// makes fractional ("Chord 4, 0.5 beats: I, C, given"); the letter name after
+// the numeral is the chord in the song's key.
 const BOX_LABEL =
-  /^Chord (?<position>\d+), (?<beats>[\d.]+) beats?(?:: (?<chord>[^,]+))?(?<given>, given)?(?:, (?<mark>right|wrong))?$/;
+  /^Chord (?<position>\d+), (?<beats>[\d.]+) beats?(?:: (?<chord>[^,]+)(?:, (?!given$|given,|right$|wrong$)(?<name>[^,]+))?)?(?<given>, given)?(?:, (?<mark>right|wrong))?$/;
 
 /**
  * The mark a checked box carries, as one of the two the trainer draws. A third
@@ -257,9 +245,9 @@ function stripText(strip: StripRead): string {
 /**
  * Whether something turns up on screen within the budget.
  *
- * The panel and the ghost pad follow a write the script has already seen the
- * server answer — the standing is pushed and the next step re-read — so a
- * straight `isVisible()` asks the browser before it has been told. This waits
+ * The panel follows a write the script has already seen the server answer —
+ * the selection is pushed — so a straight `isVisible()` asks the browser
+ * before it has been told. This waits
  * for the app to catch up and still answers false rather than throwing, so the
  * check that called it reports a failure instead of ending the run.
  */
@@ -270,23 +258,6 @@ async function shows(locator: Locator, timeoutMs = 30_000): Promise<boolean> {
       if (err instanceof Error && err.name === "TimeoutError") return false;
       throw err;
     },
-  );
-}
-
-/**
- * Whether the panel says the learner is on this level — the line that names
- * where they ARE ("Your level"), not the locked row below it, which names the
- * level the next step would reach and so always reads one higher.
- *
- * It doubles as the barrier before a round is asked about: the level and the
- * ask rule are one value, so a panel showing the new level is a browser that
- * has the new rule.
- */
-async function panelShowsLevel(page: Page, level: number): Promise<boolean> {
-  return shows(
-    page
-      .getByLabel("Your level")
-      .getByText(`Level ${String(level)}`, { exact: true }),
   );
 }
 
@@ -355,9 +326,9 @@ async function nextSong(page: Page, what: string): Promise<StripRead> {
 // ── Playing a round ──────────────────────────────────────────────────────────
 
 /** The digits that answer on their own — a shared digit needs a second key. */
-function soloDigits(unlocked: readonly ChordToken[]): Map<ChordToken, string> {
+function soloDigits(tokens: readonly ChordToken[]): Map<ChordToken, string> {
   const solo = new Map<ChordToken, string>();
-  for (const group of chordKeyPlan(unlocked)) {
+  for (const group of chordKeyPlan(tokens)) {
     const only = group.tokens.length === 1 ? group.tokens[0] : undefined;
     if (only !== undefined) solo.set(only, group.digit);
   }
@@ -366,23 +337,22 @@ function soloDigits(unlocked: readonly ChordToken[]): Map<ChordToken, string> {
 
 /**
  * Fill every asked box and let the round check itself, answering with the
- * chord the trainer is most likely asking for (the weakest one, which is what
- * the loop was chosen for). A wrong answer would do for everything this script
- * asserts; aiming at the right one only keeps the history it leaves plausible.
+ * weakest practised chord (the one the loop was chosen for). Returns the body
+ * the trainer saved.
  */
 async function playRound(
   page: Page,
   strip: StripRead,
-  curriculum: Curriculum,
+  selection: Selection,
   progress: ChordProgress,
-): Promise<{ answers: number; givenCount: number }> {
-  const unlocked = curriculum.unlocked.map((u) => u.token);
-  const solo = soloDigits(unlocked);
-  const guess = weakestChord(unlocked, progress.chords);
+): Promise<z.infer<typeof RecordRoundBodySchema>> {
+  const practised = practisedChords(selection);
+  const solo = soloDigits(practised);
+  const guess = weakestChord(practised, progress.chords);
   const digit = solo.get(guess) ?? [...solo.values()][0];
   if (digit === undefined) {
     throw new Error(
-      `every unlocked chord shares its digit with another (${unlocked.map((token) => `${chordLabel(token).text} on ${chordDigit(token)}`).join(", ")}), so one keystroke answers nothing`,
+      `every practised chord shares its digit with another (${practised.map((token) => `${chordLabel(token).text} on ${chordDigit(token)}`).join(", ")}), so one keystroke answers nothing`,
     );
   }
   const saved = page.waitForResponse(
@@ -391,441 +361,249 @@ async function playRound(
       res.request().method() === "POST",
     { timeout: 60_000 },
   );
+  // A control the script clicked (a Blanks radio, a chip) keeps focus; the
+  // digits are the trainer's keys, so hand focus back to the page first.
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
   for (let i = 0; i < asked(strip).length; i += 1) {
     await page.keyboard.press(digit);
   }
-  const res = await saved;
+  const res = await saved.catch(async (err: unknown) => {
+    if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
+    const now = await readStrip(page);
+    r.fail(
+      "the round is saved",
+      `pressed ${digit} ${String(asked(strip).length)}× and no POST /api/chord/rounds came — the strip reads ${now === null ? "nothing" : stripText(now)}`,
+    );
+    return r.finish();
+  });
   if (!res.ok()) {
     r.fail("the round is saved", `POST /api/chord/rounds → ${res.status()}`);
     return r.finish();
   }
-  const body = RecordRoundBodySchema.parse(res.request().postDataJSON());
-  return { answers: body.answers.length, givenCount: body.givenCount };
+  return RecordRoundBodySchema.parse(res.request().postDataJSON());
 }
 
-// ── Where the ladder is, and putting it back ─────────────────────────────────
+// ── Where the learner is, and putting it back ────────────────────────────────
 
-const start = await readCurriculum();
-r.note(
-  `the learner starts at level ${start.level}, ask rule "${start.askRule}", ` +
-    `${start.unlocked.length} chords (${start.unlocked.map((u) => chordLabel(u.token).text).join(" ")})`,
-);
-r.ok(
-  "the learner starts at level 1, naming one chord",
-  start.level === 1 && start.askRule === "target",
-  `level ${start.level}, ask rule "${start.askRule}" — press Undo in the trainer until it reads Level 1, then run this again`,
-);
-if (start.level !== 1) await r.finish();
+const start = await readSelection();
+r.note(`the learner starts at ${selectionText(start)}`);
 
-/** Every step this run took, taken back — however the run ends. */
+/**
+ * Put the selection back: each chord's state, then the blanks. The key modes
+ * are only changed by the map-cell step, which this run takes only when the
+ * learner started in major keys alone — so they need no putting back.
+ */
 onBeforeFinish(async () => {
-  let standing = await readCurriculum();
-  while (standing.level > start.level) {
-    const res = await agentFetch("/api/chord/curriculum/undo", {
-      method: "POST",
-    });
-    if (!res.ok) {
-      throw new Error(
-        `undoing back to level ${start.level} failed at level ${standing.level}: POST /api/chord/curriculum/undo → HTTP ${res.status}: ${await res.text()}`,
-      );
+  const now = await readSelection();
+  const tokens = new Set([
+    ...start.chords.map((c) => c.token),
+    ...now.chords.map((c) => c.token),
+  ]);
+  for (const token of tokens) {
+    const want = chordState(start, token);
+    if (chordState(now, token) !== want) {
+      await post("/api/chord/curriculum/chord", { token, state: want });
     }
-    standing = await readCurriculum();
   }
-  r.note(
-    `the ladder is back where it was found: level ${standing.level}, ask rule "${standing.askRule}", ` +
-      `${standing.unlocked.length} chords`,
+  await post("/api/chord/curriculum/blanks", { blanks: start.blanks });
+  const back = await readSelection();
+  r.ok(
+    "the selection is back where it was found",
+    sameSelection(back, start),
+    `${selectionText(back)} — started at ${selectionText(start)}`,
   );
 });
 
-// ── The index has to be loaded ───────────────────────────────────────────────
-
 await ensureReady(r, timeoutMs);
 
-const startTokens = start.unlocked.map((u) => u.token);
-const before = await readProgress(startTokens);
-r.note(
-  `progress before: all time ${before.allTime.songs} songs, ${before.allTime.answers} answers; ` +
-    `answers per chord ${JSON.stringify(answersOf(before.chords))}`,
-);
-
-/** Rounds this run played, all of which stay in the learner's history. */
+const progressTokens = [
+  ...new Set([...HOME, vi, ...start.chords.map((c) => c.token)]),
+];
+const before = await readProgress(progressTokens);
 let roundsPlayed = 0;
 let answersGiven = 0;
 
-await withBrowser(async ({ session }) => {
-  const { page, captured } = await session({
-    viewport: { width: 1320, height: 900 },
-  });
-
-  // ── 1. level 1 asks for one chord ──────────────────────────────────────────
-
-  await boot(page, pathUrl("/chord"), { marker: BOX, timeoutMs });
-  // A loop of one single chord has nothing to give away, so it says nothing
-  // about scaffolding. Move on until a loop with more than one box turns up.
-  let first = await requireRound(page, "the first round");
-  for (let tries = 0; tries < 6 && first.boxes.length < 2; tries += 1) {
-    first = await nextSong(page, "a first round with more than one box");
-  }
-  r.note(`level 1 round: ${stripText(first)}`);
-  r.ok(
-    "level 1 asks about part of the loop, not all of it",
-    asked(first).length >= 1 && asked(first).length < first.boxes.length,
-    `${asked(first).length} asked of ${first.boxes.length} boxes — ${stripText(first)}`,
-  );
-  r.ok(
-    "every given box already shows its chord",
-    given(first).every((box) => box.chord !== null),
-    stripText(first),
-  );
-  r.eq(
-    "the heading counts the asked boxes only",
-    first.heading,
-    `Chord 1 of ${String(asked(first).length)}`,
-  );
-  r.ok(
-    "no given box is marked right or wrong",
-    given(first).every((box) => box.mark === null),
-    stripText(first),
-  );
-
-  // ── 2. filling the asked boxes checks the round, and saves it ──────────────
-
-  const askedFirst = asked(first).length;
-  const givenFirst = given(first).length;
-  const saved = await playRound(page, first, start, before);
-  roundsPlayed += 1;
-  answersGiven += saved.answers;
-  r.eq(
-    "the saved round counts the boxes the learner named",
-    saved.answers,
-    askedFirst,
-  );
-  r.eq(
-    "the saved round counts the given boxes as scaffolding",
-    saved.givenCount,
-    givenFirst,
-  );
-
-  const checked = await waitFor(
-    () => readStrip(page),
-    (strip) => strip !== null && /right in/.test(strip.heading),
-    { timeoutMs: 20_000, intervalMs: 200 },
-  );
-  const scored = checked.value;
-  if (scored === null) {
-    r.fail("the round is checked", "the strip vanished after the last fill");
-    return r.finish();
-  }
-  r.ok(
-    "the round checks itself once the last asked box is filled",
-    new RegExp(`^\\d+ of ${String(askedFirst)} right in \\d+\\.\\d s$`).test(
-      scored.heading,
-    ),
-    scored.heading,
-  );
-  const askedChords = new Set(asked(scored).map((box) => box.chord));
-  r.ok(
-    "every box the round asked about held the same chord — the one being practised",
-    askedChords.size === 1,
-    `asked chords ${[...askedChords].join(", ")} — ${stripText(scored)}`,
-  );
-
-  const moved = await waitFor(
-    () => readProgress(startTokens),
-    (p) => p.allTime.songs === before.allTime.songs + 1,
-    { timeoutMs: 20_000, intervalMs: 500 },
-  );
-  r.ok(
-    "chord.progress counts one more song",
-    moved.ok,
-    JSON.stringify(moved.value.allTime),
-  );
-  r.eq(
-    "chord.progress counts one answer per asked box, and none for the given ones",
-    moved.value.allTime.answers,
-    before.allTime.answers + askedFirst,
-  );
-
-  // ── The warm-up: play until no chord is fresh ──────────────────────────────
-  //
-  // A chord with fewer than FRESH_ANSWERS answers is asked ALONE whatever the
-  // ask rule says, so on a new learner the cadence and whole-loop rungs change
-  // nothing that can be seen. The rungs are what checks 3 and 4 are about, so
-  // the run first plays the freshness off every unlocked chord.
-
-  const warmupStarted = performance.now();
-  let progress = moved.value;
-  let strip = await nextSong(page, "the round after the first");
-  while (Math.min(...answersOf(progress.chords)) < FRESH_ANSWERS) {
-    if (roundsPlayed >= warmupBudget) break;
-    const played = await playRound(page, strip, start, progress);
-    roundsPlayed += 1;
-    answersGiven += played.answers;
-    progress = await waitFor(
-      () => readProgress(startTokens),
-      (p) => p.allTime.songs >= before.allTime.songs + roundsPlayed,
-      { timeoutMs: 20_000, intervalMs: 300 },
-    ).then((settled) => settled.value);
-    strip = await nextSong(page, "the next warm-up round");
-  }
-  const warmupMin = Math.min(...answersOf(progress.chords));
-  r.note(
-    `warm-up: ${roundsPlayed} rounds, ${answersGiven} answers, ` +
-      `${Math.round((performance.now() - warmupStarted) / 1000)} s — answers per chord ${JSON.stringify(answersOf(progress.chords))}`,
-  );
-  r.ok(
-    `every chord is past ${String(FRESH_ANSWERS)} answers, so the ask rule is what decides the round`,
-    warmupMin >= FRESH_ANSWERS,
-    `the least-answered chord has ${warmupMin} answers after ${roundsPlayed} rounds (budget ${warmupBudget}) — raise --warmup-rounds`,
-  );
-  if (warmupMin < FRESH_ANSWERS) return r.finish();
-
-  // ── 3. Add takes the cadence rung ──────────────────────────────────────────
-
-  const offered = await readNextStep();
-  r.ok(
-    "the next step on offer is the cadence rung",
-    offered.kind === "step" &&
-      offered.step.kind === "ask" &&
-      offered.step.rule === "half",
-    JSON.stringify(offered),
-  );
-  const addButton = page.getByRole("button", { name: "Add", exact: true });
-  await addButton.waitFor({ state: "visible", timeout: 30_000 });
-  r.ok(
-    "the panel names the step it is offering",
-    await shows(page.getByText("Name the cadence", { exact: true }).first()),
-    'no "Name the cadence" row under Your chords',
-  );
-  await addButton.click();
-
-  const atHalf = await waitFor(readCurriculum, (c) => c.level === 2, {
+/** Wait until the server's selection passes `check`. */
+async function selectionWhere(
+  what: string,
+  check: (s: Selection) => boolean,
+): Promise<Selection> {
+  const settled = await waitFor(readSelection, check, {
     timeoutMs: 20_000,
     intervalMs: 250,
   });
+  r.ok(what, settled.ok, selectionText(settled.value));
+  return settled.value;
+}
+
+await withBrowser(async ({ session }) => {
+  const { page, captured } = await session({
+    viewport: { width: 1320, height: 1000 },
+  });
+  await boot(page, pathUrl("/chord"), { marker: BOX, timeoutMs });
+  await requireRound(page, "the first round");
+
+  // ── 1. the Path card holds the controls ────────────────────────────────────
+
+  await page.getByRole("button", { name: "Path" }).click();
+  const blanksButton = (label: string) =>
+    page.getByRole("radio", { name: label, exact: true });
   r.ok(
-    "Add raises the level",
-    atHalf.ok && atHalf.value.level === 2,
-    JSON.stringify(atHalf.value),
-  );
-  r.eq("the round now asks for the cadence", atHalf.value.askRule, "half");
-  r.ok(
-    "the panel says the learner is on level 2",
-    await panelShowsLevel(page, 2),
-    'the "Your level" line never read "Level 2"',
-  );
-  const afterHalf = await readNextStep();
-  r.ok(
-    "the next step moves on to the whole loop",
-    afterHalf.kind === "step" &&
-      afterHalf.step.kind === "ask" &&
-      afterHalf.step.rule === "all",
-    JSON.stringify(afterHalf),
+    "the Path card opens to the blanks control",
+    await shows(blanksButton("All"), 10_000),
+    "no All radio in the Path card",
   );
 
-  // The round on screen keeps the sheet it was built with, so the rung shows
-  // on the NEXT loop — and only on one with a box in each half to tell apart.
-  strip = await nextSong(page, "the first cadence round");
-  for (let tries = 0; tries < 6 && strip.boxes.length < 2; tries += 1) {
-    strip = await nextSong(page, "a cadence round with more than one box");
-  }
-  r.note(`cadence round: ${stripText(strip)}`);
+  const setBlanks = async (label: string, blanks: Blanks) => {
+    await blanksButton(label).click();
+    const saved = await selectionWhere(
+      `Blanks → ${label} is saved`,
+      (s) => s.blanks === blanks,
+    );
+    // The page's own control reads the pushed selection: once it shows the
+    // new value, the trainer has it too, and the next round is dealt with it.
+    const shown = await waitFor(
+      () => blanksButton(label).getAttribute("aria-checked"),
+      (checked) => checked === "true",
+      { timeoutMs: 15_000, intervalMs: 200 },
+    );
+    r.ok(
+      `the page shows Blanks → ${label}`,
+      shown.ok,
+      `aria-checked=${String(shown.value)}`,
+    );
+    return saved;
+  };
+  const isPractised = (s: Selection, label: string | null) =>
+    label !== null &&
+    practisedChords(s).some((t) => chordLabel(t).text === label);
+
+  // ── 2. All ─────────────────────────────────────────────────────────────────
+
+  let selection = await setBlanks("All", "all");
+  let strip = await nextSong(page, "a whole-loop round");
+  r.note(`whole-loop round: ${stripText(strip)}`);
   r.ok(
-    "at the cadence rung the round asks every box of the loop's second half",
-    asked(strip).length > 0 &&
-      asked(strip).every((box) => box.fraction >= 0.49) &&
-      given(strip).every((box) => box.fraction < 0.49),
+    "at All the round gives only chords that are not practised",
+    given(strip).every((box) => !isPractised(selection, box.chord)),
     stripText(strip),
   );
-  r.ok(
-    "the boxes before the midpoint are given",
-    given(strip).length > 0,
-    `nothing was given — ${stripText(strip)}`,
-  );
   r.eq(
-    "the heading counts the cadence's boxes",
+    "the heading counts the asked boxes",
     strip.heading,
     `Chord 1 of ${String(asked(strip).length)}`,
   );
 
-  // ── 4. Add again takes the whole-loop rung ─────────────────────────────────
+  // ── 3. One ─────────────────────────────────────────────────────────────────
 
-  await addButton.click();
-  const atAll = await waitFor(readCurriculum, (c) => c.level === 3, {
-    timeoutMs: 20_000,
-    intervalMs: 250,
-  });
-  r.ok(
-    "Add raises the level again",
-    atAll.ok && atAll.value.level === 3,
-    JSON.stringify(atAll.value),
-  );
-  r.eq("the round now asks for the whole loop", atAll.value.askRule, "all");
-  r.ok(
-    "the panel says the learner is on level 3",
-    await panelShowsLevel(page, 3),
-    'the "Your level" line never read "Level 3"',
-  );
+  selection = await setBlanks("One", "one");
+  strip = await nextSong(page, "a one-box round");
+  r.note(`one-box round: ${stripText(strip)}`);
+  r.eq("at One the round asks exactly one box", asked(strip).length, 1);
 
-  strip = await nextSong(page, "the first whole-loop round");
-  r.note(`whole-loop round: ${stripText(strip)}`);
+  // ── 4. Half ────────────────────────────────────────────────────────────────
+
+  selection = await setBlanks("Half", "half");
+  strip = await nextSong(page, "a cadence round");
+  for (let tries = 0; tries < 6 && strip.boxes.length < 2; tries += 1) {
+    strip = await nextSong(page, "a cadence round with more than one box");
+  }
+  r.note(`cadence round: ${stripText(strip)}`);
+  const secondHalf = asked(strip).every((box) => box.fraction >= 0.49);
+  const fallback =
+    asked(strip).length === 1 &&
+    strip.boxes.filter((b) => b.fraction >= 0.49).every((b) => b.given);
   r.ok(
-    "at the whole-loop rung every box is asked",
-    given(strip).length === 0 && asked(strip).length === strip.boxes.length,
+    "at Half the round asks only the second half (or its last practised box, when the second half holds none)",
+    asked(strip).length > 0 && (secondHalf || fallback),
     stripText(strip),
   );
 
-  // ── 5. a chord step grows the palette ──────────────────────────────────────
+  // ── 5. the saved round carries its blanks ──────────────────────────────────
 
-  const chordStep = await readNextStep();
-  if (chordStep.kind !== "step" || chordStep.step.kind !== "chords") {
-    r.fail(
-      "the next step after the rungs is a chord",
-      JSON.stringify(chordStep),
+  const body = await playRound(page, strip, selection, before);
+  roundsPlayed += 1;
+  answersGiven += body.answers.length;
+  r.eq("the saved round says it was asked at Half", body.blanks, "half");
+
+  // ── 6. a chord chip cycles its three states ────────────────────────────────
+
+  const viLabel = chordLabel(vi).text;
+  const chip = (state: string) =>
+    page.getByRole("button", { name: `${viLabel}, ${state}`, exact: true });
+  const cycleTo = async (from: string, to: ChordState) => {
+    await chip(from).click();
+    return selectionWhere(
+      `the ${viLabel} chip goes to ${to}`,
+      (s) => chordState(s, vi) === to,
     );
-    return r.finish();
-  }
-  const newTokens = chordStep.step.tokens;
-  const newToken = newTokens[0];
-  if (newToken === undefined) {
-    r.fail(
-      "the chord step opens at least one chord",
-      JSON.stringify(chordStep),
+  };
+  if (chordState(await readSelection(), vi) !== "off") {
+    await post("/api/chord/curriculum/chord", { token: vi, state: "off" });
+    await selectionWhere(
+      `${viLabel} starts off`,
+      (s) => chordState(s, vi) === "off",
     );
-    return r.finish();
   }
-  const newLabel = chordLabel(newToken).text;
-  r.note(
-    `the next step is ${stepText(chordStep.step)} (${chordStep.step.stage}), opening ${chordStep.windows} loop windows`,
-  );
-  // The browser re-reads the next step after each write, and working it out
-  // scans the index, so the row and the pad arrive a moment after the write
-  // this script has already seen answered.
-  const ghost = page.getByRole("button", { name: "Next step", exact: true });
-  r.ok(
-    "a chord step shows as the ghost pad at the end of the grid",
-    await shows(ghost),
-    'no pad named "Next step"',
-  );
-  r.ok(
-    "the panel names the chord it is offering",
-    await shows(page.getByText(newLabel, { exact: true }).first()),
-    `no "${newLabel}" row under Your chords`,
-  );
-
-  const padsBefore = await page.locator(PAD).count();
-  r.eq(
-    "the grid has one button per unlocked chord",
-    padsBefore,
-    atAll.value.unlocked.length,
-  );
-  await ghost.click();
-
-  const atChord = await waitFor(readCurriculum, (c) => c.level === 4, {
-    timeoutMs: 20_000,
-    intervalMs: 250,
-  });
-  r.ok(
-    "the pad adds the chord",
-    atChord.ok && atChord.value.level === 4,
-    JSON.stringify(atChord.value),
-  );
-  r.ok(
-    `${newLabel} is unlocked, at level 4`,
-    atChord.value.unlocked.some((u) => u.token === newToken && u.level === 4),
-    JSON.stringify(atChord.value.unlocked),
-  );
-  r.ok(
-    "the panel says the learner is on level 4",
-    await panelShowsLevel(page, 4),
-    'the "Your level" line never read "Level 4"',
-  );
-  const padsAfter = await waitFor(
+  const padsOff = await page.locator(PAD).count();
+  await cycleTo("Off", "practice");
+  const padsOn = await waitFor(
     () => page.locator(PAD).count(),
-    (count) => count === padsBefore + newTokens.length,
+    (n) => n === padsOff + 1,
     { timeoutMs: 20_000, intervalMs: 250 },
   );
   r.eq(
-    "a chord button appears for it",
-    padsAfter.value,
-    padsBefore + newTokens.length,
+    `practising ${viLabel} adds its answer button`,
+    padsOn.value,
+    padsOff + 1,
   );
+  await cycleTo("Practise", "hear");
+  const padsHear = await waitFor(
+    () => page.locator(PAD).count(),
+    (n) => n === padsOff,
+    { timeoutMs: 20_000, intervalMs: 250 },
+  );
+  r.eq(
+    `hearing ${viLabel} only takes its button away`,
+    padsHear.value,
+    padsOff,
+  );
+  await cycleTo("Hear only", "off");
 
-  // The loops already queued were chosen before the step, for the old palette
-  // and the old target, so they still ask for the whole loop. The first round
-  // the new chord was chosen for is the first one with a given box again —
-  // that can only be the fresh-chord rule, and the only fresh chord is this one.
-  let skipped = 0;
-  strip = await nextSong(page, `the first round targeting ${newLabel}`);
-  while (given(strip).length === 0 && skipped < 15) {
-    skipped += 1;
-    strip = await nextSong(page, `a round targeting ${newLabel}`);
-  }
-  r.note(
-    `the round asking for ${newLabel} arrived after ${skipped} queued loops chosen before the step`,
-  );
-  r.ok(
-    `while ${newLabel} is fresh a round asks only part of the loop again`,
-    given(strip).length > 0,
-    `15 rounds still asked for every box — ${stripText(strip)}`,
-  );
-  if (given(strip).length > 0) {
-    const played = await playRound(page, strip, atChord.value, progress);
-    roundsPlayed += 1;
-    answersGiven += played.answers;
-    const revealed = await waitFor(
-      () => readStrip(page),
-      (s) => s !== null && /right in/.test(s.heading),
-      { timeoutMs: 20_000, intervalMs: 200 },
+  // ── 7. a map cell sets both axes ───────────────────────────────────────────
+
+  const startModes = [...start.modes].sort().join(",");
+  if (startModes !== "major") {
+    r.note(
+      `skipped the map-cell step: the learner started with key modes ${startModes}, which a cell would change and this run could not put back`,
     );
-    const shown = revealed.value;
-    const chords = shown === null ? [] : asked(shown).map((box) => box.chord);
+  } else {
+    await page
+      .getByRole("button", { name: /^vi · One —/ })
+      .first()
+      .click();
+    const want = cellSelection({ chapter: "major", row: "vi", blanks: "one" });
+    const atCell = await selectionWhere(
+      "the vi · One cell sets the whole selection",
+      (s) => sameSelection(s, want),
+    );
     r.ok(
-      `the boxes it asks about are all ${newLabel}`,
-      chords.length > 0 && chords.every((chord) => chord === newLabel),
-      `asked chords ${chords.join(", ")} — ${shown === null ? "no strip" : stripText(shown)}`,
+      "vi is practised alone; the home chords are only heard",
+      chordState(atCell, vi) === "practice" &&
+        HOME.every((t) => chordState(atCell, t) === "hear"),
+      selectionText(atCell),
     );
+    const onePad = await waitFor(
+      () => page.locator(PAD).count(),
+      (n) => n === 1,
+      { timeoutMs: 20_000, intervalMs: 250 },
+    );
+    r.eq("one answer button: vi's", onePad.value, 1);
   }
-
-  // ── 6. Undo takes the last step back ───────────────────────────────────────
-
-  const undo = page.getByRole("button", { name: "Undo", exact: true });
-  await undo.waitFor({ state: "visible", timeout: 20_000 });
-  await undo.click();
-  const undone = await waitFor(readCurriculum, (c) => c.level === 3, {
-    timeoutMs: 20_000,
-    intervalMs: 250,
-  });
-  r.ok(
-    "Undo takes the last step back",
-    undone.ok && undone.value.level === 3,
-    JSON.stringify(undone.value),
-  );
-  r.ok(
-    `${newLabel} is locked again`,
-    !undone.value.unlocked.some((u) => u.token === newToken),
-    JSON.stringify(undone.value.unlocked),
-  );
-  r.eq("the ask rule is back to the whole loop", undone.value.askRule, "all");
-  r.ok(
-    "the panel says the learner is back on level 3",
-    await panelShowsLevel(page, 3),
-    'the "Your level" line never read "Level 3" again',
-  );
-  const padsUndone = await waitFor(
-    () => page.locator(PAD).count(),
-    (count) => count === padsBefore,
-    { timeoutMs: 20_000, intervalMs: 250 },
-  );
-  r.eq("its chord button goes away", padsUndone.value, padsBefore);
-  const offeredAgain = await readNextStep();
-  r.ok(
-    `the next step on offer is ${newLabel} again`,
-    offeredAgain.kind === "step" &&
-      offeredAgain.step.kind === "chords" &&
-      offeredAgain.step.tokens[0] === newToken,
-    JSON.stringify(offeredAgain),
-  );
 
   r.ok(
     "no page errors",
@@ -834,13 +612,10 @@ await withBrowser(async ({ session }) => {
   );
 });
 
-// ── What this run leaves behind ──────────────────────────────────────────────
-
-const end = await readProgress(startTokens);
+const end = await readProgress(progressTokens);
 r.note(
   `left behind: ${roundsPlayed} rounds and ${answersGiven} answers, which nothing can undo ` +
-    `(all time is now ${end.allTime.songs} songs, ${end.allTime.answers} answers). ` +
-    `The steps unlocked are taken back below; the song index keeps the load request.`,
+    `(all time is now ${end.allTime.songs} songs, ${end.allTime.answers} answers).`,
 );
 
 await r.finish();

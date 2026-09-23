@@ -1,5 +1,6 @@
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import type { RecordRoundBody } from "@plugins/apps/plugins/chord/plugins/progress/core";
+import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { clampAnswerMs } from "./answer-time";
 import type { Round } from "./round";
 
@@ -168,11 +169,13 @@ export function sheetScore(sheet: AnswerSheet, round: Round): SheetScore {
 
 /**
  * The body of `POST /api/chord/rounds` for a checked sheet: one answer per
- * ASKED box, plus how many boxes were given. Throws on a sheet not checked.
+ * ASKED box, how many boxes were given, and the blanks setting the asked boxes
+ * were chosen by. Throws on a sheet not checked.
  */
 export function recordRoundBody(
   sheet: AnswerSheet,
   round: Round,
+  blanks: Blanks,
 ): RecordRoundBody {
   const answers = checkedAnswers(sheet, round);
   return {
@@ -182,6 +185,7 @@ export function recordRoundBody(
     startBeat: round.startBeat,
     answers,
     givenCount: round.boxes.length - answers.length,
+    blanks,
   };
 }
 

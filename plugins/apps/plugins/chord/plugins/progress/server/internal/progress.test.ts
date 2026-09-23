@@ -26,6 +26,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {
   MASTERY_WINDOW,
   encodeProgressParams,
@@ -56,8 +57,12 @@ beforeEach(async () => {
 
 type Answer = { token: ChordToken; answer: ChordToken; answerMs?: number };
 
-/** A round checked at `at`, its answers in the order given. */
-async function roundAt(at: Date, answers: Answer[]): Promise<void> {
+/** A round checked at `at`, its answers in the order given, asked at `blanks` (none: before the setting existed). */
+async function roundAt(
+  at: Date,
+  answers: Answer[],
+  blanks: Blanks | null = null,
+): Promise<void> {
   const [round] = await t.db
     .insert(_chordRounds)
     .values({
@@ -80,6 +85,7 @@ async function roundAt(at: Date, answers: Answer[]): Promise<void> {
       correct: a.token === a.answer,
       answerMs: a.answerMs ?? 1000,
       answeredAt: at,
+      blanks,
     })),
   );
 }
@@ -100,6 +106,7 @@ describe("recordRound", () => {
         { position: 2, token: V, answer: V, answerMs: 1200 },
       ],
       givenCount: 0,
+      blanks: "all",
     };
     const { roundId } = await recordRound(t.db, body);
 
@@ -151,6 +158,7 @@ describe("recordRound", () => {
       startBeat: 1,
       answers: [{ position: 2, token: V, answer: V, answerMs: 1100 }],
       givenCount: 3,
+      blanks: "one",
     });
     const [round] = await t.db
       .select()
@@ -197,7 +205,7 @@ describe("loadChordProgress", () => {
     }
 
     const p = await loadChordProgress(t.db, params("UTC", [V, I, IV]), now);
-    expect(p.chords).toEqual([
+    expect(p.chords).toMatchObject([
       {
         token: I,
         answers: 20,
@@ -225,10 +233,40 @@ describe("loadChordProgress", () => {
     ]);
   });
 
+  test("each blanks level is judged on its own last MASTERY_WINDOW answers", async () => {
+    const base = Date.parse("2026-09-01T12:00:00Z");
+    // I: 20 right at "one", 3 wrong at "all", 5 with no level (before the setting).
+    for (let i = 0; i < MASTERY_WINDOW; i++) {
+      await roundAt(
+        new Date(base + i * 1000),
+        [{ token: I, answer: I }],
+        "one",
+      );
+    }
+    for (let i = 0; i < 3; i++) {
+      await roundAt(
+        new Date(base + i * 1000),
+        [{ token: I, answer: V }],
+        "all",
+      );
+    }
+    for (let i = 0; i < 5; i++) {
+      await roundAt(new Date(base + i * 1000), [{ token: I, answer: I }]);
+    }
+    const p = await loadChordProgress(t.db, params("UTC", [I]), now);
+    expect(p.chords[0]?.byBlanks).toEqual({
+      one: { answers: 20, accuracy: 1, mastered: true },
+      half: { answers: 0, accuracy: null, mastered: false },
+      all: { answers: 3, accuracy: 0, mastered: false },
+    });
+    // The overall window reads every answer, levelled or not.
+    expect(p.chords[0]?.answers).toBe(MASTERY_WINDOW);
+  });
+
   test("a chord never answered has an empty standing, and the empty set is fine", async () => {
     await roundAt(new Date("2026-09-18T10:00:00Z"), [{ token: I, answer: I }]);
     const p = await loadChordProgress(t.db, params("UTC", [V]), now);
-    expect(p.chords).toEqual([
+    expect(p.chords).toMatchObject([
       {
         token: V,
         answers: 0,

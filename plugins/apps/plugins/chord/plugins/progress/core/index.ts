@@ -16,6 +16,7 @@ export type { RecordRoundBody, RoundAnswer } from "./endpoints";
 export {
   ChordProgressSchema,
   ChordStandingSchema,
+  LevelStandingSchema,
   chordProgressResource,
   decodeProgressParams,
   encodeProgressParams,
@@ -25,4 +26,5 @@ export type {
   ChordProgressParams,
   ChordStanding,
   DecodedProgressParams,
+  LevelStanding,
 } from "./progress";

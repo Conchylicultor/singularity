@@ -22,7 +22,10 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { chordKeyPlan } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
-import { CurriculumSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
+import {
+  SelectionSchema,
+  practisedChords,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { ensureReady } from "@plugins/apps/plugins/chord/plugins/song-index/e2e";
 import { z } from "zod";
 
@@ -36,11 +39,11 @@ const ASKED_BOX = `${BOX}:not([aria-label*=", given"])`;
 const res = await agentFetch("/api/resources/chord.curriculum");
 if (!res.ok) throw new Error(`chord.curriculum → HTTP ${res.status}`);
 const { value } = z.object({ value: z.unknown() }).parse(await res.json());
-const curriculum = CurriculumSchema.parse(value);
+const curriculum = SelectionSchema.parse(value);
 
 // The digits that answer on their own: one press is one chord, and the chord
 // behind the press is not in doubt.
-const solo = chordKeyPlan(curriculum.unlocked.map((u) => u.token)).filter(
+const solo = chordKeyPlan(practisedChords(curriculum)).filter(
   (group) => group.tokens.length === 1,
 );
 const first = solo[0];

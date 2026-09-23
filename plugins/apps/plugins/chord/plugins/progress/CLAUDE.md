@@ -113,6 +113,9 @@ that are real.
   - Routes: `POST /api/chord/rounds`
 - Core:
   - Uses:
+    - `apps/chord/curriculum.Blanks`
+    - `apps/chord/curriculum.BLANKS`
+    - `apps/chord/curriculum.BlanksSchema`
     - `apps/chord/song-index.ChordToken`
     - `apps/chord/song-index.ChordTokenSchema`
     - `apps/chord/song-index.LOOP_SHAPE_IDS`
@@ -126,6 +129,7 @@ that are real.
     - `ChordProgressParams`
     - `ChordStanding`
     - `DecodedProgressParams`
+    - `LevelStanding`
     - `RecordRoundBody`
     - `RoundAnswer`
   - Exports (values):
@@ -135,6 +139,7 @@ that are real.
     - `ChordStandingSchema`
     - `decodeProgressParams`
     - `encodeProgressParams`
+    - `LevelStandingSchema`
     - `MASTERY_WINDOW`
     - `MAX_ANSWER_MS`
     - `MIN_ANSWER_MS`

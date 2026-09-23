@@ -45,6 +45,7 @@ export async function recordRound(
         correct: a.correct,
         answerMs: a.answerMs,
         answeredAt: round.checkedAt,
+        blanks: body.blanks,
       })),
     );
     return { roundId: round.id };

@@ -74,6 +74,7 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `useExpandAll`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/curriculum`
     - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `build/build-logs`

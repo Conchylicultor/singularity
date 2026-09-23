@@ -10,7 +10,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`agent-manager`** [3 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
-    - **`chord`** [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
+    - **`chord`** [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [22 sub-plugins] — Events — track events from pluggable sources in one database.

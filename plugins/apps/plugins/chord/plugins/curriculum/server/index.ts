@@ -3,31 +3,33 @@ import {
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import {
-  nextCurriculumStepEndpoint,
-  undoCurriculumStepEndpoint,
-  unlockCurriculumStepEndpoint,
+  applyCellEndpoint,
+  setBlanksEndpoint,
+  setChapterStateEndpoint,
+  setChordStateEndpoint,
 } from "../core";
 import {
-  handleNextStep,
-  handleUndoStep,
-  handleUnlockStep,
+  handleApplyCell,
+  handleSetBlanks,
+  handleSetChapterState,
+  handleSetChordState,
 } from "./internal/handlers";
 import { chordCurriculumServerResource } from "./internal/resource";
 
 export default {
   description:
-    "The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.",
+    "The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.",
   httpRoutes: {
-    [nextCurriculumStepEndpoint.route]: handleNextStep,
-    [unlockCurriculumStepEndpoint.route]: handleUnlockStep,
-    [undoCurriculumStepEndpoint.route]: handleUndoStep,
+    [setChordStateEndpoint.route]: handleSetChordState,
+    [setChapterStateEndpoint.route]: handleSetChapterState,
+    [setBlanksEndpoint.route]: handleSetBlanks,
+    [applyCellEndpoint.route]: handleApplyCell,
   },
   contributions: [
-    // `chord_unlocks` is kept in forks, backups and the change feed on purpose
-    // (no ExcludeFromFork / ExcludeFromBackup / ExcludeFromChangeFeed): it is
-    // the learner's own history of decisions, which nothing can rebuild, and
-    // the feed is what pushes `chord.curriculum`. No growth bound: a row is
-    // written only when a person takes a step. See CLAUDE.md.
+    // `chord_curriculum` is kept in forks, backups and the change feed on
+    // purpose (no ExcludeFromFork / ExcludeFromBackup / ExcludeFromChangeFeed):
+    // it is the learner's own choice, which nothing can rebuild, and the feed
+    // is what pushes `chord.curriculum`. No growth bound: it is one row.
     Resource.Declare(chordCurriculumServerResource),
   ],
 } satisfies ServerPluginDefinition;

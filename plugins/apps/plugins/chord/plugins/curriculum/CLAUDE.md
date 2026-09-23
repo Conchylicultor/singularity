@@ -1,370 +1,258 @@
 # curriculum
 
-The ladder the learner climbs: which chords and key modes they hear, how much
-of a loop they name, and which step comes next. Design:
-`research/2026-09-19-apps-chord-trainer-curriculum.md`.
+What the learner practises, and the path that suggests what to practise next.
+Design: `research/2026-09-23-apps-chord-trainer-free-curriculum.md` (it
+replaced the step ladder of `research/2026-09-19-apps-chord-trainer-curriculum.md`).
 
-## The model
+## The model: two axes the learner sets, and a path that only suggests
 
-Two axes, one ladder.
+- **Which chords** — every chord is `practice` (its boxes can be blank, it has
+  an answer button), `hear` (it can play in a loop, its boxes are always given)
+  or `off` (no loop holding it plays). Plus the key modes a loop may be in.
+- **How much is blank** (`Blanks`) — `one` (the target's last box), `half`
+  (the practised boxes in the loop's second half), `all` (every practised box).
 
-- **What you may hear** — the unlocked chord tokens and key modes. They are
-  what `find` draws loops from, so a loop holding a chord you have not unlocked
-  never plays.
-- **How much you name** — the _ask rule_. The boxes it does not pick are
-  **given**: they already show their chord, so a round asks for one notion at a
-  time instead of four chords in a row.
-
-A **step** moves one axis. A **level** is how many steps you have taken, plus
-one — level 1 is `FIRST_LEVEL`, a constant, so there is never a row for it.
-
-| Level | Step                          | What the round asks                               |
-| ----- | ----------------------------- | ------------------------------------------------- |
-| 1     | I, IV, V, major keys          | only the boxes of the chord being practised       |
-| 2     | ask rule → `half`             | every box in the loop's second half (the cadence) |
-| 3     | ask rule → `all`              | every box                                         |
-| 4…    | one notion, or a stage's seed | every box — except while a new chord is settling  |
-
-**A NEW chord is asked alone**, until it has `FRESH_ANSWERS` (10) answers, so
-every new notion arrives isolated and widens out on its own.
-
-New means "arrived after the learner widened out", not "not practised much":
-the chord's unlock level must be **above** `askRuleLevel`, the level the current
-rung was set at. Both are steps on one ladder, so they are compared as levels.
-Why it matters, and why a bare freshness test is wrong: at level 1 no chord has
-any answers, so a freshness test isolated every one of them — the learner paid
-for the cadence at level 2 and the whole loop at level 3 and the round still
-asked for a single chord until each starting chord had ten answers. An
-under-practised old chord needs no isolation; being picked as the target is
-already what looks after it.
+Both are one value, the **selection** (`Selection`: `chords` — every chord
+that is not off, with its state —, `blanks`, `modes`), live as
+`chord.curriculum`. Nothing gates anything: the learner can change either axis
+at any time, and the trainer follows at once.
 
 ```ts
-askedPositions(boxes, { windowBeats, askRule, target,
-                        targetLevel, askRuleLevel, targetAnswers }) → number[]
-// "target", or an isolated target → the boxes whose chord is the target
-// "half"                         → boxes starting at or after the window's midpoint
-// "all"                          → every box
-// never empty: a rule that picks nothing falls back to the round's last box
+askedPositions(boxes, { windowBeats, blanks, practised, target }) → number[]
+// only a practised chord's box can be blank; never empty: a rule that picks
+// nothing falls back to the last practised box; a target not practised throws
 ```
 
-## Stages
+## The path
 
-A **stage** is a family of chords: what it opens (a seed, and key modes), and
-which chords belong to it once open. Membership is a predicate over the token's
-parts, and the **first stage of `STAGES` that holds a chord owns it** — so a
-chord nobody listed still lands in exactly one pool, and a chord in no pool is
-never offered.
+`path.ts` is **plain data**: `CHAPTERS`, each a hand-written list of rows (a
+chord, a few chords heard as one idea — both inversions of a chord —, or a key
+mode). A **cell** is (chapter, row, blanks); the map shows every cell.
 
-| Stage                                        | Opens     | Seed         | Pool                                                                                 |
-| -------------------------------------------- | --------- | ------------ | ------------------------------------------------------------------------------------ |
-| `major-triads`                               | major     | I, IV, V     | root-position triads the major scale builds (ii, iii, vi, vii°)                      |
-| `minor-keys`                                 | minor     | i, ♭VII, ♭VI | the other natural-minor triads (ii°, ♭III, iv, v)                                    |
-| `sevenths`                                   | —         | —            | root-position sevenths either scale builds (V7, ii7, vi7, Imaj7, viiø7)              |
-| `inversions`                                 | —         | —            | any inversion **whose root-position twin is already unlocked**                       |
-| `secondary`                                  | —         | —            | a major triad or dominant seventh on a degree that does not have one (V/V, V/vi, I7) |
-| `colour`                                     | —         | —            | anything else in root position: sus, sixths, added notes                             |
-| `mixolydian`, `dorian`, `lydian`, `phrygian` | that mode | —            | — (the chords are known; the step opens the mode)                                    |
+- `routeOf(chapter)`: the cells the path suggests, in order — the first row at
+  one, half, all; every later row at one (alone), then all. `ROUTE` is every
+  chapter's route; the rest of the map is "off the route", still clickable.
+- `cellSelection(cell)`: what a cell means. Everything met before is practised
+  (earlier chapters whole, this chapter's earlier rows), except a later row at
+  `one`: then this chapter's earlier rows are only heard, so the new chord is
+  named alone against known ones. Modes: every mode the rows so far open.
+- `cellOf(selection)`: the cell a selection is, or null — free practice. No two
+  cells mean the same selection (tested), so it reads back exactly.
+- `cellStanding(cell, standing)` / `nextCell(standing)`: a cell is mastered when
+  every chord of its row is mastered **at that blanks level** (progress keeps a
+  standing per level, `byBlanks`); the next cell is the first route cell not
+  mastered. A key-mode row has no chord, so nothing to score — it is never
+  "next". The standing is a function the caller passes, so this plugin does not
+  depend on progress (progress depends on it, for `Blanks`).
 
-The scale sets are derived, not listed: `diatonicShapes` stacks thirds on each
-degree of the major and natural-minor scales, so "the seventh on ♭VII" is
-computed rather than typed out.
-
-Two consequences worth knowing:
-
-- **An inversion waits for its twin.** V⁶ belongs to no pool until V is
-  unlocked, so it never ranks — no special case needed.
-- **The modal stages hold no chord.** They open a key mode, and the chords heard
-  in it are ones the learner already knows. `locrian`, `harmonicMinor` and
-  `phrygianDominant` have no stage: nothing opens them today.
-
-### Notions: what one step teaches
-
-A level teaches one notion, and a notion is not always one chord. A stage's
-`notion(parts)` says which of its chords are **one idea** — a string that is
-only ever compared — and candidates sharing one are unlocked by a single step.
-Every stage answers: one that bundles nothing returns the shared `ownNotion`
-(the chord's own token), so "nothing to bundle" is a stated answer rather than a
-missing method. Only `inversions` bundles, on the root-position twin: V⁶ and V⁶₄
-arrive together as "V, with another note in the bass" instead of spending a
-level each on the same idea.
-
-**A bundle is worth its biggest member, not the sum.** The sum double-counts the
-windows two members share, and counting the set exactly would cost one more
-`countLoopsInSet` query per notion on every `next` read. The biggest member is
-what decides whether the family earns a level, and the step opens at least that
-many.
-
-A step already carried a list of tokens (the minor-keys seed unlocks three at
-once), so `NextStep`, the stored rows and `curriculumFromSteps` are untouched,
-and the trainer's isolate-a-new-chord rule already takes the members in turn.
-
-## Which step comes next
-
-`chooseNextStep` is **pure over supplied counts** — no database, no HTTP — so
-the whole ordering can be checked in a unit test. `server/internal/next.ts`
-gathers the numbers; this decides. In order:
-
-1. **The ask ladder first.** While the round does not yet ask for the whole
-   loop, the next step is the next rung. No new chord arrives until the learner
-   names what they already hear.
-2. **Finish the stage in hand** — the stage the last chord step came from —
-   while its best notion is worth at least `minStepWindows` **and** at
-   least a fifth of the best step available anywhere (`STAGE_HOLD_SHARE`). One
-   notion is finished before the next starts, but a family's rare leftovers
-   never hold up a much bigger one: vii° opens a few dozen loops where minor
-   keys open thousands, so it waits and comes back once the families ahead of
-   it have run down.
-3. **Otherwise the best step anywhere**: each open stage's best notion, and
-   each unopened stage's seed. Ties go to the earlier stage, then the earlier
-   token, so the same counts always give the same answer.
-
-Nothing above the bar is `done`.
-
-**The bar is a share of the index, not a count.** `minStepWindows` is one
-window in 10,000, and at least 5. A worktree loads a 5 % sample of the songs,
-so a fixed count would stall there where main's full index flows.
-
-Measured on a 5 % sample, the ladder after I, IV, V runs **vi, ii, iii**, then
-the **minor-keys seed** — minor keys are 44 % of the sample's windows, so they
-arrive long before sevenths or inversions. That ordering comes from the songs,
-not from anyone's taste, which is the point of ranking by window count.
+**What a chord IS still comes from `stages.ts`**, the chord families
+(`stageOf`, first match wins: major-key triads, minor keys, sevenths,
+inversions — only once the root-position twin is known —, secondary dominants,
+colour, and the four modal stages, which hold no chord). `path.test.ts` checks
+every row's chords belong to one of its chapter's stages, so the hand list
+cannot drift from how the app classifies chords. That is why V7 is in Sevenths,
+not in Major keys, and borrowed iv / ♭VII are in Minor keys.
 
 ## Server surface
 
 ```ts
-chord.curriculum; // live: { level, askRule, askRuleLevel, modes, unlocked[], stage }
-POST / api / chord / curriculum / next; // → not-ready | step | done
-POST / api / chord / curriculum / unlock; // { expected: NextStep } → { level }
-POST / api / chord / curriculum / undo; //                        → { level }
+chord.curriculum;                      // live: Selection
+POST /api/chord/curriculum/chord       // { token, state }
+POST /api/chord/curriculum/chapter     // { chapter, state } — every chord of it, and its modes
+POST /api/chord/curriculum/blanks      // { blanks }
+POST /api/chord/curriculum/cell        // { cell } — the server computes cellSelection
 ```
 
-- **`next` is an endpoint, not a live resource.** Working the step out scans the
-  loop windows once for the candidate chords, plus one count per unopened stage.
-  A resource over those tables would recompute it on every row an index load
-  writes.
-- **`next` answers `not-ready` whenever the index is not loaded**, never `done`
-  — with no windows to count, "nothing is worth unlocking" and "I cannot tell
-  yet" are the same answer, and only one of them is true.
-- **`unlock` takes the step the learner was shown.** The server works the next
-  step out again and refuses with a 409 when it differs: the index may have
-  grown, or another tab may have stepped first. A client never invents a step.
-- **`undo`** drops the last row, so a mis-click costs nothing. At level 1 it
-  refuses — there is no step to take back.
+- The writes are pure functions over a selection (`change.ts`:
+  `withChordState`, `withChapterState`, `withBlanks`), applied in one
+  transaction by `updateSelection`, which locks the row so two tabs apply one
+  after the other. None answers the new value: the resource pushes it.
+- `chapter` → `off` that would leave no key mode on is refused with a 409 —
+  no loop could play.
+- A client never sends a whole selection it computed: `cell` takes the cell
+  and the server works out what it means.
 
-The counts come from the song index's server barrel directly
-(`countLoopsByNextChord`, `countLoopsInSet`). HTTP between two server plugins
-would be the wrong seam.
+## `chord_curriculum`
+
+One row (`id = 1`): `chords jsonb`, `blanks text`, `modes jsonb`,
+`updated_at`. **No row means nobody has changed anything**: the loader answers
+`firstSelection()` (I, IV, V practised, half, major) and the first write
+inserts the row — so there is no seed migration.
+
+Kept in worktree forks and backups, and in the change feed (which pushes
+`chord.curriculum`): it is the learner's own choice, nothing can rebuild it.
+No growth bound: it is one row.
 
 ## web
 
-Four hooks and two components. Nothing here decides anything — the ladder is
-worked out on the server; this is how a screen reads it and moves it.
-
 ```ts
-useCurriculum()  → ResourceResult<Curriculum>   // live: pending until the first value
-useNextStep()    → { read, refetch }            // loading | error | answer
-useUnlockStep()  → { unlock(step), pending }
-useUndoStep()    → { run, pending }
-stepReadiness(unlocked, progress) → "unknown" | "early" | "ready"
+useCurriculum()        → ResourceResult<Selection>   // pending until the first value
+useCurriculumWrites()  → { setChordState, setChapterState, setBlanks, applyCell, pending }
+<PathCard selection standing/>   // the folded card holding every control
+<PathProgress standing/>         // the step bar of the chapter in hand
 ```
 
-- **A pending curriculum is a loading state, never an empty palette.** The
-  trainer shows its skeleton until the standing lands: drawing three chord
-  buttons that are about to become four is a claim about what this learner has.
-- **The next step is re-read by the writes themselves**, on success and on
-  failure alike, so a surface cannot forget to and go on offering a step that
-  has already been taken. It is not asked for on a timer or on focus — only
-  after a write.
-- **A refused unlock is a toast**, never a silent nothing: "The next step has
-  changed" with the server's sentence under it (the index grew, or another tab
-  stepped first), and the step is read again straight away.
-
-**Readiness has three answers, not two.** `stepReadiness` returns `unknown`
-while the learner's progress has not landed — not a quiet "no". A control
-reading "Add anyway" during the load tells this learner they are behind and
-then takes it back, which is the wrong-state-while-loading bug the repo bans
-(`live-state/no-pending-data-collapse`). Both components render `unknown` as
-their own waiting form.
-
-The two places the locked step shows:
-
-- **`<NextStepPad step level readiness adding onAdd/>`** — the ghost chord
-  button at the end of the grid: the numeral greyed, a padlock and "Level N",
-  or the numeral bright and **Add it** once every unlocked chord is mastered.
-  **Chords only** — a key-mode or ask-rule step has no numeral, so it draws
-  nothing and shows in the row instead. Accessible name: `Next step`.
-- **`<NextStepRow step level readiness adding onAdd/>`** — the row at the foot
-  of "Your chords", which draws **every** kind of step: a chord by its numeral,
-  a key mode by the stage's name, an ask-rule step as "Name the cadence" /
-  "Name the whole loop".
-
-Both are live once the readiness is known. Mastered everything: the button
-reads **Add** and is the prominent one; not yet: **Add anyway** — going faster
-than the trainer suggests is the learner's call, not a mistake. The accessible
-name stays `Add` either way, so it is one control however it reads.
-
-## `chord_unlocks`
-
-```
-position integer primary key   -- the level it reached: 2, 3, 4…
-step     jsonb not null        -- the NextStep, decoded on every read and write
-unlocked_at timestamptz not null
-```
-
-**The step is stored, not a stage index**, so a later edit to the stage list
-cannot rewrite what someone already unlocked. The standing is read back from the
-rows by `curriculumFromSteps`, which is pure: level 1 plus what each step added,
-a chord keeping the level it first arrived at.
-
-The table is **kept** in worktree forks and in backups, and **stays in the
-change feed** (which is what pushes `chord.curriculum`). It is the learner's own
-history of decisions, and nothing can rebuild it. **No growth bound is
-declared**: a row is written only when a person presses Add, so the table grows
-at the speed of someone learning, and the retention monitor's silencing set must
-only hold bounds that are real.
-
-`position` is the primary key, so two tabs unlocking at once cannot both take
-the same level — the second fails loudly instead of quietly writing a second
-step at the same rung.
+- **A pending selection is a loading state**, never buttons: the trainer shows
+  its skeleton until the selection lands.
+- **A refused write is a toast** with the server's sentence.
+- **`<PathCard>`**, folded by default. Closed: "Path" and one word on where the
+  learner stands (On track / On the path / Off the route / Free practice), plus
+  **Resume: ‹row› · ‹blanks›** when they are not on the suggested cell. Open:
+  the chord chips (the first chapter's chords and every chord on, in path
+  order; a click moves one practise → hear only → off; the **+** menu sets a
+  whole chapter), the Blanks control (One · Half · All, each with a tiny loop
+  glyph), a sentence on where the path goes next (with Go / Back to the path),
+  and the chapter accordion — each chapter opens to its map: rows × blanks,
+  cells filled by progress, a check when mastered, a ring for "you are here", a
+  pulse for "next", dashed when off the route. Clicking a cell applies it.
+- **`standing`** is how the path reads a chord at a blanks level: the trainer
+  builds it from `chord.progress` (`byBlanks`).
 
 ## e2e
 
-`e2e/ladder-preview.ts` walks the ladder in memory and prints the order it
-produces (above). It writes nothing.
+`e2e/curriculum-verify.ts` drives the controls in the real app: it opens the
+Path card, switches Blanks to All / One / Half and checks the next round asks
+what each promises (All gives only chords not practised; One asks one box;
+Half asks the second half), checks a saved round carries its blanks, cycles
+vi's chip Off → Practise → Hear only → Off (its answer button comes and goes),
+and clicks the vi · One cell (vi practised alone, the home chords heard, one
+button). It puts the selection back before the verdict prints, crash included;
+the rounds it plays stay in the history. It skips the cell step when the
+learner is not in major keys alone, since a cell would change the key modes.
 
-`e2e/curriculum-verify.ts` plays the trainer and moves the ladder for real:
-level 1 asks one chord and gives the rest (the saved round counts them as
-`givenCount`); Add raises the level and the next round asks the loop's second
-half, then every box; the chord step's ghost pad adds a fourth chord button and
-a round asks only the fresh chord's boxes; Undo puts it back. It starts from
-level 1, and undoes every step it takes before the verdict prints, crash
-included — the rounds it played cannot be undone, so it prints what it left.
-
-Two traps it had to solve, for whoever writes the next one:
-
-- **The rungs are invisible on a new learner**: a fresh chord is asked alone
-  whatever the rung says, so the script first plays rounds until every chord is
-  past `FRESH_ANSWERS` (bounded by `--warmup-rounds`, a failure if unreached).
-- **A round nothing was typed into reads exactly like the next one**, so
-  waiting on the heading after "next song" reads the OLD round back — and then
-  asserts about the rule it was built with. Wait for a different (song, boxes)
-  pair.
+A round nothing was typed into reads exactly like the next one, so after
+"next song" it waits for a different (song, boxes) pair, not just a heading.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum standing), useNextStep (the step on offer, re-read after every write), useUnlockStep / useUndoStep (the two writes, whose conflicts surface as a toast), and the two places the locked next step shows — <NextStepPad>, the ghost chord button at the end of the grid, and <NextStepRow>, the panel row that draws every kind of step. The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.
+- Description: The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
 - Server:
   - Contributes: `resource.declare` "chord.curriculum"
   - Uses:
-    - `apps/chord/song-index.countLoopsByNextChord`
-    - `apps/chord/song-index.countLoopsInSet`
-    - `apps/chord/song-index.loadIndexStatus`
     - `database.db`
     - `database/sql-column.parsedJson`
+    - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
   - Resources: `chord.curriculum` (invalidate)
   - Routes:
-    - `POST /api/chord/curriculum/next`
-    - `POST /api/chord/curriculum/unlock`
-    - `POST /api/chord/curriculum/undo`
+    - `POST /api/chord/curriculum/chord`
+    - `POST /api/chord/curriculum/chapter`
+    - `POST /api/chord/curriculum/blanks`
+    - `POST /api/chord/curriculum/cell`
 - Web:
   - Uses:
     - `apps/chord/vocabulary.ChordNumeral`
     - `apps/chord/vocabulary.chordToneStyle`
-    - `infra/endpoints.endpointQueryKey`
     - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/center.Center`
+    - `primitives/css/coords.pct`
+    - `primitives/css/coords.placedClasses`
+    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
+    - `primitives/overlay/popover.InlinePopover`
     - `shell/toast.showToast`
   - Exports (types):
-    - `NextStepRead`
-    - `StepReadiness`
-    - `StepWrite`
+    - `CurriculumWrites`
+    - `StandingLookup`
   - Exports (values):
-    - `NextStepPad`
-    - `NextStepRow`
-    - `stepReadiness`
+    - `BlanksGlyph`
+    - `PathCard`
+    - `PathProgress`
     - `useCurriculum`
-    - `useNextStep`
-    - `useUndoStep`
-    - `useUnlockStep`
+    - `useCurriculumWrites`
 - Core:
   - Uses:
     - `apps/chord/song-index.ChordToken`
     - `apps/chord/song-index.chordTokenFromParts`
     - `apps/chord/song-index.ChordTokenParts`
     - `apps/chord/song-index.ChordTokenSchema`
-    - `apps/chord/song-index.IndexStatusSchema`
     - `apps/chord/song-index.parseChordToken`
     - `infra/endpoints.defineEndpoint`
+    - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `AskedBox`
     - `AskedOptions`
-    - `AskRule`
-    - `ChordCandidate`
-    - `Curriculum`
-    - `CurriculumLevel`
-    - `FirstLevel`
-    - `LadderCounts`
-    - `LadderState`
-    - `NextStep`
-    - `NextStepAnswer`
-    - `NextStepChoice`
+    - `Blanks`
+    - `Cell`
+    - `CellStanding`
+    - `Chapter`
+    - `ChordState`
+    - `PathRow`
+    - `SelectedChord`
+    - `Selection`
+    - `SelectionChange`
     - `Stage`
-    - `StageEntry`
     - `StageId`
-    - `UnlockedChord`
-    - `UnlockStepBody`
+    - `TokenStanding`
   - Exports (values):
-    - `ASK_RULES`
+    - `ALL_CELLS`
+    - `applyCellEndpoint`
     - `askedPositions`
-    - `AskRuleSchema`
-    - `askRuleStep`
-    - `chooseNextStep`
+    - `BLANKS`
+    - `BLANKS_LABEL`
+    - `BlanksSchema`
+    - `canonicalSelection`
+    - `cellName`
+    - `cellOf`
+    - `CellSchema`
+    - `cellSelection`
+    - `cellStanding`
+    - `chapterById`
+    - `CHAPTERS`
+    - `CHORD_STATES`
     - `chordCurriculumResource`
-    - `curriculumFromSteps`
-    - `CurriculumSchema`
-    - `FIRST_LEVEL`
-    - `firstCurriculum`
-    - `FRESH_ANSWERS`
-    - `minStepWindows`
-    - `nextAskRule`
-    - `nextCurriculumStepEndpoint`
-    - `NextStepAnswerSchema`
-    - `NextStepSchema`
-    - `sameStep`
-    - `STAGE_HOLD_SHARE`
+    - `chordState`
+    - `ChordStateSchema`
+    - `firstSelection`
+    - `nextCell`
+    - `onRoute`
+    - `PATH_TOKENS`
+    - `pathOrder`
+    - `playableChords`
+    - `practisedChords`
+    - `ROUTE`
+    - `routeOf`
+    - `sameCell`
+    - `sameSelection`
+    - `SelectedChordSchema`
+    - `SelectionSchema`
+    - `setBlanksEndpoint`
+    - `setChapterStateEndpoint`
+    - `setChordStateEndpoint`
     - `STAGE_IDS`
     - `stageById`
     - `StageIdSchema`
-    - `stageIsOpen`
     - `stageOf`
-    - `stageOrder`
     - `STAGES`
-    - `targetIsIsolated`
-    - `undoCurriculumStepEndpoint`
-    - `unlockCurriculumStepEndpoint`
-    - `UnlockedChordSchema`
-    - `UnlockStepBodySchema`
-    - `unopenedStages`
+    - `withBlanks`
+    - `withChapterState`
+    - `withChordState`
 - Cross-plugin:
-  - Imported by: `apps/chord/trainer`
+  - Imported by:
+    - `apps/chord/progress`
+    - `apps/chord/trainer`
 
 <!-- AUTOGENERATED:END -->

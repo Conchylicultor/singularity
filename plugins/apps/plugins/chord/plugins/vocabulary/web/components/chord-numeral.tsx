@@ -7,7 +7,7 @@ import "../chord-paint.css";
  * A chord's Roman numeral in the display serif (Bodoni Moda): the degree at
  * full size, its quality mark and inversion figure small and raised, in the
  * sans. Its size and colour come from where it sits: a box, a chord button, a
- * chip, the locked next step.
+ * chip, the Path card's chips and map rows.
  */
 export function ChordNumeral({
   token,

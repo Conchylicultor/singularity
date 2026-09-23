@@ -108,7 +108,7 @@ by the curriculum staying small.
 `web/` is the one place a chord is drawn: `<ChordNumeral>` and
 `chordToneStyle`, with `.chord-tone` / `.chord-num` in `chord-paint.css`. The
 trainer and the curriculum both use them, so one chord reads the same in an
-answer box, on a button, in a panel chip and in the locked next step. Sizes
+answer box, on a button, in a panel chip and in the Path card's chips and map. Sizes
 belong to the surface, not here.
 
 ## Voicing, and what the app actually sounds
@@ -136,7 +136,7 @@ surface.
 
 ## Plugin reference
 
-- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's locked next step, so one chord reads the same everywhere.
+- Description: How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's Path card (its chips and map rows), so one chord reads the same everywhere.
 - Web:
   - Uses: `primitives/css/ui-kit.cn`
   - Exports (values):

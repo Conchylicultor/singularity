@@ -1,7 +1,7 @@
 # chord
 
 A chord ear trainer: it plays a short loop of a real song and asks you to name
-its chords, only ever choosing loops made of chords you have already unlocked.
+its chords, only ever choosing loops made of chords the learner has turned on.
 The track page is `block-49ba706c-affe-417b-a9a1-b6873e8c7ea8` ("Chord trainer
 app"); the design is `research/2026-09-16-apps-chord-trainer-song-index*.md`
 (v1–v4).
@@ -26,9 +26,10 @@ What exists today:
 - `vocabulary` — what the trainer says about a chord token (numeral, scale
   degree, function, answering key, piano voicing) and how one is drawn
   (`<ChordNumeral>`, `chordToneStyle`).
-- `curriculum` — the ladder: which chords and key modes are unlocked, how much
-  of a loop the learner names, and which step comes next (ranked by how many
-  real songs it opens). See its CLAUDE.md.
+- `curriculum` — what the learner practises: each chord practised, heard or
+  off, how much of a loop is blank, and the path (chapters × blanks) that
+  suggests what to practise next, all set from the folded Path card. See its
+  CLAUDE.md.
 - `progress` — every checked round and its answers, the mastery rule, and the
   live `chord.progress` stats.
 - `piano` — the app's piano: the notes it plays for a chord (bass doubled an
@@ -43,15 +44,15 @@ What exists today:
 
 ## Plugin reference
 
-- Description: Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
+- Description: Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
 - Sub-plugins:
-  - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum standing), useNextStep (the step on offer, re-read after every write), useUnlockStep / useUndoStep (the two writes, whose conflicts surface as a toast), and the two places the locked next step shows — <NextStepPad>, the ghost chord button at the end of the grid, and <NextStepRow>, the panel row that draws every kind of step. The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.
+  - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
   - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
   - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
   - **`shell`** — The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
   - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.
-  - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per unlocked chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
+  - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
   - **`video-availability`** — Chord video availability: the chord_videos evidence ledger (oEmbed's answer and the player's, each in its own columns), the chord_video_status_v view that resolves them, the on-demand oEmbed check a loop query runs over the videos it is about to offer, and the player's playback-report endpoint.
-  - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's locked next step, so one chord reads the same everywhere.
+  - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's Path card (its chips and map rows), so one chord reads the same everywhere.
 
 <!-- AUTOGENERATED:END -->

@@ -1,0 +1,214 @@
+/* The Path card's paint: the chord state chips, the blanks glyph, the chapter
+ * maps and the progress bar. Layout stays with the layout primitives; a chord's
+ * colours come from `.chord-tone` (vocabulary). The mockup is
+ * proto-1789461303-updb. */
+
+/* ── A chord's state: practise (filled), hear only (outlined, an ear), off (dashed) */
+.chord-state-chip {
+  position: relative;
+  min-width: 38px;
+  height: 32px;
+  padding: 0 7px;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.chord-state-chip .chord-num {
+  font-size: 17px;
+}
+.chord-state-chip[data-state="practice"] {
+  background: var(--fn-bg);
+}
+.chord-state-chip[data-state="practice"] .chord-num {
+  color: var(--fn-ink);
+}
+.chord-state-chip[data-state="hear"] {
+  border-color: color-mix(in srgb, var(--fn, var(--foreground)) 55%, transparent);
+  background: color-mix(in srgb, var(--fn, var(--foreground)) 7%, transparent);
+}
+.chord-state-chip[data-state="off"] {
+  border: 1.5px dashed var(--input);
+}
+.chord-state-chip[data-state="off"] .chord-num {
+  color: var(--faint-foreground);
+  opacity: 0.6;
+}
+.chord-state-chip:hover {
+  filter: brightness(1.12);
+}
+.chord-state-ear {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--fn, var(--foreground));
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+}
+.chord-state-more {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--input);
+  color: var(--muted-foreground);
+  display: inline-grid;
+  place-items: center;
+  font-size: 17px;
+  cursor: pointer;
+}
+.chord-state-more:hover {
+  color: var(--foreground);
+  border-color: var(--faint-foreground);
+}
+
+/* ── The blanks glyph: a tiny loop, hollow boxes are the ones you name ───── */
+.chord-blanks-glyph {
+  display: inline-flex;
+  gap: 2px;
+}
+.chord-blanks-glyph i {
+  width: 5px;
+  height: 12px;
+  border-radius: 1.5px;
+  background: currentColor;
+  opacity: 0.35;
+}
+.chord-blanks-glyph i[data-blank] {
+  background: transparent;
+  border: 1.3px solid currentColor;
+  opacity: 1;
+}
+
+/* ── Where you stand ──────────────────────────────────────────────────────── */
+.chord-path-meter {
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--background) 40%, black);
+  overflow: hidden;
+}
+.chord-path-meter-fill {
+  background: var(--foreground);
+  border-radius: 3px;
+}
+.chord-path-step {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.chord-path-step[data-state="done"] {
+  background: var(--foreground);
+}
+.chord-path-step[data-state="next"] {
+  background: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+/* ── The chapters and their maps ──────────────────────────────────────────── */
+.chord-chapter-n {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--input);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--faint-foreground);
+}
+.chord-chapter-n[data-open] {
+  border-color: var(--muted-foreground);
+  color: var(--foreground);
+}
+.chord-row-label {
+  gap: 2px;
+  min-width: 0;
+}
+.chord-row-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--fn-bg);
+  overflow: hidden;
+}
+.chord-row-chip .chord-num {
+  font-size: 13px;
+  color: var(--fn-ink);
+}
+.chord-row-label[data-mode] {
+  height: 26px;
+  border-radius: 6px;
+  background: var(--secondary);
+  overflow: hidden;
+}
+.chord-map-cell {
+  height: 26px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background) 40%, black);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+}
+.chord-map-cell:hover {
+  border-color: var(--faint-foreground);
+}
+.chord-map-fill {
+  background: color-mix(in srgb, var(--fn, var(--foreground)) 42%, transparent);
+}
+.chord-map-cell[data-mastered] .chord-map-fill {
+  background: var(--fn-bg);
+}
+.chord-map-check {
+  height: 100%;
+  color: var(--fn-ink);
+  font-size: 11px;
+}
+.chord-map-cell[data-off-route] {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--input);
+}
+.chord-map-cell[data-here] {
+  outline: 2px solid var(--foreground);
+  outline-offset: 1.5px;
+}
+.chord-map-cell[data-next] {
+  border: 1.5px solid var(--muted-foreground);
+  animation: chord-breathe 1.8s ease-in-out infinite;
+}
+@keyframes chord-breathe {
+  50% {
+    border-color: var(--border);
+  }
+}
+.chord-legend {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border-radius: 3px;
+  vertical-align: -1px;
+  background: color-mix(in srgb, var(--background) 40%, black);
+  border: 1px solid var(--border);
+}
+.chord-legend[data-kind="here"] {
+  outline: 1.5px solid var(--foreground);
+  outline-offset: 1px;
+}
+.chord-legend[data-kind="next"] {
+  border: 1.5px solid var(--muted-foreground);
+}
+.chord-legend[data-kind="off"] {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--faint-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-map-cell[data-next] {
+    animation: none;
+  }
+}

@@ -1,17 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  ChordTokenSchema,
-  parseChordToken,
-  type ChordToken,
-} from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import {
-  STAGES,
-  stageById,
-  stageIsOpen,
-  stageOf,
-  stageOrder,
-  type StageId,
-} from "./stages";
+import { ChordTokenSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { stageById, stageOf, type StageId } from "./stages";
 
 const token = (text: string) => ChordTokenSchema.parse(text);
 const set = (...texts: string[]) => new Set(texts.map(token));
@@ -79,9 +68,6 @@ describe("stageOf — which family a chord belongs to", () => {
 
   test("the modal stages hold no chord at all — they open a key mode", () => {
     for (const id of ["mixolydian", "dorian", "lydian", "phrygian"] as const) {
-      const stage = stageById(id);
-      expect(stage.seed).toEqual([]);
-      expect(stage.modes).toEqual([id]);
       const held = cases
         .map(([, text]) => stageOf(token(text), MAJOR))
         .filter((stageId) => stageId === id);
@@ -109,107 +95,8 @@ describe("stageOf — which family a chord belongs to", () => {
   });
 });
 
-describe("notion — which of a stage's chords are one idea", () => {
-  const parts = (text: string) => parseChordToken(text);
-
-  test("every inversion of one chord shares the root position's notion", () => {
-    const inversions = stageById("inversions");
-    expect(inversions.notion(parts("7:4-3/1"))).toBe(V);
-    expect(inversions.notion(parts("7:4-3/2"))).toBe(V);
-    expect(inversions.notion(parts("7:4-3-3/3"))).toBe("7:4-3-3/0");
-    // A different chord is a different idea, so it is a step of its own.
-    expect(inversions.notion(parts("0:4-3/1"))).not.toBe(
-      inversions.notion(parts("7:4-3/1")),
-    );
-  });
-
-  test("every other stage makes each chord its own notion: it bundles nothing", () => {
-    for (const stage of STAGES) {
-      if (stage.id === "inversions") continue;
-      for (const text of [I, V, "2:3-4-3/0", "0:5-2/0", "7:4-3/1"]) {
-        expect(stage.notion(parts(text))).toBe(text);
-      }
-    }
-  });
-});
-
 describe("the stages themselves", () => {
-  test("the starting chords are the major-triads seed", () => {
-    expect(stageById("major-triads").seed.map(String)).toEqual([I, IV, V]);
-    expect(stageById("major-triads").modes).toEqual(["major"]);
-  });
-
-  test("the minor-keys seed is i, ♭VII and ♭VI, and it opens minor", () => {
-    expect(stageById("minor-keys").seed.map(String)).toEqual([
-      "0:3-4/0",
-      "10:4-3/0",
-      "8:4-3/0",
-    ]);
-    expect(stageById("minor-keys").modes).toEqual(["minor"]);
-  });
-
-  test("a stage's own seed belongs to its own pool", () => {
-    for (const stage of STAGES) {
-      for (const seed of stage.seed) {
-        expect(stageOf(seed, new Set<ChordToken>())).toBe(stage.id);
-      }
-    }
-  });
-
   test("stageById throws on an id no stage has", () => {
     expect(() => stageById("nope" as StageId)).toThrow('No stage "nope"');
-    expect(() => stageOrder("nope" as StageId)).toThrow('No stage "nope"');
-  });
-});
-
-describe("stageIsOpen", () => {
-  test("a stage with no seed and no modes is open from the start", () => {
-    for (const id of [
-      "sevenths",
-      "inversions",
-      "secondary",
-      "colour",
-    ] as const) {
-      expect(stageIsOpen(stageById(id), new Set<ChordToken>(), new Set())).toBe(
-        true,
-      );
-    }
-  });
-
-  test("major triads are open at level 1; minor keys are not", () => {
-    const modes = new Set(["major" as const]);
-    expect(stageIsOpen(stageById("major-triads"), MAJOR, modes)).toBe(true);
-    expect(stageIsOpen(stageById("minor-keys"), MAJOR, modes)).toBe(false);
-    expect(stageIsOpen(stageById("mixolydian"), MAJOR, modes)).toBe(false);
-  });
-
-  test("the seed AND the modes must both be there", () => {
-    const seed = stageById("minor-keys").seed;
-    const withChords = new Set([...MAJOR, ...seed]);
-    expect(
-      stageIsOpen(
-        stageById("minor-keys"),
-        withChords,
-        new Set(["major" as const]),
-      ),
-    ).toBe(false);
-    expect(
-      stageIsOpen(
-        stageById("minor-keys"),
-        withChords,
-        new Set(["major" as const, "minor" as const]),
-      ),
-    ).toBe(true);
-    // Half the seed is not the seed.
-    const [first] = seed;
-    if (first === undefined)
-      throw new Error("the minor-keys seed is not empty");
-    expect(
-      stageIsOpen(
-        stageById("minor-keys"),
-        new Set([...MAJOR, first]),
-        new Set(["major" as const, "minor" as const]),
-      ),
-    ).toBe(false);
   });
 });

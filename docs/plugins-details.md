@@ -553,120 +553,135 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
-    - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
+    - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
-        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum standing), useNextStep (the step on offer, re-read after every write), useUnlockStep / useUndoStep (the two writes, whose conflicts surface as a toast), and the two places the locked next step shows — <NextStepPad>, the ghost chord button at the end of the grid, and <NextStepRow>, the panel row that draws every kind of step. The Chord trainer's curriculum: the chord_unlocks ladder the learner climbs, the live chord.curriculum standing (what they hear and how much of a loop they name), the next step ranked by how many real songs it opens, and the unlock / undo writes.
+        - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
           - Server:
             - Contributes: `resource.declare` "chord.curriculum"
             - Uses:
-              - `apps/chord/song-index.countLoopsByNextChord`
-              - `apps/chord/song-index.countLoopsInSet`
-              - `apps/chord/song-index.loadIndexStatus`
               - `database.db`
               - `database/sql-column.parsedJson`
+              - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
             - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
             - Resources: `chord.curriculum` (invalidate)
             - Routes:
-              - `POST /api/chord/curriculum/next`
-              - `POST /api/chord/curriculum/unlock`
-              - `POST /api/chord/curriculum/undo`
+              - `POST /api/chord/curriculum/chord`
+              - `POST /api/chord/curriculum/chapter`
+              - `POST /api/chord/curriculum/blanks`
+              - `POST /api/chord/curriculum/cell`
           - Web:
             - Uses:
               - `apps/chord/vocabulary.ChordNumeral`
               - `apps/chord/vocabulary.chordToneStyle`
-              - `infra/endpoints.endpointQueryKey`
               - `infra/endpoints.getEndpointErrorMessage`
-              - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
+              - `primitives/collapsible.Collapsible`
+              - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.CollapsibleContent`
+              - `primitives/collapsible.CollapsibleTrigger`
               - `primitives/css/center.Center`
+              - `primitives/css/coords.pct`
+              - `primitives/css/coords.placedClasses`
+              - `primitives/css/coords.placedStyle`
               - `primitives/css/fill.Fill`
+              - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
+              - `primitives/overlay/popover.InlinePopover`
               - `shell/toast.showToast`
             - Exports (types):
-              - `NextStepRead`
-              - `StepReadiness`
-              - `StepWrite`
+              - `CurriculumWrites`
+              - `StandingLookup`
             - Exports (values):
-              - `NextStepPad`
-              - `NextStepRow`
-              - `stepReadiness`
+              - `BlanksGlyph`
+              - `PathCard`
+              - `PathProgress`
               - `useCurriculum`
-              - `useNextStep`
-              - `useUndoStep`
-              - `useUnlockStep`
+              - `useCurriculumWrites`
           - Core:
             - Uses:
               - `apps/chord/song-index.ChordToken`
               - `apps/chord/song-index.chordTokenFromParts`
               - `apps/chord/song-index.ChordTokenParts`
               - `apps/chord/song-index.ChordTokenSchema`
-              - `apps/chord/song-index.IndexStatusSchema`
               - `apps/chord/song-index.parseChordToken`
               - `infra/endpoints.defineEndpoint`
+              - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `AskedBox`
               - `AskedOptions`
-              - `AskRule`
-              - `ChordCandidate`
-              - `Curriculum`
-              - `CurriculumLevel`
-              - `FirstLevel`
-              - `LadderCounts`
-              - `LadderState`
-              - `NextStep`
-              - `NextStepAnswer`
-              - `NextStepChoice`
+              - `Blanks`
+              - `Cell`
+              - `CellStanding`
+              - `Chapter`
+              - `ChordState`
+              - `PathRow`
+              - `SelectedChord`
+              - `Selection`
+              - `SelectionChange`
               - `Stage`
-              - `StageEntry`
               - `StageId`
-              - `UnlockedChord`
-              - `UnlockStepBody`
+              - `TokenStanding`
             - Exports (values):
-              - `ASK_RULES`
+              - `ALL_CELLS`
+              - `applyCellEndpoint`
               - `askedPositions`
-              - `AskRuleSchema`
-              - `askRuleStep`
-              - `chooseNextStep`
+              - `BLANKS`
+              - `BLANKS_LABEL`
+              - `BlanksSchema`
+              - `canonicalSelection`
+              - `cellName`
+              - `cellOf`
+              - `CellSchema`
+              - `cellSelection`
+              - `cellStanding`
+              - `chapterById`
+              - `CHAPTERS`
+              - `CHORD_STATES`
               - `chordCurriculumResource`
-              - `curriculumFromSteps`
-              - `CurriculumSchema`
-              - `FIRST_LEVEL`
-              - `firstCurriculum`
-              - `FRESH_ANSWERS`
-              - `minStepWindows`
-              - `nextAskRule`
-              - `nextCurriculumStepEndpoint`
-              - `NextStepAnswerSchema`
-              - `NextStepSchema`
-              - `sameStep`
-              - `STAGE_HOLD_SHARE`
+              - `chordState`
+              - `ChordStateSchema`
+              - `firstSelection`
+              - `nextCell`
+              - `onRoute`
+              - `PATH_TOKENS`
+              - `pathOrder`
+              - `playableChords`
+              - `practisedChords`
+              - `ROUTE`
+              - `routeOf`
+              - `sameCell`
+              - `sameSelection`
+              - `SelectedChordSchema`
+              - `SelectionSchema`
+              - `setBlanksEndpoint`
+              - `setChapterStateEndpoint`
+              - `setChordStateEndpoint`
               - `STAGE_IDS`
               - `stageById`
               - `StageIdSchema`
-              - `stageIsOpen`
               - `stageOf`
-              - `stageOrder`
               - `STAGES`
-              - `targetIsIsolated`
-              - `undoCurriculumStepEndpoint`
-              - `unlockCurriculumStepEndpoint`
-              - `UnlockedChordSchema`
-              - `UnlockStepBodySchema`
-              - `unopenedStages`
+              - `withBlanks`
+              - `withChapterState`
+              - `withChordState`
           - Cross-plugin:
-            - Imported by: `apps/chord/trainer`
+            - Imported by:
+              - `apps/chord/progress`
+              - `apps/chord/trainer`
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -716,6 +731,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/chord/rounds`
           - Core:
             - Uses:
+              - `apps/chord/curriculum.Blanks`
+              - `apps/chord/curriculum.BLANKS`
+              - `apps/chord/curriculum.BlanksSchema`
               - `apps/chord/song-index.ChordToken`
               - `apps/chord/song-index.ChordTokenSchema`
               - `apps/chord/song-index.LOOP_SHAPE_IDS`
@@ -729,6 +747,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ChordProgressParams`
               - `ChordStanding`
               - `DecodedProgressParams`
+              - `LevelStanding`
               - `RecordRoundBody`
               - `RoundAnswer`
             - Exports (values):
@@ -738,6 +757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ChordStandingSchema`
               - `decodeProgressParams`
               - `encodeProgressParams`
+              - `LevelStandingSchema`
               - `MASTERY_WINDOW`
               - `MAX_ANSWER_MS`
               - `MIN_ANSWER_MS`
@@ -943,20 +963,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/progress`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
-        - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per unlocked chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
+        - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
           - Web:
             - Slots: `chord-trainer.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "chord-trainer"
             - Uses:
-              - `apps/chord/curriculum.NextStepPad`
-              - `apps/chord/curriculum.NextStepRead`
-              - `apps/chord/curriculum.NextStepRow`
-              - `apps/chord/curriculum.stepReadiness`
-              - `apps/chord/curriculum.StepReadiness`
+              - `apps/chord/curriculum.PathCard`
+              - `apps/chord/curriculum.PathProgress`
+              - `apps/chord/curriculum.StandingLookup`
               - `apps/chord/curriculum.useCurriculum`
-              - `apps/chord/curriculum.useNextStep`
-              - `apps/chord/curriculum.useUndoStep`
-              - `apps/chord/curriculum.useUnlockStep`
               - `apps/chord/piano.PianoCard`
               - `apps/chord/piano.useChordSoundSource`
               - `apps/chord/piano.usePiano`
@@ -986,7 +1001,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/yield.yieldClass`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -1079,7 +1093,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `videoStatusSummaryEndpoint`
           - Cross-plugin:
             - Imported by: `apps/chord/song-index`
-        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's locked next step, so one chord reads the same everywhere.
+        - **`vocabulary`** — How a chord is drawn, wherever it is drawn: <ChordNumeral> (the Roman numeral in the display serif, its quality mark and inversion figure raised beside it) and chordToneStyle (the degree's colour and tile depth, as the --fn custom properties the .chord-tone paint reads). Shared by the trainer's boxes, buttons and chips and by the curriculum's Path card (its chips and map rows), so one chord reads the same everywhere.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports (values):
@@ -24028,6 +24042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useExpandAll`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/curriculum`
           - `apps/deploy/ssh-setup`
           - `apps/mail/reading-pane`
           - `build/build-logs`
@@ -24759,6 +24774,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `placedStyle`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/sonata/notation`
@@ -24930,6 +24946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
+              - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
               - `apps/sonata/library`
@@ -26677,6 +26694,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
+              - `apps/chord/curriculum`
               - `apps/chord/piano`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
@@ -29914,6 +29932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `InlinePopover`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/curriculum`
               - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`

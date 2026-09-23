@@ -4,10 +4,30 @@ import {
   ChordTokenSchema,
   type ChordToken,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  BLANKS,
+  type Blanks,
+} from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 
 // ── The live stats: `chord.progress` ─────────────────────────────────────────
 
 const count = z.number().int().min(0);
+
+/** One chord at one blanks level, over that level's last `MASTERY_WINDOW` answers. */
+export const LevelStandingSchema = z.object({
+  answers: count,
+  accuracy: z.number().nullable(),
+  mastered: z.boolean(),
+});
+export type LevelStanding = z.infer<typeof LevelStandingSchema>;
+
+/** The same mastery rule, once per blanks level: what the path's map reads. */
+const ByBlanksSchema = z.object(
+  Object.fromEntries(BLANKS.map((b) => [b, LevelStandingSchema])) as Record<
+    Blanks,
+    typeof LevelStandingSchema
+  >,
+);
 
 /** One chord, over its last `MASTERY_WINDOW` answers (`chordMastery`). */
 export const ChordStandingSchema = z.object({
@@ -18,6 +38,8 @@ export const ChordStandingSchema = z.object({
   accuracy: z.number().nullable(),
   medianMs: z.number().nullable(),
   mastered: z.boolean(),
+  /** The chord at each blanks level; answers saved before the setting existed count at none. */
+  byBlanks: ByBlanksSchema,
 });
 export type ChordStanding = z.infer<typeof ChordStandingSchema>;
 

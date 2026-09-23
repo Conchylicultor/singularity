@@ -5,26 +5,16 @@ import {
   type ChordToken,
   type ChordTokenParts,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 
 // ── Stages: the families a chord can come from ───────────────────────────────
 //
-// A stage is one notion the learner works through — major-key triads, minor
-// keys, sevenths, inversions. It says which key modes it opens, which chords
-// open it (its seed), and which chords belong to it once it is open (its pool).
-//
-// Nothing here says WHICH chord comes next: that is `ladder.ts`, which ranks
-// the candidates by how many real songs each would open. A stage only says
-// what a chord IS.
+// A stage is a family of chords — major-key triads, minor keys, sevenths,
+// inversions. It only says what a chord IS; which chords the learner practises,
+// and in what order the path suggests them, is `path.ts`.
 //
 // Membership is by predicate over the token's parts, and the FIRST stage of
 // `STAGES` whose predicate matches owns the chord. So a chord nobody thought
-// of still lands in exactly one pool, and a chord in no pool is never offered.
-//
-// A stage also says which of its chords are ONE IDEA — its `notion`. Chords
-// sharing a notion are unlocked by one step, because a level teaches a notion:
-// V⁶ and V⁶₄ are both "V, with another note in the bass", and a ladder that
-// spent a level on each would be teaching the same thing twice.
+// of still lands in exactly one family.
 
 export const STAGE_IDS = [
   "major-triads",
@@ -43,34 +33,17 @@ export const StageIdSchema = z.enum(STAGE_IDS);
 
 export type Stage = {
   id: StageId;
-  /** What the learner is told they are starting: "Minor keys". */
+  /** The family's name: "Minor keys". */
   title: string;
-  /** The key modes this stage opens. Empty when it opens none. */
-  modes: readonly HookpadMode[];
-  /** The chords unlocked together to open the stage. Empty when it needs none. */
-  seed: readonly ChordToken[];
   /**
-   * Whether this chord belongs to the stage's pool.
+   * Whether this chord belongs to the stage.
    *
-   * `unlocked` is the learner's whole set: the inversions pool reads it,
-   * because an inversion is only worth learning once its root-position twin is
-   * known. Pure — the same arguments always give the same answer.
+   * `known` is a set of chords the caller treats as known: the inversions
+   * stage reads it, because an inversion is only in the family once its
+   * root-position twin is. Pure — the same arguments always give the same answer.
    */
-  holds(parts: ChordTokenParts, unlocked: ReadonlySet<ChordToken>): boolean;
-  /**
-   * The NOTION this chord belongs to. Candidates of this stage sharing a notion
-   * are unlocked by ONE step, because they are one idea.
-   *
-   * Required of every stage: a stage that bundles nothing answers `ownNotion`,
-   * so "this stage bundles nothing" is a stated answer rather than a missing
-   * method. The string is compared, never shown — only its equality matters.
-   */
-  notion(parts: ChordTokenParts): string;
+  holds(parts: ChordTokenParts, known: ReadonlySet<ChordToken>): boolean;
 };
-
-/** Every chord its own notion: this stage bundles nothing, and says so. */
-export const ownNotion = (parts: ChordTokenParts): string =>
-  chordTokenFromParts(parts);
 
 // ── Reading a chord against the scales ───────────────────────────────────────
 
@@ -144,9 +117,6 @@ const shapeOf = (parts: ChordTokenParts) =>
 
 // ── The stages ───────────────────────────────────────────────────────────────
 
-const chord = (root: number, intervals: number[]): ChordToken =>
-  chordTokenFromParts({ root, intervals, inversion: 0 });
-
 /**
  * Every stage, in classification order. A chord belongs to the first one that
  * holds it, so the order decides the borderline cases:
@@ -161,113 +131,72 @@ const chord = (root: number, intervals: number[]): ChordToken =>
  *   secondary dominant;
  * - everything else in root position is colour: sus, sixths, added notes.
  *
- * The modal stages hold no chord at all — they open a key mode, and the chords
- * heard in it are ones the learner already knows.
+ * The modal stages hold no chord at all — they are key modes, and the chords
+ * heard in them are ones the learner already knows.
  */
 export const STAGES: readonly Stage[] = [
   {
     id: "major-triads",
     title: "Major keys",
-    modes: ["major"],
-    seed: [chord(0, [4, 3]), chord(5, [4, 3]), chord(7, [4, 3])],
     holds: (parts) =>
       rootPosition(parts) && MAJOR_TRIAD_SHAPES.has(shapeOf(parts)),
-    notion: ownNotion,
   },
   {
     id: "minor-keys",
     title: "Minor keys",
-    modes: ["minor"],
-    // i, ♭VII, ♭VI — the three that open the most minor-key songs together.
-    seed: [chord(0, [3, 4]), chord(10, [4, 3]), chord(8, [4, 3])],
     holds: (parts) =>
       rootPosition(parts) && MINOR_TRIAD_SHAPES.has(shapeOf(parts)),
-    notion: ownNotion,
   },
   {
     id: "sevenths",
     title: "Sevenths",
-    modes: [],
-    seed: [],
     holds: (parts) =>
       rootPosition(parts) && DIATONIC_SEVENTH_SHAPES.has(shapeOf(parts)),
-    notion: ownNotion,
   },
   {
     id: "inversions",
     title: "Inversions",
-    modes: [],
-    seed: [],
     // Only once the same chord in root position is known: naming a V⁶ before a
-    // V is two notions at once. A chord whose twin is missing simply never
-    // ranks — it belongs to no pool, so it is never offered.
-    holds: (parts, unlocked) =>
+    // V is two notions at once. A chord whose twin is missing belongs to no
+    // family at all.
+    holds: (parts, known) =>
       parts.inversion > 0 &&
-      unlocked.has(chordTokenFromParts({ ...parts, inversion: 0 })),
-    // The notion is the chord itself, not this one arrangement of it: every
-    // inversion of a V is "V, with another note in the bass", so they arrive
-    // together and one level teaches one idea.
-    notion: (parts) => chordTokenFromParts({ ...parts, inversion: 0 }),
+      known.has(chordTokenFromParts({ ...parts, inversion: 0 })),
   },
   {
     id: "secondary",
     title: "Secondary dominants",
-    modes: [],
-    seed: [],
     holds: (parts) =>
       rootPosition(parts) &&
       (sameStack(parts.intervals, MAJOR_TRIAD) ||
         sameStack(parts.intervals, DOMINANT_SEVENTH)),
-    notion: ownNotion,
   },
   {
     id: "colour",
     title: "Colour chords",
-    modes: [],
-    seed: [],
     holds: rootPosition,
-    notion: ownNotion,
   },
   {
     id: "mixolydian",
     title: "Mixolydian",
-    modes: ["mixolydian"],
-    seed: [],
     holds: () => false,
-    notion: ownNotion,
   },
   {
     id: "dorian",
     title: "Dorian",
-    modes: ["dorian"],
-    seed: [],
     holds: () => false,
-    notion: ownNotion,
   },
   {
     id: "lydian",
     title: "Lydian",
-    modes: ["lydian"],
-    seed: [],
     holds: () => false,
-    notion: ownNotion,
   },
   {
     id: "phrygian",
     title: "Phrygian",
-    modes: ["phrygian"],
-    seed: [],
     holds: () => false,
-    notion: ownNotion,
   },
 ];
-
-/** Where a stage sits in classification order: the tie-break when two steps are worth the same. */
-export function stageOrder(id: StageId): number {
-  const order = STAGES.findIndex((stage) => stage.id === id);
-  if (order === -1) throw new Error(`No stage "${id}"`);
-  return order;
-}
 
 /** The stage with this id. Throws when there is none. */
 export function stageById(id: StageId): Stage {
@@ -277,30 +206,13 @@ export function stageById(id: StageId): Stage {
 }
 
 /**
- * The stage this chord belongs to, or `null` when no pool holds it — an
- * inversion whose root-position twin the learner does not know. Such a chord is
- * never offered; it is not a failure, it is simply not a step yet.
+ * The stage this chord belongs to, or `null` when none holds it — an
+ * inversion whose root-position twin is not in `known`.
  */
 export function stageOf(
   token: ChordToken,
-  unlocked: ReadonlySet<ChordToken>,
+  known: ReadonlySet<ChordToken>,
 ): StageId | null {
   const parts = parseChordToken(token);
-  return STAGES.find((stage) => stage.holds(parts, unlocked))?.id ?? null;
-}
-
-/**
- * Whether the stage is already open: its whole seed unlocked and every mode it
- * opens already on. A stage with neither (sevenths, inversions, secondary,
- * colour) is open from the start — there is nothing to open.
- */
-export function stageIsOpen(
-  stage: Stage,
-  unlocked: ReadonlySet<ChordToken>,
-  modes: ReadonlySet<HookpadMode>,
-): boolean {
-  return (
-    stage.seed.every((token) => unlocked.has(token)) &&
-    stage.modes.every((mode) => modes.has(mode))
-  );
+  return STAGES.find((stage) => stage.holds(parts, known))?.id ?? null;
 }

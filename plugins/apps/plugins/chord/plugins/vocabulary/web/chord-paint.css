@@ -1,7 +1,7 @@
 /* How a chord is drawn, wherever it is drawn: its colour and its numeral.
  *
  * Every surface that shows a chord — the trainer's answer boxes and buttons,
- * the side panel's chips, the curriculum's locked next step — shares these two
+ * the side panel's chips, the curriculum's Path card — shares these two
  * rules, so the same chord reads the same everywhere. The paint around them
  * (the box states, the pad's shadow) stays with the surface that owns it.
  *

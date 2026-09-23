@@ -36,47 +36,45 @@ prev, next)` between two playhead reads — a forward move finishes every box
   whose end it crosses (within 50 ms), a jump back (the loop wrapping) finishes
   the box it cut off within 0.3 s of its end. A box filled before its chord
   finished counts the minimum, 0.3 s.
-- `weakestChord(unlocked, standings)`: the target of the next loop query —
+- `weakestChord(practised, standings)`: the target of the next loop query —
   not mastered first, then the fewest recent answers, then the lowest accuracy;
-  ties keep the unlocked order.
+  ties keep the order given.
 
 ## web
 
 `trainerPane` (route `chord-trainer`, segment `""`, `appIndex`) renders
 `<SongIndexGate><TrainerScreen/></SongIndexGate>`.
 
-- **The palette comes from the curriculum** (`useCurriculum`): the unlocked
-  chords, the key modes and the ask rule. Until the standing lands the screen
-  shows its loading state — three buttons that are about to become four would
-  be a claim about what this learner has.
+- **Everything comes from the learner's selection** (`useCurriculum`): which
+  chords are practised, heard or off, the blanks (one / half / all) and the key
+  modes. Until it lands the screen shows its loading state — buttons that are
+  about to change would be a claim about what this learner chose.
 - **The loop queue** (`useLoopQueue`): the loop on screen is the queue's
   first. When it is the last one left, 10 more are asked for
-  (`findLoopsEndpoint`: the unlocked chords, the curriculum's modes, the
-  weakest chord as target, the sections of the last 20 loops moved past and of
-  the ones still queued left out). Nothing is asked until the progress has
-  loaded. An empty answer shows "No song fits these chords yet" (with Try
-  again), never a blank screen; `not-ready` and a failed query show in the same
-  place. **Each queued loop carries the target its batch was asked for**, so
-  the round asks about the chord the loop was chosen for — re-reading the
-  weakest chord when the round is built would name a different one, since the
-  progress moves in between. **Unlocking drops the queue.** The loops still
-  waiting were drawn from the old palette, so a step would otherwise take a
-  whole batch to be heard; everything behind the loop on screen goes and a
-  fresh query runs at once (the loop on screen stays — the learner may be
-  mid-answer). **Undo drops it too**: taking a step back removes a chord, and
-  the round on screen was very likely chosen for it, so a round the new palette
-  cannot hold goes with the rest rather than asking for a chord the learner no
-  longer has. The sections already played are remembered across the change.
-- **Which boxes the round asks about** (`askedPositions`, curriculum): the
-  chord being practised early on, then the cadence, then the whole loop — and
-  always the target alone while it is a chord unlocked ABOVE the level the rung
-  was set at and still settling (the curriculum's `askRuleLevel`; a chord the
-  learner already had when they paid for the rung is not isolated, or paying
-  would change nothing). The rest are **given**: they
-  show their chord in its own colour, dimmed and flat, are not click targets
-  before the check, and are never marked right or wrong. After the check they
-  replay their stretch of the song like any other box, because they are part of
-  the loop. The heading counts asked boxes only ("Chord 1 of 2").
+  (`findLoopsEndpoint`: every chord on — practised and heard — as the chords a
+  loop may hold, the key modes, the weakest PRACTISED chord as target, the
+  sections of the last 20 loops moved past and of the ones still queued left
+  out). Nothing is asked until the progress has loaded, and nothing at all
+  while no chord is practised ("No chord is practised"). An empty answer shows
+  "No song fits these chords yet" (with Try again), never a blank screen;
+  `not-ready` and a failed query show in the same place. **Each queued loop
+  carries the target its batch was asked for**, so the round asks about the
+  chord the loop was chosen for. **Changing the chords drops the queue**: the
+  loops still waiting were drawn from the old chords, so everything behind the
+  loop on screen goes and a fresh query runs at once. The loop on screen stays
+  (the learner may be mid-answer) unless the new chords cannot hold it — a
+  chord in it turned off, or its target no longer practised. The sections
+  already played are remembered across the change.
+- **Which boxes the round asks about** (`askedPositions`, curriculum): only a
+  practised chord's box can be blank; `one` asks the target's last box, `half`
+  the practised boxes in the second half, `all` every practised box. The rest
+  are **given**: they show their chord in its own colour, dimmed and flat, are
+  not click targets before the check, and are never marked right or wrong.
+  After the check they replay their stretch of the song like any other box,
+  because they are part of the loop. The heading counts asked boxes only
+  ("Chord 1 of 2"). **The round's key includes the asked positions**, so
+  changing the blanks or the chords mid-round deals the same loop again with
+  the new boxes; the round is saved with the blanks it was dealt with.
 - **The player** stays mounted from loop to loop (a new video loads in place).
   Browsers block sound until the page is used, so the first loop waits for Play;
   after a Play or a Next every loop starts by itself (`autoplay`).
@@ -85,7 +83,7 @@ prev, next)` between two playhead reads — a forward move finishes every box
   chord finishes. Nothing re-renders for it.
 - **Keys** (surface-scoped, `useSurfaceShortcuts`; `useChordKeys`): the chord's
   root digit answers (`chordKeyPlan`, so ♭VII is on the 7). A digit several
-  unlocked chords share instead **arms** — those chords light, numbered on their
+  practised chords share instead **arms** — those chords light, numbered on their
   buttons, and the next number picks one; Escape drops the pick, and so does
   every other key of the trainer. While a digit is armed **it owns the number
   keys**: the plan's own digit shortcuts stand down and the registered numbers
@@ -119,17 +117,16 @@ prev, next)` between two playhead reads — a forward move finishes every box
   hands `<PianoCard>` a `play` function, so the card's playable keys sound on
   the same context rather than opening a second one.
 - **The progress panel** (`ProgressPanel`): today (songs, % right, seconds per
-  chord), an all-time line, and "Your chords" — the level and the stage being
-  worked through, then one line per unlocked chord **in unlock order** (chip,
-  accuracy meter marked at 90 %, accuracy, median time red over 2 s, a check
-  once mastered), then the locked next step (`<NextStepRow>`). Undo sits beside
-  the level: it takes back the last step, not the rounds already played. The
-  panel reads "Level N" twice — the level the learner is on, and the one the
-  locked row would reach — so the first line is named `Your level`. It is
-  a **plain component, not a DataView**: a small fixed status list (the
-  unlocked set, a few dozen chords at most), not a collection anyone searches,
-  sorts or filters. It shows a loading state until `chord.progress` has its
-  first value.
+  chord), an all-time line, "Your chords" — the path's step bar for the
+  chapter in hand (`<PathProgress>`), then one line per chord that is on, in
+  path order (chip, accuracy meter marked at 90 %, accuracy, median time red
+  over 2 s, a check once mastered; a chord only heard is dimmed and reads
+  "hear only") — and the Path card (`<PathCard>`, curriculum), folded, which
+  holds every practice control. The panel builds the path's `standing` from
+  `chord.progress` (`byBlanks`); the progress it reads covers every chord on
+  and every chord the path names. It is a **plain component, not a DataView**:
+  a small fixed status list, not a collection anyone searches, sorts or
+  filters. It shows a loading state until `chord.progress` has its first value.
 - **The words, and the piano** (`piano/web`): one `songVocabulary(songKey)` and
   one `songKeyTonicPc(songKey)` per loop, so nothing on screen names a chord
   against one key while sounding it against another. Every chord is named — the
@@ -150,12 +147,6 @@ prev, next)` between two playhead reads — a forward move finishes every box
   then), which is what stops the keyboard giving the answer away; `lastPlayed`
   is a `RoundSession` field, so the next song clears it with the rest and there
   is no reset to remember.
-- **The locked next step** shows in two places, both from `curriculum/web`:
-  `<NextStepPad>` at the end of the button grid (chord steps only — the grid
-  has no way to draw a key mode) and `<NextStepRow>` in the panel (every kind).
-  Both take `stepReadiness(unlocked, progress)`, which has **three** answers:
-  until the standing lands nobody can say whether the learner is ready, so the
-  controls wait rather than reading "Add anyway" and taking it back.
 
 ### Paint
 
@@ -172,9 +163,8 @@ at 1000 px, with a named disable).
 
 A chord's own colour and numeral are drawn the same wherever they appear, so
 they live with the vocabulary (`vocabulary/web`: `chordToneStyle`,
-`<ChordNumeral>`, `chord-paint.css`) and the curriculum's locked step draws
-them too. The ghost pad's box (`curriculum/web`) matches `.chord-pad`'s height
-and corners so the two sit in one grid.
+`<ChordNumeral>`, `chord-paint.css`) and the curriculum's Path card (its
+chord chips and map rows) draws them too.
 
 ## e2e
 
@@ -198,20 +188,15 @@ piano.
 
 ## Plugin reference
 
-- Description: The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per unlocked chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
+- Description: The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
 - Web:
   - Slots: `chord-trainer.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "chord-trainer"
   - Uses:
-    - `apps/chord/curriculum.NextStepPad`
-    - `apps/chord/curriculum.NextStepRead`
-    - `apps/chord/curriculum.NextStepRow`
-    - `apps/chord/curriculum.stepReadiness`
-    - `apps/chord/curriculum.StepReadiness`
+    - `apps/chord/curriculum.PathCard`
+    - `apps/chord/curriculum.PathProgress`
+    - `apps/chord/curriculum.StandingLookup`
     - `apps/chord/curriculum.useCurriculum`
-    - `apps/chord/curriculum.useNextStep`
-    - `apps/chord/curriculum.useUndoStep`
-    - `apps/chord/curriculum.useUnlockStep`
     - `apps/chord/piano.PianoCard`
     - `apps/chord/piano.useChordSoundSource`
     - `apps/chord/piano.usePiano`
@@ -241,7 +226,6 @@ piano.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

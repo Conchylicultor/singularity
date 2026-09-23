@@ -10,9 +10,6 @@ import {
   ChordNumeral,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
-import { NextStepPad } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
-import type { StepReadiness } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
-import type { NextStep } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -22,7 +19,7 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { Picking } from "../internal/use-chord-keys";
 
 /**
- * One button per unlocked chord: its numeral, its colour (a bar at the left
+ * One button per practised chord: its numeral, its colour (a bar at the left
  * edge, from its scale degree), the key that answers it, and under it either
  * the chord's function or — once reveal is on — its name in the song's key.
  * Before the check a click fills the selected box; after it, the chord plays on
@@ -33,32 +30,21 @@ import type { Picking } from "../internal/use-chord-keys";
  * it, and while that digit is armed those buttons are lit. Past seven chords on
  * one digit the number depends on which page is showing, so at rest the button
  * shows its digit alone and the second number appears only while armed.
- *
- * At the end sits the locked next step, when it is a chord (`<NextStepPad>`).
  */
 export function ChordButtons({
   plan,
   lit,
   picking,
   nameChord,
-  nextStep,
   onPick,
 }: {
-  /** The unlocked chords grouped by the key that answers them (`chordKeyPlan`). */
+  /** The practised chords grouped by the key that answers them (`chordKeyPlan`). */
   plan: readonly ChordKeyGroup[];
   lit: ChordToken | null;
   /** The digit waiting for its second key and what that key reaches, or null. */
   picking: Picking | null;
   /** Names a chord in the song's key. */
   nameChord: (token: ChordToken) => string;
-  /** The locked next step, when there is one to show. */
-  nextStep: {
-    step: NextStep;
-    level: number;
-    readiness: StepReadiness;
-    adding: boolean;
-    onAdd: () => void;
-  } | null;
   onPick: (token: ChordToken) => void;
 }) {
   return (
@@ -99,15 +85,6 @@ export function ChordButtons({
           );
         });
       })}
-      {nextStep !== null && (
-        <NextStepPad
-          step={nextStep.step}
-          level={nextStep.level}
-          readiness={nextStep.readiness}
-          adding={nextStep.adding}
-          onAdd={nextStep.onAdd}
-        />
-      )}
     </Grid>
   );
 }

@@ -1,35 +1,35 @@
+import { z } from "zod";
 import { integer, pgTable, timestamp } from "drizzle-orm/pg-core";
-import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { NextStepSchema } from "../../core/step";
+import {
+  parsedJson,
+  parsedText,
+} from "@plugins/database/plugins/sql-column/server";
+import { HookpadModeSchema } from "@plugins/integrations/plugins/hooktheory/core";
+import { BlanksSchema } from "../../core/blanks";
+import { SelectedChordSchema } from "../../core/selection";
 
-// The learner's own history: one row per step they chose to take. Nothing can
-// rebuild it — it is a record of decisions, not of data — so the table is KEPT
-// in worktree forks and backups, and it stays in the change feed, which is what
-// pushes `chord.curriculum`. No growth bound is declared: a row is written only
-// when a person presses Add, so the table grows at the speed of someone
-// learning, and the retention monitor's silencing set must only hold bounds
-// that are real. See the plugin's CLAUDE.md.
+// What the learner has chosen: one row, written only when they change a
+// setting. It is theirs and nothing can rebuild it, so it is KEPT in worktree
+// forks and backups, and stays in the change feed, which is what pushes
+// `chord.curriculum`. No growth bound: it is one row, always. See the plugin's
+// CLAUDE.md.
+//
+// No row yet means nobody has changed anything: the loader answers
+// `firstSelection()` and the first write inserts the row.
 //
 // This file is a load-order leaf (drizzle-kit loads it on its own), so it
-// imports the step schema from its core module directly, never through the
+// imports its schemas from their core modules directly, never through the
 // core barrel.
 
-/** One step up the ladder: what it unlocked, and when. */
-export const _chordUnlocks = pgTable("chord_unlocks", {
-  /**
-   * The level the step reached: 2, 3, 4… Level 1 is `FIRST_LEVEL`, a constant,
-   * so there is never a row for it. Primary key, so two tabs unlocking at once
-   * cannot both write the same level — the second fails loudly.
-   */
-  position: integer("position").primaryKey(),
-  /**
-   * The step itself (`NextStep`): the chords and modes it opened, with the
-   * stage they came from, or the ask rung it reached. The step is stored, not a
-   * stage index, so a later edit to the stage list cannot rewrite what someone
-   * already unlocked.
-   */
-  step: parsedJson("step", NextStepSchema).notNull(),
-  unlockedAt: timestamp("unlocked_at", { withTimezone: true })
+export const _chordCurriculum = pgTable("chord_curriculum", {
+  /** Always 1: there is one learner per instance, so one selection. */
+  id: integer("id").primaryKey(),
+  /** Every chord that is not off, and whether it is practised or only heard. */
+  chords: parsedJson("chords", z.array(SelectedChordSchema)).notNull(),
+  blanks: parsedText("blanks", BlanksSchema).notNull(),
+  /** The key modes a loop may be in. Never empty. */
+  modes: parsedJson("modes", z.array(HookpadModeSchema).min(1)).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });

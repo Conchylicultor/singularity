@@ -1,57 +1,53 @@
-export {
-  STAGE_IDS,
-  STAGES,
-  StageIdSchema,
-  stageById,
-  stageIsOpen,
-  stageOf,
-  stageOrder,
-} from "./stages";
+export { STAGE_IDS, STAGES, StageIdSchema, stageById, stageOf } from "./stages";
 export type { Stage, StageId } from "./stages";
-export { NextStepSchema, sameStep } from "./step";
-export type { NextStep } from "./step";
+export { BLANKS, BlanksSchema } from "./blanks";
+export type { Blanks } from "./blanks";
+export { askedPositions } from "./ask";
+export type { AskedBox, AskedOptions } from "./ask";
 export {
-  ASK_RULES,
-  AskRuleSchema,
-  FRESH_ANSWERS,
-  askedPositions,
-  nextAskRule,
-  targetIsIsolated,
-} from "./ask";
-export type { AskRule, AskedBox, AskedOptions } from "./ask";
-export { FIRST_LEVEL } from "./first-level";
-export type { FirstLevel } from "./first-level";
+  CHORD_STATES,
+  ChordStateSchema,
+  SelectedChordSchema,
+  SelectionSchema,
+  canonicalSelection,
+  chordState,
+  playableChords,
+  practisedChords,
+  sameSelection,
+} from "./selection";
+export type { ChordState, SelectedChord, Selection } from "./selection";
 export {
-  askRuleStep,
-  chooseNextStep,
-  minStepWindows,
-  STAGE_HOLD_SHARE,
-  unopenedStages,
-} from "./ladder";
+  ALL_CELLS,
+  BLANKS_LABEL,
+  CHAPTERS,
+  PATH_TOKENS,
+  ROUTE,
+  cellName,
+  cellOf,
+  cellSelection,
+  cellStanding,
+  chapterById,
+  firstSelection,
+  nextCell,
+  onRoute,
+  pathOrder,
+  routeOf,
+  sameCell,
+} from "./path";
 export type {
-  ChordCandidate,
-  LadderCounts,
-  LadderState,
-  NextStepChoice,
-  StageEntry,
-} from "./ladder";
+  Cell,
+  CellStanding,
+  Chapter,
+  PathRow,
+  TokenStanding,
+} from "./path";
+export { chordCurriculumResource } from "./resource";
 export {
-  CurriculumSchema,
-  UnlockedChordSchema,
-  chordCurriculumResource,
-  curriculumFromSteps,
-  firstCurriculum,
-} from "./resource";
-export type { Curriculum, UnlockedChord } from "./resource";
-export {
-  NextStepAnswerSchema,
-  UnlockStepBodySchema,
-  nextCurriculumStepEndpoint,
-  undoCurriculumStepEndpoint,
-  unlockCurriculumStepEndpoint,
+  CellSchema,
+  applyCellEndpoint,
+  setBlanksEndpoint,
+  setChapterStateEndpoint,
+  setChordStateEndpoint,
 } from "./endpoints";
-export type {
-  CurriculumLevel,
-  NextStepAnswer,
-  UnlockStepBody,
-} from "./endpoints";
+export { withBlanks, withChapterState, withChordState } from "./change";
+export type { SelectionChange } from "./change";

@@ -14,6 +14,7 @@ import {
   ChordTokenSchema,
   LOOP_SHAPE_IDS,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { BlanksSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 
 // The learner's history: every checked round and the answer given for each of
 // its boxes. Nothing can rebuild it, so both tables are kept in worktree forks
@@ -75,6 +76,12 @@ export const _chordAnswers = pgTable(
     correct: boolean("correct").notNull(),
     answerMs: integer("answer_ms").notNull(),
     /**
+     * How much of the loop was blank when this box was asked (the curriculum's
+     * blanks setting): the path reads a chord's standing per level. Null for
+     * every answer saved before the setting existed.
+     */
+    blanks: parsedText("blanks", BlanksSchema),
+    /**
      * The round's check time: the trainer reports how long each box took, not
      * when it was filled. Within a round, `position` orders the answers.
      */
@@ -84,6 +91,13 @@ export const _chordAnswers = pgTable(
     // A chord's last MASTERY_WINDOW answers: one index scan per chord.
     index("chord_answers_token_answered_at_idx").on(
       t.token,
+      t.answeredAt.desc(),
+      t.position.desc(),
+    ),
+    // A chord's last MASTERY_WINDOW answers at one blanks level.
+    index("chord_answers_token_blanks_answered_at_idx").on(
+      t.token,
+      t.blanks,
       t.answeredAt.desc(),
       t.position.desc(),
     ),

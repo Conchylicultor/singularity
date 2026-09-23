@@ -5,6 +5,7 @@ import {
   ChordTokenSchema,
   LOOP_SHAPE_IDS,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { BlanksSchema } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 
 // ── Saving a checked round ───────────────────────────────────────────────────
 
@@ -43,6 +44,8 @@ export const RecordRoundBodySchema = z
      * boxes.
      */
     givenCount: z.number().int().min(0),
+    /** How much of the loop was blank: the curriculum's setting the round was built with. */
+    blanks: BlanksSchema,
   })
   .refine(
     (body) => {

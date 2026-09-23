@@ -337,3 +337,8 @@
     animation: none;
   }
 }
+
+/* A chord the learner only hears: listed, dimmed, never scored. */
+[data-heard-only] .chord-chip {
+  opacity: 0.6;
+}

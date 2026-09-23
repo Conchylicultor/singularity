@@ -8,7 +8,7 @@
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`browser`** — Minimal iframe-based web browser app.
-  - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked, asks you to name each chord, and keeps track of how well you know each one.
+  - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
   - **`debug`** — Debug app.
   - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
   - **`events`** — Events — track events from pluggable sources in one database.
