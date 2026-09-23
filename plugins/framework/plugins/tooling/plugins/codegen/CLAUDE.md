@@ -25,6 +25,8 @@
     - `framework/plugin-id.PLUGIN_FOLDERS`
     - `framework/plugin-id.PluginFolder`
     - `framework/plugin-id.PluginId`
+    - `framework/plugin-id.RUNTIME_FOLDERS`
+    - `framework/plugin-id.RuntimeFolder`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.TESTS_DIR`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
@@ -65,8 +67,10 @@
     - `plugin-meta/parse-utils.lineAt`
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
+    - `plugin-meta/parse-utils.parseBarrelExports`
     - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStaticCallId`
+    - `plugin-meta/parse-utils.readIfExists`
     - `plugin-meta/parse-utils.unresolvableCallIdMessage`
     - `plugin-meta/parse-utils.walkFilesAsync`
     - `plugin-meta/plugin-tree.buildPluginTree`

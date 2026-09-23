@@ -15,6 +15,7 @@ import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { buildEnrichedTree } from "./enriched-tree";
 import { assertNoTestCodeInFacts } from "./doc-facts-guard";
+import { collectTestHelpers, renderTestHelpers } from "./test-helpers-doc";
 
 /**
  * Marker appended to a plugin's `name — description` line when the app's own
@@ -116,6 +117,12 @@ function renderPluginFacts(
 
 type RenderMode = "detail" | "compact";
 
+function subtreeHasTestHelpers(p: PluginNode): boolean {
+  return (
+    collectTestHelpers(p).length > 0 || p.children.some(subtreeHasTestHelpers)
+  );
+}
+
 function countDescendants(p: PluginNode): number {
   let n = 0;
   for (const c of p.children) n += 1 + countDescendants(c);
@@ -136,23 +143,33 @@ function renderPluginTreeMd(
   const desc = pluginDescription(p);
   const descStr = desc ? ` — ${desc}` : "";
   const lbMarker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
+  // A collapsed entry hides its sub-tree, so it carries the marker when any
+  // plugin inside it publishes helpers.
+  const thMarker =
+    mode === "compact" &&
+    (p.collapsed ? subtreeHasTestHelpers(p) : collectTestHelpers(p).length > 0)
+      ? " [test helpers]"
+      : "";
   const exMarker = exclusionMarker(p, main);
 
   if (mode === "compact" && p.collapsed && p.children.length > 0) {
     const total = countDescendants(p);
     const subLabel = total === 1 ? "1 sub-plugin" : `${total} sub-plugins`;
     lines.push(
-      `${headerIndent}- **\`${p.name}\`**${lbMarker} [${subLabel}]${exMarker}${descStr}`,
+      `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker} [${subLabel}]${exMarker}${descStr}`,
     );
     return lines;
   }
 
   lines.push(
-    `${headerIndent}- **\`${p.name}\`**${lbMarker}${exMarker}${descStr}`,
+    `${headerIndent}- **\`${p.name}\`**${lbMarker}${thMarker}${exMarker}${descStr}`,
   );
 
   const includeBody = mode === "detail";
-  if (includeBody) renderPluginFacts(p, facets, bodyIndent, root, lines);
+  if (includeBody) {
+    renderPluginFacts(p, facets, bodyIndent, root, lines);
+    lines.push(...renderTestHelpers(collectTestHelpers(p), bodyIndent));
+  }
 
   if (p.children.length > 0) {
     lines.push(`${bodyIndent}- Plugins:`);
@@ -189,11 +206,11 @@ function renderTreeBody(
 
 const COMPACT_HEADER =
   "# Plugins (compact)\n\n" +
-  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`; collapsed plugins show `[N sub-plugins]` — open the plugin's own `CLAUDE.md` for its full sub-tree. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
+  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`; plugins publishing shared test fixtures (`<runtime>/testing/` barrels) are marked `[test helpers]` (a collapsed entry, when any plugin inside it does), listed under *Test helpers* in the details doc; collapsed plugins show `[N sub-plugins]` — open the plugin's own `CLAUDE.md` for its full sub-tree. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
 
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
-  "Full reference for every plugin. Read this on demand (e.g. before writing a helper, to check whether one already exists). The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n";
+  "Full reference for every plugin. Read this on demand (e.g. before writing a helper or a test fixture, to check whether one already exists). A plugin's *Test helpers* item lists its `<runtime>/testing/` barrels: shared fixtures that only test code may import. The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n";
 
 export async function renderCompactDoc({
   root,
@@ -229,6 +246,7 @@ function renderPluginClaudeAutogen(
     );
   }
   renderPluginFacts(p, facets, "", root, lines);
+  lines.push(...renderTestHelpers(collectTestHelpers(p), ""));
   if (p.children.length > 0) {
     if (p.collapsed) {
       lines.push("- Sub-plugins:");

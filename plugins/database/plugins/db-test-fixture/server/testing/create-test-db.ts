@@ -45,6 +45,7 @@ export interface CreateTestDbOptions {
   prefix?: string;
 }
 
+/** Provision a throwaway database on the running cluster: a drizzle handle, its connection string, and `drop()` for the suite's `afterAll`. */
 export async function createTestDb(
   options: CreateTestDbOptions = {},
 ): Promise<TestDb> {
