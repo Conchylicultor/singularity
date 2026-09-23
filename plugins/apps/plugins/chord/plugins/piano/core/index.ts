@@ -1,2 +1,2 @@
-export { CHORD_SOUND_SOURCES, asChordSoundSource } from "./sound-source";
-export type { ChordSoundSource } from "./sound-source";
+export { MAX_VOLUME, SOUND_CHANNELS } from "./sound-mix";
+export type { ChannelLevel, SoundChannel, SoundMix } from "./sound-mix";

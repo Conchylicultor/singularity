@@ -34,8 +34,9 @@ What exists today:
   live `chord.progress` stats.
 - `piano` — the app's piano: the notes it plays for a chord (bass doubled an
   octave below the voicing), the four-octave keyboard that draws them and plays
-  under the finger, and the toggle choosing whether a chord box sounds the song
-  or the piano. Always on screen — the old three-valued `reveal` setting is
+  under the finger, and the sound mix — the song and the piano as two
+  channels, each on or off at its own level, the piano following the song's
+  playhead. Always on screen — the old three-valued `reveal` setting is
   gone. See its CLAUDE.md.
 - `trainer` — the round model and answer rules (`core`), and the trainer screen
   itself, the app's index pane (`web`).
@@ -47,7 +48,7 @@ What exists today:
 - Description: Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
 - Sub-plugins:
   - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
-  - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
+  - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
   - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
   - **`shell`** — The Chord app's rail entry and frame: a thin header (the three-bar logo and the name) above the full-pane renderer, where the trainer's pane is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours as categorical-1…7, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
   - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.

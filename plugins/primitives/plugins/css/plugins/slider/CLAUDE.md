@@ -80,6 +80,7 @@ rendered whether or not there is a detent, so that routing never moves.
   - Exports (values): `Slider`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/piano`
     - `apps/prototypes/canvas`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`

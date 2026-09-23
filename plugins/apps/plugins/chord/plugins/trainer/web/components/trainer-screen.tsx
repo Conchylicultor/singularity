@@ -9,9 +9,10 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
   PianoCard,
-  useChordSoundSource,
   usePiano,
+  useSoundMix,
 } from "@plugins/apps/plugins/chord/plugins/piano/web";
+import { MAX_VOLUME } from "@plugins/apps/plugins/chord/plugins/piano/core";
 import type {
   ChordToken,
   LoopCandidate,
@@ -73,6 +74,7 @@ import {
 } from "../../core";
 import { useChordKeys } from "../internal/use-chord-keys";
 import { useHeardClock } from "../internal/use-heard-clock";
+import { usePianoFollow } from "../internal/use-piano-follow";
 import {
   loopKey,
   useLoopQueue,
@@ -316,16 +318,15 @@ function Trainer({
   );
   const words = useMemo(() => songVocabulary(songKey), [songKey]);
   const tonicPc = useMemo(() => songKeyTonicPc(songKey), [songKey]);
-  // Which sound a chord BOX plays: the song's own bars, or the piano. The
-  // buttons and the piano's keys are not asked — they always sound on the
-  // piano, because a chord outside the loop has no stretch of song to play.
-  const soundSource = useChordSoundSource();
+  // What the loop is heard with: the song (muted, never paused, when off) and
+  // the piano following it, each at its own level.
+  const mix = useSoundMix();
 
   const player = useYouTubePlayer();
   const playerState = useYouTubePlayerState(player);
   const playerReady = playerState.kind === "ready";
   const playing = playerState.kind === "ready" && playerState.playing;
-  const piano = usePiano();
+  const piano = usePiano(mix.piano.volume / MAX_VOLUME);
 
   // The video's length from the player, for a video-fraction alignment only
   // (a beat-times round never reads it, so it is not rebuilt when it lands).
@@ -416,19 +417,34 @@ function Trainer({
   // The two ways the screen sounds something, both through the one piano: a
   // set of notes (a key the learner pressed) and a chord (its whole sound,
   // doubled bass included — `chordSound` is the same call the keyboard lights).
-  const playNotes = useEventCallback((pitches: readonly number[]) => {
-    void piano(pitches).catch((err: unknown) => {
-      showToast({
-        title: "The piano could not play",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
+  const playNotes = useEventCallback(
+    (pitches: readonly number[], ringSeconds?: number) => {
+      void piano.play(pitches, { ringSeconds }).catch((err: unknown) => {
+        showToast({
+          title: "The piano could not play",
+          description: err instanceof Error ? err.message : String(err),
+          variant: "error",
+        });
+        throw err;
       });
-      throw err;
-    });
-  });
-  const playChord = useEventCallback((token: ChordToken) =>
-    playNotes(chordSound(token, tonicPc).pitches),
+    },
   );
+  const playChord = useEventCallback(
+    (token: ChordToken, ringSeconds?: number) =>
+      playNotes(chordSound(token, tonicPc).pitches, ringSeconds),
+  );
+
+  // With the piano on, it plays along with the song: each box's chord struck
+  // as the playhead enters it, held for the rest of the box. It sounds before
+  // the check too — hearing the bare chords is the point — but writes nothing
+  // the keyboard reads, so it gives no answer away.
+  usePianoFollow({
+    player,
+    round,
+    enabled: mix.piano.on,
+    strike: (box, remaining) => playChord(box.token, remaining),
+    silence: piano.silence,
+  });
 
   const pick = useEventCallback((token: ChordToken) => {
     if (session === null || round === null) return;
@@ -475,14 +491,13 @@ function Trainer({
     queue.next();
   });
 
-  // A box plays its chord — the song's own bars, or the same chord struck on
-  // the piano, whichever the toggle is on. Either way it is the chord the
-  // learner is now listening to, so the keyboard shows it.
+  // A box plays its bars of the song, heard through whichever channels are on
+  // — the record, the piano following it, or both. It is the chord the learner
+  // is now listening to, so the keyboard shows it.
   const onReplayBox = useEventCallback((box: Box) => {
     memory.markInteracted();
     if (session !== null) setStored({ ...session, lastPlayed: box.token });
-    if (soundSource === "song") player.playRange(box.startSec, box.endSec);
-    else playChord(box.token);
+    player.playRange(box.startSec, box.endSec);
   });
 
   // The answer the learner gave, which the song never played: the piano only.
@@ -597,6 +612,7 @@ function Trainer({
                 : { start: round.loop.startSec, end: round.loop.endSec }
             }
             autoplay={memory.interacted}
+            audio={{ volume: mix.song.volume, muted: !mix.song.on }}
             onReady={onReady}
             onPlaying={onPlaying}
             onError={onError}
@@ -611,7 +627,7 @@ function Trainer({
           sheet={session.sheet}
           fills={session.fills}
           player={player}
-          canReplay={soundSource === "piano" || playerReady}
+          canReplay={playerReady}
           soundingPosition={sounding}
           nameChord={words.nameChord}
           onSelect={onSelect}

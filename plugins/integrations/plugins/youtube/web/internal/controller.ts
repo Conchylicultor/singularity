@@ -6,6 +6,16 @@ export interface YouTubeRange {
   end: number;
 }
 
+/**
+ * What the viewer hears. `volume` is 0–100; `muted` silences the video
+ * without pausing it, so a muted video still keeps time for whatever follows
+ * its playhead.
+ */
+export interface YouTubeAudio {
+  volume: number;
+  muted: boolean;
+}
+
 /** What the player reports about itself, for rendering. */
 export type YouTubePlayerState =
   /** The API script or the player iframe is not ready yet. */
@@ -45,6 +55,8 @@ export interface YouTubeSource {
   videoId: string;
   loop: YouTubeRange | null;
   autoplay: boolean;
+  /** `null` leaves the audio as YouTube has it. */
+  audio: YouTubeAudio | null;
 }
 
 /**
@@ -170,6 +182,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       return;
     }
     if (!sameRange(previous.loop, source.loop)) this.applyLoopChange(a);
+    if (!sameAudio(previous.audio, source.audio)) this.applyAudio(a);
   }
 
   setCallbacks(read: () => YouTubePlayerCallbacks): void {
@@ -203,6 +216,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
           if (a === null) return;
           a.ready = true;
           a.player.getIframe().style.display = "block";
+          this.applyAudio(a);
           if (this.source !== null) this.load(a, this.source);
           else this.emit();
         },
@@ -334,7 +348,18 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     };
     if (source.autoplay) a.player.loadVideoById(request);
     else a.player.cueVideoById(request);
+    // Re-stated on every load: the level is the app's, not the video's.
+    this.applyAudio(a);
     this.emit();
+  }
+
+  /** Set the player's volume and mute to the source's. A no-op without one. */
+  private applyAudio(a: Attached): void {
+    const audio = this.source?.audio ?? null;
+    if (audio === null) return;
+    a.player.setVolume(Math.min(100, Math.max(0, audio.volume)));
+    if (audio.muted) a.player.mute();
+    else a.player.unMute();
   }
 
   /** The loop moved on the same video: bring the playhead into it if needed. */
@@ -559,6 +584,11 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       this.frame = null;
     }
   }
+}
+
+function sameAudio(a: YouTubeAudio | null, b: YouTubeAudio | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.volume === b.volume && a.muted === b.muted;
 }
 
 function sameRange(a: YouTubeRange | null, b: YouTubeRange | null): boolean {

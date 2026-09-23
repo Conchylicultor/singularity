@@ -1,5 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { MdMusicNote, MdPiano } from "react-icons/md";
+import { useMemo, useState } from "react";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   chordSound,
@@ -10,10 +9,6 @@ import {
   ChordNumeral,
   chordToneStyle,
 } from "@plugins/apps/plugins/chord/plugins/vocabulary/web";
-import {
-  CHORD_SOUND_SOURCES,
-  type ChordSoundSource,
-} from "@plugins/apps/plugins/chord/plugins/piano/core";
 import {
   SONATA_DEFAULT_LOOK,
   SONATA_LOOK_STYLES,
@@ -26,26 +21,18 @@ import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugin
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  SegmentedControl,
-  type SegmentedOption,
-} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { keyboardWindowFor } from "../internal/keyboard-window";
-import {
-  useChordSoundSource,
-  useSetChordSoundSource,
-} from "../internal/use-sound-source";
+import { SoundChannelControl } from "./sound-channel";
 import "../piano.css";
 
 /**
  * The app's piano: a four-octave keyboard showing the chord on show — its name
  * in the song's key, its numeral, the notes the app plays for it lit and
  * labelled, and its bass doubled an octave below in a greyed tile — with the
- * sound toggle above it.
+ * piano's own sound channel (on/off and level) above it.
  *
  * Three things it is worth saying plainly:
  *
@@ -55,8 +42,9 @@ import "../piano.css";
  *    which is why it is drawn: it is heard.
  *  - **The keys are playable.** Clicking, tapping or sliding across them
  *    strikes that note on the same piano, and the key lights while it is held.
- *    A single key has no stretch of song behind it, so it always sounds on the
- *    piano, whatever the toggle says.
+ *    A key is played on the piano whether or not the piano channel is on: the
+ *    channel decides whether the piano FOLLOWS the song, not whether it can
+ *    be played.
  *  - **Nothing is lit before the check**, by construction: the trainer's shown
  *    chord is null until the round is checked, so there is no guard here that
  *    could be forgotten. With `null` the card draws the SAME keyboard unlit and
@@ -161,7 +149,7 @@ export function PianoCard({
             </>
           )}
           <Fill />
-          <SoundToggle />
+          <SoundChannelControl channel="piano" />
         </Line>
         <Keyboard
           plane={plane}
@@ -192,51 +180,5 @@ export function PianoCard({
         />
       </Stack>
     </Card>
-  );
-}
-
-/**
- * The short spelling of each sound, and the icon that carries it when the strip
- * is narrow. A `Record` over the union, so a third sound is a tsc error here
- * rather than a blank chip; the order is `CHORD_SOUND_SOURCES`' own.
- */
-const SOURCE_LABEL: Record<ChordSoundSource, string> = {
-  song: "Song",
-  piano: "Piano",
-};
-const SOURCE_TITLE: Record<ChordSoundSource, string> = {
-  song: "A chord box plays its bars of the song",
-  piano: "A chord box plays the chord alone, on the piano",
-};
-const SOURCE_ICON: Record<ChordSoundSource, ReactNode> = {
-  song: <MdMusicNote aria-hidden="true" />,
-  piano: <MdPiano aria-hidden="true" />,
-};
-
-const SOURCE_OPTIONS: readonly SegmentedOption<ChordSoundSource>[] =
-  CHORD_SOUND_SOURCES.map((id) => ({
-    id,
-    label: SOURCE_LABEL[id],
-    icon: SOURCE_ICON[id],
-    title: SOURCE_TITLE[id],
-  }));
-
-/**
- * Which sound a chord of the loop is heard with. It reads and writes the config
- * itself, so the card hands it nothing — and it sits on the piano rather than
- * in the side panel because it is about what the learner is about to HEAR, and
- * the piano is where they go to hear it.
- */
-function SoundToggle() {
-  const source = useChordSoundSource();
-  const setSource = useSetChordSoundSource();
-  return (
-    <SegmentedControl<ChordSoundSource>
-      options={SOURCE_OPTIONS}
-      value={source}
-      variant="ghost"
-      className={rigidClass()}
-      onChange={setSource}
-    />
   );
 }

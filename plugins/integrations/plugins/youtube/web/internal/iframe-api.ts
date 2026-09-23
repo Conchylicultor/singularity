@@ -34,6 +34,10 @@ export interface YTPlayer {
   getDuration(): number;
   getPlaybackRate(): number;
   getPlayerState(): number;
+  /** 0–100. Independent of `mute`: an unmuted player comes back at this level. */
+  setVolume(volume: number): void;
+  mute(): void;
+  unMute(): void;
   loadVideoById(request: YTVideoRequest): void;
   cueVideoById(request: YTVideoRequest): void;
   getIframe(): HTMLIFrameElement;

@@ -1,6 +1,11 @@
-// @hash 1b8ce02153b6
+// @hash 78828dc17b3d
 {
-  // What a chord of the loop plays when you click its box after the check: the bars of the song where it sounds, or the same chord struck alone on the app's piano. The chord buttons and the piano's own keys always sound on the piano — a chord the loop does not contain has no stretch of song to play.
-  // Allowed values: "song", "piano"
-  "source": "song"
+  // Hear the recording. Off mutes it without pausing it: the video keeps playing, and the piano keeps following it.
+  "songOn": true,
+  // The recording's level, 0–100.
+  "songVolume": 100,
+  // Play each chord of the loop on the app's piano as the song reaches it, so the chords can be heard on their own (with the song off) or under the record (with it on).
+  "pianoOn": false,
+  // The piano's level, 0–100: the chords following the song, and every chord or key you play yourself.
+  "pianoVolume": 80
 }

@@ -4,6 +4,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   YouTubePlayerControllerImpl,
   type YouTubePlayerCallbacks,
+  type YouTubeAudio,
   type YouTubePlayerController,
   type YouTubeRange,
 } from "../internal/controller";
@@ -24,6 +25,12 @@ export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
    * and waits for `controller.play()`. Read when a video loads.
    */
   autoplay?: boolean;
+  /**
+   * The volume (0–100) and mute to hold the player at, on this video and every
+   * one loaded after. Muting does not pause: the video keeps playing silently.
+   * Omitted leaves the audio as YouTube has it.
+   */
+  audio?: YouTubeAudio;
   className?: string;
 }
 
@@ -40,6 +47,7 @@ export function YouTubePlayer({
   videoId,
   loop,
   autoplay = false,
+  audio,
   className,
   onReady,
   onPlaying,
@@ -58,6 +66,8 @@ export function YouTubePlayer({
 
   const loopStart = loop?.start ?? null;
   const loopEnd = loop?.end ?? null;
+  const volume = audio?.volume ?? null;
+  const muted = audio?.muted ?? null;
   useEffect(() => {
     impl.setSource({
       videoId,
@@ -66,8 +76,9 @@ export function YouTubePlayer({
           ? null
           : { start: loopStart, end: loopEnd },
       autoplay,
+      audio: volume === null || muted === null ? null : { volume, muted },
     });
-  }, [impl, videoId, loopStart, loopEnd, autoplay]);
+  }, [impl, videoId, loopStart, loopEnd, autoplay, volume, muted]);
 
   useEffect(() => {
     const host = hostRef.current;

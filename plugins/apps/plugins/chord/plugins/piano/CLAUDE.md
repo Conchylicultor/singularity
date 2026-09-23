@@ -1,7 +1,8 @@
 # piano
 
 The Chord app's piano: the notes it plays for a chord, the keyboard that draws
-and plays them, and the one choice about which sound a chord is heard with.
+and plays them, and the sound mix — the song and the piano as two channels,
+each on or off at its own level.
 Design: `research/2026-09-20-apps-chord-trainer-reveal.md` (Part 1, whose
 three-valued reveal setting this replaced); the look is the prototype
 `proto-1789461303-updb`.
@@ -93,28 +94,39 @@ forgotten. With `null` the card draws the SAME keyboard, unlit and still
 playable, with a line saying so, rather than collapsing — the panel below would
 otherwise jump every time a chord stopped sounding.
 
-## The sound toggle
+## The sound mix: two channels
 
-`chordSoundConfig` is one enum, `song | piano` (`core/sound-source.ts`,
-`shared/config.ts`), read by `useChordSoundSource()`. The toggle sits on the
-card, because it is about what the learner is about to HEAR and the piano is
-where they go to hear it.
+What the loop is heard with is two channels, the **song** and the **piano**,
+each on or off at its own level (`core/sound-mix.ts`, stored as four fields in
+`chordSoundConfig`, read by `useSoundMix()`). Each is set on the thing it
+belongs to, by one `<SoundChannelControl channel/>`: the song's on the song
+card, the piano's on the keyboard card. There is no "song / piano / mix"
+switch — "piano only" is simply the song turned off, and "mix" both on. The
+mockup that settled this is the `split` variant of `proto-1789461303-updb`.
 
-It governs the **answer boxes** and nothing else:
+| channel | on | off |
+|---|---|---|
+| song | the YouTube player at its volume | the player **muted, still playing** |
+| piano | each box's chord struck as the song's playhead enters it, held for the rest of the box | the piano does not follow the song |
 
-| clicked | what sounds |
-|---|---|
-| an answer box, source `song` | the bars of the song where that chord plays |
-| an answer box, source `piano` | the same chord struck alone on the piano |
-| a chord button | the piano, always |
-| the "you: IV" tag | the piano, always |
-| a key of the keyboard | the piano, always |
+The song is never paused for being off, because its playhead is the clock the
+piano follows (the trainer's `usePianoFollow`). The piano stops when the song
+pauses, and strikes the box under the playhead again when it resumes. It plays
+before the check too — hearing the bare chords under the record is the point —
+but it writes nothing the keyboard reads, so it gives no answer away.
 
-The three "always" rows are not a preference this ignores — they are a fact
-about the chord. A button's chord need not be in the loop at all, the answer
-given is one the song never played, and a single key never had a stretch of song
-behind it. Rather than each call site remembering that, the rule is written once
-on the source type and the trainer reads it there.
+What the piano channel does NOT gate: a chord button, the "you: IV" tag and a
+key of the keyboard always sound on the piano — they are the learner asking
+for that sound, not the piano following the song. The piano's **level** applies
+to all of them (one gain node in `usePiano`).
+
+An answer box always replays its bars of the SONG (`playRange`), heard through
+whichever channels are on: the record, the piano following it, or both.
+
+Moving the slider of an off channel turns it on, and the level of an off
+channel is kept (dimmed, reading "off") for when it comes back. The slider's
+saves are throttled leading + trailing with a held draft
+(`web/internal/use-level-fader.ts`), the policy of Sonata's track faders.
 
 ## One memory of what was heard
 
@@ -160,7 +172,7 @@ one held down — the one thing a value check cannot tell you.
 
 ## Plugin reference
 
-- Description: The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
+- Description: The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -176,26 +188,31 @@ one held down — the one thing a value check cannot tell you.
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.SegmentedOption`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+  - Exports (types): `Piano`
   - Exports (values):
     - `PianoCard`
-    - `useChordSoundSource`
+    - `SoundChannelControl`
     - `usePiano`
-    - `useSetChordSoundSource`
+    - `useSoundMix`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by: `apps/chord/trainer`
 - Core:
-  - Exports (types): `ChordSoundSource`
+  - Exports (types):
+    - `ChannelLevel`
+    - `SoundChannel`
+    - `SoundMix`
   - Exports (values):
-    - `asChordSoundSource`
-    - `CHORD_SOUND_SOURCES`
+    - `MAX_VOLUME`
+    - `SOUND_CHANNELS`
 
 <!-- AUTOGENERATED:END -->

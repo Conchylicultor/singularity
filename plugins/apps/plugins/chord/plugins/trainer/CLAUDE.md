@@ -95,9 +95,15 @@ prev, next)` between two playhead reads — a forward move finishes every box
   step disarms with nothing to clean up. The clock does not stop for the second
   key: a two-stroke answer costs what it costs. ← / → move, Backspace clears,
   Space plays or pauses, Enter moves to the next song.
-- **After the check**: a box plays its chord — the song's own bars once
-  (`controller.playRange`), or the chord struck alone on the piano, whichever
-  the piano's sound toggle is on. A chord button, or the "you: IV" tag under a
+- **The sound mix** (`piano/web`'s `useSoundMix`): the song and the piano,
+  each on or off at its own level, set on the song card and the piano card.
+  The song's level and mute go to the player's `audio` prop (off = muted, still
+  playing). With the piano on, `usePianoFollow` watches the playhead and strikes
+  each box's chord as the song enters it, held for the rest of the box; it
+  silences the piano when the song stops, and strikes again on resume. It plays
+  before the check too, and writes nothing the keyboard reads.
+- **After the check**: a box plays its bars of the song once
+  (`controller.playRange`), heard through whichever channels are on. A chord button, or the "you: IV" tag under a
   wrong box, always plays on the piano (`chordSound(token, tonicPc)`), because
   neither chord need be in the loop at all. The button of the chord sounding now
   is lit.
@@ -198,8 +204,9 @@ piano.
     - `apps/chord/curriculum.StandingLookup`
     - `apps/chord/curriculum.useCurriculum`
     - `apps/chord/piano.PianoCard`
-    - `apps/chord/piano.useChordSoundSource`
+    - `apps/chord/piano.SoundChannelControl`
     - `apps/chord/piano.usePiano`
+    - `apps/chord/piano.useSoundMix`
     - `apps/chord/song-index.SongIndexGate`
     - `apps/chord/vocabulary.ChordNumeral`
     - `apps/chord/vocabulary.chordToneStyle`

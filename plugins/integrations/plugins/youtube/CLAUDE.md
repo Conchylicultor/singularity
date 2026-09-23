@@ -66,6 +66,15 @@ posted, which can trail by a few hundred milliseconds, so while the video
 advances the controller extrapolates from the last reported change by wall time
 (at most 0.5 s ahead). The loop's end check uses the same time.
 
+## The audio
+
+`audio={{ volume, muted }}` (volume 0–100) holds the player at that level, on
+the current video and every one loaded after — it is re-applied on each load,
+so the level is the app's, not the video's. Muting does not pause: a muted
+video keeps playing and keeping time, which is what lets something else follow
+its playhead in its place (the chord trainer's piano plays a loop's chords this
+way while the song is muted). Omit `audio` to leave the sound as YouTube has it.
+
 ## Player settings
 
 `controls: 0` (the app owns play / pause / seek, and YouTube's bar would let
@@ -90,12 +99,13 @@ calls the controller makes; `@types/youtube` is not a dependency.
 
 ## Plugin reference
 
-- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
+- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
   - Exports (types):
+    - `YouTubeAudio`
     - `YouTubePlaybackState`
     - `YouTubePlayerCallbacks`
     - `YouTubePlayerController`

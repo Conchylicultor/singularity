@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MdPause, MdPlayArrow } from "react-icons/md";
 import type { LoopCandidate } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import { SoundChannelControl } from "@plugins/apps/plugins/chord/plugins/piano/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -14,8 +15,9 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
 /**
  * The song on screen: the YouTube player (small, 16:9, where the mockup has
- * its thumbnail), the title, artist, section and bar count, and on the right
- * Play / Pause and "Next song ↵".
+ * its thumbnail), the title, artist, section and bar count, the song's own
+ * sound channel (on/off and level — off mutes the video, which keeps
+ * playing), and on the right Play / Pause and "Next song ↵".
  *
  * `player` is the mounted `<YouTubePlayer>`: the screen owns it so one player
  * lives across every loop.
@@ -86,6 +88,7 @@ export function SongCard({
             </Line>
           </Stack>
         </Fill>
+        <SoundChannelControl channel="song" />
         <Line className={cn(rigidClass(), "gap-sm")}>
           <button
             type="button"

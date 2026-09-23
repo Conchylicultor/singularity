@@ -682,7 +682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/chord/progress`
               - `apps/chord/trainer`
-        - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound toggle that decides whether a chord box plays the song or the piano. The Chord app's piano, server side: registers the chord-sound config (the song / the piano) so the learner's choice persists and shows in Settings.
+        - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
             - Uses:
@@ -698,27 +698,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/slider.Slider`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/toggle-chip.SegmentedOption`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+            - Exports (types): `Piano`
             - Exports (values):
               - `PianoCard`
-              - `useChordSoundSource`
+              - `SoundChannelControl`
               - `usePiano`
-              - `useSetChordSoundSource`
+              - `useSoundMix`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
             - Imported by: `apps/chord/trainer`
           - Core:
-            - Exports (types): `ChordSoundSource`
+            - Exports (types):
+              - `ChannelLevel`
+              - `SoundChannel`
+              - `SoundMix`
             - Exports (values):
-              - `asChordSoundSource`
-              - `CHORD_SOUND_SOURCES`
+              - `MAX_VOLUME`
+              - `SOUND_CHANNELS`
         - **`progress`** — Chord progress: the chord_rounds / chord_answers history, the endpoint that saves a checked round, and the live chord.progress stats (each chord's last 20 answers against the mastery rule, today in the learner's time zone, all time).
           - Server:
             - Contributes: `resource.declare` "chord.progress"
@@ -973,8 +978,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/curriculum.StandingLookup`
               - `apps/chord/curriculum.useCurriculum`
               - `apps/chord/piano.PianoCard`
-              - `apps/chord/piano.useChordSoundSource`
+              - `apps/chord/piano.SoundChannelControl`
               - `apps/chord/piano.usePiano`
+              - `apps/chord/piano.useSoundMix`
               - `apps/chord/song-index.SongIndexGate`
               - `apps/chord/vocabulary.ChordNumeral`
               - `apps/chord/vocabulary.chordToneStyle`
@@ -20508,12 +20514,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LET_IT_BE_VERSE` — `GET /v1/songs/public/_NgbRXeYgQA?fields=ID,song,jsonData` — the verse of "Let It Be", captured 2026-09-15. `jsonData` is the Hookpad document as a JSON string, editor state (bands, lyrics, cursor, settings, mixer) included; `youtube.id` is a `youtu.be` share link, not a bare id.
           - `TRENDS_NODES_401_HTML` — `GET /v1/trends/nodes?cp=1,4` with no Authorization header, captured 2026-09-16: a 401 whose body is Hooktheory's HTML error page, not its JSON envelope.
           - `UNKNOWN_SECTION_400_JSON` — `GET /v1/songs/public/1?fields=ID,song,jsonData`, captured 2026-09-16: the JSON envelope Hooktheory answers an unknown section id with.
-    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
+    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, playRange for one pass then back to the loop, seek, getCurrentTime, getDuration), useYouTubePlayerState, and useYouTubePlayhead (one read per animation frame while playing). Loops without polling: one timer to the loop's end, reset on every state change.
       - Web:
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/latest-ref.useLatestRef`
         - Exports (types):
+          - `YouTubeAudio`
           - `YouTubePlaybackState`
           - `YouTubePlayerCallbacks`
           - `YouTubePlayerController`
@@ -25931,6 +25938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Slider`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/piano`
               - `apps/prototypes/canvas`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
@@ -26837,7 +26845,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps/chord/curriculum`
-              - `apps/chord/piano`
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
@@ -27036,6 +27043,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/chord/curriculum`
+              - `apps/chord/piano`
               - `apps/chord/song-index`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
@@ -28832,6 +28840,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/proxy`
           - `apps/browser/tabs`
           - `apps/browser/webview`
+          - `apps/chord/piano`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history/investigate-failure`
           - `apps/deploy/deployments`
