@@ -9,7 +9,6 @@ import type {
   CounterpartKindProps,
   CounterpartResolution,
 } from "@plugins/apps/plugins/prototypes/plugins/compare/web";
-import { specimenWidths } from "./widths";
 
 /**
  * The `component:` kind: a real app component, exhibited by the plugin that
@@ -21,18 +20,13 @@ import { specimenWidths } from "./widths";
  */
 export function ComponentCounterpart({
   target,
-  meta,
   children,
 }: CounterpartKindProps): ReactElement {
   const lookup = useSpecimen(target);
-  return <>{children(resolve(target, lookup, meta.viewport.w))}</>;
+  return <>{children(resolve(target, lookup))}</>;
 }
 
-function resolve(
-  id: string,
-  lookup: SpecimenLookup,
-  declaredWidth: number,
-): CounterpartResolution {
+function resolve(id: string, lookup: SpecimenLookup): CounterpartResolution {
   switch (lookup.kind) {
     case "missing":
       return {
@@ -60,7 +54,6 @@ function resolve(
       const { specimen } = lookup;
       return {
         status: "found",
-        widths: specimenWidths(specimen.widths, declaredWidth),
         title: specimen.label,
         ...(specimen.description === undefined
           ? {}

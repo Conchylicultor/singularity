@@ -1,8 +1,8 @@
 # fixture
 
-The **`fixture:`** kind of counterpart for the prototype Compare stage: the real
+The **`fixture:`** kind of counterpart for the prototype canvas's Real app frame: the real
 app component a prototype mocks, as a **layout-harness fixture** rendered live
-at the stage's shared width.
+at the canvas's size.
 
 It is a separate plugin because it is the only thing in the Prototypes app that
 reaches into app internals — the layout-harness fixture catalog. The compare
@@ -48,7 +48,7 @@ to the parent `compare` plugin; see its `CLAUDE.md`.
 
 ## Plugin reference
 
-- Description: The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
+- Description: The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.
 - Web:
   - Contributes: `Counterpart.Kind` "App component" → `FixtureCounterpart`
   - Uses:

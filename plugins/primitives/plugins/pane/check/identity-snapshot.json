@@ -446,7 +446,7 @@
     },
     {
       "paneId": "prototypes-detail",
-      "segment": "proto/:name/:stage?",
+      "segment": "proto/:name/:layout?",
       "appIndex": false,
       "parent": "prototypes-gallery"
     },
@@ -458,7 +458,7 @@
     },
     {
       "paneId": "prototypes-present",
-      "segment": "present/:name/:sha?",
+      "segment": "present/:name/:version/:picks?",
       "appIndex": false,
       "parent": null
     },

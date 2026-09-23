@@ -1,3 +1,4 @@
+import type { ReactElement, ReactNode } from "react";
 import {
   matchResource,
   useResource,
@@ -6,43 +7,52 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import {
   prototypeHistoryResource,
   type PrototypeVersion,
+  type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import {
-  PrototypeDetailProvider,
-  VersionStepShortcuts,
-} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { PrototypeDetailProvider } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { prototypePresentPane } from "../panes";
+import { LIVE_VERSION, decodePicks } from "../internal/present-link";
 import { PresentStage } from "./present-stage";
 
 /**
- * The new-tab presentation: the prototype filling the page, with the options
- * picker floating over it. No header and no exit button — the tab itself is
- * the presentation, and closing it is how you leave.
+ * One frame presented as a page of its own (a new app tab, or a chromeless new
+ * browser tab): the frame filling the page, its chrome on hover. No Exit — the
+ * tab itself is the presentation, and closing it is how you leave.
  *
- * A `sha` in the URL opens that recorded version (the one the detail pane was
- * showing when the tab was opened); it is looked up in the history, so the
- * picker can offer the options THAT version declares.
+ * It mounts a one-frame canvas: the URL's version (looked up in the history,
+ * so the options pill offers the options THAT version declares) and, when the
+ * URL carries them, the frame's own picks — else the shared record, as frame A.
  */
-export function PresentPage() {
-  const { name, sha } = prototypePresentPane.useParams();
-  return sha === undefined ? (
-    <PresentPageBody name={name} version={null} />
+export function PresentPage(): ReactElement {
+  const { name, version, picks } = prototypePresentPane.useParams();
+  const own = picks === undefined ? undefined : decodePicks(picks);
+  return version === LIVE_VERSION ? (
+    <PresentPageBody name={name} version={null} picks={own} />
   ) : (
-    <VersionPresentPage name={name} sha={sha} />
+    <VersionPresentPage name={name} sha={version} picks={own} />
   );
 }
 
-function VersionPresentPage({ name, sha }: { name: string; sha: string }) {
+function VersionPresentPage({
+  name,
+  sha,
+  picks,
+}: {
+  name: string;
+  sha: string;
+  picks: StoredPicks | undefined;
+}): ReactNode {
   const history = useResource(prototypeHistoryResource, { name });
   return matchResource(history, {
     pending: () => <Loading variant="block" />,
     ready: (h) => {
       const version = h.versions.find((v) => v.sha === sha);
       return version ? (
-        <PresentPageBody name={name} version={version} />
+        <PresentPageBody name={name} version={version} picks={picks} />
       ) : (
         <Text as="div" variant="body" tone="muted" className="p-lg">
           This version is no longer in the prototype&apos;s history.
@@ -55,28 +65,23 @@ function VersionPresentPage({ name, sha }: { name: string; sha: string }) {
 function PresentPageBody({
   name,
   version,
+  picks,
 }: {
   name: string;
   version: PrototypeVersion | null;
-}) {
+  picks: StoredPicks | undefined;
+}): ReactElement {
   return (
     <PrototypeDetailProvider
       name={name}
       initialVersion={version}
-      // No stage switcher on this page: it shows the presentation, never a
-      // stage, so nothing asks to change one.
-      stageId={undefined}
-      onStageChange={noStageChange}
+      {...(picks === undefined ? {} : { initialPicks: picks })}
     >
-      {/* No pane header here to hold the version stepper's `[` / `]`. */}
-      <VersionStepShortcuts />
       <div className={cn("relative size-full bg-background", hoverRevealGroup)}>
-        <PresentStage name={name} />
+        <PortalHost>
+          <PresentStage name={name} />
+        </PortalHost>
       </div>
     </PrototypeDetailProvider>
   );
-}
-
-function noStageChange(): void {
-  throw new Error("The present page has no stages to switch.");
 }

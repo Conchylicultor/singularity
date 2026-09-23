@@ -6,7 +6,7 @@ import {
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { prototypesResource } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 
 /**
  * A raw `proto-…` id rendered as a chip that opens the mock beside the text.

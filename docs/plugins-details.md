@@ -195,7 +195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
         - Uses:
-          - `apps/prototypes/gallery.prototypeDetailPane`
+          - `apps/prototypes/canvas.prototypeDetailPane`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
@@ -3631,6 +3631,136 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (values): `PROTOTYPES_CATEGORY_ID`
       - Plugins:
+        - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames, and the proto/<id>/compare URL for 'the prototype beside the real app'.
+          - Web:
+            - Slots:
+              - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
+              - `PrototypeFrameActions` ← `apps.prototypes.canvas`, `apps.prototypes.present`
+              - `FrameSource` ← `apps.prototypes.compare`
+              - `PrototypeVersionActions` ← `apps.prototypes.canvas`
+            - Contributes:
+              - `Pane.Register` "prototypes-detail"
+              - `prototypeDetailPane.Actions` "layout" → `LayoutAction`
+              - `prototypeDetailPane.Actions` "add" → `AddFrameActions`
+              - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
+              - `PrototypeFrameActions` "duplicate" → `DuplicateFrameAction`
+              - `PrototypeFrameActions` "close" → `CloseFrameAction`
+              - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
+            - Uses:
+              - `apps-core/tabs.navigate`
+              - `infra/endpoints.fetchEndpoint`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/column.Column`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/layer.layerClasses`
+              - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/slider.Slider`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/sticky.Sticky`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.FieldOption`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/error-boundary.PluginErrorBoundary`
+              - `primitives/hover-reveal.hoverRevealGroup`
+              - `primitives/hover-reveal.hoverRevealTarget`
+              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
+              - `primitives/link-gesture.linkGestureProps`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useCombinedResources`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
+              - `primitives/optimistic-mutation.useOptimisticResource`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/shortcuts.useSurfaceShortcuts`
+              - `primitives/slot-render.defineDispatchSlot`
+              - `shell/toast.showToast`
+            - Exports (types):
+              - `CanvasAction`
+              - `CanvasFrame`
+              - `CanvasFrameViewProps`
+              - `CanvasLayout`
+              - `CanvasSize`
+              - `CanvasSourceEntry`
+              - `CanvasState`
+              - `CanvasZoom`
+              - `FrameActionRow`
+              - `FrameId`
+              - `FrameLayout`
+              - `FrameResolution`
+              - `FrameSourceMeta`
+              - `FrameSourceProps`
+              - `PicksRead`
+              - `PresetName`
+              - `PrototypeDetailContextValue`
+              - `PrototypeFrame`
+              - `Room`
+              - `SourceFrame`
+              - `VersionStepperProps`
+            - Exports (values):
+              - `CanvasFrameView`
+              - `COMPARE_LAYOUT`
+              - `documentOptions`
+              - `frameA`
+              - `FrameLetter`
+              - `FrameSource`
+              - `layoutFrames`
+              - `letterOf`
+              - `OptionsPill`
+              - `prototypeDetailPane`
+              - `PrototypeDetailProvider`
+              - `prototypeDocumentSrc`
+              - `PrototypeFrameActions`
+              - `prototypeFrames`
+              - `PrototypeVersionActions`
+              - `roomPerFrame`
+              - `SIZE_PRESETS`
+              - `SizeChip`
+              - `useFrameNames`
+              - `useFramePicks`
+              - `useFrameSrc`
+              - `usePrototypeDetail`
+              - `VersionStepper`
+          - Cross-plugin:
+            - Imported by:
+              - `active-data/prototype`
+              - `apps/prototypes/compare`
+              - `apps/prototypes/copy-id`
+              - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
+              - `conversations/conversation-view/artifacts/prototype`
+          - Core:
+            - Exports (types): `CanvasFrameStatus`
+            - Exports (values):
+              - `CANVAS_FRAME_ATTR`
+              - `CANVAS_FRAME_KIND_ATTR`
+              - `CANVAS_FRAME_STATUS_ATTR`
+              - `canvasFrameSelector`
+              - `PROTOTYPE_FRAME_KIND`
         - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
           - Server:
             - Contributes: `trigger` "prototypes.checkpoint-turn"
@@ -3643,60 +3773,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
             - Register: `defineJob('prototypes.checkpoint-turn')`
-        - **`compare`** — The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
+        - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (a layout-harness fixture, a live component specimen, the running app at a route) is a child plugin.
           - Web:
-            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
-            - Contributes:
-              - `PrototypeStages.Stage` "Compare" → `CompareStage`
-              - `PrototypeDetailScope` → `CompareAgainstProvider`
+            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
+            - Contributes: `FrameSource` "Real app" → `RealAppSource`
             - Uses:
-              - `apps/prototypes/gallery.PrototypeDetailScope`
-              - `apps/prototypes/gallery.PrototypeStageProps`
-              - `apps/prototypes/gallery.PrototypeStages`
-              - `apps/prototypes/gallery.usePrototypeDetail`
-              - `primitives/bar.Bar`
+              - `apps/prototypes/canvas.FrameSource`
               - `primitives/css/badge.Badge`
-              - `primitives/css/clip.Clip`
-              - `primitives/css/column.Column`
-              - `primitives/css/line.Line`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/dom/element-size.useResizeObserver`
-              - `primitives/error-boundary.PluginErrorBoundary`
-              - `primitives/loading.Loading`
               - `primitives/slot-render.defineDispatchSlot`
             - Exports (types):
-              - `CompareAgainst`
               - `CounterpartKindMeta`
               - `CounterpartKindProps`
-              - `CounterpartPreset`
               - `CounterpartResolution`
-              - `CounterpartSpec`
-              - `WidthChoices`
             - Exports (values):
               - `Counterpart`
-              - `MockFrame`
-              - `useCompareAgainst`
               - `useCounterpartKinds`
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/compare/component`
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
-              - `apps/prototypes/compare/version`
           - Core:
-            - Exports (types):
-              - `CompareHalf`
-              - `CompareStatus`
-            - Exports (values):
-              - `COMPARE_HALF_ATTR`
-              - `COMPARE_STATUS_ATTR`
-              - `compareHalfSelector`
+            - Exports (values): `REAL_APP_SOURCE`
           - Plugins:
-            - **`component`** — The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
+            - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
               - Web:
                 - Contributes: `Counterpart.Kind` "Live component" → `ComponentCounterpart`
                 - Uses:
@@ -3705,13 +3807,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/specimens.Specimens`
                   - `plugin-meta/specimens.useSpecimen`
                   - `primitives/css/badge.Badge`
-            - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
+            - **`fixture`** — The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.
               - Web:
                 - Contributes: `Counterpart.Kind` "App component" → `FixtureCounterpart`
                 - Uses:
                   - `apps/prototypes/compare.Counterpart`
                   - `primitives/css/badge.Badge`
-            - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
+            - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
               - Web:
                 - Contributes:
                   - `Counterpart.Kind` "App screen" → `RouteCounterpart`
@@ -3724,40 +3826,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-            - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options — or the version on screen itself as another variant, with option picks of its own (version:shown). Never declared by a page: offered as "Latest version" and "Another variant" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
-              - Web:
-                - Contributes:
-                  - `Counterpart.Kind` "Prototype version" → `VersionCounterpart`
-                  - `PrototypeVersionActions` "compare-with-latest" → `CompareWithLatest`
-                - Uses:
-                  - `apps/prototypes/compare.Counterpart`
-                  - `apps/prototypes/compare.CounterpartKindProps`
-                  - `apps/prototypes/compare.CounterpartResolution`
-                  - `apps/prototypes/compare.MockFrame`
-                  - `apps/prototypes/compare.useCompareAgainst`
-                  - `apps/prototypes/gallery.documentOptions`
-                  - `apps/prototypes/gallery.OptionRows`
-                  - `apps/prototypes/gallery.prototypeDocumentSrc`
-                  - `apps/prototypes/gallery.PrototypeVersionActions`
-                  - `apps/prototypes/gallery.summarizePicks`
-                  - `apps/prototypes/gallery.useCloseVersionList`
-                  - `apps/prototypes/gallery.usePrototypeDetail`
-                  - `apps/prototypes/gallery.usePrototypeDocumentSrc`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.matchResource`
-                  - `primitives/live-state.useCombinedResources`
-                  - `primitives/live-state.useResource`
-                  - `primitives/overlay/popover.InlinePopover`
         - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
           - Web:
             - Contributes: `prototypeDetailPane.Actions` "copy-id" → `CopyIdAction`
             - Uses:
-              - `apps/prototypes/gallery.prototypeDetailPane`
-              - `apps/prototypes/gallery.usePrototypeDetail`
+              - `apps/prototypes/canvas.prototypeDetailPane`
+              - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
@@ -3869,163 +3943,109 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/prototype`
               - `apps/prototypes/checkpoints`
-              - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped and filterable by a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
-              - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
-              - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
-              - `PrototypeVersionActions` ← `apps.prototypes.compare.version`, `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
-              - `PrototypeDetailScope` ← `apps.prototypes.compare`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
-              - `Pane.Register` "prototypes-detail"
-              - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
-              - `prototypeDetailPane.Actions` "version" → `VersionStepper`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `PrototypeCardActions` "done" → `DoneCardAction`
-              - `PrototypeStages.Stage` "Focus" → `FocusStage`
-              - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
             - Uses:
-              - `apps-core/tabs.navigate`
+              - `apps/prototypes/canvas.prototypeDetailPane`
+              - `apps/prototypes/canvas.usePrototypeDetail`
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
-              - `primitives/css/clip.Clip`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/column.Column`
-              - `primitives/css/layer.layerClasses`
-              - `primitives/css/line.Line`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Inset`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/surface.Surface`
-              - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
-              - `primitives/data-view.FieldOption`
-              - `primitives/data-view.ItemActionProps`
-              - `primitives/dom/element-size.useElementSize`
-              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
-              - `primitives/latest-ref.useEventCallback`
               - `primitives/launch.LaunchAgentPopover`
-              - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
-              - `primitives/loading.Loading`
-              - `primitives/optimistic-mutation.useOptimisticResource`
-              - `primitives/overlay/floating-action.FloatingAction`
-              - `primitives/overlay/floating-action.FloatingActionFadeIn`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
-              - `primitives/overlay/popover.InlinePopover`
-              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/relative-time.RelativeTime`
-              - `primitives/shortcuts.useSurfaceShortcuts`
-              - `primitives/slot-render.defineWrapperSlot`
-              - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
-            - Exports (types):
-              - `FrameSize`
-              - `FrameSizeChoice`
-              - `PicksRead`
-              - `PrototypeDetailContextValue`
-              - `PrototypeGalleryRow`
-              - `PrototypeStage`
-              - `PrototypeStageContribution`
-              - `PrototypeStageProps`
+            - Exports (types): `PrototypeGalleryRow`
             - Exports (values):
-              - `documentOptions`
-              - `FrameSizeProvider`
               - `mintPrototypeFolder`
               - `newPrototypePrompt`
-              - `OptionRows`
-              - `OptionsPicker`
               - `PrototypeCardActions`
-              - `prototypeDetailPane`
-              - `PrototypeDetailProvider`
-              - `PrototypeDetailScope`
-              - `prototypeDocumentSrc`
               - `prototypesGalleryPane`
-              - `PrototypeStages`
-              - `PrototypeVersionActions`
-              - `ScaledIframe`
-              - `summarizePicks`
-              - `useCloseVersionList`
-              - `useFrameSizeState`
-              - `usePrototypeDetail`
-              - `usePrototypeDocumentSrc`
-              - `usePrototypePicks`
-              - `usePrototypeSrc`
-              - `VersionStepShortcuts`
+              - `useSetPrototypeDone`
           - Cross-plugin:
-            - Imported by:
-              - `active-data/prototype`
-              - `apps/home/app-cards`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/compare/version`
-              - `apps/prototypes/copy-id`
-              - `apps/prototypes/present`
-              - `conversations/conversation-view/artifacts/prototype`
-        - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened in a new browser tab as a chromeless app page (present/<id>) that keeps the options picker. Contributed into the detail pane's Actions.
+            - Imported by: `apps/home/app-cards`
+        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.
           - Web:
             - Slots: `prototypes-present.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "prototypes-present"
-              - `prototypeDetailPane.Actions` "present" → `PresentMenu`
+              - `PrototypeFrameActions` "present" → `PresentMenu`
             - Uses:
+              - `apps-core/tabs.navigate`
               - `apps-core/tabs.useSurfaceFocused`
-              - `apps/prototypes/gallery.FrameSizeProvider`
-              - `apps/prototypes/gallery.OptionsPicker`
-              - `apps/prototypes/gallery.prototypeDetailPane`
-              - `apps/prototypes/gallery.PrototypeDetailProvider`
-              - `apps/prototypes/gallery.ScaledIframe`
-              - `apps/prototypes/gallery.useFrameSizeState`
-              - `apps/prototypes/gallery.usePrototypeDetail`
-              - `apps/prototypes/gallery.usePrototypeSrc`
-              - `apps/prototypes/gallery.VersionStepShortcuts`
+              - `apps/prototypes/canvas.CanvasFrame`
+              - `apps/prototypes/canvas.CanvasFrameView`
+              - `apps/prototypes/canvas.frameA`
+              - `apps/prototypes/canvas.FrameActionRow`
+              - `apps/prototypes/canvas.FrameId`
+              - `apps/prototypes/canvas.FrameLetter`
+              - `apps/prototypes/canvas.FrameResolution`
+              - `apps/prototypes/canvas.FrameSource`
+              - `apps/prototypes/canvas.layoutFrames`
+              - `apps/prototypes/canvas.letterOf`
+              - `apps/prototypes/canvas.OptionsPill`
+              - `apps/prototypes/canvas.PrototypeDetailProvider`
+              - `apps/prototypes/canvas.PrototypeFrame`
+              - `apps/prototypes/canvas.PrototypeFrameActions`
+              - `apps/prototypes/canvas.SizeChip`
+              - `apps/prototypes/canvas.useFrameNames`
+              - `apps/prototypes/canvas.usePrototypeDetail`
+              - `apps/prototypes/canvas.VersionStepper`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/pin.Pin`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
               - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/css/ui-kit.DropdownMenuSection`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/css/viewport-overlay.ViewportOverlay`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/embed.embedUrl`
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
-              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
+              - `primitives/overlay/tooltip.Kbd`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
-        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
+              - `primitives/shortcuts.useSurfaceShortcuts`
+        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
             - Uses:
@@ -4034,8 +4054,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
           - Core:
-            - Uses: `primitives/pane.defineApp`
-            - Exports (values): `prototypesApp`
+            - Uses:
+              - `primitives/pane.defineApp`
+              - `primitives/pane.defineRoute`
+            - Exports (values):
+              - `prototypeDetailRoute`
+              - `prototypesApp`
+              - `prototypesGalleryRoute`
         - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
           - Server:
             - Contributes: `resource.declare` "prototypes.thumbnails"
@@ -7024,7 +7049,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/present`
           - `build`
           - `config_v2/config-link`
@@ -9725,7 +9750,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Prototypes"
                 - Uses:
-                  - `apps/prototypes/gallery.prototypeDetailPane`
+                  - `apps/prototypes/canvas.prototypeDetailPane`
                   - `conversations/conversation-view/artifacts.ArtifactRow`
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
                   - `primitives/css/spacing.Stack`
@@ -17554,9 +17579,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
               - `apps/pages/starred`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
-              - `apps/prototypes/compare/version`
-              - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/library`
@@ -18326,6 +18350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/files`
           - `apps/prototypes/gallery`
           - `apps/sonata/library`
@@ -24045,7 +24070,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/shell`
           - `apps/browser/tabs`
           - `apps/chord/shell`
-          - `apps/prototypes/compare`
           - `primitives/app-shell`
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
@@ -24295,12 +24319,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/search`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
               - `apps/prototypes/compare/component`
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
-              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
@@ -24500,6 +24525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/pages/page-tree`
+              - `apps/prototypes/canvas`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -24595,8 +24621,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/trainer`
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
@@ -24654,7 +24678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/prompt-origin`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/studio/compositions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/compositions/membership-summary`
@@ -24745,8 +24769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/shell`
               - `apps/home/shell`
               - `apps/mail/shell`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/library`
               - `apps/studio/contributions`
               - `apps/studio/graph`
@@ -24818,6 +24841,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/pages/page-author`
               - `apps/pages/page-tree`
+              - `apps/prototypes/canvas`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/piano-roll`
               - `apps/sonata/view-options`
@@ -24860,6 +24884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/curriculum`
               - `apps/chord/trainer`
               - `apps/deploy/analytics/dashboard`
+              - `apps/prototypes/canvas`
               - `apps/sonata/notation`
               - `apps/sonata/pedal/lane`
               - `apps/sonata/piano-roll`
@@ -24917,6 +24942,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/mail/threads`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/present`
               - `apps/sonata/library`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -25178,7 +25205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -25277,8 +25304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/mail/threads`
               - `apps/pages/history`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
@@ -25427,6 +25453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/solo`
               - `apps/browser/webview`
               - `apps/pages/page-tree`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
@@ -25608,7 +25635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/shell`
               - `apps/chord/trainer`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/website/landing/layers`
@@ -25778,7 +25805,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
-              - `apps/prototypes/compare`
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/present`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
@@ -25873,6 +25901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `Slider`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/canvas`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/track-mixer`
@@ -25959,9 +25988,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
-              - `apps/prototypes/compare/version`
-              - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
               - `apps/sonata/library`
@@ -26320,6 +26348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/mail/search`
+              - `apps/prototypes/canvas`
               - `code-explorer/commit-detail`
               - `conversations/conversation-view/jsonl-viewer`
               - `debug/profiling/ops/op-gantt`
@@ -26370,7 +26399,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
-              - `apps/prototypes/gallery`
               - `apps/studio/graph`
               - `conversations/agents`
               - `fields/json/config`
@@ -26468,9 +26496,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/compare`
-              - `apps/prototypes/compare/version`
-              - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
@@ -26784,8 +26811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/pedal/indicator`
               - `apps/sonata/piano-roll`
@@ -26998,7 +27024,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare/version`
+              - `apps/prototypes/canvas`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
@@ -27344,7 +27370,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/chord/trainer`
               - `apps/pages/page-tree`
-              - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
@@ -27672,6 +27697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/home/app-cards`
           - `apps/mail/threads`
           - `apps/pages/page-tree`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/studio/compositions`
@@ -28452,8 +28478,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/present`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -28589,7 +28615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PluginErrorBoundary`
       - Cross-plugin:
         - Imported by:
-          - `apps/prototypes/compare`
+          - `apps/prototypes/canvas`
           - `framework/web-core`
           - `layouts/full-pane`
           - `layouts/miller`
@@ -28730,6 +28756,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/surface/floating`
           - `apps/pages/page-tree`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/present`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
@@ -28789,10 +28816,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
-          - `apps/prototypes/compare/version`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/copy-id`
           - `apps/prototypes/gallery`
-          - `apps/prototypes/present`
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/metronome`
           - `apps/sonata/library`
@@ -28963,7 +28989,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs`
           - `apps/chord/piano`
           - `apps/chord/trainer`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
+          - `apps/prototypes/present`
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/live-play`
           - `apps/sonata/audio/metronome`
@@ -29113,7 +29140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tabs`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
           - `primitives/pane`
       - Web:
         - Exports (types): `LinkGestureProps`
@@ -29235,7 +29262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
-          - `apps/prototypes/compare/version`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/files`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
@@ -29421,8 +29448,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
-          - `apps/prototypes/compare`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/present`
           - `apps/sonata/library`
           - `apps/sonata/sources/ultimate-guitar`
@@ -29761,7 +29787,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useOptimisticResource`
       - Cross-plugin:
         - Imported by:
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
           - `apps/sonata/track-mixer`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
@@ -29847,7 +29873,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FloatingActionFadeIn`
           - Cross-plugin:
             - Imported by:
-              - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/prompt-templates`
               - `primitives/outline/rail`
@@ -30005,7 +30030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
                 - Imported by:
-                  - `apps/prototypes/gallery`
+                  - `apps/prototypes/canvas`
                   - `build/serve-composition`
                   - `conversations/conversation-view/rewind`
                   - `ui/theme-engine/theme-gallery`
@@ -30033,8 +30058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/chord/curriculum`
-              - `apps/prototypes/compare/version`
-              - `apps/prototypes/gallery`
+              - `apps/prototypes/canvas`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/entry-points`
               - `apps/website/improve`
@@ -30119,6 +30143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps/chord/trainer`
               - `apps/events/sources`
+              - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/primitives/toolbar-control`
               - `build`
@@ -30150,7 +30175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar/dots`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.foundations`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.foundations`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -30172,8 +30197,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blockDetailPane.Actions` "title" → `PaneTitleItem`
           - `pagesTreePane.Actions` "title" → `PaneTitleItem`
           - `pages-root.actions` "title" → `PaneTitleItem`
-          - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
+          - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
           - `settings-config-index.actions` "title" → `PaneTitleItem`
           - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
@@ -30399,6 +30424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/welcome`
           - `apps/pages/welcome/quick-create`
           - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/compare/route`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
@@ -30709,7 +30735,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/threads`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
           - `apps/studio/compositions/release`
@@ -31009,7 +31035,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/solo`
           - `apps-core/tabs`
           - `apps/chord/trainer`
-          - `apps/prototypes/gallery`
+          - `apps/prototypes/canvas`
+          - `apps/prototypes/present`
           - `apps/sonata/controls`
           - `apps/sonata/progress/loop`
           - `primitives/action-presentation`
@@ -31075,8 +31102,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/shell`
           - `apps/pages/welcome`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/compare`
-          - `apps/prototypes/gallery`
           - `apps/settings/shell`
           - `apps/sonata/piano-roll`
           - `apps/sonata/progress/scrubber`
@@ -32000,7 +32027,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×211: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×212: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -32029,7 +32056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×210: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×211: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -33245,6 +33272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/chord/trainer`
           - `apps/events/sources/refresh-all`
           - `apps/pages/page-tree`
+          - `apps/prototypes/canvas`
           - `build/serve-composition`
           - `config_v2/settings`
           - `conversations/conversation-view`

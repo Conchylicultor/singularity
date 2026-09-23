@@ -102,6 +102,8 @@ primitive exists to name.
     - `apps/mail/sync-status`
     - `apps/mail/threads`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/canvas`
+    - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`

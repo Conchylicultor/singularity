@@ -1,7 +1,7 @@
 # embed
 
 The declared **embedded-document** signal. A document opened with `?embed=…` is
-hosted by another page on this same origin (the Prototypes app's Compare stage
+hosted by another page on this same origin (the Prototypes app's canvas
 framing the real app beside a mock, for one), and the flag's value says how much
 of the app's own chrome it still draws:
 

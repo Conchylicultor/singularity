@@ -106,6 +106,7 @@ offsets expressible on the semantic ramp.
     - `apps-core/surface/solo`
     - `apps/browser/webview`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`

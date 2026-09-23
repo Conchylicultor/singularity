@@ -17,8 +17,7 @@
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
-//   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
-//   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
@@ -95,9 +94,10 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/prototypes/plugins/compare/plugins/component",
   "apps/plugins/prototypes/plugins/compare/plugins/fixture",
   "apps/plugins/prototypes/plugins/compare/plugins/route",
-  "apps/plugins/prototypes/plugins/compare/plugins/version",
   "apps/plugins/prototypes/plugins/copy-id",
+  "apps/plugins/prototypes/plugins/gallery",
   "apps/plugins/prototypes/plugins/present",
+  "apps/plugins/prototypes/plugins/thumbnails",
   "apps/plugins/settings/plugins/accounts",
   "apps/plugins/settings/plugins/appearance",
   "apps/plugins/settings/plugins/config",

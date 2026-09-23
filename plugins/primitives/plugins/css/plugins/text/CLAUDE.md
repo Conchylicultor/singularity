@@ -240,9 +240,8 @@ fixed raw size escapes per-site via
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
-    - `apps/prototypes/compare/version`
-    - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`

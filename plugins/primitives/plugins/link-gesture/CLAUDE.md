@@ -19,7 +19,7 @@ either depending on the other.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tabs`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `primitives/pane`
 - Web:
   - Exports (types): `LinkGestureProps`

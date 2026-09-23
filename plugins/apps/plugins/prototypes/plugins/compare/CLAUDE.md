@@ -1,84 +1,59 @@
 # compare
 
-The **Compare** stage of the prototype detail pane: the document on screen on
-the left, a counterpart on the right, both live, both interactive, and both at
-**one width** the reader changes. The counterpart is, by default, the real app
-thing the prototype says it mocks — or one the reader picked (below), such as
-the prototype's own latest version.
+The prototype canvas's **Real app** frame: the real thing a prototype says it
+mocks, live and interactive, beside the mock at the canvas's size. It is a
+`FrameSource` contribution to the `canvas` plugin (id `REAL_APP_SOURCE`,
+`"real-app"`, in `core/`; add label "Real app"), so it arrives through the
+canvas's `+ Real app` button or the `proto/<id>/compare` URL. The size, zoom,
+side-by-side and swipe are the canvas's — this plugin paints no layout.
 
-This plugin owns four things and names no kind of counterpart:
+It owns two things and names no kind of counterpart:
 
 1. **Reading the declaration.** A prototype names its counterpart in its own
    document, as `<meta name="mocks" content="<kind>:<ref>">`. The `files`
    plugin parses that on the wire (`parseMocks` → `none` / `malformed` /
-   `declared { tag, ref }`), so this stage never sees a raw string.
-2. **Dispatching on the kind.** `Counterpart.Kind` (`web/slots.tsx`) is a
-   dispatch slot keyed on the tag. A kind is a child plugin under `plugins/`
-   contributing `{ match: "<tag>", label, example, component }`. Shipped kinds:
-   `fixture` (a layout-harness fixture), `component` (a real component a
-   plugin exhibits as a specimen, rendered inline in the app), `route` / `app` (the running app
-   at a path — the screen alone, or the whole app with its rail and tab bar;
-   one plugin, two contributions), and `version` (another version of the
-   prototype itself). Another kind is a new folder here and no edit to this
+   `declared { tag, ref }`), so this plugin never sees a raw string.
+2. **Dispatching on the kind** (`RealAppSource`, `web/components/real-app-source.tsx`).
+   `Counterpart.Kind` (`web/slots.tsx`) is a dispatch slot keyed on the tag. A
+   kind is a child plugin under `plugins/` contributing `{ match: "<tag>",
+   label, example, component }`. Shipped kinds: `fixture` (a layout-harness
+   fixture), `component` (a real component a plugin exhibits as a specimen,
+   rendered inline in the app), and `route` / `app` (the running app at a path —
+   the screen alone, or the whole app with its rail and tab bar; one plugin,
+   two contributions). Another kind is a new folder here and no edit to this
    plugin.
-3. **What the stage compares against** (`web/against.tsx`). See below.
-4. **The chrome** (`counterpart-stage.tsx`): the Against, width and zoom
-   controls, both halves, the per-half error boundary.
 
-## Declared or picked: what the stage compares against
-
-The stage shows ONE `<kind>:<ref>` spec (`CounterpartSpec`): the one the reader
-picked, else the one the page declares. Either goes through the same dispatch,
-so a kind cannot tell which it was handed.
-
-- **A kind can offer counterparts undeclared**: `presets: [{ ref, label }]` on
-  its contribution. The stage's **Against** control lists "Declared" plus every
-  kind's presets (`useOfferedCounterparts()`); with no presets anywhere the
-  control is absent. The `version` kind offers `version:latest` as "Latest
-  version" and `version:shown` as "Another variant" (the same version, with
-  option picks of its own).
-- **A kind a page never declares** leaves out `example`, and is then not listed
-  in the "how to declare one" copy.
-- **The pick** lives in `CompareAgainstProvider`, contributed into the gallery's
-  `PrototypeDetailScope` wrapper slot, so the header, the version list's row
-  actions and the stage share it. It is held with the prototype's name (opening
-  another prototype drops it, as the shown version does) and it is not in the
-  URL — the pane's route has room for one optional part, the stage.
-  `useCompareAgainst().compareAgainst(spec)` picks a spec AND switches to this
-  stage: that is how the `version` plugin's **Compare with latest** hover
-  action on a past version works (it also shows that version on the left, so
-  the stepper keeps stepping the left half through history).
-
-## The contract: a kind resolves, the stage renders
+## The contract: a kind resolves, the canvas renders
 
 A kind contributes a **component whose only output is `children(resolution)`**
 (`CounterpartKindProps` / `CounterpartResolution`, `web/types.ts`). It is a
-real component — it may run hooks (the fixture kind loads a catalog in an
-effect, the route kind reads the app registry) and it mounts inside the dispatch
-middleware's error boundary — but it paints no layout of its own. So the
-shared-width invariant lives in exactly one place, and a kind cannot re-derive
-it differently.
+real component — it may run hooks (the fixture kind loads a catalog, the route
+kind reads the app registry) and it mounts inside the dispatch middleware's
+error boundary — but it paints no layout of its own, so the frame is always
+the canvas's size.
 
-The resolution has three arms, and every one is a state the stage renders:
+The resolution has three arms, and every one is a state the frame renders:
 
-- `loading` — the kind does not know yet. Never the "no counterpart" copy, which
-  would be a claim about the user's file that reverses itself.
+- `loading` — the kind does not know yet. Never the "no counterpart" copy,
+  which would be a claim about the user's file that reverses itself.
 - `unresolved { title, detail }` — the kind understands the tag but cannot
   resolve the ref here (no such fixture on this branch; no pane at that path).
-- `found { widths, title, subtitle?, badge?, controls?, render(width) }` — the
-  widths this counterpart has something to say about, how to paint it at one of
-  them, and any controls of its own the stage puts in its bar (the `version:shown`
-  half's Variant picker).
+- `found { title, subtitle?, badge?, href?, render(width, height) }` — how to
+  paint it at the canvas's logical size, what the frame's tag says ("/agents ·
+  App screen"), and, for a counterpart that is a page, the URL that opens it on
+  its own (Present's new browser tab).
 
-The kind's `target` prop is everything after the first colon; it is not named
-`ref` because that collides with React's `RefAttributes` on a `ComponentType`.
+`RealAppSource` maps that onto the canvas's `FrameResolution` (the tag is
+`badge ?? title` plus `subtitle`). The kind's `target` prop is everything after
+the first colon; it is not named `ref` because that collides with React's
+`RefAttributes` on a `ComponentType`.
 
 ## The four visible states
 
-| State | Decided by | What the reader sees |
+| State | Decided by | What the reader sees in the frame |
 | --- | --- | --- |
-| no tag (and nothing picked) | the parser | "does not say what it is a mockup of" + every declarable kind's example line |
-| malformed | the parser (also a `problems[]` entry on the card and Focus banner) | the raw line, the reason, the syntax, the known kinds |
+| no tag | the parser | "does not say what it is a mockup of" + every declarable kind's example line |
+| malformed | the parser (also a `problems[]` entry on the card and the pane's banner) | the raw line, the reason, the syntax, the known kinds |
 | unknown kind | the dispatch fallback (`UnknownKind`, in `slots.tsx`) | "nothing in this worktree shows a `<tag>:` counterpart" + the known kinds |
 | unresolvable ref | the kind itself | the kind's own sentence (fixture: missing / region; route: no app / no pane) |
 
@@ -88,70 +63,14 @@ fallback lives in `slots.tsx` rather than its own file because it reads the
 registry it falls back from — a fallback file importing the slot while the slot
 imports the fallback would be an import cycle.
 
-## Shared width is the whole affordance
+The declaration is one-directional — the prototype names its counterpart.
+Prototypes are host-global and outside git while kinds and their catalogs are
+per-worktree, so the lookup can only ever happen at runtime, and "this worktree
+has no such thing" is an ordinary answer, not a fault.
 
-One control moves both halves. Not a draggable divider — that trades room
-*between* the two, so every reading is a different question.
+## Diffing the mock and the app from outside: `e2e/compare-diff.ts`
 
-The widths offered are the counterpart's own (`resolution.widths`), and the
-stage opens at whichever is closest to the prototype's declared viewport width —
-the width the mock was drawn at, so the one it is certain to have something to
-say about. With one width offered, the control is a label. While the counterpart
-is loading or unresolved, a placeholder list (`360 / 640 / 960`) keeps the mock
-half at a real width.
-
-The mock half renders in **every** arm: the mock is known the moment the pane
-opens, and making it wait on the counterpart would be a second unknown standing
-in for a known thing.
-
-## Zoom: fit the pair on screen without reflowing it
-
-The **Zoom** control (`Fit` by default, or `100%`) paints both halves smaller by
-ONE factor without changing the width they are laid out at: each half's content
-sits in a `ScaledBox` exactly the shared width wide, `transform: scale()`d. So
-the zoomed pair is the 100% pair shrunk, every proportion kept.
-
-Fit is the largest factor at which the WHOLE pair fits the pane — width and
-height both — computed by `fitPair` (`web/fit-pair.ts`, pure and tested) from
-what `usePairRoom` measures: the room inside the stage's inset, the one-line
-label band above each frame, and the gap between halves (the chrome that does
-not zoom comes off the room first). It tries the pair side by side and stacked,
-and takes whichever paints them bigger: two wide screens side by side are a
-strip three times wider than tall, which a landscape pane holds well and a
-narrow one (the gallery open beside it, a portrait window) holds far better
-stacked. The pair is fitted to the mock's declared viewport — a route
-counterpart's frame is that same box — and centred in whatever is left over.
-A fixture taller than the mock overflows and scrolls. Fit never zooms in; 100%
-is always side by side.
-
-The chrome is kept to what does not steal room from the renderings: a small
-inset, a small gap, a one-line label (it truncates, so its height is constant),
-and a frame that is a ring rather than a padded card — a ring paints outside
-the box and takes no layout.
-
-## Why the mock frame is not `ScaledIframe`
-
-`ScaledIframe` mounts a prototype at its declared viewport and `scale()`s it to
-fit, so a 320px box shows the 1280px layout shrunk. Next to a counterpart that
-genuinely reflows at 320px, that compares nothing.
-
-So `MockFrame` mounts a plain iframe **at** the chosen width, and the prototype's
-own media queries run. A prototype authored at one fixed width then crops and
-scrolls instead of rearranging — that *is* the answer ("the mock has nothing to
-say about this width"), not a defect to paper over with a scale factor. (Zoom
-is different: it lays both halves out at the chosen width first and only then
-paints them smaller, so it never changes what either half says.) Height
-is the prototype's declared viewport height, since an iframe never sizes to its
-content. Sandbox posture is unchanged from every other prototype frame:
-`allow-scripts allow-same-origin`.
-
-`resolution.render(width)` runs inside a `PluginErrorBoundary`: the slot
-middleware's boundary is the whole pane, which would take the mock down with it
-and leave nothing to compare against.
-
-## Diffing the two halves from outside: `e2e/compare-diff.ts`
-
-The stage puts the mock and the real thing side by side for a person. The
+The canvas puts the mock and the real thing side by side for a person. The
 `compare-diff` script does the same for an agent, and then subtracts one from
 the other:
 
@@ -161,20 +80,24 @@ the other:
   [--out /tmp/mist] [--fail-above 5]
 ```
 
-It opens this pane's Compare stage on the deploy this checkout built, waits for
-the counterpart to resolve, photographs both halves at the shared width, and
-writes `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` and
+It opens `proto/<id>/compare` on the deploy this checkout built, waits for the
+real-app frame to resolve, sets the canvas to 100% through the size & zoom chip
+(so a pixel of the mock is a pixel of the app), and photographs both frames at
+the one canvas size. `--width` must be a size preset's width (the run refuses
+and lists the presets otherwise); without it the canvas stays Responsive and
+the browser window is sized until the frames come out at the prototype's
+declared viewport — the size the mock was drawn at. It writes
+`<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` and
 `<out>-side-by-side.png`, logging the differing-pixel ratio and a per-cell
 heatmap. `--fail-above <pct>` turns the ratio into a verdict; without it the
 run is a transcript tool.
 
-A mock that declares options (`<meta name="prototype-option">`) is
-photographed at its authored defaults unless `--options` names the variant.
-The values are judged against the page's declarations by the same rule the
-server applies to a frame URL (an undeclared name or value refuses the run),
-picked through the stage's own options pill, and checked on the mock
-document's `<html data-*>` before the capture — so a page carrying two
-directions cannot be diffed against the wrong one without saying so.
+The mock is photographed at its authored defaults (frame A's picks are reset
+first) unless `--options` names the variant. The values are judged against
+the page's declarations by the same rule the server applies to a frame URL (an
+undeclared name or value refuses the run), picked through frame A's own options
+pill, and checked on the mock document's `<html data-*>` before the capture.
+Frame A's picks are the shared record; the harness reverts what the run wrote.
 
 The pixel diff is salient by construction — a surface one shade off passes
 it — so colour is reported separately, with the colours named: the dominant
@@ -183,87 +106,54 @@ the mean colour of each region, and the luminance profile across rows and
 columns. That is `<out>-colors.png` and the "colour report" block in the
 transcript; `--delta-e` sets the drift line (default 5).
 
-**It drives the stage, it does not re-implement it.** The script never reads
-the `mocks` tag and names no kind: the stage dispatches the declaration exactly
-as it does for a person, so a kind contributed tomorrow is diffable the same
-day, and the counterpart is always the app as this deploy renders it. What the
-script needs from the stage is only *which two boxes to photograph*, and the
-stage publishes that as DOM attributes — `data-compare-half="mock" |
-"counterpart"` on each half's frame (the ring paints outside it, so at 100%
-zoom the frame is the rendering edge to edge — the script switches to 100%
-before it captures), plus `data-compare-status="loading" | "unresolved" |
-"found"` on the counterpart's. The names are exported from this plugin's
-`core/` (`COMPARE_HALF_ATTR`, `COMPARE_STATUS_ATTR`, `compareHalfSelector`),
-which is the one spelling the stage and the script both read: an `e2e` script
-may import a plugin's `core` but never its `web`.
+**It drives the canvas, it does not re-implement it.** The script never reads
+the `mocks` tag and names no kind. It finds the two frames through the
+canvas's published DOM contract (`canvasFrameSelector` from `canvas/core`):
+frame A of kind `prototype` is the mock, the frame whose kind is
+`REAL_APP_SOURCE` is the app, and `data-canvas-frame-status` says when the app
+frame has resolved (on `unresolved`, the frame's own text is printed as the
+reason). An `e2e` script may import a plugin's `core` and `e2e` barrels but
+never its `web`, which is why the source id lives in `core/`.
 
-Both captures come out of the same Chromium at the same width, which is what
+Both captures come out of the same Chromium at the same size, which is what
 makes a pixel diff honest here — the pixel arithmetic itself is the harness's
 `diffImages` (see `tooling/e2e-harness/CLAUDE.md`), not anything of this
 plugin's.
 
-Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
+Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`, and the
+canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
+- Description: The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (a layout-harness fixture, a live component specimen, the running app at a route) is a child plugin.
 - Web:
-  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
-  - Contributes:
-    - `PrototypeStages.Stage` "Compare" → `CompareStage`
-    - `PrototypeDetailScope` → `CompareAgainstProvider`
+  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.component`, `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
+  - Contributes: `FrameSource` "Real app" → `RealAppSource`
   - Uses:
-    - `apps/prototypes/gallery.PrototypeDetailScope`
-    - `apps/prototypes/gallery.PrototypeStageProps`
-    - `apps/prototypes/gallery.PrototypeStages`
-    - `apps/prototypes/gallery.usePrototypeDetail`
-    - `primitives/bar.Bar`
+    - `apps/prototypes/canvas.FrameSource`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
-    - `primitives/css/column.Column`
-    - `primitives/css/line.Line`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/loading.Loading`
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):
-    - `CompareAgainst`
     - `CounterpartKindMeta`
     - `CounterpartKindProps`
-    - `CounterpartPreset`
     - `CounterpartResolution`
-    - `CounterpartSpec`
-    - `WidthChoices`
   - Exports (values):
     - `Counterpart`
-    - `MockFrame`
-    - `useCompareAgainst`
     - `useCounterpartKinds`
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/compare/component`
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
-    - `apps/prototypes/compare/version`
 - Core:
-  - Exports (types):
-    - `CompareHalf`
-    - `CompareStatus`
-  - Exports (values):
-    - `COMPARE_HALF_ATTR`
-    - `COMPARE_STATUS_ATTR`
-    - `compareHalfSelector`
+  - Exports (values): `REAL_APP_SOURCE`
 - Sub-plugins:
-  - **`component`** — The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
-  - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
-  - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
-  - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options — or the version on screen itself as another variant, with option picks of its own (version:shown). Never declared by a page: offered as "Latest version" and "Another variant" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
+  - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
+  - **`fixture`** — The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.
+  - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
 
 <!-- AUTOGENERATED:END -->

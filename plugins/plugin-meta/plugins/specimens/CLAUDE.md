@@ -3,7 +3,7 @@
 A place for a plugin to exhibit one of its **real** components on its own, so
 another surface can render it standalone — inside the running app, with real
 slot contributions, config and data. The first consumer is the Prototypes
-Compare stage's `component:` kind, which puts a specimen beside a mock.
+canvas's Real app frame, through its `component:` kind, which puts a specimen beside a mock.
 
 ## Registering one
 

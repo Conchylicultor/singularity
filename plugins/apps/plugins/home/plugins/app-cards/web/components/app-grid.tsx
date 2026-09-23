@@ -62,7 +62,7 @@ function newAppPrompt(userText: string, prototypeId: string | null): string {
         ...app,
         "Once the app is built, add",
         '`<meta name="mocks" content="app:/<the app\'s path>">` to the prototype so',
-        "the Compare stage puts the mock and the real app side by side.",
+        "the prototype canvas can put the mock beside the real app (+ Real app).",
       ].join("\n"),
     );
   } else {

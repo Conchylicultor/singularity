@@ -17,8 +17,8 @@ after the click, so no toast is needed.
 - Web:
   - Contributes: `prototypeDetailPane.Actions` "copy-id" → `CopyIdAction`
   - Uses:
-    - `apps/prototypes/gallery.prototypeDetailPane`
-    - `apps/prototypes/gallery.usePrototypeDetail`
+    - `apps/prototypes/canvas.prototypeDetailPane`
+    - `apps/prototypes/canvas.usePrototypeDetail`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/icon-button.IconButton`
 

@@ -726,7 +726,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
-    - `apps/prototypes/compare/version`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/files`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`

@@ -1,8 +1,10 @@
-// Verifies the Present menu on a prototype's detail pane: each of the four
-// destinations actually takes the prototype somewhere, the options picker comes
-// along (and still switches the variant and the version while fullscreen), and
-// Escape brings it
-// back. Manual only — nothing runs this automatically.
+// Verifies the per-frame Present menu on a prototype's canvas: each
+// destination takes frame A somewhere (this app tab keeps the tab bar, this
+// browser tab and full screen cover it), the chrome comes along (the tag with
+// its version stepper, the options pill, the size chip), ← / → flip to the
+// other frame in place, `F` presents the selected frame in full screen, Escape
+// brings it back, and the new-browser-tab icon opens the chromeless present
+// page. Manual only — nothing runs this automatically.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
@@ -23,6 +25,7 @@ import {
   humanizeToken,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { canvasFrameSelector } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 
 const out = arg("out", "/tmp/present-verify");
 
@@ -53,7 +56,7 @@ const name = meta.name;
 const option = meta.options.find((o) => o.values.some((v) => v !== o.default));
 const otherValue = option?.values.find((v) => v !== option.default);
 
-/** The prototype document's frame URL, wherever it is mounted. */
+/** The live prototype document's frame URL, wherever it is mounted. */
 function frameUrl(page: Page): string | undefined {
   return page
     .frames()
@@ -63,61 +66,95 @@ function frameUrl(page: Page): string | undefined {
 
 await withBrowser(async (h) => {
   const r = report(`present — ${name}`);
-  const { page, context, captured } = await h.session();
+  const { page, context, captured } = await h.session({
+    viewport: { width: 1440, height: 900 },
+  });
   await boot(page, pathUrl(`/prototypes/proto/${name}`), {
-    marker: "iframe",
+    marker: canvasFrameSelector({ letter: "A", status: "found" }),
     settleMs: 1000,
   });
 
-  const present = page.getByRole("button", { name: "Present" });
-  const dialog = page.getByRole("dialog");
+  const frameA = page.locator(canvasFrameSelector({ letter: "A" }));
+  const dialog = page.getByRole("dialog", { name: "Prototype presentation" });
   // One chip of the app tab strip — the thing "In this app tab" must NOT
   // cover, and the thing every other destination does cover.
   const tabChip = page.locator("[data-app-tab]").first();
-  const picker = dialog.getByLabel("Prototype options");
+  const viewport = page.viewportSize();
 
-  /** The picker travels with the presentation — the only way to switch variant
-      once the pane header is gone. Skipped on a prototype declaring none. */
-  async function pickerIsPresent(where: string) {
-    if (!option) return;
+  /** Frame A's own Present menu: hover its screen, click its Present button. */
+  async function openMenuOfA() {
+    await frameA.hover();
+    // Frame A's header comes first, so its Present button is the first one.
+    await page
+      .getByRole("button", { name: "Present", exact: true })
+      .first()
+      .click();
+  }
+
+  /** The chrome shows on hover: the tag's stepper, the size chip, the pill. */
+  async function chromeIsThere(where: string) {
+    await dialog.hover();
     r.ok(
-      `the options picker is on the ${where} presentation`,
-      (await picker.count()) === 1,
+      `the version stepper is on the ${where} presentation`,
+      (await dialog.getByRole("group", { name: "Version" }).count()) === 1,
     );
+    r.ok(
+      `the size chip is on the ${where} presentation`,
+      (await dialog.getByRole("button", { name: "Size and zoom" }).count()) ===
+        1,
+    );
+    if (option) {
+      r.ok(
+        `the options pill is on the ${where} presentation`,
+        (await dialog.getByLabel("Prototype options").count()) === 1,
+      );
+    }
   }
 
   // --- In this app tab ---------------------------------------------------
-  await present.click();
-  await page.getByRole("menuitem", { name: "In this app tab" }).click();
+  await openMenuOfA();
+  r.ok(
+    "the menu is headed with the frame's letter",
+    await page
+      .getByText("Present A", { exact: true })
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(
+        () => true,
+        () => false,
+      ),
+  );
+  await page.getByRole("menuitem", { name: /^In this app tab/ }).click();
   await dialog.waitFor({ state: "visible", timeout: 5000 });
   const surfaceBox = await dialog.boundingBox();
-  const viewport = page.viewportSize();
   r.ok(
     "in-this-app-tab fills the surface, not the viewport",
     surfaceBox != null &&
       viewport != null &&
       // Starts strictly below the top of the page: the tab bar is still on
-      // screen above it. Width may legitimately equal the viewport's (the rail
-      // can be hidden), so height/top is the load-bearing assertion.
+      // screen above it.
       surfaceBox.y > 1 &&
       surfaceBox.height < viewport.height - 1,
     `dialog ${JSON.stringify(surfaceBox)} viewport ${JSON.stringify(viewport)}`,
   );
   r.ok(
-    "presented stage shows the prototype",
-    (await dialog.locator("iframe").count()) === 1,
+    "the presentation shows the prototype",
+    (await dialog.locator("iframe").count()) >= 1,
   );
   r.ok("the app tab bar is still visible", await tabChip.isVisible());
-  await pickerIsPresent("in-this-app-tab");
+  await chromeIsThere("in-this-app-tab");
   await snap(page, out, "in-this-app-tab");
 
   await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "detached", timeout: 5000 });
   r.ok("Escape leaves the surface presentation", (await dialog.count()) === 0);
 
-  // --- In this browser tab -----------------------------------------------
-  await present.click();
-  await page.getByRole("menuitem", { name: "In this browser tab" }).click();
+  // --- In this browser tab, with two frames: ← / → flip -------------------
+  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await page
+    .locator(canvasFrameSelector({ letter: "B", status: "found" }))
+    .waitFor({ state: "visible", timeout: 10_000 });
+  await openMenuOfA();
+  await page.getByRole("menuitem", { name: /^In this browser tab/ }).click();
   await dialog.waitFor({ state: "visible", timeout: 5000 });
   const box = await dialog.boundingBox();
   r.ok(
@@ -128,16 +165,72 @@ await withBrowser(async (h) => {
       box.height >= viewport.height - 1,
     `dialog ${JSON.stringify(box)} viewport ${JSON.stringify(viewport)}`,
   );
-  await pickerIsPresent("in-this-browser-tab");
+  await dialog.hover();
+  r.ok(
+    "the tag says 1 of 2",
+    await dialog.getByText("1 of 2 · ← →").isVisible(),
+  );
+  await chromeIsThere("in-this-browser-tab");
   await snap(page, out, "in-this-browser-tab");
+  // Keys go to the app document, not the prototype's iframe.
+  await dialog.getByText("1 of 2 · ← →").click();
+  await page.keyboard.press("ArrowRight");
+  const flipped = await dialog
+    .getByText("2 of 2 · ← →")
+    .waitFor({ state: "visible", timeout: 5000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  r.ok("→ flips to frame B in place", flipped);
+  r.ok(
+    "…showing B's screen",
+    (await dialog.locator(canvasFrameSelector({ letter: "B" })).count()) === 1,
+  );
+  await page.keyboard.press("ArrowLeft");
+  const back = await dialog
+    .getByText("1 of 2 · ← →")
+    .waitFor({ state: "visible", timeout: 5000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  r.ok("← flips back to frame A", back);
+  await page.keyboard.press("ArrowRight");
+  await dialog
+    .getByText("2 of 2 · ← →")
+    .waitFor({ state: "visible", timeout: 5000 });
 
   await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "detached", timeout: 5000 });
   r.ok("Escape leaves the presentation", (await dialog.count()) === 0);
 
-  // --- Fullscreen --------------------------------------------------------
-  await present.click();
-  await page.getByRole("menuitem", { name: "Fullscreen" }).click();
+  // --- F presents the selected frame --------------------------------------
+  // Leaving selected B (the frame last on show), so F presents B.
+  await page.mouse.move(5, 5);
+  await page.keyboard.press("f");
+  await dialog.waitFor({ state: "visible", timeout: 5000 });
+  const fB = await dialog
+    .locator(canvasFrameSelector({ letter: "B" }))
+    .waitFor({ state: "attached", timeout: 5000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  r.ok(
+    "leaving selected the frame last on show, and F presents it (B)",
+    fB,
+    `frames in the presentation: ${String(await dialog.locator("[data-canvas-frame]").count())}`,
+  );
+  await page.waitForTimeout(500);
+  await page.evaluate(async () => {
+    if (document.fullscreenElement) await document.exitFullscreen();
+  });
+  await dialog.waitFor({ state: "detached", timeout: 5000 });
+
+  // --- Full screen, from the menu ----------------------------------------
+  await openMenuOfA();
+  await page.getByRole("menuitem", { name: /^Full screen/ }).click();
   await dialog.waitFor({ state: "visible", timeout: 5000 });
   // The fullscreen transition is async — poll rather than sampling once.
   const fullscreened = await page
@@ -148,18 +241,20 @@ await withBrowser(async (h) => {
       () => true,
       () => false,
     );
-  r.ok("fullscreen hands the stage to the browser", fullscreened);
-  await pickerIsPresent("fullscreen");
-  // The load-bearing one: the picker still WORKS inside the fullscreened
-  // element — hovering opens its chips, and a chip reloads the frame on the
-  // picked variant, with no pane header to go back to.
+  r.ok("full screen hands the stage to the browser", fullscreened);
+  await chromeIsThere("full-screen");
+  // The load-bearing one: the options pill still WORKS inside the
+  // fullscreened element — its popover opens there, and a chip reloads the
+  // frame on the picked variant.
   if (option && otherValue !== undefined) {
-    await picker.hover();
+    await dialog.getByLabel("Prototype options").click();
     const group = dialog.getByRole("radiogroup", {
       name: humanizeToken(option.name),
     });
     await group.waitFor({ state: "visible", timeout: 5000 });
-    await group.getByRole("radio", { name: humanizeToken(otherValue) }).click();
+    await group
+      .getByRole("radio", { name: new RegExp(`^${humanizeToken(otherValue)}`) })
+      .click();
     const switched = await waitFor(
       () => Promise.resolve(frameUrl(page)),
       (url) =>
@@ -167,130 +262,81 @@ await withBrowser(async (h) => {
       { timeoutMs: 15_000 },
     );
     r.ok(
-      `a chip switches ${option.name} to "${otherValue}" while fullscreen`,
+      `a chip switches ${option.name} to "${otherValue}" while full screen`,
       switched.ok,
       switched.value,
     );
-    await page.mouse.move(5, 5);
+    // Close the popover by its trigger: under full screen, Escape would leave.
+    await dialog.getByLabel("Prototype options").click();
   }
-  // The version comes along too: with no pane header, the picker's Version
-  // row is the only way off the version the presentation opened on.
-  await dialog.getByLabel("Prototype options").hover();
-  const versionRow = dialog.getByRole("group", { name: "Version" });
-  await versionRow.waitFor({ state: "visible", timeout: 5000 });
-  r.ok("the picker offers the Version row while fullscreen", true);
-  // The label opens the version list: drawn inside the fullscreened
-  // presentation (its portal host), with the picker held open under it.
-  await versionRow
-    .getByRole("button", { name: /^(v\d+|Live|Unknown)/ })
-    .click();
-  const list = dialog
-    .locator("[data-portal-host]")
-    .getByText(/^\d+ versions?$/);
+  // The version list opens inside the fullscreened presentation (its portal
+  // host).
+  await dialog.hover();
+  const versionLabel = dialog
+    .getByRole("group", { name: "Version" })
+    .getByRole("button", { name: /^(v\d+|Live|Unknown)/ });
+  await versionLabel.click();
+  const list = dialog.getByText("Versions of A", { exact: true });
   const listShown = await list
     .waitFor({ state: "visible", timeout: 5000 })
     .then(
       () => true,
       () => false,
     );
-  r.ok("the version list opens inside the fullscreen presentation", listShown);
-  await page.mouse.move(5, 5);
-  await page.waitForTimeout(500);
-  r.ok(
-    "the picker stays open while its version list is open",
-    await versionRow.isVisible(),
-  );
-  await snap(page, out, "fullscreen-version-list");
-  await page.keyboard.press("Escape");
-  await list.waitFor({ state: "hidden", timeout: 5000 });
-  r.ok(
-    "Escape closes the list without leaving fullscreen",
-    await page.evaluate(() => document.fullscreenElement !== null),
-  );
-  await dialog.getByLabel("Prototype options").hover();
-  const previous = versionRow.getByRole("button", { name: "Previous version" });
-  if (await previous.isEnabled()) {
-    await previous.click();
-    const stepped = await waitFor(
-      () =>
-        Promise.resolve(
-          page
-            .frames()
-            .find((f) => f.url().includes(`/api/prototypes/${name}/versions/`))
-            ?.url(),
-        ),
-      (url) => url !== undefined,
-      { timeoutMs: 15_000 },
-    );
-    r.ok(
-      "Previous version shows a recorded version while fullscreen",
-      stepped.ok,
-      stepped.value,
-    );
-    await snap(page, out, "fullscreen-version");
-    await versionRow.getByRole("button", { name: "Back to latest" }).click();
-    const back = await waitFor(
-      () => Promise.resolve(frameUrl(page)),
-      (url) => url !== undefined,
-      { timeoutMs: 15_000 },
-    );
-    r.ok("Back to latest returns to the live folder", back.ok, back.value);
-  }
-  await page.mouse.move(5, 5);
-  await snap(page, out, "fullscreen");
+  r.ok("the version list opens inside the full-screen presentation", listShown);
+  await snap(page, out, "full-screen-version-list");
+  await versionLabel.click();
   await page.evaluate(async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
   });
   await dialog.waitFor({ state: "detached", timeout: 5000 });
   r.ok(
-    "leaving fullscreen closes the presentation",
+    "leaving full screen closes the presentation",
     (await dialog.count()) === 0,
   );
 
   // --- New browser tab ---------------------------------------------------
-  await present.click();
+  await openMenuOfA();
   const opened = context.waitForEvent("page", { timeout: 5000 });
-  await page.getByRole("menuitem", { name: "New browser tab" }).click();
+  await page
+    .getByRole("menuitem", { name: "Open in a new browser tab" })
+    .click();
   const tab = await opened;
   await tab.waitForLoadState("domcontentloaded");
   const tabUrl = new URL(tab.url());
   r.ok(
-    "new tab opens the app's present page, chromeless",
-    tabUrl.pathname === `/prototypes/present/${name}` &&
+    "the new tab opens frame A's present page (live, shared picks), chromeless",
+    tabUrl.pathname === `/prototypes/present/${name}/live` &&
       tabUrl.searchParams.get("embed") === "1",
     tab.url(),
   );
   await tab
-    .locator("iframe")
-    .first()
+    .locator(canvasFrameSelector({ letter: "A", status: "found" }))
     .waitFor({ state: "attached", timeout: 15_000 });
   r.ok(
     "the new tab shows the prototype",
-    (await tab.locator("iframe").count()) === 1,
+    (await tab.locator("iframe").count()) >= 1,
   );
   r.ok(
     "the new tab draws no app tab bar",
     (await tab.locator("[data-app-tab]").count()) === 0,
   );
-  // The reason the new tab is an app page at all: the picker is there, and a
-  // chip still switches the variant.
   if (option) {
+    await tab.locator(canvasFrameSelector({ letter: "A" })).hover();
     const tabPicker = tab.getByLabel("Prototype options");
-    await tabPicker.waitFor({ state: "attached", timeout: 15_000 });
-    r.ok(
-      "the options picker is on the new-tab page",
-      (await tabPicker.count()) === 1,
-    );
-    await tab.locator("iframe").first().hover();
-    await tabPicker.hover();
+    await tabPicker.waitFor({ state: "visible", timeout: 15_000 });
+    r.ok("the options pill is on the new-tab page", true);
+    await snap(tab, out, "new-tab");
+    // The full-screen step above left `otherValue` picked: switch back.
+    await tabPicker.click();
     const group = tab.getByRole("radiogroup", {
       name: humanizeToken(option.name),
     });
     await group.waitFor({ state: "visible", timeout: 5000 });
-    await snap(tab, out, "new-tab");
-    // The fullscreen step above left `otherValue` picked: switch back.
     await group
-      .getByRole("radio", { name: humanizeToken(option.default) })
+      .getByRole("radio", {
+        name: new RegExp(`^${humanizeToken(option.default)}`),
+      })
       .click();
     const switched = await waitFor(
       () =>

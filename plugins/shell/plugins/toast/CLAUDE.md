@@ -25,6 +25,7 @@
     - `apps/chord/trainer`
     - `apps/events/sources/refresh-all`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-view`

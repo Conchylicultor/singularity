@@ -58,7 +58,7 @@ conversation.
 - Web:
   - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
   - Uses:
-    - `apps/prototypes/gallery.prototypeDetailPane`
+    - `apps/prototypes/canvas.prototypeDetailPane`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`

@@ -73,12 +73,13 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/events/sources/source-detail/status`
     - `apps/mail/attachments`
     - `apps/mail/search`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
     - `apps/prototypes/compare/component`
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
-    - `apps/prototypes/compare/version`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/ultimate-guitar`

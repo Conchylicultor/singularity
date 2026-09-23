@@ -210,8 +210,8 @@ check that the app answering is the build you just made.
 To **compare a prototype mock against the real app** it declares it mocks
 (`<meta name="mocks">`), run
 [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts).
-It photographs both halves of the Compare stage at one width and writes the
-two captures, a red-on-grey diff and a side-by-side sheet, logging the
+It opens the prototype's canvas beside the Real app frame, photographs both
+frames at one size and 100% zoom, and writes the two captures, a red-on-grey diff and a side-by-side sheet, logging the
 differing-pixel ratio and a per-cell heatmap — plus a colour report that names
 the dominant colours, region means and luminance profiles of each half:
 
@@ -220,7 +220,7 @@ the dominant colours, region means and luminance profiles of each half:
   --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out /tmp/compare] [--fail-above 5]
 ```
 
-A mock with variants is captured at its defaults unless `--options` picks the one the app was built from.
+`--width` must be one of the canvas's size presets (omit it for the mock's declared viewport). A mock with variants is captured at its defaults unless `--options` picks the one the app was built from.
 
 For a repeatable flow, write a standalone E2E script in the plugin it verifies,
 at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner

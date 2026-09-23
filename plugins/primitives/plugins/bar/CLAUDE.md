@@ -23,7 +23,6 @@
     - `apps/browser/shell`
     - `apps/browser/tabs`
     - `apps/chord/shell`
-    - `apps/prototypes/compare`
     - `primitives/app-shell`
     - `primitives/pane`
 

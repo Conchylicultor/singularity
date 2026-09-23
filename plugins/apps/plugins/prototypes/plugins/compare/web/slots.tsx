@@ -3,11 +3,7 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type {
-  CounterpartKindMeta,
-  CounterpartKindProps,
-  CounterpartSpec,
-} from "./types";
+import type { CounterpartKindMeta, CounterpartKindProps } from "./types";
 import { KindExamples } from "./components/notices";
 
 /**
@@ -34,41 +30,18 @@ export const Counterpart = {
 
 /**
  * Every registered kind's self-description, in registration order. What the
- * notices list; never what the stage dispatches on — that is the slot's job.
+ * notices list; never what the frame dispatches on — that is the slot's job.
  */
 export function useCounterpartKinds(): readonly CounterpartKindMeta[] {
   return Counterpart.Kind.useContributions();
-}
-
-/** One counterpart the stage offers whatever the prototype declares. */
-export interface OfferedCounterpart {
-  spec: CounterpartSpec;
-  label: string;
-}
-
-/**
- * Every registered kind's presets (`CounterpartKindMeta.presets`), as the specs
- * the Against control offers. A kind matched by a pattern rather than a plain
- * tag has no single tag to name, so it offers none.
- */
-export function useOfferedCounterparts(): readonly OfferedCounterpart[] {
-  const kinds = Counterpart.Kind.useContributions();
-  return kinds.flatMap((k) => {
-    const tag = k.match;
-    if (typeof tag !== "string") return [];
-    return (k.presets ?? []).map((p) => ({
-      spec: { tag, ref: p.ref },
-      label: p.label,
-    }));
-  });
 }
 
 /**
  * The dispatch fallback: the declaration names a kind nothing here handles.
  *
  * Rendered through the same `children(resolution)` path as a kind that handles
- * the tag but cannot resolve the ref, so the stage's chrome (the mock half, the
- * header) is identical in both — only the sentence differs, and the reader can
+ * the tag but cannot resolve the ref, so the frame's chrome is identical in
+ * both — only the sentence differs, and the reader can
  * tell "no such kind" from "no such fixture" at a glance.
  */
 function UnknownKind({ kind, children }: CounterpartKindProps): ReactElement {

@@ -260,9 +260,8 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/compare`
-    - `apps/prototypes/compare/version`
-    - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/library`

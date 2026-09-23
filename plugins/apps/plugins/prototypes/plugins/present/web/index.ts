@@ -1,15 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { PrototypeFrameActions } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { PresentMenu } from "./components/present-menu";
 import { prototypePresentPane } from "./panes";
 
 export default {
   description:
-    "Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened in a new browser tab as a chromeless app page (present/<id>) that keeps the options picker. Contributed into the detail pane's Actions.",
+    "Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.",
   contributions: [
     Pane.Register({ pane: prototypePresentPane }),
-    prototypeDetailPane.Actions({ id: "present", component: PresentMenu }),
+    PrototypeFrameActions({ id: "present", component: PresentMenu }),
   ],
   slots: {
     "prototypes-present": prototypePresentPane,

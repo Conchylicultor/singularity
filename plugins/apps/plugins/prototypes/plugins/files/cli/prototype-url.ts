@@ -1,27 +1,20 @@
 import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { fillSegment } from "@plugins/primitives/plugins/pane/core";
-import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
+import {
+  prototypeDetailRoute,
+  prototypesApp,
+} from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import { prototypeUrl, type OptionPicks } from "../core";
 
 // Where a minted prototype can be LOOKED AT, which is the only thing a
 // prototype is for — so both verbs print it.
 //
 // Derived, never literal. `namespaceUrl` owns `.localhost:9000`
-// (`no-hand-built-namespace-url` enforces that), `prototypesApp.basePath` owns
-// `/prototypes`, and `fillSegment` applies the same per-segment encoding the
-// web router does. What is spelled here and nowhere else is the pane's own
-// `proto/:name/:stage?` segment: it is declared in `gallery/web`, which a CLI
-// process must not import (React in a terminal verb), so this one literal is
-// the seam.
-// `present/e2e/present-verify.ts` carries the same literal for the same reason.
-
-/**
- * The detail pane's route segment, as `gallery/web/panes.tsx` declares it. No
- * `stage` is filled, so the URL is the bare one: whichever stage sorts first.
- */
-const DETAIL_SEGMENT = "proto/:name/:stage?";
+// (`no-hand-built-namespace-url` enforces that), and `prototypeDetailRoute`
+// (declared in `shell/core`, which a CLI process may import — no React) owns
+// `/prototypes/proto/:name/:layout?`. No `layout` is filled, so the URL is the
+// bare one: the prototype alone on its canvas.
 
 /**
  * Resolve this checkout's namespace ONCE, and hand back the formatter —
@@ -32,10 +25,7 @@ const DETAIL_SEGMENT = "proto/:name/:stage?";
  */
 export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
   const at = await checkoutUrl();
-  return (id) =>
-    at(
-      `${prototypesApp.basePath}/${fillSegment(DETAIL_SEGMENT, { name: id }).join("/")}`,
-    );
+  return (id) => at(prototypeDetailRoute.link(prototypesApp, { name: id }));
 }
 
 /**

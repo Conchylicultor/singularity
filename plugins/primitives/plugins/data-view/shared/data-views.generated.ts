@@ -42,7 +42,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "plugin-view.file-tree", pluginId: "plugin-meta.plugin-view.file-tree" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
-  { id: "prototypes.versions", pluginId: "apps.prototypes.gallery" },
+  { id: "prototypes.versions", pluginId: "apps.prototypes.canvas" },
   { id: "running-agents", pluginId: "conversations.conversation-view.running-agents" },
   { id: "runs", pluginId: "runs" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },

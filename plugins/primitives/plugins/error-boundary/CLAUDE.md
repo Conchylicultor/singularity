@@ -70,7 +70,7 @@ barrel.
     - `PluginErrorBoundary`
 - Cross-plugin:
   - Imported by:
-    - `apps/prototypes/compare`
+    - `apps/prototypes/canvas`
     - `framework/web-core`
     - `layouts/full-pane`
     - `layouts/miller`

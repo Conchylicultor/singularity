@@ -1,0 +1,91 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { prototypeDetailPane } from "./panes";
+import {
+  FrameSource,
+  PrototypeFrameActions,
+  PrototypeVersionActions,
+} from "./slots";
+import { AddFrameActions, LayoutAction } from "./components/header-actions";
+import {
+  CloseFrameAction,
+  DuplicateFrameAction,
+  KeepOnlyFrameAction,
+} from "./components/frame-actions";
+import { OpenVersionConversation } from "./components/version-list";
+
+export { prototypeDetailPane } from "./panes";
+export {
+  FrameSource,
+  PrototypeFrameActions,
+  PrototypeVersionActions,
+} from "./slots";
+export type {
+  FrameActionRow,
+  FrameResolution,
+  FrameSourceMeta,
+  FrameSourceProps,
+} from "./slots";
+export {
+  COMPARE_LAYOUT,
+  PrototypeDetailProvider,
+  documentOptions,
+  prototypeDocumentSrc,
+  useFramePicks,
+  useFrameSrc,
+  usePrototypeDetail,
+} from "./context";
+export type {
+  CanvasSourceEntry,
+  PicksRead,
+  PrototypeDetailContextValue,
+} from "./context";
+export { SIZE_PRESETS, frameA, prototypeFrames } from "./internal/canvas-model";
+export type {
+  CanvasAction,
+  CanvasFrame,
+  CanvasLayout,
+  CanvasSize,
+  CanvasState,
+  CanvasZoom,
+  FrameId,
+  PresetName,
+  PrototypeFrame,
+  SourceFrame,
+} from "./internal/canvas-model";
+export { layoutFrames, roomPerFrame } from "./internal/layout";
+export type { FrameLayout, Room } from "./internal/layout";
+export { letterOf } from "./internal/frame-name";
+export { CanvasFrameView } from "./components/canvas-frame-view";
+export type { CanvasFrameViewProps } from "./components/canvas-frame-view";
+export { OptionsPill } from "./components/options-pill";
+export { VersionStepper } from "./components/version-stepper";
+export type { VersionStepperProps } from "./components/version-stepper";
+export { SizeChip } from "./components/size-chip";
+export { FrameLetter } from "./components/frame-letter";
+export { useFrameNames } from "./components/canvas";
+
+export default {
+  description:
+    "The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames, and the proto/<id>/compare URL for 'the prototype beside the real app'.",
+  contributions: [
+    Pane.Register({ pane: prototypeDetailPane }),
+    // The header IS the action bar: every control in it is a contribution.
+    // Their order is authored in `config/apps/prototypes/canvas/`.
+    prototypeDetailPane.Actions({ id: "layout", component: LayoutAction }),
+    prototypeDetailPane.Actions({ id: "add", component: AddFrameActions }),
+    PrototypeFrameActions({ id: "keep-only", component: KeepOnlyFrameAction }),
+    PrototypeFrameActions({ id: "duplicate", component: DuplicateFrameAction }),
+    PrototypeFrameActions({ id: "close", component: CloseFrameAction }),
+    PrototypeVersionActions({
+      id: "open-conversation",
+      component: OpenVersionConversation,
+    }),
+  ],
+  slots: {
+    "prototypes-detail": prototypeDetailPane,
+    "frame-actions": PrototypeFrameActions,
+    "frame-source": FrameSource,
+    "version-actions": PrototypeVersionActions,
+  },
+} satisfies PluginDefinition;

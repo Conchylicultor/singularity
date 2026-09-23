@@ -1,72 +1,5 @@
-import type { ComponentType } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import { defineWrapperSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type {
-  PrototypeMeta,
-  PrototypeVersion,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
-
-/**
- * What every stage is handed. The pane resolves these once — it has to, to say
- * "Prototype not found" — so a stage is a pure function of them and subscribes
- * to nothing itself.
- */
-export interface PrototypeStageProps {
-  /** The prototype the pane is open on. */
-  meta: PrototypeMeta;
-  /**
-   * Every prototype in the gallery, already loaded — a stage that puts
-   * prototypes side by side needs no second subscription of its own. Offered,
-   * not required: the pane resolves the list anyway (to say "not found"), so
-   * handing it over costs nothing, and no shipped stage happens to read it.
-   */
-  gallery: PrototypeMeta[];
-  /**
-   * The URL of the prototype's document, for a stage's iframe `src`. Built once
-   * by the pane (`usePrototypeSrc`): it carries the edit cache-bust — which is
-   * what reloads a stage's frame live — and the option values the reader picked,
-   * so a stage hands it to its frame as-is and cannot show another variant.
-   */
-  src: string;
-}
-
-/**
- * One stage of the detail pane: an entry in the header switcher, and the body it
- * paints when picked.
- */
-export interface PrototypeStageContribution {
-  /** Identity in the switcher and in the pane's active-stage state. */
-  id: string;
-  /** What the switcher chip reads. */
-  label: string;
-  /** Ascending; ties keep registration order. Defaults to 0. */
-  order?: number;
-  /**
-   * The stage renders the prototype through the pane's frame size
-   * (`useFrameSize()` — fixed / page / mobile / full). Only then does the options
-   * picker offer its Size row: a stage that sizes its frames some other way
-   * (Compare's shared width) would otherwise show a control that does nothing.
-   */
-  usesFrameSize?: boolean;
-  component: ComponentType<PrototypeStageProps>;
-}
-
-/**
- * The stage set is OPEN. The gallery contributes Focus like anyone else would,
- * and names no stage anywhere outside its own contribution — so a sibling
- * plugin adds another (the `compare` plugin's Compare stage: a prototype beside
- * the real thing it mocks) without this plugin changing.
- *
- * A plain slot rather than `defineRenderSlot`: exactly one stage paints at a
- * time, picked by id, so there is no list to render. It is the shape
- * `defineTabbedView` uses internally — but that factory owns the switcher's
- * placement (stacked above its body) and this pane's switcher is a header
- * action-bar contribution, several components away from the body it drives.
- */
-export const PrototypeStages = {
-  Stage: defineSlot<PrototypeStageContribution>({ docLabel: (c) => c.label }),
-};
+import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
  * One gallery card: the prototype as listed, joined with whether the user has
@@ -80,20 +13,3 @@ export type PrototypeGalleryRow = PrototypeMeta & { done: boolean };
  * painted at rest — and anything else a card grows is a contribution.
  */
 export const PrototypeCardActions = defineItemActions<PrototypeGalleryRow>();
-
-/**
- * Per-row actions on the version list (the popover behind the stepper's
- * `v3 of 7` label). The gallery ships one — open the conversation whose turn
- * recorded the version — and anything else a version grows is a contribution,
- * not a branch in the list.
- */
-export const PrototypeVersionActions = defineItemActions<PrototypeVersion>();
-
-/**
- * Wrappers folded around the whole detail pane — header and body both, inside
- * the pane's own provider (so a wrapper can read `usePrototypeDetail()`). For
- * state a sibling plugin shares between a header control, a version-list row
- * action and its stage: the `compare` plugin keeps "what Compare compares
- * against" here, and this plugin names no wrapper.
- */
-export const PrototypeDetailScope = defineWrapperSlot();

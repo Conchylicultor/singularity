@@ -1832,6 +1832,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `apps/home/app-cards`
     - `apps/mail/threads`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/studio/compositions`

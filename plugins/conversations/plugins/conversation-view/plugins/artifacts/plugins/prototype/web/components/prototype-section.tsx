@@ -7,7 +7,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { prototypesResource } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
 

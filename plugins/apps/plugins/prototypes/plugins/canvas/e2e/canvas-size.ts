@@ -1,0 +1,265 @@
+// Verifies the canvas-wide size & zoom chip: the canvas opens Responsive at
+// Fit; a device preset lays every frame's page out at that device's size; Fit
+// shrinks the frame to the room while 100% and the zoom slider set the scale
+// exactly; Whole page makes the frame as tall as its document (nothing left to
+// scroll inside); and dragging a frame's right edge resizes every frame, snapping
+// onto a preset it lands near and otherwise giving a Custom width.
+// Manual only — nothing runs this automatically.
+//
+// Usage:
+//   ./singularity run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-size.ts \
+//     [--name <prototype id>] [--out <prefix>] [--headed]
+
+import type { Page } from "playwright";
+import {
+  arg,
+  report,
+  snap,
+  waitFor,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  card,
+  dismiss,
+  frameDoc,
+  hoverCard,
+  letters,
+  openCanvas,
+  openSizeMenu,
+  pickPrototype,
+  pickSize,
+  screen,
+  sizeChip,
+} from "./driver";
+
+const out = arg("out", "/tmp/canvas-size");
+const meta = await pickPrototype();
+const VIEWPORT = { width: 1600, height: 1000 };
+
+/** Frame `letter`'s logical page size and its on-screen scale. */
+async function measure(
+  page: Page,
+  m: PrototypeMeta,
+  letter: string,
+): Promise<{ w: number; h: number; scale: number; boxH: number } | null> {
+  const doc = await frameDoc(page, m, letter);
+  const box = await screen(page, letter).boundingBox();
+  if (!doc || !box) return null;
+  return {
+    w: doc.width,
+    h: doc.height,
+    scale: Math.round((box.width / doc.width) * 100) / 100,
+    boxH: box.height,
+  };
+}
+
+async function chipText(page: Page): Promise<string> {
+  return (await sizeChip(page).innerText()).replace(/\s+/g, " ").trim();
+}
+
+await withBrowser(async (h) => {
+  const r = report(`canvas size — ${meta.title} (${meta.name})`);
+  const { page, captured } = await h.session({ viewport: VIEWPORT });
+  await openCanvas(page, meta.name);
+  const settle = (
+    letter: string,
+    ok: (v: NonNullable<Awaited<ReturnType<typeof measure>>>) => boolean,
+  ) =>
+    waitFor(
+      () => measure(page, meta, letter),
+      (v) => v !== null && ok(v),
+      { timeoutMs: 10_000 },
+    );
+
+  const opened = await chipText(page);
+  r.ok(
+    "opens Responsive at Fit",
+    /^Responsive/.test(opened) && /Fit · 100%/.test(opened),
+    opened,
+  );
+  const responsive = await settle("A", (v) => v.scale === 1);
+  r.ok(
+    "Responsive: the page lays out at the room's own size, at scale 1",
+    responsive.ok &&
+      responsive.value!.w > 1000 &&
+      responsive.value!.w < VIEWPORT.width,
+    JSON.stringify(responsive.value),
+  );
+
+  // A preset lays the page out at that device's size; Fit shrinks it to the room.
+  await pickSize(page, "Phone");
+  const phone = await settle("A", (v) => v.w === 480 && v.h === 900);
+  r.ok(
+    "Phone lays the page out at 480 × 900",
+    phone.ok,
+    JSON.stringify(phone.value),
+  );
+  r.ok(
+    "…fitted into the room (the whole frame visible)",
+    phone.ok && phone.value!.boxH <= VIEWPORT.height,
+    JSON.stringify(phone.value),
+  );
+  r.ok(
+    "the chip names the preset",
+    /^Phone 480 × 900/.test(await chipText(page)),
+    await chipText(page),
+  );
+
+  await pickSize(page, "Wide");
+  const wide = await settle("A", (v) => v.w === 1600 && v.h === 900);
+  r.ok(
+    "Wide at Fit is shrunk below 100%",
+    wide.ok && wide.value!.scale < 1,
+    JSON.stringify(wide.value),
+  );
+  await snap(page, out, "wide-fit");
+
+  // 100%: the value box in the zoom row jumps to actual size.
+  await openSizeMenu(page);
+  await page.getByRole("button", { name: "Actual size" }).click();
+  await dismiss(page);
+  const actual = await settle("A", (v) => v.scale === 1);
+  r.ok(
+    "100% shows the page at scale 1",
+    actual.ok,
+    JSON.stringify(actual.value),
+  );
+  r.ok(
+    "the chip reads 100%",
+    / 100%$/.test(await chipText(page)),
+    await chipText(page),
+  );
+
+  // The slider: ten steps down from 100% is 90%.
+  await openSizeMenu(page);
+  const slider = page.getByRole("slider", { name: "Zoom" });
+  await slider.focus();
+  for (let i = 0; i < 10; i++) await slider.press("ArrowLeft");
+  await dismiss(page);
+  const ninety = await settle("A", (v) => v.scale === 0.9);
+  r.ok(
+    "the zoom slider sets the scale (90%)",
+    ninety.ok,
+    JSON.stringify(ninety.value),
+  );
+  r.ok(
+    "the chip reads 90%",
+    / 90%$/.test(await chipText(page)),
+    await chipText(page),
+  );
+
+  // Back to Fit.
+  await openSizeMenu(page);
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  await dismiss(page);
+  const fitScale = wide.value?.scale ?? -1;
+  const fitAgain = await settle(
+    "A",
+    (v) => Math.abs(v.scale - fitScale) <= 0.01,
+  );
+  r.ok(
+    `Fit goes back to the room's scale (${fitScale})`,
+    fitAgain.ok,
+    JSON.stringify(fitAgain.value),
+  );
+
+  // Whole page: the frame is as tall as its document — nothing to scroll inside.
+  await pickSize(page, "Phone");
+  await settle("A", (v) => v.w === 480);
+  await openSizeMenu(page);
+  await page.getByRole("switch", { name: /Whole page/ }).click();
+  await dismiss(page);
+  const whole = await waitFor(
+    () =>
+      screen(page, "A")
+        .locator("iframe:not([aria-hidden])")
+        .evaluate((el) => {
+          const f = el as HTMLIFrameElement;
+          return {
+            frame: Number(f.getAttribute("height")),
+            doc: f.contentDocument?.documentElement.scrollHeight ?? -1,
+          };
+        }),
+    (v) => v.frame >= 900 && v.doc > 0 && v.doc <= v.frame,
+    { timeoutMs: 10_000 },
+  );
+  r.ok(
+    "Whole page makes the frame as tall as its document",
+    whole.ok,
+    JSON.stringify(whole.value),
+  );
+  const wholeBox = await screen(page, "A").boundingBox();
+  r.ok(
+    "…still fitted into the room",
+    wholeBox !== null && wholeBox.height <= VIEWPORT.height,
+    JSON.stringify(wholeBox),
+  );
+  await snap(page, out, "whole-page");
+  await openSizeMenu(page);
+  await page.getByRole("switch", { name: /Whole page/ }).click();
+  await dismiss(page);
+
+  // The drag handle: every frame follows, snapping onto a preset near it.
+  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await waitFor(
+    () => letters(page),
+    (v) => v === "AB",
+    { timeoutMs: 10_000 },
+  );
+  await pickSize(page, "Desktop");
+  const desk = await settle("B", (v) => v.w === 1280);
+  if (!desk.ok) throw new Error("frame B never reached Desktop");
+
+  async function dragTo(width: number): Promise<void> {
+    const now = await measure(page, meta, "A");
+    if (!now) throw new Error("frame A has no size");
+    await hoverCard(page, "A");
+    const handle = card(page, "A").getByRole("separator", {
+      name: "Drag to resize every frame",
+    });
+    const box = await handle.boundingBox();
+    if (!box) throw new Error("no drag handle");
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + (width - now.w) * now.scale, y, { steps: 8 });
+    await page.mouse.up();
+    await page.mouse.move(2, 2);
+  }
+
+  await dragTo(1034);
+  const snapped = await settle("B", (v) => v.w === 1024 && v.h === 640);
+  r.ok(
+    "dragging near 1024 snaps every frame onto Laptop",
+    snapped.ok,
+    JSON.stringify(snapped.value),
+  );
+  r.ok(
+    "the chip names Laptop",
+    /^Laptop/.test(await chipText(page)),
+    await chipText(page),
+  );
+
+  await dragTo(900);
+  const custom = await settle("B", (v) => Math.abs(v.w - 900) <= 2);
+  r.ok(
+    "dragging off the presets gives a custom width, in every frame",
+    custom.ok,
+    JSON.stringify(custom.value),
+  );
+  r.ok(
+    "the chip reads Custom",
+    /^Custom/.test(await chipText(page)),
+    await chipText(page),
+  );
+  await snap(page, out, "custom");
+
+  r.ok(
+    "no page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join(" | "),
+  );
+  await r.finish();
+});

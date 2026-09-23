@@ -10,24 +10,30 @@
 // The prototype names its counterpart itself, in its own
 // `<meta name="mocks" content="<kind>:<ref>">` (`route:/agents`,
 // `fixture:control-panel/setting-rail`). This script does not read that tag
-// and does not know the kinds: it opens the Compare stage of the Prototypes
-// app, which dispatches the declaration to whichever kind plugin handles it and
-// lays both halves out at one shared width, and photographs the two boxes the
-// stage publishes (`data-compare-half`). So a new counterpart kind is
-// comparable the day it is contributed, and what sits beside the mock is the
-// app as THIS deploy renders it — never a second rendering that could drift.
+// and does not know the kinds: it opens the prototype's canvas at
+// `proto/<id>/compare` — frame A (the mock) beside the Real app frame, which
+// dispatches the declaration to whichever kind plugin handles it — and
+// photographs the two frame screens the canvas publishes
+// (`data-canvas-frame="A"`, and the frame whose `data-canvas-frame-kind` is
+// this plugin's source id). So a new counterpart kind is comparable the day it
+// is contributed, and what sits beside the mock is the app as THIS deploy
+// renders it — never a second rendering that could drift.
 //
-// --width picks one of the widths the stage offers for this counterpart (the
-// prototype's own declared width by default). The run refuses, listing the
-// choices, when the width is not one of them.
+// Both frames always share one size (the canvas's), set to 100% through the
+// size & zoom chip so a pixel of the mock is a pixel of the app. --width picks
+// the canvas size preset of that width (the run refuses, listing the presets,
+// when no preset has it). Without it the canvas stays Responsive and the
+// browser window is sized so the frames come out at the prototype's own
+// declared viewport — the size the mock was drawn at.
 //
 // --options picks the mock's variant (`theme=launch,palette=azure`) — the
 // values its `<meta name="prototype-option">` lines declare. Without it the
-// mock is photographed at its authored defaults, which for a page carrying
-// several directions is only one of them. Picked through the stage's own
-// options picker, so the capture shows exactly what a person would see; a name
-// or value the page does not declare refuses the run instead of photographing
-// the default.
+// mock is photographed at its authored defaults (the run resets frame A's
+// picks first), which for a page carrying several directions is only one of
+// them. Picked through frame A's own options pill, so the capture shows exactly what a person would see; a
+// name or value the page does not declare refuses the run instead of
+// photographing the default. (Frame A's picks are the prototype's shared
+// record; the harness reverts what the run wrote.)
 //
 // Writes `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` (the mock in
 // faint grey, every differing pixel red) and `<out>-side-by-side.png` (all
@@ -54,14 +60,12 @@ import type { Frame, Locator, Page } from "playwright";
 import {
   agentFetch,
   arg,
-  boot,
   colorReport,
   colorReportText,
   detectOsColorScheme,
   diffImages,
   heatmapText,
   numArg,
-  pathUrl,
   report,
   requireArg,
   usage,
@@ -75,7 +79,21 @@ import {
   type OptionPicks,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { compareHalfSelector } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
+import {
+  canvasFrameSelector,
+  PROTOTYPE_FRAME_KIND,
+  type CanvasFrameStatus,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
+import {
+  dismiss,
+  frameDoc,
+  openCanvas,
+  openOptions,
+  openSizeMenu,
+  pickValue,
+  screen,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/e2e";
+import { REAL_APP_SOURCE } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 
 const USAGE =
   "--name <proto-id> is required — the prototype folder's minted id (`./singularity prototype list` prints them)";
@@ -95,7 +113,7 @@ const waitMs = numArg("wait", 3000);
 const colorScheme = (arg("color-scheme") ??
   detectOsColorScheme()) as ColorScheme;
 
-/** How much room the stage's chrome takes around the two halves. */
+/** Room around the two frames at a preset size: the app chrome and the board. */
 const CHROME = { width: 720, height: 360 };
 
 /**
@@ -171,22 +189,76 @@ console.log(
 );
 console.log(`color-scheme: ${colorScheme}`);
 
-/** The width chips the stage offers: every radio labelled `<n>px`. */
-async function offeredWidths(page: Page): Promise<number[]> {
-  const names = await page
-    .getByRole("radio")
-    .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ""));
-  return names
-    .filter((n) => /^\d+px$/.test(n))
-    .map((n) => Number.parseInt(n, 10));
+/** The mock: frame A, the prototype. */
+const mockSelector = (status?: CanvasFrameStatus) =>
+  canvasFrameSelector({ letter: "A", kind: PROTOTYPE_FRAME_KIND, status });
+/** The counterpart: the frame compare's Real app source contributes. */
+const appSelector = (status?: CanvasFrameStatus) =>
+  canvasFrameSelector({ kind: REAL_APP_SOURCE, status });
+
+/** A size preset as the size & zoom menu lists it: `Phone  480 × 900`. */
+interface Preset {
+  name: string;
+  w: number;
+  h: number;
 }
 
-/** Resize the viewport so both halves sit side by side with no scrolling. */
-async function fitViewport(page: Page, w: number): Promise<void> {
-  await page.setViewportSize({
-    width: 2 * w + CHROME.width,
-    height: meta.viewport.h + CHROME.height,
+/** Every preset the size & zoom menu offers, read off its radio rows. */
+async function offeredPresets(page: Page): Promise<Preset[]> {
+  await openSizeMenu(page);
+  const rows = await page
+    .getByRole("radio")
+    .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+  await dismiss(page);
+  return rows.flatMap((text) => {
+    const m = /^\s*([A-Za-z]+)\s*(\d+)\s*×\s*(\d+)/.exec(text);
+    return m && m[1] !== "Custom"
+      ? [{ name: m[1]!, w: Number(m[2]), h: Number(m[3]) }]
+      : [];
   });
+}
+
+/** Pick a size row by name, and set the zoom to 100%. */
+async function pickSizeAtActual(
+  page: Page,
+  preset: string | null,
+): Promise<void> {
+  await openSizeMenu(page);
+  if (preset !== null) {
+    await page.getByRole("radio", { name: new RegExp(`^${preset}`) }).click();
+  }
+  await page.getByRole("button", { name: "Actual size" }).click();
+  await dismiss(page);
+}
+
+/** Frame A's logical page size (its iframe's own box). */
+async function mockSize(page: Page): Promise<{ w: number; h: number }> {
+  const doc = await frameDoc(page, meta, "A");
+  if (!doc) throw new Error("frame A has no document");
+  return { w: doc.width, h: doc.height };
+}
+
+/**
+ * Responsive at 100%: each frame IS its share of the canvas, in page pixels.
+ * Grow or shrink the window by twice the difference (two frames share the
+ * width) until the frames come out at `want` — the chrome around them is
+ * measured, never assumed.
+ */
+async function sizeWindowTo(
+  page: Page,
+  want: { w: number; h: number },
+): Promise<void> {
+  for (let i = 0; i < 4; i++) {
+    const got = await mockSize(page);
+    if (got.w === want.w && got.h === want.h) return;
+    const vp = page.viewportSize();
+    if (!vp) throw new Error("no viewport");
+    await page.setViewportSize({
+      width: vp.width + 2 * (want.w - got.w),
+      height: vp.height + (want.h - got.h),
+    });
+    await page.waitForTimeout(300);
+  }
 }
 
 /** Every frame on the page has finished loading, then the settle pause. */
@@ -198,16 +270,12 @@ async function settle(page: Page): Promise<void> {
   await Promise.all(page.frames().map((f) => f.waitForLoadState("load")));
 }
 
-/** The frames showing this prototype's document (Focus's, or Compare's mock). */
-function prototypeFrames(page: Page): Frame[] {
-  return page
-    .frames()
-    .filter((f) => f.url().includes(`/api/prototypes/${name}/index.html`));
-}
-
-/** Each picked value, as the prototype document's `<html data-*>` carries it now. */
+/** Each option's value, as frame A's document `<html data-*>` carries it now. */
 async function shownPicks(page: Page): Promise<Record<string, string | null>> {
-  const [frame] = prototypeFrames(page);
+  const handle = await screen(page, "A")
+    .locator("iframe:not([aria-hidden])")
+    .elementHandle();
+  const frame: Frame | null = handle ? await handle.contentFrame() : null;
   if (!frame) return {};
   return frame.evaluate(
     (keys) =>
@@ -222,22 +290,18 @@ async function shownPicks(page: Page): Promise<Record<string, string | null>> {
 }
 
 /**
- * Pick each `--options` value through the stage's options pill — hover reveals
- * one radio group per option — and wait for the prototype document to carry it.
+ * Put frame A on its authored defaults, then pick each `--options` value
+ * through its options pill — one radio group per option.
  */
 async function pickOptions(page: Page): Promise<void> {
-  const entries = Object.entries(picks);
-  if (entries.length === 0) return;
-  const pill = page.getByLabel("Prototype options");
-  for (const [option, value] of entries) {
-    await pill.hover();
-    const group = page.getByRole("radiogroup", { name: humanizeToken(option) });
-    await group.waitFor({ state: "visible", timeout: 5000 });
-    await group
-      .getByRole("radio", { name: humanizeToken(value), exact: true })
-      .click();
+  if (meta.options.length === 0) return;
+  const popover = await openOptions(page, "A");
+  const reset = popover.getByRole("button", { name: "Reset to defaults" });
+  if ((await reset.count()) > 0) await reset.click();
+  for (const [option, value] of Object.entries(picks)) {
+    await pickValue(popover, humanizeToken(option), humanizeToken(value));
   }
-  await page.mouse.move(0, 0);
+  await dismiss(page);
 }
 
 async function capture(loc: Locator, suffix: string): Promise<Buffer> {
@@ -258,68 +322,61 @@ await withBrowser(async (h) => {
     colorScheme,
   });
 
-  await boot(page, pathUrl(`/prototypes/proto/${name}`), {
-    marker: "iframe",
-    settleMs: 500,
-  });
-  await pickOptions(page);
-  await page.getByRole("radio", { name: "Compare", exact: true }).click();
-  // The stage opens zoomed to fit the pane; a capture wants actual size, so
-  // a pixel of the mock is a pixel of the app.
-  await page.getByRole("radio", { name: "100%", exact: true }).click();
+  await openCanvas(page, name, "compare");
+  const mock = page.locator(mockSelector());
+  const counterpart = page.locator(appSelector());
 
-  const mock = page.locator(compareHalfSelector("mock"));
-  const counterpart = page.locator(compareHalfSelector("counterpart"));
-  await mock.waitFor({ state: "visible", timeout: 20_000 });
-
-  // The counterpart's status settles first: the width list is the
-  // counterpart's own, so the chips are not final until it has resolved.
+  // The Real app frame joins once compare's plugin has loaded, then resolves.
   await page
-    .locator(
-      `${compareHalfSelector("counterpart", "found")}, ${compareHalfSelector("counterpart", "unresolved")}`,
-    )
+    .locator(`${appSelector("found")}, ${appSelector("unresolved")}`)
     .first()
     .waitFor({ state: "attached", timeout: 30_000 });
-  if (
-    (await page
-      .locator(compareHalfSelector("counterpart", "found"))
-      .count()) === 0
-  ) {
+  if ((await page.locator(appSelector("found")).count()) === 0) {
     const why = (await counterpart.innerText()).replace(/\s+/g, " ").trim();
     r.fail("counterpart resolves on this deploy", why);
     await r.finish();
   }
 
+  await pickOptions(page);
+
+  // One size for both frames, at 100%: a preset for --width, else Responsive
+  // with the window sized so the frames come out at the declared viewport.
   if (width !== undefined) {
-    const chip = page.getByRole("radio", { name: `${width}px`, exact: true });
-    if ((await chip.count()) === 0) {
-      const offered = await offeredWidths(page);
+    const presets = await offeredPresets(page);
+    const preset = presets.find((p) => p.w === width);
+    if (!preset) {
       r.fail(
-        `stage offers ${width}px`,
-        `this counterpart offers: ${offered.map((w) => `${w}px`).join(", ")} — pass one of them as --width`,
+        `a canvas size preset is ${width}px wide`,
+        `the presets are ${presets.map((p) => `${p.name} ${p.w}×${p.h}`).join(", ")} — pass one of their widths as --width, or omit it for the prototype's declared ${meta.viewport.w}×${meta.viewport.h}`,
       );
-      await r.finish();
+      return await r.finish();
     }
-    await chip.click();
+    await pickSizeAtActual(page, preset.name);
+    await page.setViewportSize({
+      width: 2 * preset.w + CHROME.width,
+      height: preset.h + CHROME.height,
+    });
+  } else {
+    await pickSizeAtActual(page, null);
+    await sizeWindowTo(page, meta.viewport);
   }
 
-  // The width the stage actually settled on, read off the box itself.
-  const box = await mock.boundingBox();
-  if (!box) throw new Error("the mock half has no box");
-  const sharedWidth = Math.round(box.width);
-  console.log(`width:        ${sharedWidth}px`);
-  await fitViewport(page, sharedWidth);
-
+  await page.locator(mockSelector("found")).waitFor({ timeout: 20_000 });
+  await page.mouse.move(0, 0);
   await settle(page);
 
-  // The mock half must show the variant asked for — checked on the document
+  // The size the canvas actually settled on, read off frame A's document.
+  const size = await mockSize(page);
+  console.log(`size:         ${size.w}×${size.h}`);
+
+  // The mock must show the variant asked for — checked on the document
   // itself, since a capture of the default would diff just as happily.
   if (Object.keys(picks).length > 0) {
     const shown = await shownPicks(page);
     const off = Object.entries(picks).filter(([k, v]) => shown[k] !== v);
     if (off.length > 0) {
       r.fail(
-        "the mock half shows the picked options",
+        "the mock shows the picked options",
         off
           .map(([k, v]) => `data-${k}=${String(shown[k])}, wanted ${v}`)
           .join("; "),
@@ -365,12 +422,12 @@ await withBrowser(async (h) => {
   console.log(colorReportText(colors));
 
   r.ok(
-    "both halves captured at the shared width",
-    diff.a.width === sharedWidth && diff.b.width === sharedWidth,
-    `mock ${diff.a.width}px, app ${diff.b.width}px, stage ${sharedWidth}px — a narrower capture means the half was clipped by the viewport`,
+    "both frames captured at the canvas size",
+    diff.a.width === size.w && diff.b.width === size.w,
+    `mock ${diff.a.width}px, app ${diff.b.width}px, canvas ${size.w}px — a narrower capture means the frame was clipped by the window`,
   );
   r.ok(
-    "both halves have the same size",
+    "both frames have the same size",
     diff.sameSize,
     `mock ${diff.a.width}×${diff.a.height} vs app ${diff.b.width}×${diff.b.height}; compared the top-left ${diff.compared.width}×${diff.compared.height}`,
   );

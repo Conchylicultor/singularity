@@ -11,24 +11,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type {
   CounterpartKindProps,
   CounterpartResolution,
-  WidthChoices,
 } from "@plugins/apps/plugins/prototypes/plugins/compare/web";
-
-/**
- * The standard breakpoints a whole screen is read at. Merged with the
- * prototype's own declared width, which is always offered: it is the width the
- * mock was drawn at, so the one width both halves are certain to have
- * something to say about. The breakpoints are what make the real app's own
- * responsive behavior legible beside it.
- */
-const ROUTE_WIDTHS = [480, 768, 1024, 1280, 1600] as const;
-
-function widthChoices(declared: number): WidthChoices {
-  const all = [...new Set([...ROUTE_WIDTHS, declared])].sort((a, b) => a - b);
-  const [first, ...rest] = all;
-  // `all` holds `declared` at minimum, so the list is never empty.
-  return first === undefined ? [declared] : [first, ...rest];
-}
 
 /**
  * The `route:` kind: the running app itself, framed at an in-app path.
@@ -60,28 +43,22 @@ const TITLES: Record<EmbedMode, string> = {
 
 function AppCounterpartOf({
   target,
-  meta,
   children,
   embed,
 }: CounterpartKindProps & { embed: EmbedMode }): ReactElement {
   const apps = Apps.App.useContributions();
   const { deferredComplete } = useDeferredLoadState();
-  return (
-    <>
-      {children(resolve(target, meta.viewport, apps, deferredComplete, embed))}
-    </>
-  );
+  return <>{children(resolve(target, apps, deferredComplete, embed))}</>;
 }
 
 function resolve(
   target: string,
-  viewport: { w: number; h: number },
   apps: ReturnType<typeof Apps.App.useContributions>,
   deferredComplete: boolean,
   embed: EmbedMode,
 ): CounterpartResolution {
   // Framing stops at depth one. This document being a framed app screen means
-  // the path in some prototype led back to a Compare stage — its own
+  // the path in some prototype led back to a prototype canvas — its own
   // (`route:/prototypes/proto/<id>/compare`) or another one that leads back —
   // and framing again from here would nest app inside app with no floor.
   if (isEmbeddedDocument()) {
@@ -89,7 +66,7 @@ function resolve(
       status: "unresolved",
       title: "Not framing the app again inside a framed app screen.",
       detail:
-        "This Compare stage is itself inside the app screen of another Compare stage, so its path leads back to a Compare stage. Framing stops at one level so the screens cannot nest without end.",
+        "This canvas is itself inside the real-app frame of another prototype canvas, so its path leads back to one. Framing stops at one level so the screens cannot nest without end.",
     };
   }
 
@@ -147,17 +124,12 @@ function resolve(
 
   return {
     status: "found",
-    widths: widthChoices(viewport.w),
     title: TITLES[embed],
     subtitle: resolved.app.app.name,
     badge: target,
-    render: (width) => (
-      <AppFrame
-        target={target}
-        embed={embed}
-        width={width}
-        height={viewport.h}
-      />
+    href: embedUrl(target, embed),
+    render: (width, height) => (
+      <AppFrame target={target} embed={embed} width={width} height={height} />
     ),
   };
 }
@@ -191,12 +163,10 @@ function AppFrame({
     <iframe
       title={`${TITLES[embed]} at ${target}`}
       src={embedUrl(target, embed)}
-      // Inline geometry, not banned className layout utilities: the width comes
-      // from the frame's own box (100% of the width the stage sized it to), the
-      // height from the prototype's declared viewport — the same box the mock
-      // half gets, which is what makes the two comparable at all.
-      style={{ border: "0", display: "block", width: "100%", height }}
-      data-width={width}
+      // Inline geometry, not banned className layout utilities: the canvas's
+      // logical size — the same box the prototype frames get, which is what
+      // makes the two comparable at all.
+      style={{ border: "0", display: "block", width, height }}
     />
   );
 }

@@ -4,7 +4,7 @@ import { ComponentCounterpart } from "./components/component-counterpart";
 
 export default {
   description:
-    "The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.",
+    "The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.",
   contributions: [
     Counterpart.Kind({
       match: "component",

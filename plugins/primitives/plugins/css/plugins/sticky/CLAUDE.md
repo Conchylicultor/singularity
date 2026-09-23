@@ -76,6 +76,7 @@ toggle, silently resetting any child component state (e.g. an inner
 - Cross-plugin:
   - Imported by:
     - `apps/mail/search`
+    - `apps/prototypes/canvas`
     - `code-explorer/commit-detail`
     - `conversations/conversation-view/jsonl-viewer`
     - `debug/profiling/ops/op-gantt`

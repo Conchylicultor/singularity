@@ -1,115 +1,147 @@
 # present
 
-The **Present** control in the prototype detail pane's header — four ways to see
-a prototype with none of the app around it, ordered by how much they cover:
+**Present** shows one canvas frame with none of the app around it. It is a
+frame action (`PrototypeFrameActions`), so every frame of the prototype canvas
+gets its own Present button, and the canvas knows nothing about it.
+
+The menu, headed "Present B", has three rows, ordered by how much they cover:
 
 - **In this app tab** — a `<SurfaceOverlay>` filling the tab's surface. The
   Singularity tab bar and app rail stay visible and clickable, so the user can
-  leave a prototype presented and keep working in other tabs. The × sits
-  **top-left** here: the app's floating chrome runs down the right edge — the
-  global action bar at the top, the toaster at the bottom — and it is portaled
-  above us, so either right corner would have something land on the button.
+  leave a frame presented and keep working in other tabs. Its trailing icon,
+  **Open in a new app tab**, opens the frame's present page in a new app tab
+  (`navigate(…, { newTab: true })` from `apps-core/tabs`).
 - **In this browser tab** — a `<ViewportOverlay layer="max">`: the whole page,
-  app chrome included. × back at top-right, which the overlay now covers.
-- **Fullscreen** — the same viewport overlay, additionally handed to the
-  browser's Fullscreen API. The close button lives *inside* the element that
-  goes fullscreen — a sibling of it would be invisible there. Escape exits
-  fullscreen (browser-handled) and the resulting `fullscreenchange` closes the
-  overlay, so one key still leaves.
-- **New browser tab** — opens the app's own `present/<id>` page (or
-  `present/<id>/<sha>` when the detail pane is showing a recorded version),
-  chromeless (`?embed=1`: no tab bar, no rail, no action bar). It used to open
-  the bare prototype document, but that page has no app code, so nothing could
-  draw the options picker there. The page is `prototypePresentPane`, a root
-  route of the Prototypes app, so opened alone it is the only column and fills
-  the tab. No × — closing the tab is how you leave.
+  app chrome included. Its trailing icon, **Open in a new browser tab**, opens
+  the frame's present page chromeless (`embedUrl(…, "chromeless")`, so no tab
+  bar, rail or action bar). For a source frame (the real app) it opens the
+  source's own `href` instead, and is disabled when the source has none. The
+  new-app-tab icon is disabled on a source frame: the present page shows only
+  prototype frames.
+- **Full screen** (`F`) — the viewport overlay, also handed to the browser's
+  Fullscreen API. Escape exits fullscreen (the browser handles it), and the
+  resulting `fullscreenchange` closes the overlay, so one key still leaves.
 
-All four share one stage (`PresentStage`: the same live iframe, scaled UP to
-fill — the pane's stage never upscales; a presentation should — plus the
-options picker), so they cannot drift. The new-tab page supplies the
-`PrototypeDetailProvider` itself (opening on the URL's version via
-`initialVersion`); the overlays sit inside the detail pane's.
-`PresentPlacement` is ordered by coverage: `surface` < `viewport` < `screen`.
+**`F` presents the selected frame** in full screen. Only the selected frame's
+menu registers the key (a surface-scoped shortcut, silent in text fields), and
+it stands down while that menu's presentation is open. Presenting selects the
+frame first, so the menu holding `F` is always the one presenting.
 
-**The options picker comes along** (the gallery's `OptionsPicker`, bottom-right,
-hover-revealed like the ×), so a theme or variant can be switched while
-presenting. It is inline DOM inside the stage box.
+## While presenting
 
-**So does the version.** The stage asks the picker for its Version row
-(`withVersion`): `‹ v3 of 7 ›` — whose label opens the version list, as in the
-header — and Back to latest, with the pill naming the version on screen. There
-is no pane header while presenting, so this is the only way to change version
-there — fullscreen included. `[` / `]` work everywhere: in the in-app overlays
-the pane's header stepper is still mounted under them, and the new-tab page
-registers them itself (`VersionStepShortcuts`).
+The frame is drawn by the canvas's own `CanvasFrameView`, sized by the canvas's
+size, zoom and Whole page — but computed for the room the presentation has. So
+"Phone at Fit" is a phone filling the screen, and "Responsive at Fit" is the
+page laid out at the screen's own width. When the frame is bigger than the room
+(a zoom past Fit, a tall whole page) it scrolls.
 
-**The overlay's stage box is a `PortalHost`** (`primitives/overlay/portal-host`):
-every popup opened inside the presentation — the version list, a tooltip — is
-drawn inside the box instead of under `body`. Under the Fullscreen API only the
-fullscreened subtree is painted, and a viewport presentation sits above the
-popup layer, so without it those popups would be invisible.
+Hovering shows the chrome (`PresentStage`):
 
-**Presenting opens at Full size**: the frame fills the presentation at scale 1,
-so the page's own responsive layout shows instead of a fixed canvas scaled up.
-`PresentedFrame` holds its own frame-size scope (starting at `full`), so the
-picker's Size row can still switch to Fixed or Mobile while presenting without
-changing the size the pane was left on. The new browser tab needs nothing: it
-opens the raw document, which is already full size.
+- top-left, the frame's **tag**: its letter, its name, its version stepper (or a
+  source frame's tag), and "2 of 3 · ← →" when the canvas has more than one
+  frame;
+- **Exit `Esc`** — top-right, except in the app-tab placement, where it sits
+  beside the tag: the app's floating action bar is portaled above us at the
+  top-right, and would land on it;
+- the frame's **options pill**, bottom centre;
+- the canvas's **size & zoom chip**, bottom right. Changing it changes the
+  canvas too: there is one size for the whole canvas.
 
-The overlay is rendered with `key={placement}`, so switching destination is an
-explicit remount rather than a portal-container swap React would reconcile into
-a half-move.
+**← / → flip through the canvas's frames in place** (surface-scoped
+shortcuts). Leaving selects the frame last on show, so the canvas comes back on
+it.
 
 **Escape is gated on `useSurfaceFocused()`.** Tabs are keep-alive — a background
 tab is still mounted, and under the floating placement still on screen — so an
 ungated `window` keydown would close a presentation the user is not looking at.
 
-The whole feature is one contribution — `prototypeDetailPane.Actions({
-component: PresentMenu })` — so the detail pane knows nothing about it. Adding
-another way to view a prototype is a sibling plugin, not an edit here.
+**The overlay's stage box is a `PortalHost`**: every popup opened inside the
+presentation (the version list, the size menu, the options popover, a tooltip)
+is drawn inside the box instead of under `body`. Under the Fullscreen API only
+the fullscreened subtree is painted, and a viewport presentation sits above the
+popup layer, so without it those popups would be invisible.
+
+The overlay is rendered with `key={placement}`, so switching destination is an
+explicit remount rather than a portal-container swap React would reconcile into
+a half-move.
+
+## The present page
+
+`present/<id>/<version>[/<picks>]` (`prototypePresentPane`, a root route of
+the Prototypes app, so opened alone it is the only column and fills the tab):
+
+- `version` is a recorded version's sha, or `live` for the live folder. It is
+  required rather than optional because a route may have only one optional
+  part, and it must be the last — `picks` needs that place.
+- `picks` is the frame's own picks, `a=b,c=d` (each name and value escaped on
+  its own, `internal/present-link.ts`). Frame A reads the shared picks record,
+  so its link carries none, and the page then reads the shared record too.
+  Any other frame's link carries its own variant.
+
+The page mounts a one-frame canvas (`PrototypeDetailProvider` with
+`initialVersion` and `initialPicks`) and draws the same `PresentStage`, minus
+Exit: closing the tab is how you leave.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened in a new browser tab as a chromeless app page (present/<id>) that keeps the options picker. Contributed into the detail pane's Actions.
+- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.
 - Web:
   - Slots: `prototypes-present.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "prototypes-present"
-    - `prototypeDetailPane.Actions` "present" → `PresentMenu`
+    - `PrototypeFrameActions` "present" → `PresentMenu`
   - Uses:
+    - `apps-core/tabs.navigate`
     - `apps-core/tabs.useSurfaceFocused`
-    - `apps/prototypes/gallery.FrameSizeProvider`
-    - `apps/prototypes/gallery.OptionsPicker`
-    - `apps/prototypes/gallery.prototypeDetailPane`
-    - `apps/prototypes/gallery.PrototypeDetailProvider`
-    - `apps/prototypes/gallery.ScaledIframe`
-    - `apps/prototypes/gallery.useFrameSizeState`
-    - `apps/prototypes/gallery.usePrototypeDetail`
-    - `apps/prototypes/gallery.usePrototypeSrc`
-    - `apps/prototypes/gallery.VersionStepShortcuts`
+    - `apps/prototypes/canvas.CanvasFrame`
+    - `apps/prototypes/canvas.CanvasFrameView`
+    - `apps/prototypes/canvas.frameA`
+    - `apps/prototypes/canvas.FrameActionRow`
+    - `apps/prototypes/canvas.FrameId`
+    - `apps/prototypes/canvas.FrameLetter`
+    - `apps/prototypes/canvas.FrameResolution`
+    - `apps/prototypes/canvas.FrameSource`
+    - `apps/prototypes/canvas.layoutFrames`
+    - `apps/prototypes/canvas.letterOf`
+    - `apps/prototypes/canvas.OptionsPill`
+    - `apps/prototypes/canvas.PrototypeDetailProvider`
+    - `apps/prototypes/canvas.PrototypeFrame`
+    - `apps/prototypes/canvas.PrototypeFrameActions`
+    - `apps/prototypes/canvas.SizeChip`
+    - `apps/prototypes/canvas.useFrameNames`
+    - `apps/prototypes/canvas.usePrototypeDetail`
+    - `apps/prototypes/canvas.VersionStepper`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/pin.Pin`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/css/ui-kit.DropdownMenuSection`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/embed.embedUrl`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
-    - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
+    - `primitives/shortcuts.useSurfaceShortcuts`
 
 <!-- AUTOGENERATED:END -->

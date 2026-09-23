@@ -84,7 +84,7 @@ has the vocabulary for it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/keyboard`

@@ -67,7 +67,6 @@ prototypes options picker's version list.
     - `FloatingActionFadeIn`
 - Cross-plugin:
   - Imported by:
-    - `apps/prototypes/gallery`
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/outline/rail`

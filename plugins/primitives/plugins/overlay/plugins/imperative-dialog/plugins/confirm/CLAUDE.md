@@ -73,7 +73,7 @@ appears (YAGNI).
   - Exports (values): `confirmDialog`
 - Cross-plugin:
   - Imported by:
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`
     - `ui/theme-engine/theme-gallery`

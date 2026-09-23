@@ -1,16 +1,16 @@
-import { useEffect, useRef } from "react";
-import { MdClose } from "react-icons/md";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
+import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
+import {
+  usePrototypeDetail,
+  type FrameId,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { PresentStage } from "./present-stage";
 
 /**
@@ -24,9 +24,10 @@ import { PresentStage } from "./present-stage";
 export type PresentPlacement = "surface" | "viewport" | "screen";
 
 /**
- * The prototype alone, with none of the app around it. The same live iframe the
- * pane shows (so an agent's edit still reloads it), scaled up to fill the space
- * instead of sitting at native size in the middle of it.
+ * One canvas frame alone, with none of the app around it: the same live frame
+ * the canvas shows (so an agent's edit still reloads it), at the canvas's size
+ * and zoom fitted to the space it now has. ← / → flip through the canvas's
+ * frames in place.
  *
  * Escape leaves from any placement: in `surface`/`viewport` our own key handler
  * closes; in `screen` the browser exits fullscreen first and the resulting
@@ -34,16 +35,59 @@ export type PresentPlacement = "surface" | "viewport" | "screen";
  */
 export function PresentOverlay({
   name,
+  frameId,
   placement,
   onClose,
 }: {
   name: string;
+  /** The canvas frame presented first; ← / → flip to the others in place. */
+  frameId: FrameId;
   placement: PresentPlacement;
   /** Stable identity required — the fullscreen effect keys on it. */
   onClose: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const surfaceFocused = useSurfaceFocused();
+  const { canvas, dispatch } = usePrototypeDetail();
+  const [shown, setShown] = useState<FrameId>(frameId);
+
+  // Leaving selects the frame last on show, so the canvas comes back on it
+  // (and `F` presents it again). Stable, like `onClose`.
+  const exit = useEventCallback(() => {
+    dispatch({ type: "select", id: shown });
+    onClose();
+  });
+
+  const flip = useEventCallback((delta: -1 | 1) => {
+    const n = canvas.frames.length;
+    if (n < 2) return;
+    const i = Math.max(
+      0,
+      canvas.frames.findIndex((f) => f.id === shown),
+    );
+    const next = canvas.frames[(i + delta + n) % n];
+    if (next) setShown(next.id);
+  });
+  const flipKeys = useMemo(
+    () => [
+      {
+        id: "prototypes.present-previous",
+        keys: "arrowleft",
+        label: "Present the previous frame",
+        group: "Prototypes",
+        handler: () => flip(-1),
+      },
+      {
+        id: "prototypes.present-next",
+        keys: "arrowright",
+        label: "Present the next frame",
+        group: "Prototypes",
+        handler: () => flip(1),
+      },
+    ],
+    [flip],
+  );
+  useSurfaceShortcuts(flipKeys);
 
   useEffect(() => {
     // Only the focused tab listens. Tabs are keep-alive — a background tab is
@@ -52,20 +96,21 @@ export function PresentOverlay({
     // looking at.
     if (!surfaceFocused) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") exit();
     }
     // eslint-disable-next-line shortcuts/no-window-key-listener -- installed only while this surface is focused (the useSurfaceFocused gate above) and only while presenting.
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, surfaceFocused]);
+  }, [exit, surfaceFocused]);
 
   useEffect(() => {
     if (placement !== "screen") return;
     const el = rootRef.current;
     if (!el) return;
-    // Still inside the menu click's user activation, so the request is granted.
+    // Still inside the menu click's (or the F key's) user activation, so the
+    // request is granted.
     const onChange = () => {
-      if (document.fullscreenElement === null) onClose();
+      if (document.fullscreenElement === null) exit();
     };
     document.addEventListener("fullscreenchange", onChange);
     void el.requestFullscreen();
@@ -73,46 +118,33 @@ export function PresentOverlay({
       document.removeEventListener("fullscreenchange", onChange);
       if (document.fullscreenElement === el) void document.exitFullscreen();
     };
-  }, [placement, onClose]);
+  }, [placement, exit]);
 
   const stageBox = (
     /* The stage box: the element handed to the Fullscreen API, and the
-       positioning context the close button pins to (so the button is inside the
-       fullscreened subtree and stays visible there). `ScaledIframe` fills and
-       centers itself, so this box only owns size + context. */
+       positioning context the chrome pins to (so it is inside the fullscreened
+       subtree and stays visible there). */
     <div
       ref={rootRef}
       className={cn("relative size-full bg-background", hoverRevealGroup)}
     >
-      {/* Every popup opened in the presentation (the version list, a
-          tooltip) is drawn inside this box: under the Fullscreen API only this
-          subtree is painted, and a viewport presentation sits above the popup
-          layer. */}
+      {/* Every popup opened in the presentation (the version list, the size
+          menu, a tooltip) is drawn inside this box: under the Fullscreen API
+          only this subtree is painted, and a viewport presentation sits above
+          the popup layer. */}
       <PortalHost>
-        <PresentStage name={name} />
-        {/* Hidden until the pointer moves over the stage: a presentation shows
-          the design, not our chrome. No `mask` — the app's scrim color bleeds
-          a dark patch across a light prototype, and the solid `secondary`
-          button already carries its own background, so nothing interleaves.
-
-          Top-LEFT when we only cover the surface: the app's own floating chrome
-          all lives down the right edge — the global action bar at the top, the
-          toaster at the bottom — and it is portaled above us, so either right
-          corner would have something land on the exit button. Covering the
-          viewport puts that chrome underneath us, so the top-right corner is
-          free again, and that is where an exit belongs. */}
-        <Pin
-          to={placement === "surface" ? "top-left" : "top-right"}
-          offset="md"
-          className={hoverRevealTarget}
-        >
-          <IconButton
-            icon={MdClose}
-            label="Exit presentation (Esc)"
-            variant="secondary"
-            onClick={onClose}
-          />
-        </Pin>
+        {/* Exit goes top-LEFT, beside the tag, when we only cover the surface:
+            the app's own floating chrome (the global action bar) sits at the
+            top-right and is portaled above us. Covering the viewport puts it
+            underneath, so the top-right corner is free again. */}
+        <PresentStage
+          name={name}
+          frameId={shown}
+          exit={{
+            onExit: exit,
+            side: placement === "surface" ? "left" : "right",
+          }}
+        />
       </PortalHost>
     </div>
   );

@@ -16,8 +16,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/chord/curriculum`
-    - `apps/prototypes/compare/version`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/entry-points`
     - `apps/website/improve`

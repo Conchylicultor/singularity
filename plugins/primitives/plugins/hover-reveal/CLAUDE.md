@@ -40,6 +40,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
   - Imported by:
     - `apps-core/surface/floating`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`

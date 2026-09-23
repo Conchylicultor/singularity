@@ -1,6 +1,6 @@
 # component
 
-The **`component:`** kind of counterpart for the prototype Compare stage: a
+The **`component:`** kind of counterpart for the prototype canvas's Real app frame: a
 real app component, exhibited by the plugin that owns it as a **specimen**
 (`plugin-meta/specimens`), rendered inline in the running app.
 
@@ -30,7 +30,7 @@ No loading arm: the registry is a slot, complete once plugins have booted.
 
 ## Plugin reference
 
-- Description: The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
+- Description: The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
 - Web:
   - Contributes: `Counterpart.Kind` "Live component" → `ComponentCounterpart`
   - Uses:

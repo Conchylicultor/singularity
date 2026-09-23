@@ -38,8 +38,7 @@ anonymous index signature. See
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`
-    - `apps/prototypes/compare`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/pedal/indicator`
     - `apps/sonata/piano-roll`

@@ -117,7 +117,7 @@ The gallery reads these out of your HTML — there is no metadata file.
   it defaults to `1280x800`. Don't copy it into your CSS as a fixed width (see
   below).
 - `<meta name="mocks">` names the real app thing this prototype is a mockup
-  of, as `<kind>:<ref>`, so the Compare stage can put the two side by side:
+  of, as `<kind>:<ref>`, so the canvas can put the two side by side (its Real app frame):
   - `fixture:control-panel/setting-rail` — an app **component**, by its Layout
     Lab fixture id.
   - `route:/agents/c/123` — a whole app **screen**: the running app itself,
@@ -130,7 +130,7 @@ The gallery reads these out of your HTML — there is no metadata file.
     path with its rail, tab bar and action bar, as a person sees it in their own
     tab. For a mock of the chrome itself, or of a theme across chrome and screen.
 
-  The kinds are open — the Compare stage lists the ones this worktree knows,
+  The kinds are open — the Real app frame lists the ones this worktree knows,
   with an example of each. A value with no `<kind>:` prefix is reported as a
   problem on the card. Most prototypes are not a mockup of anything in the app —
   leave the tag out and nothing is missing.

@@ -88,8 +88,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
-    - `apps/prototypes/compare`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/sonata/sources/ultimate-guitar`

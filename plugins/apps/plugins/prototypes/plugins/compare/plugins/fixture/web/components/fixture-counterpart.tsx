@@ -6,28 +6,8 @@ import {
   type HarnessFixture,
   type LayoutFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-import type {
-  CounterpartKindProps,
-  WidthChoices,
-} from "@plugins/apps/plugins/prototypes/plugins/compare/web";
+import type { CounterpartKindProps } from "@plugins/apps/plugins/prototypes/plugins/compare/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-
-/**
- * Widths to offer when the matched fixture declares none of its own. A fixture's
- * `widths` array is the component's own statement of where it changes shape, so
- * it is always preferred; this is only the floor under an empty one.
- */
-const FALLBACK_WIDTHS: WidthChoices = [360, 640, 960];
-
-/**
- * The fixture's own widths, or the fallback when it declares none.
- * `LayoutFixture.widths` is a plain `number[]`, so an empty one is
- * representable there — this is the one place that possibility is resolved.
- */
-function widthChoices(fixture: LayoutFixture): WidthChoices {
-  const [first, ...rest] = fixture.widths;
-  return first === undefined ? FALLBACK_WIDTHS : [first, ...rest];
-}
 
 function dimsLabel(f: LayoutFixture): string {
   const { contentLen, withMeta, state } = f.dims;
@@ -84,7 +64,6 @@ export function FixtureCounterpart({
     <>
       {children({
         status: "found",
-        widths: widthChoices(entry),
         title: "App component",
         subtitle: dimsLabel(entry),
         badge: entry.id,

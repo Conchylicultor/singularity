@@ -1,7 +1,7 @@
 import { MdCheck, MdContentCopy } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 
 /**
  * "Copy prototype ID" header action contributed to `prototypeDetailPane.Actions`.

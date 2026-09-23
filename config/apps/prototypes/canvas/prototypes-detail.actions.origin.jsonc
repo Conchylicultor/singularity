@@ -1,0 +1,15 @@
+// @hash 2dc5ec0d39d1
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "apps.prototypes.canvas:layout",
+    "apps.prototypes.canvas:add",
+    "apps.prototypes.copy-id:copy-id",
+    "apps.prototypes.gallery:done",
+    "primitives.pane:title"
+  ]
+}

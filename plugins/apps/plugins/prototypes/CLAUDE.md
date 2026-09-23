@@ -1,7 +1,7 @@
 # prototypes
 
-Prototypes app — a surface to browse, **Focus** on, **Compare**, and iterate on
-throwaway UI design mockups. The mockups live in `~/.singularity/apps/prototypes/` —
+Prototypes app — a surface to browse, compare (variants, versions, the real
+app) and iterate on throwaway UI design mockups. The mockups live in `~/.singularity/apps/prototypes/` —
 host-global, shared by every worktree and main, and deliberately **not** in git,
 so a mock is live with no build and nothing to commit (the `prototypes` backup
 source is what makes it recoverable). Authored separately from this plugin:
@@ -32,21 +32,25 @@ other content lives in sub-plugins:
   version of every prototype that turn's tool calls named, labelled with the
   turn's request. Its own plugin so `files` never depends on `conversations`.
 - **`shell`** — the `Apps.App` rail entry, the app layout, and pane registration.
-- **`present`** — the Present menu (this app tab / this browser tab /
-  fullscreen / new browser tab), a contribution into the detail pane's
-  `Actions`.
-- **`gallery`** — the gallery list pane and the detail pane whose stage set is a
-  slot (it contributes Focus). Also owns the launch prompt (New prototype) — the
+- **`gallery`** — the gallery list pane (a card per prototype, Done checkbox,
+  grouped by status) and New prototype. Also owns the launch prompt — the
   always-taken path by which prototype agents are launched, and therefore where
-  "start from the blank template, never read a sibling" has to be said. The
-  detail pane's `‹ v3 of 7 ›` version stepper (and Restore) lives here too.
-- **`compare`** — the Compare stage: the mock beside the real thing it declares
-  it mocks (`<meta name="mocks" content="<kind>:<ref>">`), or beside a
-  counterpart the reader picks (its latest version), at one shared width.
-  Owns the dispatch, the pick and the chrome; each kind of counterpart is a
-  child plugin — `fixture` (a layout-harness fixture), `route` (the running
-  app, framed at a path) and `version` (another version of the prototype, with
-  the version list's "Compare with latest" hover action).
+  "start from the blank template, never read a sibling" has to be said.
+- **`canvas`** — the detail pane: the prototype as a canvas of lettered
+  frames (A, B, C…), each with its own version stepper and options pill (frame
+  A reads and writes the shared picks, the others hold their own), one
+  canvas-wide size & zoom chip, link / spread / keep only, swipe, and the
+  `proto/<id>/compare` URL. Owns the `FrameSource` and frame-actions slots.
+- **`compare`** — the canvas's **Real app** frame: the real thing the
+  prototype declares it mocks (`<meta name="mocks" content="<kind>:<ref>">`),
+  contributed as a `FrameSource`. Owns the dispatch; each kind of counterpart
+  is a child plugin — `fixture` (a layout-harness fixture), `component` (a
+  live component specimen) and `route` (the running app, framed at a path).
+  Also `e2e/compare-diff.ts`, the pixel and colour diff of mock vs app.
+- **`present`** — shows one canvas frame without the app around it (this app
+  tab, this browser tab, full screen, or a new tab), a frame action on every
+  frame.
+- **`copy-id`** — the copy-id button in the canvas's header.
 - **`thumbnails`** — the rendered PNG behind each gallery card: a
   content-addressed cache, a headless-chromium render job driven by `files`'
   watcher, and the three-armed cover (picture / not yet / visibly failed).
@@ -66,18 +70,18 @@ whose app surface still stands).
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:
+  - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames, and the proto/<id>/compare URL for 'the prototype beside the real app'.
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
-  - **`compare`** — The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
+  - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (a layout-harness fixture, a live component specimen, the running app at a route) is a child plugin.
     - Plugins:
-      - **`component`** — The component: counterpart kind for the prototype Compare stage: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the stage's shared width.
-      - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
-      - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
-      - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options — or the version on screen itself as another variant, with option picks of its own (version:shown). Never declared by a page: offered as "Latest version" and "Another variant" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
+      - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
+      - **`fixture`** — The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.
+      - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
   - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
   - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
-  - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
-  - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened in a new browser tab as a chromeless app page (present/<id>) that keeps the options picker. Contributed into the detail pane's Actions.
-  - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
+  - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped and filterable by a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
+  - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.
+  - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.
   - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
 
 <!-- AUTOGENERATED:END -->

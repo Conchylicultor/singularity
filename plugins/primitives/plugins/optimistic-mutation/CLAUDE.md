@@ -453,7 +453,7 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `useOptimisticResource`
 - Cross-plugin:
   - Imported by:
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
     - `apps/sonata/track-mixer`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/conversations-view/queue`

@@ -28,7 +28,7 @@ import {
   usePrototypeThumbnails,
 } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
 import { mintPrototypeFolder, newPrototypePrompt } from "./new-prototype";
-import { prototypeDetailPane } from "../panes";
+import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { PrototypeCardActions, type PrototypeGalleryRow } from "../slots";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");

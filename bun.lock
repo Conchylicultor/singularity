@@ -590,6 +590,10 @@
       "name": "@singularity/plugin-apps-prototypes",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/canvas": {
+      "name": "@singularity/plugin-apps-prototypes-canvas",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/checkpoints": {
       "name": "@singularity/plugin-apps-prototypes-checkpoints",
       "version": "0.0.1",
@@ -608,10 +612,6 @@
     },
     "plugins/apps/plugins/prototypes/plugins/compare/plugins/route": {
       "name": "@singularity/plugin-apps-prototypes-compare-route",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/prototypes/plugins/compare/plugins/version": {
-      "name": "@singularity/plugin-apps-prototypes-compare-version",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/prototypes/plugins/copy-id": {
@@ -6137,6 +6137,8 @@
 
     "@singularity/plugin-apps-prototypes": ["@singularity/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
 
+    "@singularity/plugin-apps-prototypes-canvas": ["@singularity/plugin-apps-prototypes-canvas@workspace:plugins/apps/plugins/prototypes/plugins/canvas"],
+
     "@singularity/plugin-apps-prototypes-checkpoints": ["@singularity/plugin-apps-prototypes-checkpoints@workspace:plugins/apps/plugins/prototypes/plugins/checkpoints"],
 
     "@singularity/plugin-apps-prototypes-compare": ["@singularity/plugin-apps-prototypes-compare@workspace:plugins/apps/plugins/prototypes/plugins/compare"],
@@ -6146,8 +6148,6 @@
     "@singularity/plugin-apps-prototypes-compare-fixture": ["@singularity/plugin-apps-prototypes-compare-fixture@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/fixture"],
 
     "@singularity/plugin-apps-prototypes-compare-route": ["@singularity/plugin-apps-prototypes-compare-route@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/route"],
-
-    "@singularity/plugin-apps-prototypes-compare-version": ["@singularity/plugin-apps-prototypes-compare-version@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/version"],
 
     "@singularity/plugin-apps-prototypes-copy-id": ["@singularity/plugin-apps-prototypes-copy-id@workspace:plugins/apps/plugins/prototypes/plugins/copy-id"],
 

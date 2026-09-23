@@ -623,6 +623,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps/events/sources/source-detail/settings`
     - `apps/pages/page-author`
     - `apps/pages/page-tree`
+    - `apps/prototypes/canvas`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/piano-roll`
     - `apps/sonata/view-options`

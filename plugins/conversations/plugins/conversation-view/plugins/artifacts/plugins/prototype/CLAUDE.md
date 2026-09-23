@@ -50,7 +50,7 @@ Two states are not a title and do not pretend to be one:
 - Web:
   - Contributes: `ConversationArtifacts.Kind` "Prototypes"
   - Uses:
-    - `apps/prototypes/gallery.prototypeDetailPane`
+    - `apps/prototypes/canvas.prototypeDetailPane`
     - `conversations/conversation-view/artifacts.ArtifactRow`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `primitives/css/spacing.Stack`

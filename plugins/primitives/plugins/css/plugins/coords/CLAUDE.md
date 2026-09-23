@@ -165,6 +165,7 @@ default is stated twice and can therefore drift.
     - `apps/chord/curriculum`
     - `apps/chord/trainer`
     - `apps/deploy/analytics/dashboard`
+    - `apps/prototypes/canvas`
     - `apps/sonata/notation`
     - `apps/sonata/pedal/lane`
     - `apps/sonata/piano-roll`

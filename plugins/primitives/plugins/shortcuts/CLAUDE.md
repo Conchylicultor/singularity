@@ -29,7 +29,8 @@
     - `apps-core/surface/solo`
     - `apps-core/tabs`
     - `apps/chord/trainer`
-    - `apps/prototypes/gallery`
+    - `apps/prototypes/canvas`
+    - `apps/prototypes/present`
     - `apps/sonata/controls`
     - `apps/sonata/progress/loop`
     - `primitives/action-presentation`
