@@ -8,7 +8,7 @@ import { setTaskPrepromptRemote } from "./api";
 export function useTaskPrepromptBinding(
   taskId: string,
 ): LaunchBinding<string | null> {
-  const value = useTaskPreprompt(taskId);
+  const result = useTaskPreprompt(taskId);
 
   const onChange = useCallback(
     (prepromptId: string | null) => {
@@ -24,5 +24,6 @@ export function useTaskPrepromptBinding(
     [taskId],
   );
 
-  return { value, onChange };
+  if (result.pending) return { pending: true };
+  return { pending: false, value: result.data, onChange };
 }

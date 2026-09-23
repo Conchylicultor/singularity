@@ -16,11 +16,15 @@ export interface LaunchControlProps<V> {
   disabled?: boolean;
 }
 
-/** A control bound to an existing task's persisted value. */
-export interface LaunchBinding<V> {
-  value: V;
-  onChange: (next: V) => void;
-}
+/**
+ * A control bound to an existing task's persisted value. While the value is
+ * still loading the binding is `{ pending: true }` and carries NO value: the
+ * host shows a loading state in the control's place, so a picker can never
+ * show (and let you click) a stand-in like "Off" before the task's real value
+ * is known.
+ */
+export type LaunchBinding<V> =
+  { pending: true } | { pending: false; value: V; onChange: (next: V) => void };
 
 /**
  * How an option draws itself on a composer bar — as a pill, instead of as the

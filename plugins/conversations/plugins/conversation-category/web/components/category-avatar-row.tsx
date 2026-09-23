@@ -22,7 +22,16 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const rows = useCategoryRows(conv.id, categoryIds);
   const avatars = useCategoryAvatars(avatarCategoryId);
 
-  const item = avatarCategoryId ? rows.get(avatarCategoryId)?.item : undefined;
+  // The assignment isn't known yet: a neutral disc (status dot only), never the
+  // title-glyph that means "this conversation has no category icon". With no
+  // avatar category chosen there is nothing to wait for.
+  if (avatarCategoryId && rows.pending) {
+    return <Avatar statusDot={CONV_STATUS_DOT[conv.status]} colorless />;
+  }
+  const item =
+    avatarCategoryId && !rows.pending
+      ? rows.data.get(avatarCategoryId)?.item
+      : undefined;
   const avatar = item ? avatars[item] : undefined;
   const hasIcon =
     avatar?.icon != null ||

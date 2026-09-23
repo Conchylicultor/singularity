@@ -15,6 +15,7 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.Conversation`
     - `primitives/css/inline.Inline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResource`
     - `ui/segmented-progress-bar.SegmentedProgressBar`
 - Server:

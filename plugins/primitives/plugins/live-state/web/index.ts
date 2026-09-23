@@ -22,7 +22,11 @@ export {
 } from "./pending-mount-tracker";
 export type { PendingMountSnapshot } from "./pending-mount-tracker";
 export type { ResourceResult } from "./use-resource";
-export { combineResources, useCombinedResources } from "./resource-utils";
+export {
+  combineResources,
+  useCombinedResources,
+  mapResource,
+} from "./resource-utils";
 export type {
   GateInput,
   GateDataOf,

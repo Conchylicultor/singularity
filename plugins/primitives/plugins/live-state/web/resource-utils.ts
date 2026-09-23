@@ -18,6 +18,8 @@
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
 
+import type { ResourceResult } from "./use-resource";
+
 /**
  * Anything gateable on readiness: a `useResource` result (discriminated
  * union), a `combineResources` result, or `useOptimisticResource`'s
@@ -81,4 +83,29 @@ export function useCombinedResources<T extends Record<string, GateInput>>(
   inputs: T,
 ): CombinedResources<T> {
   return combineResources(inputs);
+}
+
+/**
+ * Derive from a resource result WITHOUT erasing its readiness: the settled arm's
+ * `data` goes through `fn`, the pending arm passes through (its `stale` value, if
+ * any, derived the same way). This is how a domain hook narrows a read — e.g. a
+ * point set to its one row, `rows[0] ?? null` — while still handing its caller
+ * "not known yet" as a state rather than as a value that means "absent".
+ *
+ * Pure; `fn` runs on every call, so memoize its output at the call site when a
+ * stable identity matters.
+ */
+export function mapResource<T, U>(
+  result: ResourceResult<T>,
+  fn: (data: T) => U,
+): ResourceResult<U> {
+  if (!result.pending) {
+    return { pending: false, data: fn(result.data), refetch: result.refetch };
+  }
+  return {
+    pending: true,
+    error: result.error,
+    refetch: result.refetch,
+    ...(result.stale === undefined ? {} : { stale: fn(result.stale) }),
+  };
 }

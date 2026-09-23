@@ -537,6 +537,25 @@ warm WS load paints with zero flash) and an error `Placeholder`. Data-dependent
 disabled-neutral while pending — never a default mode, and especially never the
 destructive one.
 
+**Domain hooks keep the pending arm.** A hook that narrows a read — one row out
+of `usePointResource` / `usePointResources`, one key out of a record — returns
+`ResourceResult<T | null>`, never a bare `T | null`. A settled `null` then means
+"absent", and "not loaded yet" stays a state the caller renders. Derive with
+`mapResource(r, fn)`, which maps the settled arm and passes the pending one
+through:
+
+```ts
+export function useTaskAutoStart(id: string): ResourceResult<Row | null> {
+  return mapResource(usePointResources(r, [id]), (rows) => rows[0] ?? null);
+}
+```
+
+The lint rule watches `usePointResource`, `usePointResources` and
+`useWindowResource` as well, and flags `if (r.pending) return null` in a
+value-returning function whenever the settled return can be `null` too
+(`?? null`, an optional chain, or any `usePointResource` read). A component's
+`if (r.pending) return null` before rendering JSX stays legal.
+
 **Gate restriction:** feed only whole-resource results into gates — never a
 `select` result (silent-flip caveat below). For a select-based readiness read,
 pass `gate: true` (next section).
@@ -642,6 +661,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `hydrateResource`
     - `keyedResourceDescriptor`
     - `liveStateSocketKind`
+    - `mapResource`
     - `matchResource`
     - `noteResourceTxAcks`
     - `noteResourceWatermark`

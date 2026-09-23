@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   blockPromptTasksResource,
   promptTaskOriginsResource,
@@ -28,15 +32,15 @@ export function useBlockPromptTasks(
   }, [result]);
 }
 
-// The page/block a task was launched from, or null when the task did not come
-// from a prompt block (and while the resource is still hydrating). The `blockId`
+// The page/block a task was launched from. Settled `null` means the task did not
+// come from a prompt block; "not loaded yet" stays the pending arm. The `blockId`
 // may dangle — the block can be deleted while the task lives on — so consumers
 // must tolerate a page/block that no longer exists.
 export function usePromptTaskLink(
   taskId: string | null | undefined,
-): PromptTaskOrigin | null {
+): ResourceResult<PromptTaskOrigin | null> {
   const result = useResource(promptTaskOriginsResource);
-  if (!taskId) return null;
-  if (result.pending) return null;
-  return result.data.find((row) => row.taskId === taskId) ?? null;
+  return mapResource(result, (rows) =>
+    taskId ? (rows.find((row) => row.taskId === taskId) ?? null) : null,
+  );
 }

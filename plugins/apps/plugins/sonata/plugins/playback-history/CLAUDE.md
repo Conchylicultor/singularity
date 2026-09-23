@@ -19,6 +19,8 @@ shows in the TABLE's Plays column too, which is deliberate.
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/relative-time.formatRelativeTime`
   - Exports (values):

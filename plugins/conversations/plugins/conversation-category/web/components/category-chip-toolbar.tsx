@@ -26,6 +26,9 @@ export function CategoryChipToolbar() {
 
   if (!conversation) return null;
   if (conversation.kind === "agent") return null;
+  // A chip reads "unset" when its category has no assignment, so until the
+  // assignments are known, show no chips rather than all of them unset.
+  if (rows.pending) return null;
 
   return (
     <>
@@ -34,7 +37,7 @@ export function CategoryChipToolbar() {
           key={category.id}
           conversationId={conversation.id}
           category={category}
-          item={rows.get(category.id)?.item ?? null}
+          item={rows.data.get(category.id)?.item ?? null}
         />
       ))}
     </>

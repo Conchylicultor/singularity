@@ -71,8 +71,8 @@ ruleTester.run(
           const label = r.pending ? "" : "ready";
         `,
       },
-      // Statement form, null early-return — `null` is excluded by design (the
-      // sanctioned "render nothing / no value yet while loading" shape).
+      // Statement form, null early-return where the settled value is never
+      // nullish — `null` stays a distinct "not yet" the caller must check.
       {
         code: `
           function useThing() {
@@ -125,8 +125,147 @@ ruleTester.run(
           }
         `,
       },
+      // Same, with a derivation that can't produce null.
+      {
+        code: `
+          function useCount() {
+            const r = useResource(songsResource);
+            if (r.pending) return null;
+            return r.data.length;
+          }
+        `,
+      },
+      // A `null` inside a nested callback doesn't make the return nullable.
+      {
+        code: `
+          function useNames() {
+            const r = useResource(songsResource);
+            if (r.pending) return null;
+            return r.data.map((s) => s.name ?? null);
+          }
+        `,
+      },
+      // A hook handing its caller the result itself — the pending arm survives.
+      {
+        code: `
+          function useProgress(id) {
+            const r = usePointResource(progressResource, id);
+            return r;
+          }
+        `,
+      },
+      // A component rendering nothing while a point read loads — sanctioned.
+      {
+        code: `
+          function Chip({ id }) {
+            const r = usePointResource(progressResource, id);
+            if (r.pending) return null;
+            return <span>{r.data?.phase}</span>;
+          }
+        `,
+      },
+      // A pane title hook: undefined means "use the default title", which is
+      // right while loading too.
+      {
+        code: `
+          function useDeploymentTitle({ id }) {
+            const result = useResource(deploymentsResource);
+            if (result.pending) return undefined;
+            return result.data.find((d) => d.id === id)?.name;
+          }
+          export const pane = Pane.define({ useTitle: useDeploymentTitle });
+        `,
+      },
+      // Same, written inline.
+      {
+        code: `
+          export const pane = Pane.define({
+            useTitle: ({ id }) => {
+              const r = usePointResource(rowsResource, id);
+              return r.pending ? undefined : r.data?.name;
+            },
+          });
+        `,
+      },
     ],
     invalid: [
+      // A title hook returning null (not the contract's undefined) is still flagged.
+      {
+        code: `
+          function useTitle2({ id }) {
+            const result = usePointResource(rowsResource, id);
+            if (result.pending) return null;
+            return result.data?.name ?? null;
+          }
+          export const pane = Pane.define({ useTitle: useTitle2 });
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
+      // Point read collapsed by a ternary: pending and absent are both null.
+      {
+        code: `
+          function useProgressFor(id) {
+            const result = usePointResource(progressResource, id);
+            return result.pending ? null : (result.data ?? null);
+          }
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      // Point read collapsed by an early return — settled data is row | null.
+      {
+        code: `
+          function usePreprompt(id) {
+            const result = usePointResource(prepromptsResource, id);
+            if (result.pending) return null;
+            return result.data;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
+      // Point set narrowed to one row: `?? null` makes the settled value nullable.
+      {
+        code: `
+          function useTaskAutoStart(ids) {
+            const result = usePointResources(autoStartResource, ids);
+            if (result.pending) return null;
+            return result.data[0] ?? null;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
+      // Whole-collection lookup with an optional chain + `?? null`.
+      {
+        code: `
+          function useTaskEffort(taskId) {
+            const result = useResource(taskEffortsResource);
+            if (!taskId) return null;
+            if (result.pending) return null;
+            return result.data[taskId]?.level ?? null;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
+      // Point set collapsed to undefined by a ternary.
+      {
+        code: `
+          function useRows(ids) {
+            const result = usePointResources(categoriesResource, ids);
+            const rows = result.pending ? undefined : result.data;
+            return rows;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
+      // Window read collapsed to an empty list.
+      {
+        code: `
+          function useStarred() {
+            const result = useWindowResource(starredResource);
+            return result.pending ? [] : result.data;
+          }
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
       // The canonical collapse.
       {
         code: `

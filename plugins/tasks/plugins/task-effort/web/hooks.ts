@@ -1,10 +1,20 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { taskEffortsResource } from "../shared/schemas";
 
-export function useTaskEffort(taskId: string | null | undefined): EffortLevel | null {
+/**
+ * The task's thinking mode. Settled `null` means none is set (or there is no
+ * task); "not loaded yet" stays the pending arm, so it can never read as unset.
+ */
+export function useTaskEffort(
+  taskId: string | null | undefined,
+): ResourceResult<EffortLevel | null> {
   const result = useResource(taskEffortsResource);
-  if (!taskId) return null;
-  if (result.pending) return null;
-  return result.data[taskId]?.level ?? null;
+  return mapResource(result, (byTask) =>
+    taskId ? (byTask[taskId]?.level ?? null) : null,
+  );
 }

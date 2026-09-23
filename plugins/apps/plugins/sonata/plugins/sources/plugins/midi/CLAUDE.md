@@ -28,6 +28,8 @@ while the column/sort/filter come free. `useSongMidiMap()` is the batch hook a
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
   - Exports (values):
     - `MIDI_SOURCE_ID`

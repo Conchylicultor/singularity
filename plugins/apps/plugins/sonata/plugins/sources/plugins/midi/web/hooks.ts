@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { songMidiResource, type SongMidiRow } from "../shared/resources";
 
 /**
@@ -17,12 +21,15 @@ export function useSongMidiMap(): Map<string, SongMidiRow> {
   }, [result]);
 }
 
-/** One song's MIDI data, or null if it carries no MIDI (reactive). */
+/**
+ * One song's MIDI data (reactive). Settled `null` means it carries no MIDI;
+ * "not loaded yet" stays the pending arm.
+ */
 export function useSongMidi(
   songId: string | null | undefined,
-): SongMidiRow | null {
+): ResourceResult<SongMidiRow | null> {
   const result = useResource(songMidiResource);
-  if (!songId) return null;
-  if (result.pending) return null;
-  return result.data.find((r) => r.songId === songId) ?? null;
+  return mapResource(result, (rows) =>
+    songId ? (rows.find((r) => r.songId === songId) ?? null) : null,
+  );
 }

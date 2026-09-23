@@ -46,6 +46,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `primitives/css/inline.Inline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResource`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`

@@ -109,6 +109,8 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResources`
     - `shell/notifications.toast`
   - Exports (types):

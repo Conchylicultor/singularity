@@ -9,7 +9,7 @@ import { setTaskEffortRemote } from "./api";
 export function useTaskEffortBinding(
   taskId: string,
 ): LaunchBinding<EffortLevel | null> {
-  const value = useTaskEffort(taskId);
+  const result = useTaskEffort(taskId);
 
   const onChange = useCallback(
     (level: EffortLevel | null) => {
@@ -25,5 +25,6 @@ export function useTaskEffortBinding(
     [taskId],
   );
 
-  return { value, onChange };
+  if (result.pending) return { pending: true };
+  return { pending: false, value: result.data, onChange };
 }

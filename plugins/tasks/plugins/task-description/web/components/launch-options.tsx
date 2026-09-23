@@ -1,4 +1,5 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   TaskLaunch,
@@ -19,12 +20,18 @@ function BoundOptionRow({
   taskId: string;
   useTaskBinding: NonNullable<LaunchOptionEntry["useTaskBinding"]>;
 }) {
-  const { value, onChange } = useTaskBinding(taskId);
+  const binding = useTaskBinding(taskId);
   const Control = option.component;
   return (
     <Stack direction="row" align="center" gap="md">
       <SectionLabel as="span">{option.label}</SectionLabel>
-      <Control value={value} onChange={onChange} />
+      {/* Until the task's value is known the control is not mounted at all —
+          it would otherwise show (and accept clicks on) a stand-in value. */}
+      {binding.pending ? (
+        <Loading variant="block" className="control-md w-32" />
+      ) : (
+        <Control value={binding.value} onChange={binding.onChange} />
+      )}
     </Stack>
   );
 }

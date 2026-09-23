@@ -1,13 +1,22 @@
 import { useMemo } from "react";
-import { usePointResources } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  usePointResources,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   taskAutoStartResource,
   type TaskAutoStartRow,
 } from "../shared/resources";
 
+/**
+ * The task's auto-start row. Settled `null` means the task has no row (not
+ * armed); "not loaded yet" stays the pending arm, so an armed task can never
+ * read as unarmed during the load window.
+ */
 export function useTaskAutoStart(
   taskId: string | null | undefined,
-): TaskAutoStartRow | null {
+): ResourceResult<TaskAutoStartRow | null> {
   // `usePointResources` rather than `usePointResource`: this hook's signature is
   // nullish-tolerant and a hook cannot be called conditionally. An empty id set
   // encodes to `{ ids: "" }`, which the server's point loader short-circuits with
@@ -15,6 +24,5 @@ export function useTaskAutoStart(
   // categories avatar uses.
   const ids = useMemo(() => (taskId ? [taskId] : []), [taskId]);
   const result = usePointResources(taskAutoStartResource, ids);
-  if (result.pending) return null;
-  return result.data[0] ?? null;
+  return mapResource(result, (rows) => rows[0] ?? null);
 }

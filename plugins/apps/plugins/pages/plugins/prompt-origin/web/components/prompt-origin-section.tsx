@@ -17,24 +17,31 @@ import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/we
  *   real work and must outlive its block), so a dangling id is expected, not an
  *   error — the provenance is simply no longer navigable.
  */
-function useOriginPage(taskId: string): { pageId: string; title: string } | null {
+function useOriginPage(
+  taskId: string,
+): { pageId: string; title: string } | null {
   const origin = usePromptTaskLink(taskId);
   const pagesResult = useResource(pagesResource);
 
-  if (!origin) return null;
-  if (pagesResult.pending) return null;
+  if (origin.pending || pagesResult.pending) return null;
+  if (!origin.data) return null;
+  const { pageId } = origin.data;
 
-  const page = pagesResult.data.find((row) => row.id === origin.pageId);
+  const page = pagesResult.data.find((row) => row.id === pageId);
   if (!page) return null;
 
-  return { pageId: origin.pageId, title: pageData(page).title || "Untitled" };
+  return { pageId, title: pageData(page).title || "Untitled" };
 }
 
 /**
  * The whole section is conditional — with no live page to link to the host
  * paints nothing at all: no card, no title, no empty state.
  */
-export function usePromptOriginAvailable({ taskId }: { taskId: string }): boolean {
+export function usePromptOriginAvailable({
+  taskId,
+}: {
+  taskId: string;
+}): boolean {
   return useOriginPage(taskId) !== null;
 }
 

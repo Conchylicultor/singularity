@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { usePointResources } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  usePointResources,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   categoryRowId,
   conversationCategoriesResource,
@@ -19,14 +23,14 @@ import {
  * the server's point loader short-circuits without a query. That is what "no
  * avatar category chosen yet" looks like; no sentinel id is needed.
  *
- * A missing key means "not classified yet" — pending reads as missing too, so
- * consumers fall back to their unset rendering for the one post-mount
- * round-trip.
+ * On the settled arm a missing key means "not classified yet". "Not loaded
+ * yet" stays the pending arm, so a classified conversation never paints as
+ * unclassified during the load window.
  */
 export function useCategoryRows(
   conversationId: string,
   categoryIds: readonly string[],
-): Map<string, ConversationCategory> {
+): ResourceResult<Map<string, ConversationCategory>> {
   const ids = useMemo(
     () =>
       categoryIds.map((categoryId) =>
@@ -35,9 +39,12 @@ export function useCategoryRows(
     [conversationId, categoryIds],
   );
   const result = usePointResources(conversationCategoriesResource, ids);
-  const rows = result.pending ? undefined : result.data;
   return useMemo(
-    () => new Map((rows ?? []).map((row) => [row.categoryId, row])),
-    [rows],
+    () =>
+      mapResource(
+        result,
+        (rows) => new Map(rows.map((row) => [row.categoryId, row])),
+      ),
+    [result],
   );
 }

@@ -10,7 +10,10 @@ import { PrepromptIcon } from "./preprompt-icon";
 // live and falls back to a default glyph, so the marker is always visible.
 // Conversations launched without any preprompt stay unadorned.
 export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
-  const record = useConversationPreprompt(conv.id);
+  const result = useConversationPreprompt(conv.id);
+  // Nothing while loading, nothing when no preprompt was recorded.
+  if (result.pending) return null;
+  const record = result.data;
   if (!record) return null;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>

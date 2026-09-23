@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   playbackHistoryResource,
   type PlaybackHistoryRow,
@@ -18,12 +22,15 @@ export function usePlaybackHistoryMap(): Map<string, PlaybackHistoryRow> {
   }, [result]);
 }
 
-/** One song's playback rollup, or null if it has never been played. */
+/**
+ * One song's playback rollup. Settled `null` means it has never been played;
+ * "not loaded yet" stays the pending arm.
+ */
 export function usePlaybackHistory(
   songId: string | null | undefined,
-): PlaybackHistoryRow | null {
+): ResourceResult<PlaybackHistoryRow | null> {
   const result = useResource(playbackHistoryResource);
-  if (!songId) return null;
-  if (result.pending) return null;
-  return result.data.find((r) => r.songId === songId) ?? null;
+  return mapResource(result, (rows) =>
+    songId ? (rows.find((r) => r.songId === songId) ?? null) : null,
+  );
 }

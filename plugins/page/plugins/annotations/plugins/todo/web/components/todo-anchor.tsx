@@ -79,7 +79,21 @@ function DispatchableTodoAnchor({
   blockId: string;
   editor: BlockEditorAPI;
 }) {
-  const dispatched = useTodoTask(blockId) !== null;
+  const link = useTodoTask(blockId);
+
+  // Until the link is known, the name only: offering "Launch" on a card that
+  // was already dispatched would misstate it, so the action waits.
+  if (link.pending) {
+    return (
+      <ContainerCornerLabel
+        blockId={blockId}
+        editor={editor}
+        name="Todo"
+        className="text-warning/80"
+      />
+    );
+  }
+  const dispatched = link.data !== null;
 
   return (
     <ContainerCornerLabel

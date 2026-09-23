@@ -4636,6 +4636,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/relative-time.formatRelativeTime`
             - Exports (values):
@@ -5300,6 +5302,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
                 - Exports (values):
                   - `MIDI_SOURCE_ID`
@@ -7808,6 +7812,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/css/ui-kit.Button`
           - `primitives/launch.LaunchAgentPopover`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
@@ -9225,6 +9231,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResources`
           - `shell/notifications.toast`
         - Exports (types):
@@ -9309,6 +9317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResource`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -9354,6 +9363,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/header.Conversation`
           - `primitives/css/inline.Inline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResource`
           - `ui/segmented-progress-bar.SegmentedProgressBar`
       - Server:
@@ -20938,6 +20948,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/launch.LaunchAgentForm`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
                   - `tasks/task-status.StatusBadge`
                   - `tasks/tasks-core.useTaskConversations`
@@ -22556,6 +22568,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `infra/endpoints.fetchEndpoint`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
             - Exports (types):
               - `PromptTaskLink`
@@ -29076,6 +29090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `hydrateResource`
           - `keyedResourceDescriptor`
           - `liveStateSocketKind`
+          - `mapResource`
           - `matchResource`
           - `noteResourceTxAcks`
           - `noteResourceWatermark`
@@ -29413,6 +29428,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `tasks/attempt-view`
           - `tasks/task-dependencies`
+          - `tasks/task-description`
           - `tasks/task-draft-form`
           - `tasks/task-events`
           - `tasks/task-graph`
@@ -33666,6 +33682,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
           - `primitives/css/badge.Badge`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResources`
           - `tasks.setAutoStart`
           - `tasks/task-list.Tasks`
@@ -33931,6 +33949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch.LaunchControl`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
+          - `primitives/loading.Loading`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `primitives/text-editor/paste-images.AttachmentThumbnail`
@@ -34059,6 +34078,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/effort-provider.effortItems`
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
@@ -34214,6 +34235,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/preprompts.PrepromptSelect`
           - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`

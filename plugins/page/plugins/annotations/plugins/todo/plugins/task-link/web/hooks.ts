@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   tasksResource,
   type TaskStatus,
@@ -7,23 +11,20 @@ import {
 import { todoTaskResource, type TodoTaskLink } from "../shared/schemas";
 
 /**
- * The task a TODO card has been dispatched onto, or `null` when it has not been.
- *
- * `null` also covers "still hydrating", and the caller renders the two the same
- * way — as nothing to show. A card whose link has not loaded and a card nobody
- * has dispatched both have no task, and a spinner in place of the card's glyph
- * would be noise on every card of the page. The consequence is that a
- * freshly-opened page's TODO glyph settles a beat after it paints — the same call
- * `useAgentNotesAuthors` and `useBlockPromptTasks` make.
+ * The task a TODO card has been dispatched onto. Settled `null` means it has not
+ * been dispatched; "not loaded yet" stays the pending arm, so a dispatched card
+ * never offers "Launch" as if it were fresh. Callers that render the two the same
+ * (the run chips: nothing either way) decide that themselves.
  *
  * At most one link exists per card — the extension table's primary key is the
  * block id — so the array the resource carries is read as its first element
  * rather than searched.
  */
-export function useTodoTask(blockId: string): TodoTaskLink | null {
+export function useTodoTask(
+  blockId: string,
+): ResourceResult<TodoTaskLink | null> {
   const result = useResource(todoTaskResource, { blockId });
-  if (result.pending) return null;
-  return result.data[0] ?? null;
+  return mapResource(result, (links) => links[0] ?? null);
 }
 
 /** A dispatched card's task, as the card's two surfaces need to render it. */
@@ -52,7 +53,8 @@ export interface TodoTaskState {
 export function useTodoTaskState(blockId: string): TodoTaskState | null {
   const link = useTodoTask(blockId);
   const tasks = useResource(tasksResource);
-  const taskId = link?.taskId;
+  // Hydrating reads as "no task" here by design — see above.
+  const taskId = link.pending ? undefined : link.data?.taskId;
 
   return useMemo(() => {
     if (taskId === undefined || tasks.pending) return null;

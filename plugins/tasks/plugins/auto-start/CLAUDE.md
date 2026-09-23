@@ -9,6 +9,8 @@
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
     - `primitives/css/badge.Badge`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResources`
     - `tasks.setAutoStart`
     - `tasks/task-list.Tasks`

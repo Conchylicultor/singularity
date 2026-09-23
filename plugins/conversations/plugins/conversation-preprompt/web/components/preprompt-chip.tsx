@@ -14,8 +14,11 @@ import { PrepromptIcon } from "./preprompt-icon";
 // reveals the full instruction text in a scrollable popover.
 export function PrepromptChip() {
   const { convId } = conversationPane.useParams();
-  const record = useConversationPreprompt(convId);
+  const result = useConversationPreprompt(convId);
   const [open, setOpen] = useState(false);
+  // Nothing while loading, nothing when no preprompt was recorded.
+  if (result.pending) return null;
+  const record = result.data;
   if (!record) return null;
 
   return (

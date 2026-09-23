@@ -15,8 +15,10 @@ export function useTaskAutoStartBinding(
     [taskId],
   );
 
+  if (autoStart.pending) return { pending: true };
   return {
-    value: autoStart?.autoStartModel ?? null,
+    pending: false,
+    value: autoStart.data?.autoStartModel ?? null,
     onChange,
   };
 }

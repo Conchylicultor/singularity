@@ -1,6 +1,10 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAutoFixHigh } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  mapResource,
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import {
@@ -11,11 +15,13 @@ import {
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
-/** The run, once the history resource has settled. */
-function useBuildRun(runId: string): BuildRun | null {
+/** The run; settled `null` means it is not in the history. */
+function useBuildRun(runId: string): ResourceResult<BuildRun | null> {
   const result = useResource(buildHistoryResource);
-  if (result.pending) return null;
-  return result.data.find((r) => r.id === runId) ?? null;
+  return mapResource(
+    result,
+    (runs) => runs.find((r) => r.id === runId) ?? null,
+  );
 }
 
 /**
@@ -32,7 +38,10 @@ function useBuildRun(runId: string): BuildRun | null {
  */
 export function useBuildFailed({ runId }: { runId: string }): boolean {
   const run = useBuildRun(runId);
-  return run !== null && buildStatusOf(run) === "failed";
+  // Unavailable until the run is known: offering a fix before knowing the build
+  // failed would be a claim the data may not back.
+  if (run.pending || run.data === null) return false;
+  return buildStatusOf(run.data) === "failed";
 }
 
 /**
@@ -43,8 +52,8 @@ export function useBuildFailed({ runId }: { runId: string }): boolean {
 export function BuildFixAction({ runId }: { runId: string }) {
   const run = useBuildRun(runId);
   // `useAvailable` already gated on a failed run; this only narrows the type.
-  if (!run) return null;
-  return <BuildFixButton runId={runId} run={run} />;
+  if (run.pending || !run.data) return null;
+  return <BuildFixButton runId={runId} run={run.data} />;
 }
 
 function formatBuildInfo(run: BuildRun): string {

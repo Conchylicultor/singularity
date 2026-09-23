@@ -10,9 +10,12 @@ const STEPS = PHASE_ORDER.map((p) => ({ id: p, label: PHASE_LABELS[p] }));
 export function ProgressBarToolbar() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const progress = useProgressFor(convId);
+  const result = useProgressFor(convId);
   if (!conversation) return null;
   if (conversation.kind === "agent") return null;
+  // Nothing while loading, nothing when no progress is classified yet.
+  if (result.pending) return null;
+  const progress = result.data;
   if (!progress) return null;
   return (
     <Inline gap="none">

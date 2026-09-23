@@ -11,6 +11,8 @@
     - `conversations/effort-provider.effortItems`
     - `conversations/effort-provider.EffortSelect`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.toast`

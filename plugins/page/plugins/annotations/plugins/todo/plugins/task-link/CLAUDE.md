@@ -214,6 +214,8 @@ card, not a collection.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchAgentForm`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `tasks/task-status.StatusBadge`
     - `tasks/tasks-core.useTaskConversations`

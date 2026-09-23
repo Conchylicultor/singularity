@@ -8,7 +8,9 @@ import { setAutoStart } from "@plugins/tasks/web";
 export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
   const autoStart = useTaskAutoStart(taskId);
-  const queuedModel = autoStart?.autoStartModel ?? null;
+  // Nothing while loading; the chip appears once the task is known to be armed.
+  if (autoStart.pending) return null;
+  const queuedModel = autoStart.data?.autoStartModel ?? null;
 
   if (!queuedModel) return null;
 

@@ -29,9 +29,22 @@
  *     component that early-returns while pending and then renders `X.data` in JSX
  *     is the sanctioned shape and must never be flagged.
  *
- * Note `null`/`undefined` early-returns are excluded by design: they signal
- * genuine absence the caller must null-check, and flagging them would break the
- * legitimate "render nothing while loading" pattern.
+ * A `null`/`undefined` early-return is flagged too, but only when the later
+ * value-return can ITSELF produce `null`/`undefined` — it contains a
+ * `null`/`undefined` literal (`?? null`, `? … : null`) or an optional chain, or
+ * X comes from `usePointResource`, whose settled data is `row | null` with
+ * `null` meaning "the row doesn't exist". Then "not loaded yet" and "absent"
+ * reach the caller as the same value, which is the bug (a picker showing "Off"
+ * for an armed task during the load window). When the value-return can never be
+ * nullish, a pending `null` stays a distinct "not yet" the caller must check,
+ * and is allowed. The non-JSX guard still keeps a component's "render nothing
+ * while loading" early-return legal.
+ *
+ * Carve-out: a pane `useTitle` hook (inline in a `useTitle:` property, or a
+ * function declared in the file and passed as one) may return `undefined` while
+ * pending. Pane's title contract defines `undefined` as "fall back to the pane's
+ * default title", which is the right thing to show while loading as well as
+ * when the entity is gone — so nothing wrong reaches the screen.
  *
  * Carve-out (favor false negatives): `useResource(…, { select })` results are
  * sanctioned point reads where `pending ? null : q.data` is legitimate.
@@ -61,6 +74,12 @@ const RESOURCE_HOOKS = new Set([
   // config's empty defaults read as a legitimate answer, so the wrong state is
   // indistinguishable from a real one.
   "useConfigResult",
+  // The bounded reads. `usePointResource` settles on `row | null` where `null`
+  // means "absent", so collapsing its pending arm to `null` is indistinguishable
+  // from a real answer.
+  "usePointResource",
+  "usePointResources",
+  "useWindowResource",
 ]);
 
 type Ctx = Readonly<
@@ -342,14 +361,15 @@ function referencesData(node: TSESTree.Node, objName: string): boolean {
   return false;
 }
 
-function isResourceResultBinding(
+/** The hook name `ident` was initialized from (`const X = useFoo(…)`), or null. */
+function hookCallOf(
   context: Ctx,
   ident: TSESTree.Identifier,
-): boolean {
+): { name: string; call: TSESTree.CallExpression } | null {
   const init = initializerOf(context, ident);
-  if (!init) return false;
+  if (!init) return null;
   const call = unwrap(init);
-  if (call.type !== AST_NODE_TYPES.CallExpression) return false;
+  if (call.type !== AST_NODE_TYPES.CallExpression) return null;
   const callee = call.callee;
   const name =
     callee.type === AST_NODE_TYPES.Identifier
@@ -358,7 +378,94 @@ function isResourceResultBinding(
           callee.property.type === AST_NODE_TYPES.Identifier
         ? callee.property.name
         : null;
-  if (!name || !RESOURCE_HOOKS.has(name)) return false;
+  return name ? { name, call } : null;
+}
+
+function isNullishLiteral(node: TSESTree.Node): boolean {
+  const n = unwrap(node);
+  return (
+    (n.type === AST_NODE_TYPES.Literal && n.value === null) ||
+    (n.type === AST_NODE_TYPES.Identifier && n.name === "undefined")
+  );
+}
+
+/**
+ * Can this value-return expression produce `null`/`undefined`? True when its
+ * subtree (not descending into nested functions, whose values are not this
+ * return's) holds a `null`/`undefined` literal or an optional chain.
+ */
+function canBeNullish(node: TSESTree.Node): boolean {
+  if (isNullishLiteral(node)) return true;
+  if (node.type === AST_NODE_TYPES.ChainExpression) return true;
+  if (
+    node.type === AST_NODE_TYPES.FunctionExpression ||
+    node.type === AST_NODE_TYPES.ArrowFunctionExpression
+  ) {
+    return false;
+  }
+  for (const key of Object.keys(node)) {
+    if (key === "parent") continue;
+    const child = (node as unknown as Record<string, unknown>)[key];
+    if (Array.isArray(child)) {
+      for (const c of child) {
+        if (isAstNode(c) && canBeNullish(c)) return true;
+      }
+    } else if (isAstNode(child) && canBeNullish(child)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function propertyKeyIs(node: TSESTree.Node | undefined, key: string): boolean {
+  return (
+    node?.type === AST_NODE_TYPES.Property &&
+    !node.computed &&
+    ((node.key.type === AST_NODE_TYPES.Identifier && node.key.name === key) ||
+      (node.key.type === AST_NODE_TYPES.Literal && node.key.value === key))
+  );
+}
+
+/**
+ * Is `fn` a pane `useTitle` hook? Either written inline as the value of a
+ * `useTitle:` property, or a named function whose identifier is passed as one.
+ */
+function isPaneTitleHook(context: Ctx, fn: FunctionNode): boolean {
+  if (propertyKeyIs(fn.parent, "useTitle")) return true;
+  if (fn.type !== AST_NODE_TYPES.FunctionDeclaration || !fn.id) return false;
+  const variable = resolveVariable(context, fn.id);
+  return (
+    variable?.references.some((ref) => {
+      const parent = ref.identifier.parent;
+      return (
+        propertyKeyIs(parent, "useTitle") &&
+        (parent as TSESTree.Property).value === ref.identifier
+      );
+    }) ?? false
+  );
+}
+
+/** `undefined` returned by a pane `useTitle` hook — see the file header. */
+function isTitleFallback(
+  context: Ctx,
+  at: TSESTree.Node,
+  pendingValue: TSESTree.Node,
+): boolean {
+  const n = unwrap(pendingValue);
+  if (n.type !== AST_NODE_TYPES.Identifier || n.name !== "undefined") {
+    return false;
+  }
+  const fn = enclosingFunction(at);
+  return fn !== null && isPaneTitleHook(context, fn);
+}
+
+function isResourceResultBinding(
+  context: Ctx,
+  ident: TSESTree.Identifier,
+): boolean {
+  const hook = hookCallOf(context, ident);
+  if (!hook || !RESOURCE_HOOKS.has(hook.name)) return false;
+  const { name, call } = hook;
   // Carve-out: select-based point reads are sanctioned narrowed reads.
   if (name === "useResource") {
     const opts = call.arguments[2];
@@ -412,10 +519,11 @@ export default createRule({
         "`.pending`, wrap in <ResourceView>/matchResource(…), combine multiple resources with combineResources(…), or pass `loading` to " +
         "DataView. See plugins/primitives/plugins/live-state/CLAUDE.md.",
       pendingCollapseReturn:
-        "`if ({{name}}.pending) return <typed-empty>` returns a fake empty/default value while loading, then later returns " +
+        "`if ({{name}}.pending) return <typed-empty>` returns a fake empty/default value while loading (or `null` where the settled " +
+        "value can be `null` too), then later returns " +
         '`{{name}}.data` — collapsing "still loading" into "genuinely empty" for every caller (the wrong-state-while-loading bug class). ' +
         "This function produces a VALUE, so don't bake a fake-empty into it: expose the raw `ResourceResult` and gate at the caller (for a " +
-        "hook/derivation), early-return `<Loading/>` (for a component), or combine multiple resources with `combineResources(…)`. " +
+        "hook/derivation — `mapResource(r, fn)` derives from the settled arm and keeps the pending one), early-return `<Loading/>` (for a component), or combine multiple resources with `combineResources(…)`. " +
         "See plugins/primitives/plugins/live-state/CLAUDE.md.",
     },
   },
@@ -440,6 +548,7 @@ export default createRule({
         }
         if (!isEmptyDefault(context, pendingBranch)) return;
         if (!referencesData(dataBranch, obj.name)) return;
+        if (isTitleFallback(context, node, pendingBranch)) return;
         if (!isResourceResultBinding(context, obj)) return;
         context.report({
           node,
@@ -463,15 +572,19 @@ export default createRule({
         if (!fn) return;
         const dataReturn = findDataReturn(fn, obj.name, consReturn);
         if (!dataReturn?.argument) return;
-        if (
-          !isTypedEmptyStandIn(
-            consReturn.argument,
-            dataReturn.argument,
-            obj.name,
-          )
-        ) {
-          return;
-        }
+        const typedEmpty = isTypedEmptyStandIn(
+          consReturn.argument,
+          dataReturn.argument,
+          obj.name,
+        );
+        // A nullish stand-in collapses only when the settled value can be
+        // nullish too — see the file header.
+        const nullishCollapse =
+          isNullishLiteral(consReturn.argument) &&
+          (canBeNullish(dataReturn.argument) ||
+            hookCallOf(context, obj)?.name === "usePointResource");
+        if (!typedEmpty && !nullishCollapse) return;
+        if (isTitleFallback(context, node, consReturn.argument)) return;
         if (!isResourceResultBinding(context, obj)) return;
         context.report({
           node,

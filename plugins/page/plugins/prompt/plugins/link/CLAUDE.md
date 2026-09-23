@@ -100,6 +100,8 @@ endpoint contract are consumed by this plugin's own `web` and `server` only.
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
   - Exports (types):
     - `PromptTaskLink`
