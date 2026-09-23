@@ -10,7 +10,7 @@ import {
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { paneHeaderContributions } from "../header-slot";
 import { Pane as PaneSlots } from "../slots";
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "../testing";
 
 // One pane header is ONE slot, title included. These pin the two facts that
 // makes true and that nothing else in the suite would notice breaking: the pane

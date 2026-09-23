@@ -35,7 +35,7 @@ import { encodeStateAsUpdate } from "yjs";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { tokenExtension } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";

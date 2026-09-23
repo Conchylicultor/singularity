@@ -17,8 +17,6 @@ export {
   readFreshDuress,
   refreshDuress,
   setDuress,
-  _setClockForTests,
-  _setLatchDirForTests,
 } from "./internal/latch";
 export type { DuressLatch } from "./internal/latch";
 

@@ -22,7 +22,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { closeRunOn, insertRunOn, type InsertRunRow } from "./recorder";
 import { _buildRuns } from "./tables";

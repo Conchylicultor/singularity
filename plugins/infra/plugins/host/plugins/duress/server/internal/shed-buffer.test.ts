@@ -3,11 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  _setClockForTests,
-  _setLatchDirForTests,
   clearDuress,
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import {
+  _setClockForTests,
+  _setLatchDirForTests,
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server/testing";
 import {
   _setFlushTimerForTests,
   _setShedConfigForTests,

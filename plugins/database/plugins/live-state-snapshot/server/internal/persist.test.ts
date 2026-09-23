@@ -1,11 +1,18 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import {
   captureWatermark,
   persistSnapshot,
@@ -53,8 +60,7 @@ async function selectRow(
   key: string,
   paramsKey: string,
 ): Promise<
-  | { value: unknown; position: string; tables_read: string[] }
-  | undefined
+  { value: unknown; position: string; tables_read: string[] } | undefined
 > {
   const res = await t.db.execute<{
     value: unknown;
@@ -93,7 +99,10 @@ describe("captureWatermark", () => {
 
 describe("persistSnapshot", () => {
   test("inserts a row that reads back", async () => {
-    await persistSnapshot(t.db, "k1", "{}", { hello: "world" }, "42", ["ta", "tb"]);
+    await persistSnapshot(t.db, "k1", "{}", { hello: "world" }, "42", [
+      "ta",
+      "tb",
+    ]);
     const row = await selectRow("k1", "{}");
     expect(row).toBeDefined();
     expect(row!.value).toEqual({ hello: "world" });
@@ -113,7 +122,11 @@ describe("persistSnapshot", () => {
 
   test("tables_read round-trips: multi-element and empty array", async () => {
     await persistSnapshot(t.db, "multi", "{}", {}, "1", ["a", "b", "c"]);
-    expect((await selectRow("multi", "{}"))!.tables_read).toEqual(["a", "b", "c"]);
+    expect((await selectRow("multi", "{}"))!.tables_read).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
 
     // The `ARRAY[]::text[]` path — an empty array must persist and read back [].
     await persistSnapshot(t.db, "empty", "{}", {}, "1", []);
@@ -274,9 +287,13 @@ describe("reconcileReadSetTable", () => {
       "conversations_v",
       "notifications",
     ]);
-    await persistSnapshot(t.db, "notifications", "{}", {}, "1", ["notifications"]);
+    await persistSnapshot(t.db, "notifications", "{}", {}, "1", [
+      "notifications",
+    ]);
 
-    const changed = await reconcileReadSetTable(t.db, "notifications", ["notifications"]);
+    const changed = await reconcileReadSetTable(t.db, "notifications", [
+      "notifications",
+    ]);
     expect(changed).toBe(1);
 
     // The stale edge is evicted from `attempts`, order otherwise preserved.
@@ -285,6 +302,8 @@ describe("reconcileReadSetTable", () => {
       "conversations_v",
     ]);
     // The sole legitimate reader row is untouched.
-    expect((await selectRow("notifications", "{}"))!.tables_read).toEqual(["notifications"]);
+    expect((await selectRow("notifications", "{}"))!.tables_read).toEqual([
+      "notifications",
+    ]);
   });
 });

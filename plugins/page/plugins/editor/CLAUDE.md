@@ -3520,9 +3520,9 @@ recursively) instead of `() => ""` — which is why a type with no markdown
 declaration at all (callout, image, video, audio, file, embed, bookmark) is
 covered. Design:
 [`research/2026-08-03-page-markdown-block-roundtrip.md`](../../../../research/2026-08-03-page-markdown-block-roundtrip.md);
-`check/markdown.test.ts`'s fuzzed round-trip property test is the executable statement,
+`core/markdown.test.ts`'s fuzzed round-trip property test is the executable statement,
 and it runs against the REAL block registry — the handles the app ships, read
-through `check/block-handles.ts`, rather than a hand-written copy of them. So a
+through `core/testing/block-handles.ts`, rather than a hand-written copy of them. So a
 new block type is added to the suite's GENERATOR rather than as a one-off case:
 the generator's type set is asserted equal to the registry's, so a type that
 gains no generator fails the suite instead of quietly going untested.

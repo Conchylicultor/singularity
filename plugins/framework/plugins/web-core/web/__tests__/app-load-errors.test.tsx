@@ -42,9 +42,9 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import {
   getDeferredLoadState,
   pluginLoadReportSink,
-  resetDeferredLoadStateForTests,
   type PluginLoadReport,
 } from "@plugins/framework/plugins/web-sdk/core";
+import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import App from "../App";
 
 /**

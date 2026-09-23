@@ -4,8 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 import {
   markDeferredLoadComplete,
   markDeferredPluginsFailed,
-  resetDeferredLoadStateForTests,
 } from "@plugins/framework/plugins/web-sdk/core";
+import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
   createPaneStore,
   PaneLoadScopeContext,

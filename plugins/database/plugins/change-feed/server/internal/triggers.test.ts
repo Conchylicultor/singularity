@@ -4,7 +4,7 @@ import { rebuildTriggers } from "./triggers";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 
 // Real-DB trigger-rebuild suite, pinning the SKIP-WHEN-UNCHANGED fast-path AND
 // the single-relation rebuild contract.
@@ -46,7 +46,9 @@ async function triggerOids(): Promise<Map<string, string>> {
 
 beforeAll(async () => {
   testDb = await createTestDb({ prefix: "cf_trig_test" });
-  await testDb.db.execute(sql`CREATE TABLE widgets (id text PRIMARY KEY, name text)`);
+  await testDb.db.execute(
+    sql`CREATE TABLE widgets (id text PRIMARY KEY, name text)`,
+  );
 });
 
 afterAll(async () => {
@@ -86,7 +88,9 @@ describe("rebuildTriggers", () => {
     const after = await triggerOids();
     expect([...after.keys()]).toEqual([...before.keys()]);
     // Fresh oids: a real rebuild ran rather than a false skip.
-    expect(after.get("live_state_widgets_i")).not.toBe(before.get("live_state_widgets_i"));
+    expect(after.get("live_state_widgets_i")).not.toBe(
+      before.get("live_state_widgets_i"),
+    );
   });
 
   test("rebuilds when a new table appears — the signature tracks the schema", async () => {
@@ -104,7 +108,9 @@ describe("rebuildTriggers", () => {
       "live_state_widgets_i",
       "live_state_widgets_u",
     ]);
-    expect(after.get("live_state_widgets_i")).not.toBe(before.get("live_state_widgets_i"));
+    expect(after.get("live_state_widgets_i")).not.toBe(
+      before.get("live_state_widgets_i"),
+    );
   });
 
   test("skips again once the new table's feed is installed", async () => {

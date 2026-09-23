@@ -10,17 +10,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  _setLatchDirForTests,
   clearDuress,
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import { _setLatchDirForTests } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server/testing";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import {
   declareRuntimeNamespace,
-  resetRuntimeNamespaceForTest,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
+import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
 import { readChannelEntries } from "./persist";
 import { getChannelIds } from "./registry";
 import { handleEmit } from "./handle-emit";

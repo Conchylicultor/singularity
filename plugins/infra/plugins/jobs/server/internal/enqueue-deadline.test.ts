@@ -27,14 +27,16 @@ import {
   createDbPool,
   queryDeadlineSink,
   QueryDeadlineExceededError,
-  startBlackHoleProxy,
-  type BlackHoleProxy,
   type QueryDeadlineEvent,
 } from "@plugins/database/plugins/connection/server";
 import {
+  startBlackHoleProxy,
+  type BlackHoleProxy,
+} from "@plugins/database/plugins/connection/server/testing";
+import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { installQueueSchema } from "./queue-schema";
 

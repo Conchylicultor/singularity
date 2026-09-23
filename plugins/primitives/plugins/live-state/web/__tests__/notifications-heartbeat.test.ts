@@ -29,7 +29,7 @@ import { QueryClient } from "@tanstack/react-query";
 import {
   createTransportHub,
   type FakeWebSocket,
-} from "@plugins/primitives/plugins/networking/web";
+} from "@plugins/primitives/plugins/networking/web/testing";
 import {
   NotificationsClient,
   type ChannelStatuses,

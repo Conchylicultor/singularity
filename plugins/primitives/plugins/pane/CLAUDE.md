@@ -562,13 +562,14 @@ contribution list synchronously on every render via `useSyncPaneRegistry()`.
 The jsdom suites live in `web/__tests__/` and run via `bun run test:dom
 plugins/primitives/plugins/pane` (manual — nothing runs them automatically).
 
-**Mount a pane surface with `TestSurface` from `./surface-fixture`; never
+**Mount a pane surface with `TestSurface` from the pane testing barrel
+(`@plugins/primitives/plugins/pane/web/testing`, `../testing` inside this plugin); never
 hand-pick the contexts your component happens to need.** The fixture wraps the
 real `PaneSurfaceProvider`, so a context that moves into the surface reaches
 every suite at once:
 
 ```tsx
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "@plugins/primitives/plugins/pane/web/testing";
 
 const store = createTestSurfaceStore();   // in beforeEach
 render(<TestSurface store={store} plugins={[testPlugin]}><ComponentUnderTest /></TestSurface>);

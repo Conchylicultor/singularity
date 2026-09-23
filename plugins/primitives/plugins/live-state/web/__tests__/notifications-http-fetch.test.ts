@@ -27,13 +27,25 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { createTransportHub, type FakeWebSocket } from "@plugins/primitives/plugins/networking/web";
-import { NotificationsClient, ResourceStaleReadError, queryKeyFor } from "../notifications-client";
-import { httpStaleDropReportSink, type HttpStaleDropReport } from "../stale-drop-reporter";
+import {
+  createTransportHub,
+  type FakeWebSocket,
+} from "@plugins/primitives/plugins/networking/web/testing";
+import {
+  NotificationsClient,
+  ResourceStaleReadError,
+  queryKeyFor,
+} from "../notifications-client";
+import {
+  httpStaleDropReportSink,
+  type HttpStaleDropReport,
+} from "../stale-drop-reporter";
 
 const pushSchema = z.object({ status: z.string() });
 
@@ -55,7 +67,8 @@ function makeResponse(opts: ScriptedResponse): Response {
     status,
     ok: opts.ok ?? (status >= 200 && status < 300),
     headers: {
-      get: (h: string) => (h.toLowerCase() === "etag" ? (opts.etag ?? null) : null),
+      get: (h: string) =>
+        h.toLowerCase() === "etag" ? (opts.etag ?? null) : null,
     },
     json: async () => opts.body,
   } as unknown as Response;
@@ -80,13 +93,19 @@ describe("NotificationsClient — HTTP fetch path", () => {
     const tab = hub.tab();
     const fetchQueue: Response[] = [];
     const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
-    const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
+    const fetchImpl = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
       fetchCalls.push({ url: String(url), init });
       const r = fetchQueue.shift();
       if (!r) throw new Error(`no scripted response for ${String(url)}`);
       return r;
     }) as typeof fetch;
-    const client = new NotificationsClient(qc, { makeSocket: hub.makeSocket(tab), fetchImpl });
+    const client = new NotificationsClient(qc, {
+      makeSocket: hub.makeSocket(tab),
+      fetchImpl,
+    });
     clients.push(client);
     await flush(); // elected → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
@@ -115,29 +134,78 @@ describe("NotificationsClient — HTTP fetch path", () => {
     client.observe("k", { id: "c1" }, undefined, pushSchema);
 
     // No etag yet → no If-None-Match; cache:no-store; correct URL with params.
-    fetchQueue.push(makeResponse({ body: { value: { status: "a" }, version: 1, epoch: "b1" } }));
-    await client.fetchOverHttp("k", { id: "c1" }, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "a" }, version: 1, epoch: "b1" },
+      }),
+    );
+    await client.fetchOverHttp(
+      "k",
+      { id: "c1" },
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(fetchCalls[0]!.url).toBe("/api/resources/k?id=c1");
     expect(fetchCalls[0]!.init?.cache).toBe("no-store");
-    expect((fetchCalls[0]!.init?.headers as Record<string, string> | undefined)?.["If-None-Match"]).toBeUndefined();
-    expect(qc.getQueryData(queryKeyFor("k", { id: "c1" }))).toEqual({ status: "a" });
+    expect(
+      (fetchCalls[0]!.init?.headers as Record<string, string> | undefined)?.[
+        "If-None-Match"
+      ],
+    ).toBeUndefined();
+    expect(qc.getQueryData(queryKeyFor("k", { id: "c1" }))).toEqual({
+      status: "a",
+    });
 
     // A WS sub-ack stamps an etag; the next conditional GET sends If-None-Match.
-    socket.serverSend({ kind: "update", key: "k", params: { id: "c1" }, value: { status: "b" }, version: 2, etag: "etag-2" });
-    fetchQueue.push(makeResponse({ body: { value: { status: "b" }, version: 2, epoch: "b1" } }));
-    await client.fetchOverHttp("k", { id: "c1" }, undefined, pushSchema, "fallback");
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: { id: "c1" },
+      value: { status: "b" },
+      version: 2,
+      etag: "etag-2",
+    });
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "b" }, version: 2, epoch: "b1" },
+      }),
+    );
+    await client.fetchOverHttp(
+      "k",
+      { id: "c1" },
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(fetchCalls[1]!.init?.cache).toBe("no-store");
-    expect((fetchCalls[1]!.init?.headers as Record<string, string>)["If-None-Match"]).toBe("etag-2");
+    expect(
+      (fetchCalls[1]!.init?.headers as Record<string, string>)["If-None-Match"],
+    ).toBe("etag-2");
   });
 
   test("2: 304 with an applied value → same reference, no write, no second fetch", async () => {
     const { client, qc, socket, fetchQueue, fetchCalls } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v1" }, version: 1, epoch: "b1", etag: "e1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v1" },
+      version: 1,
+      epoch: "b1",
+      etag: "e1",
+    });
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     fetchQueue.push(makeResponse({ status: 304 }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toBe(cached); // same reference
     expect(fetchCalls).toHaveLength(1); // no defensive refetch
     expect(drops).toHaveLength(0);
@@ -148,16 +216,34 @@ describe("NotificationsClient — HTTP fetch path", () => {
     client.observe("k", {}, undefined, pushSchema);
     // A placeholder is present in the cache but was never server-applied
     // (dataUpdatedAt held at epoch 0 — exactly a descriptor's initialData).
-    qc.setQueryData(queryKeyFor("k", {}), { status: "placeholder" }, { updatedAt: 0 });
+    qc.setQueryData(
+      queryKeyFor("k", {}),
+      { status: "placeholder" },
+      { updatedAt: 0 },
+    );
     client.noteHttpEtag("k", {}, undefined, "e1"); // so the GET is conditional
 
     fetchQueue.push(makeResponse({ status: 304 }));
-    fetchQueue.push(makeResponse({ body: { value: { status: "real" }, version: 1, epoch: "b1" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "real" }, version: 1, epoch: "b1" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
 
     expect(fetchCalls).toHaveLength(2); // 304 fell through to the unconditional refetch
     expect(fetchCalls[1]!.init?.cache).toBe("no-store");
-    expect((fetchCalls[1]!.init?.headers as Record<string, string> | undefined)?.["If-None-Match"]).toBeUndefined();
+    expect(
+      (fetchCalls[1]!.init?.headers as Record<string, string> | undefined)?.[
+        "If-None-Match"
+      ],
+    ).toBeUndefined();
     expect(out).toEqual({ status: "real" });
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "real" });
   });
@@ -165,11 +251,28 @@ describe("NotificationsClient — HTTP fetch path", () => {
   test("4: same-epoch stale drop, applied → cached returned, sink emitted consecutiveDrops:1", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v5" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v5" },
+      version: 5,
+      epoch: "b1",
+    });
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
-    fetchQueue.push(makeResponse({ body: { value: { status: "v3-stale" }, version: 3, epoch: "b1" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "v3-stale" }, version: 3, epoch: "b1" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toBe(cached); // kept the newer cached value
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v5" });
     expect(drops).toHaveLength(1);
@@ -196,44 +299,105 @@ describe("NotificationsClient — HTTP fetch path", () => {
     // Deliberately NOT via an `up-to-date` frame: a value-less ack may no longer
     // advance a never-applied entry's version (see handleServerMessage's
     // no-applied-value guard), so that state is now unreachable by construction.
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "gc'd" }, version: 5, epoch: "b1" });
-    qc.setQueryData(queryKeyFor("k", {}), { status: "placeholder" }, { updatedAt: 0 });
-
-    fetchQueue.push(makeResponse({ body: { value: { status: "v3-stale" }, version: 3, epoch: "b1" } }));
-    await expect(client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback")).rejects.toBeInstanceOf(
-      ResourceStaleReadError,
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "gc'd" },
+      version: 5,
+      epoch: "b1",
+    });
+    qc.setQueryData(
+      queryKeyFor("k", {}),
+      { status: "placeholder" },
+      { updatedAt: 0 },
     );
+
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "v3-stale" }, version: 3, epoch: "b1" },
+      }),
+    );
+    await expect(
+      client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback"),
+    ).rejects.toBeInstanceOf(ResourceStaleReadError);
     expect(drops).toHaveLength(1);
-    expect(drops[0]).toMatchObject({ reason: "stale-version", neverApplied: true });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-version",
+      neverApplied: true,
+    });
   });
 
   test("6: equal-version same-epoch → applies (strict-< regression pin)", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v5" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v5" },
+      version: 5,
+      epoch: "b1",
+    });
 
     // GET reports the counter without bumping it — the invalidate-mode refetch
     // returns the SAME version. `<` accepts it.
-    fetchQueue.push(makeResponse({ body: { value: { status: "v5-refetch" }, version: 5, epoch: "b1" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "v5-refetch" }, version: 5, epoch: "b1" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toEqual({ status: "v5-refetch" });
-    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v5-refetch" });
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({
+      status: "v5-refetch",
+    });
     expect(drops).toHaveLength(0);
   });
 
   test("7: cross-epoch adopt (case 2) → applies, version+epoch adopted", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "old" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "old" },
+      version: 5,
+      epoch: "b1",
+    });
 
     // Server restarts to b2: learn the new epoch via a second sub's ack, leaving
     // k's entry stamped at the stale b1.
     client.observe("other", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "other", params: {}, value: { status: "x" }, version: 1, epoch: "b2" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "other",
+      params: {},
+      value: { status: "x" },
+      version: 1,
+      epoch: "b2",
+    });
 
     // The HTTP body carries the live b2 identity → adopt even though version 2 < 5.
-    fetchQueue.push(makeResponse({ body: { value: { status: "new" }, version: 2, epoch: "b2" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "new" }, version: 2, epoch: "b2" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toEqual({ status: "new" });
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "new" });
     expect(drops).toHaveLength(0);
@@ -241,27 +405,63 @@ describe("NotificationsClient — HTTP fetch path", () => {
     const sub = client.debugSnapshot().subs.find((s) => s.key === "k")!;
     expect(sub.version).toBe(2);
     // epoch adopted to b2: a subsequent same-epoch stale (version 1, b2) now drops.
-    fetchQueue.push(makeResponse({ body: { value: { status: "stale" }, version: 1, epoch: "b2" } }));
-    const out2 = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "stale" }, version: 1, epoch: "b2" },
+      }),
+    );
+    const out2 = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out2).toEqual({ status: "new" }); // kept
     expect(drops).toHaveLength(1);
-    expect(drops[0]).toMatchObject({ reason: "stale-version", bodyEpoch: "b2", entryEpoch: "b2" });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-version",
+      bodyEpoch: "b2",
+      entryEpoch: "b2",
+    });
   });
 
   test("8: cross-epoch drop (case 3) → cached returned (applied) with reason stale-epoch", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
     // entry.epoch === serverEpoch === b1 (the live identity).
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "live" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "live" },
+      version: 5,
+      epoch: "b1",
+    });
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     // Body is from an OLDER boot b0 → the body is stale, not the entry → drop.
-    fetchQueue.push(makeResponse({ body: { value: { status: "old-boot" }, version: 9, epoch: "b0" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "old-boot" }, version: 9, epoch: "b0" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toBe(cached);
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "live" });
     expect(drops).toHaveLength(1);
-    expect(drops[0]).toMatchObject({ reason: "stale-epoch", bodyEpoch: "b0", entryEpoch: "b1", serverEpoch: "b1" });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-epoch",
+      bodyEpoch: "b0",
+      entryEpoch: "b1",
+      serverEpoch: "b1",
+    });
   });
 
   test("8b: cross-epoch drop (case 3) never-applied → throws with reason stale-epoch", async () => {
@@ -270,27 +470,71 @@ describe("NotificationsClient — HTTP fetch path", () => {
     // Same gc'd-cache vehicle as case 5: the sub-ack stamps entry.epoch=b1=
     // serverEpoch and version 5, then the query is reset to a never-applied
     // placeholder. (An `up-to-date` can no longer stamp a never-applied entry.)
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "gc'd" }, version: 5, epoch: "b1" });
-    qc.setQueryData(queryKeyFor("k", {}), { status: "placeholder" }, { updatedAt: 0 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "gc'd" },
+      version: 5,
+      epoch: "b1",
+    });
+    qc.setQueryData(
+      queryKeyFor("k", {}),
+      { status: "placeholder" },
+      { updatedAt: 0 },
+    );
 
-    fetchQueue.push(makeResponse({ body: { value: { status: "old-boot" }, version: 9, epoch: "b0" } }));
-    await expect(client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback")).rejects.toMatchObject({
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "old-boot" }, version: 9, epoch: "b0" },
+      }),
+    );
+    await expect(
+      client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback"),
+    ).rejects.toMatchObject({
       reason: "stale-epoch",
     });
-    expect(drops[0]).toMatchObject({ reason: "stale-epoch", neverApplied: true });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-epoch",
+      neverApplied: true,
+    });
   });
 
   test("9: case 4 (no arbiter) → adopts the live response", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "b1val" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "b1val" },
+      version: 5,
+      epoch: "b1",
+    });
     // Move serverEpoch to b2 via another sub — k stays stamped b1.
     client.observe("other", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "other", params: {}, value: { status: "x" }, version: 1, epoch: "b2" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "other",
+      params: {},
+      value: { status: "x" },
+      version: 1,
+      epoch: "b2",
+    });
 
     // Body epoch b3 matches NEITHER entry (b1) NOR serverEpoch (b2) → adopt.
-    fetchQueue.push(makeResponse({ body: { value: { status: "b3val" }, version: 2, epoch: "b3" } }));
-    const out = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "b3val" }, version: 2, epoch: "b3" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(out).toEqual({ status: "b3val" });
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "b3val" });
     expect(drops).toHaveLength(0);
@@ -299,12 +543,27 @@ describe("NotificationsClient — HTTP fetch path", () => {
   test("10: the consecutive-drop counter resets on a successful apply; sink payload is complete", async () => {
     const { client, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v5" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v5" },
+      version: 5,
+      epoch: "b1",
+    });
 
     // Two consecutive stale drops → counts 1, then 2.
-    fetchQueue.push(makeResponse({ body: { value: { status: "s3" }, version: 3, epoch: "b1" } }));
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "s3" }, version: 3, epoch: "b1" },
+      }),
+    );
     await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
-    fetchQueue.push(makeResponse({ body: { value: { status: "s4" }, version: 4, epoch: "b1" } }));
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "s4" }, version: 4, epoch: "b1" },
+      }),
+    );
     await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
     expect(drops.map((d) => d.consecutiveDrops)).toEqual([1, 2]);
     // The full payload is present and correct.
@@ -323,8 +582,19 @@ describe("NotificationsClient — HTTP fetch path", () => {
     });
 
     // A successful WS apply resets the counter — the next drop is back to 1.
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "v6" }, version: 6, epoch: "b1" });
-    fetchQueue.push(makeResponse({ body: { value: { status: "s2" }, version: 2, epoch: "b1" } }));
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "v6" },
+      version: 6,
+      epoch: "b1",
+    });
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "s2" }, version: 2, epoch: "b1" },
+      }),
+    );
     await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
     expect(drops.at(-1)!.consecutiveDrops).toBe(1);
   });
@@ -332,19 +602,45 @@ describe("NotificationsClient — HTTP fetch path", () => {
   test("11: epoch-less body → strict-< behavior byte-for-byte (drop older, apply newer)", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v5" }, version: 5, epoch: "b1" });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v5" },
+      version: 5,
+      epoch: "b1",
+    });
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     // Older, no epoch → dropped (kept cached), sink emitted.
-    fetchQueue.push(makeResponse({ body: { value: { status: "v3" }, version: 3 } }));
-    const dropped = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({ body: { value: { status: "v3" }, version: 3 } }),
+    );
+    const dropped = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(dropped).toBe(cached);
     expect(drops).toHaveLength(1);
-    expect(drops[0]).toMatchObject({ reason: "stale-version", bodyEpoch: null });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-version",
+      bodyEpoch: null,
+    });
 
     // Newer, no epoch → applies.
-    fetchQueue.push(makeResponse({ body: { value: { status: "v7" }, version: 7 } }));
-    const applied = await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+    fetchQueue.push(
+      makeResponse({ body: { value: { status: "v7" }, version: 7 } }),
+    );
+    const applied = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      pushSchema,
+      "fallback",
+    );
     expect(applied).toEqual({ status: "v7" });
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v7" });
   });

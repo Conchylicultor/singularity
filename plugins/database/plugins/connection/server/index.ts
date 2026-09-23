@@ -30,12 +30,6 @@ export {
   abandonClient,
   assertPgPoolInternals,
 } from "./internal/abandon";
-// Test support: a proxy in front of the cluster whose forwarding can be switched
-// off, so a suite can make any connection's calls go unanswered.
-export {
-  startBlackHoleProxy,
-  type BlackHoleProxy,
-} from "./internal/black-hole-proxy";
 
 export default {
   description:

@@ -9,7 +9,6 @@ export {
   legacyInstanceKey,
   mayAdoptLegacyPayload,
   readAppInstance,
-  resetAppInstanceForTests,
   RETAINED_INSTANCES,
   stampAppInstance,
 } from "./internal/app-instance";

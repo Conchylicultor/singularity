@@ -15,6 +15,7 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import {
+  isTestCodePath,
   PLUGIN_FOLDERS,
   type PluginFolder,
   type PluginId,
@@ -471,15 +472,19 @@ async function collectEntries(
 
 const TS_FILE_RE = /\.tsx?$/;
 
-// Every `.ts`/`.tsx` under a plugin's `<dir>/` tree, skipping `node_modules` and
-// nested `plugins/` (each sub-plugin is scanned as its own entry).
+// Every shipping `.ts`/`.tsx` under a plugin's `<dir>/` tree, skipping
+// `node_modules`, nested `plugins/` (each sub-plugin is scanned as its own
+// entry) and test code (`isTestCodePath`). A test's imports are not the
+// plugin's: counting them made every plugin whose suite uses `createTestDb`
+// "depend on" db-test-fixture at runtime, and put test-only npm packages in the
+// vendor set.
 function tsFilesUnder(repo: RepoFiles, base: string): string[] {
   return repo.under(base).filter((rel) => {
     const segments = rel.slice(base.length + 1).split("/");
-    const name = segments.pop()!;
     return (
-      TS_FILE_RE.test(name) &&
-      !segments.some((s) => s === "node_modules" || s === "plugins")
+      TS_FILE_RE.test(segments.at(-1)!) &&
+      !segments.some((s) => s === "node_modules" || s === "plugins") &&
+      !isTestCodePath(segments)
     );
   });
 }

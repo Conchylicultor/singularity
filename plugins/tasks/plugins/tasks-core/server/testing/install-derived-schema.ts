@@ -1,8 +1,16 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
-import { attemptConvAggSpec, attemptPushAggSpec } from "./rollup-spec";
-import { attempts, conversations, taskBlocking, tasks } from "./views";
+import {
+  attemptConvAggSpec,
+  attemptPushAggSpec,
+} from "../internal/rollup-spec";
+import {
+  attempts,
+  conversations,
+  taskBlocking,
+  tasks,
+} from "../internal/views";
 
 // Install this plugin's derived layer — the two attempt rollups and the four
 // views — onto a database that has only the migration chain: a `createTestDb`

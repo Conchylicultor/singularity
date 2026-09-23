@@ -27,6 +27,7 @@ import { recordBoundaryReadSet } from "./read-set";
 import { selectSourceFiles } from "./source-files";
 import { repoTree } from "./repo-tree";
 import { collectUnknownDirViolations } from "./unknown-dirs";
+import { findTestSupportInBarrel } from "./test-exports";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
@@ -185,6 +186,13 @@ const check: Check = {
           continue;
         }
         await checkBarrelPurity(barrelRel, violations, repoFiles);
+        // R12: test helpers go in `<runtime>/testing/`, never the public barrel.
+        violations.push(
+          ...findTestSupportInBarrel(
+            barrelRel,
+            (await repoFiles.read(barrelRel)) ?? "",
+          ),
+        );
 
         // Name-level cross-plugin re-export detection (direct + indirect chains
         // + import-then-reexport). Single source of truth for the

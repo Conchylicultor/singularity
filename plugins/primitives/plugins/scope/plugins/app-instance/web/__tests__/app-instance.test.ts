@@ -9,11 +9,11 @@ import {
   legacyInstanceKey,
   mayAdoptLegacyPayload,
   readAppInstance,
-  resetAppInstanceForTests,
   RETAINED_INSTANCES,
   stampAppInstance,
   type NavigationType,
 } from "../index";
+import { resetAppInstanceForTests } from "../testing";
 
 /** Minimal in-memory Storage — jsdom's sessionStorage under vitest is inert. */
 class MemoryStorage implements Storage {

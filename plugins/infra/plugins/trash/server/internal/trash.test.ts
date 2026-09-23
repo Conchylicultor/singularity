@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import type { TrashEntry } from "../../core/schemas";
@@ -118,8 +118,10 @@ describe("consumeTrashEntry", () => {
       label: "Once",
     });
 
-    await consumeTrashEntry(t.db, { sourceId: "test-double", entryId }, (s, e) =>
-      s.restore(e),
+    await consumeTrashEntry(
+      t.db,
+      { sourceId: "test-double", entryId },
+      (s, e) => s.restore(e),
     );
 
     const err = await rejection(

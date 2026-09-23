@@ -26,9 +26,9 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   declareRuntimeNamespace,
-  resetRuntimeNamespaceForTest,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
+import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
 import { createDbClient, createDbPool, type DbClient } from "./client";
 import {
   QueryDeadlineExceededError,
@@ -36,7 +36,7 @@ import {
   withQueryDeadline,
   type QueryDeadlineEvent,
 } from "./deadline";
-import { startBlackHoleProxy, type BlackHoleProxy } from "./black-hole-proxy";
+import { startBlackHoleProxy, type BlackHoleProxy } from "../testing";
 import {
   AbandonedClientHold,
   abandonClient,
@@ -44,7 +44,7 @@ import {
 } from "./abandon";
 
 // The connection deadline against a REAL Postgres, through a black-hole proxy
-// (./black-hole-proxy.ts): a TCP server in front of the cluster whose forwarding
+// (../testing/black-hole-proxy.ts): a TCP server in front of the cluster whose forwarding
 // can be switched off, so bytes are swallowed rather than refused — the
 // vanished-bytes incident the deadline guards
 // (research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md).

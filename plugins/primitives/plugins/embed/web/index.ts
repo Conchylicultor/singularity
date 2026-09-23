@@ -5,7 +5,6 @@ export {
   isEmbeddedDocument,
   isChromelessDocument,
   embedUrl,
-  resetEmbedForTests,
 } from "./internal/embed-document";
 
 export default {

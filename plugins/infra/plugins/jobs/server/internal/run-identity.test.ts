@@ -24,7 +24,7 @@ import { z } from "zod";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { reconcileDeadJobs } from "./dead-job-gc";

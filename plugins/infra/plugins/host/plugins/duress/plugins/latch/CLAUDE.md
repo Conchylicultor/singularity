@@ -40,8 +40,6 @@ shed engine's test.
 - Server:
   - Exports (types): `DuressLatch`
   - Exports (values):
-    - `_setClockForTests`
-    - `_setLatchDirForTests`
     - `clearDuress`
     - `duressEpisode`
     - `duressLatchDir`

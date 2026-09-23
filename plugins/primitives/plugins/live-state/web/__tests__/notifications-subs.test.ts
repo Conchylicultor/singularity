@@ -31,11 +31,16 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { createTransportHub, type FakeWebSocket } from "@plugins/primitives/plugins/networking/web";
+import {
+  createTransportHub,
+  type FakeWebSocket,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import { NotificationsClient } from "../notifications-client";
 import { getResourceWatermark } from "../watermark-registry";
 import { hasResourceTxAck } from "../tx-ack-registry";
@@ -45,7 +50,9 @@ import { hasResourceTxAck } from "../tx-ack-registry";
 const SUB_KEEPALIVE_MS = 30_000;
 
 const pushSchema = z.object({ status: z.string() });
-const keyedSchema = z.array(z.object({ id: z.string(), n: z.number().optional() }));
+const keyedSchema = z.array(
+  z.object({ id: z.string(), n: z.number().optional() }),
+);
 const keyOf = (row: unknown): string => (row as { id: string }).id;
 
 const flush = async (): Promise<void> => {
@@ -65,7 +72,9 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     const hub = createTransportHub();
     const qc = new QueryClient();
     const tab = hub.tab();
-    const client = new NotificationsClient(qc, { makeSocket: hub.makeSocket(tab) });
+    const client = new NotificationsClient(qc, {
+      makeSocket: hub.makeSocket(tab),
+    });
     clients.push(client);
     await flush(); // elected → startLeading → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
@@ -73,8 +82,13 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     return { hub, qc, client, socket };
   }
 
-  const subFrames = (socket: FakeWebSocket, key?: string): Record<string, unknown>[] =>
-    socket.sentJson().filter((m) => m.op === "sub" && (key === undefined || m.key === key));
+  const subFrames = (
+    socket: FakeWebSocket,
+    key?: string,
+  ): Record<string, unknown>[] =>
+    socket
+      .sentJson()
+      .filter((m) => m.op === "sub" && (key === undefined || m.key === key));
   const unsubFrames = (socket: FakeWebSocket): Record<string, unknown>[] =>
     socket.sentJson().filter((m) => m.op === "unsub");
 
@@ -127,7 +141,13 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // The shared socket broadcasts every server frame to every tab; a tab that
     // never observed the key must silently drop it (no schema is registered, so
     // an ungated apply would throw).
-    socket.serverSend({ kind: "update", key: "ghost", params: {}, value: { status: "x" }, version: 1 });
+    socket.serverSend({
+      kind: "update",
+      key: "ghost",
+      params: {},
+      value: { status: "x" },
+      version: 1,
+    });
     expect(qc.getQueryData(["ghost"])).toBeUndefined();
     expect(client.debugSnapshot().subs).toHaveLength(0);
   });
@@ -161,7 +181,13 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // BUG A's fix: the broken delta already advanced the sub's version to 1, so
     // pre-fix the recovery sub-ack at that SAME version was `<=`-dropped and the
     // cache never healed. forceFullResub reset the baseline — it applies now.
-    socket.serverSend({ kind: "sub-ack", key: "rk", params: {}, value: [{ id: "a", n: 1 }], version: 1 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "rk",
+      params: {},
+      value: [{ id: "a", n: 1 }],
+      version: 1,
+    });
     expect(qc.getQueryData(["rk"])).toEqual([{ id: "a", n: 1 }]); // healed
   });
 
@@ -204,7 +230,11 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       kind: "sub-ack",
       key: "rk",
       params: {},
-      value: [{ id: "a", n: 1 }, { id: "b", n: 2 }, { id: "c", n: 3 }],
+      value: [
+        { id: "a", n: 1 },
+        { id: "b", n: 2 },
+        { id: "c", n: 3 },
+      ],
       version: 2,
     });
     expect(qc.getQueryData(["rk"])).toEqual([
@@ -218,7 +248,10 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     const hub = createTransportHub();
     const qc = new QueryClient();
     const tab = hub.tab();
-    const client = new NotificationsClient(qc, { makeSocket: hub.makeSocket(tab), tabId: "tab-X" });
+    const client = new NotificationsClient(qc, {
+      makeSocket: hub.makeSocket(tab),
+      tabId: "tab-X",
+    });
     clients.push(client);
     await flush();
     const socket = hub.server.all()[0]!;
@@ -242,19 +275,43 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   test("version guard: a frame with version ≤ the applied version is dropped; a strictly-greater one applies", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "working" }, version: 5 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "working" },
+      version: 5,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "working" });
 
     // Equal version → dropped (the `<=` guard).
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "stale-equal" }, version: 5 });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "stale-equal" },
+      version: 5,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "working" });
 
     // Lower version → dropped.
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "stale-lower" }, version: 4 });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "stale-lower" },
+      version: 4,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "working" });
 
     // Strictly greater → applied.
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "fresh" }, version: 6 });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "fresh" },
+      version: 6,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "fresh" });
   });
 
@@ -268,9 +325,16 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     const invalidate = vi.spyOn(qc, "invalidateQueries");
     client.observe("k", { id: "c1" }, undefined, pushSchema);
 
-    socket.serverSend({ kind: "sub-error", key: "k", params: { id: "c1" }, reason: "loader-failed" });
+    socket.serverSend({
+      kind: "sub-error",
+      key: "k",
+      params: { id: "c1" },
+      reason: "loader-failed",
+    });
     expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate.mock.calls[0]![0]).toEqual({ queryKey: ["k", { id: "c1" }] });
+    expect(invalidate.mock.calls[0]![0]).toEqual({
+      queryKey: ["k", { id: "c1" }],
+    });
   });
 
   test("sub-error for a non-held key → dropped, no invalidate (broadcast-gate pin)", async () => {
@@ -278,7 +342,12 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     const invalidate = vi.spyOn(qc, "invalidateQueries");
     // The shared socket broadcasts every frame to every tab; a tab that never
     // observed the key must not act on its sub-error.
-    socket.serverSend({ kind: "sub-error", key: "ghost", params: {}, reason: "unknown-key" });
+    socket.serverSend({
+      kind: "sub-error",
+      key: "ghost",
+      params: {},
+      reason: "unknown-key",
+    });
     expect(invalidate).not.toHaveBeenCalled();
   });
 
@@ -289,7 +358,11 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // A pre-upgrade server omits `params`; the client computes paramsKey({}) which
     // cannot match the non-empty-params sub → safe drop, never a throw.
     expect(() =>
-      socket.serverSend({ kind: "sub-error", key: "k", reason: "legacy" } as unknown as Record<string, unknown>),
+      socket.serverSend({
+        kind: "sub-error",
+        key: "k",
+        reason: "legacy",
+      } as unknown as Record<string, unknown>),
     ).not.toThrow();
     expect(invalidate).not.toHaveBeenCalled();
   });
@@ -304,32 +377,74 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       client.observe("wm-a", {}, undefined, pushSchema);
 
       // sub-ack carries the floor.
-      socket.serverSend({ kind: "sub-ack", key: "wm-a", params: {}, value: { status: "s0" }, version: 1, watermark: "100" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "wm-a",
+        params: {},
+        value: { status: "s0" },
+        version: 1,
+        watermark: "100",
+      });
       expect(qc.getQueryData(["wm-a"])).toEqual({ status: "s0" });
       expect(getResourceWatermark("wm-a", {})).toBe("100");
 
       // A newer-version frame carrying an OLDER watermark (a joiner-adopted
       // flight) applies its value but never regresses the floor.
-      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s1" }, version: 2, watermark: "99" });
+      socket.serverSend({
+        kind: "update",
+        key: "wm-a",
+        params: {},
+        value: { status: "s1" },
+        version: 2,
+        watermark: "99",
+      });
       expect(qc.getQueryData(["wm-a"])).toEqual({ status: "s1" });
       expect(getResourceWatermark("wm-a", {})).toBe("100");
 
       // Numeric (BigInt) adoption: "1000" > "999" even though "1000" < "999"
       // as strings.
-      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s2" }, version: 3, watermark: "999" });
-      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s3" }, version: 4, watermark: "1000" });
+      socket.serverSend({
+        kind: "update",
+        key: "wm-a",
+        params: {},
+        value: { status: "s2" },
+        version: 3,
+        watermark: "999",
+      });
+      socket.serverSend({
+        kind: "update",
+        key: "wm-a",
+        params: {},
+        value: { status: "s3" },
+        version: 4,
+        watermark: "1000",
+      });
       expect(getResourceWatermark("wm-a", {})).toBe("1000");
     });
 
     test("a watermark-less scoped delta applies but leaves the stored floor untouched; a FULL delta's watermark adopts", async () => {
       const { socket, qc, client } = await setup();
       client.observe("wm-k", {}, undefined, keyedSchema, keyOf);
-      socket.serverSend({ kind: "sub-ack", key: "wm-k", params: {}, value: [{ id: "a", n: 1 }], version: 1, watermark: "200" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "wm-k",
+        params: {},
+        value: [{ id: "a", n: 1 }],
+        version: 1,
+        watermark: "200",
+      });
       expect(getResourceWatermark("wm-k", {})).toBe("200");
 
       // Scoped delta (no order, no watermark — a partial re-read): value merges,
       // floor untouched.
-      socket.serverSend({ kind: "delta", key: "wm-k", params: {}, upserts: [["a", { id: "a", n: 2 }]], deletes: [], version: 2 });
+      socket.serverSend({
+        kind: "delta",
+        key: "wm-k",
+        params: {},
+        upserts: [["a", { id: "a", n: 2 }]],
+        deletes: [],
+        version: 2,
+      });
       expect(qc.getQueryData(["wm-k"])).toEqual([{ id: "a", n: 2 }]);
       expect(getResourceWatermark("wm-k", {})).toBe("200");
 
@@ -344,19 +459,36 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
         version: 3,
         watermark: "201",
       });
-      expect(qc.getQueryData(["wm-k"])).toEqual([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+      expect(qc.getQueryData(["wm-k"])).toEqual([
+        { id: "a", n: 2 },
+        { id: "b", n: 1 },
+      ]);
       expect(getResourceWatermark("wm-k", {})).toBe("201");
     });
 
     test("a version-guard-dropped frame does NOT adopt its watermark", async () => {
       const { socket, qc, client } = await setup();
       client.observe("wm-d", {}, undefined, pushSchema);
-      socket.serverSend({ kind: "sub-ack", key: "wm-d", params: {}, value: { status: "s0" }, version: 5, watermark: "300" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "wm-d",
+        params: {},
+        value: { status: "s0" },
+        version: 5,
+        watermark: "300",
+      });
       expect(getResourceWatermark("wm-d", {})).toBe("300");
 
       // Equal version → `<=`-dropped: neither the cache nor the floor moves,
       // even though the frame claims a newer watermark.
-      socket.serverSend({ kind: "update", key: "wm-d", params: {}, value: { status: "stale" }, version: 5, watermark: "999" });
+      socket.serverSend({
+        kind: "update",
+        key: "wm-d",
+        params: {},
+        value: { status: "stale" },
+        version: 5,
+        watermark: "999",
+      });
       expect(qc.getQueryData(["wm-d"])).toEqual({ status: "s0" });
       expect(getResourceWatermark("wm-d", {})).toBe("300");
     });
@@ -367,22 +499,40 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
       // Version-less standalone ack for a held sub: acks noted, nothing else —
       // the sub's version baseline stays -1 and the cache stays untouched.
-      socket.serverSend({ kind: "ack", key: "ack-a", params: {}, ackTx: ["700", "701"] });
+      socket.serverSend({
+        kind: "ack",
+        key: "ack-a",
+        params: {},
+        ackTx: ["700", "701"],
+      });
       expect(hasResourceTxAck("ack-a", {}, "700")).toBe(true);
       expect(hasResourceTxAck("ack-a", {}, "701")).toBe(true);
       expect(qc.getQueryData(["ack-a"])).toBeUndefined();
-      expect(client.debugSnapshot().subs.find((s) => s.key === "ack-a")!.version).toBe(-1);
+      expect(
+        client.debugSnapshot().subs.find((s) => s.key === "ack-a")!.version,
+      ).toBe(-1);
 
       // A never-observed key's ack is dropped by the broadcast gate (the shared
       // socket fans every frame to every tab).
-      socket.serverSend({ kind: "ack", key: "ack-ghost", params: {}, ackTx: ["702"] });
+      socket.serverSend({
+        kind: "ack",
+        key: "ack-ghost",
+        params: {},
+        ackTx: ["702"],
+      });
       expect(hasResourceTxAck("ack-ghost", {}, "702")).toBe(false);
     });
 
     test("delta acks are noted BEFORE setQueryData — a QueryCache listener reads them synchronously", async () => {
       const { socket, qc, client } = await setup();
       client.observe("ack-k", {}, undefined, keyedSchema, keyOf);
-      socket.serverSend({ kind: "sub-ack", key: "ack-k", params: {}, value: [{ id: "a", n: 1 }], version: 1 });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "ack-k",
+        params: {},
+        value: [{ id: "a", n: 1 }],
+        version: 1,
+      });
 
       // The optimistic hook's confirm pass runs inside the QueryCache event —
       // the ack must already be readable there (same load-bearing order as the
@@ -405,7 +555,14 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       expect(qc.getQueryData(["ack-k"])).toEqual([{ id: "a", n: 2 }]);
       expect(observed).toContain(true);
       // An update frame's ackTx notes too.
-      socket.serverSend({ kind: "update", key: "ack-k", params: {}, value: [{ id: "a", n: 3 }], version: 3, ackTx: ["801"] });
+      socket.serverSend({
+        kind: "update",
+        key: "ack-k",
+        params: {},
+        value: [{ id: "a", n: 3 }],
+        version: 3,
+        ackTx: ["801"],
+      });
       expect(hasResourceTxAck("ack-k", {}, "801")).toBe(true);
     });
 
@@ -451,7 +608,14 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       expect(qc.getQueryData(["wm-nb"])).toBeUndefined();
       expect(getResourceWatermark("wm-nb", {})).toBeUndefined();
 
-      socket.serverSend({ kind: "sub-ack", key: "wm-nb", params: {}, value: [{ id: "a", n: 1 }], version: 1, watermark: "401" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "wm-nb",
+        params: {},
+        value: [{ id: "a", n: 1 }],
+        version: 1,
+        watermark: "401",
+      });
       expect(qc.getQueryData(["wm-nb"])).toEqual([{ id: "a", n: 1 }]);
       expect(getResourceWatermark("wm-nb", {})).toBe("401");
     });

@@ -22,11 +22,17 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { createTransportHub, type FakeWebSocket, type TabHandle } from "@plugins/primitives/plugins/networking/web";
+import {
+  createTransportHub,
+  type FakeWebSocket,
+  type TabHandle,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import { NotificationsClient } from "../notifications-client";
 
 const pushSchema = z.object({ status: z.string() });
@@ -54,14 +60,18 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     const qcA = new QueryClient();
     const qcB = new QueryClient();
     const tabA = hub.tab();
-    const clientA = new NotificationsClient(qcA, { makeSocket: hub.makeSocket(tabA) });
+    const clientA = new NotificationsClient(qcA, {
+      makeSocket: hub.makeSocket(tabA),
+    });
     clients.push(clientA);
     await flush(); // A elected → S1 connecting
     const s1 = hub.server.all()[0]!;
     s1.open(); // A leader, S1 open
 
     const tabB = hub.tab();
-    const clientB = new NotificationsClient(qcB, { makeSocket: hub.makeSocket(tabB) });
+    const clientB = new NotificationsClient(qcB, {
+      makeSocket: hub.makeSocket(tabB),
+    });
     clients.push(clientB);
     await flush(); // B follower, queued behind A on the lock
     return { hub, qcA, qcB, clientA, clientB, tabA, s1 };
@@ -69,7 +79,10 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
 
   const isLeader = (c: NotificationsClient): boolean =>
     c.debugSnapshot().leader.worktree.isLeader;
-  const subFrames = (socket: FakeWebSocket, key: string): Record<string, unknown>[] =>
+  const subFrames = (
+    socket: FakeWebSocket,
+    key: string,
+  ): Record<string, unknown>[] =>
     socket.sentJson().filter((m) => m.op === "sub" && m.key === key);
 
   beforeEach(() => {
@@ -90,7 +103,13 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
 
     // A (leader) subscribes k on its own socket S1 and gets acked.
     clientA.observe("k", {}, undefined, pushSchema);
-    s1.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "a" }, version: 1 });
+    s1.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "a" },
+      version: 1,
+    });
     expect(qcA.getQueryData(["k"])).toEqual({ status: "a" });
 
     // B (follower) subscribes k: its sub relays tx → leader A → S1 (relay routing).
@@ -111,7 +130,9 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     const s2 = hub.server.all().find((s) => s.readyState === 0)!;
     s2.open();
     await vi.advanceTimersByTimeAsync(0);
-    const s2Batches = s2.sentJson().filter((m) => m.op === "sub-batch") as Array<{
+    const s2Batches = s2
+      .sentJson()
+      .filter((m) => m.op === "sub-batch") as Array<{
       entries: Array<{ key: string }>;
     }>;
     expect(s2Batches).toHaveLength(1);
@@ -119,7 +140,13 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     expect(hub.server.openSockets()).toHaveLength(1); // exactly one live socket
 
     // A resync sub-ack on S2 converges B's cache to server truth.
-    s2.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "b" }, version: 2 });
+    s2.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "b" },
+      version: 2,
+    });
     expect(qcB.getQueryData(["k"])).toEqual({ status: "b" });
   });
 
@@ -131,13 +158,19 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     const qcA = new QueryClient();
     const qcB = new QueryClient();
     const tabA = hub.tab();
-    const clientA = new NotificationsClient(qcA, { makeSocket: hub.makeSocket(tabA), tabId: "tab-A" });
+    const clientA = new NotificationsClient(qcA, {
+      makeSocket: hub.makeSocket(tabA),
+      tabId: "tab-A",
+    });
     clients.push(clientA);
     await flush();
     const s1 = hub.server.all()[0]!;
     s1.open();
     const tabB = hub.tab();
-    const clientB = new NotificationsClient(qcB, { makeSocket: hub.makeSocket(tabB), tabId: "tab-B" });
+    const clientB = new NotificationsClient(qcB, {
+      makeSocket: hub.makeSocket(tabB),
+      tabId: "tab-B",
+    });
     clients.push(clientB);
     await flush();
 
@@ -173,7 +206,14 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     // fresh sub and an empty cache while A's replay is being answered.
     const { hub, qcA, qcB, clientA, clientB, s1 } = await elect();
     clientA.observe("k", {}, undefined, pushSchema);
-    s1.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v0" }, version: 0, epoch: "b1" });
+    s1.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v0" },
+      version: 0,
+      epoch: "b1",
+    });
     await flush(); // drain that ack's rx broadcast while B still holds no sub
     expect(qcB.getQueryData(["k"])).toBeUndefined();
 
@@ -184,7 +224,13 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     // A's replay echoed (epoch, version 0), so the server short-circuits with a
     // value-less `up-to-date` — broadcast to BOTH tabs. B holds a sub for k, so
     // the no-sub gate passes, but B has no value: it must NOT adopt version 0.
-    s1.serverSend({ kind: "up-to-date", key: "k", params: {}, version: 0, epoch: "b1" });
+    s1.serverSend({
+      kind: "up-to-date",
+      key: "k",
+      params: {},
+      version: 0,
+      epoch: "b1",
+    });
     await flush();
     expect(qcB.getQueryData(["k"])).toBeUndefined();
 
@@ -192,7 +238,14 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     // 0, so this was dropped as stale — and since a config version never moves
     // again, B stayed `pending` forever, rendering `descriptor.defaults` ("No
     // views configured") until a page reload.
-    s1.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v0" }, version: 0, epoch: "b1" });
+    s1.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v0" },
+      version: 0,
+      epoch: "b1",
+    });
     await flush();
     expect(qcB.getQueryData(["k"])).toEqual({ status: "v0" });
     expect(qcA.getQueryData(["k"])).toEqual({ status: "v0" }); // A never lost its value
@@ -209,7 +262,13 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
 
     // ONE server frame on S1 reaches both caches: A applies it locally, B via the
     // rx broadcast relayed from the leader.
-    s1.serverSend({ kind: "update", key: "k", params: {}, value: { status: "x" }, version: 1 });
+    s1.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "x" },
+      version: 1,
+    });
     await flush(); // deliver the rx broadcast to B
     expect(qcA.getQueryData(["k"])).toEqual({ status: "x" });
     expect(qcB.getQueryData(["k"])).toEqual({ status: "x" });

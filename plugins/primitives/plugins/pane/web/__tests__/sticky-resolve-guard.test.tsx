@@ -8,7 +8,7 @@ import { Pane, type PaneStore } from "@plugins/primitives/plugins/pane/web";
 // directly (same plugin, no boundary crossed) rather than through a box.
 import { PaneResolveGuard } from "../components/pane-resolve-guard";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "../testing";
 
 // Local fixture app — this suite is about the resolve guard, not pane homes.
 const testApp = defineApp({

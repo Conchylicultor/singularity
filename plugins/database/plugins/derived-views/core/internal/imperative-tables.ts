@@ -15,7 +15,7 @@
 //
 // This list is for tables in the REAL worktree DB only. A test that just needs a
 // scratch table must NOT be added here: provision a throwaway database with
-// `createTestDb` (@plugins/database/plugins/db-test-fixture/server) and create the
+// `createTestDb` (@plugins/database/plugins/db-test-fixture/server/testing) and create the
 // table on that instead. Such a database is dropped in teardown and is never what
 // orphaned-db-tables scans, so the check exempts those create sites — while an
 // entry here would make orphaned-db-tables treat a test fixture's name as declared

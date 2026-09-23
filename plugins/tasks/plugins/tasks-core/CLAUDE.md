@@ -208,7 +208,6 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `primitives/rank.RankExecutor`
     - `primitives/rank.withRank`
   - DB schema:
-    - `plugins/tasks/plugins/tasks-core/server/internal/install-derived-schema.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`
@@ -216,6 +215,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
+    - `plugins/tasks/plugins/tasks-core/server/testing/install-derived-schema.ts`
   - Exports (types):
     - `AdoptOrphanInput`
     - `Attempt`
@@ -280,7 +280,6 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `insertConversation`
     - `insertConversationOnConflictDoNothing`
     - `insertPush`
-    - `installTaskDerivedSchema`
     - `isDescendant`
     - `listActiveConversations`
     - `listAttempts`

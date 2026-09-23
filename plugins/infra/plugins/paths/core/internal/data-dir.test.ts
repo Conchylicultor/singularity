@@ -12,9 +12,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   declareRuntimeNamespace,
-  resetRuntimeNamespaceForTest,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
+import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
 import {
   dataRoot,
   defineAppDataDir,

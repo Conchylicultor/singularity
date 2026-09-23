@@ -4,16 +4,16 @@ import { cleanup, render } from "@testing-library/react";
 import {
   PluginProvider,
   markDeferredLoadComplete,
-  resetDeferredLoadStateForTests,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
+import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
   type PaneStore,
   Pane,
   usePaneRoute,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "../testing";
 
 // Local fixture app — this suite is about URL resolution, not pane homes.
 const testApp = defineApp({

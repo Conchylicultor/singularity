@@ -9,7 +9,7 @@ import {
   useIndexMatch,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "../testing";
 
 // `appIndex` is a boolean, not a path: which app a pane is the index OF comes
 // from the `app` it already declares. This suite pins what that buys — the

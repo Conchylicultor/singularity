@@ -6,7 +6,7 @@
 //
 // Mirrors the server half's injection philosophy (resource-runtime's
 // `ResourceRuntimeOptions` hooks): production wires the globals, tests wire the
-// deterministic fakes in `./test-support`. See
+// deterministic fakes in `./testing`. See
 // `research/2026-07-03-global-live-state-client-transport-harness.md`.
 
 /** The string-message subset of the native `WebSocket` API this stack uses. */

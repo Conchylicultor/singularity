@@ -21,13 +21,20 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
@@ -104,7 +111,13 @@ async function snapshot(): Promise<string> {
   const rows = await t.db.select().from(_blocks);
   return JSON.stringify(
     rows
-      .map((r) => [r.id, r.parentId, r.pageId, r.rank, r.deletedAt?.toISOString() ?? null])
+      .map((r) => [
+        r.id,
+        r.parentId,
+        r.pageId,
+        r.rank,
+        r.deletedAt?.toISOString() ?? null,
+      ])
       .sort(),
   );
 }
@@ -115,10 +128,34 @@ async function snapshot(): Promise<string> {
  * chokepoint, not a hand-set column.
  */
 async function seedTrashedParent(): Promise<void> {
-  await seedBlock({ id: "W", parentId: null, pageId: null, type: "page", rank: "a0" });
-  await seedBlock({ id: "A", parentId: "W", pageId: "W", type: "page", rank: "a0" });
-  await seedBlock({ id: "A1", parentId: "A", pageId: "A", type: "text", rank: "a0" });
-  await seedBlock({ id: "L", parentId: "W", pageId: "W", type: "page", rank: "a1" });
+  await seedBlock({
+    id: "W",
+    parentId: null,
+    pageId: null,
+    type: "page",
+    rank: "a0",
+  });
+  await seedBlock({
+    id: "A",
+    parentId: "W",
+    pageId: "W",
+    type: "page",
+    rank: "a0",
+  });
+  await seedBlock({
+    id: "A1",
+    parentId: "A",
+    pageId: "A",
+    type: "text",
+    rank: "a0",
+  });
+  await seedBlock({
+    id: "L",
+    parentId: "W",
+    pageId: "W",
+    type: "page",
+    rank: "a1",
+  });
   await deleteBlocksSubtree(["A"], t.db);
 }
 
@@ -176,7 +213,13 @@ describe("computePageId — the insert paths' guard", () => {
 
   test("a live parent still resolves its page scope (no regression)", async () => {
     await seedTrashedParent();
-    await seedBlock({ id: "L1", parentId: "L", pageId: "L", type: "text", rank: "a0" });
+    await seedBlock({
+      id: "L1",
+      parentId: "L",
+      pageId: "L",
+      type: "text",
+      rank: "a0",
+    });
 
     expect(await computePageId("L", t.db)).toBe("L"); // parent IS the page
     expect(await computePageId("L1", t.db)).toBe("L"); // inherit the parent's page
@@ -199,8 +242,20 @@ describe("loadLiveSiblings — the move paths' guard", () => {
 
   test("a live parent returns its complete live sibling set (no regression)", async () => {
     await seedTrashedParent();
-    await seedBlock({ id: "L1", parentId: "L", pageId: "L", type: "text", rank: "a0" });
-    await seedBlock({ id: "L2", parentId: "L", pageId: "L", type: "page", rank: "a1" });
+    await seedBlock({
+      id: "L1",
+      parentId: "L",
+      pageId: "L",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "L2",
+      parentId: "L",
+      pageId: "L",
+      type: "page",
+      rank: "a1",
+    });
 
     const { siblings } = await loadLiveSiblings(t.db, "L");
     // Unfiltered by `type` and by `page_id` — one ordering space.
@@ -209,7 +264,13 @@ describe("loadLiveSiblings — the move paths' guard", () => {
 
   test("parentId null (workspace root) is legal and lists live root rows only", async () => {
     await seedTrashedParent();
-    await seedBlock({ id: "R", parentId: null, pageId: null, type: "page", rank: "a1" });
+    await seedBlock({
+      id: "R",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a1",
+    });
     await deleteBlocksSubtree(["R"], t.db);
 
     const { siblings: roots } = await loadLiveSiblings(t.db, null);
@@ -242,13 +303,43 @@ describe("loadLiveSiblings — the move paths' guard", () => {
 
 describe("delete cascade across a page boundary", () => {
   test("pages A ⊂ B: deleting B trashes A too, under B's single trash entry", async () => {
-    await seedBlock({ id: "W", parentId: null, pageId: null, type: "page", rank: "a0" });
-    await seedBlock({ id: "B", parentId: "W", pageId: "W", type: "page", rank: "a0" });
-    await seedBlock({ id: "B1", parentId: "B", pageId: "B", type: "text", rank: "a0" });
+    await seedBlock({
+      id: "W",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "B",
+      parentId: "W",
+      pageId: "W",
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "B1",
+      parentId: "B",
+      pageId: "B",
+      type: "text",
+      rank: "a0",
+    });
     // A is a sub-page of B — a DIFFERENT `page_id` partition, reached only
     // because `collectBlockSubtrees` walks `parent_id` across page boundaries.
-    await seedBlock({ id: "A", parentId: "B", pageId: "B", type: "page", rank: "a1" });
-    await seedBlock({ id: "A1", parentId: "A", pageId: "A", type: "text", rank: "a0" });
+    await seedBlock({
+      id: "A",
+      parentId: "B",
+      pageId: "B",
+      type: "page",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "A1",
+      parentId: "A",
+      pageId: "A",
+      type: "text",
+      rank: "a0",
+    });
 
     const result = await deleteBlocksSubtree(["B"], t.db);
     expect(result.trashed).toBe(true);

@@ -34,7 +34,7 @@ import { z } from "zod";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { taskFor } from "../../core/hold";
 import { installQueueSchema, QueueSchemaMissingError } from "./queue-schema";
 import { defineJob } from "./registry";

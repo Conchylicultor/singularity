@@ -15,7 +15,7 @@ import { STACKED_FILTERS_NOTE, clickRow } from "../internal/filters";
 import { PANELS } from "../internal/panels";
 import { RankedPanel } from "../components/ranked-panel";
 import { FilterBar } from "../components/filter-bar";
-import { report, row } from "./fixtures";
+import { report, row } from "../testing";
 
 /** jsdom's navigator.language is en-US. */
 const FRANCE = "France (FR)";

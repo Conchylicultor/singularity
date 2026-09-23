@@ -1,6 +1,6 @@
 # plugin-boundaries
 
-Implements the cross-plugin boundary rules (R1–R10) enforced by
+Implements the cross-plugin boundary rules (R1–R12) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
 root `CLAUDE.md`.
 
@@ -29,6 +29,14 @@ R4 accepts `@plugins/<p>/<runtime>/testing` as a legal ending; R3 requires the
 `index.ts` once `testing/` holds TypeScript and applies barrel purity and the
 cross-plugin re-export rule to it. Who may import a testing barrel (test code
 and `check/` only) is `boundary-rules`' job, not this check's.
+
+R12 (`test-support-in-public-barrel`, `check/test-exports.ts`) is the other
+direction: a public runtime barrel may not publish test support. It fails on a
+published name ending in `ForTest`/`ForTests`/`ForTesting`, and on a statement
+taking names from a test-support module — a test-code path (`testing/`,
+`__tests__/`, `*.test.ts`) or a file named `test-support`, `fixture(s)` or
+`<x>.fixture(s)`. The fix is to publish it from `<runtime>/testing/index.ts`.
+A reset hook keeps its body next to the state it resets; only the export moves.
 
 ## Cross-plugin re-export (provenance-based)
 

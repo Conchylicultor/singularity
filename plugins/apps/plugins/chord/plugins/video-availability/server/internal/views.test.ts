@@ -17,7 +17,7 @@ import { sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import {
   EVIDENCE_TTL_DAYS,

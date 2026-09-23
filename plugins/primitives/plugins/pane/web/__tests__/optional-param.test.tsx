@@ -16,7 +16,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+import { createTestSurfaceStore, TestSurface } from "../testing";
 
 // A VIEW OF A PANE HAS AN ADDRESS.
 //

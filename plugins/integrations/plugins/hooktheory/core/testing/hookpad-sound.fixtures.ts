@@ -4,7 +4,7 @@
 // inversion, adds, omits, alterations, suspensions) in the Sheet Sage dump,
 // with the sound Sheet Sage's processed file gives it. Each line is
 // `<tonic> <mode> | <chord fields> | <rootPc> <intervals> <inversion>`, read by
-// `decodeFixture` in hookpad-sound.fixture-format.ts.
+// `decodeFixture` in core/internal/hookpad-sound.fixture-format.ts.
 
 export const HOOKPAD_SOUND_FIXTURES: readonly string[] = [
   "A dorian | root=1 type=13 inv=0 applied=0 borrowed=- adds=- omits=- alts=- sus=- | 9 3,4,3,4,3,4 inv=0",

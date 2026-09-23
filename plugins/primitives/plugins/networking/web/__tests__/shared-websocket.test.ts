@@ -24,13 +24,16 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
-import { SharedWebSocket, type SharedWebSocketHooks } from "../shared-websocket";
+import {
+  SharedWebSocket,
+  type SharedWebSocketHooks,
+} from "../shared-websocket";
 import {
   createTransportHub,
   FakeWsServer,
   FakeBroadcastChannelBus,
   FakeLockManager,
-} from "../test-support";
+} from "../testing";
 
 const URL_PATH = "/ws/test";
 const CLOSED = 3;
@@ -161,7 +164,9 @@ describe("SharedWebSocket", () => {
     const tabB = hub.tab();
     const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
     let bOpened = false;
-    swsB.onopen = () => { bOpened = true; };
+    swsB.onopen = () => {
+      bOpened = true;
+    };
     await flush(); // B hello → A.onFollowerJoined → rebroadcast open → B learns open
 
     expect(swsB.isLeader).toBe(false);
@@ -190,7 +195,9 @@ describe("SharedWebSocket", () => {
     const tabB = hub.tab();
     const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
     let bOpens = 0;
-    swsB.onopen = () => { bOpens++; };
+    swsB.onopen = () => {
+      bOpens++;
+    };
     await flush(); // B joins → leader rebroadcasts open → B's FIRST dispatch
     expect(bOpens).toBe(1);
     expect(swsB.status).toBe("open");
@@ -200,7 +207,9 @@ describe("SharedWebSocket", () => {
     const tabC = hub.tab();
     const swsC = track(new SharedWebSocket(URL_PATH, tabC.hooks));
     let cOpened = false;
-    swsC.onopen = () => { cOpened = true; };
+    swsC.onopen = () => {
+      cOpened = true;
+    };
     await flush();
     expect(cOpened).toBe(true); // the joiner itself still learns "open"
     expect(bOpens).toBe(1); // the existing follower did NOT re-dispatch

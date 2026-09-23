@@ -132,7 +132,7 @@ directory, then:
 ```
 
 It checks both files' sha256 first and takes about 3½ minutes. `--emit-fixtures`
-rewrites `core/internal/hookpad-sound.fixtures.ts` (one chord per distinct
+rewrites `core/testing/hookpad-sound.fixtures.ts` (one chord per distinct
 combination of mode, applied, borrowed, type, inversion, adds, omits,
 alterations and suspensions), which `hookpad-sound.test.ts` replays on every
 test run.

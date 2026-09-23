@@ -21,7 +21,7 @@ import { sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 import {
   FindLoopsBodySchema,

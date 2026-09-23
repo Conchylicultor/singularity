@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LET_IT_BE_VERSE } from "./fixtures";
+import { LET_IT_BE_VERSE } from "../testing";
 import { HookpadHarmonyDocSchema, sectionFromHookpadDoc } from "./section";
 
 const ID = "_NgbRXeYgQA";

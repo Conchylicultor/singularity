@@ -62,7 +62,9 @@ export function TestSurface({
  * every URL-derived case would resolve empty. Pass `live: false` for a suite
  * that drives its subject directly and wants nothing to do with the URL.
  */
-export function createTestSurfaceStore(opts: { live?: boolean } = {}): PaneStore {
+export function createTestSurfaceStore(
+  opts: { live?: boolean } = {},
+): PaneStore {
   const store = createPaneStore({ live: opts.live ?? true });
   setLiveStore(store);
   return store;

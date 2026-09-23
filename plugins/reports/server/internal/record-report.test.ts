@@ -24,7 +24,7 @@ import { sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { upsertReport, type ReportUpsertValues } from "./record-report";
 import { _reports } from "./tables";

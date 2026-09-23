@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LET_IT_BE_VERSE } from "../../core/internal/fixtures";
+import { LET_IT_BE_VERSE } from "../../core/testing";
 import { PublicSongEnvelopeSchema, sectionFromEnvelope } from "./section";
 
 // The document decoding itself is tested next to `sectionFromHookpadDoc` in

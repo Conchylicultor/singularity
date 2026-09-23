@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   worktreeDbScenario,
   type DbExecutor,
-} from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server";
+} from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { listDependentClosure, readTaskStatuses } from "./queries/tasks";
 import { removeTaskDependency, updateTask } from "./mutations/tasks";
 import { runStatusBatchOn } from "./status-batch";

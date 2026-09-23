@@ -25,7 +25,7 @@ import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import type { DeploymentAnalyticsResult } from "../../core";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
-import { report, row } from "./fixtures";
+import { report, row } from "../testing";
 
 afterEach(cleanup);
 

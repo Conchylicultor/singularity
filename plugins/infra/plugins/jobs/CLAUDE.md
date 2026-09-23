@@ -643,7 +643,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `conversations/hibernation`
     - `conversations/transcript-retention`
     - `database/db-test-fixture/sweep`
-    - `database/db-test-fixture/worktree-db`
     - `database/fork`
     - `database/live-state-snapshot`
     - `debug/boot-budget`

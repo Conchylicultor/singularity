@@ -135,7 +135,7 @@ filed.
 
 ## Test support
 
-`startBlackHoleProxy(upstream)` (`server/internal/black-hole-proxy.ts`) puts a
+`startBlackHoleProxy(upstream)` (`server/testing/black-hole-proxy.ts`, published as `@plugins/database/plugins/connection/server/testing`) puts a
 TCP proxy in front of the cluster whose forwarding can be switched off, so a
 suite can make any connection's calls go unanswered. `deadline.test.ts` uses it
 for the client itself; `infra/jobs`'s `enqueue-deadline.test.ts` uses it to prove
@@ -175,7 +175,6 @@ deadline sees it go silent. That needs a heartbeat.
     - `infra/jobs`
 - Server:
   - Exports (types):
-    - `BlackHoleProxy`
     - `CreateDbClientOptions`
     - `CreateDbPoolOptions`
     - `DbClient`
@@ -195,7 +194,6 @@ deadline sees it go silent. That needs a heartbeat.
     - `QueryDeadlineExceededError`
     - `queryDeadlineSink`
     - `queryText`
-    - `startBlackHoleProxy`
     - `withQueryDeadline`
 - Core:
   - Exports (types):

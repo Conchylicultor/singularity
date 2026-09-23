@@ -30,7 +30,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";

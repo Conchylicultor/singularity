@@ -31,11 +31,16 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { createTransportHub, type FakeWebSocket } from "@plugins/primitives/plugins/networking/web";
+import {
+  createTransportHub,
+  type FakeWebSocket,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import { NotificationsClient } from "../notifications-client";
 
 const pushSchema = z.object({ status: z.string() });
@@ -64,7 +69,9 @@ describe("NotificationsClient — reconnect + resync", () => {
     const hub = createTransportHub();
     const qc = new QueryClient();
     const tab = hub.tab();
-    const client = new NotificationsClient(qc, { makeSocket: hub.makeSocket(tab) });
+    const client = new NotificationsClient(qc, {
+      makeSocket: hub.makeSocket(tab),
+    });
     clients.push(client);
     await flush(); // elected → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
@@ -73,11 +80,19 @@ describe("NotificationsClient — reconnect + resync", () => {
   }
 
   // The single connecting socket the SharedWebSocket just created for reconnect.
-  const nextSocket = (hub: ReturnType<typeof createTransportHub>): FakeWebSocket =>
-    hub.server.all().find((s) => s.readyState === 0)!;
-  const subFrames = (socket: FakeWebSocket, key?: string): Record<string, unknown>[] =>
-    socket.sentJson().filter((m) => m.op === "sub" && (key === undefined || m.key === key));
-  const batchFrames = (socket: FakeWebSocket): Array<Record<string, unknown> & { entries: BatchEntry[] }> =>
+  const nextSocket = (
+    hub: ReturnType<typeof createTransportHub>,
+  ): FakeWebSocket => hub.server.all().find((s) => s.readyState === 0)!;
+  const subFrames = (
+    socket: FakeWebSocket,
+    key?: string,
+  ): Record<string, unknown>[] =>
+    socket
+      .sentJson()
+      .filter((m) => m.op === "sub" && (key === undefined || m.key === key));
+  const batchFrames = (
+    socket: FakeWebSocket,
+  ): Array<Record<string, unknown> & { entries: BatchEntry[] }> =>
     socket.sentJson().filter((m) => m.op === "sub-batch") as Array<
       Record<string, unknown> & { entries: BatchEntry[] }
     >;
@@ -96,13 +111,25 @@ describe("NotificationsClient — reconnect + resync", () => {
   test("H1: frames lost during the reopen gap are recovered by one sub-batch replay converging", async () => {
     const { client, hub, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v1" }, version: 1 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v1" },
+      version: 1,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" });
 
     // Socket drops; a v2 frame lands on the now-closed socket and is silently lost
     // (serverSend is guarded on OPEN — the exact reopen gap).
     socket.serverClose();
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "v2-lost" }, version: 2 });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "v2-lost" },
+      version: 2,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" }); // never delivered
 
     // Backoff reconnect (exactly 500ms), then a fresh socket. The replay is ONE
@@ -115,7 +142,13 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
 
     // The resync sub-ack at v3 converges the cache to server truth.
-    socket2.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v3" }, version: 3 });
+    socket2.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v3" },
+      version: 3,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
   });
 
@@ -127,7 +160,14 @@ describe("NotificationsClient — reconnect + resync", () => {
 
     // Ack each sub at its own version, carrying the boot epoch the client learns.
     keys.forEach((k, i) => {
-      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: k }, version: i + 1, epoch: "boot-1" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: k,
+        params: {},
+        value: { status: k },
+        version: i + 1,
+        epoch: "boot-1",
+      });
     });
 
     // Drop → reconnect → fresh socket; the open triggers ONE synchronous batch.
@@ -160,9 +200,18 @@ describe("NotificationsClient — reconnect + resync", () => {
     // value — a wedge no later frame heals for a resource whose version never
     // moves. `kept` is the control: same replay, value still cached.
     const { client, hub, socket, qc } = await setup();
-    for (const k of ["gcd", "kept"]) client.observe(k, {}, undefined, pushSchema);
+    for (const k of ["gcd", "kept"])
+      client.observe(k, {}, undefined, pushSchema);
     for (const k of ["gcd", "kept"]) {
-      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: k }, version: 4, epoch: "boot-1", etag: `e-${k}` });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: k,
+        params: {},
+        value: { status: k },
+        version: 4,
+        epoch: "boot-1",
+        etag: `e-${k}`,
+      });
     }
     qc.removeQueries({ queryKey: ["gcd"] }); // gcTime elapsed for the unobserved query
 
@@ -180,7 +229,14 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(kept.etag).toBe("e-kept");
 
     // The full-path sub-ack the omission forces lands the value back.
-    socket2.serverSend({ kind: "sub-ack", key: "gcd", params: {}, value: { status: "refetched" }, version: 4, epoch: "boot-1" });
+    socket2.serverSend({
+      kind: "sub-ack",
+      key: "gcd",
+      params: {},
+      value: { status: "refetched" },
+      version: 4,
+      epoch: "boot-1",
+    });
     expect(qc.getQueryData(["gcd"])).toEqual({ status: "refetched" });
   });
 
@@ -189,7 +245,14 @@ describe("NotificationsClient — reconnect + resync", () => {
     const keys = ["k0", "k1", "k2"];
     for (const k of keys) client.observe(k, {}, undefined, pushSchema);
     for (const k of keys) {
-      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-old` }, version: 5, epoch: "boot-1" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: k,
+        params: {},
+        value: { status: `${k}-old` },
+        version: 5,
+        epoch: "boot-1",
+      });
     }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-old" });
 
@@ -208,7 +271,14 @@ describe("NotificationsClient — reconnect + resync", () => {
     // Post-restart sub-acks at the LOWER version 1 still apply: the batch build
     // reset every baseline to -1.
     for (const k of keys) {
-      socket2.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-new` }, version: 1, epoch: "boot-2" });
+      socket2.serverSend({
+        kind: "sub-ack",
+        key: k,
+        params: {},
+        value: { status: `${k}-new` },
+        version: 1,
+        epoch: "boot-2",
+      });
     }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-new" });
     expect(qc.getQueryData(["k2"])).toEqual({ status: "k2-new" });
@@ -225,7 +295,14 @@ describe("NotificationsClient — reconnect + resync", () => {
     const { client, hub, socket, qc } = await setup();
     for (const k of ["a", "b"]) {
       client.observe(k, {}, undefined, pushSchema);
-      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-v1` }, version: 1, epoch: "boot-1" });
+      socket.serverSend({
+        kind: "sub-ack",
+        key: k,
+        params: {},
+        value: { status: `${k}-v1` },
+        version: 1,
+        epoch: "boot-1",
+      });
     }
     const cachedA = qc.getQueryData(["a"]);
 
@@ -251,29 +328,65 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(qc.getQueryData(["a"])).toBe(cachedA);
     expect(qc.getQueryData(["b"])).toEqual({ status: "b-v1" });
     // Versions adopted: a stale replay of v1 is dropped, a genuine v2 applies.
-    socket2.serverSend({ kind: "update", key: "a", params: {}, value: { status: "a-stale" }, version: 1 });
+    socket2.serverSend({
+      kind: "update",
+      key: "a",
+      params: {},
+      value: { status: "a-stale" },
+      version: 1,
+    });
     expect(qc.getQueryData(["a"])).toBe(cachedA); // v1 ≤ adopted 1 → dropped
-    socket2.serverSend({ kind: "update", key: "a", params: {}, value: { status: "a-v2" }, version: 2 });
+    socket2.serverSend({
+      kind: "update",
+      key: "a",
+      params: {},
+      value: { status: "a-v2" },
+      version: 2,
+    });
     expect(qc.getQueryData(["a"])).toEqual({ status: "a-v2" });
   });
 
   test("H7: a lost intermediate level-state frame still converges on the next full frame", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "working" }, version: 1 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "working" },
+      version: 1,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "working" });
 
     // The v2 frame never arrives (lost). Level state carries full truth, so the
     // next full frame at v3 converges — no replay of the missing intermediate.
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "gone" }, version: 3 });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "gone" },
+      version: 3,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "gone" });
   });
 
   test("H7: probeMissedUpdates surfaces a silently-missed gap end-to-end over the batch replay", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v1" }, version: 1 });
-    socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "v3" }, version: 3 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v1" },
+      version: 1,
+    });
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "v3" },
+      version: 3,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
 
     // Start the probe: it forces a resync via the SAME synchronous batch replay
@@ -287,12 +400,22 @@ describe("NotificationsClient — reconnect + resync", () => {
 
     // The resync sub-ack reveals a higher server version — the missed frames —
     // landing BEFORE the settle window elapses.
-    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v9" }, version: 9 });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v9" },
+      version: 9,
+    });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v9" }); // cache converged
 
     await vi.advanceTimersByTimeAsync(200); // settle elapses
     const missed = await probe;
     expect(missed).toHaveLength(1);
-    expect(missed[0]).toMatchObject({ key: "k", prevVersion: 3, ackVersion: 9 });
+    expect(missed[0]).toMatchObject({
+      key: "k",
+      prevVersion: 3,
+      ackVersion: 9,
+    });
   });
 });

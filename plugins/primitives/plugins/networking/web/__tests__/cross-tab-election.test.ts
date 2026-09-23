@@ -18,12 +18,15 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
-import { CrossTabElection, type CrossTabElectionCallbacks } from "../cross-tab-election";
+import {
+  CrossTabElection,
+  type CrossTabElectionCallbacks,
+} from "../cross-tab-election";
 import {
   FakeBroadcastChannelBus,
   FakeLockManager,
   type FakeBroadcastChannel,
-} from "../test-support";
+} from "../testing";
 import { subscribeNetDiag, type NetDiagEvent } from "../net-diag-bus";
 
 type Msg = { n: number };
@@ -37,13 +40,29 @@ interface Rec {
 }
 
 function recorder(): { calls: Rec; callbacks: CrossTabElectionCallbacks<Msg> } {
-  const calls: Rec = { elected: 0, demoted: 0, followerJoined: 0, leaderMsgs: [], followerMsgs: [] };
+  const calls: Rec = {
+    elected: 0,
+    demoted: 0,
+    followerJoined: 0,
+    leaderMsgs: [],
+    followerMsgs: [],
+  };
   const callbacks: CrossTabElectionCallbacks<Msg> = {
-    onElected: () => { calls.elected++; },
-    onDemoted: () => { calls.demoted++; },
-    onFollowerJoined: () => { calls.followerJoined++; },
-    onLeaderMessage: (m) => { calls.leaderMsgs.push(m); },
-    onFollowerMessage: (m) => { calls.followerMsgs.push(m); },
+    onElected: () => {
+      calls.elected++;
+    },
+    onDemoted: () => {
+      calls.demoted++;
+    },
+    onFollowerJoined: () => {
+      calls.followerJoined++;
+    },
+    onLeaderMessage: (m) => {
+      calls.leaderMsgs.push(m);
+    },
+    onFollowerMessage: (m) => {
+      calls.followerMsgs.push(m);
+    },
   };
   return { calls, callbacks };
 }
@@ -220,7 +239,11 @@ describe("CrossTabElection", () => {
     expect(elA.isLeader).toBe(true);
 
     // Another tab steals the lock directly (holds it with a never-resolving cb).
-    void locks.request(NAME, { mode: "exclusive", steal: true }, () => new Promise<void>(() => {}));
+    void locks.request(
+      NAME,
+      { mode: "exclusive", steal: true },
+      () => new Promise<void>(() => {}),
+    );
     await flush();
 
     expect(a.calls.demoted).toBe(1);

@@ -13,12 +13,19 @@
  *   bun test plugins/primitives/plugins/data-view/plugins/view-order/server
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { and, asc, eq } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -91,7 +98,10 @@ describe("applyRowOrder (bounded upsert)", () => {
   test("an existing key's rank is updated in place", async () => {
     await apply(mkWrites(["A", "B", "C"]));
     const before = await t.db
-      .select({ rowKey: _dataViewRowOrder.rowKey, rank: _dataViewRowOrder.rank })
+      .select({
+        rowKey: _dataViewRowOrder.rowKey,
+        rank: _dataViewRowOrder.rank,
+      })
       .from(_dataViewRowOrder);
     const rankOf = new Map(before.map((r) => [r.rowKey, r.rank]));
 
@@ -100,7 +110,10 @@ describe("applyRowOrder (bounded upsert)", () => {
     await apply([{ rowKey: "C", rank: newC }]);
 
     const after = await t.db
-      .select({ rowKey: _dataViewRowOrder.rowKey, rank: _dataViewRowOrder.rank })
+      .select({
+        rowKey: _dataViewRowOrder.rowKey,
+        rank: _dataViewRowOrder.rank,
+      })
       .from(_dataViewRowOrder);
     const nextRankOf = new Map(after.map((r) => [r.rowKey, r.rank]));
 
@@ -113,7 +126,10 @@ describe("applyRowOrder (bounded upsert)", () => {
   test("ranks sort by C collation, matching Rank.compare", async () => {
     await apply(mkWrites(["A", "B", "C"]));
     const rows = await t.db
-      .select({ rowKey: _dataViewRowOrder.rowKey, rank: _dataViewRowOrder.rank })
+      .select({
+        rowKey: _dataViewRowOrder.rowKey,
+        rank: _dataViewRowOrder.rank,
+      })
       .from(_dataViewRowOrder)
       .orderBy(asc(_dataViewRowOrder.rank));
     const inJs = [...rows]

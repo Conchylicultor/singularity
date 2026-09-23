@@ -17,7 +17,7 @@ import { ensureSnapshotTable } from "./tables-ddl";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { persistSnapshot } from "./persist";
 import { runCatchUp } from "./catch-up";
 

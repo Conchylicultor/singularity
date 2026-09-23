@@ -190,7 +190,6 @@ the decision table.
     - `legacyInstanceKey`
     - `mayAdoptLegacyPayload`
     - `readAppInstance`
-    - `resetAppInstanceForTests`
     - `RETAINED_INSTANCES`
     - `stampAppInstance`
 - Cross-plugin:

@@ -46,8 +46,8 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
-import { worktreeDbScenario } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
+import { worktreeDbScenario } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { _tasks } from "../tables";
 import type { DbExecutor } from "../status-batch";

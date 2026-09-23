@@ -326,7 +326,6 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `pluginLoadReportSink`
     - `PluginProvider`
     - `PluginRuntimeContext`
-    - `resetDeferredLoadStateForTests`
     - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`

@@ -8,8 +8,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 // db-test-fixture` coexist acyclically — the split is what keeps the graph a
 // DAG, not a filing preference.
 
-export { worktreeDbScenario } from "./internal/scenario";
-export type { DbExecutor } from "./internal/scenario";
+// The harness is test code, published from `./testing`
+// (`@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing`).
 
 export default {
   description:

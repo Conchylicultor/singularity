@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LET_IT_BE_VERSE } from "./fixtures";
+import { HOOKPAD_SOUND_FIXTURES, LET_IT_BE_VERSE } from "../testing";
 import {
   HOOKPAD_MODE_OFFSETS,
   hookpadChordSound,
@@ -9,7 +9,6 @@ import {
   type HookpadChordRule,
 } from "./hookpad-sound";
 import { decodeFixture } from "./hookpad-sound.fixture-format";
-import { HOOKPAD_SOUND_FIXTURES } from "./hookpad-sound.fixtures";
 import { HookpadModeSchema, type HookpadKey } from "./schemas";
 import { sectionFromHookpadDoc } from "./section";
 

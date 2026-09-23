@@ -34,14 +34,14 @@ import { Pool } from "pg";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { installQueueSchema } from "@plugins/infra/plugins/jobs/server";
 import {
-  installTaskDerivedSchema,
   runStatusBatchOn,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { installTaskDerivedSchema } from "@plugins/tasks/plugins/tasks-core/server/testing";
 import {
   DEFAULT_MODEL_CHOICE,
   resolveModel,

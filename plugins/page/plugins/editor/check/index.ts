@@ -21,7 +21,7 @@ import {
   resolveBlockSlots,
   WEB_BLOCK_FRAME_SLOT,
   WEB_BLOCK_SLOT,
-} from "./block-handles";
+} from "../core/testing";
 import type {
   Check,
   CheckResult,
@@ -34,7 +34,7 @@ import noTokenIdentityOutsideOwner from "./no-token-identity-outside-owner";
 // `docLabel: (c) => c.block?.type`, server `docLabel: (h) => h.type` — which is
 // the join key the first check below is built on. The two WEB tokens, and the
 // slot-object resolution they feed, live beside the handle loader in
-// `./block-handles.ts`.
+// `../core/testing/block-handles.ts`.
 const SERVER_BLOCK_DATA_SLOT = "page.block-data"; // Editor.BlockData (server _kind)
 
 // The `editor` plugin ITSELF registers `Editor.BlockData("page")` (page rows are

@@ -5,7 +5,7 @@ import type { DbChange } from "./parse-payload";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 
 // Real-DB listener suite: a throwaway database on the running cluster, a real raw
 // LISTEN client, and real `pg_notify` delivery over that socket. The listener's
@@ -29,7 +29,11 @@ let testDb: TestDb;
 const QUIET_LIVENESS_MS = 60_000;
 
 // A payload exactly as the STATEMENT trigger's live_state_notify() emits it.
-function notifyPayload(table: string, op: "I" | "U" | "D", ids: string[] | null): string {
+function notifyPayload(
+  table: string,
+  op: "I" | "U" | "D",
+  ids: string[] | null,
+): string {
   return JSON.stringify({ t: table, op, ids });
 }
 

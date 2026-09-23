@@ -12,7 +12,7 @@ import {
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { type BlockHandle } from "../core";
+import { type BlockHandle } from "../define-block";
 
 // Canonical slot tokens for the two WEB block slots (see
 // plugins/page/plugins/editor/web/slots.ts). Each contribution carries the block
@@ -73,7 +73,7 @@ export async function resolveBlockSlots(
 /**
  * Every registered block handle, with the plugin id that declared it.
  *
- * The handle-reading checks in `./index.ts` all need the same thing: import each web
+ * The handle-reading checks in `check/index.ts` (and `core/markdown.test.ts`) all need the same thing: import each web
  * barrel that contributes `Editor.Block` and read the handles off it. A static
  * source scan cannot recover a handle's fields from
  * `Editor.Block({ match: fooBlock.type, block: fooBlock })`, and ad-hoc marker

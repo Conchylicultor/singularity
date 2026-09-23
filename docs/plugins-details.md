@@ -12493,7 +12493,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/session-chain`
       - `conversations/summary`
       - `database/change-feed`
-      - `database/db-test-fixture/worktree-db`
       - `database/live-state-snapshot`
       - `database/query-deadline`
       - `debug/boot-profile`
@@ -12608,9 +12607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/run-ledger`
           - `build/serve-composition`
           - `database/change-feed`
-          - `database/db-test-fixture`
           - `database/db-test-fixture/sweep`
-          - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
           - `database/query`
@@ -12674,7 +12671,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs`
       - Server:
         - Exports (types):
-          - `BlackHoleProxy`
           - `CreateDbClientOptions`
           - `CreateDbPoolOptions`
           - `DbClient`
@@ -12694,7 +12690,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueryDeadlineExceededError`
           - `queryDeadlineSink`
           - `queryText`
-          - `startBlackHoleProxy`
           - `withQueryDeadline`
       - Core:
         - Exports (types):
@@ -12704,15 +12699,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DB_CALL_PHASES`
           - `DB_POOL_NAMES`
     - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
-      - Server:
-        - Uses:
-          - `database/admin.dropDatabase`
-          - `database/admin.ensureDatabase`
-          - `database/admin.openShortLivedClient`
-        - Exports (types):
-          - `CreateTestDbOptions`
-          - `TestDb`
-        - Exports (values): `createTestDb`
       - Core:
         - Exports (types): `TestDbName`
         - Exports (values):
@@ -12738,13 +12724,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `LeakedTestDbPayload`
             - Exports (values): `LeakedTestDbPayloadSchema`
         - **`worktree-db`** — Rolled-back-transaction harness for suites that must drive the REAL worktree DB (derived views included) rather than a throwaway: one scenario per transaction, always rolled back, with the excluded-from-fork queue schema installed once per process first.
-          - Server:
-            - Uses:
-              - `database.db`
-              - `database/admin.connectionString`
-              - `infra/jobs.installQueueSchema`
-            - Exports (types): `DbExecutor`
-            - Exports (values): `worktreeDbScenario`
     - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -17894,7 +17873,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pluginLoadReportSink`
           - `PluginProvider`
           - `PluginRuntimeContext`
-          - `resetDeferredLoadStateForTests`
           - `slots`
           - `subscribeDeferredLoadState`
           - `UNSAFE_unsealSlotComponent`
@@ -19002,8 +18980,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Server:
                 - Exports (types): `DuressLatch`
                 - Exports (values):
-                  - `_setClockForTests`
-                  - `_setLatchDirForTests`
                   - `clearDuress`
                   - `duressEpisode`
                   - `duressLatchDir`
@@ -19263,7 +19239,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/hibernation`
           - `conversations/transcript-retention`
           - `database/db-test-fixture/sweep`
-          - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
           - `debug/boot-budget`
@@ -19852,7 +19827,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `namespaceArgv`
           - `readNamespaceArgv`
           - `readServingSocket`
-          - `resetRuntimeNamespaceForTest`
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
@@ -28484,7 +28458,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `embedUrl`
           - `isChromelessDocument`
           - `isEmbeddedDocument`
-          - `resetEmbedForTests`
       - Core:
         - Exports (types): `EmbedMode`
         - Exports (values):
@@ -29613,7 +29586,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `BroadcastChannelLike`
           - `CrossTabElectionCallbacks`
-          - `FakeWsServerOptions`
           - `FetchWithRetryOptions`
           - `LockManagerLike`
           - `MakeBroadcastChannel`
@@ -29623,22 +29595,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
           - `SharedWebSocketHooks`
-          - `TabHandle`
-          - `TransportHub`
           - `WebSocketLike`
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
-          - `createTransportHub`
           - `CrossTabElection`
-          - `FakeBroadcastChannel`
-          - `FakeBroadcastChannelBus`
-          - `FakeLockManager`
-          - `FakeWebSocket`
-          - `FakeWsServer`
           - `fetchWithRetry`
-          - `HUB_HEARTBEAT_MS`
-          - `HUB_TIMEOUT_MS`
           - `publishNetDiag`
           - `publishWsStatus`
           - `ReconnectingEventSource`
@@ -30717,7 +30679,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `legacyInstanceKey`
               - `mayAdoptLegacyPayload`
               - `readAppInstance`
-              - `resetAppInstanceForTests`
               - `RETAINED_INSTANCES`
               - `stampAppInstance`
           - Cross-plugin:
@@ -34374,7 +34335,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.RankExecutor`
           - `primitives/rank.withRank`
         - DB schema:
-          - `plugins/tasks/plugins/tasks-core/server/internal/install-derived-schema.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`
@@ -34382,6 +34342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
+          - `plugins/tasks/plugins/tasks-core/server/testing/install-derived-schema.ts`
         - Exports (types):
           - `AdoptOrphanInput`
           - `Attempt`
@@ -34446,7 +34407,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `insertConversation`
           - `insertConversationOnConflictDoNothing`
           - `insertPush`
-          - `installTaskDerivedSchema`
           - `isDescendant`
           - `listActiveConversations`
           - `listAttempts`

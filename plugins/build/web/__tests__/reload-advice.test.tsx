@@ -13,10 +13,8 @@ import {
   NotificationsProvider,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  markDeferredPluginsFailed,
-  resetDeferredLoadStateForTests,
-} from "@plugins/framework/plugins/web-sdk/core";
+import { markDeferredPluginsFailed } from "@plugins/framework/plugins/web-sdk/core";
+import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
   deploymentResource,
   type DeploymentState,

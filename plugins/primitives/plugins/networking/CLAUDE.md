@@ -20,7 +20,7 @@ all-optional injected factories that default to the globals (mirroring
   `teardownWs()` and does *not* self-reconnect (the new leader owns the
   socket; re-election reconnects via `onElected`).
 
-`web/test-support.ts` (barrel-exported, no vitest dependency) provides the
+`web/testing/transport-fakes.ts` (published as `@plugins/primitives/plugins/networking/web/testing`, no vitest dependency) provides the
 deterministic fakes: `FakeWebSocket`/`FakeWsServer` (scripted server frames,
 captured sent frames, restart), `FakeBroadcastChannelBus` (real-microtask
 delivery, self-skip, `freeze()`), `FakeLockManager` (async microtask grant,
@@ -42,7 +42,6 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
   - Exports (types):
     - `BroadcastChannelLike`
     - `CrossTabElectionCallbacks`
-    - `FakeWsServerOptions`
     - `FetchWithRetryOptions`
     - `LockManagerLike`
     - `MakeBroadcastChannel`
@@ -52,22 +51,12 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `ReconnectingWsHandle`
     - `ReconnectingWsOptions`
     - `SharedWebSocketHooks`
-    - `TabHandle`
-    - `TransportHub`
     - `WebSocketLike`
     - `WsStatus`
     - `WsStatusEvent`
   - Exports (values):
-    - `createTransportHub`
     - `CrossTabElection`
-    - `FakeBroadcastChannel`
-    - `FakeBroadcastChannelBus`
-    - `FakeLockManager`
-    - `FakeWebSocket`
-    - `FakeWsServer`
     - `fetchWithRetry`
-    - `HUB_HEARTBEAT_MS`
-    - `HUB_TIMEOUT_MS`
     - `publishNetDiag`
     - `publishWsStatus`
     - `ReconnectingEventSource`

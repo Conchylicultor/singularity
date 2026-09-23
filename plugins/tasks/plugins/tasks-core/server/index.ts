@@ -210,9 +210,6 @@ export { withTaskStatusBatch, runStatusBatchOn } from "./internal/status-batch";
 export { orphanedAttemptSink } from "./internal/sweep-orphaned-attempts";
 export type { OrphanedAttempt } from "./internal/sweep-orphaned-attempts";
 
-// Test support: this plugin's derived views + rollups, installed onto a
-// migrations-only throwaway (`createTestDb`) by a suite outside this plugin.
-export { installTaskDerivedSchema } from "./internal/install-derived-schema";
 export type { DbExecutor } from "./internal/status-batch";
 
 export {

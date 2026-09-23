@@ -115,7 +115,6 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `namespaceArgv`
     - `readNamespaceArgv`
     - `readServingSocket`
-    - `resetRuntimeNamespaceForTest`
     - `runtimeNamespace`
     - `servingSocketPath`
 - Cross-plugin:

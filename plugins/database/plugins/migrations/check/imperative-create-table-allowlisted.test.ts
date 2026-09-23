@@ -14,9 +14,16 @@ const SAMPLE_MAPPING = {
   DERIVED_VIEW_STATE_TABLE_NAME: "derived_view_state",
   LIVE_STATE_SNAPSHOT_TABLE: "live_state_snapshot",
 };
-const SAMPLE_EXPORTS: Record<string, unknown> = { ...SAMPLE_MAPPING, compileCreateView: () => "" };
+const SAMPLE_EXPORTS: Record<string, unknown> = {
+  ...SAMPLE_MAPPING,
+  compileCreateView: () => "",
+};
 
-const m = (path: string, line: number, text: string): CodeMatch => ({ path, line, text });
+const m = (path: string, line: number, text: string): CodeMatch => ({
+  path,
+  line,
+  text,
+});
 
 // Real DDL lines are spelled with the keyword split so this source file never
 // contains the literal token the check greps for (belt-and-suspenders; the file
@@ -26,25 +33,38 @@ const CT = "CREATE " + "TABLE";
 describe("allowlistIdentifiers", () => {
   test("returns the record's keys when every one names a matching barrel export", () => {
     expect(allowlistIdentifiers(SAMPLE_MAPPING, SAMPLE_EXPORTS)).toEqual(
-      new Set(["MIGRATIONS_TABLE_NAME", "DERIVED_VIEW_STATE_TABLE_NAME", "LIVE_STATE_SNAPSHOT_TABLE"]),
+      new Set([
+        "MIGRATIONS_TABLE_NAME",
+        "DERIVED_VIEW_STATE_TABLE_NAME",
+        "LIVE_STATE_SNAPSHOT_TABLE",
+      ]),
     );
   });
 
   test("ignores barrel exports that are not allowlist entries", () => {
     // `compileCreateView` is exported from the same barrel but is not a table
     // constant, so it must never become an allowlist identifier.
-    expect(allowlistIdentifiers(SAMPLE_MAPPING, SAMPLE_EXPORTS).has("compileCreateView")).toBe(false);
+    expect(
+      allowlistIdentifiers(SAMPLE_MAPPING, SAMPLE_EXPORTS).has(
+        "compileCreateView",
+      ),
+    ).toBe(false);
   });
 
   test("throws on a NON-SHORTHAND key (the alias names no export)", () => {
     // `{ ALIAS: MIGRATIONS_TABLE_NAME }` — the value is right, the key is not the
     // identifier a create site spells, so the textual coupling is broken.
     const aliased = { ...SAMPLE_MAPPING, ALIAS: "__singularity_migrations" };
-    expect(() => allowlistIdentifiers(aliased, SAMPLE_EXPORTS)).toThrow(/ALIAS/);
+    expect(() => allowlistIdentifiers(aliased, SAMPLE_EXPORTS)).toThrow(
+      /ALIAS/,
+    );
   });
 
   test("throws when a key names an export holding a DIFFERENT value", () => {
-    const skewed = { ...SAMPLE_EXPORTS, LIVE_STATE_SNAPSHOT_TABLE: "renamed_elsewhere" };
+    const skewed = {
+      ...SAMPLE_EXPORTS,
+      LIVE_STATE_SNAPSHOT_TABLE: "renamed_elsewhere",
+    };
     expect(() => allowlistIdentifiers(SAMPLE_MAPPING, skewed)).toThrow(
       /LIVE_STATE_SNAPSHOT_TABLE/,
     );
@@ -52,7 +72,9 @@ describe("allowlistIdentifiers", () => {
 
   test("throws when a key is absent from the barrel (constant not re-exported)", () => {
     const missing = { ...SAMPLE_MAPPING, NEW_TABLE: "new_table" };
-    expect(() => allowlistIdentifiers(missing, SAMPLE_EXPORTS)).toThrow(/NEW_TABLE/);
+    expect(() => allowlistIdentifiers(missing, SAMPLE_EXPORTS)).toThrow(
+      /NEW_TABLE/,
+    );
   });
 
   test("throws when the record is empty (would enforce a vacuous allowlist)", () => {
@@ -65,32 +87,65 @@ describe("findOffenders", () => {
 
   test("passes a line that names an allowlist constant", () => {
     const matches = [
-      m("plugins/database/plugins/migrations/server/internal/runner.ts", 63, `    ${CT} IF NOT EXISTS \${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (`),
-      m("plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts", 18, `${CT} IF NOT EXISTS \${LIVE_STATE_SNAPSHOT_TABLE} (`),
+      m(
+        "plugins/database/plugins/migrations/server/internal/runner.ts",
+        63,
+        `    ${CT} IF NOT EXISTS \${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (`,
+      ),
+      m(
+        "plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts",
+        18,
+        `${CT} IF NOT EXISTS \${LIVE_STATE_SNAPSHOT_TABLE} (`,
+      ),
     ];
     expect(findOffenders(matches, ids)).toEqual([]);
   });
 
   test("flags a bare CREATE TABLE with a literal name", () => {
-    const matches = [m("plugins/database/plugins/migrations/server/internal/x.ts", 10, `  ${CT} IF NOT EXISTS rogue_tbl (id int)`)];
+    const matches = [
+      m(
+        "plugins/database/plugins/migrations/server/internal/x.ts",
+        10,
+        `  ${CT} IF NOT EXISTS rogue_tbl (id int)`,
+      ),
+    ];
     expect(findOffenders(matches, ids)).toEqual([
-      "plugins/database/plugins/migrations/server/internal/x.ts:10:" + `${CT} IF NOT EXISTS rogue_tbl (id int)`,
+      "plugins/database/plugins/migrations/server/internal/x.ts:10:" +
+        `${CT} IF NOT EXISTS rogue_tbl (id int)`,
     ]);
   });
 
   test("flags a CREATE TABLE using a non-allowlist constant", () => {
-    const matches = [m("plugins/database/plugins/migrations/server/internal/x.ts", 5, `${CT} IF NOT EXISTS \${SOME_OTHER_CONST} (`)];
+    const matches = [
+      m(
+        "plugins/database/plugins/migrations/server/internal/x.ts",
+        5,
+        `${CT} IF NOT EXISTS \${SOME_OTHER_CONST} (`,
+      ),
+    ];
     expect(findOffenders(matches, ids).length).toBe(1);
   });
 
   test("flags CREATE UNLOGGED TABLE without an allowlist constant", () => {
-    const matches = [m("plugins/database/plugins/migrations/server/internal/x.ts", 7, `CREATE UNLOGGED ${"TABLE"} scratch (id int)`)];
+    const matches = [
+      m(
+        "plugins/database/plugins/migrations/server/internal/x.ts",
+        7,
+        `CREATE UNLOGGED ${"TABLE"} scratch (id int)`,
+      ),
+    ];
     expect(findOffenders(matches, ids).length).toBe(1);
   });
 
   test("does not require a full-word identifier match on a substring collision", () => {
     // A constant that merely CONTAINS an allowlist id as a substring must not pass.
-    const matches = [m("plugins/database/plugins/migrations/server/internal/x.ts", 9, `${CT} IF NOT EXISTS \${XMIGRATIONS_TABLE_NAMEX} (`)];
+    const matches = [
+      m(
+        "plugins/database/plugins/migrations/server/internal/x.ts",
+        9,
+        `${CT} IF NOT EXISTS \${XMIGRATIONS_TABLE_NAMEX} (`,
+      ),
+    ];
     expect(findOffenders(matches, ids).length).toBe(1);
   });
 
@@ -106,7 +161,8 @@ describe("findOffenders", () => {
   });
 
   test("exempts a path the caller resolved as a throwaway-test-db file", () => {
-    const path = "plugins/database/plugins/change-feed/server/internal/triggers.test.ts";
+    const path =
+      "plugins/database/plugins/change-feed/server/internal/triggers.test.ts";
     const matches = [m(path, 45, `${CT} widgets (id text PRIMARY KEY)`)];
     expect(findOffenders(matches, ids, new Set([path]))).toEqual([]);
     // …and is still an offender when the caller did NOT exempt it.
@@ -118,7 +174,7 @@ describe("findOffenders", () => {
 // test AND importing the throwaway-database fixture. These pin both halves, so a
 // future loosening of either has to break a test first.
 describe("usesThrowawayTestDb", () => {
-  const FIXTURE_IMPORT = `import { createTestDb } from "@plugins/database/plugins/db-test-fixture/server";`;
+  const FIXTURE_IMPORT = `import { createTestDb } from "@plugins/database/plugins/db-test-fixture/server/testing";`;
   // Bare basenames on purpose: usesThrowawayTestDb keys only off the `.test.ts`
   // SUFFIX, so the dir is irrelevant — and a `plugins/<x>/…` shaped literal here
   // would trip the plugin-refs-resolve check on a plugin that does not exist.

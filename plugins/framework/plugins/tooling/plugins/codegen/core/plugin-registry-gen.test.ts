@@ -367,7 +367,9 @@ function fakeNode(pluginsRoot: string, path: string): PluginNode {
  * A synthetic three-plugin tree over an in-memory file set: `beta/web` imports
  * `alpha`'s web barrel, so the emitted `beta` entry carries
  * `dependsOn: ["alpha"]`. A `web/plugins/` file of `gamma`'s that imports
- * `alpha` is a sub-plugin's, not gamma's, so gamma depends on nothing.
+ * `alpha` is a sub-plugin's, not gamma's, and gamma's test code (a
+ * `*.test.ts`, a `__tests__/` helper, a `testing/` barrel) importing `alpha` is
+ * not what gamma ships — so gamma depends on nothing.
  *
  * The ctx is built by hand rather than through `buildRegistryGenContext` on
  * purpose: what is under test is the renderer's bundle-dependence, and a
@@ -386,6 +388,9 @@ function bundleFixture(): {
       'import x from "@plugins/alpha/web";\nexport default { name: "beta", x };\n',
     [pj("gamma/web/index.ts")]: "export default { name: 'gamma' };\n",
     [pj("gamma/web/plugins/sub/x.ts")]: 'import "@plugins/alpha/web";\n',
+    [pj("gamma/web/x.test.ts")]: 'import "@plugins/alpha/web";\n',
+    [pj("gamma/web/__tests__/helper.ts")]: 'import "@plugins/alpha/web";\n',
+    [pj("gamma/web/testing/index.ts")]: 'export * from "@plugins/alpha/web";\n',
   });
   const nodes = ["alpha", "beta", "gamma"].map((p) => fakeNode(pluginsRoot, p));
   const tree = {

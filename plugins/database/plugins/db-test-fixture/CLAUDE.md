@@ -11,8 +11,8 @@ upserts, ordering predicates) against a real Postgres in isolation, rather than 
 fake `db`. Pass a `prefix` so the ephemeral database stays identifiable in
 Postgres logs (e.g. `createTestDb({ prefix: "cf_test" })`).
 
-Import it from a `.test.ts` via the server barrel:
-`import { createTestDb } from "@plugins/database/plugins/db-test-fixture/server"`.
+Import it from a `.test.ts` (or a check) via the server testing barrel:
+`import { createTestDb } from "@plugins/database/plugins/db-test-fixture/server/testing"`.
 
 **Need drizzle-tracked tables in the throwaway DB?** Do NOT hand-write mirror
 `CREATE TABLE` DDL in the test (it drifts from the real schema, and the
@@ -36,15 +36,6 @@ The `page/editor-collab` suite (`server/internal/doc-store.test.ts`) is the
 ## Plugin reference
 
 - Description: Shared throwaway-database fixture for DB-backed test suites.
-- Server:
-  - Uses:
-    - `database/admin.dropDatabase`
-    - `database/admin.ensureDatabase`
-    - `database/admin.openShortLivedClient`
-  - Exports (types):
-    - `CreateTestDbOptions`
-    - `TestDb`
-  - Exports (values): `createTestDb`
 - Core:
   - Exports (types): `TestDbName`
   - Exports (values):

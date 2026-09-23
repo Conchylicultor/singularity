@@ -3,9 +3,9 @@
  * (NOT `.test.ts`, and NO `vitest`/`bun:test` import) so neither runner ever
  * collects it as a suite and BOTH plugins' suites (networking's own
  * cross-tab-election / shared-websocket tests, and live-state's notifications
- * tests) can import the identical fakes. Barrel-exported from
- * `networking/web/index.ts` because the boundary rules only let live-state reach
- * these across the plugin edge through the runtime barrel.
+ * tests) can import the identical fakes. Published from this plugin's testing
+ * barrel (`@plugins/primitives/plugins/networking/web/testing`), which only test
+ * code may import — never from the public `web` barrel.
  *
  * The design mirrors resource-runtime's server-side `test-support.ts`: the fakes
  * are dumb and *scriptable*, never smart mocks. A test drives them by hand
@@ -26,8 +26,11 @@
  *     hazard H1 pins.
  */
 
-import { SharedWebSocket, type SharedWebSocketHooks } from "./shared-websocket";
-import type { WebSocketLike, LockManagerLike } from "./transport-types";
+import {
+  SharedWebSocket,
+  type SharedWebSocketHooks,
+} from "../shared-websocket";
+import type { WebSocketLike, LockManagerLike } from "../transport-types";
 
 const WS_OPEN = 1;
 const WS_CLOSED = 3;
@@ -225,7 +228,9 @@ export class FakeBroadcastChannelBus {
       // may have closed or frozen between post and delivery).
       void Promise.resolve().then(() => {
         if (ch.closed || this.frozen.has(ch)) return;
-        ch.onmessage?.(new MessageEvent("message", { data: structuredClone(data) }));
+        ch.onmessage?.(
+          new MessageEvent("message", { data: structuredClone(data) }),
+        );
       });
     }
   }
@@ -276,7 +281,12 @@ export class FakeLockManager implements LockManagerLike {
     const steal = options.steal ?? false;
     const state = this.state(name);
     return new Promise<void>((resolve, reject) => {
-      const entry: LockRequest = { cb: callback, resolve, reject, settled: false };
+      const entry: LockRequest = {
+        cb: callback,
+        resolve,
+        reject,
+        settled: false,
+      };
       if (steal) {
         queueMicrotask(() => {
           const cur = state.holder;
@@ -317,7 +327,9 @@ export class FakeLockManager implements LockManagerLike {
   private grant(name: string, entry: LockRequest): void {
     const state = this.state(name);
     if (state.holder) {
-      throw new Error(`FakeLockManager invariant: two holders for lock "${name}"`);
+      throw new Error(
+        `FakeLockManager invariant: two holders for lock "${name}"`,
+      );
     }
     state.holder = entry;
     // Native semantics: the lock is held until the callback's returned promise

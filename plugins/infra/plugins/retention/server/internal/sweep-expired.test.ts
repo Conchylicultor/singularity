@@ -11,7 +11,14 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
@@ -19,7 +26,7 @@ import { Client } from "pg";
 import {
   createTestDb,
   type TestDb,
-} from "@plugins/database/plugins/db-test-fixture/server";
+} from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { retentionCutoff } from "./retention-sql";
 import { sweepExpired } from "./define-retention";
 
@@ -107,7 +114,10 @@ describe("sweepExpired", () => {
       beforeDelete: async (rows) => {
         // Rows must still exist while the callback runs (callback-first order).
         seen.push((await remainingIds()).slice());
-        expect(rows.map((r) => r.id as string).sort()).toEqual(["old-a", "old-b"]);
+        expect(rows.map((r) => r.id as string).sort()).toEqual([
+          "old-a",
+          "old-b",
+        ]);
       },
     });
 

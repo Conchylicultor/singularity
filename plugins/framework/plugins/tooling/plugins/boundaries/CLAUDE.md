@@ -44,6 +44,12 @@ Test code is a second dimension beside the folder, defined once by
 - `@plugins/<p>/<runtime>/testing` is the one legal import ending beyond the
   barrel (plugin-boundaries R4), and the testing barrel is held to R3 like any
   barrel.
+- The other direction: a public barrel publishes no test support
+  (plugin-boundaries R12). Examples of the pattern: `createTestDb`
+  (`database/db-test-fixture/server/testing`), the fake transports
+  (`primitives/networking/web/testing`), `TestSurface`
+  (`primitives/pane/web/testing`), `loadBlockHandles`
+  (`page/editor/core/testing`).
 
 ## One table, inside and across plugins
 

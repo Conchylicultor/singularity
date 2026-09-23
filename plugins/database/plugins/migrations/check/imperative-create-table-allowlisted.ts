@@ -1,5 +1,8 @@
 import { join } from "path";
-import { grepCode, type CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  grepCode,
+  type CodeMatch,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import * as derivedViewsCore from "@plugins/database/plugins/derived-views/core";
 import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -60,7 +63,7 @@ const ALLOWED_PATHS = [
 // this barrel, so it stays fully covered by the rule.
 const TEST_FILE_RE = /\.test\.tsx?$/;
 const TEST_DB_FIXTURE_IMPORT_RE =
-  /from\s+["']@plugins\/database\/plugins\/db-test-fixture\/server["']/;
+  /from\s+["']@plugins\/database\/plugins\/db-test-fixture\/server\/testing["']/;
 
 /**
  * PURE helper (exported for unit testing): does this file create its tables in a
@@ -149,7 +152,10 @@ const check: Check = {
   cacheSignature: () => null,
   async run() {
     const root = await getWorktreeRoot();
-    const allowlistIds = allowlistIdentifiers(IMPERATIVE_PUBLIC_TABLES, derivedViewsCore);
+    const allowlistIds = allowlistIdentifiers(
+      IMPERATIVE_PUBLIC_TABLES,
+      derivedViewsCore,
+    );
 
     // maskStrings:false is load-bearing: the DDL lives INSIDE a template string,
     // so we must keep string interiors visible to see `CREATE TABLE` and the
@@ -188,7 +194,7 @@ const check: Check = {
         `CREATE TABLE line (e.g. \`CREATE TABLE IF NOT EXISTS \${MY_TABLE} (…)\`). To create a tracked, ` +
         `drizzle-managed table instead, define it in the plugin's tables.ts and run ./singularity build. ` +
         `In a TEST that only needs a scratch table, provision a throwaway database with createTestDb ` +
-        `(@plugins/database/plugins/db-test-fixture/server) and create the table on it — that never ` +
+        `(@plugins/database/plugins/db-test-fixture/server/testing) and create the table on it — that never ` +
         `touches the worktree DB, so it is exempt and must NOT be added to the allowlist.`,
     };
   },
