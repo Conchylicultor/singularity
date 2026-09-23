@@ -14737,26 +14737,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
           - `infra/host/contention.ContentionSnapshotSchema`
+          - `infra/runtime-profiler.SPAN_MEASURES`
+          - `infra/runtime-profiler.SpanMeasure`
+          - `infra/runtime-profiler.WaitBreakdown`
           - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `CallerBreakdown`
           - `CallerRef`
+          - `MeasureStat`
           - `SlowOp`
           - `SlowOpMarker`
+          - `SlowOpMeasures`
           - `SlowOpReportPayload`
           - `SlowOpSample`
+          - `VariantBreakdown`
         - Exports (values):
           - `CallerBreakdownSchema`
           - `CallerRefSchema`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
+          - `OTHER_VARIANT`
           - `slowOpConfig`
           - `slowOpFields`
           - `SlowOpMarkerSchema`
+          - `SlowOpMeasuresSchema`
           - `SlowOpReportPayloadSchema`
           - `SlowOpSampleSchema`
           - `SlowOpSchema`
           - `slowOpsResource`
+          - `VARIANT_CAP`
+          - `VariantBreakdownSchema`
       - Cross-plugin:
         - Imported by:
           - `debug/boot-monitor`
@@ -17041,6 +17051,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PhaseId`
           - `ProcMemory`
           - `ProfilerHooks`
+          - `ProfilerMeasureName`
+          - `ProfilerSpanDetail`
           - `RecomputeIntent`
           - `Registration`
           - `ResourceContract`
@@ -18192,6 +18204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `emit`
           - `live-state`
           - `live-state-stale-drop`
+          - `runtime`
     - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, and <ClaudeCliCallDetail> is the one rendering of a recorded call (system, prompt, output or error, meta). One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
         - Contributes:
@@ -19922,7 +19935,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resetRuntimeNamespaceForTest` — Drop the declaration.
     - **`runtime-profiler`**
       - Cross-plugin:
-        - Imported by: `infra/endpoints`
+        - Imported by:
+          - `debug/slow-ops`
+          - `infra/endpoints`
       - Core:
         - Exports (types):
           - `Aggregate`
@@ -19934,7 +19949,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ParentBreakdown`
           - `SlowSpan`
           - `SlowSpanHandler`
+          - `SpanDetail`
           - `SpanKind`
+          - `SpanMeasure`
+          - `SpanMeasures`
           - `SpanRef`
           - `Track`
           - `WaitBand`
@@ -19969,6 +19987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runWithoutProfiling`
           - `seedReadSetIndex`
           - `SPAN_KINDS`
+          - `SPAN_MEASURES`
           - `waitSplit`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:

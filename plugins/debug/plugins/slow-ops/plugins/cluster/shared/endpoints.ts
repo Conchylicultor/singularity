@@ -9,11 +9,21 @@ import { SlowOpSchema } from "@plugins/debug/plugins/slow-ops/core";
 // fork, connection refused) the row is surfaced with `ok: false` + `error`
 // rather than blanking the whole view — loud-but-resilient. The client parses
 // each streamed `worktree` NDJSON frame with this schema.
+//
+// A cluster row omits `variants` / `measures`: the merged view does not use
+// them, and selecting them would turn every fork still on the older schema
+// into an error row until it rebuilds.
+export const ClusterSlowOpSchema = SlowOpSchema.omit({
+  variants: true,
+  measures: true,
+});
+export type ClusterSlowOp = z.infer<typeof ClusterSlowOpSchema>;
+
 export const ClusterWorktreeSchema = z.object({
   name: z.string(),
   ok: z.boolean(),
   error: z.string().optional(),
-  ops: z.array(SlowOpSchema),
+  ops: z.array(ClusterSlowOpSchema),
 });
 export type ClusterWorktree = z.infer<typeof ClusterWorktreeSchema>;
 

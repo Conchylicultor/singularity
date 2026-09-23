@@ -22,7 +22,13 @@ import {
   slowOpsResource,
   type SlowOp,
   type CallerBreakdown,
+  type SlowOpMeasures,
+  type VariantBreakdown,
 } from "@plugins/debug/plugins/slow-ops/core";
+import {
+  SPAN_MEASURES,
+  type SpanMeasure,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 
 // Newest captured sample first; deep-link its trace when the engine admitted one.
 function newestTraceId(op: SlowOp): string | undefined {
@@ -71,6 +77,65 @@ function WaitBreakdownLines({
           ⏳ {layer} {Math.round(ms)} ms
         </span>
       ))}
+    </Stack>
+  );
+}
+
+// Which instances of the operation were slow (a loader's params): ◇ {"id":"…"}
+// ×3 (4200 ms). Slowest total first; the folded tail reads as "(other)".
+function VariantBreakdownLines({
+  variants,
+}: {
+  variants: VariantBreakdown[];
+}): ReactElement {
+  const sorted = [...variants].sort((a, b) => b.totalMs - a.totalMs);
+  return (
+    <Stack gap="2xs" className="pl-md">
+      {sorted.map((v) => (
+        <span
+          key={v.variant}
+          className="truncate font-mono text-3xs text-muted-foreground"
+          title={v.variant}
+        >
+          ◇ {v.variant} ×{v.count} ({Math.round(v.totalMs)} ms)
+        </span>
+      ))}
+    </Stack>
+  );
+}
+
+// How each measure reads on screen. Exhaustive over SpanMeasure, so a new
+// measure is a tsc error here until it has a label.
+const MEASURE_LABEL: Record<SpanMeasure, (v: number) => string> = {
+  subscribers: (v) => `${v} subscribers`,
+  frameChars: (v) =>
+    v >= 1024 ? `${(v / 1024).toFixed(1)}k chars` : `${v} chars`,
+  ids: (v) => `${v} ids`,
+  sinceChangeMs: (v) => `${Math.round(v)} ms since change`,
+};
+
+// The numbers the slow spans carried: # max 42 subscribers · last 40.
+function MeasureLines({
+  measures,
+}: {
+  measures: SlowOpMeasures;
+}): ReactElement {
+  return (
+    <Stack gap="2xs" className="pl-md">
+      {SPAN_MEASURES.map((m) => {
+        const stat = measures[m];
+        if (!stat) return null;
+        const text = `max ${MEASURE_LABEL[m](stat.max)} · last ${MEASURE_LABEL[m](stat.last)}`;
+        return (
+          <span
+            key={m}
+            className="truncate font-mono text-3xs text-muted-foreground"
+            title={text}
+          >
+            # {text}
+          </span>
+        );
+      })}
     </Stack>
   );
 }
@@ -128,6 +193,12 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
             )}
             {Object.keys(r.waits).length > 0 && (
               <WaitBreakdownLines waits={r.waits} />
+            )}
+            {r.variants.length > 0 && (
+              <VariantBreakdownLines variants={r.variants} />
+            )}
+            {Object.keys(r.measures).length > 0 && (
+              <MeasureLines measures={r.measures} />
             )}
             {newestTraceId(r) && (
               <Stack direction="row" gap="2xs" align="start">

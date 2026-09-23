@@ -264,6 +264,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `PhaseId`
     - `ProcMemory`
     - `ProfilerHooks`
+    - `ProfilerMeasureName`
+    - `ProfilerSpanDetail`
     - `RecomputeIntent`
     - `Registration`
     - `ResourceContract`

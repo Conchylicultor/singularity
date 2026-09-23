@@ -7,6 +7,7 @@ import {
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
 import { routeChange } from "./route-change";
+import { routeWithSpan } from "./route-span";
 import { changeFeedLog as log } from "./log-sink";
 
 // How often the liveness timer re-checks the socket. This is NOT change-polling
@@ -114,7 +115,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
           );
           return;
         }
-        opts.route(change);
+        routeWithSpan(change, opts.route);
       });
 
       await c.connect();
@@ -183,7 +184,10 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     for (const table of opts.coveredTables()) {
       // A reconnect sweep is a synthesized FULL invalidation — no source
       // transaction corresponds, so no ack attribution (`xid: null`).
-      opts.route({ table, op: "U", ids: null, xid: null, changedAt: null });
+      routeWithSpan(
+        { table, op: "U", ids: null, xid: null, changedAt: null },
+        opts.route,
+      );
     }
   }
 

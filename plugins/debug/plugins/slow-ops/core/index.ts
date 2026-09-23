@@ -5,6 +5,10 @@ export {
   CallerBreakdownSchema,
   CallerRefSchema,
   SlowOpSampleSchema,
+  VariantBreakdownSchema,
+  SlowOpMeasuresSchema,
+  VARIANT_CAP,
+  OTHER_VARIANT,
   SlowOpMarkerSchema,
   loadSeverity,
 } from "./resources";
@@ -14,6 +18,9 @@ export type {
   CallerRef,
   SlowOpSample,
   SlowOpMarker,
+  VariantBreakdown,
+  MeasureStat,
+  SlowOpMeasures,
 } from "./resources";
 export { slowOpConfig } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS } from "./limits";

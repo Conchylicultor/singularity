@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
-import type { WaitBreakdown } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  SPAN_MEASURES,
+  type SpanMeasure,
+  type WaitBreakdown,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -36,6 +40,35 @@ export type CallerRef = z.infer<typeof CallerRefSchema>;
 // per layer on each occurrence. `{}` when the op never waited on a gate.
 export const WaitBreakdownSchema = z.record(z.string(), z.number());
 
+// Per-variant breakdown: WHICH instance of the operation was slow (a loader's
+// canonical params), how often and how slow — the per-row answer to "which
+// param set", while the row itself stays one per operation. Bounded: the
+// merge keeps the top `VARIANT_CAP` by totalMs and folds the rest into one
+// `OTHER_VARIANT` entry.
+export const VariantBreakdownSchema = z.object({
+  variant: z.string(),
+  count: z.number().int(),
+  totalMs: z.number(),
+  maxMs: z.number(),
+});
+export type VariantBreakdown = z.infer<typeof VariantBreakdownSchema>;
+export const VARIANT_CAP = 10;
+export const OTHER_VARIANT = "(other)";
+
+// The largest and the latest value of each span measure (fan-out, frame size,
+// scoped ids, time since the change) this operation carried when it was slow.
+export const MeasureStatSchema = z.object({
+  max: z.number(),
+  last: z.number(),
+});
+export type MeasureStat = z.infer<typeof MeasureStatSchema>;
+export const SlowOpMeasuresSchema = z.object(
+  Object.fromEntries(
+    SPAN_MEASURES.map((m) => [m, MeasureStatSchema.optional()]),
+  ) as Record<SpanMeasure, z.ZodOptional<typeof MeasureStatSchema>>,
+);
+export type SlowOpMeasures = z.infer<typeof SlowOpMeasuresSchema>;
+
 // One captured contention sample: the box state at the instant a span tripped
 // its threshold, with the span's own duration. Stored as a capped ring on the
 // aggregate row (newest first, last 10) so a storm's shape is visible per op
@@ -47,6 +80,15 @@ export const SlowOpSampleSchema = z.object({
   durationMs: z.number(),
   snapshot: ContentionSnapshotSchema,
   traceId: z.string().optional(),
+  // The tripping span's own variant and measures, when it carried any.
+  variant: z.string().optional(),
+  measures: z
+    .object(
+      Object.fromEntries(
+        SPAN_MEASURES.map((m) => [m, z.number().optional()]),
+      ) as Record<SpanMeasure, z.ZodOptional<z.ZodNumber>>,
+    )
+    .optional(),
 });
 export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 
@@ -68,6 +110,14 @@ export const slowOpFields = {
     default: [],
   }),
   waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
+  variants: jsonField<VariantBreakdown[]>({
+    schema: z.array(VariantBreakdownSchema),
+    default: [],
+  }),
+  measures: jsonField<SlowOpMeasures>({
+    schema: SlowOpMeasuresSchema,
+    default: {},
+  }),
   recentSamples: jsonField<SlowOpSample[]>({
     schema: z.array(SlowOpSampleSchema),
     default: [],

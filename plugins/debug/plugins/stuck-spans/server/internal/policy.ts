@@ -32,6 +32,9 @@ export const STUCK_SPAN_POLICY: StuckSpanPolicyTable = {
   push: { watch: true, thresholdMs: 90_000 },
   flush: { watch: true, thresholdMs: 90_000 },
   cascade: { watch: true, thresholdMs: 90_000 },
+  // A window's ids query under a `push` origin — the same live-state read path
+  // as `loader`, held to the same bar.
+  membership: { watch: true, thresholdMs: 90_000 },
   job: {
     watch: false,
     why:
@@ -48,6 +51,13 @@ export const STUCK_SPAN_POLICY: StuckSpanPolicyTable = {
       "watchers, reconcilers), so an old bg span says nothing on its own. " +
       "Watched spans running INSIDE a bg root are still watched, with the bg " +
       "root named in their ancestor chain.",
+  },
+  route: {
+    watch: false,
+    why:
+      "A leaf: change-feed routing is synchronous and recorded after it " +
+      "finishes, so it is never in the open set. A stuck route is an " +
+      "event-loop stall, which the stall monitor reports.",
   },
   db: {
     watch: false,

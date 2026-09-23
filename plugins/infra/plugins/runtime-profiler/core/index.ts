@@ -27,12 +27,16 @@ export {
   registerGateGauge,
   readGateGauges,
   SPAN_KINDS,
+  SPAN_MEASURES,
   __contribute,
   __pushBand,
 } from "./recorder";
 export type {
   OriginClass,
   SpanKind,
+  SpanMeasure,
+  SpanMeasures,
+  SpanDetail,
   SpanRef,
   SlowSpan,
   SlowSpanHandler,

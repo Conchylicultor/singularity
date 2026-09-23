@@ -14,19 +14,30 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
 import { getRuntimeProfile, resetRuntimeProfile } from "../../shared/endpoints";
+import {
+  SPAN_KINDS,
+  type SpanKind,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 
 const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
-type RuntimeKind =
-  | "http"
-  | "db"
-  | "loader"
-  | "sub"
-  | "push"
-  | "flush"
-  | "job"
-  | "cascade"
-  | "bg";
+type RuntimeKind = SpanKind;
+
+// The Kind column's label per span kind. Exhaustive over SpanKind, so a new kind
+// is a tsc error here until it has a label (it no longer drops out silently).
+const KIND_LABEL: Record<SpanKind, string> = {
+  http: "HTTP",
+  db: "DB",
+  loader: "Loader",
+  sub: "Sub",
+  push: "Push",
+  flush: "Flush",
+  job: "Job",
+  cascade: "Cascade",
+  bg: "BG",
+  route: "Route",
+  membership: "Membership",
+};
 
 interface ParentRow {
   kind: RuntimeKind;
@@ -168,16 +179,7 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Kind",
     type: "enum",
     value: (r) => r.kind,
-    options: [
-      { value: "http", label: "HTTP" },
-      { value: "db", label: "DB" },
-      { value: "loader", label: "Loader" },
-      { value: "sub", label: "Sub" },
-      { value: "push", label: "Push" },
-      { value: "flush", label: "Flush" },
-      { value: "job", label: "Job" },
-      { value: "cascade", label: "Cascade" },
-    ],
+    options: SPAN_KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] })),
     width: "5rem",
   },
   {
@@ -281,17 +283,7 @@ export function RuntimeSection(): ReactElement | null {
     if (!data) return [];
     const tag = (kind: RuntimeKind, aggs: AggRow[]): RuntimeRow[] =>
       aggs.map((r) => ({ ...r, kind }));
-    return [
-      ...tag("http", toAggRows(data.aggregates.http)),
-      ...tag("db", toAggRows(data.aggregates.db)),
-      ...tag("loader", toAggRows(data.aggregates.loader)),
-      ...tag("sub", toAggRows(data.aggregates.sub)),
-      ...tag("push", toAggRows(data.aggregates.push)),
-      ...tag("flush", toAggRows(data.aggregates.flush)),
-      ...tag("job", toAggRows(data.aggregates.job)),
-      ...tag("cascade", toAggRows(data.aggregates.cascade)),
-      ...tag("bg", toAggRows(data.aggregates.bg)),
-    ];
+    return SPAN_KINDS.flatMap((k) => tag(k, toAggRows(data.aggregates[k])));
   }, [data]);
 
   if (!data) return null;

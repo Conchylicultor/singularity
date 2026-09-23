@@ -96,6 +96,12 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
     // watcher callbacks). Background-class like the above, so it shares the
     // loader bar (no separate config knob).
     case "bg":
+    // `route` (change-feed routing of one change) and `membership` (a window
+    // resource's ids query) are live-state plumbing around the loader — they
+    // share the loader bar rather than adding a knob, which would also lower
+    // the perf floor for every span.
+    case "route":
+    case "membership":
       return t.loaderMs;
   }
 }

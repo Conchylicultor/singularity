@@ -64,6 +64,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
           waitMs: span.waitMs,
           childMs: span.childMs,
           selfMs: span.selfMs,
+          ...(span.detail && { spanDetail: span.detail }),
         },
       });
       // 2. Aggregate + report — the existing funnel, now stamped with the link.
@@ -81,6 +82,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         source: "server-slow-op",
         caller: span.parent,
         waits: span.waits,
+        detail: span.detail,
         traceId: trace?.id,
       });
     },

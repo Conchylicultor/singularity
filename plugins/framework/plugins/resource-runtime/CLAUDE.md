@@ -484,6 +484,24 @@ which requires matching params. A params-less legacy frame matches no live sub a
 is safely dropped. On a match the client runs `applyInvalidate(key, params)` — see
 `live-state/CLAUDE.md`.
 
+## Profiling seams (all optional; central binds none)
+
+The server binds each of these to a profiler span in `server-core/core/resources.ts`:
+
+- `wrapLoad(key, info, fn)` wraps every loader run (`timedLoad`). `info.variant` is
+  the canonical params (`paramsKey`), absent for `{}`. `info.scopedIds` is the id count
+  of a scoped refill, absent on a FULL load.
+- `wrapOrigin(kind, key, fn)` wraps the `sub` / `push` / `cascade` origins.
+  `wrapFlush(fn)` wraps the flush cycle.
+- `wrapHttp(key, fn)` wraps one `GET /api/resources/:key` request, starting right after
+  the key resolves. The revalidate signature and the 304 are included, so a conditional
+  GET is measured even when no loader runs.
+- `wrapMembership(key, fn)` wraps a window's `windowIdsOf` (`runWindowIds`, the one call
+  site). It keeps the ids query apart from the value query.
+- `onDelivered(key, latencyMs, subscribers, frameChars)` fires per delivered notify.
+  `frameChars` is the length of the one serialized frame: `broadcastJson` returns it,
+  and `sendUpdate` / `broadcastAckOnly` pass it on.
+
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 
 The runtime's hardest correctness invariants are pinned by co-located `bun:test`

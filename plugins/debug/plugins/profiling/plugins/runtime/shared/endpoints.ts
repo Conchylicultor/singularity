@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { SPAN_KINDS } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  SPAN_KINDS,
+  SPAN_MEASURES,
+  type SpanKind,
+  type SpanMeasure,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 
 // Mirrors the recorder's getRuntimeProfile() return shape
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
@@ -28,6 +33,19 @@ const parentBreakdownSchema = z.object({
 // to every open ancestor entry. Absent when the entry never waited.
 const waitBreakdownSchema = z.record(z.string(), z.number());
 
+// Numbers a span carries beside its duration (fan-out, frame size, …), keyed by
+// the recorder's closed SPAN_MEASURES set.
+const spanMeasuresSchema = z.object(
+  Object.fromEntries(
+    SPAN_MEASURES.map((m) => [m, z.number().optional()]),
+  ) as Record<SpanMeasure, z.ZodOptional<z.ZodNumber>>,
+);
+
+const spanDetailSchema = z.object({
+  variant: z.string().optional(),
+  measures: spanMeasuresSchema.optional(),
+});
+
 const aggregateSchema = z.object({
   label: z.string(),
   count: z.number(),
@@ -47,6 +65,7 @@ const aggregateSchema = z.object({
   maxAgeMs: z.number(),
   byParent: z.array(parentBreakdownSchema),
   waits: waitBreakdownSchema.optional(),
+  measuresMax: spanMeasuresSchema.optional(),
 });
 
 const slowSpanSchema = z.object({
@@ -65,20 +84,18 @@ const slowSpanSchema = z.object({
   waitMs: z.number(),
   childMs: z.number(),
   selfMs: z.number(),
+  detail: spanDetailSchema.optional(),
 });
 
+// One array per span kind, derived from SPAN_KINDS so a new kind cannot drift
+// out of the response schema.
 const byKind = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({
-    http: z.array(item),
-    db: z.array(item),
-    loader: z.array(item),
-    sub: z.array(item),
-    push: z.array(item),
-    flush: z.array(item),
-    job: z.array(item),
-    cascade: z.array(item),
-    bg: z.array(item),
-  });
+  z.object(
+    Object.fromEntries(SPAN_KINDS.map((k) => [k, z.array(item)])) as Record<
+      SpanKind,
+      z.ZodArray<T>
+    >,
+  );
 
 export const runtimeProfileSchema = z.object({
   aggregates: byKind(aggregateSchema),

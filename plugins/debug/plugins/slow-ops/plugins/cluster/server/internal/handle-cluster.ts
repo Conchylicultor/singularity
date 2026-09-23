@@ -2,8 +2,10 @@ import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
-import { SlowOpSchema } from "@plugins/debug/plugins/slow-ops/core";
-import { type ClusterWorktree } from "../../shared/endpoints";
+import {
+  ClusterSlowOpSchema,
+  type ClusterWorktree,
+} from "../../shared/endpoints";
 import { listLiveForkDatabases } from "./live-fork-databases";
 
 // Bound the fan-out so a 16-worktree cluster never opens 16 pools at once. Each
@@ -11,7 +13,8 @@ import { listLiveForkDatabases } from "./live-fork-databases";
 // (already-contended) cluster while still parallelising the merge.
 const FANOUT_CONCURRENCY = 6;
 
-// Aliased to the camelCase field names `SlowOpSchema` declares, so the schema
+// Aliased to the camelCase field names `ClusterSlowOpSchema` declares (the slow-op
+// wire schema minus the two columns the cluster view does not read), so the schema
 // that defines a slow op on the wire is also the one that parses it off the
 // wire here — ONE definition, and the read is checked exactly as the live
 // resource's is. The types line up with no coercion: `count` is int4, the `_ms`
@@ -33,7 +36,7 @@ async function fetchWorktree(name: string): Promise<ClusterWorktree> {
   try {
     const ops = await queryRows(pool, {
       sql: SELECT_SLOW_OPS,
-      row: SlowOpSchema,
+      row: ClusterSlowOpSchema,
     });
     return { name, ok: true, ops };
   } catch (err) {

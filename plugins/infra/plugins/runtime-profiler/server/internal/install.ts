@@ -5,7 +5,11 @@
 // the runtime before Bun.serve starts handling requests.
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { setProfilerHooks } from "@plugins/framework/plugins/server-core/core";
+import {
+  setProfilerHooks,
+  type ProfilerMeasureName,
+  type ProfilerSpanDetail,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
@@ -20,6 +24,7 @@ import {
   registerGateGauge,
   type EntryContext,
   type SpanKind,
+  type SpanMeasure,
   type GateGauge,
 } from "../../core";
 
@@ -64,12 +69,29 @@ installBackgroundLaneRuntime({
 // plugin — inverting what would otherwise be a server-core ⇄ runtime-profiler
 // cross-plugin cycle. The thin wrappers carry the profiler-internal types
 // (SpanKind, GateGauge) that the widened seam deliberately omits.
+//
+// The seam spells the measure names itself (`ProfilerMeasureName`); these two
+// assignments fail to compile the moment it and SPAN_MEASURES disagree in
+// either direction, so the detail passes through without a cast.
+const _seamCoversMeasures: ProfilerMeasureName = null as unknown as SpanMeasure;
+const _measuresCoverSeam: SpanMeasure = null as unknown as ProfilerMeasureName;
+void _seamCoversMeasures;
+void _measuresCoverSeam;
+
 setProfilerHooks({
-  recordEntrySpan: <T>(kind: string, label: string, fn: () => T | Promise<T>): Promise<T> =>
-    recordEntrySpan(kind as SpanKind, label, fn),
+  recordEntrySpan: <T>(
+    kind: string,
+    label: string,
+    fn: () => T | Promise<T>,
+    detail?: ProfilerSpanDetail,
+  ): Promise<T> => recordEntrySpan(kind as SpanKind, label, fn, detail),
   runTracked,
-  recordSpan: (kind: string, label: string, durationMs: number): void =>
-    recordSpan(kind as SpanKind, label, durationMs),
+  recordSpan: (
+    kind: string,
+    label: string,
+    durationMs: number,
+    detail?: ProfilerSpanDetail,
+  ): void => recordSpan(kind as SpanKind, label, durationMs, detail),
   chargeWait,
   getReadSetIndex,
   getLastLoaderReadSet,

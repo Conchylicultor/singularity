@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  SlowOp,
-  SlowOpSample,
-} from "@plugins/debug/plugins/slow-ops/core";
+import type { SlowOpSample } from "@plugins/debug/plugins/slow-ops/core";
 import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/core";
-import type { ClusterWorktree } from "../../shared/endpoints";
+import type {
+  ClusterSlowOp as SlowOp,
+  ClusterWorktree,
+} from "../../shared/endpoints";
 import {
   buildClusterAggregate,
   buildContentionTimeline,

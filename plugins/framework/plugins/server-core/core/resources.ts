@@ -201,6 +201,7 @@ export type ResourceDeliveryObserver = (
   key: string,
   latencyMs: number,
   subscribers: number,
+  frameChars: number,
 ) => void;
 const deliveryObservers = new Set<ResourceDeliveryObserver>();
 export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
@@ -216,7 +217,23 @@ export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
 // in-memory loader that issues no query therefore never waits. See
 // research/2026-06-19-global-live-state-unified-read-path-v2.md (Task 2).
 const runtime = createResourceRuntime({
-  wrapLoad: (key, fn) => recordEntrySpan("loader", key, fn),
+  // The label stays the resource key (one slow-op row per resource, and the key
+  // the loader→tables read-set index is built on); WHICH params ran rides as the
+  // span's variant, and a scoped refill carries how many ids it read.
+  wrapLoad: (key, info, fn) =>
+    recordEntrySpan("loader", key, fn, {
+      variant: info.variant,
+      measures:
+        info.scopedIds !== undefined ? { ids: info.scopedIds } : undefined,
+    }),
+  // The live-state HTTP fallback as an `http` entry, 304s included. It is a raw
+  // route (not `implement()`), so nothing else opens one. The label names the
+  // resolved key — bounded by the registry, since an unknown key 404s first.
+  wrapHttp: (key, fn) =>
+    recordEntrySpan("http", `GET /api/resources/${key}`, fn),
+  // A window resource's ids-only membership query, as its own kind so it is told
+  // apart from the value query and stays out of the loader read-set index.
+  wrapMembership: (key, fn) => recordEntrySpan("membership", key, fn),
   // Origin entry for sub-ack / push-cascade loads: gives the nested loader span a
   // non-null `parent` naming the request class that triggered it, so head-of-line
   // blocking is attributable. See
@@ -228,10 +245,14 @@ const runtime = createResourceRuntime({
   wrapFlush: (fn) => recordEntrySpan("flush", "flushNotifies", fn),
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
-  onDelivered: (key, latencyMs, subscribers) => {
-    recordSpan("push", `deliver:${key}`, latencyMs);
+  // Fan-out and frame size ride as measures, so a delivery slowed by a wide
+  // fan-out or a huge frame says so on its own slow-op row.
+  onDelivered: (key, latencyMs, subscribers, frameChars) => {
+    recordSpan("push", `deliver:${key}`, latencyMs, {
+      measures: { subscribers, frameChars },
+    });
     for (const observer of deliveryObservers) {
-      observer(key, latencyMs, subscribers);
+      observer(key, latencyMs, subscribers, frameChars);
     }
   },
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors

@@ -5,6 +5,7 @@ import { db } from "@plugins/database/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
+  type SpanDetail,
   type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
@@ -24,6 +25,7 @@ import type {
   SlowOpMarker,
   SlowOpSample,
 } from "../../core";
+import { mergeMeasures, mergeVariant } from "./merge-detail";
 import { _slowOps } from "./tables";
 
 // The only report sources a slow-op originates from — narrowed from the
@@ -62,6 +64,10 @@ export interface RecordSlowOpInput {
   // Merged per layer into the row's durable `waits` so the wait-vs-work split
   // survives restart. Only entry spans (loader/http/sub/push) carry it.
   waits?: WaitBreakdown;
+  // The tripping span's variant (which instance ran — a loader's params) and
+  // measures (fan-out, frame size, …). Merged into the row's `variants`
+  // breakdown and `measures` stats, and stamped on the newest sample.
+  detail?: SpanDetail;
   // Additive cold-start attribution (client `element` signal only). When the
   // notifications transport was not ready at resource mount, this duration is
   // transport time-to-first-data, not resource compute. Threaded into the report
@@ -133,8 +139,17 @@ export function mergeSample(
   durationMs: number,
   traceId: string | undefined,
   occurredAt: Date,
+  detail?: SpanDetail,
 ): SlowOpSample[] {
-  return [{ atTime: occurredAt, durationMs, snapshot, traceId }, ...samples]
+  const sample: SlowOpSample = {
+    atTime: occurredAt,
+    durationMs,
+    snapshot,
+    traceId,
+  };
+  if (detail?.variant !== undefined) sample.variant = detail.variant;
+  if (detail?.measures) sample.measures = detail.measures;
+  return [sample, ...samples]
     .sort(
       // atTime is a Date in fresh entries but an ISO string once round-tripped
       // through the jsonb column — normalize before comparing.
@@ -365,6 +380,7 @@ export async function upsertSlowOpIn(
     caller,
     waits,
     traceId,
+    detail,
   } = input;
   const worktree = runtimeNamespace();
 
@@ -421,9 +437,17 @@ export async function upsertSlowOpIn(
     durationMs,
     traceId,
     occurredAt,
+    detail,
   );
+  const variants =
+    detail?.variant !== undefined
+      ? mergeVariant(row.variants, detail.variant, durationMs)
+      : row.variants;
+  const measures = detail?.measures
+    ? mergeMeasures(row.measures, detail.measures)
+    : row.measures;
   await tx
     .update(_slowOps)
-    .set({ callers, waits: nextWaits, recentSamples })
+    .set({ callers, waits: nextWaits, recentSamples, variants, measures })
     .where(eq(_slowOps.id, row.id));
 }

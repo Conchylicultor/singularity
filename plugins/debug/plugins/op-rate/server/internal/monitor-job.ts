@@ -258,6 +258,10 @@ function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
     // `bg` (a runTracked root — detached background work) shares the loader rate
     // bar for the same reason: background-class, no separate knob.
     case "bg":
+    // `route` (change-feed routing) and `membership` (a window's ids query) are
+    // live-state plumbing around the loader — same bar, no separate knob.
+    case "route":
+    case "membership":
       return cfg.loaderPerWindow;
   }
 }
@@ -287,6 +291,9 @@ function kindMsBudget(kind: SpanKind, cfg: Thresholds): number {
     // `bg` (detached background work) shares the loader budget too — see
     // kindThreshold above.
     case "bg":
+    // `route` / `membership`: see kindThreshold above.
+    case "route":
+    case "membership":
       return cfg.loaderMsPerWindow;
   }
 }

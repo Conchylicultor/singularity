@@ -33,6 +33,7 @@ import {
   type EntryContext,
   type FlightSpan,
   type FlightWindow,
+  type SlowSpan,
   type SpanKind,
   type Track,
   type WaitBand,
@@ -93,7 +94,9 @@ beforeEach(() => {
 });
 
 function agg(kind: SpanKind, label: string): Aggregate {
-  const found = getRuntimeProfile().aggregates[kind].find((a) => a.label === label);
+  const found = getRuntimeProfile().aggregates[kind].find(
+    (a) => a.label === label,
+  );
   if (!found) throw new Error(`no ${kind} aggregate for ${label}`);
   return found;
 }
@@ -202,7 +205,9 @@ describe("decomposition coherence", () => {
     expect(composite.totalMs).toBe(60);
     expect(composite.childTotalMs).toBe(50); // push exec [100, 150]
     expect(composite.selfTotalMs).toBe(10);
-    expect(composite.waitTotalMs + composite.selfTotalMs).toBeLessThanOrEqual(composite.totalMs);
+    expect(composite.waitTotalMs + composite.selfTotalMs).toBeLessThanOrEqual(
+      composite.totalMs,
+    );
     expect(composite.selfTotalMs).toBeGreaterThanOrEqual(0);
   });
 });
@@ -556,7 +561,9 @@ describe("per-instance span identity", () => {
     // Same {kind,label} — indistinguishable before ids existed. Now each names
     // the exact push instance it ran under.
     expect(loaders).toHaveLength(2);
-    expect(new Set(loaders.map((s) => s.parentId))).toEqual(new Set([p1.id, p2.id]));
+    expect(new Set(loaders.map((s) => s.parentId))).toEqual(
+      new Set([p1.id, p2.id]),
+    );
   });
 });
 
@@ -652,10 +659,13 @@ describe("flight recorder — ring write precedes the notify loop", () => {
       sub.dispose();
     }
 
-    if (tripId === undefined) throw new Error("onSlowSpan never fired for the trip span");
+    if (tripId === undefined)
+      throw new Error("onSlowSpan never fired for the trip span");
     const trip = captured!.completed.find((s) => s.id === tripId);
     expect(trip?.label).toBe("trip");
-    expect(captured!.completed.find((s) => s.label === "child")!.parentId).toBe(tripId);
+    expect(captured!.completed.find((s) => s.label === "child")!.parentId).toBe(
+      tripId,
+    );
   });
 });
 
@@ -768,7 +778,9 @@ describe("flight recorder — caps", () => {
         await gate.promise;
       }),
     );
-    expect(captureFlightWindow({ windowStartMs: 0, maxOpen: 2 }).open).toHaveLength(2);
+    expect(
+      captureFlightWindow({ windowStartMs: 0, maxOpen: 2 }).open,
+    ).toHaveLength(2);
     gate.resolve();
     await Promise.all(runs);
   });
@@ -777,10 +789,14 @@ describe("flight recorder — caps", () => {
 describe("flight recorder — gate gauges", () => {
   test("a registered gauge is read; duplicate layer registration throws", () => {
     registerGateGauge("test-gate", () => ({ active: 2, queued: 5, max: 4 }));
-    expect(readGateGauges()["test-gate"]).toEqual({ active: 2, queued: 5, max: 4 });
-    expect(() => registerGateGauge("test-gate", () => ({ active: 0, queued: 0, max: 0 }))).toThrow(
-      "duplicate layer",
-    );
+    expect(readGateGauges()["test-gate"]).toEqual({
+      active: 2,
+      queued: 5,
+      max: 4,
+    });
+    expect(() =>
+      registerGateGauge("test-gate", () => ({ active: 0, queued: 0, max: 0 })),
+    ).toThrow("duplicate layer");
   });
 
   test("resetRuntimeProfile clears the flight ring but keeps registered gauges", async () => {
@@ -792,7 +808,11 @@ describe("flight recorder — gate gauges", () => {
 
     resetRuntimeProfile();
     expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
-    expect(readGateGauges()["reset-gate"]).toEqual({ active: 1, queued: 0, max: 1 });
+    expect(readGateGauges()["reset-gate"]).toEqual({
+      active: 1,
+      queued: 0,
+      max: 1,
+    });
   });
 });
 
@@ -826,7 +846,10 @@ describe("read-set index — per-run capture (getLastLoaderReadSet)", () => {
     await runLoader("attempts", ["attempts_v"]);
 
     // The append-only index still carries every table ever read (over-approximation).
-    expect(getReadSetIndex().attempts).toEqual(["attempts_v", "conversations_v"]);
+    expect(getReadSetIndex().attempts).toEqual([
+      "attempts_v",
+      "conversations_v",
+    ]);
     // The per-run capture is ONLY the most recent run — the self-healing set.
     expect(getLastLoaderReadSet("attempts")).toEqual(["attempts_v"]);
   });
@@ -906,7 +929,9 @@ describe("positioned wait bands", () => {
   // Bands are observable only on FlightSpans (the ring / open capture), never on
   // the label-keyed aggregates — same as the per-instance ids.
   function completed(label: string): FlightSpan {
-    const found = captureFlightWindow({ windowStartMs: 0 }).completed.find((s) => s.label === label);
+    const found = captureFlightWindow({ windowStartMs: 0 }).completed.find(
+      (s) => s.label === label,
+    );
     if (!found) throw new Error(`no completed span for ${label}`);
     return found;
   }
@@ -1009,7 +1034,9 @@ describe("positioned wait bands", () => {
       fakeNow = 30;
       chargeWait("db-acquire", 30);
     });
-    expect(completed("l").waitBands).toEqual([{ layer: "db-acquire", t0: 0, t1: 30 }]);
+    expect(completed("l").waitBands).toEqual([
+      { layer: "db-acquire", t0: 0, t1: 30 },
+    ]);
     resetRuntimeProfile();
     expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
   });
@@ -1024,7 +1051,10 @@ describe("monitoring self-meter", () => {
     totalMs: number;
   } {
     const after = getSelfMeter();
-    return { count: after.count - before.count, totalMs: after.totalMs - before.totalMs };
+    return {
+      count: after.count - before.count,
+      totalMs: after.totalMs - before.totalMs,
+    };
   }
 
   test("a sync scope adds one op and its wall time", () => {
@@ -1129,9 +1159,58 @@ describe("monitoring self-meter", () => {
       });
     });
     const profile = getRuntimeProfile();
-    expect(profile.aggregates.db.find((a) => a.label === "suppressed-query")).toBeUndefined();
+    expect(
+      profile.aggregates.db.find((a) => a.label === "suppressed-query"),
+    ).toBeUndefined();
     expect(
       profile.aggregates.loader.find((a) => a.label === "suppressed-loader"),
     ).toBeUndefined();
+  });
+});
+
+describe("span detail", () => {
+  test("variant + measures reach the slowest ring and onSlowSpan; measuresMax keeps each measure's max", async () => {
+    const seen: SlowSpan[] = [];
+    const sub = onSlowSpan((s) => seen.push(s), { thresholdMs: 0 });
+    try {
+      recordSpan("push", "deliver:tasks", 5, {
+        measures: { subscribers: 3, frameChars: 900 },
+      });
+      recordSpan("push", "deliver:tasks", 7, {
+        measures: { subscribers: 8, frameChars: 100 },
+      });
+      await recordEntrySpan(
+        "loader",
+        "task",
+        () => {
+          fakeNow = 4;
+        },
+        { variant: '{"id":"42"}', measures: { ids: 2 } },
+      );
+    } finally {
+      sub.dispose();
+    }
+
+    expect(agg("push", "deliver:tasks").measuresMax).toEqual({
+      subscribers: 8,
+      frameChars: 900,
+    });
+    const loader = seen.find((s) => s.kind === "loader")!;
+    expect(loader.detail).toEqual({
+      variant: '{"id":"42"}',
+      measures: { ids: 2 },
+    });
+    expect(getRuntimeProfile().slowest.loader[0]!.detail?.variant).toBe(
+      '{"id":"42"}',
+    );
+  });
+
+  test("an empty detail is recorded as no detail, and a long variant is capped", () => {
+    recordSpan("route", "tasks", 1, { measures: {} });
+    recordSpan("route", "tasks", 1, { variant: "x".repeat(1000) });
+    const details = getRuntimeProfile().slowest.route.map((s) => s.detail);
+    expect(details).toContainEqual(undefined);
+    expect(details.find((d) => d)!.variant!.length).toBe(200);
+    expect(agg("route", "tasks").measuresMax).toBeUndefined();
   });
 });

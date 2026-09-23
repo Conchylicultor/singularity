@@ -17,6 +17,8 @@ export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type {
   ProfilerHooks,
+  ProfilerMeasureName,
+  ProfilerSpanDetail,
   RuntimeProfileView,
   LoaderAggregateView,
 } from "./profiler-hooks";

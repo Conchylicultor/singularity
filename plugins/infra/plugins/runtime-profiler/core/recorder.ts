@@ -73,6 +73,13 @@
 // reads are a cascade mechanism, not the downstream's value dependencies, so they
 // must NOT enter the loader read-set index (that would create false silent-FULL
 // flags). See research/2026-07-07-global-read-set-notifications-attribution-noise.md.
+// `route` is the change-feed's routing of one Postgres change notification into
+// the resource runtime (label = the changed table): a leaf span recorded with no
+// parent (the listener runs outside any entry). `membership` is a window resource's ids-only membership query
+// (`windowIdsOf`, label = the resource key), recorded under its `push` origin —
+// its own kind for the same reason as `cascade`: a membership read must not
+// enter the loader read-set index, and it must be told apart from the value
+// query. See research/2026-09-23-global-live-state-plumbing-slow-op-coverage.md.
 //
 // SINGLE SOURCE OF TRUTH: `SPAN_KINDS` is the one enumeration of every span kind.
 // `SpanKind`, this module's iteration set, the MCP tool's filter, and the
@@ -90,8 +97,43 @@ export const SPAN_KINDS = [
   "job",
   "cascade",
   "bg",
+  "route",
+  "membership",
 ] as const;
 export type SpanKind = (typeof SPAN_KINDS)[number];
+
+/**
+ * The closed set of numbers a span can carry beside its duration. Closed (like
+ * `SPAN_KINDS`) so a misspelt measure is a tsc error and every surface can label
+ * and format each one:
+ * - `subscribers` — sockets a delivery was sent to (fan-out).
+ * - `frameChars` — length of the serialized delivery frame, in UTF-16 chars
+ *   (not bytes: a byte count would re-scan every frame on the flush path).
+ * - `ids` — ids a read was scoped to (a scoped refill's affected ids, a
+ *   change notification's changed ids).
+ * - `sinceChangeMs` — time from the Postgres trigger firing to this span
+ *   (includes how long the writing transaction stayed open).
+ */
+export const SPAN_MEASURES = [
+  "subscribers",
+  "frameChars",
+  "ids",
+  "sinceChangeMs",
+] as const;
+export type SpanMeasure = (typeof SPAN_MEASURES)[number];
+export type SpanMeasures = Partial<Record<SpanMeasure, number>>;
+
+/**
+ * Optional per-run detail a span carries beside `(kind, label, duration)`.
+ * `variant` names WHICH instance of the operation ran (e.g. a loader's
+ * canonical params) without splitting the label: the label stays a bounded
+ * operation-class identifier, so one resource stays one aggregate row, and
+ * consumers break a row down by variant themselves (bounded on their side).
+ */
+export interface SpanDetail {
+  variant?: string;
+  measures?: SpanMeasures;
+}
 
 /** A reference to an enclosing entry point (the immediate parent of a span). */
 export interface SpanRef {
@@ -179,6 +221,8 @@ export interface SlowSpan {
   childMs: number;
   /** durationMs − union(waits ∪ child executions): own orchestration/CPU. Leaves: durationMs. */
   selfMs: number;
+  /** Variant + measures the call site attached, if any. Variant capped at `MAX_VARIANT_LEN`. */
+  detail?: SpanDetail;
 }
 
 export type SlowSpanHandler = (span: SlowSpan) => void;
@@ -203,6 +247,8 @@ export interface Aggregate {
   byParent: ParentBreakdown[];
   /** Summed per-record wait unions by layer across all records of this label, if any waited. */
   waits?: WaitBreakdown;
+  /** Largest value of each measure any record of this label carried, if any did. */
+  measuresMax?: SpanMeasures;
 }
 
 /**
@@ -237,6 +283,7 @@ export function waitSplit(agg: Aggregate): {
 }
 
 const MAX_LABEL_LEN = 500;
+const MAX_VARIANT_LEN = 200;
 const SLOWEST_CAP = 50;
 
 // Rolling-max window: per-aggregate max durations are bucketed into
@@ -643,6 +690,8 @@ interface AggregateInternal {
   byParent: Map<string, ParentBreakdown>;
   /** Summed per-record wait unions by layer, lazily created on first wait. */
   waits?: WaitBreakdown;
+  /** Per-measure max across records, lazily created on the first measure. */
+  measuresMax?: SpanMeasures;
 }
 
 // Per-kind aggregate maps keyed by label.
@@ -656,6 +705,8 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   job: new Map(),
   cascade: new Map(),
   bg: new Map(),
+  route: new Map(),
+  membership: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -672,6 +723,8 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   job: [],
   cascade: [],
   bg: [],
+  route: [],
+  membership: [],
 };
 
 let sinceMs = now();
@@ -1008,6 +1061,7 @@ function record(
   childMs = 0,
   selfMs = durationMs,
   waitBands?: WaitBand[],
+  rawDetail?: SpanDetail,
 ): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -1018,6 +1072,7 @@ function record(
   const cappedLabel =
     label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
   const atMs = now();
+  const detail = capDetail(rawDetail);
 
   const byLabel = aggregates[kind];
   let agg = byLabel.get(cappedLabel);
@@ -1094,6 +1149,15 @@ function record(
     }
   }
 
+  const measures = detail?.measures;
+  if (measures) {
+    const max = (agg.measuresMax ??= {});
+    for (const m of SPAN_MEASURES) {
+      const v = measures[m];
+      if (v !== undefined && !(v <= (max[m] ?? -Infinity))) max[m] = v;
+    }
+  }
+
   const ring = slowest[kind];
   ring.push({
     id: spanId,
@@ -1107,6 +1171,7 @@ function record(
     waitMs,
     childMs,
     selfMs,
+    detail,
   });
   if (ring.length > SLOWEST_CAP) {
     // Drop the single fastest entry to keep the slowest N.
@@ -1155,6 +1220,7 @@ function record(
       waitMs,
       childMs,
       selfMs,
+      detail,
     };
     for (const sub of slowSpanSubs) {
       if (durationMs >= sub.thresholdMs) sub.handler(span);
@@ -1174,6 +1240,7 @@ export function recordSpan(
   kind: SpanKind,
   label: string,
   durationMs: number,
+  detail?: SpanDetail,
 ): void {
   const cur = contextRuntime.current();
   record(
@@ -1183,7 +1250,37 @@ export function recordSpan(
     nextSpanId++,
     cur ? cur.id : null,
     cur ? { kind: cur.kind, label: cur.label } : null,
+    undefined,
+    0,
+    0,
+    durationMs,
+    undefined,
+    detail,
   );
+}
+
+// Cap the variant at MAX_VARIANT_LEN and drop empty parts, so an absent detail
+// is `undefined` rather than `{}` on every downstream surface.
+function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
+  if (!detail) return undefined;
+  const variant =
+    detail.variant === undefined || detail.variant === ""
+      ? undefined
+      : detail.variant.length > MAX_VARIANT_LEN
+        ? detail.variant.slice(0, MAX_VARIANT_LEN)
+        : detail.variant;
+  let measures: SpanMeasures | undefined;
+  if (detail.measures) {
+    for (const m of SPAN_MEASURES) {
+      const v = detail.measures[m];
+      if (v !== undefined) (measures ??= {})[m] = v;
+    }
+  }
+  if (variant === undefined && measures === undefined) return undefined;
+  return {
+    ...(variant !== undefined && { variant }),
+    ...(measures && { measures }),
+  };
 }
 
 /**
@@ -1320,9 +1417,9 @@ const ORIGIN_CLASS: Record<SpanKind, OriginClass> = {
   // the root of boot-snapshot's cold fan-out, which awaits its `loadResourceByKey`
   // calls inside the endpoint's own `http` entry rather than detaching.
   http: "interactive",
-  // A legitimate root, and interactive: `GET /api/resources/:key` is a raw
-  // `httpRoutes` handler (`server-core/bin/index.ts:184`) that opens no `http`
-  // span, but `gatedRead` wraps it in a `sub` origin. A tab is waiting on it.
+  // A legitimate root, and interactive: a tab subscribed and is waiting on the
+  // ack. (The `GET /api/resources/:key` fallback's `sub` origin now nests under
+  // that request's own `http` entry — the runtime's `wrapHttp`.)
   sub: "interactive",
   // A bare `loader` root is reachable only via `loadResourceByKey` /
   // `measureSubscribeCycle`, both human reads today. A future background caller
@@ -1347,6 +1444,12 @@ const ORIGIN_CLASS: Record<SpanKind, OriginClass> = {
   job: "background",
   // A runTracked root: declared detached work we WANT attributed. Background because nobody is blocked on its millisecond, which also routes its DB work through the background lane for free.
   bg: "background",
+  // A change-feed notification being routed. Recorded as a leaf, so never a
+  // root — classified for exhaustiveness; nobody is blocked on its millisecond.
+  route: "background",
+  // A window resource's ids query. Never a root — it runs under a `push`
+  // origin inside `flush` — classified for the same reason as `cascade`.
+  membership: "background",
 };
 
 /**
@@ -1401,6 +1504,7 @@ export async function recordEntrySpan<T>(
   kind: SpanKind,
   label: string,
   fn: () => T | Promise<T>,
+  detail?: SpanDetail,
 ): Promise<T> {
   const cur = contextRuntime.current();
   const parent: SpanRef | null = cur
@@ -1480,6 +1584,7 @@ export async function recordEntrySpan<T>(
       childMs,
       selfMs,
       waitBands,
+      detail,
     );
     // Flush the loader's captured table read-set into the index, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
@@ -1535,6 +1640,7 @@ export function getRuntimeProfile(): {
             (a, b) => b.count - a.count,
           ),
           waits: agg.waits ? { ...agg.waits } : undefined,
+          measuresMax: agg.measuresMax ? { ...agg.measuresMax } : undefined,
         };
       })
       // Live relevance first: a label spiking NOW outranks one whose since-boot

@@ -945,9 +945,39 @@ interface SocketState {
   subs: Map<string, Map<string, SocketSubRecord>>;
 }
 
+/** What `wrapLoad` is told about one loader run (see `ResourceRuntimeOptions.wrapLoad`). */
+export interface LoadInfo {
+  variant?: string;
+  scopedIds?: number;
+}
+
 export interface ResourceRuntimeOptions {
-  /** Wrap each loader call. server: recordEntrySpan("loader", key, fn); central: omit (identity). */
-  wrapLoad?: (key: string, fn: () => Promise<unknown>) => Promise<unknown>;
+  /**
+   * Wrap each loader call. `info.variant` is the canonical params
+   * (`paramsKey`, absent for `{}`); `info.scopedIds` is how many ids a scoped
+   * refill read (absent on a FULL load). server: recordEntrySpan("loader", key,
+   * fn, detail); central: omit (identity).
+   */
+  wrapLoad?: (
+    key: string,
+    info: LoadInfo,
+    fn: () => Promise<unknown>,
+  ) => Promise<unknown>;
+  /**
+   * Wrap one `GET /api/resources/:key` request after its key resolved to a
+   * registered resource — the ETag/304 path included. server:
+   * recordEntrySpan("http", `GET /api/resources/${key}`, fn); central: omit.
+   */
+  wrapHttp?: (key: string, fn: () => Promise<Response>) => Promise<Response>;
+  /**
+   * Wrap a window resource's ids-only membership query (`windowIdsOf`), so it
+   * is told apart from the value query. Runs inside the drain's `push` origin.
+   * server: recordEntrySpan("membership", key, fn); central: omit.
+   */
+  wrapMembership?: (
+    key: string,
+    fn: () => Promise<string[]>,
+  ) => Promise<string[]>;
   /**
    * Wrap an origin-triggered load so child loader spans (and the gate waits they
    * charge) attribute to the originating request class — `sub` (a tab subscribed)
@@ -976,7 +1006,12 @@ export interface ResourceRuntimeOptions {
    * leaf `deliver:<key>` span nests under the `flush` entry so latency attributes
    * to the resource. See the doc above.
    */
-  onDelivered?: (key: string, latencyMs: number, subscribers: number) => void;
+  onDelivered?: (
+    key: string,
+    latencyMs: number,
+    subscribers: number,
+    frameChars: number,
+  ) => void;
   /**
    * Per-key loader stats for the `_debug` endpoint: call count, calls-per-minute,
    * and slowest single call over the current profiling window. server: derived
@@ -1580,7 +1615,23 @@ export function createResourceRuntime(
     ctx?: { affectedIds: readonly string[] },
   ): Promise<unknown> {
     const run = async () => entry.schema.parse(await entry.loader(params, ctx));
-    return opts.wrapLoad ? opts.wrapLoad(entry.key, run) : run();
+    if (!opts.wrapLoad) return run();
+    const info: LoadInfo = {};
+    if (Object.keys(params).length > 0) info.variant = paramsKey(params);
+    if (ctx) info.scopedIds = ctx.affectedIds.length;
+    return opts.wrapLoad(entry.key, info, run);
+  }
+
+  // The one call site of a window's ids-only membership query. `wrapMembership`
+  // (server: a `membership` entry span) keeps it apart from the value query in
+  // the profiler, and out of the loader read-set index.
+  function runWindowIds(
+    entry: RegistryEntry,
+    membership: Extract<MembershipRecord, { kind: "window" }>,
+    params: ResourceParams,
+  ): Promise<string[]> {
+    const run = () => membership.windowIdsOf(params);
+    return opts.wrapMembership ? opts.wrapMembership(entry.key, run) : run();
   }
 
   // The single read accessor. Full loads (ctx === undefined: sub-ack, HTTP
@@ -1878,8 +1929,8 @@ export function createResourceRuntime(
     watermark?: string,
     ackTx?: readonly string[],
     changedAt?: number,
-  ): void | Promise<void> {
-    const broadcast = (etag?: string): void => {
+  ): number | Promise<number> {
+    const broadcast = (etag?: string): number => {
       const msg = {
         kind: "update" as const,
         key: entry.key,
@@ -1891,11 +1942,10 @@ export function createResourceRuntime(
         ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
         ...(changedAt !== undefined ? { changedAt } : {}),
       };
-      broadcastJson(subs, msg);
+      return broadcastJson(subs, msg);
     };
     if (!entry.revalidate) {
-      broadcast(); // sync send — no microtask before the wire (H5a)
-      return;
+      return broadcast(); // sync send — no microtask before the wire (H5a)
     }
     return pushEtag(entry, params).then(broadcast);
   }
@@ -2025,13 +2075,13 @@ export function createResourceRuntime(
   function broadcastAckOnly(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
-  ): void {
-    if (!entry.ackChannel) return;
+  ): number {
+    if (!entry.ackChannel) return 0;
     const ackTx = pendingAckTx(pendingEntry);
-    if (ackTx === undefined) return;
+    if (ackTx === undefined) return 0;
     const subs = subscribersFor(entry.key, paramsKey(pendingEntry.params));
-    if (subs.length === 0) return;
-    broadcastJson(subs, {
+    if (subs.length === 0) return 0;
+    return broadcastJson(subs, {
       kind: "ack" as const,
       key: entry.key,
       params: pendingEntry.params,
@@ -2408,8 +2458,11 @@ export function createResourceRuntime(
   // §B2). Synchronous end-to-end so the no-await-before-send property of the
   // push path (H5a) is untouched. Per-socket try/catch mirrors sendJson: a
   // dead socket's close handler cleans up, the rest still receive.
-  function broadcastJson(subs: readonly SocketState[], obj: unknown): void {
-    if (subs.length === 0) return;
+  // Returns the serialized frame's length in UTF-16 chars (0 when nothing was
+  // sent) — the delivery's `frameChars` measure, read off the one string that
+  // was already built, so measuring costs nothing extra.
+  function broadcastJson(subs: readonly SocketState[], obj: unknown): number {
+    if (subs.length === 0) return 0;
     const str = JSON.stringify(obj);
     for (const s of subs) {
       try {
@@ -2419,6 +2472,7 @@ export function createResourceRuntime(
         // close handler will clean up
       }
     }
+    return str.length;
   }
 
   // Schedule a single global microtask flush, guarded so concurrent callers
@@ -3005,8 +3059,9 @@ export function createResourceRuntime(
     if (subs.length > 0 && valueComputed) {
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
+      let frameChars: number;
       if (!hadSnapshot) {
-        await sendUpdate(
+        frameChars = await sendUpdate(
           entry,
           params,
           value,
@@ -3039,7 +3094,7 @@ export function createResourceRuntime(
             ? { changedAt: pendingEntry.changedAt }
             : {}),
         };
-        broadcastJson(subs, msg);
+        frameChars = broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
           subscribers: subs.length,
           changed:
@@ -3050,6 +3105,7 @@ export function createResourceRuntime(
         entry.key,
         performance.now() - pendingEntry.enqueuedAt,
         subs.length,
+        frameChars,
       );
     } else if (valueComputed) {
       // Zero subscribers but a value was computed (persisted / value-aware
@@ -3235,9 +3291,9 @@ export function createResourceRuntime(
         try {
           orderedIds = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () =>
-                membership.windowIdsOf(params),
+                runWindowIds(entry, membership, params),
               )
-            : membership.windowIdsOf(params));
+            : runWindowIds(entry, membership, params));
         } catch (err) {
           reportLoaderError(`windowIdsOf failed for ${entry.key}`, err);
           await drainMembershipFull(entry, pendingEntry, persisted);
@@ -3291,9 +3347,9 @@ export function createResourceRuntime(
         try {
           orderedIds = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () =>
-                membership.windowIdsOf(params),
+                runWindowIds(entry, membership, params),
               )
-            : membership.windowIdsOf(params));
+            : runWindowIds(entry, membership, params));
         } catch (err) {
           reportLoaderError(`orderOf failed for ${entry.key}`, err);
           await drainMembershipFull(entry, pendingEntry, persisted);
@@ -3382,11 +3438,12 @@ export function createResourceRuntime(
             ? { changedAt: pendingEntry.changedAt }
             : {}),
         };
-        broadcastJson(subs, msg);
+        const frameChars = broadcastJson(subs, msg);
         opts.onDelivered?.(
           entry.key,
           performance.now() - pendingEntry.enqueuedAt,
           subs.length,
+          frameChars,
         );
       }
     } else {
@@ -3603,6 +3660,9 @@ export function createResourceRuntime(
         }
       }
 
+      // The delivered frame's size (0 while nothing value-carrying was sent) —
+      // the `frameChars` measure of this delivery.
+      let frameChars = 0;
       if (subs.length > 0) {
         if (entry.mode === "invalidate") {
           const msg = {
@@ -3611,7 +3671,7 @@ export function createResourceRuntime(
             params,
             version,
           };
-          broadcastJson(subs, msg);
+          frameChars = broadcastJson(subs, msg);
         } else if (entry.mode === "keyed") {
           // `value` is guaranteed computed (needValue is true for keyed + subs).
           const hadSnapshot = entry.snapshots?.has(pk) ?? false;
@@ -3655,7 +3715,7 @@ export function createResourceRuntime(
             // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
             // serves only to (re)seed the snapshot from the full value.
             diffKeyed(entry, pk, full);
-            await sendUpdate(
+            frameChars = await sendUpdate(
               entry,
               params,
               full,
@@ -3693,12 +3753,12 @@ export function createResourceRuntime(
                   ? { changedAt: pendingEntry.changedAt }
                   : {}),
               };
-              broadcastJson(subs, msg);
+              frameChars = broadcastJson(subs, msg);
             } else {
               // Empty scoped diff: the recompute proved the bytes unchanged —
               // no value frame, but an opted-in entry still delivers the
               // writer's ack (a no-byte-change write must not hang it).
-              broadcastAckOnly(entry, pendingEntry);
+              frameChars = broadcastAckOnly(entry, pendingEntry);
             }
             // Emit regardless of whether a frame was sent: the recompute happened,
             // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
@@ -3714,7 +3774,7 @@ export function createResourceRuntime(
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              await sendUpdate(
+              frameChars = await sendUpdate(
                 entry,
                 params,
                 value,
@@ -3750,7 +3810,7 @@ export function createResourceRuntime(
                   ? { changedAt: pendingEntry.changedAt }
                   : {}),
               };
-              broadcastJson(subs, msg);
+              frameChars = broadcastJson(subs, msg);
               opts.onPush?.(entry.key, {
                 subscribers: subs.length,
                 changed:
@@ -3761,7 +3821,7 @@ export function createResourceRuntime(
             }
           }
         } else {
-          await sendUpdate(
+          frameChars = await sendUpdate(
             entry,
             params,
             value,
@@ -3782,6 +3842,7 @@ export function createResourceRuntime(
           entry.key,
           performance.now() - pendingEntry.enqueuedAt,
           subs.length,
+          frameChars,
         );
       }
 
@@ -4437,7 +4498,19 @@ export function createResourceRuntime(
     if (key === "_debug") return handleResourcesDebug();
     const entry = registry.get(key);
     if (!entry) return new Response("Unknown resource", { status: 404 });
+    // Everything past the registry lookup — the revalidate signature and its 304
+    // included — runs inside `wrapHttp` (server: an `http` entry span), so a
+    // conditional GET is measured even when it never reaches a loader. Wrapped
+    // only after the lookup, so the span label only ever names a registered key.
+    const serve = () => serveResourceHttp(req, entry);
+    return opts.wrapHttp ? opts.wrapHttp(key, serve) : serve();
+  }
 
+  async function serveResourceHttp(
+    req: Request,
+    entry: RegistryEntry,
+  ): Promise<Response> {
+    const key = entry.key;
     const url = new URL(req.url);
     const resourceParams: ResourceParams = {};
     for (const [k, v] of url.searchParams) resourceParams[k] = v;

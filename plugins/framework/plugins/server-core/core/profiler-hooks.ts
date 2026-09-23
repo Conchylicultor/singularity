@@ -23,15 +23,39 @@ export interface RuntimeProfileView {
 }
 
 /**
+ * The measure names a span can carry — the profiler's `SPAN_MEASURES`, spelled
+ * here because server-core cannot import the profiler. runtime-profiler's
+ * install asserts the two sets are equal at the type level, so they cannot drift.
+ */
+export type ProfilerMeasureName =
+  "subscribers" | "frameChars" | "ids" | "sinceChangeMs";
+
+/** The profiler's `SpanDetail`, seen through the seam. */
+export interface ProfilerSpanDetail {
+  variant?: string;
+  measures?: Partial<Record<ProfilerMeasureName, number>>;
+}
+
+/**
  * The profiler operations server-core's resource runtime depends on. Param types
  * are deliberately widened (`kind`/`layer` as `string`) so the framework core
  * carries no profiler-internal type (`SpanKind`, `GateGauge`); runtime-profiler
  * supplies a matching implementation and owns any casts.
  */
 export interface ProfilerHooks {
-  recordEntrySpan<T>(kind: string, label: string, fn: () => T | Promise<T>): Promise<T>;
+  recordEntrySpan<T>(
+    kind: string,
+    label: string,
+    fn: () => T | Promise<T>,
+    detail?: ProfilerSpanDetail,
+  ): Promise<T>;
   runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T>;
-  recordSpan(kind: string, label: string, durationMs: number): void;
+  recordSpan(
+    kind: string,
+    label: string,
+    durationMs: number,
+    detail?: ProfilerSpanDetail,
+  ): void;
   chargeWait(layer: string, ms: number): void;
   getRuntimeProfile(): RuntimeProfileView;
   getReadSetIndex(): Record<string, string[]>;
@@ -59,16 +83,27 @@ export function recordEntrySpan<T>(
   kind: string,
   label: string,
   fn: () => T | Promise<T>,
+  detail?: ProfilerSpanDetail,
 ): Promise<T> {
-  return hooks ? hooks.recordEntrySpan(kind, label, fn) : Promise.resolve(fn());
+  return hooks
+    ? hooks.recordEntrySpan(kind, label, fn, detail)
+    : Promise.resolve(fn());
 }
 
-export function runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
+export function runTracked<T>(
+  label: string,
+  fn: () => T | Promise<T>,
+): Promise<T> {
   return hooks ? hooks.runTracked(label, fn) : Promise.resolve(fn());
 }
 
-export function recordSpan(kind: string, label: string, durationMs: number): void {
-  hooks?.recordSpan(kind, label, durationMs);
+export function recordSpan(
+  kind: string,
+  label: string,
+  durationMs: number,
+  detail?: ProfilerSpanDetail,
+): void {
+  hooks?.recordSpan(kind, label, durationMs, detail);
 }
 
 export function chargeWait(layer: string, ms: number): void {
@@ -76,7 +111,9 @@ export function chargeWait(layer: string, ms: number): void {
 }
 
 export function getRuntimeProfile(): RuntimeProfileView {
-  return hooks ? hooks.getRuntimeProfile() : { aggregates: { loader: [] }, sinceMs: performance.now() };
+  return hooks
+    ? hooks.getRuntimeProfile()
+    : { aggregates: { loader: [] }, sinceMs: performance.now() };
 }
 
 export function getReadSetIndex(): Record<string, string[]> {

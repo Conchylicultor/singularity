@@ -8,6 +8,14 @@ Client `element` signals attribute to their route — they pass
 `caller: { kind: "route", label: location.pathname }`, which the recorder merges
 into the row's `callers` so the pane shows e.g. `↳ route:/agents/c/123 ×N`.
 
+A server span's `detail` lands on the row too. Its `variant` merges into `variants`
+(`◇ {"id":"42"} ×3`). Only the top 10 by total time stay named; the rest fold into
+one `(other)` entry, so the row cannot grow without bound. Its `measures` merge into
+`measures` as `{ max, last }` per measure (`# max 40 subscribers · last 12`). Both
+are also stamped on the newest sample. The merges are pure (`merge-detail.ts`). The
+cluster tab reads neither column (`ClusterSlowOpSchema`), so a fork still on the
+older schema stays readable.
+
 ## Cold-start slowness is UX truth — don't suppress it
 
 The `element` signal measures a resource's mount → first-data settle = the
@@ -180,26 +188,36 @@ bar).
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `infra/host/contention.ContentionSnapshotSchema`
+    - `infra/runtime-profiler.SPAN_MEASURES`
+    - `infra/runtime-profiler.SpanMeasure`
+    - `infra/runtime-profiler.WaitBreakdown`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CallerBreakdown`
     - `CallerRef`
+    - `MeasureStat`
     - `SlowOp`
     - `SlowOpMarker`
+    - `SlowOpMeasures`
     - `SlowOpReportPayload`
     - `SlowOpSample`
+    - `VariantBreakdown`
   - Exports (values):
     - `CallerBreakdownSchema`
     - `CallerRefSchema`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
+    - `OTHER_VARIANT`
     - `slowOpConfig`
     - `slowOpFields`
     - `SlowOpMarkerSchema`
+    - `SlowOpMeasuresSchema`
     - `SlowOpReportPayloadSchema`
     - `SlowOpSampleSchema`
     - `SlowOpSchema`
     - `slowOpsResource`
+    - `VARIANT_CAP`
+    - `VariantBreakdownSchema`
 - Cross-plugin:
   - Imported by:
     - `debug/boot-monitor`

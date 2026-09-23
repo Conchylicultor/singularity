@@ -17,7 +17,10 @@ import {
   formatDuration,
   type SpanBar,
 } from "@plugins/debug/plugins/profiling/web";
-import type { TraceLaneProps, TraceSelection } from "@plugins/debug/plugins/trace/plugins/engine/web";
+import type {
+  TraceLaneProps,
+  TraceSelection,
+} from "@plugins/debug/plugins/trace/plugins/engine/web";
 import {
   buildSpanTree,
   flattenTree,
@@ -28,18 +31,33 @@ import {
 // Categorical color per span kind (fill = "what", never state — the op-gantt
 // convention). The kind is now a per-row dot rather than a lane grouping: the rows
 // are ordered by the call tree, not bucketed by kind.
-const KIND_CONFIG: Record<SpanKind, { label: string; bar: string; dot: string }> = {
+const KIND_CONFIG: Record<
+  SpanKind,
+  { label: string; bar: string; dot: string }
+> = {
   http: { label: "HTTP", bar: "bg-categorical-1", dot: "bg-categorical-1" },
   sub: { label: "Sub", bar: "bg-categorical-2", dot: "bg-categorical-2" },
   push: { label: "Push", bar: "bg-categorical-3", dot: "bg-categorical-3" },
   flush: { label: "Flush", bar: "bg-categorical-4", dot: "bg-categorical-4" },
-  cascade: { label: "Cascade", bar: "bg-categorical-8", dot: "bg-categorical-8" },
+  cascade: {
+    label: "Cascade",
+    bar: "bg-categorical-8",
+    dot: "bg-categorical-8",
+  },
   loader: { label: "Loader", bar: "bg-categorical-5", dot: "bg-categorical-5" },
   job: { label: "Job", bar: "bg-categorical-6", dot: "bg-categorical-6" },
   db: { label: "DB", bar: "bg-categorical-7", dot: "bg-categorical-7" },
   // categorical-1..8 are all taken above; a `bg` (runTracked) root reuses the
   // unused categorical-9 so it reads as its own distinct color in the waterfall.
   bg: { label: "BG", bar: "bg-categorical-9", dot: "bg-categorical-9" },
+  // Live-state plumbing around the loader: routing reuses the flush hue and a
+  // membership query the loader hue — each reads as a sibling of what it feeds.
+  route: { label: "Route", bar: "bg-categorical-4", dot: "bg-categorical-4" },
+  membership: {
+    label: "Membership",
+    bar: "bg-categorical-5",
+    dot: "bg-categorical-5",
+  },
 };
 
 // Stable per-LAYER color for wait bands (and their legend swatch), independent of
@@ -84,19 +102,30 @@ function tripSpanId(detail: unknown): number | null {
  */
 export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
   const tree = useMemo(() => buildSpanTree(trace), [trace]);
-  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(() => new Set());
+  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
 
   const rows = useMemo(
     () => (tree.kind === "ok" ? flattenTree(tree.roots, collapsed) : []),
     [tree, collapsed],
   );
-  const tripId = useMemo(() => tripSpanId(trace.trigger.detail), [trace.trigger.detail]);
+  const tripId = useMemo(
+    () => tripSpanId(trace.trigger.detail),
+    [trace.trigger.detail],
+  );
 
   if (tree.kind !== "ok") return <SectionPlaceholder section={tree} />;
 
   const { byId, roots } = tree;
   const collapseAll = (): void =>
-    setCollapsed(new Set([...byId.values()].filter((n) => n.children.length > 0).map((n) => n.id)));
+    setCollapsed(
+      new Set(
+        [...byId.values()]
+          .filter((n) => n.children.length > 0)
+          .map((n) => n.id),
+      ),
+    );
 
   return (
     <div className="border-b">
@@ -104,7 +133,11 @@ export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
         <Text as="div" variant="caption" className="font-semibold">
           Spans
         </Text>
-        <Text as="div" variant="caption" className="tabular-nums text-muted-foreground">
+        <Text
+          as="div"
+          variant="caption"
+          className="tabular-nums text-muted-foreground"
+        >
           {byId.size} span{byId.size === 1 ? "" : "s"} · {roots.length} root
           {roots.length === 1 ? "" : "s"}
         </Text>
@@ -131,7 +164,9 @@ export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
                 return next;
               })
             }
-            onClick={() => onSelect?.(toSelection(node, byId, trace.wallTime, trace.atMs))}
+            onClick={() =>
+              onSelect?.(toSelection(node, byId, trace.wallTime, trace.atMs))
+            }
           />
         ))}
       </Stack>
@@ -213,7 +248,12 @@ function TreeLabel({
   return (
     <SingleLineProvider value={true}>
       {/* Depth indentation is a runtime value — no Tailwind class can express it. */}
-      <Stack direction="row" align="center" gap="2xs" style={{ paddingLeft: depth * INDENT }}>
+      <Stack
+        direction="row"
+        align="center"
+        gap="2xs"
+        style={{ paddingLeft: depth * INDENT }}
+      >
         {hasChildren ? (
           <button
             type="button"
@@ -222,14 +262,25 @@ function TreeLabel({
             className="text-muted-foreground hover:text-foreground"
             onClick={onToggle}
           >
-            {collapsed ? <MdChevronRight className="size-3" /> : <MdExpandMore className="size-3" />}
+            {collapsed ? (
+              <MdChevronRight className="size-3" />
+            ) : (
+              <MdExpandMore className="size-3" />
+            )}
           </button>
         ) : (
           <span className="size-3" />
         )}
-        <span className={cn("size-2 rounded-full", KIND_CONFIG[node.kind].dot)} />
+        <span
+          className={cn("size-2 rounded-full", KIND_CONFIG[node.kind].dot)}
+        />
         <Fill>
-          <Text as="span" variant="caption" className="font-mono" title={node.label}>
+          <Text
+            as="span"
+            variant="caption"
+            className="font-mono"
+            title={node.label}
+          >
             {node.label}
           </Text>
         </Fill>
@@ -249,7 +300,10 @@ function TreeLabel({
 function SectionPlaceholder({
   section,
 }: {
-  section: { kind: "absent" } | { kind: "legacy" } | { kind: "invalid"; message: string };
+  section:
+    | { kind: "absent" }
+    | { kind: "legacy" }
+    | { kind: "invalid"; message: string };
 }): ReactElement {
   const message: ReactNode =
     section.kind === "absent"
@@ -259,7 +313,9 @@ function SectionPlaceholder({
         : `Malformed spans section: ${section.message}`;
   return (
     <Stack gap="none" className="px-lg py-sm">
-      <Placeholder tone={section.kind === "invalid" ? "error" : "muted"}>{message}</Placeholder>
+      <Placeholder tone={section.kind === "invalid" ? "error" : "muted"}>
+        {message}
+      </Placeholder>
     </Stack>
   );
 }
@@ -295,9 +351,15 @@ function toSelection(
 
   const chain = ancestorChain(node, byId);
   if (chain.length > 0) {
-    fields.push({ label: "parent", value: chain.map((n) => `${n.kind}:${n.label}`).join(" ← ") });
+    fields.push({
+      label: "parent",
+      value: chain.map((n) => `${n.kind}:${n.label}`).join(" ← "),
+    });
   } else if (node.orphan) {
-    fields.push({ label: "parent", value: "not in this window (evicted or detached)" });
+    fields.push({
+      label: "parent",
+      value: "not in this window (evicted or detached)",
+    });
   }
   if (node.children.length > 0) {
     fields.push({ label: "children", value: String(node.children.length) });
@@ -332,14 +394,20 @@ function toSelection(
 }
 
 /** Per-layer wait totals, each prefixed by the layer's Gantt band color swatch. */
-function WaitsLegend({ waits }: { waits: Record<string, number> }): ReactElement {
+function WaitsLegend({
+  waits,
+}: {
+  waits: Record<string, number>;
+}): ReactElement {
   return (
     <Inline gap="sm">
       {Object.entries(waits)
         .sort((a, b) => b[1] - a[1])
         .map(([layer, w]) => (
           <Inline key={layer} gap="2xs">
-            <span className={cn("size-2 rounded-full", layerColorClass(layer))} />
+            <span
+              className={cn("size-2 rounded-full", layerColorClass(layer))}
+            />
             <span>
               {layer} {ms(w)}
             </span>
