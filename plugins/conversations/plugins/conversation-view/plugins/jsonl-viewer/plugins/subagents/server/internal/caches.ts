@@ -1,6 +1,11 @@
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { transcriptChainSignature } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { SubagentActivityRow, SubagentTranscript } from "../../core";
+import {
+  SubagentRefSchema,
+  type SubagentActivityRow,
+  type SubagentRef,
+  type SubagentTranscript,
+} from "../../core";
 import {
   evictActivityScan,
   resolveActivityTargets,
@@ -49,39 +54,40 @@ export function evictSubagentActivity(conversationId: string): void {
   evictActivityScan(conversationId);
 }
 
-// A signed memo is keyed by ONE string, and this resource is keyed by a pair.
-// NUL cannot occur in a conversation uuid or in a Claude tool-use id, so it is
-// the one separator that cannot collide with either half.
+// A signed memo is keyed by ONE string, and this resource is keyed by a
+// conversation plus a sub-agent ref. NUL cannot occur in a conversation uuid, a
+// Claude tool-use id or an agent id, so it is the one separator that cannot
+// collide with any part.
 const SEP = "\u0000";
 
 export function transcriptMemoKey(
   conversationId: string,
-  toolUseId: string,
+  ref: SubagentRef,
 ): string {
-  return `${conversationId}${SEP}${toolUseId}`;
+  return [conversationId, ref.by, ref.key].join(SEP);
 }
 
 function parseMemoKey(key: string): {
   conversationId: string;
-  toolUseId: string;
+  ref: SubagentRef;
 } {
-  const at = key.indexOf(SEP);
-  if (at < 0)
+  const [conversationId, by, refKey, ...rest] = key.split(SEP);
+  const ref = SubagentRefSchema.safeParse({ by, key: refKey });
+  if (conversationId === undefined || !ref.success || rest.length > 0) {
     throw new Error(`[subagents] malformed transcript memo key: ${key}`);
-  return { conversationId: key.slice(0, at), toolUseId: key.slice(at + 1) };
+  }
+  return { conversationId, ref: ref.data };
 }
 
 const transcriptMemo = createSignedMemo<SubagentTranscript>({
   name: "subagent-transcript",
   signature: async (key) => {
-    const { conversationId, toolUseId } = parseMemoKey(key);
-    return transcriptChainSignature(
-      await transcriptPaths(conversationId, toolUseId),
-    );
+    const { conversationId, ref } = parseMemoKey(key);
+    return transcriptChainSignature(await transcriptPaths(conversationId, ref));
   },
   compute: (key) => {
-    const { conversationId, toolUseId } = parseMemoKey(key);
-    return readSubagentTranscript(conversationId, toolUseId);
+    const { conversationId, ref } = parseMemoKey(key);
+    return readSubagentTranscript(conversationId, ref);
   },
 });
 

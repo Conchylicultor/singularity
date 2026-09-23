@@ -1,24 +1,32 @@
 import { readJsonlEventsFromChain } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { WatchTargets } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { SubagentTranscript } from "../../core";
-import { findSubagentIn, subagentDirs, type SubagentLookup } from "./discovery";
+import type { SubagentRef, SubagentTranscript } from "../../core";
+import {
+  findSubagentByAgentId,
+  findSubagentIn,
+  subagentDirs,
+  type SubagentLookup,
+} from "./discovery";
 import { requestedNameFor } from "./agent-calls";
 
 /**
- * Find one sub-agent of a conversation, by everything the card can offer.
+ * Find one sub-agent of a conversation, by whichever key the surface holds.
  *
- * A resource is handed only a tool-use id, so the name half of the join has to
- * be read back out of the parent's own `Agent` call (`agent-calls.ts`). That
- * lookup is memoized on the parent chain's signature, so it costs one read per
- * parent write, not one per sub-agent append.
+ * By agent id there is nothing to join: the id names the files. By call, a
+ * resource is handed only a tool-use id, so the name half of the join has to be
+ * read back out of the parent's own `Agent` call (`agent-calls.ts`). That lookup
+ * is memoized on the parent chain's signature, so it costs one read per parent
+ * write, not one per sub-agent append.
  */
 async function lookup(
   conversationId: string,
-  toolUseId: string,
+  ref: SubagentRef,
 ): Promise<SubagentLookup> {
-  return findSubagentIn(conversationId, await subagentDirs(conversationId), {
-    toolUseId,
-    requestedName: await requestedNameFor(conversationId, toolUseId),
+  const dirs = await subagentDirs(conversationId);
+  if (ref.by === "agent") return findSubagentByAgentId(dirs, ref.key);
+  return findSubagentIn(conversationId, dirs, {
+    toolUseId: ref.key,
+    requestedName: await requestedNameFor(conversationId, ref.key),
   });
 }
 
@@ -28,9 +36,9 @@ async function lookup(
  */
 export async function transcriptPaths(
   conversationId: string,
-  toolUseId: string,
+  ref: SubagentRef,
 ): Promise<string[]> {
-  const found = await lookup(conversationId, toolUseId);
+  const found = await lookup(conversationId, ref);
   return found.kind === "found" ? [found.entry.transcriptPath] : [];
 }
 
@@ -45,9 +53,9 @@ export async function transcriptPaths(
  */
 export async function resolveTranscriptTargets(
   conversationId: string,
-  toolUseId: string,
+  ref: SubagentRef,
 ): Promise<WatchTargets> {
-  const found = await lookup(conversationId, toolUseId);
+  const found = await lookup(conversationId, ref);
   if (found.kind === "found") return { paths: [found.entry.transcriptPath] };
   return { paths: [], dirs: await subagentDirs(conversationId) };
 }
@@ -79,7 +87,7 @@ export async function readSubagentTranscriptIn(
 /** `readSubagentTranscriptIn`, bound to a conversation's own anchored directories. */
 export async function readSubagentTranscript(
   conversationId: string,
-  toolUseId: string,
+  ref: SubagentRef,
 ): Promise<SubagentTranscript> {
-  return readSubagentTranscriptIn(await lookup(conversationId, toolUseId));
+  return readSubagentTranscriptIn(await lookup(conversationId, ref));
 }

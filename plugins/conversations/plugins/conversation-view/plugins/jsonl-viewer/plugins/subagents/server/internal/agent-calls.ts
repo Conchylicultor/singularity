@@ -32,9 +32,10 @@ import {
  * teammate has its `Agent` call inside the SUB-AGENT's transcript, and those are
  * the files that grow constantly — folding them in would trade this bound away
  * for 5 of 818 sub-agents. Such a teammate stays unreachable from a pane opened
- * by id, which is a state the result type can express; a nested card rendered
- * inside its parent's own pane still joins, because that surface holds the event
- * and passes the name directly.
+ * by CALL id, which is a state the result type can express. A surface holding
+ * the row opens it by its own agent id instead (`findSubagentByAgentId`), and a
+ * nested card rendered inside its parent's own pane still joins, because that
+ * surface holds the event and passes the name directly.
  */
 const memo = createSignedMemo<Map<string, string>>({
   name: "subagent-agent-call-names",

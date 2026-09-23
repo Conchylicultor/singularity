@@ -24,8 +24,18 @@ export const DONE_LINGER_MS = 3000;
  * the older half.
  */
 export interface RunningAgentRow {
-  /** The sub-agent's own id — stable for as long as it exists. */
+  /**
+   * The sub-agent's own id — stable for as long as it exists, and the key its
+   * report pane opens by. Every sub-agent has one, whoever spawned it, so every
+   * row opens.
+   */
   key: string;
+  /**
+   * The sub-agent that spawned this one, or `null` when the conversation did —
+   * or when the harness did not record it (older Claude Code versions write no
+   * `parentAgentId`), which the band renders as top-level.
+   */
+  parentKey: string | null;
   /** `subagent_type`, or the type a launch without one runs as. */
   type: string;
   description: string;
@@ -38,13 +48,6 @@ export interface RunningAgentRow {
   startedAt: Date;
   /** `null` while it is still running. */
   endedAt: Date | null;
-  /**
-   * The id its report pane opens by — its own, else the id of the call that
-   * named it. `null` = nothing on screen can reach it (an in-process teammate
-   * whose call has scrolled out of the chain, or an unreadable meta), which the
-   * band renders as a row that does not activate rather than a dead button.
-   */
-  toolUseId: string | null;
   /** The row this was read from, for the surfaces that take the whole union. */
   row: SubagentActivityRow;
 }
@@ -59,6 +62,7 @@ export function agentRow(entry: SubagentEntry): RunningAgentRow {
   const described = entry.row.kind === "described" ? entry.row : undefined;
   return {
     key: entry.row.agentId,
+    parentKey: described?.parentAgentId ?? null,
     type: described?.agentType ?? input?.subagent_type ?? DEFAULT_AGENT_TYPE,
     description: described?.description ?? input?.description ?? "",
     model: described?.model ?? input?.model ?? null,
@@ -70,7 +74,6 @@ export function agentRow(entry: SubagentEntry): RunningAgentRow {
     state: entry.state,
     startedAt: entry.startedAt,
     endedAt: entry.endedAt,
-    toolUseId: described?.toolUseId ?? call?.toolUseId ?? null,
     row: entry.row,
   };
 }
@@ -82,7 +85,14 @@ function isShown(row: RunningAgentRow, now: number): boolean {
 
 /**
  * The conversation's sub-agents worth showing right now: every one still
- * running, plus the ones that stopped within the last {@link DONE_LINGER_MS}.
+ * running, plus the ones that stopped within the last {@link DONE_LINGER_MS},
+ * plus every ANCESTOR of those.
+ *
+ * The ancestors are what keep the hierarchy honest. A sub-agent can finish
+ * while the ones it spawned keep working; dropping it would leave its children
+ * with no parent on screen, and they would silently move up to the top level —
+ * a claim that the conversation launched them. So a stopped sub-agent stays,
+ * reading "done", for as long as anything under it is still shown.
  *
  * The linger is what makes a finish legible. Without it a row simply vanishes
  * at some moment the user was not looking at, and the band silently shrinks;
@@ -96,22 +106,47 @@ export function visibleAgentRows(
   entries: readonly SubagentEntry[],
   now: number,
 ): RunningAgentRow[] {
-  return entries.map(agentRow).filter((row) => isShown(row, now));
+  const rows = entries.map(agentRow);
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+  const kept = new Set<string>();
+  for (const row of rows) {
+    if (!isShown(row, now)) continue;
+    // Walk up until the chain leaves the rows or meets one already kept. The
+    // `kept` check also ends a cycle, which the harness should never write but
+    // which must not hang the band if it did.
+    for (
+      let at: RunningAgentRow | undefined = row;
+      at !== undefined && !kept.has(at.key);
+      at = at.parentKey === null ? undefined : byKey.get(at.parentKey)
+    ) {
+      kept.add(at.key);
+    }
+  }
+  return rows.filter((row) => kept.has(row.key));
 }
 
 /**
- * When the first of these rows leaves, or `null` when none is lingering.
+ * When the first of these rows' own linger runs out after `now`, or `null` when
+ * none is lingering.
  *
  * The band arms ONE timer to this instant. A timer for a row that is about to
  * leave the screen is presentational — the rows themselves arrive pushed, from
  * the sub-agent activity resource, and nothing here polls for them.
+ *
+ * Expiries at or before `now` are skipped: such a row is on screen only as the
+ * ancestor of a row still shown, and it leaves when that row does — whose own
+ * expiry is the one to wait for. Counting them would re-arm a timer that fires
+ * at once, forever.
  */
 export function nextLingerExpiry(
   rows: readonly RunningAgentRow[],
+  now: number,
 ): number | null {
-  const expiries = rows.flatMap((row) =>
-    row.endedAt === null ? [] : [row.endedAt.getTime() + DONE_LINGER_MS],
-  );
+  const expiries = rows.flatMap((row) => {
+    if (row.endedAt === null) return [];
+    const expiry = row.endedAt.getTime() + DONE_LINGER_MS;
+    return expiry > now ? [expiry] : [];
+  });
   return expiries.length === 0 ? null : Math.min(...expiries);
 }
 

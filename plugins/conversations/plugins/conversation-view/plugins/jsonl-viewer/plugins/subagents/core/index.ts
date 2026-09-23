@@ -6,6 +6,7 @@ export type {
   DescribedSubagent,
   UndescribedSubagent,
   SubagentTranscript,
+  SubagentRef,
 } from "./protocol";
 export {
   SubagentRequestShapeSchema,
@@ -16,6 +17,7 @@ export {
   SubagentActivityRowSchema,
   SubagentActivityPayloadSchema,
   SubagentTranscriptSchema,
+  SubagentRefSchema,
   describedSubagent,
   agentCallJoin,
   subagentActivityResource,

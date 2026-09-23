@@ -391,6 +391,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `LastStep`
     - `SubagentActivityRow`
     - `SubagentJoin`
+    - `SubagentRef`
     - `SubagentReport`
     - `SubagentRequestShape`
     - `SubagentRunState`
@@ -411,6 +412,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentActivityPayloadSchema`
     - `subagentActivityResource`
     - `SubagentActivityRowSchema`
+    - `SubagentRefSchema`
     - `subagentReport`
     - `SubagentRequestShapeSchema`
     - `subagentRunState`

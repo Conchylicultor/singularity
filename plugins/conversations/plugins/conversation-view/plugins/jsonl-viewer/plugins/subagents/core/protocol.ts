@@ -281,11 +281,32 @@ export const subagentActivityResource = resourceDescriptor<
 >("subagent-activity", SubagentActivityPayloadSchema, []);
 
 /**
- * One sub-agent's transcript, keyed by the parent's TOOL-USE id rather than by
- * the agent id, so a card and the pane route it opens need no extra identifier:
- * the server resolves the id to a file through the meta files.
+ * Which sub-agent a surface means — by one of its TWO keys, because the
+ * surfaces that open one hold different things:
+ *
+ * - `call`  — the parent's `Agent` tool-use id. What a transcript card and a
+ *   completion notification hold, and the only key that exists BEFORE the
+ *   harness writes the sub-agent's files, so a card clicked at launch still
+ *   opens a pane that fills in. The server joins it to a file through the
+ *   meta files (id, else the name the call requested).
+ * - `agent` — the sub-agent's own id, which names its files directly. What a
+ *   list of sub-agents holds, and the only key that reaches a named teammate
+ *   spawned by another sub-agent: its `Agent` call lives in that sub-agent's
+ *   transcript, which the call-keyed join does not read.
+ *
+ * Flat, so it spreads straight into resource params and a pane route.
+ */
+export const SubagentRefSchema = z.object({
+  by: z.enum(["call", "agent"]),
+  key: z.string(),
+});
+export type SubagentRef = z.infer<typeof SubagentRefSchema>;
+
+/**
+ * One sub-agent's transcript, keyed by whichever {@link SubagentRef} the
+ * opening surface holds; the server resolves it to a file.
  */
 export const subagentTranscriptResource = resourceDescriptor<
   SubagentTranscript,
-  { id: string; toolUseId: string }
+  { id: string } & SubagentRef
 >("subagent-transcript", SubagentTranscriptSchema, { kind: "unlinked" });

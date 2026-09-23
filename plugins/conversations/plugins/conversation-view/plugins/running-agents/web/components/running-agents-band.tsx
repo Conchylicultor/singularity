@@ -7,9 +7,11 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   FieldDef,
+  HierarchyConfig,
   HostedToolbar,
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   CollapsibleChevron,
   useCollapsible,
@@ -96,15 +98,39 @@ function ElapsedCell({ row }: { row: RunningAgentRow }) {
   );
 }
 
+/** What a row says it last did — `formatLastStep`, so a card phrases it the same. */
+function lastStepText(row: RunningAgentRow): string {
+  return row.lastStep === null
+    ? "Nothing written yet"
+    : formatLastStep(row.lastStep);
+}
+
 /**
- * The row schema. One line per sub-agent: what it was asked to do is the title,
- * what it is (type, model, where it runs) and what it last did read underneath,
- * and its clock sits at the end.
+ * The row's label: what it was asked to do, then — muted — what it last did.
  *
- * `lastStep` renders through the subagents plugin's own `formatLastStep`, so
- * the band and a transcript card phrase the same step identically — as plain
- * text, because the list's subtitle is ONE truncating leaf and a component with
- * a box of its own would take the truncation with it.
+ * One truncating line, and the order is the priority: when the row runs out of
+ * room the last step is cut first and the task stays. It rides in the label
+ * rather than in its own field because a tree row's other fields are rigid
+ * chips that never shrink — a sentence there squeezes the task to nothing.
+ * Plain inline spans only: a box of its own would take the truncation with it.
+ */
+function TaskLabel({ row }: { row: RunningAgentRow }) {
+  return (
+    <>
+      {row.description}
+      <span className="text-muted-foreground">
+        {" · "}
+        {lastStepText(row)}
+      </span>
+    </>
+  );
+}
+
+/**
+ * The row schema. One line per sub-agent, nested under the one that spawned
+ * it: what it was asked to do and what it last did are the label, what it is
+ * (type; model and where it runs a Properties toggle away) sits after it, and
+ * its clock at the end.
  */
 const FIELDS: FieldDef<RunningAgentRow>[] = [
   {
@@ -113,6 +139,7 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     type: "text",
     primary: true,
     value: (row) => row.description,
+    cell: (row) => <TaskLabel row={row} />,
   },
   { id: "type", label: "Agent", type: "text", value: (row) => row.type },
   { id: "model", label: "Model", type: "text", value: (row) => row.model },
@@ -126,10 +153,8 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     id: "lastStep",
     label: "Last step",
     type: "text",
-    value: (row) =>
-      row.lastStep === null
-        ? "Nothing written yet"
-        : formatLastStep(row.lastStep),
+    // Shown inside the label (`TaskLabel`); the field stays for search/filter.
+    value: lastStepText,
   },
   {
     id: "started",
@@ -250,6 +275,22 @@ export function RunningAgentsBand({
     () => ({ summary: summarizeAgents(rows), collapsible }),
     [rows, collapsible],
   );
+  // Each sub-agent sits under the one that spawned it. Siblings keep launch
+  // order: the rows arrive in start order, and their ranks are minted from that
+  // order, so nothing here can reorder them — and there is no `onMove`, so
+  // nobody can drag them either.
+  const hierarchy = useMemo<HierarchyConfig<RunningAgentRow>>(() => {
+    const ranks = new Map(
+      Rank.nBetween(null, null, rows.length).map((rank, i) => [
+        rows[i]!.key,
+        rank,
+      ]),
+    );
+    return {
+      getParentId: (row) => row.parentKey,
+      getRank: (row) => ranks.get(row.key)!,
+    };
+  }, [rows]);
 
   if (state.kind === "pending" || rows.length === 0) return null;
 
@@ -259,27 +300,32 @@ export function RunningAgentsBand({
         rows={rows}
         fields={FIELDS}
         rowKey={(row) => row.key}
-        views={["list"]}
+        views={["tree"]}
+        hierarchy={hierarchy}
         density="compact"
         storageKey={RUNNING_AGENTS_VIEW}
         searchPlaceholder="Search agents"
         toolbar={BAND_TOOLBAR}
         searchAccessor={(row) => `${row.description} ${row.type}`}
-        // A row opens the same report pane its transcript card does — and a
-        // sub-agent nothing can name resolves to no handler at all, so its row
-        // is a plain line rather than a button onto a pane that never resolves.
-        rowActivation={(row) => {
-          const toolUseId = row.toolUseId;
-          if (toolUseId === null) return undefined;
-          return () =>
-            openPane(agentReportPane, { toolUseId }, { mode: "push" });
-        }}
+        // A row opens the same report pane its transcript card does, by the
+        // sub-agent's own id — the one key every sub-agent has, including a
+        // teammate another sub-agent spawned, whose launching call is nowhere
+        // in this conversation's transcript.
+        rowActivation={(row) => () =>
+          openPane(
+            agentReportPane,
+            { by: "agent", key: row.key },
+            { mode: "push" },
+          )
+        }
         emptyState={
           <Text tone="muted">No agent matches what you searched for.</Text>
         }
         viewOptions={{
-          list: {
-            leading: (row: RunningAgentRow) => (
+          tree: {
+            // The band exists to show the whole set; a user fold still wins.
+            defaultExpanded: true,
+            leadingIcon: (row: RunningAgentRow) => (
               <StatusDot
                 colorClass={
                   row.state.kind === "running"

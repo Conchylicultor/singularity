@@ -25,12 +25,16 @@ import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import {
   subagentReport,
   subagentTranscriptResource,
+  type SubagentRef,
   type SubagentReport,
   type SubagentRequestShape,
   type SubagentTranscript,
 } from "../../core";
-import { useSubagentStatus } from "../internal/use-subagent-status";
-import type { SubagentStatus } from "../internal/use-subagent-statuses";
+import {
+  useConversationSubagents,
+  type ConversationSubagents,
+  type SubagentStatus,
+} from "../internal/use-subagent-statuses";
 import { subagentStateDisplay } from "../internal/run-state-display";
 import { SubagentDuration } from "./subagent-duration";
 import { SubagentLastStep } from "./subagent-last-step";
@@ -69,6 +73,60 @@ function findAgentToolEvent(
     (e): e is ToolCallEvent =>
       e.kind === "tool-call" && e.toolUseId === toolUseId,
   );
+}
+
+/**
+ * The sub-agent a ref names, as the pane reads it: how it is going, and the
+ * parent's `Agent` call that launched it when the parent transcript holds one.
+ *
+ * `missing` is only reachable by agent id — a row that is no longer on disk. By
+ * call there is always an answer: no row yet is "starting", which the status
+ * already expresses.
+ */
+type ResolvedRef =
+  | {
+      kind: "known";
+      status: SubagentStatus;
+      agentToolEvent: ToolCallEvent | undefined;
+    }
+  | { kind: "missing" };
+
+function resolveRef(
+  subagents: ConversationSubagents,
+  ref: SubagentRef,
+  parentEvents: JsonlEvent[],
+): ResolvedRef {
+  if (ref.by === "call") {
+    const agentToolEvent = findAgentToolEvent(parentEvents, ref.key);
+    return {
+      kind: "known",
+      agentToolEvent,
+      status:
+        subagents.kind === "pending"
+          ? { kind: "pending" }
+          : subagents.statusOf({ toolUseId: ref.key, agentToolEvent }),
+    };
+  }
+  if (subagents.kind === "pending") {
+    return {
+      kind: "known",
+      status: { kind: "pending" },
+      agentToolEvent: undefined,
+    };
+  }
+  const entry = subagents.entries.find((e) => e.row.agentId === ref.key);
+  if (entry === undefined) return { kind: "missing" };
+  return {
+    kind: "known",
+    agentToolEvent: entry.agentToolEvent,
+    status: {
+      kind: "known",
+      state: entry.state,
+      row: entry.row.kind === "described" ? entry.row : undefined,
+      startedAt: entry.startedAt,
+      endedAt: entry.endedAt,
+    },
+  };
 }
 
 /** The whole pane, when there is nothing to show in it yet. */
@@ -239,12 +297,12 @@ function SubagentReportCard({
  */
 export function SubagentPaneBody({
   conversationId,
-  toolUseId,
+  subagent,
 }: {
   /** The PARENT conversation — what both resources are keyed by. */
   conversationId: string;
-  /** The parent's `Agent` tool-use id, which is the sub-agent's whole identity. */
-  toolUseId: string;
+  /** Which sub-agent: by the call that launched it, or by its own id. */
+  subagent: SubagentRef;
 }) {
   const events = useResource(jsonlEventsResource, { id: conversationId });
   // The parent transcript is gated HERE, so that below this line a missing
@@ -271,8 +329,8 @@ export function SubagentPaneBody({
       {(parentEvents) => (
         <SubagentPaneContent
           conversationId={conversationId}
-          toolUseId={toolUseId}
-          agentToolEvent={findAgentToolEvent(parentEvents, toolUseId)}
+          subagent={subagent}
+          parentEvents={parentEvents}
         />
       )}
     </ResourceView>
@@ -281,23 +339,34 @@ export function SubagentPaneBody({
 
 function SubagentPaneContent({
   conversationId,
-  toolUseId,
-  agentToolEvent,
+  subagent,
+  parentEvents,
 }: {
   conversationId: string;
-  toolUseId: string;
-  /** `undefined` = the parent transcript holds no such `Agent` call. */
-  agentToolEvent: ToolCallEvent | undefined;
+  subagent: SubagentRef;
+  /** The parent transcript, already arrived. */
+  parentEvents: JsonlEvent[];
 }) {
-  const status = useSubagentStatus({
-    conversationId,
-    toolUseId,
-    agentToolEvent,
-  });
+  const resolved = resolveRef(
+    useConversationSubagents(conversationId),
+    subagent,
+    parentEvents,
+  );
   const transcript = useResource(subagentTranscriptResource, {
     id: conversationId,
-    toolUseId,
+    ...subagent,
   });
+
+  if (resolved.kind === "missing") {
+    return (
+      <PaneMessage>
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          This conversation has no sub-agent with that id any more.
+        </Text>
+      </PaneMessage>
+    );
+  }
+  const { status, agentToolEvent } = resolved;
 
   const fallback = readAgentInput(agentToolEvent?.input);
   const row = status.kind === "known" ? status.row : undefined;
@@ -329,7 +398,7 @@ function SubagentPaneContent({
       />
       <SubagentTranscript
         conversationId={conversationId}
-        toolUseId={toolUseId}
+        subagent={subagent}
         transcript={transcript}
         status={status}
       />
@@ -339,12 +408,12 @@ function SubagentPaneContent({
 
 function SubagentTranscript({
   conversationId,
-  toolUseId,
+  subagent,
   transcript,
   status,
 }: {
   conversationId: string;
-  toolUseId: string;
+  subagent: SubagentRef;
   transcript: ResourceResult<SubagentTranscript>;
   status: SubagentStatus;
 }) {
@@ -368,7 +437,7 @@ function SubagentTranscript({
     );
   }
   if (transcript.data.kind === "unlinked") {
-    // No file claimed by this tool-use id. While the sub-agent is still going
+    // No file claimed by this ref. While the sub-agent is still going
     // that is "not written yet"; once it has stopped, no file is ever coming —
     // and a spinner that spins forever is the lie the discriminated result
     // exists to prevent.
@@ -393,7 +462,7 @@ function SubagentTranscript({
       events={transcript.data.events}
       conversationId={conversationId}
       // The surface tab is appended by the view — name only the subject here.
-      persistKey={`subagent-scroll:${toolUseId}`}
+      persistKey={`subagent-scroll:${subagent.by}:${subagent.key}`}
       empty={<span>This sub-agent&apos;s transcript is empty so far.</span>}
     />
   );

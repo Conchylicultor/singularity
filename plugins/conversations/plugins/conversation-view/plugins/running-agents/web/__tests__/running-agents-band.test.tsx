@@ -250,8 +250,9 @@ describe("the running-agents band", () => {
     subagents = known(FIXTURES);
     renderBand();
 
+    // The task, then what it last did — one line, so the step is cut first.
     expect(screen.getByTestId("cell:fg:description").textContent).toBe(
-      "Search auth flow",
+      "Search auth flow · Read auth.ts",
     );
     expect(screen.getByTestId("cell:fg:type").textContent).toBe("Explore");
     expect(screen.getByTestId("cell:fg:model").textContent).toBe("sonnet");

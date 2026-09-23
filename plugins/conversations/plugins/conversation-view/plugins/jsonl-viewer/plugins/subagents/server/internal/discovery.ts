@@ -248,12 +248,7 @@ export function evictMetaCache(scope: string): void {
  * else's work under this card.
  */
 export type SubagentLookup =
-  | {
-      kind: "found";
-      entry: SubagentEntry;
-      meta: SubagentMeta;
-      startedAt: string;
-    }
+  | { kind: "found"; entry: SubagentEntry }
   | { kind: "none" }
   | { kind: "ambiguous"; reason: string };
 
@@ -285,14 +280,7 @@ export async function findSubagentIn(
   for (const entry of entries) {
     const read = await readMeta(scope, entry.metaPath);
     if (read.kind !== "read") continue;
-    if (read.meta.toolUseId === join.toolUseId) {
-      return {
-        kind: "found",
-        entry,
-        meta: read.meta,
-        startedAt: read.startedAt,
-      };
-    }
+    if (read.meta.toolUseId === join.toolUseId) return { kind: "found", entry };
     described.push({ entry, meta: read.meta, startedAt: read.startedAt });
   }
 
@@ -300,7 +288,7 @@ export async function findSubagentIn(
   const byName = described.filter(
     (d) => d.meta.toolUseId === undefined && d.meta.name === join.requestedName,
   );
-  if (byName.length === 1) return { kind: "found", ...byName[0]! };
+  if (byName.length === 1) return { kind: "found", entry: byName[0]!.entry };
   if (byName.length > 1) {
     return {
       kind: "ambiguous",
@@ -308,4 +296,26 @@ export async function findSubagentIn(
     };
   }
   return { kind: "none" };
+}
+
+/**
+ * A sub-agent by its OWN id — the key every sub-agent has, whoever spawned it.
+ *
+ * The id names the files directly (`agent-<id>.*`), so there is nothing to join
+ * and nothing to refuse: this is how a surface that already holds the row (the
+ * running-agents band) opens it. It is the only way to reach a named teammate
+ * spawned by ANOTHER sub-agent, whose `Agent` call lives in that sub-agent's
+ * transcript rather than the parent chain the call-keyed lookup reads.
+ *
+ * No meta is required: a sub-agent whose meta is unreadable still has a
+ * transcript worth showing.
+ */
+export async function findSubagentByAgentId(
+  dirs: readonly string[],
+  agentId: string,
+): Promise<SubagentLookup> {
+  const entry = (await listSubagentEntries(dirs)).find(
+    (e) => e.agentId === agentId,
+  );
+  return entry === undefined ? { kind: "none" } : { kind: "found", entry };
 }

@@ -5,8 +5,27 @@ The sub-agents working for this conversation, in a card above the prompt box:
 > ◌ **3** agents working · longest 4:06 ⌄
 
 Open by default; the summary line folds the rows. One row per sub-agent — dot,
-what it was asked to do, type, model, "background", **what it last did**, a
-ticking clock. A row opens that sub-agent's report pane.
+what it was asked to do, **what it last did**, type, a ticking clock — nested
+under the sub-agent that spawned it. Every row opens that sub-agent's report
+pane.
+
+## The hierarchy
+
+A sub-agent can spawn its own (a lead fanning out to named teammates). Each
+row sits under its parent, read from the meta file's `parentAgentId`; older
+Claude Code versions don't write it, so those rows sit at the top level.
+
+- **A stopped parent stays while anything under it is shown** (reading
+  "done"), or its children would silently move to the top level — a claim that
+  the conversation launched them. `visibleAgentRows` keeps every ancestor of a
+  shown row; such a parent arms no linger timer of its own
+  (`nextLingerExpiry` skips expiries already behind `now`) and leaves with its
+  last child.
+- **A row opens by the sub-agent's OWN id** (`{ by: "agent" }`), not by the
+  tool-use id of the call that launched it. A named teammate records no
+  tool-use id, and when another sub-agent spawned it, that launching call is in
+  the spawner's transcript, which the call-keyed lookup never reads. The own id
+  names its files directly, so every row opens.
 
 ## It derives nothing
 
@@ -41,7 +60,8 @@ under `prefers-reduced-motion` rather than removed, so the line keeps its shape.
 
 ## The rows are a DataView with a HOSTED toolbar
 
-`views={["list"]}`, `toolbar={{ kind: "hosted", frame }}` — no band (a
+`views={["tree"]}` with a read-only `hierarchy` (ranks minted from launch
+order, no `onMove`), `toolbar={{ kind: "hosted", frame }}` — no band (a
 search/filter/sort strip over four rows in a small card does nothing); the card
 places the one options trigger the host hands it. Two things to know before
 editing `running-agents-band.tsx`:
@@ -50,10 +70,12 @@ editing `running-agents-band.tsx`:
   and the open/closed state reach it through a context the band provides around
   the DataView. The frame is module-scope — a new identity per render remounts
   the card.
-- **The subtitle is one truncating text leaf**: a field `cell` that renders a
-  box of its own (a `Line`, a chip row) takes the truncation with it. So the
-  last step is plain text from `formatLastStep`; only the trailing clock has a
-  cell.
+- **The last step rides in the label.** A tree row's non-label fields are
+  rigid chips that never shrink, so a sentence there squeezes the task to
+  nothing. The label (`TaskLabel`) is the one truncating leaf: task, then the
+  muted step, so the step is cut first. Plain inline spans only — a box of its
+  own (a `Line`, a chip row) takes the truncation with it. The `lastStep` field
+  stays for search and filter, hidden from the body.
 
 Config-backed like every DataView:
 `config/conversations/conversation-view/running-agents/running-agents.jsonc`.

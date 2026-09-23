@@ -14,7 +14,7 @@
     },
     {
       "paneId": "agent-report",
-      "segment": "agent-report/:toolUseId",
+      "segment": "agent-report/:by/:key",
       "appIndex": false,
       "parent": null
     },

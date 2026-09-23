@@ -22,7 +22,8 @@ const NO_ENTRIES: SubagentEntry[] = [];
 
 /**
  * The sub-agents to show above the prompt box: every one still running, plus
- * the ones that stopped moments ago and are still saying so.
+ * the ones that stopped moments ago and are still saying so, plus the
+ * ancestors of both (see `visibleAgentRows`).
  *
  * Run state is NOT derived here. It comes from the subagents plugin, which owns
  * the three-armed answer (running / finished / ended without reporting) and
@@ -42,14 +43,14 @@ export function useRunningAgents(conversationId: string): RunningAgentsState {
   const rows = useMemo(() => visibleAgentRows(entries, now), [entries, now]);
 
   useEffect(() => {
-    const expiry = nextLingerExpiry(rows);
+    const expiry = nextLingerExpiry(rows, now);
     if (expiry === null) return;
     const id = setTimeout(
       () => setNow(Date.now()),
       Math.max(0, expiry - Date.now()),
     );
     return () => clearTimeout(id);
-  }, [rows]);
+  }, [rows, now]);
 
   if (subagents.kind === "pending") return { kind: "pending" };
   return { kind: "known", rows };

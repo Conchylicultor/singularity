@@ -38,7 +38,11 @@ function OpenSubagentAction({ toolUseId }: { toolUseId: string }) {
       label="View sub-agent"
       onClick={(e) => {
         e.stopPropagation();
-        openPane(agentReportPane, { toolUseId }, { mode: "push" });
+        openPane(
+          agentReportPane,
+          { by: "call", key: toolUseId },
+          { mode: "push" },
+        );
       }}
     />
   );

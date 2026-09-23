@@ -254,7 +254,10 @@ describe("one sub-agent's transcript", () => {
       ]),
     ];
 
-    const result = await readSubagentTranscript(CONV, "toolu_1");
+    const result = await readSubagentTranscript(CONV, {
+      by: "call",
+      key: "toolu_1",
+    });
     expect(result.kind).toBe("linked");
     if (result.kind !== "linked") throw new Error("unreachable");
     expect(result.agentId).toBe("aaa");
@@ -268,7 +271,9 @@ describe("one sub-agent's transcript", () => {
     keptPaths = [await writeSession(projects, "sess-a", [])];
     // An empty array here would render as "the sub-agent did nothing"; the arm
     // makes that reading impossible.
-    expect(await readSubagentTranscript(CONV, "toolu_pending")).toEqual({
+    expect(
+      await readSubagentTranscript(CONV, { by: "call", key: "toolu_pending" }),
+    ).toEqual({
       kind: "unlinked",
     });
   });
@@ -280,7 +285,9 @@ describe("one sub-agent's transcript", () => {
 
     // Nothing claims the id yet: routing by a path we do not have would mean the
     // pane never learns the file was created.
-    expect(await resolveTranscriptTargets(CONV, "toolu_1")).toEqual({
+    expect(
+      await resolveTranscriptTargets(CONV, { by: "call", key: "toolu_1" }),
+    ).toEqual({
       paths: [],
       dirs: [subagents],
     });
@@ -292,7 +299,9 @@ describe("one sub-agent's transcript", () => {
     ];
     evictMetaCache(CONV);
     // Identity is now fixed, so a sibling sub-agent's appends stop waking it.
-    expect(await resolveTranscriptTargets(CONV, "toolu_1")).toEqual({
+    expect(
+      await resolveTranscriptTargets(CONV, { by: "call", key: "toolu_1" }),
+    ).toEqual({
       paths: [join(subagents, "agent-aaa.jsonl")],
     });
   });
@@ -390,5 +399,66 @@ describe("joining a named in-process teammate", () => {
     expect(await scanActivity(CONV)).toMatchObject([
       { kind: "described", name: "live-probe", toolUseId: undefined },
     ]);
+  });
+});
+
+describe("a sub-agent opened by its own id", () => {
+  test("reaches a teammate spawned by ANOTHER sub-agent, which no call-keyed lookup can", async () => {
+    // Its `Agent` call lives in the parent sub-agent's transcript, not in the
+    // conversation's chain — so neither its (absent) tool-use id nor its name
+    // joins from here. Its own id names its files directly.
+    const projects = await newProjectsDir();
+    keptPaths = [
+      await writeSession(projects, "sess-a", [
+        {
+          agentId: "nested",
+          meta: {
+            agentType: "batch",
+            description: "Verify batch 1",
+            name: "batch1",
+            parentAgentId: "lead",
+          },
+          lines: [assistantLine("checking")],
+        },
+      ]),
+    ];
+
+    expect(
+      await readSubagentTranscript(CONV, { by: "call", key: "toolu_lead" }),
+    ).toEqual({ kind: "unlinked" });
+
+    const result = await readSubagentTranscript(CONV, {
+      by: "agent",
+      key: "nested",
+    });
+    expect(result.kind).toBe("linked");
+    if (result.kind !== "linked") throw new Error("unreachable");
+    expect(result.agentId).toBe("nested");
+  });
+
+  test("an unreadable meta does not hide the transcript", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [
+      await writeSession(projects, "sess-a", [
+        {
+          agentId: "odd",
+          meta: { nonsense: true },
+          lines: [assistantLine("x")],
+        },
+      ]),
+    ];
+    const result = await readSubagentTranscript(CONV, {
+      by: "agent",
+      key: "odd",
+    });
+    expect(result.kind).toBe("linked");
+  });
+
+  test("an id nothing on disk carries is `unlinked`", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [await writeSession(projects, "sess-a", [])];
+    expect(
+      await readSubagentTranscript(CONV, { by: "agent", key: "ghost" }),
+    ).toEqual({ kind: "unlinked" });
   });
 });

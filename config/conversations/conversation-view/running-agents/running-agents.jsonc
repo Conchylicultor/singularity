@@ -2,11 +2,15 @@
 {
   "views": [
     {
-      "id": "list",
+      "id": "tree",
       "name": "Agents",
-      // Source order is launch order, which is how the band reads: the agent
-      // you started first is the one at the top.
-      "view": { "type": "list", "sort": [] }
+      // Each sub-agent under the one that spawned it; siblings in launch order,
+      // which is how the band reads: the agent started first is at the top.
+      "view": {
+        "type": "tree",
+        "sort": [],
+        "visibleFields": ["description", "type", "started"]
+      }
     }
   ]
 }

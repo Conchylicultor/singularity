@@ -10887,6 +10887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `LastStep`
                   - `SubagentActivityRow`
                   - `SubagentJoin`
+                  - `SubagentRef`
                   - `SubagentReport`
                   - `SubagentRequestShape`
                   - `SubagentRunState`
@@ -10907,6 +10908,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SubagentActivityPayloadSchema`
                   - `subagentActivityResource`
                   - `SubagentActivityRowSchema`
+                  - `SubagentRefSchema`
                   - `subagentReport`
                   - `SubagentRequestShapeSchema`
                   - `subagentRunState`

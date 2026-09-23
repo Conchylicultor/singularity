@@ -72,7 +72,11 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
   const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    openPane(agentReportPane, { toolUseId: event.toolUseId }, { mode: "push" });
+    openPane(
+      agentReportPane,
+      { by: "call", key: event.toolUseId },
+      { mode: "push" },
+    );
   };
 
   // Always openable, whether or not a result has landed: while it runs the pane
