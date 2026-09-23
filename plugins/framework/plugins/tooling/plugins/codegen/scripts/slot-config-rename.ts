@@ -16,6 +16,10 @@
  * ids exist nowhere in the source any more — deriving them would mean reading a
  * manifest that has since been regenerated — so the table is the only durable
  * record of the mapping. Delete both once every worktree has been migrated.
+ *
+ * Do not copy this shape for a plugin move: `./singularity plugin move` records
+ * the move in relocate's ledger, and every build migrates its own namespace
+ * (`applyPluginMoves`) — no hand-run step.
  */
 import {
   existsSync,

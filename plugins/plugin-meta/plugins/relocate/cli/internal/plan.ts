@@ -23,6 +23,7 @@ import {
   type RelativeRef,
   type RelativeRefSyntax,
 } from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import { movedPluginId } from "../../core";
 
 const PLUGINS_DIR = "plugins";
 const SEGMENT_RE = /^[A-Za-z0-9_-]+$/;
@@ -108,11 +109,7 @@ export function mapRepoPath(move: Move, path: string): string {
 
 /** The moved spelling of a dot id, or null when it is outside the moved subtree. */
 export function mapPluginId(move: Move, id: PluginId): PluginId | null {
-  if (id === move.from.id) return move.to.id;
-  if (id.startsWith(`${move.from.id}.`)) {
-    return asPluginId(move.to.id + id.slice(move.from.id.length));
-  }
-  return null;
+  return movedPluginId(id, move.from.id, move.to.id);
 }
 
 /** A `[start, end)` replacement in one file's text. */

@@ -73,6 +73,7 @@ contributor that hands a conflict to an agent.
     - `configNavPane.Actions` ← `primitives.pane`
     - `configDetailPane.Actions` ← `primitives.pane`
     - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
+    - `ConfigNavSlots.Notice` ← `debug.config-orphans`
   - Contributes:
     - `Pane.Register` "config-v2-nav"
     - `Pane.Register` "config-v2-detail"
@@ -89,6 +90,7 @@ contributor that hands a conflict to an agent.
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/column.Column`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -131,6 +133,7 @@ contributor that hands a conflict to an agent.
     - `ConfigDetailSlots`
     - `ConfigNav`
     - `configNavPane`
+    - `ConfigNavSlots`
 - Server:
   - Contributes: `taskCategory` "config"
   - Uses:
@@ -162,6 +165,7 @@ contributor that hands a conflict to an agent.
     - `auth`
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
+    - `debug/config-orphans`
 - Sub-plugins:
   - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
 

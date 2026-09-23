@@ -129,6 +129,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "config_v2.settings.config-v2-detail.actions", pluginId: "config_v2.settings", configName: "config-v2-detail.actions" },
   { slotId: "config_v2.settings.config-v2-nav.actions", pluginId: "config_v2.settings", configName: "config-v2-nav.actions" },
   { slotId: "config_v2.settings.conflict-action", pluginId: "config_v2.settings", configName: "conflict-action" },
+  { slotId: "config_v2.settings.nav-notice", pluginId: "config_v2.settings", configName: "nav-notice" },
   { slotId: "conversations.agents.agent-actions", pluginId: "conversations.agents", configName: "agent-actions" },
   { slotId: "conversations.agents.agent-detail.actions", pluginId: "conversations.agents", configName: "agent-detail.actions" },
   { slotId: "conversations.agents.agent-side.actions", pluginId: "conversations.agents", configName: "agent-side.actions" },

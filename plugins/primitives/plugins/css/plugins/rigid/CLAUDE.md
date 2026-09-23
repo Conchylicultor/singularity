@@ -107,6 +107,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `conversations/conversation-view/turn-summary`
     - `conversations/recover`
     - `debug/broadcasts`
+    - `debug/config-orphans`
     - `debug/health-monitor`
     - `debug/live-state-health`
     - `debug/memory`

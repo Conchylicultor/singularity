@@ -231,6 +231,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/prototypes/present`
     - `build`
     - `config_v2/config-link`
+    - `debug/config-orphans`
     - `debug/op-rate`
     - `debug/queue-health`
     - `debug/reports`

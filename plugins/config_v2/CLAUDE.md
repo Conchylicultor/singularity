@@ -132,6 +132,12 @@ A three-way merge needs the **base** — the origin the override was written aga
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
 
+### Plugin moves and stranded overrides
+
+A config's user-layer path is its plugin's id, so moving a plugin moves where its saved settings must live. `./singularity plugin move` records every move in a committed ledger, and each build replays it onto its own namespace's user dir before propagation — folder moved, saved reorder keys re-rooted, `// @hash` chain kept so overrides stay in force. See `plugins/plugin-meta/plugins/relocate/CLAUDE.md` ("Saved settings follow the move").
+
+An override that still ends up where no live config reads it (plugin removed, or a move onto a destination that already had settings) is found by `auditUserConfigOrphans` — never deleted, since the user layer is not versioned. `debug/config-orphans` shows it: a notice pinned above Settings → Config, the Debug → Config Orphans panel, and one rolling `config-orphans-stranded` report filed at boot.
+
 ### Schema evolution
 
 Adding a field to an existing config (including a `listField` item or `objectField` sub-field) must not break documents stored before the field existed. Two mechanisms guarantee this:
@@ -499,6 +505,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/host/duress`
     - `integrations/gmail`
     - `plugin-meta/composition`
+    - `plugin-meta/relocate`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`

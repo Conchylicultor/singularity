@@ -140,6 +140,7 @@ primitive exists to name.
     - `conversations/recover`
     - `debug/broadcasts`
     - `debug/claude-cli-calls`
+    - `debug/config-orphans`
     - `debug/health-monitor`
     - `debug/live-state-health`
     - `debug/logs`

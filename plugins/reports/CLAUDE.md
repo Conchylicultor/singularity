@@ -139,6 +139,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database/query-deadline`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
+    - `debug/config-orphans`
     - `debug/duress-shed`
     - `debug/live-state-churn/monitor`
     - `debug/op-rate`

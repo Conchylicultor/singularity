@@ -4,18 +4,25 @@
 
 ## Plugin reference
 
-- Description: Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live.
+- Description: Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Files one rolling `config-orphans-stranded` report at boot when any real user override is stranded.
 - Web:
   - Slots: `configOrphansPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "config-orphans"
     - `DebugApp.Sidebar` "Config Orphans"
+    - `ConfigNavSlots.Notice` → `StrandedConfigNotice`
   - Uses:
+    - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
+    - `config_v2/settings.ConfigNavSlots`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/pane.defineRoute`
@@ -25,9 +32,12 @@
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `configOrphansPane`
 - Server:
+  - Contributes: `report-kind` "config-orphans-stranded"
   - Uses:
     - `config_v2.auditUserConfigOrphans`
     - `infra/endpoints.implement`
+    - `reports.recordReport`
+    - `reports.ReportKind`
   - Routes: `GET /api/debug/config-orphans`
 - Shared:
   - Exports (values): `configOrphans`

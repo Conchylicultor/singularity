@@ -17,6 +17,7 @@
     - `plugin-meta/parse-utils`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
+    - `plugin-meta/relocate`
 - Core:
   - Exports (types):
     - `LeafFolder`

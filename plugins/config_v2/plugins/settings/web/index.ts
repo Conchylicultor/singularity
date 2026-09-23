@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
-import { ConfigDetailSlots } from "./slots";
+import { ConfigDetailSlots, ConfigNavSlots } from "./slots";
 
 export {
   configNavPane,
@@ -9,7 +9,7 @@ export {
   configDetailRoute,
 } from "./internal/panes";
 export { ConfigNav } from "./components/config-nav";
-export { ConfigDetailSlots } from "./slots";
+export { ConfigDetailSlots, ConfigNavSlots } from "./slots";
 export type {
   ConfigConflictContext,
   ConfigConflictField,
@@ -28,5 +28,6 @@ export default {
     "config-v2-nav": configNavPane,
     "config-v2-detail": configDetailPane,
     ConflictAction: ConfigDetailSlots.ConflictAction,
+    NavNotice: ConfigNavSlots.Notice,
   },
 } satisfies PluginDefinition;

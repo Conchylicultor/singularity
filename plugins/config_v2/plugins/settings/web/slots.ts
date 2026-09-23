@@ -63,3 +63,13 @@ export const ConfigDetailSlots = {
     component: ComponentType<{ conflict: ConfigConflictContext }>;
   }>(),
 };
+
+export const ConfigNavSlots = {
+  /**
+   * Notices pinned above the config nav — something about the user's saved
+   * settings as a whole that no single config row can say (e.g. overrides that
+   * no longer apply to any config). A contribution renders nothing when it has
+   * nothing to say.
+   */
+  Notice: defineRenderSlot<{ component: ComponentType }>(),
+};

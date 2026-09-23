@@ -30,6 +30,10 @@ export const SERVER_REPORT_SOURCES = [
   // caught.
   "server-upstream-monitor",
   "server-cost-monitor",
+  // The boot-time audit of this namespace's saved settings: some of the user's
+  // own config overrides sit where no live config reads them any more (a plugin
+  // was removed, or moved onto a destination that already had settings).
+  "server-config-audit",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error
   // (nobody is still running to catch it). Its own source because that

@@ -14,6 +14,7 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { applyPluginMoves } from "@plugins/plugin-meta/plugins/relocate/core";
 import type {
   Lane,
   GrantHooks,
@@ -483,6 +484,29 @@ export async function deployNamespace(
       ensureDatabase(ns),
     );
   }
+
+  // Saved settings follow plugin moves BEFORE propagation reads them: replay
+  // the committed move ledger onto this namespace's user-layer config, so the
+  // dir is shaped like the code being deployed (see relocate's apply-moves).
+  await span(
+    "applyPluginMoves",
+    "build:codegen",
+    "apply plugin moves to user config",
+    async () => {
+      for (const a of applyPluginMoves({
+        root,
+        userConfigDir: configDir.file(ns),
+      })) {
+        console.log(
+          `Plugin move ${a.move.from} → ${a.move.to}: moved ${a.moved.length} saved config file(s), ` +
+            `rewrote ${a.rewritten.length}` +
+            (a.kept.length > 0
+              ? `; kept ${a.kept.length} at the old path (destination already had one): ${a.kept.join(", ")}`
+              : ""),
+        );
+      }
+    },
+  );
 
   await span(
     "propagateConfig",

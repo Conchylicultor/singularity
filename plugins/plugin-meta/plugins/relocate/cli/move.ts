@@ -3,11 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import {
-  asPath,
-  asPluginId,
-  type PluginId,
-} from "@plugins/framework/plugins/plugin-id/core";
+import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   getMainRepoRoot,
@@ -16,6 +12,11 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { findPluginRefs } from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  PLUGIN_MOVES_FILE,
+  appendPluginMove,
+  namespacesHolding,
+} from "../core";
 import {
   editFor,
   locationOf,
@@ -112,17 +113,6 @@ function selfLocatingFiles(
 ): string[] {
   const re = /import\.meta\.(?:dir|dirname|url)\b|__dirname/;
   return files.filter((f) => re.test(texts.get(f) ?? ""));
-}
-
-/** User-layer config dirs (every namespace) under the old slash path. */
-function strandedUserConfig(id: PluginId): string[] {
-  if (!existsSync(configDir.path)) return [];
-  const out: string[] = [];
-  for (const ns of readdirSync(configDir.path)) {
-    const dir = join(configDir.path, ns, asPath(id));
-    if (existsSync(dir)) out.push(dir);
-  }
-  return out.sort();
 }
 
 /** Remove `dir` and each parent up to (not including) `stop` while empty. */
@@ -276,20 +266,20 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     }
   }
 
-  const stranded = strandedUserConfig(from.id);
+  // Saved settings are not moved here: each namespace's copy is migrated by its
+  // own next build, from the ledger entry committed alongside this move — so the
+  // settings change exactly when the code that reads them does.
+  if (!dryRun) appendPluginMove(root, { from: from.id, to: to.id });
+  const holding = namespacesHolding(configDir.path, from.id);
   console.log(``);
-  if (stranded.length > 0) {
-    console.log(
-      `User-layer config under the old slash path (${asPath(from.id)}) — NOT moved; the user's ` +
-        `overrides there stop applying until migrated:`,
-    );
-    for (const d of stranded) console.log(`  ${d}`);
-  } else {
-    console.log(
-      `No user-layer config under ${asPath(from.id)} in any namespace.`,
-    );
-  }
-  console.log(``);
+  console.log(
+    `${dryRun ? "Would record" : "Recorded"} ${from.id} → ${to.id} in ${PLUGIN_MOVES_FILE}. ` +
+      `Each namespace's next \`./singularity build\` moves its saved settings from ` +
+      `${asPath(from.id)} to ${asPath(to.id)} and rewrites saved reorder keys` +
+      (holding.length > 0
+        ? ` — namespaces with settings there now: ${holding.join(", ")}.`
+        : ` — no namespace has settings there now.`),
+  );
   console.log(
     `plugin_health_reviews rows are keyed by plugin id; rows for the old ids orphan (not migrated). ` +
       `To see them: SELECT plugin_id, axis FROM plugin_health_reviews WHERE plugin_id IN (${plan.plugins

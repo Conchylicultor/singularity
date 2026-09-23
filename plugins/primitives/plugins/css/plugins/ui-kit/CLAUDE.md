@@ -604,6 +604,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `debug/boot-profile`
     - `debug/broadcasts`
     - `debug/claude-cli-calls`
+    - `debug/config-orphans`
     - `debug/heap-snapshot`
     - `debug/live-state-churn/emit`
     - `debug/live-state-health`
