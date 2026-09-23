@@ -29,7 +29,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 }: SelectPrimitive.Root.Props<Value, Multiple>) {
   // See `usePopupOpenMirror`: the enclosing PopupOpenScope reads this instead of
   // a CSS selector over base-ui's own open-state attribute.
-  const handleOpenChange = usePopupOpenMirror({
+  const { onOpenChange: handleOpenChange } = usePopupOpenMirror({
     open,
     defaultOpen,
     onOpenChange,

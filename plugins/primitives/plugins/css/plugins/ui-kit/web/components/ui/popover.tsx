@@ -3,6 +3,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror";
+import { useFrameFocusDismiss } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/frame-focus-dismiss";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import type {
   PopoverWidth,
@@ -16,19 +17,23 @@ function Popover({
   defaultOpen,
   onOpenChange,
   ...props
-}: PopoverPrimitive.Root.Props) {
+}: Omit<PopoverPrimitive.Root.Props, "actionsRef">) {
   // See `usePopupOpenMirror`: the enclosing PopupOpenScope reads this instead of
   // a CSS selector over base-ui's own open-state attribute.
-  const handleOpenChange = usePopupOpenMirror({
+  const { onOpenChange: handleOpenChange, isOpen } = usePopupOpenMirror({
     open,
     defaultOpen,
     onOpenChange,
   });
+  // A click inside an iframe never reaches base-ui's outside-press listener.
+  const actionsRef =
+    useFrameFocusDismiss<PopoverPrimitive.Root.Actions>(isOpen);
   return (
     <PopoverPrimitive.Root
       open={open}
       defaultOpen={defaultOpen}
       onOpenChange={handleOpenChange}
+      actionsRef={actionsRef}
       {...props}
     />
   );

@@ -4,6 +4,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror";
+import { useFrameFocusDismiss } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/frame-focus-dismiss";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import type {
   PopoverWidth,
@@ -18,21 +19,24 @@ function DropdownMenu({
   defaultOpen,
   onOpenChange,
   ...props
-}: MenuPrimitive.Root.Props) {
+}: Omit<MenuPrimitive.Root.Props, "actionsRef">) {
   // Publish open state to the enclosing PopupOpenScope, so chrome that must
   // hold itself visible while its menu is open (a hover-revealed row-action
   // cluster — the menu's own anchor) reads a typed boolean.
-  const handleOpenChange = usePopupOpenMirror({
+  const { onOpenChange: handleOpenChange, isOpen } = usePopupOpenMirror({
     open,
     defaultOpen,
     onOpenChange,
   });
+  // A click inside an iframe never reaches base-ui's outside-press listener.
+  const actionsRef = useFrameFocusDismiss<MenuPrimitive.Root.Actions>(isOpen);
   return (
     <MenuPrimitive.Root
       data-slot="dropdown-menu"
       open={open}
       defaultOpen={defaultOpen}
       onOpenChange={handleOpenChange}
+      actionsRef={actionsRef}
       {...props}
     />
   );

@@ -10,8 +10,8 @@ import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/
  * `PopupOpenScope` instead of a CSS selector naming base-ui's `data-popup-open`
  * attribute (which is how the previous, dead Radix spelling rotted unnoticed).
  *
- * Returns the `onOpenChange` to hand back to the `Root`. The caller's handler is
- * invoked with EVERY argument base-ui passed — the signature is
+ * Returns the `onOpenChange` to hand back to the `Root`, and whether the popup
+ * is open now. The caller's handler is invoked with EVERY argument base-ui passed — the signature is
  * `(open, eventDetails)` today and the spread keeps this wrapper transparent to
  * whatever it becomes.
  */
@@ -23,15 +23,22 @@ export function usePopupOpenMirror<Args extends unknown[]>({
   open?: boolean | undefined;
   defaultOpen?: boolean | undefined;
   onOpenChange?: ((open: boolean, ...args: Args) => void) | undefined;
-}): (open: boolean, ...args: Args) => void {
+}): {
+  onOpenChange: (open: boolean, ...args: Args) => void;
+  isOpen: boolean;
+} {
   const [mirrored, setMirrored] = React.useState(defaultOpen ?? false);
 
   // A controlled `open` is the truth whenever it is supplied; the mirror only
   // stands in for the uncontrolled case, where base-ui keeps the state itself.
-  useReportPopupOpen(open ?? mirrored);
+  const isOpen = open ?? mirrored;
+  useReportPopupOpen(isOpen);
 
-  return (nextOpen, ...rest) => {
-    setMirrored(nextOpen);
-    onOpenChange?.(nextOpen, ...rest);
+  return {
+    onOpenChange: (nextOpen, ...rest) => {
+      setMirrored(nextOpen);
+      onOpenChange?.(nextOpen, ...rest);
+    },
+    isOpen,
   };
 }
