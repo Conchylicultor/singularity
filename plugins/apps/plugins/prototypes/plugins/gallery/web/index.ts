@@ -8,7 +8,7 @@ import {
   PrototypeVersionActions,
 } from "./slots";
 import { DoneCardAction, DoneHeaderAction } from "./components/done-toggle";
-import { StageSwitcher, ImproveButton } from "./components/detail-actions";
+import { StageSwitcher } from "./components/detail-actions";
 import { FocusStage } from "./components/focus-stage";
 import { VersionStepper } from "./components/version-stepper";
 import { OpenVersionConversation } from "./components/version-list";
@@ -56,7 +56,7 @@ export type {
 
 export default {
   description:
-    "Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.",
+    "Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.",
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
     Pane.Register({ pane: prototypeDetailPane }),
@@ -71,7 +71,6 @@ export default {
     // `‹ v3 of 7 ›` — which recorded version the stages show. Placed beside
     // the stage switcher by the same authored header order.
     prototypeDetailPane.Actions({ id: "version", component: VersionStepper }),
-    prototypeDetailPane.Actions({ id: "improve", component: ImproveButton }),
     // Mark the open prototype Done (the same shared flag as the card checkbox).
     prototypeDetailPane.Actions({ id: "done", component: DoneHeaderAction }),
     // The Done checkbox, painted at rest on every card (`persistent`), so the

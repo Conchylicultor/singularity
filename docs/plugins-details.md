@@ -3852,7 +3852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/checkpoints`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
+        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
@@ -3866,7 +3866,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "prototypes-detail"
               - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
               - `prototypeDetailPane.Actions` "version" → `VersionStepper`
-              - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeStages.Stage` "Focus" → `FocusStage`

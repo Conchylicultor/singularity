@@ -45,7 +45,7 @@ The Prototypes app's two panes:
     where it is the only true thing left to say: there is no such folder (or the
     list failed), so the prototype has no title to show.
   - **The pane header IS the action bar.** Every control in it (the stage
-    switcher, the version stepper, Improve, and the sibling `present` plugin's
+    switcher, the version stepper, and the sibling `present` plugin's
     Present menu) is a
     contribution to `prototypeDetailPane.Actions` — the standard pane extension
     point — so a new control is a contribution, never an edit to the pane body.
@@ -205,37 +205,26 @@ The Prototypes app's two panes:
     arrows (`VersionShortcuts`), once per surface: by the header stepper, or by
     `VersionStepShortcuts` on the new-tab page. The pane itself does not ask for
     the row — its header already has the stepper.
-  - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
-    plus a line naming the picked options when any differ from the defaults
-    (`pickedVariantLine` — a snapshot from launch time), a line pointing at
-    `./singularity prototype options <id>` for the picks as they are NOW
-    (`currentPicksLine`; the user may flip a variant mid-conversation), and,
-    when a recorded version is on screen, a line naming that version
-    (number and sha) and the `prototype restore` command that brings it back,
-    since "make this darker" may be about v3 rather than the live folder.
 
 Layout uses inline styles for the dynamic scaling geometry (not banned className
 layout utilities).
 
-## The two launch prompts
+## The launch prompt
 
-`newPrototypeText()` and `improveText()` are the only instruction guaranteed to
-reach a prototype agent — they are always in its first user turn, unlike a
-`CLAUDE.md` it may never open. So they carry the rules that decide whether the
+`newPrototypeText()` is the only instruction guaranteed to
+reach a prototype agent — it is always in its first user turn, unlike a
+`CLAUDE.md` it may never open. So it carries the rules that decide whether the
 result is an original design: **write to `~/.singularity/apps/prototypes/` and commit
 nothing, edit the blank template in place, never open another prototype's
 folder, never read `plugins/`**, keep the folder self-contained — and
 **declare variants as options instead of building a switcher into the page**
 (`OPTIONS_RULE`, `launch-rules.ts`; the owner chose this instruction, not a
 check, as the guard).
-`improveText()` also points at `./singularity prototype log <id> -p` — every
-past version with its request and diff — so the agent can read how the design
-got here instead of guessing from the current file.
-Keep them tight and let `prototypes/CLAUDE.md` hold the rest — but do not let
-them drift back into "follow the shape of the existing mocks", which is what
-they said before and is why every prototype looked alike.
+Keep it tight and let `prototypes/CLAUDE.md` hold the rest — but do not let
+it drift back into "follow the shape of the existing mocks", which is what
+it said before and is why every prototype looked alike.
 
-Both name the folder as a PATH, never as a name. It is a minted id, and
+It names the folder as a PATH, never as a name. It is a minted id, and
 `` `proto-1786877040-w2vi` `` written as a name reads like something the agent
 should live up to. What the prototype is called is its `<title>` — which
 `newPrototypeText()` asks the agent to write, because until it does, the card
@@ -263,7 +252,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
+- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with a Done checkbox on every card and in the detail header (filterable and groupable in the gallery), the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
@@ -277,7 +266,6 @@ honest — the prototype does exist — and it self-corrects.
     - `Pane.Register` "prototypes-detail"
     - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
     - `prototypeDetailPane.Actions` "version" → `VersionStepper`
-    - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeStages.Stage` "Focus" → `FocusStage`

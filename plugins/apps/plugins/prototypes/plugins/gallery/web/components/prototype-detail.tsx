@@ -28,7 +28,7 @@ import { OptionsPicker } from "./options-picker";
 import { PastVersionPill } from "./past-version-pill";
 
 /**
- * The detail pane. Its header controls (the stage switcher, Present, Improve)
+ * The detail pane. Its header controls (the stage switcher, Present, Done)
  * are NOT rendered here — they are contributions to
  * `prototypeDetailPane.Actions`, so the pane's own header IS the action bar and
  * any plugin can add to it. The shared state those controls read lives in

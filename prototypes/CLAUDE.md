@@ -211,9 +211,8 @@ live. Read it from the terminal:
 ```
 
 It prints each option with the value on screen (picked, or the page's default)
-and its values, then the document URL of exactly that variant. If you were
-launched from Improve, your prompt says what was picked at launch; the user may
-have flipped it since, so run this when it matters. `prototype list` shows a
+and its values, then the document URL of exactly that variant. The user may
+flip a variant at any time, so run this when it matters. `prototype list` shows a
 `picked:` line under each prototype that is not on its defaults.
 
 ### Rendering a variant yourself

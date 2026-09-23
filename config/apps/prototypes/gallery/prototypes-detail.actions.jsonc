@@ -1,4 +1,4 @@
-// @hash a449f0ac0f62
+// @hash 9170109d83e1
 // A horizontal pane header, read left to right. The pane's own title comes
 // first, then `view-mode` — which stage you are looking at is a choice about
 // the prototype itself, so it leads, beside the title. (It used to sit there
@@ -19,14 +19,6 @@
 // the header — even past the spacer — slides the ‹ you just clicked out from
 // under the pointer. That is why Restore / Back to latest are not header items
 // at all: they float over the stage while a past version is shown.
-//
-// After the spacer, `present` and `improve` share the trailing cluster, and
-// their order there is the real decision. `present` goes first: it is what this
-// pane is FOR — viewing the prototype without the app around it — whereas
-// `improve` is the app-wide feedback affordance that appears on many surfaces.
-// The specific action sits nearer the content, the generic utility outboard of
-// it. (The seeded order had these reversed, purely because it followed
-// contribution registration order.)
 //
 // `done` (the Done toggle) leads the trailing cluster: it is a fact about the
 // prototype you record, not a way of looking at it. Its label and glyph size
@@ -51,7 +43,6 @@
     { "type": "spacer", "id": "spacer-1" },
     "apps.prototypes.gallery:done",
     "apps.prototypes.present:present",
-    "apps.prototypes.gallery:improve",
     "apps.prototypes.copy-id:copy-id"
   ]
 }
