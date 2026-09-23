@@ -22,7 +22,7 @@ empty list of options where a document of headings, lists, quotes and paragraphs
 actually lived — an attribute added to help was deleting the page. The honest
 role there was `group`, which promises nothing, and the selection state moved to
 an announcement channel instead (see
-[`plugins/page/plugins/editor/CLAUDE.md`](../../../../../../page/plugins/editor/CLAUDE.md)).
+[`plugins/page/plugins/editor/CLAUDE.md`](../../../../../../../page/plugins/editor/CLAUDE.md)).
 
 The pairing is knowable statically at the only altitude where it *is* knowable:
 the file that declares the container. That is what the rule reads.

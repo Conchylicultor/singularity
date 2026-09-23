@@ -9,6 +9,7 @@ export {
   asPath,
   asFsPath,
   pluginIdSegments,
+  packageNameFor,
   RUNTIME_FOLDERS,
   LEAF_FOLDERS,
   PLUGIN_FOLDERS,

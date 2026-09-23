@@ -254,6 +254,14 @@ Create `plugins/{name}/web/index.ts`, default-export a `PluginDefinition` whose
 contributions target slots imported from the plugins you extend, run `./singularity build`.
 Optionally define your own slots in `web/slots.ts`.
 
+Every plugin also has a `package.json` (its `"description"`, `"private": true`, and its
+own dependencies). Its `"name"` is **derived from the folder path** — `./singularity build`
+(and `./singularity regen-generated`) writes it, and the `plugin-boundaries` check (R1)
+fails while it is stale. You still have to put *some* name there, because `bun install`
+rejects a workspace member without one and runs before the build's codegen: any placeholder
+that no other plugin uses is fine (don't copy a sibling's unchanged — a duplicate name also
+fails the install). A moved or renamed plugin needs no name edit at all.
+
 ## Styling
 
 Read the `css` and `theme` SKILLs before any UI work (the root `CLAUDE.md` mandates both).

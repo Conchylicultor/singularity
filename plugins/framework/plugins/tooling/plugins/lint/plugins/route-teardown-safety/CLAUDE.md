@@ -11,7 +11,7 @@ eventual `route.continue()` throws `Route is already handled!` into a promise wi
 nowhere to land. A script built on that shape reports success while measuring an
 overlay it never made the server confirm.
 
-Use [`stallRoute`](../../../../e2e-harness/e2e/stall.ts) from the e2e-harness
+Use [`stallRoute`](../../../e2e-harness/e2e/stall.ts) from the e2e-harness
 `e2e` barrel instead: the stall ends on a signal (an elapsed timer, or an explicit
 `release()`), and the handler that continues the route is the one that paused it,
 so there is no teardown to race. `unrouteAll()` is allowed only with an explicit

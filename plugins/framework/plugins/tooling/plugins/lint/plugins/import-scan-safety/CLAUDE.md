@@ -11,7 +11,7 @@ A hand-rolled import scanner that keeps string interiors
 statement written INSIDE a string or template literal — a test fixture, a docs
 snippet, a codegen template — reporting fixture data as a real import. Route
 whole-file static-import scanning through
-[`findImports`](../../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md)
+[`findImports`](../../../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md)
 (`@plugins/plugin-meta/plugins/parse-utils/core`): it masks comments/regex AND
 strings fully, matches the import structure against the masked text, and reads
 each specifier back from the original source by offset. For a construct outside

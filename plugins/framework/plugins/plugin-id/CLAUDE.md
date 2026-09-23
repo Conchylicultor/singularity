@@ -15,6 +15,7 @@
     - `plugin-meta/facets/cross-refs`
     - `plugin-meta/facets/exports`
     - `plugin-meta/parse-utils`
+    - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
 - Core:
   - Exports (types):
@@ -28,6 +29,7 @@
     - `asPluginId`
     - `isTestCodePath`
     - `LEAF_FOLDERS`
+    - `packageNameFor`
     - `PLUGIN_FOLDERS`
     - `pluginIdSegments`
     - `RUNTIME_FOLDERS`

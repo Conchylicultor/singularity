@@ -1,7 +1,7 @@
 # runs-arm (deploy)
 
 The deploy arm of the unified run space: `deploy_runs` bound into the
-[`runs`](../../../../../../runs/CLAUDE.md) union, its own columns, and what a
+[`runs`](../../../../../../../runs/CLAUDE.md) union, its own columns, and what a
 deploy row opens. It lives under `deployments` because `deploy_runs` is that
 plugin's table; `runs` names no kind.
 

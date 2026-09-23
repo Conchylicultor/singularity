@@ -4,6 +4,24 @@ Implements the cross-plugin boundary rules (R1–R10) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
 root `CLAUDE.md`.
 
+## Package name (R1) is generated, R1 only guards it
+
+A plugin's `package.json` `"name"` is a pure function of its path —
+`packageNameFor` in `plugins/framework/plugins/plugin-id/core`
+(`@singularity/plugin-<every non-plugins segment, joined with ->`). Nothing reads
+it, but bun needs it. The repo-tree codegen (`syncPluginPackageNames` in
+`plugins/framework/plugins/tooling/plugins/codegen/core/package-names.ts`, the
+first step of `regenerateRegistryCodegen`) writes it on every
+`./singularity build` / `./singularity regen-generated`, touching only that one
+value. R1 is the in-sync guard, the same role `plugins-registry-in-sync` plays
+for the registries: a stale name is fixed by running the build, never by hand.
+Composition roots are skipped by both. A plugin with no `package.json` at all is
+still R1's to report — the build does not create one.
+
+Because `bun.lock` records every workspace member's name, a build that corrects
+a name re-resolves dependencies right after (`ensureDeps`), so the lockfile
+lands with it.
+
 ## Testing barrels
 
 A runtime folder may publish test helpers from `<runtime>/testing/index.ts`.

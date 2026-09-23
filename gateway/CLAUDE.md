@@ -2,7 +2,7 @@
 
 Reverse proxy that multiplexes multiple Singularity app instances (one per agent worktree) behind a single port using subdomain-based routing.
 
-See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`server/CLAUDE.md`](../server/CLAUDE.md) for the backend.
+See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`server-core/CLAUDE.md`](../plugins/framework/plugins/server-core/CLAUDE.md) for the backend.
 
 ## What It Does
 

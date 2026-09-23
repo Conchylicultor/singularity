@@ -7,7 +7,7 @@ sub-plugins — every field type now lives in the global `fields/` matrix
 `plugins/config` sub-plugin there that contributes its renderer into the slot
 this barrel owns.
 
-See [config v2 vision](../../../research/2026-05-16-config-v2-vision.md) for the
+See [config v2 vision](../../../../research/2026-05-16-config-v2-vision.md) for the
 overall config design, and [fields/CLAUDE.md](../../../fields/CLAUDE.md) to add
 a new field type.
 

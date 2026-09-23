@@ -16,7 +16,7 @@ resume) would silently lose its transcript after 30 idle days.
 
 A single scheduled job (`conversations.transcript-touch`) runs daily and
 `utimes()`-touches the JSONL of every **retained** conversation, via
-[`listRetainedConversations`](../../../tasks-core/server) +
+[`listRetainedConversations`](../../../tasks/plugins/tasks-core/server) +
 [`resolveConversationTranscriptPaths`](../transcript-watcher/server). Touching is
 also exactly what `claude --resume` needs, since resume reads the same file.
 
@@ -29,7 +29,7 @@ the policy lives in one place:
   resume, and the canonical "Hold & close" flow closes the conversations on the
   way out — so an `active`-only scope would age out exactly the history the hold
   was meant to preserve. This mirrors worktree-cleanup, which likewise refuses to
-  reap a held task's worktree ([`isTaskDeletable`](../../../../debug/plugins/worktree-cleanup/server/internal/safety.ts)).
+  reap a held task's worktree ([`isTaskDeletable`](../../../debug/plugins/worktree-cleanup/server/internal/safety.ts)).
 
 A conversation can span **several** session files (Claude relocates a live session
 into a new id). Every file of the chain is touched, not just the live tail: the

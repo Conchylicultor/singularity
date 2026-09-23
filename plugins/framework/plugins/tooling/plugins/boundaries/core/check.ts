@@ -72,7 +72,12 @@ const UNFOLDERED_WHY: Record<UnfolderedReason, (name: string) => string> = {
     `"${name}/" — a testing/ folder sits directly under a runtime folder (not e2e/), e.g. core/testing/`,
 };
 
-function parseRuntimeException(expr: string): {
+/**
+ * Split a `runtimeExceptions` entry (`"<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>"`)
+ * into its two sides. Throws on any other shape. Exported so the plugin-reference
+ * locator (`plugin-meta/plugin-refs`) reads the entries through the same grammar.
+ */
+export function parseRuntimeException(expr: string): {
   source: string;
   target: string;
 } {

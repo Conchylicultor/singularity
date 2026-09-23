@@ -45,6 +45,7 @@ runtime-neutral `core`.
     - `framework/tooling/codegen`
     - `framework/tooling/format`
     - `plugin-meta/barrel-import`
+    - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
 - Core:
   - Exports (values):

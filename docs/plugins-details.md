@@ -16892,6 +16892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/facets/cross-refs`
           - `plugin-meta/facets/exports`
           - `plugin-meta/parse-utils`
+          - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
@@ -16905,6 +16906,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `asPluginId`
           - `isTestCodePath`
           - `LEAF_FOLDERS`
+          - `packageNameFor`
           - `PLUGIN_FOLDERS`
           - `pluginIdSegments`
           - `RUNTIME_FOLDERS`
@@ -17116,8 +17118,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createBoundaryCheck`
               - `defineBoundaries`
               - `deny`
+              - `parseRuntimeException`
               - `runtimeNames`
               - `zone`
+          - Cross-plugin:
+            - Imported by: `plugin-meta/plugin-refs`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses:
@@ -17293,6 +17298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.isTestCodePath`
+              - `framework/plugin-id.packageNameFor`
               - `framework/plugin-id.PLUGIN_FOLDERS`
               - `framework/plugin-id.PluginFolder`
               - `framework/plugin-id.PluginId`
@@ -17360,6 +17366,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PreBarrelManifest`
               - `RampDecl`
               - `RegenCodegenOptions`
+              - `RegistryCodegenResult`
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
               - `WatchedSlotHit`
@@ -17451,6 +17458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `standardPluginDirsFromSnapshot`
               - `standardPluginDirsIn`
               - `tokenGroupVarsManifestPath`
+              - `withPackageName`
               - `writeGenerated`
               - `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
@@ -20548,6 +20556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/codegen`
           - `framework/tooling/format`
           - `plugin-meta/barrel-import`
+          - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (values):
@@ -22820,7 +22829,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveComposition`
           - `serializeEdgeGraph`
       - Cross-plugin:
-        - Imported by: `framework/tooling/codegen`
+        - Imported by:
+          - `framework/tooling/codegen`
+          - `plugin-meta/plugin-refs`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "compositions"
@@ -23368,6 +23379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/test-layout`
+          - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
@@ -23428,6 +23440,52 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PluginHealthReviewSchema`
           - `PluginStalenessSchema`
           - `ReviewTaskSummarySchema`
+    - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
+      - Core:
+        - Uses:
+          - `framework/plugin-id.asFsPath`
+          - `framework/plugin-id.asPath`
+          - `framework/plugin-id.asPluginId`
+          - `framework/plugin-id.isTestCodePath`
+          - `framework/plugin-id.PLUGIN_FOLDERS`
+          - `framework/tooling/boundaries.parseRuntimeException`
+          - `packages/macrotask-yield.createTimeSlicer`
+          - `plugin-meta/closure.parseEntryPattern`
+          - `plugin-meta/parse-utils.findImports`
+          - `plugin-meta/parse-utils.markerCallSpans`
+          - `plugin-meta/parse-utils.maskSource`
+          - `plugin-meta/parse-utils.matchBracket`
+        - Exports (types):
+          - `DotRef`
+          - `DotRefSite`
+          - `FindPluginRefsOptions`
+          - `PathRef`
+          - `PathRefSyntax`
+          - `PluginRef`
+          - `PluginRefKind`
+          - `RefRange`
+          - `RelativeRef`
+          - `RelativeRefSyntax`
+          - `ResolvedRelativeRef`
+        - Exports (values):
+          - `BOUNDARY_CONFIG`
+          - `COMPOSITIONS_MANIFEST`
+          - `findPluginRefs`
+          - `isWithinDir`
+          - `maskMarkdown`
+          - `pluginDirOfPath`
+          - `pluginDirOfRef`
+          - `pluginDirPrefix`
+          - `pluginPathFromLiteral`
+          - `relativeLinkFrom`
+          - `resolveRelativeRef`
+          - `scanAsPluginIdRefs`
+          - `scanCompositionManifestRefs`
+          - `scanCssRefs`
+          - `scanMarkdownRefs`
+          - `scanPathRefs`
+          - `scanReorderItemRefs`
+          - `scanRuntimeExceptionRefs`
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
       - Server:
         - Uses:
@@ -23631,6 +23689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/pane.useOpenPane`
+    - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range.
     - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
       - Web:
         - Slots: `Specimens.Specimen` ← `tasks.task-draft-form`

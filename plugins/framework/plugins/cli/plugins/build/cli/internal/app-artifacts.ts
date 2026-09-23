@@ -417,7 +417,22 @@ export async function prepareCompositionSources(opts: {
   // build after a push reproduces the exact same tree. Per-step profiler
   // spans are threaded through `onStep` so build keeps its granularity.
   hooks.log("Generating plugin registry...");
-  await regenerateRegistryCodegen({ root, onStep: codegenStep });
+  const { renamedPackages } = await regenerateRegistryCodegen({
+    root,
+    onStep: codegenStep,
+  });
+
+  // 1b'. A plugin `package.json` whose derived `"name"` codegen just corrected
+  // (a new or moved plugin) leaves `bun.lock` — which records every workspace
+  // member's name — describing the old one, so the next frozen install (push)
+  // would refuse it. Re-resolve now, while this build still owns the install:
+  // `ensureDeps` sees the changed package.json and rewrites the lockfile.
+  if (renamedPackages.length > 0) {
+    hooks.log(
+      `Wrote the derived package name in ${renamedPackages.length} package.json file(s):\n  ${renamedPackages.join("\n  ")}`,
+    );
+    await ensureDeps({ root, log: hooks.log });
+  }
 
   // 2a'. Composition build-gating. For each named composition, emit gitignored
   // filtered registries (the bundle's hard closure) beside the committed

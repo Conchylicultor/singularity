@@ -8,8 +8,20 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 const run: CliAction<[], object> = async () => {
   const root = await getWorktreeRoot();
-  await regenerateRegistryCodegen({ root });
+  const { renamedPackages } = await regenerateRegistryCodegen({ root });
   await regenerateManifestCodegen({ root });
+
+  // A corrected package name leaves `bun.lock` recording the old one. This
+  // command does not install (it runs inside push's merge-driver path), so it
+  // says so; the next `./singularity` invocation's dependency check sees the
+  // changed package.json and re-resolves the lockfile.
+  if (renamedPackages.length > 0) {
+    console.error(
+      `Wrote the derived package name in:\n  ${renamedPackages.join("\n  ")}\n` +
+        "bun.lock still records the old name(s) until dependencies are " +
+        "re-resolved — `./singularity build` does it.",
+    );
+  }
 
   // This command runs inside push's merge-driver path, which is followed by
   // `git add -A && git commit --amend`. A config override still carrying an

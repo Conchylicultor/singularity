@@ -4,6 +4,7 @@ import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree
 import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
+  packageNameFor,
   RUNTIME_FOLDERS,
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
@@ -463,20 +464,13 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // R1: package.json naming
 // ============================================================================
 
-/**
- * Expected `@singularity/plugin-<chain>` name for a plugin at `relPath`.
- * The chain joins every non-`plugins` segment with `-`, guaranteeing
- * uniqueness across the nested plugin tree (e.g. `plugins/tasks` and
- * `plugins/stats/plugins/tasks` map to `plugin-tasks` and `plugin-stats-tasks`
- * respectively).
- */
-function expectedPackageName(relPath: string): string {
-  const chain = relPath
-    .split("/")
-    .filter((s) => s !== "plugins")
-    .join("-");
-  return `@singularity/plugin-${chain}`;
-}
+// The name is DERIVED (`packageNameFor`) and written by the repo-tree codegen
+// (`syncPluginPackageNames`, run by `./singularity build` and
+// `./singularity regen-generated`). R1 is its in-sync guard, the same role
+// `plugins-registry-in-sync` plays for the registries.
+
+const REGEN_HINT =
+  "run `./singularity build` (or `./singularity regen-generated`), which writes the derived name";
 
 async function checkPackageNaming(
   p: PluginDir,
@@ -484,14 +478,14 @@ async function checkPackageNaming(
   repoFiles: RepoFiles,
 ): Promise<void> {
   const relPkg = `plugins/${p.relPath}/package.json`;
-  const expected = expectedPackageName(p.relPath);
+  const expected = packageNameFor(p.relPath);
   const raw = await repoFiles.read(relPkg);
   if (raw === null) {
     violations.push({
       rule: "package",
       file: relPkg,
       message: "plugin is missing package.json",
-      fix: `create \`${relPkg}\` with \`"name": "${expected}"\``,
+      fix: `create \`${relPkg}\` with \`"name": "${expected}"\` (bun needs the field; any later drift is fixed by the build)`,
     });
     return;
   }
@@ -512,7 +506,7 @@ async function checkPackageNaming(
       rule: "package",
       file: relPkg,
       message: `package name is \`${String(data.name)}\`; expected \`${expected}\``,
-      fix: `set \`"name": "${expected}"\` in ${relPkg}`,
+      fix: REGEN_HINT,
     });
   }
 }

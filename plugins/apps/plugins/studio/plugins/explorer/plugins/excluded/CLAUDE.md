@@ -8,7 +8,7 @@ Two labels, because the two cases are answerable and different:
 
 - **Not in the app** — a manifest negated this id by name. In practice that is
   the `base-exclusions` row in
-  [`composition/core/config.ts`](../../../../../../plugin-meta/plugins/composition/core/config.ts),
+  [`composition/core/config.ts`](../../../../../../../plugin-meta/plugins/composition/core/config.ts),
   which every composition inherits.
 - **Not in the app (cascade)** — nobody named it; it descends from, or
   transitively imports, something that was named, so removing that removed this

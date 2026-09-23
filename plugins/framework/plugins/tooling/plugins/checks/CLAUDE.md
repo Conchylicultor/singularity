@@ -7,7 +7,7 @@ inside comments or string literals. Use **`grepCode`** (exported from
 matches survive. Pick `maskStrings: false` when the banned token legitimately
 lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
 `true` for code constructs (`new WebSocket(`, casts). See
-[`parse-utils`](../../../../plugin-meta/plugins/parse-utils/CLAUDE.md).
+[`parse-utils`](../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md).
 
 A check that parses each candidate file (AST) rather than regex-scanning its
 lines MUST get its candidate sources from **`listCandidateSources`** (exported
@@ -137,7 +137,7 @@ Why the default stays unbounded: wall clock improves monotonically with width
 (~337s at one-per-core vs ~196s unbounded), while a run's self-reported durations
 degrade 23×. Narrowing by default would tax every run for a fleet benefit nobody
 has measured. Measure that first — see
-[`research/2026-09-02-global-bounded-check-fan-out.md`](../../../../../research/2026-09-02-global-bounded-check-fan-out.md).
+[`research/2026-09-02-global-bounded-check-fan-out.md`](../../../../../../research/2026-09-02-global-bounded-check-fan-out.md).
 
 **The gate is NOT `options.grant`. Do not merge them.** One `Grant` is shared by
 the whole run and wraps one `createSemaphore(units)` with no reentrancy, while

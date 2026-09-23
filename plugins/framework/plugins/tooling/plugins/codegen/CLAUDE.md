@@ -21,6 +21,7 @@
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.isTestCodePath`
+    - `framework/plugin-id.packageNameFor`
     - `framework/plugin-id.PLUGIN_FOLDERS`
     - `framework/plugin-id.PluginFolder`
     - `framework/plugin-id.PluginId`
@@ -88,6 +89,7 @@
     - `PreBarrelManifest`
     - `RampDecl`
     - `RegenCodegenOptions`
+    - `RegistryCodegenResult`
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
     - `WatchedSlotHit`
@@ -179,6 +181,7 @@
     - `standardPluginDirsFromSnapshot`
     - `standardPluginDirsIn`
     - `tokenGroupVarsManifestPath`
+    - `withPackageName`
     - `writeGenerated`
     - `writePreBarrelManifest`
 

@@ -62,15 +62,15 @@ A control's size is a **bundle** (height + padding + radius + text + gap + icon)
 - **No control has a `size` prop** — `Badge`, `ToggleChip`, `SegmentedControl`, `IconButton`/`PaneIconAction`, `Button`, and the fields `Input`/`SelectTrigger` (and `SearchInput`/`SidebarInput` over them) all derive density *solely* from ambient `ControlSize` (`useControlSize`); passing `size` is a **compile error** on every one of them. There is no longer any per-instance density override anywhere in the app. `Button`'s **shape** (text vs square-icon vs inline) is chosen via a separate `aspect` prop (`"text"` default | `"icon"` | `"inline"`), which carries no density.
 - **Text size tracks density too** (Phase 4): `Text` (and `Badge`, `Button`) read the ambient `ControlSize` and step their type rung via the **single** `textStepFor(density)` policy. The rule: **type size steps only at `xs`** — `sm`/`md`/`lg` stay at the comfortable size. Chrome (`Bar` defaults to `sm`) stays legible; only the explicitly-compact `xs` regions (`DataTable`, tree rows, compact `Card`) drop a rung, swapping each `Text` variant for its weight-preserving `-compact` form. No prop — the region owns it.
 - Runtime home: web-core `@/theme/control-size` (`ControlSizeProvider`, `useControlSize`, `iconSizeFor`/`textSizeFor`, `textStepFor`/`buttonTextClassFor`) — co-located with the ambient ui-kit, not the primitive, so foundational `Button` reads it without inverting layers. The CSS `control-*` scale + `no-adhoc-control` lint live in the `control-size` primitive.
-→ [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
+→ [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/control-size/CLAUDE.md)
 
 ## Design-standard enforcement (lint, fails `./singularity check`)
 Use the primitive instead of raw Tailwind classes — each ad-hoc class is banned:
-- **Typography** → `<Text variant>`, bans raw `text-{sm,lg,...}`/`leading-*` — [`plugins/primitives/plugins/text/CLAUDE.md`](../../../plugins/primitives/plugins/text/CLAUDE.md)
-- **Radius** → `rounded-*` from `--radius`, bans bare/arbitrary — [`plugins/primitives/plugins/radius/CLAUDE.md`](../../../plugins/primitives/plugins/radius/CLAUDE.md)
-- **Control size** → `control-{xs,sm,md,lg}` height scale + density-from-context (above) — [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
-- **Z-index** → `z-base..z-max`, bans raw `z-*` — [`plugins/primitives/plugins/z-layers/CLAUDE.md`](../../../plugins/primitives/plugins/z-layers/CLAUDE.md)
-- **Surface elevation** → `<Surface level={sunken|base|raised|overlay}>` (or `<Card>` / `PopoverContent`), bans open-coded raised (`bg-card`+border+rounded+pad) and overlay (`bg-popover`+shadow+rounded) recipes via `no-adhoc-surface` — [`plugins/primitives/plugins/surface/CLAUDE.md`](../../../plugins/primitives/plugins/surface/CLAUDE.md)
+- **Typography** → `<Text variant>`, bans raw `text-{sm,lg,...}`/`leading-*` — [`plugins/primitives/plugins/text/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/text/CLAUDE.md)
+- **Radius** → `rounded-*` from `--radius`, bans bare/arbitrary — [`plugins/primitives/plugins/radius/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/radius/CLAUDE.md)
+- **Control size** → `control-{xs,sm,md,lg}` height scale + density-from-context (above) — [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/control-size/CLAUDE.md)
+- **Z-index** → `z-base..z-max`, bans raw `z-*` — [`plugins/primitives/plugins/z-layers/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/z-layers/CLAUDE.md)
+- **Surface elevation** → `<Surface level={sunken|base|raised|overlay}>` (or `<Card>` / `PopoverContent`), bans open-coded raised (`bg-card`+border+rounded+pad) and overlay (`bg-popover`+shadow+rounded) recipes via `no-adhoc-surface` — [`plugins/primitives/plugins/surface/CLAUDE.md`](../../../plugins/primitives/plugins/css/plugins/surface/CLAUDE.md)
 - **Icons** → no direct `lucide-react` — [`plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md`](../../../plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md)
 
 ---

@@ -56,3 +56,6 @@ plugins/apps/plugins/<name>/
       package.json
       web/index.ts           # Contributes to shell slots
 ```
+
+Each `package.json` needs a `"name"` for `bun install`, but its value is derived from the
+folder path and rewritten by `./singularity build` — any unique placeholder works.

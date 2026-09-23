@@ -2,6 +2,7 @@ import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-imp
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
 import { generatePluginDocs } from "./docgen";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import {
   buildRegistryGenContext,
   generatePluginRegistry,
@@ -15,6 +16,7 @@ import {
 } from "./pre-barrel-manifests";
 import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
 import { assertSlotsDeclared } from "./slot-declaration-guard";
+import { syncPluginPackageNames } from "./package-names";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -68,8 +70,19 @@ export interface RegenCodegenOptions {
   onStep?: CodegenStep;
 }
 
+export interface RegistryCodegenResult {
+  /**
+   * Plugin `package.json` files whose derived `"name"` was (re)written. Non-empty
+   * means `bun.lock` — which records every workspace member's name — is stale
+   * until dependencies are re-resolved; the caller that owns the install decides
+   * how (build re-runs `ensureDeps`).
+   */
+  renamedPackages: string[];
+}
+
 /**
- * Registry-level repo-tree codegen: barrel stubs + plugin registry.
+ * Registry-level repo-tree codegen: plugin package names + barrel stubs +
+ * plugin registry.
  *
  * Runs FIRST in build — before central is spawned (its `plugins.generated.ts`
  * must be in sync) and before migrations. Barrel stubs must precede the registry
@@ -80,11 +93,23 @@ export interface RegenCodegenOptions {
  * threaded through both — one tree walk, not two. The eager-tier step runs after
  * the registry (it consumes the same filtered web-entry set + `dependsOn` graph)
  * and may throw the reachability error, which correctly fails the build.
+ *
+ * Package names come first: they are a pure function of each plugin's path
+ * (`packageNameFor`), read from the same memoized barrel-free tree the registry
+ * context reuses, and nothing below reads them — first only so a renamed plugin
+ * is reported before the heavier steps run.
  */
 export async function regenerateRegistryCodegen({
   root,
   onStep = runInline,
-}: RegenCodegenOptions): Promise<void> {
+}: RegenCodegenOptions): Promise<RegistryCodegenResult> {
+  let renamedPackages: string[] = [];
+  await onStep("packageNames", "plugin package names", async () => {
+    renamedPackages = await syncPluginPackageNames({
+      root,
+      tree: await buildBarrelFreeTree(root),
+    });
+  });
   await onStep("barrelStubs", "barrel stubs", () =>
     generateBarrelStubs({ root }),
   );
@@ -95,6 +120,7 @@ export async function regenerateRegistryCodegen({
   await onStep("eagerTier", "eager-tier manifest", () =>
     generateEagerTier({ root, ctx }),
   );
+  return { renamedPackages };
 }
 
 /**

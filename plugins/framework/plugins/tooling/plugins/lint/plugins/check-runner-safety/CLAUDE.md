@@ -4,7 +4,7 @@ Contributes the repo-wide `no-adhoc-check-runner` ESLint rule: importing
 `runChecks` as a **value** from
 `@plugins/framework/plugins/tooling/plugins/checks/core` is banned everywhere
 except the one sanctioned in-process caller,
-[`cli/plugins/check/cli/run.ts`](../../../../cli/plugins/check/cli/run.ts). Every other
+[`cli/plugins/check/cli/run.ts`](../../../../../cli/plugins/check/cli/run.ts). Every other
 caller spawns that command instead.
 
 ## Why
@@ -32,7 +32,7 @@ unrelated branch. `18126884a` fixed that one check at its source — this rule
 closes the channel for the next impure one.
 
 The remedy the message names: spawn the check pass through the shared helper at
-[`cli/plugins/op-runtime/cli/check-subprocess.ts`](../../../../cli/plugins/op-runtime/cli/check-subprocess.ts),
+[`cli/plugins/op-runtime/cli/check-subprocess.ts`](../../../../../cli/plugins/op-runtime/cli/check-subprocess.ts),
 threading the host grant through `grant.env()` so the child does not re-acquire
 host capacity.
 

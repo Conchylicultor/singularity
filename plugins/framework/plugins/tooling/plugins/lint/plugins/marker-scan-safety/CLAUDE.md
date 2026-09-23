@@ -29,7 +29,7 @@ positive.
 The correct, proven contract for a **marker-value** scan is: mask FULLY, locate
 the call over the full mask, and read the value back from the *original* source
 by offset. Route these through
-[`findMarkerCalls(src, "defineX")`](../../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md)
+[`findMarkerCalls(src, "defineX")`](../../../../../../../plugin-meta/plugins/parse-utils/CLAUDE.md)
 (`@plugins/plugin-meta/plugins/parse-utils/core`) — it masks strings fully and
 slices `argsText` from the original — or `markerCallSpans(maskSource(src), …)`
 when the surrounding member/group context is also needed (pass a **full** mask

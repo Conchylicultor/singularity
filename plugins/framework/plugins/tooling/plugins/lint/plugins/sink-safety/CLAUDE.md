@@ -15,7 +15,7 @@ convention. Two of the deleted artifacts (`flight-recorder.jsonl`,
 `stall-profiles.jsonl`) were persisted **log channels**; a third
 (`slow-op-markers.jsonl`) still is. The `persist: true` flag that spawned them is
 now gone (`defineLogSink` replaces it — see
-[`log-channels`](../../../../../../primitives/plugins/log-channels/CLAUDE.md)), so
+[`log-channels`](../../../../../../../primitives/plugins/log-channels/CLAUDE.md)), so
 the remaining ad-hoc doors are **raw filesystem appends** and a **second
 runtime-profiler subscriber**. Both are lexically precise, so both are guardable
 without semantic heuristics — the `no-direct-parcel-watcher` allowlist shape.

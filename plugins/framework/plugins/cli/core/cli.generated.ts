@@ -31,5 +31,6 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/upstream", id: "framework.cli.upstream", loader: () => import("@plugins/framework/plugins/cli/plugins/upstream/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs/plugins/supervised-job", id: "infra.jobs.supervised-job", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-job/cli"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/cli"), dependsOn: [] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/cli"), dependsOn: ["framework/plugins/cli/plugins/test"] },
 ];

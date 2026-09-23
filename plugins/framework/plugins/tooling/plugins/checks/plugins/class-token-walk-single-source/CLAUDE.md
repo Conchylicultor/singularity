@@ -3,7 +3,7 @@
 Fails if any lint **rule** file declares its own class-token walk —
 `collectTokens`, `baseClass`, `CLASS_ATTRS` or `CLASS_BUILDERS`. There is one
 walk, in
-[`tooling/plugins/lint/core/class-token-walk.ts`](../../../../lint/core/class-token-walk.ts),
+[`tooling/plugins/lint/core/class-token-walk.ts`](../../../lint/core/class-token-walk.ts),
 and every class rule is handed it.
 
 ## Why an absence, not a byte-comparison

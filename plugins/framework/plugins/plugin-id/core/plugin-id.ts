@@ -14,6 +14,21 @@ export const asFsPath = (id: PluginId): string =>
 /** Segments for breadcrumbs / last-segment matching. */
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
 
+/** The workspace package name of the plugin whose directory is `fsPath` (relative
+ *  to `plugins/`, the `asFsPath` form): `@singularity/plugin-<chain>`, the chain
+ *  joining every non-`plugins` segment with `-` — unique across the nested tree
+ *  (`tasks` → `plugin-tasks`, `stats/plugins/tasks` → `plugin-stats-tasks`).
+ *
+ *  DERIVED, never authored: the repo-tree codegen (`./singularity build` /
+ *  `./singularity regen-generated`) writes it into each plugin's `package.json`,
+ *  and the plugin-boundaries check (R1) holds the file to it. Bun needs the field
+ *  (a nameless workspace member fails `bun install`), but nothing reads it. */
+export const packageNameFor = (fsPath: string): string =>
+  `@singularity/plugin-${fsPath
+    .split("/")
+    .filter((s) => s !== "plugins")
+    .join("-")}`;
+
 /** The plugin source/barrel runtime folders — the isolation + bundling vocabulary
  *  and single source of truth. Every per-runtime grouping derives from this;
  *  never hardcode the list elsewhere. (The boundary table's keys are the wider

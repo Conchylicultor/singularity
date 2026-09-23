@@ -172,6 +172,7 @@ export {
   regenerateManifestCodegen,
   type CodegenStep,
   type RegenCodegenOptions,
+  type RegistryCodegenResult,
 } from "./regen-pipeline";
 
 // The pre-barrel manifest set — the single source of truth for which
@@ -197,3 +198,8 @@ export {
 // `formatGenerated({ file, content: renderX(...) })`. Both call the same one, so
 // the bytes an emitter produces and the bytes a check asserts cannot drift.
 export { formatGenerated, writeGenerated } from "./write-generated";
+
+// A plugin `package.json`'s derived `"name"` written in place (one-line diff).
+// The build writes every plugin's; `plugin move` writes the moved ones itself,
+// before any install can see a stale or duplicate workspace name.
+export { withPackageName } from "./package-names";

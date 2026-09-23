@@ -4,7 +4,7 @@ Contributes the repo-wide `no-adhoc-caret-trigger` ESLint rule: a file may not
 scan editor text for a trigger (`lastIndexOf` / `indexOf`) from inside a Lexical
 `registerUpdateListener`. Route caret menus through `useCaretQuery` +
 `useCaretMenu` from
-[`@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web`](../../../../../../primitives/plugins/text-editor/plugins/caret-trigger/CLAUDE.md).
+[`@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web`](../../../../../../../primitives/plugins/text-editor/plugins/caret-trigger/CLAUDE.md).
 
 ## Why
 

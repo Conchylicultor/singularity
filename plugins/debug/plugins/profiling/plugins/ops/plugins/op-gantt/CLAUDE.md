@@ -1,6 +1,6 @@
 # op-gantt
 
-The reusable Gantt over the ops [`op-log`](../../op-log/CLAUDE.md) records —
+The reusable Gantt over the ops [`op-log`](../../../op-log/CLAUDE.md) records —
 every kind in `OP_KINDS` (`build`, `push`, `check`, `test`, `e2e`), in **one**
 `group.ops.map`. `TYPE_FILL` is a `Record<OpKind, …>`, so a kind added to the
 vocabulary without a fill here is a type error.

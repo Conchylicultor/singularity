@@ -2583,7 +2583,7 @@ constant, independent of `block.type`; props, classNames and styles may vary
 freely. `components/text-block-layout.tsx` IS that fixed chain, and everything
 else follows from it. (Same principle `BlockFrameProps` reaches on the container
 axis: "a BACKDROP, not a wrapper".) Design:
-[`research/2026-07-29-page-text-block-presentation-api.md`](../../../research/2026-07-29-page-text-block-presentation-api.md).
+[`research/2026-07-29-page-text-block-presentation-api.md`](../../../../research/2026-07-29-page-text-block-presentation-api.md).
 
 A type therefore declares `chrome` (`BlockChrome`) and never a `component`:
 

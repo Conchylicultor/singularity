@@ -234,8 +234,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`facets`** [36 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+    - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+    - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range.
     - **`specimens`** — Specimen registry: a plugin exhibits one of its REAL components (Specimens.Specimen, a dispatch slot keyed on the id: label, optional widths, a self-contained component) so another surface can render it standalone inside the running app, with real slots, config and data. useSpecimen(id) answers found / missing / ambiguous; <Specimens.Specimen.Dispatch id/> renders it isolated. Owns the slot; knows no contributor.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
