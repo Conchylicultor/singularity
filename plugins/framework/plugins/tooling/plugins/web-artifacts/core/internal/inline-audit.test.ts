@@ -64,6 +64,18 @@ describe("createInlineAudit", () => {
     );
   });
 
+  test("test code inside a hashed root is not hashed, so inlining it throws", () => {
+    for (const id of [
+      "/repo/plugins/x/fixtures/testing/index.ts",
+      "/repo/plugins/x/fixtures/__tests__/helper.tsx",
+      "/repo/plugins/x/shared/util.test.ts",
+    ]) {
+      expect(() =>
+        auditOf(["/repo/plugins/x/fixtures/index.ts", id]).verify(),
+      ).toThrow(id);
+    }
+  });
+
   test("throws naming the artifact and the offending file", () => {
     let message = "";
     try {

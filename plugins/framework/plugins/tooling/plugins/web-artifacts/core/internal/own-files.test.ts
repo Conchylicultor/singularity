@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { hashedRootsFor, listOwnFiles } from "./own-files";
+import { hashedRootsFor, isHashedFile, listOwnFiles } from "./own-files";
 
 // A plugin tree with one file per folder, so which folders an artifact HASHES
 // is readable straight off the returned list.
@@ -58,5 +58,39 @@ describe("hashedRootsFor", () => {
       join(dir, "fixtures"),
       join(dir, "shared"),
     ]);
+  });
+});
+
+describe("isHashedFile", () => {
+  const roots = ["/p/web", "/p/shared"];
+
+  test("a source file inside a root is hashed", () => {
+    expect(isHashedFile(roots, "/p/web/index.ts")).toBe(true);
+    expect(isHashedFile(roots, "/p/shared/deep/util.tsx")).toBe(true);
+  });
+
+  test("outside every root is not hashed", () => {
+    expect(isHashedFile(roots, "/p/core/index.ts")).toBe(false);
+    expect(isHashedFile(roots, "/p/webx/index.ts")).toBe(false);
+  });
+
+  test("what the walk skips is not hashed, though inside a root", () => {
+    for (const abs of [
+      "/p/web/testing/index.ts",
+      "/p/web/a/__tests__/x.tsx",
+      "/p/web/a.test.ts",
+      "/p/web/node_modules/dep/index.js",
+      "/p/web/public/logo.svg",
+      "/p/web/dist.live.1/x.js",
+    ]) {
+      expect(isHashedFile(roots, abs)).toBe(false);
+    }
+  });
+
+  test("agrees with listOwnFiles on a real tree", async () => {
+    const files = await listOwnFiles(dir, "web");
+    for (const f of files.filter((f) => !f.endsWith("package.json"))) {
+      expect(isHashedFile(hashedRootsFor(dir, "web"), f)).toBe(true);
+    }
   });
 });

@@ -18,7 +18,7 @@
 // across a whole fleet) without serializing reads one at a time.
 
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   isTestCodePath,
   TESTS_DIR,
@@ -35,6 +35,17 @@ const SKIP_DIRS = new Set([
   TESTING_FOLDER,
   "public",
 ]);
+
+// What the walk leaves out of the address, stated once: `walkFiles` applies it
+// while walking, and `isHashedFile` applies it to one path, so the inline audit
+// asks exactly what the address hashed. A test-code folder sits INSIDE a hashed
+// root (`web/testing/`), so "inside a root" alone is not "hashed".
+function isSkippedDir(name: string): boolean {
+  return SKIP_DIRS.has(name) || name === "dist" || name.startsWith("dist.");
+}
+function isSkippedFile(name: string): boolean {
+  return isTestCodePath([name]) || name === ".DS_Store";
+}
 
 // Bounds concurrent file-system calls FROM THIS MODULE. Only the leaf I/O
 // calls (one `readdir` per directory, one `stat`/`readFile` per file) take a
@@ -62,15 +73,10 @@ async function walkFiles(dir: string, out: string[]): Promise<void> {
     const p = join(dir, e.name);
     if (e.isSymbolicLink()) continue;
     if (e.isDirectory()) {
-      if (
-        SKIP_DIRS.has(e.name) ||
-        e.name === "dist" ||
-        e.name.startsWith("dist.")
-      )
-        continue;
+      if (isSkippedDir(e.name)) continue;
       subdirs.push(p);
     } else if (e.isFile()) {
-      if (isTestCodePath([e.name]) || e.name === ".DS_Store") continue;
+      if (isSkippedFile(e.name)) continue;
       out.push(p);
     }
   }
@@ -92,6 +98,23 @@ export function hashedRootsFor(
   return kind === "entry"
     ? [pluginDir] // entry: web-core/web dir itself, no plugin folders around it
     : inlinedRootsFor(kind).map((root) => join(pluginDir, root));
+}
+
+/**
+ * Whether `abs` is one of the files the address hashes: inside one of `roots`
+ * (`hashedRootsFor`) and not left out by the walk's skip rules — test code,
+ * `node_modules`, `public`, build output. The path-shaped twin of the walk in
+ * `listOwnFiles` (symlinks aside, which only a directory read can see); the
+ * inline audit checks every bundled module against it.
+ */
+export function isHashedFile(roots: readonly string[], abs: string): boolean {
+  for (const root of roots) {
+    if (!abs.startsWith(root + sep)) continue;
+    const segments = abs.slice(root.length + 1).split(sep);
+    const name = segments.pop()!;
+    if (!segments.some(isSkippedDir) && !isSkippedFile(name)) return true;
+  }
+  return false;
 }
 
 /** Absolute paths of the artifact's own files, sorted. */

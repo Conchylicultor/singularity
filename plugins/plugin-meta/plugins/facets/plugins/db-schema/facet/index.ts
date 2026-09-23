@@ -1,6 +1,4 @@
-import { join } from "path";
-import { existsSync, readdirSync } from "fs";
-import { relative } from "path";
+import { basename, join, relative } from "path";
 import {
   createFacet,
   getFacet,
@@ -11,7 +9,10 @@ import {
   type PluginNode,
   resolvePluginSpecifier,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { asPath, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPath,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import {
   readIfExists,
   stripTypes,
@@ -19,6 +20,7 @@ import {
   findImports,
   maskSource,
   markerCallSpans,
+  walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 
@@ -60,14 +62,23 @@ function parseImports(src: string): Map<string, ImportBinding> {
       map.set(defLocal, { local: defLocal, original: "default", module: mod });
     }
     const closeIdx = clause.indexOf("}", braceIdx);
-    const names = clause.slice(braceIdx + 1, closeIdx < 0 ? clause.length : closeIdx);
+    const names = clause.slice(
+      braceIdx + 1,
+      closeIdx < 0 ? clause.length : closeIdx,
+    );
     for (const raw of names.split(",")) {
       let s = raw.trim();
       if (!s) continue;
       s = s.replace(/^type\s+/, "");
       const asMatch = s.match(/^(\w+)\s+as\s+(\w+)$/);
-      if (asMatch) map.set(asMatch[2]!, { local: asMatch[2]!, original: asMatch[1]!, module: mod });
-      else if (/^\w+$/.test(s)) map.set(s, { local: s, original: s, module: mod });
+      if (asMatch)
+        map.set(asMatch[2]!, {
+          local: asMatch[2]!,
+          original: asMatch[1]!,
+          module: mod,
+        });
+      else if (/^\w+$/.test(s))
+        map.set(s, { local: s, original: s, module: mod });
     }
   }
   return map;
@@ -95,7 +106,11 @@ function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
       if (!args) continue;
       const imp = imports.get(args[1]!);
       if (!imp) continue;
-      out.push({ parentVarName: imp.original, parentModule: imp.module, extName: args[2]! });
+      out.push({
+        parentVarName: imp.original,
+        parentModule: imp.module,
+        extName: args[2]!,
+      });
     }
   }
   return out;
@@ -123,7 +138,9 @@ export function parseTableNames(src: string, out: Map<string, string>): void {
   // regex over raw source.
   const masked = maskSource(src);
   const declBefore = (upTo: number): string | undefined =>
-    /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(masked.slice(0, upTo))?.[1];
+    /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(
+      masked.slice(0, upTo),
+    )?.[1];
   const firstStringArg = (open: number, close: number): string | undefined =>
     /^\s*["']([^"']+)["']/.exec(src.slice(open + 1, close))?.[1];
 
@@ -146,7 +163,8 @@ export function parseTableNames(src: string, out: Map<string, string>): void {
   // importable handle; the entity var is intermediate. Matched over the mask
   // (identifiers aren't blanked, so a `.table` in a string can't register).
   const aliasSources = new Set<string>();
-  const aliasRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\.table\b/g;
+  const aliasRe =
+    /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\.table\b/g;
   let m: RegExpExecArray | null;
   while ((m = aliasRe.exec(masked))) {
     const name = entityVarToName.get(m[2]!);
@@ -173,35 +191,25 @@ function parseTableNamesFromDbFiles(dbFiles: string[]): Map<string, string> {
   return out;
 }
 
+// Enumerates through the shared `walkFiles`, which owns the rule for what is
+// source and what is not (test code, sub-plugin trees, `node_modules`). A
+// private walker here once listed a `server/testing/` harness as DB schema,
+// because its file name contained "schema".
 function findDbFiles(pluginDir: string): string[] {
-  const serverDir = join(pluginDir, "server");
-  if (!existsSync(serverDir)) return [];
-  const results: string[] = [];
-  function walk(d: string) {
-    let entries;
-    try {
-      entries = readdirSync(d, { withFileTypes: true });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code == null) throw err;
-      return;
-    }
-    for (const e of entries) {
-      const full = join(d, e.name);
-      if (e.isDirectory()) {
-        walk(full);
-      } else if (e.name.endsWith(".ts") && e.name !== "index.ts") {
-        const byName = /schema|tables?/.test(e.name.replace(/\.ts$/, ""));
-        // Mask comments + string interiors so a commented or stringified
-        // `pgTable(` / `pgView(` doesn't misclassify a non-schema file.
-        const raw = byName ? null : readIfExists(full);
-        const src = raw === null ? null : maskSource(raw, { strings: true });
-        const byContent = !byName && !!src && (src.includes("pgTable(") || src.includes("pgView("));
-        if (byName || byContent) results.push(full);
-      }
-    }
-  }
-  walk(serverDir);
-  return results.sort();
+  const files: string[] = [];
+  walkFiles(join(pluginDir, "server"), files);
+  return files
+    .filter((full) => {
+      const name = basename(full);
+      if (!name.endsWith(".ts") || name === "index.ts") return false;
+      if (/schema|tables?/.test(name.replace(/\.ts$/, ""))) return true;
+      // Mask comments + string interiors so a commented or stringified
+      // `pgTable(` / `pgView(` doesn't misclassify a non-schema file.
+      const raw = readIfExists(full);
+      const src = raw === null ? null : maskSource(raw, { strings: true });
+      return !!src && (src.includes("pgTable(") || src.includes("pgView("));
+    })
+    .sort();
 }
 
 // ── Facet ──────────────────────────────────────────────────────────────
@@ -212,7 +220,10 @@ export default createFacet<DbSchemaFacetData>({
   extract(ctx) {
     const dbFiles = findDbFiles(ctx.dir);
     const tableMap = parseTableNamesFromDbFiles(dbFiles);
-    const tables = [...tableMap.entries()].map(([varName, name]) => ({ name, varName }));
+    const tables = [...tableMap.entries()].map(([varName, name]) => ({
+      name,
+      varName,
+    }));
     return { dbFiles, tables, entityExtensions: [], extendedBy: [] };
   },
 
@@ -247,18 +258,31 @@ export default createFacet<DbSchemaFacetData>({
         if (!r) continue;
         const parentPlugin = r.node.id;
         const parentTableName =
-          (pluginVarToTable.get(parentPlugin) ?? new Map()).get(ref.parentVarName) ?? "";
+          (pluginVarToTable.get(parentPlugin) ?? new Map()).get(
+            ref.parentVarName,
+          ) ?? "";
         const tableName = parentTableName
           ? `${parentTableName}_ext_${ref.extName}`
           : `${r.node.name}_ext_${ref.extName}`;
         if (!data.entityExtensions.some((e) => e.tableName === tableName)) {
-          data.entityExtensions.push({ parentPlugin, extName: ref.extName, tableName });
+          data.entityExtensions.push({
+            parentPlugin,
+            extName: ref.extName,
+            tableName,
+          });
         }
         const parentNode = byId.get(parentPlugin);
         if (!parentNode) continue;
         const parentData = getFacet(parentNode, dbSchemaFacetDef);
-        if (parentData && !parentData.extendedBy.some((e) => e.tableName === tableName)) {
-          parentData.extendedBy.push({ childPlugin: node.id, extName: ref.extName, tableName });
+        if (
+          parentData &&
+          !parentData.extendedBy.some((e) => e.tableName === tableName)
+        ) {
+          parentData.extendedBy.push({
+            childPlugin: node.id,
+            extName: ref.extName,
+            tableName,
+          });
         }
       }
     }
@@ -274,13 +298,30 @@ export default createFacet<DbSchemaFacetData>({
   renderDoc(data, ctx) {
     const facts: DocFact[] = [];
     if (data.dbFiles.length > 0) {
-      facts.push({ folder: "server", key: "DB schema", values: data.dbFiles.map((f) => `\`${relative(ctx.root, f)}\``) });
+      facts.push({
+        folder: "server",
+        key: "DB schema",
+        values: data.dbFiles.map((f) => `\`${relative(ctx.root, f)}\``),
+      });
     }
     if (data.entityExtensions.length > 0) {
-      facts.push({ folder: "server", key: "Entity extension of", values: data.entityExtensions.map((ext) => `\`${asPath(ext.parentPlugin)}\` (table \`${ext.tableName}\`)`) });
+      facts.push({
+        folder: "server",
+        key: "Entity extension of",
+        values: data.entityExtensions.map(
+          (ext) =>
+            `\`${asPath(ext.parentPlugin)}\` (table \`${ext.tableName}\`)`,
+        ),
+      });
     }
     if (data.extendedBy.length > 0) {
-      facts.push({ folder: "cross-plugin", key: "Extended by", values: data.extendedBy.map((e) => `\`${asPath(e.childPlugin)}\` (table \`${e.tableName}\`)`) });
+      facts.push({
+        folder: "cross-plugin",
+        key: "Extended by",
+        values: data.extendedBy.map(
+          (e) => `\`${asPath(e.childPlugin)}\` (table \`${e.tableName}\`)`,
+        ),
+      });
     }
     return facts;
   },

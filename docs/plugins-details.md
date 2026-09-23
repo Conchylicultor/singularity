@@ -19095,7 +19095,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `primitives/log-channels.Log`
         - DB schema:
-          - `plugins/infra/plugins/jobs/server/internal/queue-schema.test.ts`
           - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
           - `plugins/infra/plugins/jobs/server/internal/tables.ts`
         - Exports (types):
@@ -33305,9 +33304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports.recordReport`
           - `reports.ReportKind`
           - `tasks/tasks-core._conversations`
-        - DB schema:
-          - `plugins/stats/plugins/cost/server/internal/price-table.test.ts`
-          - `plugins/stats/plugins/cost/server/internal/price-table.ts`
+        - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
         - Register:
           - `defineWarmup('stats.cost.usage')`
           - `defineJob('stats.cost.refresh')`
@@ -34361,7 +34358,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
-          - `plugins/tasks/plugins/tasks-core/server/testing/install-derived-schema.ts`
         - Exports (types):
           - `AdoptOrphanInput`
           - `Attempt`

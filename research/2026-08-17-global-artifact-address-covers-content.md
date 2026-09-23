@@ -112,6 +112,12 @@ is independent of the roots list *and* of the externals predicate, so a future
 vite plugin, alias, or new folder kind that inlines unhashed content fails
 immediately instead of fossilising.
 
+_Update 2026-09-23:_ "inside the hashed roots" became "a file the address
+hashed" (`isHashedFile`). The hashing walk skips test code (`testing/`,
+`__tests__/`, `*.test.ts`) that sits inside a root, so bare containment let a
+bundled test helper through unhashed. The audit now reads the walk's own skip
+rules. See `research/2026-09-23-global-testing-folder-tool-audit.md`.
+
 Reused artifacts are not re-audited, and do not need to be: the builder's own
 source digest is part of the builder identity, so editing this plugin
 invalidates the whole fleet once and every artifact is rebuilt — and audited —

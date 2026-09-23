@@ -65,7 +65,11 @@ Adding a facet = adding one folder subtree; no consumer changes.
    renderDoc })`. Import parsing helpers (`parseDefineGroup`, `walkFiles`,
    `readIfExists`, …) from
    `@plugins/plugin-meta/plugins/parse-utils/core`; import the facet's own types
-   from its `core/`.
+   from its `core/`. Enumerate source files with `walkFiles` / `walkFilesAsync`,
+   never a private `readdir` walk: they own the rule that test code (`*.test.ts`,
+   `__tests__/`, `<runtime>/testing/`) and sub-plugin trees are not the plugin's
+   surface. Docgen enforces it on the output: a rendered fact naming a test-code
+   path fails the build (`codegen/core/doc-facts-guard.ts`).
 3. `plugins/render-diff/web/` — contribute a `DiffRenderer { facetId, label,
    toComparable }` to `review.plugin-changes.diff-renderer`.
 4. `plugins/render-detail/web/` — contribute a `PluginView.Section` whose Section

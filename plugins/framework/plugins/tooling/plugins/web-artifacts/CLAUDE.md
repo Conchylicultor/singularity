@@ -69,8 +69,13 @@ Key invariants:
   side (the externals predicate + the own-folder-barrel rewrite); every other own
   folder is external, routed to its own barrel. Backed by an assert that trusts
   neither: `createInlineAudit` reads the module ids rollup actually emitted
-  (`generateBundle`) and hard-fails on any first-party file outside the hashed
-  roots. Before this, a `fixtures` barrel inlined its plugin's whole `web/` while
+  (`generateBundle`) and hard-fails on any first-party file the address did not
+  hash (`isHashedFile` in `internal/own-files.ts`: inside a hashed root AND not
+  skipped by the hashing walk). Root containment alone is not enough: test code
+  (`web/testing/`, `__tests__/`, `*.test.ts`) sits inside `web/` but is never
+  hashed, so a shipping file that reached it would bake unhashed bytes into the
+  bundle. The boundary check already bans that import; the audit catches it
+  when the check was skipped. Before this, a `fixtures` barrel inlined its plugin's whole `web/` while
   hashing only `fixtures/` — moving an export out of a sibling plugin surfaced as
   a compose link failure against an hour-old fossil, and the `prewarm` barrels
   inlined an unhashed `shared/` (`…/mirror`) the same way.

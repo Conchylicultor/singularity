@@ -240,9 +240,7 @@ override where it survives.
     - `reports.recordReport`
     - `reports.ReportKind`
     - `tasks/tasks-core._conversations`
-  - DB schema:
-    - `plugins/stats/plugins/cost/server/internal/price-table.test.ts`
-    - `plugins/stats/plugins/cost/server/internal/price-table.ts`
+  - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
   - Register:
     - `defineWarmup('stats.cost.usage')`
     - `defineJob('stats.cost.refresh')`

@@ -485,7 +485,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/endpoints.implement`
     - `primitives/log-channels.Log`
   - DB schema:
-    - `plugins/infra/plugins/jobs/server/internal/queue-schema.test.ts`
     - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
     - `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports (types):

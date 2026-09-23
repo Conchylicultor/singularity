@@ -215,7 +215,6 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
-    - `plugins/tasks/plugins/tasks-core/server/testing/install-derived-schema.ts`
   - Exports (types):
     - `AdoptOrphanInput`
     - `Attempt`

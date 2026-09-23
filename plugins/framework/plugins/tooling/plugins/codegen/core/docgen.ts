@@ -14,6 +14,7 @@ import { mainComposition, type MainComposition } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { buildEnrichedTree } from "./enriched-tree";
+import { assertNoTestCodeInFacts } from "./doc-facts-guard";
 
 /**
  * Marker appended to a plugin's `name — description` line when the app's own
@@ -105,7 +106,9 @@ function renderPluginFacts(
   for (const facet of facets) {
     const data = getFacet(p, facet.def);
     if (data !== undefined) {
-      allFacts.push(...facet.renderDoc(data, { root }));
+      const facts = facet.renderDoc(data, { root });
+      assertNoTestCodeInFacts({ pluginId: p.id, facetId: facet.def.id, facts });
+      allFacts.push(...facts);
     }
   }
   lines.push(...renderDocFacts(allFacts, bodyIndent));

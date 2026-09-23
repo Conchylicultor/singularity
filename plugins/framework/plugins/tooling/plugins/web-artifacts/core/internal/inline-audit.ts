@@ -1,6 +1,10 @@
 // The rung-4 assert behind the "an artifact's address covers exactly what its
 // bytes inline" invariant: per built artifact, everything rollup ACTUALLY
-// inlined must lie inside the artifact's hashed roots.
+// inlined must be a file the artifact's address hashed — inside its hashed
+// roots AND not left out by the hashing walk (`isHashedFile`). The second half
+// matters because test code (`web/testing/`, `__tests__/`) lives inside a root
+// but is never hashed: a shipping file that reached it would bake unhashed
+// content into the bundle, and bare root containment would let that through.
 //
 // Deliberately independent of BOTH halves it guards. It does not read
 // `inlinedRootsFor` to decide what should have been inlined, and it does not
@@ -17,6 +21,7 @@
 // and audited — under the new identity.
 
 import type { Plugin as VitePlugin } from "vite";
+import { isHashedFile } from "./own-files";
 
 export interface InlineAudit {
   /** Collects the emitted module ids. Add to the build's `plugins`. */
@@ -27,10 +32,6 @@ export interface InlineAudit {
 
 /** How many offending paths the error message lists before summarizing. */
 const MAX_LISTED = 20;
-
-function isInside(id: string, root: string): boolean {
-  return id === root || id.startsWith(root + "/");
-}
 
 export function createInlineAudit(opts: {
   dirName: string;
@@ -60,7 +61,9 @@ export function createInlineAudit(opts: {
         if (id.startsWith("\0")) continue; // virtual module, no source file
         if (!id.startsWith("/")) continue; // non-path virtual id
         if (id.includes("/node_modules/")) continue; // npm code, covered by the identity hash
-        if (opts.hashedRoots.some((root) => isInside(id, root))) continue;
+        // The address's own file rule, not bare root containment: test code
+        // (`web/testing/`, `__tests__/`) sits inside a root yet is never hashed.
+        if (isHashedFile(opts.hashedRoots, id)) continue;
         offenders.add(id);
       }
       if (offenders.size === 0) return;
@@ -73,7 +76,8 @@ export function createInlineAudit(opts: {
           : "";
       throw new Error(
         `web-artifact ${opts.dirName} (kind "${opts.kind}") inlined ${sorted.length} source ` +
-          `file(s) outside its hashed roots — its address does not cover its bytes:\n` +
+          `file(s) its address does not hash — outside its hashed roots, or test code ` +
+          `(\`testing/\`, \`__tests__/\`, \`*.test.ts\`) that shipping code must never import:\n` +
           listed.map((p) => `  ${p}`).join("\n") +
           tail +
           `\n  hashed roots: ${opts.hashedRoots.join(", ")}\n` +
