@@ -7,12 +7,22 @@ import {
   backupExclusions,
   inspectBackup,
 } from "@plugins/database/plugins/admin/server";
-import type { TableStat } from "@plugins/database/plugins/admin/server";
+import type {
+  KeptForLink,
+  TableStat,
+} from "@plugins/database/plugins/admin/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { hasCompositionMarker } from "@plugins/infra/plugins/worktree/server";
 import type {
   BackupSourceItem,
   BackupSourceReport,
 } from "@plugins/backup/core";
 import { databasesSourceConfig } from "../../shared/config";
+import {
+  classifyDatabase,
+  isBackedUp,
+  type DatabaseKind,
+} from "./select-databases";
 
 /** One database that could not be dumped, and what it said. */
 interface FailedDump {
@@ -38,22 +48,30 @@ export async function assembleDatabases(
   // Read once, before any dump: it throws in a process that never collected
   // contributions, which must fail the source rather than dump everything.
   const exclusions = backupExclusions();
-  const allDbs = await listDatabases();
-  const targetDbs = allDbs.filter(
-    (name) => !name.startsWith("claude-") && !name.startsWith("att-"),
-  );
+  const classified = (await listDatabases()).map((name) => ({
+    name,
+    kind: classifyDatabase(name, hasCompositionMarker),
+  }));
+  const targetDbs = classified
+    .filter((d) => isBackedUp(d.kind))
+    .map((d) => d.name);
+  const leftOut = describeLeftOut(classified);
+  // The running namespace's own database was migrated at boot, so its schema is
+  // the one this checkout declares: a kept → left-out link there is a bad
+  // declaration and fails the dump. Every other database may be on an older
+  // schema, and keeps the linked rows instead (see `planBackupExclusions`).
+  const ownDb: string = runtimeNamespace();
 
   // Dump every target DB concurrently — each pg_dump is an independent
   // subprocess writing its own file, so there is no cross-DB ordering.
   //
-  // `allSettled`, not `all`: ONE database must not cost the archive the other
-  // six, and it used to. The cluster holds databases this repo's schema does
-  // not describe — a composition fork that has not booted since the last
-  // migration, a leaked test database — and the exclusion planner rightly
-  // refuses to dump one whose kept rows link into rows it would leave out.
-  // With `all` that refusal rejected the source, the source rejected the
-  // archive, and the run ended having backed up NOTHING: no attachments, no
-  // secrets, no transcripts. Three nights ran that way before anyone looked.
+  // `allSettled`, not `all`: ONE database must not cost the archive the others,
+  // and it used to. On 2026-09-18/19 the exclusion planner refused a composition
+  // database on an older schema (it is lenient there now — see
+  // `planBackupExclusions`), `all` turned that refusal into a rejected source,
+  // the source rejected the archive, and the run ended having backed up
+  // NOTHING: no attachments, no secrets, no transcripts. A `pg_dump` can still
+  // fail on its own, and the own database's strict plan can still refuse.
   //
   // So a database that cannot be dumped is now recorded and stepped over. The
   // source reports `failed`, which keeps the run off `ok` and puts the reason
@@ -62,12 +80,14 @@ export async function assembleDatabases(
     targetDbs.map(async (db) => {
       const out = join(dir, `${db}.dump`);
       try {
-        const plan = await backupDatabase(db, out, exclusions);
+        const plan = await backupDatabase(db, out, exclusions, {
+          strict: db === ownDb,
+        });
         const info = await inspectBackup(out, db, plan.excludedTables);
         return {
           item: {
             label: db,
-            detail: describeDump(info.tables),
+            detail: describeDump(info.tables, plan.keptForLinks),
             count: info.tables.length,
           },
           sizeBytes: info.sizeBytes,
@@ -107,6 +127,7 @@ export async function assembleDatabases(
       outcome: "failed",
       error: describeFailures(failures, targetDbs.length),
       items,
+      leftOut,
       sizeBytes,
     };
   }
@@ -116,6 +137,7 @@ export async function assembleDatabases(
     name: "Databases",
     outcome: "included",
     items,
+    leftOut,
     sizeBytes,
   };
 }
@@ -137,14 +159,71 @@ function describeFailures(
 // e.g. "135 tables / 71934 rows (rows of 1 table left out: traces)". The row
 // total counts only rows the archive holds; a left-out table is still counted
 // as a table, because its DDL is in the archive.
-function describeDump(tables: readonly TableStat[]): string {
+//
+// A table whose rows were kept only because this database still links to it
+// says so, e.g. "(rows of mail_threads kept: mail_drafts still links to it)" —
+// the one sign on the card that this database's schema is older than the code.
+function describeDump(
+  tables: readonly TableStat[],
+  keptForLinks: readonly KeptForLink[],
+): string {
   const rows = tables.reduce(
     (acc, t) => (t.rowsExcluded ? acc : acc + t.rowCount),
     0,
   );
-  const base = `${tables.length} tables / ${rows} rows`;
+  const notes: string[] = [];
   const excluded = tables.filter((t) => t.rowsExcluded).map((t) => t.name);
-  if (excluded.length === 0) return base;
-  const noun = excluded.length === 1 ? "table" : "tables";
-  return `${base} (rows of ${excluded.length} ${noun} left out: ${excluded.join(", ")})`;
+  if (excluded.length > 0) {
+    const noun = excluded.length === 1 ? "table" : "tables";
+    notes.push(
+      `rows of ${excluded.length} ${noun} left out: ${excluded.join(", ")}`,
+    );
+  }
+  for (const k of keptForLinks) {
+    notes.push(`rows of ${k.table} kept: ${k.linkedFrom} still links to it`);
+  }
+  const base = `${tables.length} tables / ${rows} rows`;
+  return notes.length === 0 ? base : `${base} (${notes.join("; ")})`;
+}
+
+const SKIPPED_KIND_LABEL: Record<
+  Exclude<DatabaseKind, "main" | "composition" | "orphan">,
+  string
+> = {
+  worktree: "worktree copies",
+  test: "test databases",
+  "fork-temp": "in-progress worktree copies",
+};
+
+// The run card's "Not backed up" list: the disposable kinds as ONE line of
+// counts, and every orphan by name — no app owns it and nothing will reclaim
+// it, so a person has to decide to drop it.
+function describeLeftOut(
+  classified: readonly { name: string; kind: DatabaseKind }[],
+): BackupSourceItem[] {
+  const counts = new Map<string, number>();
+  const orphans: BackupSourceItem[] = [];
+  for (const { name, kind } of classified) {
+    if (kind === "main" || kind === "composition") continue;
+    if (kind === "orphan") {
+      orphans.push({
+        label: name,
+        detail: "no app owns this database",
+      });
+      continue;
+    }
+    const label = SKIPPED_KIND_LABEL[kind];
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const disposable: BackupSourceItem[] =
+    counts.size === 0
+      ? []
+      : [
+          {
+            label: [...counts].map(([label, n]) => `${n} ${label}`).join(", "),
+            detail: "disposable, never backed up",
+            count: [...counts.values()].reduce((a, n) => a + n, 0),
+          },
+        ];
+  return [...disposable, ...orphans];
 }

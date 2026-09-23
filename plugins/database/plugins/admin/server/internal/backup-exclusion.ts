@@ -14,8 +14,10 @@ import { tableLabel } from "./table-label";
 // token implies the other.
 //
 // A kept table must not have a foreign key to a left-out one: the restore would
-// fail re-adding it, so the backup refuses (`BackupPlanError`, ./backup-plan).
-// Leave the linking table out too, or replace the link with a plain id.
+// fail re-adding it. In the schema this checkout declares, that is refused
+// (`BackupPlanError`, ./backup-plan) — leave the linking table out too, or
+// replace the link with a plain id. A database on an OLDER schema that still
+// has such a link keeps the linked table's rows instead (./backup-plan).
 //
 // `reason` MUST SAY ONE OF TWO THINGS:
 //

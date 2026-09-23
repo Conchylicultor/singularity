@@ -18,12 +18,8 @@ import {
 } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { dirExists } from "./reap";
-import {
-  canClassifyOrphans,
-  dirAgeMs,
-  readWorktreeDirIndex,
-  WORKTREE_NAME_RE,
-} from "./dirs";
+import { WORKTREE_NAME_RE } from "@plugins/infra/plugins/worktree/core";
+import { canClassifyOrphans, dirAgeMs, readWorktreeDirIndex } from "./dirs";
 import {
   getGitHygiene,
   isSafeToReap,

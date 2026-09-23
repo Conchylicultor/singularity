@@ -92,6 +92,7 @@ the shape that would absorb it into "the setup succeeded".
     - `writeWorktreeSpec`
 - Cross-plugin:
   - Imported by:
+    - `backup/sources/databases`
     - `build`
     - `build/serve-composition`
     - `code-explorer`
@@ -120,10 +121,12 @@ the shape that would absorb it into "the setup succeeded".
   - Exports (values):
     - `attemptBranchName`
     - `attemptBranchRef`
+    - `isCanonicalWorktreeName`
     - `isOpKind`
     - `OP_KIND_IDS`
     - `OP_KINDS`
     - `stripAttemptBranchPrefix`
+    - `WORKTREE_NAME_RE`
 - Sub-plugins:
   - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
 

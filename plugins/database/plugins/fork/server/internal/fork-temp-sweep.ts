@@ -4,9 +4,8 @@ import {
   listDatabases,
   dropDatabase,
   countActiveConnections,
+  isForkTempName,
 } from "@plugins/database/plugins/admin/server";
-
-const TEMP_SUFFIX = "__forking";
 
 // Reaps orphaned `<target>__forking` temp DBs. Most are reaped by the next fork
 // for that target (forkDatabase drops a stale temp first); the lingering case
@@ -24,9 +23,7 @@ export const forkTempSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "*/15 * * * *" },
   async run() {
-    const temps = (await listDatabases()).filter((d) =>
-      d.endsWith(TEMP_SUFFIX),
-    );
+    const temps = (await listDatabases()).filter(isForkTempName);
     for (const temp of temps) {
       // A live fork's pg_restore holds a connection to the temp — protect it.
       // Only drop temps with zero active connections.

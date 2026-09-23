@@ -25,6 +25,13 @@ interface BackupSourceReportBase {
   name: string;
   /** What this source contributed — the entries that ARE in the archive. */
   items: BackupSourceItem[];
+  /**
+   * What this source deliberately did NOT put in the archive, and why — shown
+   * on the run card beside `items` so a reader can see the boundary of the
+   * backup, not just its contents. Not a failure: it does not change `outcome`.
+   * Absent on manifests written before it existed.
+   */
+  leftOut?: BackupSourceItem[];
   /** Bytes staged by this source, counting only what it actually wrote. */
   sizeBytes: number;
 }

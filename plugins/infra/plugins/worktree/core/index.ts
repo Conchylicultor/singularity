@@ -7,5 +7,9 @@ export {
   attemptBranchRef,
   stripAttemptBranchPrefix,
 } from "./internal/branch";
+export {
+  WORKTREE_NAME_RE,
+  isCanonicalWorktreeName,
+} from "./internal/worktree-name";
 export { OP_KINDS, OP_KIND_IDS, isOpKind } from "./internal/op-kind";
 export type { OpKind, OpKindMeta } from "./internal/op-kind";

@@ -195,11 +195,13 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `BackupExclusions`
     - `BackupInfo`
     - `BackupPlan`
+    - `BackupPlanOptions`
     - `CatalogForeignKey`
     - `ForkExclusions`
     - `ForkOutcome`
     - `ForkPlan`
     - `ForkSchemaExclusion`
+    - `KeptForLink`
     - `SchemaCatalog`
     - `TableStat`
     - `UndeclaredSchema`
@@ -224,6 +226,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `forkTempPrefix`
     - `getAdminPool`
     - `inspectBackup`
+    - `isForkTempName`
     - `listDatabases`
     - `openShortLivedClient`
     - `planBackupExclusions`

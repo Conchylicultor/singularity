@@ -12,6 +12,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
+  BackupSourceItem,
   BackupSourceReport,
   BackupTargetResult,
 } from "@plugins/backup/core";
@@ -69,9 +70,18 @@ function TargetResultLine({
   );
 }
 
+function SourceItemLine({ item }: { item: BackupSourceItem }): ReactNode {
+  return (
+    <Text as="p" variant="caption" tone="muted" className="pl-md">
+      {item.label}
+      {item.detail !== undefined ? ` — ${item.detail}` : ""}
+    </Text>
+  );
+}
+
 /**
- * One source's report: what it is, the items it contributed, and — when it did
- * not finish — what stopped it.
+ * One source's report: what it is, the items it contributed, what it
+ * deliberately left out, and — when it did not finish — what stopped it.
  *
  * The failure line is the whole reason a failed source is listed here at all
  * rather than dropped with the skipped ones. Its words are the component's own
@@ -104,17 +114,18 @@ function SourceReportLines({
         </Text>
       )}
       {source.items.map((item, i) => (
-        <Text
-          key={`${item.label}:${i}`}
-          as="p"
-          variant="caption"
-          tone="muted"
-          className="pl-md"
-        >
-          {item.label}
-          {item.detail !== undefined ? ` — ${item.detail}` : ""}
-        </Text>
+        <SourceItemLine key={`${item.label}:${i}`} item={item} />
       ))}
+      {source.leftOut !== undefined && source.leftOut.length > 0 && (
+        <>
+          <Text as="p" variant="caption" className="pl-md font-medium">
+            Not backed up
+          </Text>
+          {source.leftOut.map((item, i) => (
+            <SourceItemLine key={`${item.label}:${i}`} item={item} />
+          ))}
+        </>
+      )}
     </Stack>
   );
 }

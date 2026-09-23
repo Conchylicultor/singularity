@@ -7602,7 +7602,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/admin.backupDatabase`
               - `database/admin.backupExclusions`
               - `database/admin.inspectBackup`
+              - `database/admin.isForkTempName`
               - `database/admin.listDatabases`
+              - `infra/worktree.hasCompositionMarker`
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -12616,11 +12618,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BackupExclusions`
           - `BackupInfo`
           - `BackupPlan`
+          - `BackupPlanOptions`
           - `CatalogForeignKey`
           - `ForkExclusions`
           - `ForkOutcome`
           - `ForkPlan`
           - `ForkSchemaExclusion`
+          - `KeptForLink`
           - `SchemaCatalog`
           - `TableStat`
           - `UndeclaredSchema`
@@ -12645,6 +12649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `forkTempPrefix`
           - `getAdminPool`
           - `inspectBackup`
+          - `isForkTempName`
           - `listDatabases`
           - `openShortLivedClient`
           - `planBackupExclusions`
@@ -12871,6 +12876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.forkDatabase`
           - `database/admin.forkExclusions`
           - `database/admin.ForkPlanError`
+          - `database/admin.isForkTempName`
           - `database/admin.listDatabases`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
@@ -20283,6 +20289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by:
+          - `backup/sources/databases`
           - `build`
           - `build/serve-composition`
           - `code-explorer`
@@ -20311,10 +20318,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `attemptBranchName`
           - `attemptBranchRef`
+          - `isCanonicalWorktreeName`
           - `isOpKind`
           - `OP_KIND_IDS`
           - `OP_KINDS`
           - `stripAttemptBranchPrefix`
+          - `WORKTREE_NAME_RE`
       - Plugins:
         - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
           - Server:

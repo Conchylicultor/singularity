@@ -14,6 +14,13 @@ export const runBackup = defineEndpoint({
   response: RunBackupResultSchema,
 });
 
+/** One manifest entry: an `items` or `leftOut` line. */
+const SourceItemSchema = z.object({
+  label: z.string(),
+  detail: z.string().optional(),
+  count: z.number().optional(),
+});
+
 /**
  * One source report, decoding BOTH manifest shapes.
  *
@@ -29,13 +36,8 @@ const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
     outcome: z.enum(["included", "skipped", "failed"]).optional(),
     skipped: z.boolean().optional(),
     error: z.string().optional(),
-    items: z.array(
-      z.object({
-        label: z.string(),
-        detail: z.string().optional(),
-        count: z.number().optional(),
-      }),
-    ),
+    items: z.array(SourceItemSchema),
+    leftOut: z.array(SourceItemSchema).optional(),
     sizeBytes: z.number(),
   })
   .refine(
@@ -47,6 +49,7 @@ const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
       id: r.id,
       name: r.name,
       items: r.items,
+      ...(r.leftOut !== undefined && { leftOut: r.leftOut }),
       sizeBytes: r.sizeBytes,
     };
     if (r.outcome === "failed") {

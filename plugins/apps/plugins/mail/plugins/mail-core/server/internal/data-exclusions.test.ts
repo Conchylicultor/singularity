@@ -106,7 +106,7 @@ describe("mail's data exclusions", () => {
   test("no kept table links to a left-out one, in a backup or a fork", () => {
     const catalog = catalogOf();
     expect(() =>
-      planBackupExclusions(catalog, { tables: backupTables }),
+      planBackupExclusions(catalog, { tables: backupTables }, { strict: true }),
     ).not.toThrow();
     expect(() =>
       planForkExclusions(catalog, { tables: forkTables, schemas: [] }),
@@ -122,7 +122,7 @@ describe("mail's data exclusions", () => {
       },
     ]);
     expect(() =>
-      planBackupExclusions(catalog, { tables: backupTables }),
+      planBackupExclusions(catalog, { tables: backupTables }, { strict: true }),
     ).toThrow(/"mail_drafts" links to "mail_threads"/);
     expect(() =>
       planForkExclusions(catalog, { tables: forkTables, schemas: [] }),

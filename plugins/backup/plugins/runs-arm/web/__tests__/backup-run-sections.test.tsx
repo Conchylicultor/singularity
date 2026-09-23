@@ -214,6 +214,49 @@ describe("backup run detail sections", () => {
   });
 
   /**
+   * The boundary of the backup, not just its contents: what a source chose not
+   * to archive is listed under its own heading, apart from the items — an
+   * orphan database by name, so someone can decide to drop it.
+   */
+  it("lists what a source deliberately left out, apart from its items", () => {
+    renderSection(
+      <BackupSourcesSection
+        run={backupRun({
+          "backup.sources": [
+            {
+              id: "databases",
+              name: "Databases",
+              outcome: "included",
+              items: [
+                {
+                  label: "sonata",
+                  detail:
+                    "60 tables / 10 rows (rows of mail_threads kept: mail_drafts still links to it)",
+                },
+              ],
+              leftOut: [
+                {
+                  label: "212 worktree copies",
+                  detail: "disposable, never backed up",
+                },
+                { label: "website", detail: "no app owns this database" },
+              ],
+              sizeBytes: 4096,
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Not backed up")).not.toBeNull();
+    expect(
+      screen.getByText("website — no app owns this database"),
+    ).not.toBeNull();
+    expect(screen.getByText(/212 worktree copies/)).not.toBeNull();
+    expect(screen.getByText(/mail_drafts still links to it/)).not.toBeNull();
+  });
+
+  /**
    * Every backup manifest written before this change says `skipped: boolean`
    * and has no `outcome` at all. They are months of real history on the runs
    * surface, so the decoder maps the legacy boolean rather than rejecting —

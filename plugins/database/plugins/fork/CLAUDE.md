@@ -48,6 +48,7 @@ still running is never dropped out from under it.
     - `database/admin.forkDatabase`
     - `database/admin.forkExclusions`
     - `database/admin.ForkPlanError`
+    - `database/admin.isForkTempName`
     - `database/admin.listDatabases`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`

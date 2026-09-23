@@ -3,7 +3,11 @@ import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { z } from "zod";
 import { libpqSubprocessEnv, openShortLivedClient } from "./pool";
-import { resolveBackupPlan, type BackupPlan } from "./backup-plan";
+import {
+  resolveBackupPlan,
+  type BackupPlan,
+  type BackupPlanOptions,
+} from "./backup-plan";
 import type { BackupExclusions } from "./backup-exclusion";
 
 export type TableStat = {
@@ -31,18 +35,29 @@ export type BackupInfo = {
 // that never collected contributions, and that would be a silent full backup.
 // `backupExclusions()` in ./backup-exclusion is the loud way to get the set.
 //
-// Returns the plan so the caller can say in the manifest what was left out.
+// `options.strict` says whether this database's schema is the one this checkout
+// declares (see ./backup-plan): refuse a kept → left-out link, or keep the rows.
+//
+// Returns the plan so the caller can say in the manifest what was left out, and
+// what was kept after all.
 export async function backupDatabase(
   name: string,
   outFile: string,
   exclusions: BackupExclusions,
+  options: BackupPlanOptions,
 ): Promise<BackupPlan> {
-  const plan = await resolveBackupPlan(name, exclusions);
-  // A finding, not a failure: a composition database may simply not have the
-  // table. Logged so it lands in the backup transcript.
+  const plan = await resolveBackupPlan(name, exclusions, options);
+  // Findings, not failures: a composition database may simply not have the
+  // table, or be on an older schema that still links to it. Logged so they land
+  // in the backup transcript.
   for (const line of plan.unmatched) {
     console.warn(
       `[db-backup] ${name}: declared exclusion matches nothing: ${line}`,
+    );
+  }
+  for (const k of plan.keptForLinks) {
+    console.warn(
+      `[db-backup] ${name}: kept rows of "${k.table}": "${k.linkedFrom}" still links to it (${k.constraint})`,
     );
   }
   // `-f` into the file rather than streaming stdout through Bun into it: Bun can

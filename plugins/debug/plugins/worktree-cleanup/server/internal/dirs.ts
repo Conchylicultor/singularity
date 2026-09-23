@@ -5,22 +5,8 @@ import {
   gitWorktreesDir,
   worktreePathFor,
 } from "@plugins/infra/plugins/worktree/server";
+import { isCanonicalWorktreeName } from "@plugins/infra/plugins/worktree/core";
 import { dirExists } from "./reap";
-
-// Canonical worktree-id shape (attempt id == fork DB name == registry entry
-// name): `att-<epoch>-<suffix>` / `claude-<epoch>-<suffix>`, plus the legacy
-// suffix-less `claude-<epoch>` form still present in the registry. The single
-// `-[a-z0-9]+` suffix group (no extra dashes) excludes the per-build data files
-// that share the dir (`<name>-build-profile.json`, `<name>-build-logs-<id>.json`)
-// and the reserved `singularity`/`central` namespaces and `*__forking` temps
-// (owned by the database.fork-temp-sweep job). One source of truth for the
-// fork-DB orphan filter, the registry-file orphan filter, the on-disk dir scan,
-// and the delete handlers' id validation.
-export const WORKTREE_NAME_RE = /^(att|claude)-\d+(-[a-z0-9]+)?$/;
-
-export function isCanonicalWorktreeName(name: string): boolean {
-  return WORKTREE_NAME_RE.test(name);
-}
 
 export interface WorktreeDir {
   name: string;

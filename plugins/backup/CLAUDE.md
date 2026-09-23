@@ -69,6 +69,15 @@ Three rules hold it together:
   someone is restoring it. `assembleDatabases` reclaims it on the error path, so
   the archive holds a whole dump or no file.
 
+The 2026-09-18 refusal itself is gone too. `assembleDatabases` now backs up only an
+app's own databases — main, and each composition served from main (its
+`composition.json` marker) — and lists the rest under **Not backed up** on the
+run card: worktree copies, test databases and fork temps as one line of counts,
+and every orphan (no app owns it, nothing reclaims it) by name. Only the running
+namespace's own database is planned strictly; any other may be on an older
+schema, so a link into a declared table keeps that table's rows there and the
+card says so (`planBackupExclusions` in `database/admin`).
+
 Manifests are **v3**. v2 rows (`skipped: boolean`) are still read — the boolean
 maps onto `included` / `skipped` losslessly, since v2 had no way to say `failed`
 — by both decoders and by the runs arm's `sourceCountExpr`. `backupSourceWentIn`
