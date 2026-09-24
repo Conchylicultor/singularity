@@ -4,7 +4,7 @@ The prototype canvas's **Real app** frame: the real thing a prototype says it
 mocks, live and interactive, beside the mock at the canvas's size. It is a
 `FrameSource` contribution to the `canvas` plugin (id `REAL_APP_SOURCE`,
 `"real-app"`, in `core/`; add label "Real app"), so it arrives through the
-canvas's `+ Real app` button or the `proto/<id>/compare` URL. The size, zoom,
+canvas's `+ Real app` button (and stays, since the canvas is remembered). The size, zoom,
 side-by-side and swipe are the canvas's — this plugin paints no layout.
 
 It owns two things and names no kind of counterpart:
@@ -80,8 +80,8 @@ the other:
   [--out /tmp/mist] [--fail-above 5]
 ```
 
-It opens `proto/<id>/compare` on the deploy this checkout built, waits for the
-real-app frame to resolve, sets the canvas to 100% through the size & zoom chip
+It opens the prototype's canvas on the deploy this checkout built, adds the
+Real app frame (`+ Real app`), waits for it to resolve, sets the canvas to 100% through the size & zoom chip
 (so a pixel of the mock is a pixel of the app), and photographs both frames at
 the one canvas size. `--width` must be a size preset's width (the run refuses
 and lists the presets otherwise); without it the canvas stays Responsive and
@@ -150,7 +150,9 @@ canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
 - Core:
-  - Exports (values): `REAL_APP_SOURCE`
+  - Exports (values):
+    - `REAL_APP_LABEL`
+    - `REAL_APP_SOURCE`
 - Sub-plugins:
   - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
   - **`fixture`** — The fixture: counterpart kind for the prototype canvas's Real app frame: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the canvas's size. The only place prototypes are tied to app internals.

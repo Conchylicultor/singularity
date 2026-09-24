@@ -6,10 +6,8 @@ import {
 import { PrototypeDetail } from "./components/prototype-detail";
 
 /**
- * One prototype's canvas. The URL's optional last part is the coarse layout:
- * bare `proto/<id>` (what the CLI prints) opens frame A alone,
- * `proto/<id>/compare` opens A beside the first contributed frame source (the
- * real app) — and the canvas writes it back as a source frame comes and goes.
+ * One prototype's canvas, at `proto/<id>` (what the CLI prints). It reopens as
+ * this browser last left it — see `PrototypeDetailProvider`'s `remember`.
  */
 export const prototypeDetailPane = Pane.define({
   route: prototypeDetailRoute,

@@ -10,8 +10,8 @@
 // The prototype names its counterpart itself, in its own
 // `<meta name="mocks" content="<kind>:<ref>">` (`route:/agents`,
 // `fixture:control-panel/setting-rail`). This script does not read that tag
-// and does not know the kinds: it opens the prototype's canvas at
-// `proto/<id>/compare` — frame A (the mock) beside the Real app frame, which
+// and does not know the kinds: it opens the prototype's canvas and adds the
+// Real app frame — frame A (the mock) beside the Real app frame, which
 // dispatches the declaration to whichever kind plugin handles it — and
 // photographs the two frame screens the canvas publishes
 // (`data-canvas-frame="A"`, and the frame whose `data-canvas-frame-kind` is
@@ -85,6 +85,7 @@ import {
   type CanvasFrameStatus,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import {
+  addSource,
   dismiss,
   frameDoc,
   openCanvas,
@@ -93,7 +94,10 @@ import {
   pickValue,
   screen,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/e2e";
-import { REAL_APP_SOURCE } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
+import {
+  REAL_APP_LABEL,
+  REAL_APP_SOURCE,
+} from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 
 const USAGE =
   "--name <proto-id> is required — the prototype folder's minted id (`./singularity prototype list` prints them)";
@@ -322,7 +326,9 @@ await withBrowser(async (h) => {
     colorScheme,
   });
 
-  await openCanvas(page, name, "compare");
+  // A fresh session: the canvas opens as frame A alone, then gets the Real app.
+  await openCanvas(page, name);
+  await addSource(page, REAL_APP_LABEL);
   const mock = page.locator(mockSelector());
   const counterpart = page.locator(appSelector());
 

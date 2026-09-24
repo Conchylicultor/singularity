@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { FrameSource } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { REAL_APP_SOURCE } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
+import {
+  REAL_APP_LABEL,
+  REAL_APP_SOURCE,
+} from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 import { Counterpart } from "./slots";
 import { RealAppSource } from "./components/real-app-source";
 
@@ -17,7 +20,7 @@ export default {
   contributions: [
     FrameSource({
       match: REAL_APP_SOURCE,
-      addLabel: "Real app",
+      addLabel: REAL_APP_LABEL,
       component: RealAppSource,
     }),
   ],

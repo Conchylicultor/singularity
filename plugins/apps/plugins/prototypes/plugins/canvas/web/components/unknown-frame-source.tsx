@@ -1,9 +1,13 @@
 import type { ReactElement, ReactNode } from "react";
+import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
- * The frame-source dispatch fallback: a frame names a source nothing contributes
- * (its plugin was removed while the frame was on the canvas). Rendered through
+ * The frame-source dispatch fallback: a frame names a source nothing contributes.
+ * Until the deferred plugin tier has loaded that is not known yet — a reopened
+ * canvas names its Real app frame before compare's plugin registers — so it
+ * reads `loading`. After, the plugin is really gone (removed, or not in this
+ * worktree) and the frame says so. Rendered through
  * the same `children(resolution)` path as a real source, so the frame's chrome
  * is the same — only the sentence differs.
  *
@@ -16,12 +20,14 @@ export function UnknownFrameSource({
 }: {
   source: string;
   meta: PrototypeMeta;
-  children: (resolution: {
-    status: "unresolved";
-    title: ReactNode;
-    detail: ReactNode;
-  }) => ReactNode;
+  children: (
+    resolution:
+      | { status: "loading" }
+      | { status: "unresolved"; title: ReactNode; detail: ReactNode },
+  ) => ReactNode;
 }): ReactElement {
+  const { deferredComplete } = useDeferredLoadState();
+  if (!deferredComplete) return <>{children({ status: "loading" })}</>;
   return (
     <>
       {children({

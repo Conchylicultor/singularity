@@ -10,6 +10,11 @@ import {
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  readDraft,
+  writeDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   applyPicksChange,
@@ -35,6 +40,7 @@ import {
   type FrameId,
   type PrototypeFrame,
 } from "./internal/canvas-model";
+import { restoreCanvas, serializeCanvas } from "./internal/saved-canvas";
 import { FrameSource } from "./slots";
 
 /**
@@ -53,8 +59,26 @@ export interface CanvasSourceEntry {
   addLabel: string;
 }
 
-/** The URL `layout` part that means "the prototype beside a frame source". */
-export const COMPARE_LAYOUT = "compare";
+/**
+ * Where a remembered canvas is saved: this browser's localStorage, one entry
+ * per prototype. A month without a visit forgets it.
+ */
+const SAVED_CANVAS_KEY = "prototypes.canvas";
+const SAVED_CANVAS_TTL = 30 * 24 * 60 * 60 * 1000;
+
+/** The canvas this browser last left `name` in, or a fresh one. */
+function openCanvas(name: string): CanvasState {
+  const raw = readDraft<unknown>(SAVED_CANVAS_KEY, {
+    scope: name,
+    ttl: SAVED_CANVAS_TTL,
+  });
+  if (raw === null) return initialCanvasState();
+  const restored = restoreCanvas(raw);
+  if (restored.kind === "restored") return restored.state;
+  // Written by an older shape of the canvas: open fresh, and say why.
+  console.warn(`Saved canvas of ${name} not reopened: ${restored.reason}`);
+  return initialCanvasState();
+}
 
 export interface PrototypeDetailContextValue {
   /** The directory slug of the prototype this pane is showing. */
@@ -79,12 +103,6 @@ export interface PrototypeDetailContextValue {
 interface Held {
   name: string;
   state: CanvasState;
-  /**
-   * The URL asked for a source frame (`compare`) before any source was
-   * contributed — the sources' plugins load in a later tier than this pane.
-   * The first render that has one adds it.
-   */
-  awaitingSource: boolean;
 }
 const PrototypeDetailContext =
   createContext<PrototypeDetailContextValue | null>(null);
@@ -106,29 +124,25 @@ export function usePrototypeDetail(): PrototypeDetailContextValue {
 
 export function PrototypeDetailProvider({
   name,
-  layout,
-  onLayoutChange,
+  remember = false,
   initialVersion = null,
   initialPicks,
   children,
 }: {
   name: string;
   /**
-   * The coarse layout the URL names: `compare` opens frame A beside the first
-   * contributed frame source. Read when the canvas opens (per prototype).
+   * Reopen the canvas this browser last left the prototype in, and save every
+   * change to it — the detail pane's canvas. Off for a surface that shows one
+   * given frame (Present's new-tab page), and always off inside an embedded
+   * document, so a framed copy of the app never rewrites the host's canvas.
    */
-  layout?: string;
-  /**
-   * Hear the coarse layout change — `compare` while a source frame is on the
-   * canvas, `undefined` otherwise — so the pane writes it back to its URL.
-   * Omitted by a surface with no URL to keep in step.
-   */
-  onLayoutChange?: (layout: string | undefined) => void;
-  /** The version frame A opens on — `null` (the default) for the live folder. */
+  remember?: boolean;
+  /** The version frame A opens on — `null` (the default) for the live folder. Not with `remember`. */
   initialVersion?: PrototypeVersion | null;
   /**
    * Picks of frame A's OWN, instead of the shared record — for a surface that
    * shows one frame someone else had given local picks (Present's new-tab page).
+   * Not with `remember`.
    */
   initialPicks?: StoredPicks;
   children: ReactNode;
@@ -173,39 +187,25 @@ export function PrototypeDetailProvider({
   );
 
   // The canvas belongs to ONE prototype: held with its name, so opening another
-  // prototype opens a fresh canvas without an effect resetting anything. Not
-  // remembered across visits — the URL's coarse layout is what reopens.
-  const open = (): Held => {
-    const wantsSource = layout === COMPARE_LAYOUT;
-    const source = wantsSource ? sources[0]?.id : undefined;
-    return {
-      name,
-      state: initialCanvasState({
-        version: initialVersion,
-        picks: initialPicks ?? "shared",
-        source,
-      }),
-      awaitingSource: wantsSource && source === undefined,
-    };
-  };
+  // prototype opens its own canvas without an effect resetting anything. When
+  // remembered, it is read synchronously here, so the first paint is already
+  // the saved canvas rather than the defaults swapped out a moment later.
+  const persist = remember && !isEmbeddedDocument();
+  const open = (): Held => ({
+    name,
+    state: persist
+      ? openCanvas(name)
+      : initialCanvasState({
+          version: initialVersion,
+          picks: initialPicks ?? "shared",
+        }),
+  });
   const [held, setHeld] = useState<Held>(open);
   let current = held;
   if (held.name !== name) {
-    // Another prototype: a fresh canvas, set during render (React's "adjust
-    // state on a prop change" pattern) rather than by an effect after paint.
+    // Another prototype: its canvas, set during render (React's "adjust state
+    // on a prop change" pattern) rather than by an effect after paint.
     current = open();
-    setHeld(current);
-  } else if (held.awaitingSource && sources[0] !== undefined) {
-    const added = canvasReducer(
-      held.state,
-      { type: "addSource", source: sources[0].id },
-      {},
-    ).state;
-    current = {
-      name,
-      state: { ...added, selected: held.state.selected },
-      awaitingSource: false,
-    };
     setHeld(current);
   }
   const canvas = current.state;
@@ -249,11 +249,11 @@ export function PrototypeDetailProvider({
     const { state, effects } = canvasReducer(before, action, sharedSnapshot());
     if (state === before && effects.length === 0) return;
     latest.current = { from: current, state };
-    setHeld({ name, state, awaitingSource: false });
+    setHeld({ name, state });
+    if (persist) {
+      writeDraft(SAVED_CANVAS_KEY, serializeCanvas(state), { scope: name });
+    }
     for (const effect of effects) runEffect(effect);
-    const had = before.frames.some((f) => f.kind === "source");
-    const has = state.frames.some((f) => f.kind === "source");
-    if (had !== has) onLayoutChange?.(has ? COMPARE_LAYOUT : undefined);
   });
 
   const keepOnly = useEventCallback((id: FrameId) => {

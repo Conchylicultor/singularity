@@ -89,6 +89,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
   - Imported by:
     - `apps-core/layout`
     - `apps-core/tabs`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`
     - `primitives/scope/app-instance`

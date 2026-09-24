@@ -61,17 +61,26 @@ export function spreadableOption(
   return option;
 }
 
-/** Open the canvas of `name` (optionally at a coarse layout: `compare`). */
-export async function openCanvas(
-  page: Page,
-  name: string,
-  layout?: string,
-): Promise<void> {
-  const path = `/prototypes/proto/${name}${layout === undefined ? "" : `/${layout}`}`;
-  await boot(page, pathUrl(path), {
+/**
+ * Open the canvas of `name`. It reopens as this browser last left it — a fresh
+ * session's browser has left it nowhere, so that is frame A alone.
+ */
+export async function openCanvas(page: Page, name: string): Promise<void> {
+  await boot(page, pathUrl(`/prototypes/proto/${name}`), {
     marker: canvasFrameSelector({ letter: "A", status: "found" }),
     settleMs: 500,
   });
+}
+
+/**
+ * Put a frame source's frame on the canvas through its header button
+ * (`+ <addLabel>`). Its plugin loads in a later tier than the canvas, so the
+ * button is waited for.
+ */
+export async function addSource(page: Page, addLabel: string): Promise<void> {
+  const button = page.getByRole("button", { name: addLabel, exact: true });
+  await button.waitFor({ state: "visible", timeout: 20_000 });
+  await button.click();
 }
 
 /** One frame as the DOM publishes it. */

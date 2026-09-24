@@ -16,12 +16,11 @@ export const prototypesGalleryRoute = defineRoute({
 });
 
 /**
- * One prototype's canvas. The optional last part is the coarse canvas layout:
- * bare `proto/<id>` opens one frame, `proto/<id>/compare` opens the prototype
- * beside the first contributed frame source (the real app).
+ * One prototype's canvas. The URL names only the prototype: what is on its
+ * canvas (frames, size, zoom) is remembered by the browser, per prototype.
  */
 export const prototypeDetailRoute = defineRoute({
   id: "prototypes-detail",
-  segment: "proto/:name/:layout?",
+  segment: "proto/:name",
   parent: prototypesGalleryRoute,
 });

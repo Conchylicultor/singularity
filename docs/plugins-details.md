@@ -3637,7 +3637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (values): `PROTOTYPES_CATEGORY_ID`
       - Plugins:
-        - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames, and the proto/<id>/compare URL for 'the prototype beside the real app'.
+        - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered by the browser per prototype, so a reload reopens it as it was left.
           - Web:
             - Slots:
               - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
@@ -3686,6 +3686,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ItemActionProps`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
@@ -3701,6 +3702,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/persistent-draft.readDraft`
+              - `primitives/persistent-draft.writeDraft`
               - `primitives/relative-time.RelativeTime`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/slot-render.defineDispatchSlot`
@@ -3729,7 +3732,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `VersionStepperProps`
             - Exports (values):
               - `CanvasFrameView`
-              - `COMPARE_LAYOUT`
               - `documentOptions`
               - `frameA`
               - `FrameLetter`
@@ -3802,7 +3804,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
           - Core:
-            - Exports (values): `REAL_APP_SOURCE`
+            - Exports (values):
+              - `REAL_APP_LABEL`
+              - `REAL_APP_SOURCE`
           - Plugins:
             - **`component`** — The component: counterpart kind for the prototype canvas's Real app frame: a real app component a plugin exhibits as a specimen (plugin-meta/specimens), looked up by id (component:<id>) and rendered live inside the running app — real slots, config and data — at the canvas's size.
               - Web:
@@ -28602,6 +28606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/layout`
           - `apps-core/tabs`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/compare/route`
           - `apps/prototypes/present`
           - `primitives/scope/app-instance`
@@ -30629,6 +30634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
+          - `apps/prototypes/canvas`
           - `apps/sonata/library`
           - `apps/sonata/rich/chord-readout`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

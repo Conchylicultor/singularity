@@ -7,3 +7,10 @@
  * `web`).
  */
 export const REAL_APP_SOURCE = "real-app";
+
+/**
+ * The source's add label — the canvas header's `+ Real app` button. Spelled
+ * here for the same reason: the e2e driver clicks that button to put the
+ * real-app frame on the canvas.
+ */
+export const REAL_APP_LABEL = "Real app";

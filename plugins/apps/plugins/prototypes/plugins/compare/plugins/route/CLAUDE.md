@@ -84,10 +84,9 @@ A prototype can declare `route:/prototypes/proto/<its own id>`. The bare path
 opens the detail pane on its **first** stage (Focus), so that frame shows the
 mock and stops.
 
-But the picked stage IS in the URL (`/prototypes/proto/<id>/compare`), so a
-prototype can also name a Compare stage — its own, or another prototype's whose
-path leads back. Left alone, each frame would open Compare, which frames the app
-again, with no floor. So both kinds refuse to frame from inside a framed
+But a canvas can hold a Real app frame — and a canvas opened inside a framed
+app screen could too — so a path that leads back to a prototype canvas, its
+own or another's, could frame the app again, with no floor. So both kinds refuse to frame from inside a framed
 document, in either embed mode: when `isEmbeddedDocument()` is true they answer
 `unresolved` with a notice, and the recursion stops at depth one whatever path
 the prototype wrote.

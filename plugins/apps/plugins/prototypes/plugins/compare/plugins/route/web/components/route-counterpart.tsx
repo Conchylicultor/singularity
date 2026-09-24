@@ -59,7 +59,7 @@ function resolve(
 ): CounterpartResolution {
   // Framing stops at depth one. This document being a framed app screen means
   // the path in some prototype led back to a prototype canvas — its own
-  // (`route:/prototypes/proto/<id>/compare`) or another one that leads back —
+  // (`route:/prototypes/proto/<id>`) or another one that leads back —
   // and framing again from here would nest app inside app with no floor.
   if (isEmbeddedDocument()) {
     return {

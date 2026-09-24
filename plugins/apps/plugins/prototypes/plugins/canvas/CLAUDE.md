@@ -1,6 +1,6 @@
 # canvas
 
-The prototype detail pane (`proto/:name/:layout?`): one prototype shown as a
+The prototype detail pane (`proto/:name`): one prototype shown as a
 canvas of **lettered frames** — A, B, C… side by side — so a reader can put
 two variants, two versions, or the mock and the real app next to each other
 and look. Design: `research/2026-09-23-apps-prototypes-frame-canvas.md`
@@ -31,8 +31,31 @@ page and the measured room → each frame's logical size and scale) and
 `internal/frame-name.ts` are pure and tested too.
 
 The canvas belongs to ONE prototype: the provider holds it together with the
-prototype's name, so opening another prototype opens a fresh canvas without an
-effect resetting anything. It is not remembered across visits.
+prototype's name, so opening another prototype opens its own canvas without an
+effect resetting anything.
+
+## Remembered per prototype
+
+The detail pane's canvas is **remembered by the browser**, one localStorage
+entry per prototype (`persistent-draft`, 30 days without a visit forgets it):
+frames, their versions and own picks, selection, size, zoom, Whole page, Swipe,
+link and spread. Reloading, or coming back to the prototype later, reopens it
+as it was left. `dispatch` is the one place it changes, so it is the one place
+it is written; the provider reads it synchronously when the canvas opens, so
+the first paint is already the saved canvas.
+
+Frame A's picks are not in it: A holds `"shared"`, a pointer to the server
+record, which stays their only truth. `internal/saved-canvas.ts` validates what
+it reads back (a zod schema plus the reducer's invariants — one `"shared"`
+frame and it is A, ids below `nextId`, the selection on the canvas, Swipe with
+two frames); anything else opens a fresh canvas with a console warning.
+
+Remembering is opt-in (`remember` on `PrototypeDetailProvider`): only the
+detail pane asks for it, never Present's one-frame page, and never inside an
+embedded document — a framed copy of the app must not rewrite the host's
+canvas. A reopened source frame whose plugin has not loaded yet (they load in
+a later tier) reads `loading` in the dispatch fallback until the deferred tier
+completes, and only then "nothing shows these frames".
 
 ## Frame A holds the shared picks
 
@@ -151,16 +174,11 @@ A selected frame shows its header actions; the others reveal them on hover.
 
 ## The URL
 
-The URL holds only the coarse layout. Bare `proto/<id>` (what the CLI prints)
-opens frame A alone; `proto/<id>/compare` opens A beside the first contributed
-frame source — the real app. Frame sources load in a later plugin tier than
-this pane, so on a cold `/compare` the source frame joins as soon as its
-plugin has registered (`awaitingSource`). While a source frame is on the
-canvas the provider writes `compare` back (`useSetParams`, the same pane
-instance — never a remount), and removes it when the last one closes.
-Everything else (frames, B's picks, versions, size, zoom) is pane state. Both
-routes live in `shell/core/routes.ts`, so the gallery can open this pane
-without either plugin depending on the other.
+The URL names only the prototype: `proto/<id>` (what the CLI prints). What is
+on its canvas is remembered by the browser (above), so the URL and the saved
+canvas can never disagree about it. The route lives in `shell/core/routes.ts`,
+so the gallery can open this pane without either plugin depending on the
+other.
 
 ## Extension points
 
@@ -194,7 +212,8 @@ publishes the id it was given) and `data-canvas-frame-status` (`loading` /
 `unresolved` / `found`). The names and `canvasFrameSelector` live in `core/`,
 the one spelling the canvas and an `e2e/` script both read.
 
-`e2e/index.ts` holds the shared flows (open a canvas, find a frame, read back
+`e2e/index.ts` holds the shared flows (open a canvas, add a source frame by
+its add label, find a frame, read back
 the size, version and picks its document was opened with — off the iframe's
 `src` and box, so assertions are about what is on screen). The scripts, all
 manual, default to the first prototype declaring an option with 3+ values and a
@@ -206,8 +225,11 @@ manual, default to the first prototype declaring an option with 3+ values and a
   snap;
 - `canvas-version.ts` — the per-frame stepper moves only its frame, arrows
   stay put;
-- `canvas-url.ts` — `/compare` opens A + the real app, + Real app writes it,
-  closing removes it, no remount.
+- `canvas-remember.ts` — a fresh browser opens A alone; frames, size and zoom
+  come back on reopening, the URL never changes, a closed frame stays closed.
+
+Each script's session is a fresh browser context, so it starts from nothing
+remembered.
 
 `compare/e2e/compare-diff.ts` photographs frame A against the real-app frame.
 
@@ -215,7 +237,7 @@ manual, default to the first prototype declaring an option with 3+ values and a
 
 ## Plugin reference
 
-- Description: The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames, and the proto/<id>/compare URL for 'the prototype beside the real app'.
+- Description: The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered by the browser per prototype, so a reload reopens it as it was left.
 - Web:
   - Slots:
     - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
@@ -264,6 +286,7 @@ manual, default to the first prototype declaring an option with 3+ values and a
     - `primitives/data-view.ItemActionProps`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
@@ -279,6 +302,8 @@ manual, default to the first prototype declaring an option with 3+ values and a
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/relative-time.RelativeTime`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/slot-render.defineDispatchSlot`
@@ -307,7 +332,6 @@ manual, default to the first prototype declaring an option with 3+ values and a
     - `VersionStepperProps`
   - Exports (values):
     - `CanvasFrameView`
-    - `COMPARE_LAYOUT`
     - `documentOptions`
     - `frameA`
     - `FrameLetter`
