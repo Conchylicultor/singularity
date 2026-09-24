@@ -203,9 +203,13 @@ function EditorShell({
           : "bg-transparent dark:bg-input/30",
       )}
     >
+      {/* One grid cell holds both the editable and its placeholder, so the box
+          is as tall as whichever is taller: a placeholder that wraps past
+          `minRows` grows the editor instead of spilling over `bottomSlot`. */}
       <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- stacks Lexical's two sibling children (ContentEditable + placeholder, a third-party Fragment) in one in-flow cell; no primitive stacks siblings in flow
         className={cn(
-          "relative",
+          "grid",
           disabled && "opacity-50 pointer-events-none cursor-not-allowed",
         )}
       >
@@ -219,15 +223,16 @@ function EditorShell({
               style={{ minHeight, maxHeight }}
               // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(
-                "px-sm py-xs text-body outline-none resize-none",
+                "[grid-area:1/1] min-w-0 px-sm py-xs text-body outline-none resize-none",
                 "overflow-y-auto",
                 className,
               )}
               aria-disabled={disabled}
               aria-placeholder={placeholder ?? ""}
               placeholder={
-                // eslint-disable-next-line layout/no-adhoc-layout -- decorative full-bleed placeholder overlay rendered into Lexical's PlainTextPlugin placeholder slot (third-party DOM structure); cannot route through <Overlay above>
-                <div className="text-muted-foreground pointer-events-none absolute inset-0 px-sm py-xs text-body">
+                // Shares the editable's grid cell (see the wrapper above) and so
+                // counts toward the box's height, unlike an absolute overlay.
+                <div className="text-muted-foreground pointer-events-none select-none [grid-area:1/1] px-sm py-xs text-body">
                   {placeholder ?? ""}
                 </div>
               }
