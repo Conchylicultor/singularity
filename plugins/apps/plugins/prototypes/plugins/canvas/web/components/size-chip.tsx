@@ -7,6 +7,7 @@ import {
   MdPhoneIphone,
   MdSwapHoriz,
   MdTabletMac,
+  MdWebAsset,
 } from "react-icons/md";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -26,10 +27,11 @@ import {
   type FrameLayout,
 } from "../internal/layout";
 import { usePrototypeDetail } from "../context";
+import { useWindowSize } from "../internal/use-window-size";
 
 /**
- * Size, zoom and Whole page: ONE chip for the whole canvas ("Responsive
- * 1280 × 800 | Fit · 62%"), opening a menu with the size presets, the zoom (Fit,
+ * Size, zoom and Whole page: ONE chip for the whole canvas ("This window
+ * 1728 × 990 | Fit · 62%"), opening a menu with the sizes, the zoom (Fit,
  * a 10–200% slider, and a value box that jumps to 100%) and the Whole page
  * switch. Every frame follows it.
  *
@@ -40,6 +42,7 @@ import { usePrototypeDetail } from "../context";
 export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
   const { size, zoom, wholePage } = canvas;
+  const browserWindow = useWindowSize();
   const percent = Math.round(layout.scale * 100);
   const zoomLabel =
     zoom === "fit" ? `Fit · ${String(percent)}%` : `${String(percent)}%`;
@@ -82,6 +85,17 @@ export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
             }
           >
             Responsive
+          </ControlPanel.Row>
+          <ControlPanel.Row
+            select="radio"
+            checked={size.kind === "window"}
+            trailing={`${String(browserWindow.w)} × ${String(browserWindow.h)}`}
+            hint="What the real app gets in this browser window."
+            onSelect={() =>
+              dispatch({ type: "setSize", size: { kind: "window" } })
+            }
+          >
+            This window
           </ControlPanel.Row>
           {SIZE_PRESETS.map((p) => (
             <ControlPanel.Row
@@ -166,6 +180,8 @@ function SizeIcon({ size }: { size: CanvasSize }): ReactElement {
   switch (size.kind) {
     case "responsive":
       return <MdSwapHoriz />;
+    case "window":
+      return <MdWebAsset />;
     case "preset": {
       const preset = size.preset;
       return preset === "Phone" ? (

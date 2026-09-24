@@ -112,6 +112,7 @@ Exit: closing the tab is how you leave.
     - `apps/prototypes/canvas.SizeChip`
     - `apps/prototypes/canvas.useFrameNames`
     - `apps/prototypes/canvas.usePrototypeDetail`
+    - `apps/prototypes/canvas.useWindowSize`
     - `apps/prototypes/canvas.VersionStepper`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`

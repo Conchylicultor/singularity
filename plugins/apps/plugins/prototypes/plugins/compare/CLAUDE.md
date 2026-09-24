@@ -76,7 +76,7 @@ the other:
 
 ```bash
 ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-  --name proto-1786877040-3k6f [--width 1280] [--options theme=launch,palette=azure] \
+  --name proto-1786877040-3k6f [--width 1440] [--options theme=launch,palette=azure] \
   [--out /tmp/mist] [--fail-above 5]
 ```
 
@@ -85,9 +85,10 @@ Real app frame (`+ Real app`), waits for it to resolve, sets the canvas to 100% 
 (so a pixel of the mock is a pixel of the app), and photographs both frames at
 the one canvas size. `--width` must be a size preset's width (the run refuses
 and lists the presets otherwise); without it the canvas stays at the size the
-prototype declares (Desktop by default) — or, for a `responsive` prototype,
+prototype declares — `window` (the default) is photographed at Laptop, since
+a headless run has no viewer's window — or, for a `responsive` prototype,
 Responsive with the browser window sized until the frames come out at
-Desktop's size. It writes
+Laptop's size. It writes
 `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` and
 `<out>-side-by-side.png`, logging the differing-pixel ratio and a per-cell
 heatmap. `--fail-above <pct>` turns the ratio into a verdict; without it the

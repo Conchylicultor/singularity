@@ -3,23 +3,31 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * The size presets a prototype is designed at and viewed at: the device's
- * SCREEN. One list for the whole Prototypes app — the tag an author writes, the
- * canvas's size menu, the gallery thumbnail and Compare all read it, so a size
- * one of them knows is a size all of them know.
+ * SCREEN, in CSS pixels at the device's default scaling. One list for the whole
+ * Prototypes app — the tag an author writes, the canvas's size menu, the
+ * gallery thumbnail and Compare all read it, so a size one of them knows is a
+ * size all of them know.
+ *
+ * Each is a real, common device rather than a CSS breakpoint: a mock judged at
+ * a width nobody's screen has is judged against a layout nobody sees.
+ * Phone: iPhone 13–15. Tablet: iPad Air. Laptop: MacBook Air (and the most
+ * common laptop width). Desktop: a 1080p monitor. Wide: a 27" 1440p monitor.
  */
 export const SIZE_PRESETS = [
-  { name: "Phone", w: 480, h: 900 },
-  { name: "Tablet", w: 768, h: 1024 },
-  { name: "Laptop", w: 1024, h: 640 },
-  { name: "Desktop", w: 1280, h: 800 },
-  { name: "Wide", w: 1600, h: 900 },
+  { name: "Phone", w: 390, h: 844 },
+  { name: "Tablet", w: 820, h: 1180 },
+  { name: "Laptop", w: 1440, h: 900 },
+  { name: "Desktop", w: 1920, h: 1080 },
+  { name: "Wide", w: 2560, h: 1440 },
 ] as const;
 
 export type PresetName = (typeof SIZE_PRESETS)[number]["name"];
 
 /**
  * The size a prototype declares with `<meta name="prototype-viewport">`: a
- * preset, or `responsive` — the page fills whatever room it is given (a
+ * preset; `window` — the size a page gets in the VIEWER's own browser window,
+ * so the mock is judged at exactly the room the real app will have on their
+ * machine; or `responsive` — the page fills whatever room it is given (a
  * component mock, a layout meant to stretch).
  *
  * Named, never pixels: a free `WxH` was an arbitrary number per prototype
@@ -27,13 +35,24 @@ export type PresetName = (typeof SIZE_PRESETS)[number]["name"];
  * only show it as "Custom". What an author means is the KIND of screen.
  */
 export type PrototypeViewport =
-  { kind: "responsive" } | { kind: "preset"; preset: PresetName };
+  | { kind: "responsive" }
+  | { kind: "window" }
+  | { kind: "preset"; preset: PresetName };
 
-/** What a prototype that declares no size is: a desktop app screen. */
+/**
+ * What a prototype that declares no size is: an app screen, seen at the size
+ * the viewer's own window gives the real app.
+ */
 export const DEFAULT_PROTOTYPE_VIEWPORT = {
-  kind: "preset",
-  preset: "Desktop",
+  kind: "window",
 } as const satisfies PrototypeViewport;
+
+/**
+ * The preset a size with no fixed pixels of its own (`window`, `responsive`)
+ * renders at where there is no viewer's window to measure — a headless browser
+ * taking a thumbnail, Compare sizing its window.
+ */
+export const HEADLESS_PRESET: PresetName = "Laptop";
 
 const isPresetName = (v: unknown): v is PresetName =>
   SIZE_PRESETS.some((p) => p.name === v);
@@ -41,14 +60,16 @@ const isPresetName = (v: unknown): v is PresetName =>
 /** The wire shape of a declared size. Mirrors `PrototypeViewport` exactly. */
 export const PrototypeViewportSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("responsive") }),
+  z.object({ kind: z.literal("window") }),
   z.object({
     kind: z.literal("preset"),
     preset: z.custom<PresetName>(isPresetName, "not a size preset"),
   }),
 ]) satisfies ZodParser<PrototypeViewport>;
 
-/** The words the tag accepts: `responsive`, then each preset lowercased. */
+/** The words the tag accepts: `window`, `responsive`, then each preset lowercased. */
 export const PROTOTYPE_VIEWPORT_WORDS: readonly string[] = [
+  "window",
   "responsive",
   ...SIZE_PRESETS.map((p) => p.name.toLowerCase()),
 ];
@@ -66,6 +87,7 @@ export function parseViewport(
   if (word === "") return { ok: true, viewport: DEFAULT_PROTOTYPE_VIEWPORT };
   if (word === "responsive")
     return { ok: true, viewport: { kind: "responsive" } };
+  if (word === "window") return { ok: true, viewport: { kind: "window" } };
   const preset = SIZE_PRESETS.find((p) => p.name.toLowerCase() === word);
   return preset
     ? { ok: true, viewport: { kind: "preset", preset: preset.name } }
@@ -74,7 +96,7 @@ export function parseViewport(
 
 /** The `problems[]` detail for a tag {@link parseViewport} refused. */
 export function viewportProblemDetail(raw: string): string {
-  return `<meta name="prototype-viewport" content="${raw}"> is not a size — write one of ${PROTOTYPE_VIEWPORT_WORDS.join(", ")} (the default is desktop). Pixel sizes are no longer read`;
+  return `<meta name="prototype-viewport" content="${raw}"> is not a size — write one of ${PROTOTYPE_VIEWPORT_WORDS.join(", ")} (the default is window). Pixel sizes are no longer read`;
 }
 
 /** A preset's logical size. */
@@ -85,15 +107,14 @@ export function presetSize(name: PresetName): { w: number; h: number } {
 }
 
 /**
- * The fixed size to render a prototype at where there is no room to fill — a
- * headless browser taking its thumbnail, Compare sizing its window. A
- * responsive page renders at the default's size.
+ * The fixed size to render a prototype at where there is no room to fill and
+ * no viewer's window to measure — a headless browser taking its thumbnail,
+ * Compare sizing its window. `window` and `responsive` render at
+ * {@link HEADLESS_PRESET}.
  */
 export function viewportRenderSize(v: PrototypeViewport): {
   w: number;
   h: number;
 } {
-  return presetSize(
-    v.kind === "preset" ? v.preset : DEFAULT_PROTOTYPE_VIEWPORT.preset,
-  );
+  return presetSize(v.kind === "preset" ? v.preset : HEADLESS_PRESET);
 }

@@ -32,6 +32,7 @@ import {
   snapWidth,
   type FrameLayout,
 } from "../internal/layout";
+import { useWindowSize } from "../internal/use-window-size";
 import { frameName, letterOf, type NamedFrame } from "../internal/frame-name";
 import { CanvasFrameView } from "./canvas-frame-view";
 import { FrameHeader, FRAME_HEADER_GAP } from "./frame-header";
@@ -54,6 +55,7 @@ export function Canvas({
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
+  const browserWindow = useWindowSize();
   // Each prototype frame's measured page height, for Whole page: the frames
   // are fitted to the tallest.
   const [pageHeights, setPageHeights] = useState<ReadonlyMap<FrameId, number>>(
@@ -78,6 +80,7 @@ export function Canvas({
   const layout = layoutFrames({
     room: per,
     size: canvas.size,
+    browserWindow,
     zoom: canvas.zoom,
     wholePage: canvas.wholePage,
     pageHeight: tallest,

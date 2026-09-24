@@ -31,6 +31,7 @@ import {
   VersionStepper,
   frameA,
   layoutFrames,
+  useWindowSize,
   letterOf,
   useFrameNames,
   usePrototypeDetail,
@@ -110,6 +111,7 @@ function PresentedFrame({
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
+  const browserWindow = useWindowSize();
   // The shown frame's measured page height, for Whole page. Keyed by frame so
   // flipping to another frame never fits it to the previous one's page.
   const [page, setPage] = useState<{ id: FrameId; h: number } | null>(null);
@@ -127,6 +129,7 @@ function PresentedFrame({
   const layout = layoutFrames({
     room: { w: Math.max(1, room.width), h: Math.max(1, room.height) },
     size: canvas.size,
+    browserWindow,
     zoom: canvas.zoom,
     wholePage: canvas.wholePage,
     pageHeight,

@@ -28,7 +28,7 @@ const SCREENSHOT_TIMEOUT_MS = 15_000;
 const CLOSE_TIMEOUT_MS = 10_000;
 
 /**
- * Render at half density: a 1280×800 prototype yields a 640×400 PNG. The
+ * Render at half density: a 1440×900 prototype yields a 720×450 PNG. The
  * viewport stays at the prototype's declared CSS size (so its media queries see
  * what their author intended) and only the raster density drops — which is how
  * a card-sized image comes out of this with no image-resizing dependency.
@@ -201,8 +201,8 @@ export async function renderThumbnail(
     // Neither of these two takes a timeout of its own, so both are bounded by
     // hand. A browser that launched but will not hand back a page is a broken
     // browser, not a broken prototype — hence `browser-unavailable`.
-    // A responsive prototype has no size of its own to render at; it renders
-    // at the default's.
+    // A `window` or `responsive` prototype has no size of its own to render
+    // at here; it renders at the headless preset's.
     const size = viewportRenderSize(meta.viewport);
     const context = await withTimeout(
       browser.newContext({

@@ -9,11 +9,13 @@ describe("roomPerFrame", () => {
 
 describe("layoutFrames", () => {
   const room = { w: 1000, h: 500 };
+  const browserWindow = { w: 1728, h: 990 };
 
   it("Responsive at Fit fills the room at scale 1", () => {
     expect(
       layoutFrames({
         room,
+        browserWindow,
         size: { kind: "responsive" },
         zoom: "fit",
         wholePage: false,
@@ -26,6 +28,7 @@ describe("layoutFrames", () => {
     expect(
       layoutFrames({
         room,
+        browserWindow,
         size: { kind: "responsive" },
         zoom: 0.5,
         wholePage: false,
@@ -37,6 +40,7 @@ describe("layoutFrames", () => {
   it("Responsive + Whole page at Fit zooms out until the tallest page fits", () => {
     const l = layoutFrames({
       room,
+      browserWindow,
       size: { kind: "responsive" },
       zoom: "fit",
       wholePage: true,
@@ -49,22 +53,41 @@ describe("layoutFrames", () => {
   it("a preset at Fit scales to the room's tighter axis", () => {
     const l = layoutFrames({
       room,
+      browserWindow,
       size: { kind: "preset", preset: "Desktop" },
       zoom: "fit",
       wholePage: false,
       pageHeight: null,
     });
     expect(l).toEqual({
-      width: 1280,
-      height: 800,
-      visibleHeight: 800,
-      scale: 500 / 800,
+      width: 1920,
+      height: 1080,
+      visibleHeight: 1080,
+      scale: 500 / 1080,
+    });
+  });
+
+  it("This window lays the page out at the browser window's size", () => {
+    const l = layoutFrames({
+      room,
+      browserWindow,
+      size: { kind: "window" },
+      zoom: "fit",
+      wholePage: false,
+      pageHeight: null,
+    });
+    expect(l).toEqual({
+      width: 1728,
+      height: 990,
+      visibleHeight: 990,
+      scale: 500 / 990,
     });
   });
 
   it("a preset with Whole page fits the whole page's height", () => {
     const l = layoutFrames({
       room,
+      browserWindow,
       size: { kind: "preset", preset: "Phone" },
       zoom: "fit",
       wholePage: true,
@@ -77,6 +100,7 @@ describe("layoutFrames", () => {
   it("a fixed zoom is the scale, whatever the room", () => {
     const l = layoutFrames({
       room,
+      browserWindow,
       size: { kind: "custom", w: 700, h: 600 },
       zoom: 1.5,
       wholePage: false,
@@ -89,17 +113,17 @@ describe("layoutFrames", () => {
 
 describe("snapWidth", () => {
   it("snaps within 28px of a preset", () => {
-    expect(snapWidth(1010)).toEqual({ width: 1024, preset: "Laptop" });
-    expect(snapWidth(900)).toEqual({ width: 900, preset: null });
+    expect(snapWidth(1420)).toEqual({ width: 1440, preset: "Laptop" });
+    expect(snapWidth(1000)).toEqual({ width: 1000, preset: null });
   });
 
   it("clamps to the drag range", () => {
     expect(snapWidth(10).width).toBe(360);
-    expect(snapWidth(5000).width).toBe(1920);
+    expect(snapWidth(5000).width).toBe(2560);
   });
 
   it("a drag off the presets is a custom size at the current height", () => {
-    expect(sizeForDrag(900, 700)).toEqual({ kind: "custom", w: 900, h: 700 });
-    expect(sizeForDrag(470, 700)).toEqual({ kind: "preset", preset: "Phone" });
+    expect(sizeForDrag(1000, 700)).toEqual({ kind: "custom", w: 1000, h: 700 });
+    expect(sizeForDrag(400, 700)).toEqual({ kind: "preset", preset: "Phone" });
   });
 });

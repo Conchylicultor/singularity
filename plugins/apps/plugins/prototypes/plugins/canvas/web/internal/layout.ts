@@ -8,7 +8,8 @@ import type { CanvasSize, CanvasZoom } from "./canvas-model";
 /**
  * How big every frame is, and at what scale — from three independent settings:
  *
- * - size: the frame's logical size — a device preset, a custom width, or
+ * - size: the frame's logical size — a device preset, a custom width, This
+ *   window (the size a page gets in the viewer's own browser window), or
  *   Responsive (the frame IS the space the canvas has, measured in page pixels
  *   at this zoom);
  * - zoom: Fit (the whole frame visible at once) or a fixed scale;
@@ -26,7 +27,7 @@ export const FRAME_HEAD = 34;
 
 /** Dragged widths stay in this range. */
 export const MIN_WIDTH = 360;
-export const MAX_WIDTH = 1920;
+export const MAX_WIDTH = 2560;
 /** A dragged width this close to a preset's snaps onto it. */
 export const SNAP_PX = 28;
 
@@ -71,17 +72,20 @@ export interface FrameLayout {
  * Lay out the frames (they all share one size).
  *
  * `pageHeight` is the tallest page's full height, when Whole page is on and it
- * has been measured; `null` otherwise.
+ * has been measured; `null` otherwise. `browserWindow` is the size a page gets
+ * in this browser window (`useWindowSize`), which the This window size is.
  */
 export function layoutFrames({
   room,
   size,
+  browserWindow,
   zoom,
   wholePage,
   pageHeight,
 }: {
   room: Room;
   size: CanvasSize;
+  browserWindow: Room;
   zoom: CanvasZoom;
   wholePage: boolean;
   pageHeight: number | null;
@@ -106,7 +110,12 @@ export function layoutFrames({
       scale,
     };
   }
-  const { w, h } = size.kind === "preset" ? presetSize(size.preset) : size;
+  const { w, h } =
+    size.kind === "preset"
+      ? presetSize(size.preset)
+      : size.kind === "window"
+        ? browserWindow
+        : size;
   const visibleHeight = visible(h, wholePage, pageHeight);
   const scale = fit ? Math.min(room.w / w, room.h / visibleHeight) : zoom;
   return { width: w, height: h, visibleHeight, scale };
@@ -145,11 +154,13 @@ export function sizeForDrag(w: number, height: number): CanvasSize {
     : { kind: "custom", w: width, h: height };
 }
 
-/** What the size chip names the size ("Responsive", "Phone", "Custom"). */
+/** What the size chip names the size ("Responsive", "This window", "Phone", "Custom"). */
 export function sizeName(size: CanvasSize): string {
   switch (size.kind) {
     case "responsive":
       return "Responsive";
+    case "window":
+      return "This window";
     case "preset":
       return size.preset;
     case "custom":

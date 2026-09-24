@@ -3752,6 +3752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useFramePicks`
               - `useFrameSrc`
               - `usePrototypeDetail`
+              - `useWindowSize`
               - `VersionStepper`
           - Cross-plugin:
             - Imported by:
@@ -3904,6 +3905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createPrototype`
               - `DEFAULT_PROTOTYPE_VIEWPORT`
               - `foldOptions`
+              - `HEADLESS_PRESET`
               - `humanizeToken`
               - `isOptionName`
               - `isOptionValue`
@@ -4033,6 +4035,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas.SizeChip`
               - `apps/prototypes/canvas.useFrameNames`
               - `apps/prototypes/canvas.usePrototypeDetail`
+              - `apps/prototypes/canvas.useWindowSize`
               - `apps/prototypes/canvas.VersionStepper`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.fillClasses`

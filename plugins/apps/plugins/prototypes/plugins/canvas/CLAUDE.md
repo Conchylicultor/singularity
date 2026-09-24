@@ -142,17 +142,21 @@ client-rendered prototype boots.
 
 ## Size, zoom, Whole page
 
-One chip in the canvas's bottom-right corner — "Desktop 1280 × 800 | Fit ·
+One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit ·
 62%" (`size-chip.tsx`) — opens the menu for all three:
 
 - **Size** is the logical size every frame's page lays out at: **Responsive**
   (a frame IS its share of the canvas, measured in page pixels at the current
-  zoom — the page's own responsive layout shows), a **device preset** (Phone
-  480×900, Tablet 768×1024, Laptop 1024×640, Desktop 1280×800, Wide 1600×900 —
-  a frame is that device's screen, and a longer page scrolls inside it), or
+  zoom — the page's own responsive layout shows), **This window** (the size a
+  page gets in the viewer's own browser window, `innerWidth × innerHeight`,
+  followed live — the room the real app has on this machine, so a mock judged
+  here is judged at the density the app will really have), a **device preset**
+  (Phone 390×844, Tablet 820×1180, Laptop 1440×900, Desktop 1920×1080, Wide
+  2560×1440 — real devices at their default scaling, never CSS breakpoints; a
+  frame is that device's screen, and a longer page scrolls inside it), or
   **Custom** (a width dragged off the presets). A fresh canvas (none saved in
-  this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="desktop">`
-  — a preset's name or `responsive`, Desktop when absent), so a mock always
+  this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="window">`
+  — `window`, a preset's name or `responsive`; This window when absent), so a mock always
   opens at the screen it was drawn for rather than at whatever room the pane
   happens to have. The presets and that tag's parser are one list, owned by
   `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
@@ -369,6 +373,7 @@ navigation, so it starts from nothing remembered.
     - `useFramePicks`
     - `useFrameSrc`
     - `usePrototypeDetail`
+    - `useWindowSize`
     - `VersionStepper`
 - Cross-plugin:
   - Imported by:

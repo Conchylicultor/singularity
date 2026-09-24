@@ -52,7 +52,7 @@ rule is one pure function, `decideThumbnail`.
 
 **`deviceScaleFactor: 0.5`** keeps the viewport at the prototype's declared CSS
 size (its media queries see what their author intended) and drops only raster
-density, so a 1280×800 prototype yields a 640×400 PNG **with no image-resizing
+density, so a 1440×900 prototype yields a 720×450 PNG **with no image-resizing
 dependency**. Do not "fix" this by adding one.
 
 **Playwright is imported dynamically and memoized.** Its module evaluation costs

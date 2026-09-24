@@ -19,6 +19,13 @@ describe("parseViewport", () => {
     });
   });
 
+  test("window", () => {
+    expect(parseViewport(" Window ")).toEqual({
+      ok: true,
+      viewport: { kind: "window" },
+    });
+  });
+
   test("responsive", () => {
     expect(parseViewport("responsive")).toEqual({
       ok: true,
@@ -48,14 +55,18 @@ describe("parseViewport", () => {
 });
 
 describe("viewportRenderSize", () => {
-  test("a preset renders at its size; responsive at the default's", () => {
+  test("a preset renders at its size; window and responsive at the headless preset's", () => {
     expect(viewportRenderSize({ kind: "preset", preset: "Phone" })).toEqual({
-      w: 480,
-      h: 900,
+      w: 390,
+      h: 844,
     });
     expect(viewportRenderSize({ kind: "responsive" })).toEqual({
-      w: 1280,
-      h: 800,
+      w: 1440,
+      h: 900,
+    });
+    expect(viewportRenderSize({ kind: "window" })).toEqual({
+      w: 1440,
+      h: 900,
     });
   });
 });

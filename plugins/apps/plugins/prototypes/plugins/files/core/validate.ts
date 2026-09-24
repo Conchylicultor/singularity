@@ -218,8 +218,8 @@ export async function validatePrototypeFolder(
       if (mocks.kind === "malformed") {
         problems.push({ path: fileName, detail: mocksProblemDetail(mocks) });
       }
-      // A size that is not a preset name or `responsive` (the retired `WxH`
-      // form included): the canvas opens it at Desktop, so say why here.
+      // A size that is not a preset name, `window` or `responsive` (the retired
+      // `WxH` form included): the canvas opens it at This window, so say why here.
       const viewport = parseViewport(
         await readMetaContent(text, "prototype-viewport"),
       );

@@ -23,9 +23,10 @@
 // size & zoom chip so a pixel of the mock is a pixel of the app. --width picks
 // the canvas size preset of that width (the run refuses, listing the presets,
 // when no preset has it). Without it the canvas stays at the size the
-// prototype declares (`<meta name="prototype-viewport">`, a preset — Desktop by
-// default); a `responsive` prototype is photographed at Responsive with the
-// browser window sized so the frames come out at Desktop's size.
+// prototype declares (`<meta name="prototype-viewport">`: a preset, or
+// `window` — the default — photographed at Laptop, a headless run having no
+// viewer's window); a `responsive` prototype is photographed at Responsive with
+// the browser window sized so the frames come out at Laptop's size.
 //
 // --options picks the mock's variant (`theme=launch,palette=azure`) — the
 // values its `<meta name="prototype-option">` lines declare. Without it the
@@ -79,6 +80,7 @@ import {
   picksFromQuery,
   SIZE_PRESETS,
   viewportRenderSize,
+  HEADLESS_PRESET,
   type OptionPicks,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -323,7 +325,7 @@ await withBrowser(async (h) => {
   await pickOptions(page);
 
   // One size for both frames, at 100%: the preset --width names, else the
-  // size the prototype declares — a preset, or Responsive with the window sized
+  // size the prototype declares — a preset (This window reads as one), or Responsive with the window sized
   // so the frames come out at the size a responsive page renders at.
   const declared = meta.viewport;
   let preset: (typeof SIZE_PRESETS)[number] | undefined;
@@ -338,6 +340,10 @@ await withBrowser(async (h) => {
     }
   } else if (declared.kind === "preset") {
     preset = SIZE_PRESETS.find((p) => p.name === declared.preset);
+  } else if (declared.kind === "window") {
+    // The viewer's own window has no meaning in a headless run: take the
+    // preset every headless render of `window` uses.
+    preset = SIZE_PRESETS.find((p) => p.name === HEADLESS_PRESET);
   }
   if (preset) {
     await pickSizeAtActual(page, preset.name);

@@ -56,10 +56,10 @@ pathname decides which pane answers.
 
 ## Widths
 
-The frame is the canvas's size: the size presets (`480 / 768 / 1024 / 1280 /
-1600`, owned by `files/core`'s `SIZE_PRESETS`), Responsive, or a dragged width.
-It opens at the size the prototype declares (`<meta name="prototype-viewport">`,
-Desktop by default); the other presets are what make the real app's own
+The frame is the canvas's size: the size presets (`390 / 820 / 1440 / 1920 /
+2560`, owned by `files/core`'s `SIZE_PRESETS`), This window, Responsive, or a
+dragged width. It opens at the size the prototype declares
+(`<meta name="prototype-viewport">`, This window by default); the other presets are what make the real app's own
 responsive behaviour legible beside the mock.
 
 ## No `sandbox`, no `?v=`

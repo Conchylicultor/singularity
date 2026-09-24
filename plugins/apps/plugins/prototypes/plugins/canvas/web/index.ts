@@ -55,6 +55,7 @@ export type {
   SourceFrame,
 } from "./internal/canvas-model";
 export { layoutFrames, roomPerFrame } from "./internal/layout";
+export { useWindowSize } from "./internal/use-window-size";
 export type { FrameLayout, Room } from "./internal/layout";
 export { letterOf } from "./internal/frame-name";
 export { CanvasFrameView } from "./components/canvas-frame-view";

@@ -44,6 +44,7 @@ export { parseMocks, mocksProblemDetail } from "./mocks";
 export {
   SIZE_PRESETS,
   DEFAULT_PROTOTYPE_VIEWPORT,
+  HEADLESS_PRESET,
   PROTOTYPE_VIEWPORT_WORDS,
   PrototypeViewportSchema,
   parseViewport,

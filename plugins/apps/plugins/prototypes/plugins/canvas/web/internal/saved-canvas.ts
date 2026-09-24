@@ -45,6 +45,7 @@ const SavedCanvasSchema = z.object({
   selected: FrameIdSchema,
   size: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("responsive") }),
+    z.object({ kind: z.literal("window") }),
     z.object({ kind: z.literal("preset"), preset: z.enum(PRESET_NAMES) }),
     z.object({
       kind: z.literal("custom"),

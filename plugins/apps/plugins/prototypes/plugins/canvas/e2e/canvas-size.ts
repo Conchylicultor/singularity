@@ -78,7 +78,11 @@ await withBrowser(async (h) => {
 
   const declared = meta.viewport;
   const declaredName =
-    declared.kind === "preset" ? declared.preset : "Responsive";
+    declared.kind === "preset"
+      ? declared.preset
+      : declared.kind === "window"
+        ? "This window"
+        : "Responsive";
   const opened = await chipText(page);
   r.ok(
     `opens at the declared size (${declaredName}) at Fit`,
@@ -95,6 +99,19 @@ await withBrowser(async (h) => {
     );
   }
 
+  // This window: the page lays out at the size a page gets in this browser
+  // window — the session's viewport.
+  await pickSize(page, "This window");
+  const own = await settle(
+    "A",
+    (v) => v.w === VIEWPORT.width && v.h === VIEWPORT.height,
+  );
+  r.ok(
+    `This window lays the page out at the window's ${String(VIEWPORT.width)} × ${String(VIEWPORT.height)}`,
+    own.ok,
+    JSON.stringify(own.value),
+  );
+
   await pickSize(page, "Responsive");
   const responsive = await settle("A", (v) => v.scale === 1);
   r.ok(
@@ -107,9 +124,9 @@ await withBrowser(async (h) => {
 
   // A preset lays the page out at that device's size; Fit shrinks it to the room.
   await pickSize(page, "Phone");
-  const phone = await settle("A", (v) => v.w === 480 && v.h === 900);
+  const phone = await settle("A", (v) => v.w === 390 && v.h === 844);
   r.ok(
-    "Phone lays the page out at 480 × 900",
+    "Phone lays the page out at 390 × 844",
     phone.ok,
     JSON.stringify(phone.value),
   );
@@ -120,12 +137,12 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "the chip names the preset",
-    /^Phone 480 × 900/.test(await chipText(page)),
+    /^Phone 390 × 844/.test(await chipText(page)),
     await chipText(page),
   );
 
   await pickSize(page, "Wide");
-  const wide = await settle("A", (v) => v.w === 1600 && v.h === 900);
+  const wide = await settle("A", (v) => v.w === 2560 && v.h === 1440);
   r.ok(
     "Wide at Fit is shrunk below 100%",
     wide.ok && wide.value!.scale < 1,
@@ -184,7 +201,7 @@ await withBrowser(async (h) => {
 
   // Whole page: the frame is as tall as its document — nothing to scroll inside.
   await pickSize(page, "Phone");
-  await settle("A", (v) => v.w === 480);
+  await settle("A", (v) => v.w === 390);
   await openSizeMenu(page);
   await page.getByRole("switch", { name: /Whole page/ }).click();
   await dismiss(page);
@@ -199,7 +216,7 @@ await withBrowser(async (h) => {
             doc: f.contentDocument?.documentElement.scrollHeight ?? -1,
           };
         }),
-    (v) => v.frame >= 900 && v.doc > 0 && v.doc <= v.frame,
+    (v) => v.frame >= 844 && v.doc > 0 && v.doc <= v.frame,
     { timeoutMs: 10_000 },
   );
   r.ok(
@@ -226,7 +243,7 @@ await withBrowser(async (h) => {
     { timeoutMs: 10_000 },
   );
   await pickSize(page, "Desktop");
-  const desk = await settle("B", (v) => v.w === 1280);
+  const desk = await settle("B", (v) => v.w === 1920);
   if (!desk.ok) throw new Error("frame B never reached Desktop");
 
   async function dragTo(width: number): Promise<void> {
@@ -247,10 +264,10 @@ await withBrowser(async (h) => {
     await page.mouse.move(2, 2);
   }
 
-  await dragTo(1034);
-  const snapped = await settle("B", (v) => v.w === 1024 && v.h === 640);
+  await dragTo(1450);
+  const snapped = await settle("B", (v) => v.w === 1440 && v.h === 900);
   r.ok(
-    "dragging near 1024 snaps every frame onto Laptop",
+    "dragging near 1440 snaps every frame onto Laptop",
     snapped.ok,
     JSON.stringify(snapped.value),
   );
@@ -260,8 +277,8 @@ await withBrowser(async (h) => {
     await chipText(page),
   );
 
-  await dragTo(900);
-  const custom = await settle("B", (v) => Math.abs(v.w - 900) <= 2);
+  await dragTo(1000);
+  const custom = await settle("B", (v) => Math.abs(v.w - 1000) <= 2);
   r.ok(
     "dragging off the presets gives a custom width, in every frame",
     custom.ok,
