@@ -1,9 +1,6 @@
 import { useState } from "react";
 import type { SpecimenProps } from "@plugins/plugin-meta/plugins/specimens/web";
-import {
-  useLaunchOptionDefaults,
-  type LaunchOptionValues,
-} from "@plugins/tasks/plugins/launch-options/web";
+import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { TaskDraftComposer } from "./task-draft-composer";
 
@@ -14,11 +11,9 @@ import { TaskDraftComposer } from "./task-draft-composer";
  * toggling work, submitting does nothing.
  */
 export function ComposerSpecimen(_props: SpecimenProps) {
-  const optionDefaults = useLaunchOptionDefaults();
   const captureUrlDefault = useCaptureUrlDefault();
   const [text, setText] = useState("");
-  const [launchOptions, setLaunchOptions] =
-    useState<LaunchOptionValues>(optionDefaults);
+  const [launchOptions, setLaunchOptions] = useState<LaunchOptionValues>({});
   const [includeUrl, setIncludeUrl] = useState(captureUrlDefault);
   return (
     <TaskDraftComposer

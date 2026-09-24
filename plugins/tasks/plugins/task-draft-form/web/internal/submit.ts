@@ -6,7 +6,6 @@ import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/pl
 import type { CardDraft } from "../components/task-draft-form";
 import {
   launchOptionValue,
-  pickKnownOptions,
   type LaunchOptionInfo,
 } from "@plugins/tasks/plugins/launch-options/web";
 import {
@@ -21,6 +20,8 @@ export interface SubmitArgs {
   target: TaskChainTarget;
   relate: TaskChainRelate | undefined;
   url: string;
+  /** The open app's URL default, for cards whose URL toggle was never touched. */
+  captureUrlDefault: boolean;
   /**
    * The live launch-option registry. Passed in rather than read here: reading
    * it is a hook, so it belongs in the submitting component and this stays a
@@ -51,10 +52,14 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
       const attachmentIds = Array.from(new Set(extractAttachmentIds(c.text)));
       return {
         text: c.text,
-        // Values whose option is no longer registered are dropped rather than
-        // sent: a stale localStorage draft must not 400 the whole submit.
-        options: pickKnownOptions(c.options, args.options),
-        url: c.includeUrl ? args.url : undefined,
+        // Every registered option, the card's choice or else its default —
+        // resolved here, since the draft stores only choices. Values whose
+        // option is no longer registered are never sent: a stale localStorage
+        // draft must not 400 the whole submit.
+        options: Object.fromEntries(
+          args.options.map((o) => [o.id, launchOptionValue(c.options, o)]),
+        ),
+        url: (c.includeUrl ?? args.captureUrlDefault) ? args.url : undefined,
         attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
         linkedToPrev: i > 0 && !c.linkedToPrev ? false : undefined,
       };

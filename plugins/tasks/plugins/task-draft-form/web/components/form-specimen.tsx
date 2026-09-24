@@ -1,8 +1,6 @@
 import { useState } from "react";
 import type { SpecimenProps } from "@plugins/plugin-meta/plugins/specimens/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
-import { useLaunchOptionDefaults } from "@plugins/tasks/plugins/launch-options/web";
-import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
 
 /**
@@ -17,11 +15,7 @@ import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
  * "Insert before" group never appears here.
  */
 export function FormSpecimen(_props: SpecimenProps) {
-  const optionDefaults = useLaunchOptionDefaults();
-  const captureUrlDefault = useCaptureUrlDefault();
-  const [cards, setCards] = useState<CardDraft[]>(() => [
-    makeCard({ ...optionDefaults }, captureUrlDefault),
-  ]);
+  const [cards, setCards] = useState<CardDraft[]>(() => [makeCard()]);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [relateMode, setRelateMode] = useState<
     TaskChainRelateMode | undefined

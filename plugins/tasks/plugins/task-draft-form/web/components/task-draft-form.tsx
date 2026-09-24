@@ -25,10 +25,7 @@ import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry, DependencyExtras } from "./dependency-pill";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
-import {
-  useLaunchOptionDefaults,
-  type LaunchOptionValues,
-} from "@plugins/tasks/plugins/launch-options/web";
+import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
 import {
   MAIN_COMPOSITION_ID,
   namespaceFromHost,
@@ -40,9 +37,15 @@ export interface CardDraft {
   text: string;
   // Contributed launch-option values keyed by option id (see
   // `@plugins/tasks/plugins/launch-options`). Open by construction, so a new
-  // option needs no field here.
+  // option needs no field here. Holds only the values the user SET: a missing
+  // id is the option's default, resolved on read (`launchOptionValue`), so a
+  // saved draft never freezes a default that has since changed.
   options: LaunchOptionValues;
-  includeUrl: boolean;
+  // Whether to attach the page URL, when the user chose; `undefined` follows
+  // the app the form is open in (`useCaptureUrlDefault`), resolved on read.
+  // Never stored as the default: the draft is shared across apps, so a copied
+  // default from one app would override every other app's.
+  includeUrl?: boolean;
   linkedToPrev: boolean;
 }
 
@@ -83,9 +86,10 @@ function useIsAgentWorktree(): boolean {
   }, []);
 }
 
+/** A blank card; `options` / `includeUrl` carry choices, never defaults. */
 export function makeCard(
-  options: LaunchOptionValues,
-  includeUrl = false,
+  options: LaunchOptionValues = {},
+  includeUrl?: boolean,
 ): CardDraft {
   return {
     localId: crypto.randomUUID(),
@@ -137,7 +141,6 @@ export function TaskDraftForm({
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
   const captureUrlDefault = useCaptureUrlDefault();
-  const optionDefaults = useLaunchOptionDefaults();
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -145,13 +148,11 @@ export function TaskDraftForm({
     onCardsChange(next);
   };
 
-  // A new card inherits the neighbour's whole launch configuration — one spread,
-  // so a future option is carried along without touching this.
+  // A new card inherits the neighbour's choices — its whole launch
+  // configuration in one spread, so a future option is carried along without
+  // touching this. What the neighbour left at its default stays a default.
   const cardAfter = (inheritFrom: CardDraft | undefined) =>
-    makeCard(
-      { ...optionDefaults, ...inheritFrom?.options },
-      inheritFrom?.includeUrl ?? captureUrlDefault,
-    );
+    makeCard({ ...inheritFrom?.options }, inheritFrom?.includeUrl);
 
   const insertAt = (idx: number) => {
     if (submitting) return;
@@ -292,7 +293,7 @@ export function TaskDraftForm({
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();
                     }}
-                    includeUrl={card.includeUrl}
+                    includeUrl={card.includeUrl ?? captureUrlDefault}
                     onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}

@@ -34178,9 +34178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/launch-options.LaunchOptionPills`
           - `tasks/launch-options.launchOptionValue`
           - `tasks/launch-options.LaunchOptionValues`
-          - `tasks/launch-options.pickKnownOptions`
           - `tasks/launch-options.TaskLaunch`
-          - `tasks/launch-options.useLaunchOptionDefaults`
         - Exports (types):
           - `ActiveRelateContext`
           - `CardDraft`

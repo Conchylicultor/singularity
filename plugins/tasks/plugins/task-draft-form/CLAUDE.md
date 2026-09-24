@@ -32,8 +32,24 @@ Every card carries one context toggle — **URL**, which attaches
 `window.location.href` to the filed task. It is not configurable per host: every
 surface that drafts a task is somewhere, and that somewhere is worth recording.
 Whether the box starts checked is per-app config (`captureUrlByDefault`, read
-through `useCaptureUrlDefault`), re-seeded on each popover open so the value
-tracks the app the form is rendered in rather than the stale localStorage draft.
+through `useCaptureUrlDefault`).
+
+## The draft stores choices, never defaults
+
+Everything the user authors in the popover — the cards, both dependency modes,
+Standalone, the Insert-before selection — is ONE `useDraft` record
+(`TaskDraftState`), so closing the popover or reloading keeps all of it and
+`resetForm` clears all of it. A new control adds a field there; a `useState`
+for something the user chose is the bug this shape exists to prevent.
+
+A default is never copied into the draft, because the draft outlives the
+context that produced it (it is shared across apps, and kept for 7 days). A
+card's `includeUrl` is `undefined` until the user toggles it, and follows the
+open app's `captureUrlByDefault` until then; its `options` hold only the launch
+options the user changed, the rest resolving to each option's `defaultValue`;
+Insert-before is `undefined` (= all children) until the user unchecks one, and
+the choice is keyed by the related task. All three resolve when read — on
+render, and in `submitChain`, which sends every registered option.
 
 Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
@@ -61,7 +77,7 @@ The footer holds "+ Follow-up task" (appends a card) on the left, then Cancel an
 
 The composer alone is what the plugin exhibits as a specimen
 (`plugin-meta/specimens`, id `task-draft/composer`): `ComposerSpecimen` holds
-its own text / options / URL state, seeded from the same defaults, and never
+its own text / options / URL state, starting from the same defaults, and never
 submits. A prototype mocking the Improve composer compares against it with
 `<meta name="mocks" content="component:task-draft/composer">`.
 
@@ -136,9 +152,7 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `tasks/launch-options.LaunchOptionPills`
     - `tasks/launch-options.launchOptionValue`
     - `tasks/launch-options.LaunchOptionValues`
-    - `tasks/launch-options.pickKnownOptions`
     - `tasks/launch-options.TaskLaunch`
-    - `tasks/launch-options.useLaunchOptionDefaults`
   - Exports (types):
     - `ActiveRelateContext`
     - `CardDraft`

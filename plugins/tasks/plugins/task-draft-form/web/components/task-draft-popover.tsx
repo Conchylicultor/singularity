@@ -22,20 +22,51 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
 import type { TaskChainRelateMode, TaskChainTarget } from "@plugins/tasks/core";
-import {
-  TaskLaunch,
-  useLaunchOptionDefaults,
-  type LaunchOptionValues,
-} from "@plugins/tasks/plugins/launch-options/web";
+import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
 import { useActiveRelateContext } from "../active-relate-context";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { appendSnippet, type TaskDraftInsert } from "../insert-request";
 
-function freshCards(
-  optionDefaults: LaunchOptionValues,
-  includeUrl: boolean,
-): CardDraft[] {
-  return [makeCard({ ...optionDefaults }, includeUrl)];
+/**
+ * Everything the user AUTHORS in the popover, persisted as ONE draft record so
+ * closing the popover or reloading the page keeps all of it. Adding a control
+ * to the form means adding its field here — there is no second place to keep
+ * it, and `resetForm` clears the whole record, so it cannot forget one either.
+ *
+ * Only user choices are stored, never a default copied in: a missing value
+ * means "the default", resolved when read (a card's `includeUrl` / `options`,
+ * `insertBefore` below). A copied default goes stale — it stays frozen in the
+ * draft after the context that produced it changed.
+ *
+ * What is NOT here is transient by nature: the submitting flag, the card to
+ * auto-focus, the URL snapshotted on open.
+ */
+interface TaskDraftState {
+  cards: CardDraft[];
+  /** The explicit `relate` prop's mode. */
+  relateMode: TaskChainRelateMode | undefined;
+  /** The mode against the ambient related task (no explicit `relate`). */
+  ambientRelateMode: TaskChainRelateMode | undefined;
+  /** A prerequisite that does not take over the related task's dependencies. */
+  standalone: boolean;
+  /**
+   * Which of the related task's children a follow-up goes before. Undefined =
+   * all of them. Keyed by the related task, so a choice made against one task
+   * never applies to another (the ambient related task follows navigation).
+   */
+  insertBefore: { taskId: string; ids: string[] } | undefined;
+}
+
+type PatchDraft = (patch: Partial<TaskDraftState>) => void;
+
+function freshDraft(relate: TaskDraftRelate | undefined): TaskDraftState {
+  return {
+    cards: [makeCard()],
+    relateMode: relate?.defaultMode,
+    ambientRelateMode: undefined,
+    standalone: false,
+    insertBefore: undefined,
+  };
 }
 
 function draftScope(target: TaskChainTarget): string {
@@ -75,7 +106,8 @@ export interface TaskDraftPopoverProps {
 // run here so the form never computes from a fake-empty snapshot while loading.
 function TaskDraftFormContent({
   tasks,
-  cards,
+  draft,
+  patchDraft,
   setCards,
   autoFocusId,
   setAutoFocusId,
@@ -87,20 +119,15 @@ function TaskDraftFormContent({
   relate,
   hasAmbientRelate,
   activeRelate,
-  relateMode,
-  setRelateMode,
-  ambientRelateMode,
-  setAmbientRelateMode,
-  standalone,
-  setStandalone,
   target,
   heading,
   onSuccess,
   headInsertRef,
 }: {
   tasks: readonly TaskListItem[];
-  cards: CardDraft[];
-  setCards: React.Dispatch<React.SetStateAction<CardDraft[]>>;
+  draft: TaskDraftState;
+  patchDraft: PatchDraft;
+  setCards: (next: CardDraft[]) => void;
   autoFocusId: string | null;
   setAutoFocusId: (id: string | null) => void;
   submitting: boolean;
@@ -111,23 +138,24 @@ function TaskDraftFormContent({
   relate: TaskDraftRelate | undefined;
   hasAmbientRelate: boolean;
   activeRelate: { taskId: string } | null;
-  relateMode: TaskChainRelateMode | undefined;
-  setRelateMode: (v: TaskChainRelateMode | undefined) => void;
-  ambientRelateMode: TaskChainRelateMode | undefined;
-  setAmbientRelateMode: (v: TaskChainRelateMode | undefined) => void;
-  standalone: boolean;
-  setStandalone: (v: boolean) => void;
   target: TaskChainTarget;
   heading: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
+  const { cards, standalone } = draft;
   const effectiveRelateTaskId =
     relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;
   const effectiveRelateMode = relate
-    ? relateMode
+    ? draft.relateMode
     : hasAmbientRelate
-      ? ambientRelateMode
+      ? draft.ambientRelateMode
+      : undefined;
+  const onRelateModeChange = relate
+    ? (v: TaskChainRelateMode | undefined) => patchDraft({ relateMode: v })
+    : hasAmbientRelate
+      ? (v: TaskChainRelateMode | undefined) =>
+          patchDraft({ ambientRelateMode: v })
       : undefined;
 
   const relateTaskChildren = useMemo(
@@ -147,104 +175,27 @@ function TaskDraftFormContent({
     return t ? t.dependencies.length > 0 : false;
   }, [tasks, effectiveRelateTaskId, effectiveRelateMode]);
 
-  // The insertBefore selection (which existing children the new follow-up should
-  // be inserted before) defaults to ALL children, and must re-default whenever
-  // the children list changes while still honoring explicit user toggles in
-  // between. That reset-on-change-but-user-editable semantic is owned by the
-  // keyed <InsertBeforeForm> child below: its key is the children-id signature,
-  // so a children change remounts it and re-seeds the Set from the new default,
-  // and user edits persist (no setState-in-effect needed).
-  const childIdsKey = relateTaskChildren.map((c) => c.id).join(",");
+  // The stored choice applies only to the task it was made against, and only
+  // to children that still exist; otherwise it is the all-children default.
+  const insertBeforeIds = useMemo(() => {
+    const chosen =
+      draft.insertBefore?.taskId === effectiveRelateTaskId
+        ? new Set(draft.insertBefore.ids)
+        : null;
+    return new Set(
+      relateTaskChildren
+        .map((c) => c.id)
+        .filter((id) => chosen === null || chosen.has(id)),
+    );
+  }, [draft.insertBefore, effectiveRelateTaskId, relateTaskChildren]);
+  const setInsertBeforeIds = (next: Set<string>) => {
+    if (!effectiveRelateTaskId) return;
+    patchDraft({
+      insertBefore: { taskId: effectiveRelateTaskId, ids: [...next] },
+    });
+  };
 
-  return (
-    <InsertBeforeForm
-      key={childIdsKey}
-      cards={cards}
-      setCards={setCards}
-      autoFocusId={autoFocusId}
-      setAutoFocusId={setAutoFocusId}
-      submitting={submitting}
-      setSubmitting={setSubmitting}
-      url={url}
-      setOpen={setOpen}
-      resetForm={resetForm}
-      relate={relate}
-      hasAmbientRelate={hasAmbientRelate}
-      activeRelate={activeRelate}
-      relateMode={relateMode}
-      ambientRelateMode={ambientRelateMode}
-      setRelateMode={setRelateMode}
-      setAmbientRelateMode={setAmbientRelateMode}
-      standalone={standalone}
-      setStandalone={setStandalone}
-      target={target}
-      relateTaskChildren={relateTaskChildren}
-      relateTaskHasDeps={relateTaskHasDeps}
-      heading={heading}
-      onSuccess={onSuccess}
-      headInsertRef={headInsertRef}
-    />
-  );
-}
-
-// Owns the insertBefore selection Set. Mounted with a `key` of the children-id
-// signature so a children change remounts it — re-seeding `insertBeforeIds` from
-// the all-children default while preserving user toggles until the next change.
-function InsertBeforeForm({
-  cards,
-  setCards,
-  autoFocusId,
-  setAutoFocusId,
-  submitting,
-  setSubmitting,
-  url,
-  setOpen,
-  resetForm,
-  relate,
-  hasAmbientRelate,
-  activeRelate,
-  relateMode,
-  ambientRelateMode,
-  setRelateMode,
-  setAmbientRelateMode,
-  standalone,
-  setStandalone,
-  target,
-  relateTaskChildren,
-  relateTaskHasDeps,
-  heading,
-  onSuccess,
-  headInsertRef,
-}: {
-  cards: CardDraft[];
-  setCards: React.Dispatch<React.SetStateAction<CardDraft[]>>;
-  autoFocusId: string | null;
-  setAutoFocusId: (id: string | null) => void;
-  submitting: boolean;
-  setSubmitting: (v: boolean) => void;
-  url: string;
-  setOpen: (next: boolean) => void;
-  resetForm: () => void;
-  relate: TaskDraftRelate | undefined;
-  hasAmbientRelate: boolean;
-  activeRelate: { taskId: string } | null;
-  relateMode: TaskChainRelateMode | undefined;
-  ambientRelateMode: TaskChainRelateMode | undefined;
-  setRelateMode: (v: TaskChainRelateMode | undefined) => void;
-  setAmbientRelateMode: (v: TaskChainRelateMode | undefined) => void;
-  standalone: boolean;
-  setStandalone: (v: boolean) => void;
-  target: TaskChainTarget;
-  relateTaskChildren: { id: string; title: string }[];
-  relateTaskHasDeps: boolean;
-  heading: string | undefined;
-  onSuccess: ((taskIds: string[]) => void) | undefined;
-  headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
-}) {
-  // Seed from the all-children default; the remount-on-children-change re-seeds.
-  const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
-    () => new Set(relateTaskChildren.map((c) => c.id)),
-  );
+  const captureUrlDefault = useCaptureUrlDefault();
   // The live launch-option registry: reading it is a hook, so it happens here
   // and `submitChain` / `describeOutcome` stay pure over an explicit list.
   const launchOptions = TaskLaunch.Option.useContributions();
@@ -257,30 +208,21 @@ function InsertBeforeForm({
         relateTaskChildren.length > 0 ? Array.from(insertBeforeIds) : undefined;
 
       const effectiveRelate =
-        relate && relateMode
+        effectiveRelateTaskId && effectiveRelateMode
           ? {
-              taskId: relate.taskId,
-              mode: relateMode,
+              taskId: effectiveRelateTaskId,
+              mode: effectiveRelateMode,
               insertBefore:
-                relateMode === "followup" ? insertBefore : undefined,
+                effectiveRelateMode === "followup" ? insertBefore : undefined,
               standalone:
-                relateMode === "prerequisite" && standalone ? true : undefined,
+                effectiveRelateMode === "prerequisite" && standalone
+                  ? true
+                  : undefined,
             }
-          : hasAmbientRelate && ambientRelateMode
-            ? {
-                taskId: activeRelate!.taskId,
-                mode: ambientRelateMode,
-                insertBefore:
-                  ambientRelateMode === "followup" ? insertBefore : undefined,
-                standalone:
-                  ambientRelateMode === "prerequisite" && standalone
-                    ? true
-                    : undefined,
-              }
-            : undefined;
+          : undefined;
 
       const effectiveTarget: TaskChainTarget =
-        hasAmbientRelate && ambientRelateMode
+        hasAmbientRelate && draft.ambientRelateMode
           ? { kind: "folder", folderTaskId: activeRelate!.taskId }
           : target;
 
@@ -289,6 +231,7 @@ function InsertBeforeForm({
         target: effectiveTarget,
         relate: effectiveRelate,
         url,
+        captureUrlDefault,
         options: launchOptions,
       });
       if (!outcome.ok) {
@@ -329,22 +272,14 @@ function InsertBeforeForm({
       submitting={submitting}
       onSubmit={submit}
       onCancel={() => setOpen(false)}
-      relateMode={
-        relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
-      }
-      onRelateModeChange={
-        relate
-          ? setRelateMode
-          : hasAmbientRelate
-            ? setAmbientRelateMode
-            : undefined
-      }
+      relateMode={effectiveRelateMode}
+      onRelateModeChange={onRelateModeChange}
       showIndependentRelate={hasAmbientRelate}
       relateTaskChildren={relateTaskChildren}
       insertBeforeIds={insertBeforeIds}
       onInsertBeforeChange={setInsertBeforeIds}
       standalone={standalone}
-      onStandaloneChange={setStandalone}
+      onStandaloneChange={(v) => patchDraft({ standalone: v })}
       showStandalone={relateTaskHasDeps}
       heading={heading}
       headInsertRef={headInsertRef}
@@ -367,35 +302,31 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const captureUrlDefault = useCaptureUrlDefault();
-  const optionDefaults = useLaunchOptionDefaults();
-  // `:v2` — `CardDraft` traded `model`/`prepromptId` for the open `options` map.
-  // `readDraft` blind-casts, so a pre-refactor card would deserialize with the
-  // old fields; renaming the key lets the old one expire on its 7-day TTL, which
-  // is the repo's precedent for a draft shape change (no migration exists).
-  const [cards, setCards, clearCards] = useDraft<CardDraft[]>(
-    "task-draft:cards:v2",
-    () => freshCards(optionDefaults, captureUrlDefault),
+  // `:v3` — the popover's separate `cards:v2` / `relate-mode` /
+  // `ambient-relate-mode` drafts became this one record. `readDraft` blind-casts,
+  // so the key is renamed and the old keys expire on their 7-day TTL — the
+  // repo's precedent for a draft shape change (no migration exists).
+  const [draft, setDraft, clearDraft] = useDraft<TaskDraftState>(
+    "task-draft:v3",
+    () => freshDraft(relate),
     { scope: draftScope(target) },
   );
+  const patchDraft = useCallback<PatchDraft>(
+    (patch) => setDraft((prev) => ({ ...prev, ...patch })),
+    [setDraft],
+  );
+  const { cards } = draft;
+  const setCards = useCallback(
+    (next: CardDraft[]) => patchDraft({ cards: next }),
+    [patchDraft],
+  );
+
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [relateMode, setRelateMode, clearRelateMode] = useDraft<
-    TaskChainRelateMode | undefined
-  >("task-draft:relate-mode", relate?.defaultMode, {
-    scope: draftScope(target),
-  });
 
   const activeRelate = useActiveRelateContext();
   const hasAmbientRelate = !relate && activeRelate !== null;
-  const [ambientRelateMode, setAmbientRelateMode, clearAmbientRelateMode] =
-    useDraft<TaskChainRelateMode | undefined>(
-      "task-draft:ambient-relate-mode",
-      undefined,
-      { scope: draftScope(target) },
-    );
-  const [standalone, setStandalone] = useState(false);
 
   const tasksResult = useResource(tasksResource);
 
@@ -409,7 +340,7 @@ export function TaskDraftPopover({
     seenIdsRef.current = new Set(cards.map((c) => c.localId));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- new-card detector: diffs the live cards against the previous render's seenIdsRef to find the just-added card and auto-focus it; depends on historical (prior-render) identity, so it cannot be derived in render or replaced by a primitive
     if (newest) setAutoFocusId(newest);
-  }, [cards, setCards]);
+  }, [cards]);
 
   // The single funnel every programmatic insert goes through — the external
   // request below and the in-form `TaskDraftFormSlots.Action` buttons alike, so
@@ -428,13 +359,19 @@ export function TaskDraftPopover({
         insertAtCaret(snippet);
         return;
       }
-      setCards((prev) => [
-        { ...prev[0]!, text: appendSnippet(prev[0]!.text, snippet) },
-        ...prev.slice(1),
-      ]);
+      setDraft((prev) => ({
+        ...prev,
+        cards: [
+          {
+            ...prev.cards[0]!,
+            text: appendSnippet(prev.cards[0]!.text, snippet),
+          },
+          ...prev.cards.slice(1),
+        ],
+      }));
       seenIdsRef.current = new Set();
     },
-    [setCards],
+    [setDraft],
   );
 
   // Apply each insertion request once. Keyed on the request id (not the text) so
@@ -448,24 +385,16 @@ export function TaskDraftPopover({
     applyInsert(insert.text);
   }, [insert, applyInsert]);
 
-  // On the open transition, snapshot the current URL and re-seed every card's
-  // `includeUrl` from the live per-app default. Whether to attach the URL is
-  // context about the *current app*, not authored draft content — so it must
-  // not inherit the stale value useDraft restores from localStorage (e.g. the
-  // agent-manager's `false`, frozen into the per-target draft shared across all
-  // apps). Reseeding on each open re-applies the active app's default; explicit
-  // toggles the user makes while the popover stays open are preserved.
+  // On the open transition, snapshot the current URL (what "Attach page URL"
+  // attaches) and focus the last card.
   const wasOpenRef = useRef(false);
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       setUrl(window.location.href);
-      setCards((prev) =>
-        prev.map((c) => ({ ...c, includeUrl: captureUrlDefault })),
-      );
-      seenIdsRef.current = new Set();
+      setAutoFocusId(cards.at(-1)?.localId ?? null);
     }
     wasOpenRef.current = open;
-  }, [open, captureUrlDefault, setCards]);
+  }, [open, cards]);
 
   const setOpen = (next: boolean) => {
     if (isControlled) {
@@ -477,11 +406,8 @@ export function TaskDraftPopover({
   };
 
   const resetForm = () => {
-    clearCards();
+    clearDraft();
     seenIdsRef.current = new Set();
-    clearRelateMode();
-    clearAmbientRelateMode();
-    setStandalone(false);
   };
 
   return (
@@ -498,7 +424,8 @@ export function TaskDraftPopover({
         {(tasks) => (
           <TaskDraftFormContent
             tasks={tasks}
-            cards={cards}
+            draft={draft}
+            patchDraft={patchDraft}
             setCards={setCards}
             autoFocusId={autoFocusId}
             setAutoFocusId={setAutoFocusId}
@@ -510,12 +437,6 @@ export function TaskDraftPopover({
             relate={relate}
             hasAmbientRelate={hasAmbientRelate}
             activeRelate={activeRelate}
-            relateMode={relateMode}
-            setRelateMode={setRelateMode}
-            ambientRelateMode={ambientRelateMode}
-            setAmbientRelateMode={setAmbientRelateMode}
-            standalone={standalone}
-            setStandalone={setStandalone}
             target={target}
             heading={heading}
             onSuccess={onSuccess}
