@@ -3725,7 +3725,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FrameSourceMeta`
               - `FrameSourceProps`
               - `PicksRead`
-              - `PresetName`
               - `PrototypeDetailContextValue`
               - `PrototypeFrame`
               - `Room`
@@ -3747,7 +3746,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeFrames`
               - `PrototypeVersionActions`
               - `roomPerFrame`
-              - `SIZE_PRESETS`
               - `SizeChip`
               - `useFrameNames`
               - `useFramePicks`
@@ -3888,6 +3886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `OptionPicks`
               - `OptionSource`
               - `PicksChange`
+              - `PresetName`
               - `PrototypeFolder`
               - `PrototypeHistory`
               - `PrototypeMeta`
@@ -3897,11 +3896,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeStatusChange`
               - `PrototypeVersion`
               - `PrototypeVersionKind`
+              - `PrototypeViewport`
               - `StoredPicks`
             - Exports (values):
               - `applyPicksChange`
               - `applyPrototypeStatusChange`
               - `createPrototype`
+              - `DEFAULT_PROTOTYPE_VIEWPORT`
               - `foldOptions`
               - `humanizeToken`
               - `isOptionName`
@@ -3915,15 +3916,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `NO_PROTOTYPE_STATUS`
               - `parseMocks`
               - `parseOptionDeclaration`
+              - `parseViewport`
               - `pickedValue`
               - `PicksChangeSchema`
               - `picksFromQuery`
+              - `presetSize`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
               - `PROTOTYPE_ID_RE`
               - `PROTOTYPE_VERSION_FILE_ROUTE`
               - `PROTOTYPE_VERSION_KINDS`
+              - `PROTOTYPE_VIEWPORT_WORDS`
               - `prototypeHistoryResource`
               - `PrototypeHistorySchema`
               - `prototypeIdsIn`
@@ -3940,16 +3944,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeUrl`
               - `PrototypeVersionSchema`
               - `prototypeVersionUrl`
+              - `PrototypeViewportSchema`
               - `readOptionSource`
               - `readPrototypeOptions`
               - `resolvePicks`
               - `restorePrototypeVersion`
               - `setPrototypePicks`
               - `setPrototypeStatus`
+              - `SIZE_PRESETS`
               - `statusOf`
               - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
+              - `viewportProblemDetail`
+              - `viewportRenderSize`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`

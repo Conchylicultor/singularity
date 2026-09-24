@@ -166,8 +166,7 @@ export function PrototypeDetailProvider(
   const { name } = props;
   const select = useCallback(
     (rows: readonly PrototypeMeta[]): PrototypeViewport =>
-      rows.find((p) => p.name === name)?.viewport ??
-      DEFAULT_PROTOTYPE_VIEWPORT,
+      rows.find((p) => p.name === name)?.viewport ?? DEFAULT_PROTOTYPE_VIEWPORT,
     [name],
   );
   // `gate`: this read decides whether the canvas exists, so its settle must

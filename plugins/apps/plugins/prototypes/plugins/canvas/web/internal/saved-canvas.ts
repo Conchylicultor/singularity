@@ -1,9 +1,10 @@
 import { z } from "zod";
 import {
   PrototypeVersionSchema,
+  SIZE_PRESETS,
   StoredPicksSchema,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { SIZE_PRESETS, type CanvasState } from "./canvas-model";
+import type { CanvasState } from "./canvas-model";
 
 /**
  * The canvas as this browser saved it, one entry per prototype — so reloading

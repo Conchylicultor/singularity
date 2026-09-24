@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import type {
-  PrototypeOption,
-  PrototypeVersion,
+import {
+  DEFAULT_PROTOTYPE_VIEWPORT,
+  type PrototypeOption,
+  type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   canvasReducer,
@@ -43,7 +44,10 @@ function apply(state: CanvasState, ...actions: CanvasAction[]): CanvasState {
 describe("saved canvas", () => {
   it("reopens a worked canvas exactly as it was left", () => {
     const state = apply(
-      initialCanvasState({ source: "real-app" }),
+      initialCanvasState({
+        size: DEFAULT_PROTOTYPE_VIEWPORT,
+        source: "real-app",
+      }),
       { type: "addPrototype" },
       { type: "setVersion", id: 3, version: v3 },
       { type: "setPick", id: 3, option: "design", value: "paper" },
@@ -61,7 +65,9 @@ describe("saved canvas", () => {
 
   it("keeps frame A on the shared record, never a copy of it", () => {
     const back = roundTrip(
-      apply(initialCanvasState(), { type: "addPrototype" }),
+      apply(initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }), {
+        type: "addPrototype",
+      }),
     );
     expect(back.kind).toBe("restored");
     if (back.kind === "restored") {
@@ -81,7 +87,9 @@ describe("saved canvas", () => {
 
   it("rejects a canvas that breaks the reducer's rules", () => {
     const ok = serializeCanvas(
-      apply(initialCanvasState(), { type: "addPrototype" }),
+      apply(initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }), {
+        type: "addPrototype",
+      }),
     );
     const cases: [string, unknown][] = [
       [
