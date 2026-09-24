@@ -91,6 +91,16 @@ export function yieldFloorPx(el: HTMLElement | null): number {
   return YIELD_FLOOR_EM * (Number.isFinite(fontPx) ? fontPx : MEDIUM_FONT_PX);
 }
 
+/**
+ * Drops a growing yield cell's grow while its bar holds an explicit slack
+ * claimant (`data-slack-claim`, a reorder spacer), so the two never split the
+ * row's slack. `flex-initial` (0 1 auto), not `grow-0`: the grow cell's basis
+ * is 0, so dropping only the grow would collapse the title to nothing — it has
+ * to go back to its own content width, still free to shrink below it.
+ */
+const YIELD_TO_SLACK_CLAIM =
+  "group-has-[[data-slack-claim]]/adaptive-bar:flex-initial";
+
 export interface AdaptiveBarYieldProps {
   /**
    * Also take the row's leftover, making this cell a `Fill` — it gives AND
@@ -103,6 +113,10 @@ export interface AdaptiveBarYieldProps {
    * where a header's slack belongs, and a cell holding no content still holds
    * the slack — so a title-less header keeps its actions in exactly the same
    * place as a titled one.
+   *
+   * Unless the row holds a reorder `spacer`: the author then placed the slack
+   * themselves, so this cell stops growing and whatever follows it sits right
+   * against it instead of halfway across the row.
    *
    * It stays invisible to the fit either way: `flex: 1 1 0%` contributes no
    * width of its own to the row, and `min-w-0` means the grow is surrendered
@@ -189,14 +203,20 @@ export function AdaptiveBarYield({
     };
   }, [registry]);
 
+  // Growing, this cell IS a `Fill` — so it says so with `fillClasses`, the one
+  // sanctioned home for the `min-w-0 flex-1` pair, rather than re-deriving it
+  // from the two halves here. The grow is only the DEFAULT home of the slack:
+  // when the row holds an explicit claimant (a reorder spacer, marked
+  // `data-slack-claim`), the author has said where the slack goes, and a second
+  // claimant would split it — stranding whatever sits between this cell and the
+  // spacer in the middle of the row.
+  const cellClass = grow
+    ? // eslint-disable-next-line layout/no-adhoc-layout -- a grow withdrawn only while a sibling spacer claims the slack; no primitive expresses conditional slack
+      cn(fillClasses("x"), YIELD_TO_SLACK_CLAIM)
+    : yieldClass("x");
+
   return (
-    // Growing, this cell IS a `Fill` — so it says so with `fillClasses`, the one
-    // sanctioned home for the `min-w-0 flex-1` pair, rather than re-deriving it
-    // from the two halves here.
-    <div
-      ref={cellRef}
-      className={cn(grow ? fillClasses("x") : yieldClass("x"), className)}
-    >
+    <div ref={cellRef} className={cn(cellClass, className)}>
       {children}
     </div>
   );

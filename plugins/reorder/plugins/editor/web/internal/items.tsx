@@ -294,8 +294,12 @@ export function SpacerReorderItem({
 
   if (!editMode) {
     // A spacer is a flex-grow gap that absorbs the slack between siblings.
+    // `data-slack-claim` tells a row that would otherwise hand its slack to a
+    // default claimant (an adaptive bar's growing title) that the author placed
+    // it here instead — two claimants would split it and strand what sits
+    // between them in the middle of the row.
     // eslint-disable-next-line layout/no-adhoc-layout -- flex-grow spacer gap absorbing slack between slot contributions
-    return <div className="flex-1" />;
+    return <div data-slack-claim="" className="flex-1" />;
   }
 
   function handleDelete(e: React.MouseEvent) {
