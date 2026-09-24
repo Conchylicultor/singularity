@@ -5,6 +5,7 @@ import {
 } from "@plugins/infra/plugins/html-decode/core";
 import { isPrototypeId } from "./id";
 import { mocksProblemDetail, parseMocks } from "./mocks";
+import { parseViewport, viewportProblemDetail } from "./viewport";
 import { readPrototypeOptions } from "./option-source";
 
 // The rules that make a folder a prototype, as one pure function.
@@ -124,16 +125,19 @@ async function loadsExternalBabelScript(html: string): Promise<boolean> {
 }
 
 /**
- * The raw `content` of the first `<meta name="mocks">`, or `undefined` when the
- * tag is absent. Same parser and first-occurrence rule as `list-metas.ts`; the
- * syntax judgement itself is `parseMocks`, so the validator and the reader can
- * never disagree about what a declaration is.
+ * The raw `content` of the first `<meta name="<name>">`, or `undefined` when
+ * the tag is absent. Same parser and first-occurrence rule as `list-metas.ts`;
+ * the judgement itself is the tag's own parser (`parseMocks`, `parseViewport`),
+ * so the validator and the reader can never disagree about what a line means.
  */
-async function readMocksContent(html: string): Promise<string | undefined> {
+async function readMetaContent(
+  html: string,
+  name: string,
+): Promise<string | undefined> {
   let raw: string | undefined;
   const rewriter = new HTMLRewriter().on("meta", {
     element(el) {
-      if (readHtmlAttr(el, "name") !== "mocks") return;
+      if (readHtmlAttr(el, "name") !== name) return;
       raw ??= readHtmlAttr(el, "content");
     },
   });
@@ -209,10 +213,21 @@ export async function validatePrototypeFolder(
       // ordinary case and never a problem; a mistyped line is, because the
       // Compare stage would otherwise have to explain it on its own, one stage
       // away from where the author is looking.
-      const mocksRaw = await readMocksContent(text);
+      const mocksRaw = await readMetaContent(text, "mocks");
       const mocks = parseMocks(mocksRaw ?? "");
       if (mocks.kind === "malformed") {
         problems.push({ path: fileName, detail: mocksProblemDetail(mocks) });
+      }
+      // A size that is not a preset name or `responsive` (the retired `WxH`
+      // form included): the canvas opens it at Desktop, so say why here.
+      const viewport = parseViewport(
+        await readMetaContent(text, "prototype-viewport"),
+      );
+      if (!viewport.ok) {
+        problems.push({
+          path: fileName,
+          detail: viewportProblemDetail(viewport.raw),
+        });
       }
       // Every `prototype-option` line that cannot be an option: it is left out
       // of the app's picker, so the card is where the author learns why.

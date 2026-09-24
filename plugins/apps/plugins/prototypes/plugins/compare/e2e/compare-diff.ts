@@ -22,9 +22,10 @@
 // Both frames always share one size (the canvas's), set to 100% through the
 // size & zoom chip so a pixel of the mock is a pixel of the app. --width picks
 // the canvas size preset of that width (the run refuses, listing the presets,
-// when no preset has it). Without it the canvas stays Responsive and the
-// browser window is sized so the frames come out at the prototype's own
-// declared viewport — the size the mock was drawn at.
+// when no preset has it). Without it the canvas stays at the size the
+// prototype declares (`<meta name="prototype-viewport">`, a preset — Desktop by
+// default); a `responsive` prototype is photographed at Responsive with the
+// browser window sized so the frames come out at Desktop's size.
 //
 // --options picks the mock's variant (`theme=launch,palette=azure`) — the
 // values its `<meta name="prototype-option">` lines declare. Without it the
@@ -76,6 +77,8 @@ import {
   humanizeToken,
   isPrototypeId,
   picksFromQuery,
+  SIZE_PRESETS,
+  viewportRenderSize,
   type OptionPicks,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -200,37 +203,10 @@ const mockSelector = (status?: CanvasFrameStatus) =>
 const appSelector = (status?: CanvasFrameStatus) =>
   canvasFrameSelector({ kind: REAL_APP_SOURCE, status });
 
-/** A size preset as the size & zoom menu lists it: `Phone  480 × 900`. */
-interface Preset {
-  name: string;
-  w: number;
-  h: number;
-}
-
-/** Every preset the size & zoom menu offers, read off its radio rows. */
-async function offeredPresets(page: Page): Promise<Preset[]> {
+/** Pick a size row (a preset's name, or `Responsive`), and set the zoom to 100%. */
+async function pickSizeAtActual(page: Page, size: string): Promise<void> {
   await openSizeMenu(page);
-  const rows = await page
-    .getByRole("radio")
-    .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
-  await dismiss(page);
-  return rows.flatMap((text) => {
-    const m = /^\s*([A-Za-z]+)\s*(\d+)\s*×\s*(\d+)/.exec(text);
-    return m && m[1] !== "Custom"
-      ? [{ name: m[1]!, w: Number(m[2]), h: Number(m[3]) }]
-      : [];
-  });
-}
-
-/** Pick a size row by name, and set the zoom to 100%. */
-async function pickSizeAtActual(
-  page: Page,
-  preset: string | null,
-): Promise<void> {
-  await openSizeMenu(page);
-  if (preset !== null) {
-    await page.getByRole("radio", { name: new RegExp(`^${preset}`) }).click();
-  }
+  await page.getByRole("radio", { name: new RegExp(`^${size}`) }).click();
   await page.getByRole("button", { name: "Actual size" }).click();
   await dismiss(page);
 }
@@ -318,10 +294,11 @@ async function capture(loc: Locator, suffix: string): Promise<Buffer> {
 
 await withBrowser(async (h) => {
   const r = report(`compare-diff — ${meta.title}`);
+  const initial = viewportRenderSize(meta.viewport);
   const { page, captured } = await h.session({
     viewport: {
-      width: 2 * (width ?? meta.viewport.w) + CHROME.width,
-      height: meta.viewport.h + CHROME.height,
+      width: 2 * (width ?? initial.w) + CHROME.width,
+      height: initial.h + CHROME.height,
     },
     colorScheme,
   });
@@ -345,26 +322,32 @@ await withBrowser(async (h) => {
 
   await pickOptions(page);
 
-  // One size for both frames, at 100%: a preset for --width, else Responsive
-  // with the window sized so the frames come out at the declared viewport.
+  // One size for both frames, at 100%: the preset --width names, else the
+  // size the prototype declares — a preset, or Responsive with the window sized
+  // so the frames come out at the size a responsive page renders at.
+  const declared = meta.viewport;
+  let preset: (typeof SIZE_PRESETS)[number] | undefined;
   if (width !== undefined) {
-    const presets = await offeredPresets(page);
-    const preset = presets.find((p) => p.w === width);
+    preset = SIZE_PRESETS.find((p) => p.w === width);
     if (!preset) {
       r.fail(
         `a canvas size preset is ${width}px wide`,
-        `the presets are ${presets.map((p) => `${p.name} ${p.w}×${p.h}`).join(", ")} — pass one of their widths as --width, or omit it for the prototype's declared ${meta.viewport.w}×${meta.viewport.h}`,
+        `the presets are ${SIZE_PRESETS.map((p) => `${p.name} ${p.w}×${p.h}`).join(", ")} — pass one of their widths as --width, or omit it for the size the prototype declares`,
       );
       return await r.finish();
     }
+  } else if (declared.kind === "preset") {
+    preset = SIZE_PRESETS.find((p) => p.name === declared.preset);
+  }
+  if (preset) {
     await pickSizeAtActual(page, preset.name);
     await page.setViewportSize({
       width: 2 * preset.w + CHROME.width,
       height: preset.h + CHROME.height,
     });
   } else {
-    await pickSizeAtActual(page, null);
-    await sizeWindowTo(page, meta.viewport);
+    await pickSizeAtActual(page, "Responsive");
+    await sizeWindowTo(page, initial);
   }
 
   await page.locator(mockSelector("found")).waitFor({ timeout: 20_000 });

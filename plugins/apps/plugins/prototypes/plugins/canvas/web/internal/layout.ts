@@ -1,9 +1,9 @@
 import {
   SIZE_PRESETS,
-  type CanvasSize,
-  type CanvasZoom,
+  presetSize,
   type PresetName,
-} from "./canvas-model";
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { CanvasSize, CanvasZoom } from "./canvas-model";
 
 /**
  * How big every frame is, and at what scale — from three independent settings:
@@ -52,13 +52,6 @@ export function roomPerFrame(canvas: Room, n: number): Room {
     ),
     h: Math.max(1, canvas.h - BOARD_PAD.top - BOARD_PAD.bottom - FRAME_HEAD),
   };
-}
-
-/** A preset's logical size. */
-export function presetSize(name: PresetName): { w: number; h: number } {
-  const preset = SIZE_PRESETS.find((p) => p.name === name);
-  if (!preset) throw new Error(`unknown size preset "${name}"`);
-  return { w: preset.w, h: preset.h };
 }
 
 export interface FrameLayout {

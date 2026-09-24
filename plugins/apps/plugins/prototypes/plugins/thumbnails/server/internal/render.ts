@@ -1,7 +1,10 @@
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  viewportRenderSize,
+  type PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { classifyRenderOutcome } from "./decide";
 import { ThumbnailRenderError } from "./errors";
 
@@ -198,9 +201,12 @@ export async function renderThumbnail(
     // Neither of these two takes a timeout of its own, so both are bounded by
     // hand. A browser that launched but will not hand back a page is a broken
     // browser, not a broken prototype — hence `browser-unavailable`.
+    // A responsive prototype has no size of its own to render at; it renders
+    // at the default's.
+    const size = viewportRenderSize(meta.viewport);
     const context = await withTimeout(
       browser.newContext({
-        viewport: { width: meta.viewport.w, height: meta.viewport.h },
+        viewport: { width: size.w, height: size.h },
         deviceScaleFactor: DEVICE_SCALE_FACTOR,
         serviceWorkers: "block",
         acceptDownloads: false,

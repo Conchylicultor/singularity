@@ -56,12 +56,11 @@ pathname decides which pane answers.
 
 ## Widths
 
-`480 / 768 / 1024 / 1280 / 1600`, merged with the prototype's declared viewport
-width, deduped, ascending. The declared width is always offered — it is the
-width the mock was drawn at — and it is where the stage opens; the standard
-breakpoints are what make the real app's own responsive behaviour legible
-beside it. Height is the prototype's declared viewport height, the same box the
-mock half gets.
+The frame is the canvas's size: the size presets (`480 / 768 / 1024 / 1280 /
+1600`, owned by `files/core`'s `SIZE_PRESETS`), Responsive, or a dragged width.
+It opens at the size the prototype declares (`<meta name="prototype-viewport">`,
+Desktop by default); the other presets are what make the real app's own
+responsive behaviour legible beside the mock.
 
 ## No `sandbox`, no `?v=`
 

@@ -1,5 +1,6 @@
-// Verifies the canvas-wide size & zoom chip: the canvas opens Responsive at
-// Fit; a device preset lays every frame's page out at that device's size; Fit
+// Verifies the canvas-wide size & zoom chip: the canvas opens at Fit at the
+// size the prototype declares (`<meta name="prototype-viewport">`); Responsive
+// lays the page out at the room's own size; a device preset lays every frame's page out at that device's size; Fit
 // shrinks the frame to the room while 100% and the zoom slider set the scale
 // exactly; Whole page makes the frame as tall as its document (nothing left to
 // scroll inside); and dragging a frame's right edge resizes every frame, snapping
@@ -18,7 +19,10 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  SIZE_PRESETS,
+  type PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   card,
   dismiss,
@@ -72,12 +76,26 @@ await withBrowser(async (h) => {
       { timeoutMs: 10_000 },
     );
 
+  const declared = meta.viewport;
+  const declaredName =
+    declared.kind === "preset" ? declared.preset : "Responsive";
   const opened = await chipText(page);
   r.ok(
-    "opens Responsive at Fit",
-    /^Responsive/.test(opened) && /Fit · 100%/.test(opened),
+    `opens at the declared size (${declaredName}) at Fit`,
+    opened.startsWith(declaredName) && /Fit · \d+%/.test(opened),
     opened,
   );
+  if (declared.kind === "preset") {
+    const size = SIZE_PRESETS.find((p) => p.name === declared.preset)!;
+    const at = await settle("A", (v) => v.w === size.w && v.h === size.h);
+    r.ok(
+      `…laying the page out at ${String(size.w)} × ${String(size.h)}`,
+      at.ok,
+      JSON.stringify(at.value),
+    );
+  }
+
+  await pickSize(page, "Responsive");
   const responsive = await settle("A", (v) => v.scale === 1);
   r.ok(
     "Responsive: the page lays out at the room's own size, at scale 1",

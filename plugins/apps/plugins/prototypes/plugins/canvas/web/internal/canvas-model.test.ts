@@ -1,17 +1,25 @@
 import { describe, expect, it } from "bun:test";
-import type {
-  PrototypeOption,
-  PrototypeVersion,
+import {
+  DEFAULT_PROTOTYPE_VIEWPORT,
+  type PrototypeOption,
+  type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   canvasReducer,
   frameA,
-  initialCanvasState,
+  initialCanvasState as openCanvas,
   prototypeFrames,
   type CanvasAction,
   type CanvasState,
   type PrototypeFrame,
 } from "./canvas-model";
+
+/** A canvas opened at the default size (the size is not what these pin). */
+function initialCanvasState(
+  opts: Omit<Parameters<typeof openCanvas>[0], "size"> = {},
+): CanvasState {
+  return openCanvas({ size: DEFAULT_PROTOTYPE_VIEWPORT, ...opts });
+}
 
 const design: PrototypeOption = {
   name: "design",
@@ -51,6 +59,15 @@ describe("initialCanvasState", () => {
       { id: 1, kind: "prototype", version: null, picks: "shared" },
     ]);
     expect(s.selected).toBe(1);
+  });
+
+  it("opens at the size the prototype declares", () => {
+    expect(openCanvas({ size: { kind: "responsive" } }).size).toEqual({
+      kind: "responsive",
+    });
+    expect(
+      openCanvas({ size: { kind: "preset", preset: "Phone" } }).size,
+    ).toEqual({ kind: "preset", preset: "Phone" });
   });
 
   it("puts a source beside A when asked", () => {

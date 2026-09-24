@@ -16,34 +16,24 @@ import {
   PROTOTYPE_ENTRY_FILE,
   UNTITLED_PROTOTYPE,
   parseMocks,
+  parseViewport,
+  DEFAULT_PROTOTYPE_VIEWPORT,
   readPrototypeOptions,
   validatePrototypeFolder,
   type MocksDeclaration,
   type PrototypeFolder,
   type PrototypeMeta,
   type PrototypeProblem,
+  type PrototypeViewport,
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-
-/** Canvas size used when the HTML declares no `prototype-viewport`. */
-const DEFAULT_VIEWPORT = { w: 1280, h: 800 } as const;
-
-/** `1320x868` → `{ w: 1320, h: 868 }`; anything else → `null` (⇒ default). */
-function parseViewport(raw: string): { w: number; h: number } | null {
-  const match = /^\s*(\d+)\s*[xX]\s*(\d+)\s*$/.exec(raw);
-  if (!match) return null;
-  const w = Number(match[1]);
-  const h = Number(match[2]);
-  if (w <= 0 || h <= 0) return null;
-  return { w, h };
-}
 
 /** What `index.html` declares about itself, before defaults are folded in. */
 interface HtmlMeta {
   title: string;
   blurb: string;
-  viewport: { w: number; h: number };
+  viewport: PrototypeViewport;
   mocks: MocksDeclaration;
 }
 
@@ -89,13 +79,14 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
   // The rewriter only runs its handlers as the body is consumed.
   await rewriter.transform(new Response(html)).text();
 
-  const viewport =
-    viewportRaw === undefined ? null : parseViewport(viewportRaw.trim());
+  // An unreadable size is also a `problems[]` entry, from the same parser
+  // (`validatePrototypeFolder`); here it reads as the default.
+  const viewport = parseViewport(viewportRaw);
 
   return {
     title: decodeHtmlText(titleChunks.join("")).trim(),
     blurb: (blurbRaw ?? "").trim(),
-    viewport: viewport ?? { ...DEFAULT_VIEWPORT },
+    viewport: viewport.ok ? viewport.viewport : DEFAULT_PROTOTYPE_VIEWPORT,
     // Declaring no counterpart is the ordinary case, so the absent tag parses
     // to `none` — there is nothing wrong with a prototype that mocks nothing.
     // A malformed line parses to `malformed` here AND is reported by
@@ -134,7 +125,7 @@ async function readMeta(
     // UNTITLED_PROTOTYPE.
     title: UNTITLED_PROTOTYPE,
     blurb: "",
-    viewport: { ...DEFAULT_VIEWPORT },
+    viewport: DEFAULT_PROTOTYPE_VIEWPORT,
     mocks: { kind: "none" } as const,
     options: [],
   };

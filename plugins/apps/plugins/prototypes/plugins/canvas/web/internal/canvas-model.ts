@@ -2,6 +2,7 @@ import {
   pickedValue,
   type PrototypeOption,
   type PrototypeVersion,
+  type PrototypeViewport,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
@@ -45,28 +46,14 @@ export interface SourceFrame {
 export type CanvasFrame = PrototypeFrame | SourceFrame;
 
 /**
- * The device presets. A frame is that device's SCREEN: a page longer than it
- * scrolls inside the frame (unless Whole page is on).
- */
-export const SIZE_PRESETS = [
-  { name: "Phone", w: 480, h: 900 },
-  { name: "Tablet", w: 768, h: 1024 },
-  { name: "Laptop", w: 1024, h: 640 },
-  { name: "Desktop", w: 1280, h: 800 },
-  { name: "Wide", w: 1600, h: 900 },
-] as const;
-
-export type PresetName = (typeof SIZE_PRESETS)[number]["name"];
-
-/**
- * The logical size every frame renders at: the space the canvas has
- * (`responsive` — the page's own responsive layout shows), a device preset, or
- * a width dragged off the presets (`custom`).
+ * The logical size every frame renders at: any size a prototype can declare —
+ * the space the canvas has (`responsive` — the page's own responsive layout
+ * shows) or a device preset (`SIZE_PRESETS`: the device's SCREEN; a page longer
+ * than it scrolls inside the frame unless Whole page is on) — or a width
+ * dragged off the presets (`custom`).
  */
 export type CanvasSize =
-  | { kind: "responsive" }
-  | { kind: "preset"; preset: PresetName }
-  | { kind: "custom"; w: number; h: number };
+  PrototypeViewport | { kind: "custom"; w: number; h: number };
 
 /** Fit (the whole frame visible at once) or a fixed scale, 0.1–2. */
 export type CanvasZoom = "fit" | number;
@@ -135,24 +122,29 @@ export interface CanvasTransition {
   effects: CanvasEffect[];
 }
 
-/** How a canvas opens: frame A, and optionally a frame source beside it. */
+/**
+ * How a canvas opens: frame A, and optionally a frame source beside it, at
+ * `size` — the size the prototype declares it is designed at.
+ */
 export function initialCanvasState({
+  size,
   version = null,
   picks = "shared",
   source,
 }: {
+  size: PrototypeViewport;
   version?: PrototypeVersion | null;
   /** Frame A's picks — `"shared"` except on a page that names its own. */
   picks?: "shared" | StoredPicks;
   source?: string;
-} = {}): CanvasState {
+}): CanvasState {
   const frames: CanvasFrame[] = [{ id: 1, kind: "prototype", version, picks }];
   if (source !== undefined) frames.push({ id: 2, kind: "source", source });
   return {
     frames,
     nextId: frames.length + 1,
     selected: 1,
-    size: { kind: "responsive" },
+    size,
     zoom: "fit",
     wholePage: false,
     layout: "side",

@@ -265,7 +265,13 @@ Metadata is therefore read out of the HTML, not a sidecar file:
 - `<title>` → `title` (default: `UNTITLED_PROTOTYPE`, never the directory
   name — that is an opaque id)
 - `<meta name="description">` → `blurb` (default: `""`)
-- `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
+- `<meta name="prototype-viewport" content="desktop">` → `viewport`: a size
+  preset's name (`phone`, `tablet`, `laptop`, `desktop`, `wide`) or
+  `responsive` (default: Desktop). `core/viewport.ts` owns the presets
+  (`SIZE_PRESETS`, which the canvas's size menu lists) and the parser
+  (`parseViewport`); anything else — the retired `WxH` form included — is a
+  `problems[]` entry and reads as the default. Named, not pixels, because the
+  free `WxH` was an arbitrary number per prototype that matched no preset.
 - `<meta name="mocks" content="<kind>:<ref>">` → `mocks` (default: `{ kind: "none" }`)
 - every `<meta name="prototype-option" content="<name>: <v> | <v>">`, with its
   default read off `<html data-<name>>` → `options` (default: `[]`)
@@ -458,6 +464,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `OptionPicks`
     - `OptionSource`
     - `PicksChange`
+    - `PresetName`
     - `PrototypeFolder`
     - `PrototypeHistory`
     - `PrototypeMeta`
@@ -467,11 +474,13 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeStatusChange`
     - `PrototypeVersion`
     - `PrototypeVersionKind`
+    - `PrototypeViewport`
     - `StoredPicks`
   - Exports (values):
     - `applyPicksChange`
     - `applyPrototypeStatusChange`
     - `createPrototype`
+    - `DEFAULT_PROTOTYPE_VIEWPORT`
     - `foldOptions`
     - `humanizeToken`
     - `isOptionName`
@@ -485,15 +494,18 @@ for the `checkpoints` plugin's end-of-turn job.
     - `NO_PROTOTYPE_STATUS`
     - `parseMocks`
     - `parseOptionDeclaration`
+    - `parseViewport`
     - `pickedValue`
     - `PicksChangeSchema`
     - `picksFromQuery`
+    - `presetSize`
     - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_FILE_ROUTE`
     - `PROTOTYPE_ID_RE`
     - `PROTOTYPE_VERSION_FILE_ROUTE`
     - `PROTOTYPE_VERSION_KINDS`
+    - `PROTOTYPE_VIEWPORT_WORDS`
     - `prototypeHistoryResource`
     - `PrototypeHistorySchema`
     - `prototypeIdsIn`
@@ -510,16 +522,20 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypeUrl`
     - `PrototypeVersionSchema`
     - `prototypeVersionUrl`
+    - `PrototypeViewportSchema`
     - `readOptionSource`
     - `readPrototypeOptions`
     - `resolvePicks`
     - `restorePrototypeVersion`
     - `setPrototypePicks`
     - `setPrototypeStatus`
+    - `SIZE_PRESETS`
     - `statusOf`
     - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
+    - `viewportProblemDetail`
+    - `viewportRenderSize`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`

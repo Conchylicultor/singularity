@@ -105,17 +105,21 @@ The gallery reads these out of your HTML — there is no metadata file.
 ```html
 <title>Your prototype</title>
 <meta name="description" content="A sentence about what this explores." />
-<meta name="prototype-viewport" content="1320x868" />
+<meta name="prototype-viewport" content="desktop" />
 <meta name="mocks" content="fixture:control-panel/setting-rail" />
 ```
 
 - `<title>` is the card's name — the prototype's ONLY human name, since the
   folder is an id. Without it every surface reads "Untitled prototype".
 - `<meta name="description">` is the card's blurb.
-- `<meta name="prototype-viewport">` is the size you design at: the canvas
-  in Focus and on the gallery card, and the width Compare opens at. Optional —
-  it defaults to `1280x800`. Don't copy it into your CSS as a fixed width (see
-  below).
+- `<meta name="prototype-viewport">` is the kind of screen you design for —
+  a NAME, not pixels: `desktop` (1280×800, the default — an app screen),
+  `phone` (480×900), `tablet`, `laptop`, `wide`, or `responsive` (the page
+  fills whatever room it gets — a component mock, a layout meant to stretch).
+  The canvas opens at it, and the gallery card renders at it (`responsive`
+  renders at desktop). Leave it out for an app screen. A pixel size
+  (`1320x868`) is not read — it is reported as a problem on the card. Don't
+  turn it into a fixed width in your CSS (see below).
 - `<meta name="mocks">` names the real app thing this prototype is a mockup
   of, as `<kind>:<ref>`, so the canvas can put the two side by side (its Real app frame):
   - `fixture:control-panel/setting-rail` — an app **component**, by its Layout

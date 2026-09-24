@@ -15,9 +15,16 @@ import {
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   applyPicksChange,
+  DEFAULT_PROTOTYPE_VIEWPORT,
+  prototypesResource,
   prototypePicksResource,
   prototypeUrl,
   prototypeVersionUrl,
@@ -28,6 +35,7 @@ import {
   type PrototypeMeta,
   type PrototypeOption,
   type PrototypeVersion,
+  type PrototypeViewport,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -66,18 +74,21 @@ export interface CanvasSourceEntry {
 const SAVED_CANVAS_KEY = "prototypes.canvas";
 const SAVED_CANVAS_TTL = 30 * 24 * 60 * 60 * 1000;
 
-/** The canvas this browser last left `name` in, or a fresh one. */
-function openCanvas(name: string): CanvasState {
+/**
+ * The canvas this browser last left `name` in, or a fresh one at `size` — the
+ * size the prototype declares.
+ */
+function openCanvas(name: string, size: PrototypeViewport): CanvasState {
   const raw = readDraft<unknown>(SAVED_CANVAS_KEY, {
     scope: name,
     ttl: SAVED_CANVAS_TTL,
   });
-  if (raw === null) return initialCanvasState();
+  if (raw === null) return initialCanvasState({ size });
   const restored = restoreCanvas(raw);
   if (restored.kind === "restored") return restored.state;
   // Written by an older shape of the canvas: open fresh, and say why.
   console.warn(`Saved canvas of ${name} not reopened: ${restored.reason}`);
-  return initialCanvasState();
+  return initialCanvasState({ size });
 }
 
 export interface PrototypeDetailContextValue {
@@ -122,13 +133,7 @@ export function usePrototypeDetail(): PrototypeDetailContextValue {
   return ctx;
 }
 
-export function PrototypeDetailProvider({
-  name,
-  remember = false,
-  initialVersion = null,
-  initialPicks,
-  children,
-}: {
+interface PrototypeDetailProviderProps {
   name: string;
   /**
    * Reopen the canvas this browser last left the prototype in, and save every
@@ -146,7 +151,46 @@ export function PrototypeDetailProvider({
    */
   initialPicks?: StoredPicks;
   children: ReactNode;
-}) {
+}
+
+/**
+ * The canvas for one prototype. A fresh canvas opens at the size the prototype
+ * declares (`<meta name="prototype-viewport">`), so the provider waits for the
+ * prototype list before the canvas exists at all — a canvas at a stand-in size
+ * would be a claim about the prototype that reverses itself. A prototype the
+ * list does not have opens at the default (the pane then says "not found").
+ */
+export function PrototypeDetailProvider(
+  props: PrototypeDetailProviderProps,
+): ReactNode {
+  const { name } = props;
+  const select = useCallback(
+    (rows: readonly PrototypeMeta[]): PrototypeViewport =>
+      rows.find((p) => p.name === name)?.viewport ??
+      DEFAULT_PROTOTYPE_VIEWPORT,
+    [name],
+  );
+  // `gate`: this read decides whether the canvas exists, so its settle must
+  // re-render even when the slice equals the initial one.
+  const declared = useResource(prototypesResource, undefined, {
+    select,
+    gate: true,
+  });
+  return matchResource(declared, {
+    pending: () => <Loading variant="block" />,
+    error: () => <Loading variant="block" />,
+    ready: (size) => <DetailProvider {...props} size={size} />,
+  });
+}
+
+function DetailProvider({
+  name,
+  size,
+  remember = false,
+  initialVersion = null,
+  initialPicks,
+  children,
+}: PrototypeDetailProviderProps & { size: PrototypeViewport }) {
   const contributed = FrameSource.useContributions();
   const sources = useMemo<CanvasSourceEntry[]>(
     () =>
@@ -194,8 +238,9 @@ export function PrototypeDetailProvider({
   const open = (): Held => ({
     name,
     state: persist
-      ? openCanvas(name)
+      ? openCanvas(name, size)
       : initialCanvasState({
+          size,
           version: initialVersion,
           picks: initialPicks ?? "shared",
         }),

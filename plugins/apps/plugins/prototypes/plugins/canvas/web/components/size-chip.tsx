@@ -16,7 +16,8 @@ import {
   ControlPanel,
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { SIZE_PRESETS, type CanvasSize } from "../internal/canvas-model";
+import { SIZE_PRESETS } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { CanvasSize } from "../internal/canvas-model";
 import {
   MAX_ZOOM,
   MIN_ZOOM,

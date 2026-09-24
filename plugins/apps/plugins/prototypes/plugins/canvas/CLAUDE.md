@@ -138,11 +138,17 @@ One chip in the canvas's bottom-right corner — "Desktop 1280 × 800 | Fit ·
 62%" (`size-chip.tsx`) — opens the menu for all three:
 
 - **Size** is the logical size every frame's page lays out at: **Responsive**
-  (the default: a frame IS its share of the canvas, measured in page pixels at
-  the current zoom — the page's own responsive layout shows), a **device
-  preset** (Phone 480×900, Tablet 768×1024, Laptop 1024×640, Desktop 1280×800,
-  Wide 1600×900 — a frame is that device's screen, and a longer page scrolls
-  inside it), or **Custom** (a width dragged off the presets).
+  (a frame IS its share of the canvas, measured in page pixels at the current
+  zoom — the page's own responsive layout shows), a **device preset** (Phone
+  480×900, Tablet 768×1024, Laptop 1024×640, Desktop 1280×800, Wide 1600×900 —
+  a frame is that device's screen, and a longer page scrolls inside it), or
+  **Custom** (a width dragged off the presets). A fresh canvas (none saved in
+  this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="desktop">`
+  — a preset's name or `responsive`, Desktop when absent), so a mock always
+  opens at the screen it was drawn for rather than at whatever room the pane
+  happens to have. The presets and that tag's parser are one list, owned by
+  `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
+  prototype list before the canvas exists, so it never opens at a stand-in.
 - **The drag handle** on a frame's right edge resizes EVERY frame (the size is
   canvas-wide), in 360–1920 px, snapping onto a preset it lands within 28 px of;
   a tip shows the width and the preset while dragging.
@@ -327,7 +333,6 @@ remembered.
     - `FrameSourceMeta`
     - `FrameSourceProps`
     - `PicksRead`
-    - `PresetName`
     - `PrototypeDetailContextValue`
     - `PrototypeFrame`
     - `Room`
@@ -349,7 +354,6 @@ remembered.
     - `prototypeFrames`
     - `PrototypeVersionActions`
     - `roomPerFrame`
-    - `SIZE_PRESETS`
     - `SizeChip`
     - `useFrameNames`
     - `useFramePicks`

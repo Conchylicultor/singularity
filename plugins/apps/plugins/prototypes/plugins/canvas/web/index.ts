@@ -42,7 +42,7 @@ export type {
   PicksRead,
   PrototypeDetailContextValue,
 } from "./context";
-export { SIZE_PRESETS, frameA, prototypeFrames } from "./internal/canvas-model";
+export { frameA, prototypeFrames } from "./internal/canvas-model";
 export type {
   CanvasAction,
   CanvasFrame,
@@ -51,7 +51,6 @@ export type {
   CanvasState,
   CanvasZoom,
   FrameId,
-  PresetName,
   PrototypeFrame,
   SourceFrame,
 } from "./internal/canvas-model";

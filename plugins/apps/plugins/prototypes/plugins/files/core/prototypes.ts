@@ -4,6 +4,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PrototypeProblemSchema } from "./validate";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { MocksDeclaration } from "./mocks";
+import { PrototypeViewportSchema } from "./viewport";
 import type { OptionPicks, PrototypeOption } from "./options";
 
 /**
@@ -37,8 +38,9 @@ export const PrototypeOptionSchema = z.object({
  * - `title` — `<title>`, the display name (falls back to `UNTITLED_PROTOTYPE`,
  *   never to `name`, which is an opaque id)
  * - `blurb` — `<meta name="description">` (defaults to `""`)
- * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
- *   (defaults to 1280x800)
+ * - `viewport` — `<meta name="prototype-viewport" content="desktop">`: a
+ *   size preset's name or `responsive` (see `viewport.ts`). Absent or
+ *   unreadable ⇒ Desktop; an unreadable line is also a `problems[]` entry
  * - `mocks` — `<meta name="mocks" content="<kind>:<ref>">`, the real app thing
  *   this prototype is a mockup OF (`fixture:control-panel/setting-rail`,
  *   `route:/agents/c/123`), so the Compare stage can show the two side by
@@ -63,7 +65,7 @@ export const PrototypeMetaSchema = z.object({
   name: z.string(),
   title: z.string(),
   blurb: z.string(),
-  viewport: z.object({ w: z.number(), h: z.number() }),
+  viewport: PrototypeViewportSchema,
   mocks: MocksDeclarationSchema,
   options: z.array(PrototypeOptionSchema),
   problems: z.array(PrototypeProblemSchema),

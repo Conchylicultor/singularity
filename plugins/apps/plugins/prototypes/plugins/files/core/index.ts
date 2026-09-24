@@ -41,6 +41,17 @@ export {
   UNTITLED_PROTOTYPE,
 } from "./id";
 export { parseMocks, mocksProblemDetail } from "./mocks";
+export {
+  SIZE_PRESETS,
+  DEFAULT_PROTOTYPE_VIEWPORT,
+  PROTOTYPE_VIEWPORT_WORDS,
+  PrototypeViewportSchema,
+  parseViewport,
+  viewportProblemDetail,
+  presetSize,
+  viewportRenderSize,
+} from "./viewport";
+export type { PresetName, PrototypeViewport } from "./viewport";
 export type { MocksDeclaration } from "./mocks";
 export {
   parseOptionDeclaration,

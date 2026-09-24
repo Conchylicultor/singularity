@@ -84,9 +84,10 @@ It opens the prototype's canvas on the deploy this checkout built, adds the
 Real app frame (`+ Real app`), waits for it to resolve, sets the canvas to 100% through the size & zoom chip
 (so a pixel of the mock is a pixel of the app), and photographs both frames at
 the one canvas size. `--width` must be a size preset's width (the run refuses
-and lists the presets otherwise); without it the canvas stays Responsive and
-the browser window is sized until the frames come out at the prototype's
-declared viewport — the size the mock was drawn at. It writes
+and lists the presets otherwise); without it the canvas stays at the size the
+prototype declares (Desktop by default) — or, for a `responsive` prototype,
+Responsive with the browser window sized until the frames come out at
+Desktop's size. It writes
 `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` and
 `<out>-side-by-side.png`, logging the differing-pixel ratio and a per-cell
 heatmap. `--fail-above <pct>` turns the ratio into a verdict; without it the
