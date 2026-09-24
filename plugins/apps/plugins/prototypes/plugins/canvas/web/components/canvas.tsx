@@ -260,8 +260,9 @@ function FrameCard({
 }
 
 /**
- * The screen, ringed in the accent colour when selected; clicking an
- * unselected one selects it (what `[` `]` and `0` then act on).
+ * The screen; clicking an unselected one selects it (what `[` `]` and `0` then
+ * act on). Selection draws no ring — it shows only as the header's actions
+ * staying visible, so the last-clicked frame never wears a distracting border.
  */
 function SelectableScreen({
   selected,
@@ -274,12 +275,7 @@ function SelectableScreen({
 }): ReactElement {
   return (
     <div
-      className={cn(
-        "rounded-md",
-        selected
-          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-          : "cursor-pointer",
-      )}
+      className={cn("rounded-md", !selected && "cursor-pointer")}
       // A click inside a frame's iframe never reaches this document, but the
       // iframe taking focus does (focusin on the iframe element).
       onPointerDownCapture={selected ? undefined : onSelect}
