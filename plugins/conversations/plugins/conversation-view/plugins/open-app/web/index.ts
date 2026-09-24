@@ -4,6 +4,8 @@ import { OpenAppButton } from "./components/open-app-button";
 
 export default {
   description:
-    "Opens the conversation's namespace at `http://<id>.localhost:9000/`.",
-  contributions: [Conversation.ActionBar({ id: "open-app", component: OpenAppButton })],
+    "Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).",
+  contributions: [
+    Conversation.ActionBar({ id: "open-app", component: OpenAppButton }),
+  ],
 } satisfies PluginDefinition;

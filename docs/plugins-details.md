@@ -11519,7 +11519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WorktreeOpSchema`
               - `WorktreeOpsPayloadSchema`
               - `worktreeOpsResource`
-        - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
+        - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
           - Web:
             - Contributes: `Conversation.ActionBar` → `OpenAppButton`
             - Uses:
@@ -11527,6 +11527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/pane.PaneIconAction`
+              - `tasks/task-source-url.useAttemptSourceUrl`
         - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:
@@ -12588,6 +12589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-category`
       - `tasks/task-effort`
       - `tasks/task-preprompt`
+      - `tasks/task-source-url`
       - `tasks/tasks-core`
       - `toolchain`
       - `ui/theme-engine/saved-themes`
@@ -16537,6 +16539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events`
               - `plugin-meta/composition`
               - `plugin-meta/plugin-health`
+              - `tasks/task-source-url`
               - `tasks/tasks-core`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
@@ -18533,6 +18536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-list`
           - `tasks/task-preprompt`
+          - `tasks/task-source-url`
           - `ui/theme-engine/saved-themes`
           - `ui/theme-engine/theme-customizer`
           - `ui/theme-engine/theme-gallery`
@@ -18646,6 +18650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-category`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
+          - `tasks/task-source-url`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Server:
         - Contributes:
@@ -33598,6 +33603,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/launch-options.inheritLaunchOptions`
       - `tasks/launch-options.resolveLaunchOptions`
       - `tasks/task-category.setTaskCategory`
+      - `tasks/task-source-url.setTaskSourceUrl`
       - `tasks/task-title.scheduleTaskTitleUpdate`
       - `tasks/task-title.synthesiseTitleFallback`
       - `tasks/tasks-core._tasks`
@@ -34411,6 +34417,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskPrepromptSchema`
           - `TaskPrepromptsPayloadSchema`
           - `taskPrepromptsResource`
+    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt.
+      - Web:
+        - Uses: `infra/endpoints.useEndpoint`
+        - Exports (values): `useAttemptSourceUrl`
+      - Server:
+        - Uses:
+          - `database.db`
+          - `infra/endpoints.implement`
+          - `infra/entity-extensions.defineExtension`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._tasks`
+        - DB schema: `plugins/tasks/plugins/task-source-url/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_source_url`)
+        - Exports (values):
+          - `setTaskSourceUrl`
+          - `tasksSourceUrl`
+        - Routes: `GET /api/task-source-url/by-attempt/:attemptId`
+      - Core:
+        - Uses:
+          - `fields/text/config.textField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entity-extensions.defineExtensionShape`
+        - Exports (types): `AttemptSourceUrl`
+        - Exports (values):
+          - `getAttemptSourceUrl`
+          - `taskSourceUrlShape`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/open-app`
+          - `tasks`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
         - Uses:
@@ -34763,6 +34799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort`
           - `tasks/task-events`
           - `tasks/task-preprompt`
+          - `tasks/task-source-url`
           - `tasks/task-title`
           - `toolchain`
         - Extended by:
@@ -34777,6 +34814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
+          - `tasks/task-source-url` (table `tasks_ext_source_url`)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `installTaskDerivedSchema`

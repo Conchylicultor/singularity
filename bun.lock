@@ -5102,6 +5102,10 @@
       "name": "@singularity/plugin-tasks-task-preprompt",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-source-url": {
+      "name": "@singularity/plugin-tasks-task-source-url",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-status": {
       "name": "@singularity/plugin-tasks-task-status",
       "version": "0.0.1",
@@ -8264,6 +8268,8 @@
     "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
 
     "@singularity/plugin-tasks-task-preprompt": ["@singularity/plugin-tasks-task-preprompt@workspace:plugins/tasks/plugins/task-preprompt"],
+
+    "@singularity/plugin-tasks-task-source-url": ["@singularity/plugin-tasks-task-source-url@workspace:plugins/tasks/plugins/task-source-url"],
 
     "@singularity/plugin-tasks-task-status": ["@singularity/plugin-tasks-task-status@workspace:plugins/tasks/plugins/task-status"],
 

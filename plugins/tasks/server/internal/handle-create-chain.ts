@@ -20,6 +20,7 @@ import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { resolveLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { rewireDependencies } from "./rewire-dependencies";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { setTaskSourceUrl } from "@plugins/tasks/plugins/task-source-url/server";
 
 export const handleCreateChain = implement(
   createTaskChain,
@@ -119,6 +120,12 @@ export const handleCreateChain = implement(
 
         if (categoryId) {
           await setTaskCategory(newTask.id, categoryId);
+        }
+
+        // Stored as data too, not only as the prompt's `**URL:**` line, so
+        // "Open app" can land on the page without parsing the description.
+        if (card.url) {
+          await setTaskSourceUrl(newTask.id, card.url);
         }
 
         if (attachments.length > 0) {

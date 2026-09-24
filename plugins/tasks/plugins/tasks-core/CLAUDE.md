@@ -466,6 +466,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `tasks/task-effort`
     - `tasks/task-events`
     - `tasks/task-preprompt`
+    - `tasks/task-source-url`
     - `tasks/task-title`
     - `toolchain`
   - Extended by:
@@ -480,6 +481,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
+    - `tasks/task-source-url` (table `tasks_ext_source_url`)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
     - `installTaskDerivedSchema`
