@@ -127,27 +127,35 @@ value with a fresh ETag.
 - `lastStep: null` means it has written nothing classifiable yet — a fact, not a
   stand-in for "idle".
 
-## "Running" is derived from the PARENT, and has three answers
+## "Running": the PARENT first, then the sub-agent's own turn end — three answers
 
-There is no end-of-run marker inside a sub-agent's own file (the last line is an
-ordinary assistant line), so the file cannot answer this. `subagentRunState`
-(`core/run-state.ts`) is the one computation, and it reads the parent:
+`subagentRunState` (`core/run-state.ts`) is the one computation. Evidence, in order:
 
 - **foreground** — the parent's `tool_result` lands only at completion ⇒ finished.
 - **background** — that `tool_result` is an immediate launch acknowledgement and
   means nothing; completion is the `task-notification` carrying the same
   tool-use id.
-- **neither, and the parent has no live process** — the sub-agent was killed or
-  died with the session. That is **ended without reporting**, a third state, not
-  "still running". Rendering it as running would be the card lying about work
+- **its own turn ended** — the harness streams an assistant message in pieces with
+  `stop_reason: null`, and only the last piece of an ended turn carries
+  `end_turn` / `stop_sequence`. The tail read records it as the row's `turnEnded`
+  (`turnEndedOfLines`, newest assistant/user line decides, bookkeeping lines
+  skipped) ⇒ finished. For a sub-agent started by ANOTHER sub-agent this is the
+  only signal there is: its launching call and any notification live in the
+  spawner's transcript, never the conversation's — before this it read "running"
+  until the whole conversation stopped. **Positive-only**: Claude Code versions
+  before ~2.1.27x often never wrote the marker (283 of 876 transcripts end on an
+  untagged piece), so `false` means "nothing seen", never "still working". A named
+  teammate woken by a later message appends a user line, and the next read sees an
+  open turn again — nothing is latched.
+- **none of those, and the parent has no live process** — the sub-agent was killed
+  or died with the session. That is **ended without reporting**, a third state,
+  not "still running". Rendering it as running would be the card lying about work
   that stopped minutes ago.
 
 **Do not add a staleness timeout as a fourth answer.** A sub-agent silent for
 five minutes may be inside one long tool call, and a timeout would turn that into
 a claim the code cannot support. Surfaces state the observation instead — "no
-update in 4m", from `lastActivityAt` — which the user can judge. There is no
-liveness or exit marker on disk; wanting one is a harness-level ask, not
-something to synthesise from timestamps.
+update in 4m", from `lastActivityAt` — which the user can judge.
 
 ## The meta format has GROWN — measure before you require anything
 
@@ -419,6 +427,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagentTranscriptResource`
     - `SubagentTranscriptSchema`
     - `toolResultIsOutcome`
+    - `turnEndedOfLines`
     - `UndescribedSubagentSchema`
 - Cross-plugin:
   - Imported by:

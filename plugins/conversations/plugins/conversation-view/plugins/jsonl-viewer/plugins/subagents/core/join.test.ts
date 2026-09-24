@@ -23,6 +23,7 @@ const row = (
     description: "work",
     startedAt: "2026-09-20T10:00:00.000Z",
     lastActivityAt: "2026-09-20T10:01:00.000Z",
+    turnEnded: false,
     lastStep: null,
     ...over,
   }) as SubagentActivityRow;
@@ -113,6 +114,7 @@ describe("describedSubagent", () => {
         reason: "not valid JSON",
         startedAt: "2026-09-20T10:00:00.000Z",
         lastActivityAt: "2026-09-20T10:01:00.000Z",
+        turnEnded: false,
         lastStep: null,
       },
     ];
@@ -178,6 +180,7 @@ describe("agentCallForSubagent", () => {
       reason: "not valid JSON",
       startedAt: "2026-09-20T10:00:00.000Z",
       lastActivityAt: "2026-09-20T10:01:00.000Z",
+      turnEnded: false,
       lastStep: null,
     };
     expect(agentCallForSubagent(broken, calls)).toBeUndefined();

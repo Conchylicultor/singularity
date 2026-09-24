@@ -81,6 +81,13 @@ const SubagentBaseSchema = z.object({
   lastActivityAt: z.string(),
   /** `null` = it has written nothing classifiable yet, not "it did nothing". */
   lastStep: LastStepSchema.nullable(),
+  /**
+   * The sub-agent's newest turn has ended, by its OWN transcript's marker
+   * (`turnEndedOfLines`). Positive evidence only: `false` means no marker was
+   * seen — also how a Claude Code version that never wrote one reads — never
+   * "still working".
+   */
+  turnEnded: z.boolean(),
 });
 
 /**

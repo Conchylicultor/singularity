@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { appendFile, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readLastStep, TAIL_WINDOW_BYTES } from "./tail-read";
+import { readTail, TAIL_WINDOW_BYTES } from "./tail-read";
 
 const dirs: string[] = [];
 async function newDir(): Promise<string> {
@@ -24,13 +24,14 @@ const assistant = (content: unknown[]) =>
     message: { role: "assistant", content },
   });
 
-/** `readLastStep` over a freshly written file, at its real size. */
-async function lastStepOf(path: string) {
+/** `readTail` over a freshly written file, at its real size. */
+async function tailOf(path: string) {
   const { size } = await stat(path);
-  return readLastStep(path, size);
+  return readTail(path, size);
 }
+const lastStepOf = async (path: string) => (await tailOf(path)).lastStep;
 
-describe("readLastStep", () => {
+describe("readTail", () => {
   test("a tool_use block becomes the tool step, previewed by its most identifying argument", async () => {
     const path = join(await newDir(), "agent-a.jsonl");
     await writeFile(
@@ -123,5 +124,29 @@ describe("readLastStep", () => {
     const path = join(await newDir(), "agent-empty.jsonl");
     await writeFile(path, "");
     expect(await lastStepOf(path)).toBeNull();
+  });
+
+  test("the same read says whether the newest turn has ended", async () => {
+    const path = join(await newDir(), "agent-done.jsonl");
+    await writeFile(path, assistant([{ type: "text", text: "Working" }]));
+    expect((await tailOf(path)).turnEnded).toBe(false);
+    await appendFile(
+      path,
+      line({
+        type: "assistant",
+        uuid: crypto.randomUUID(),
+        message: {
+          role: "assistant",
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "Done." }],
+        },
+      }),
+    );
+    // The harness appends bookkeeping after the closing piece.
+    await appendFile(path, line({ type: "attachment", attachment: {} }));
+    expect(await tailOf(path)).toEqual({
+      lastStep: { kind: "text", preview: "Done." },
+      turnEnded: true,
+    });
   });
 });

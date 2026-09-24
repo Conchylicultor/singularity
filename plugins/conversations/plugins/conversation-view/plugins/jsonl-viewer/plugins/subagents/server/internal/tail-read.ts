@@ -1,4 +1,12 @@
-import { lastStepOfLines, type LastStep } from "../../core";
+import { lastStepOfLines, turnEndedOfLines, type LastStep } from "../../core";
+
+/** What one bounded read of a transcript's end says about the sub-agent. */
+export interface TailReading {
+  /** `null` = nothing in the window says anything yet (an empty file at birth). */
+  lastStep: LastStep | null;
+  /** Its newest turn has ended (`turnEndedOfLines`) — positive evidence only. */
+  turnEnded: boolean;
+}
 
 /**
  * How much of a sub-agent transcript's END we read to learn what it last did.
@@ -12,21 +20,18 @@ import { lastStepOfLines, type LastStep } from "../../core";
 export const TAIL_WINDOW_BYTES = 64 * 1024;
 
 /**
- * The most recent classifiable step in a transcript, from its last
- * `TAIL_WINDOW_BYTES`.
+ * What a transcript's last `TAIL_WINDOW_BYTES` say: the most recent classifiable
+ * step, and whether the newest turn has ended.
  *
- * This half only bounds the read and parses the window; which line the step is
- * taken FROM is `lastStepOfLines` in core, where the rules live — including the
- * one that matters most, that a trailing `tool_result` defers to the `tool_use`
- * it answers rather than quoting its payload.
- *
- * `null` = nothing in the window says anything yet (an empty file at birth), not
- * "it did nothing".
+ * This half only bounds the read and parses the window, ONCE for both readings;
+ * the rules live in core — `lastStepOfLines` (including the one that matters
+ * most, that a trailing `tool_result` defers to the `tool_use` it answers rather
+ * than quoting its payload) and `turnEndedOfLines`.
  */
-export async function readLastStep(
+export async function readTail(
   path: string,
   size: number,
-): Promise<LastStep | null> {
+): Promise<TailReading> {
   const start = Math.max(0, size - TAIL_WINDOW_BYTES);
   const text = await Bun.file(path).slice(start).text();
   const lines = text.split("\n");
@@ -45,5 +50,8 @@ export async function readLastStep(
       if (!(err instanceof SyntaxError)) throw err;
     }
   }
-  return lastStepOfLines(parsed);
+  return {
+    lastStep: lastStepOfLines(parsed),
+    turnEnded: turnEndedOfLines(parsed),
+  };
 }

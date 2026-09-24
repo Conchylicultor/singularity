@@ -151,6 +151,7 @@ export function useConversationSubagents(
       agentToolEvent,
       taskNotifications,
       requestShape: row.kind === "described" ? row.requestShape : undefined,
+      turnEnded: row.turnEnded,
       conversationStatus,
     });
     return {
@@ -188,6 +189,7 @@ export function useConversationSubagents(
         agentToolEvent,
         taskNotifications,
         requestShape: row?.requestShape,
+        turnEnded: row?.turnEnded,
         conversationStatus,
       });
       const startedAt = row?.startedAt ?? agentToolEvent?.at ?? null;

@@ -10906,6 +10906,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `subagentTranscriptResource`
                   - `SubagentTranscriptSchema`
                   - `toolResultIsOutcome`
+                  - `turnEndedOfLines`
                   - `UndescribedSubagentSchema`
               - Cross-plugin:
                 - Imported by:

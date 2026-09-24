@@ -8,13 +8,14 @@ import {
   signaturePathsOf,
   type SubagentEntry,
 } from "./discovery";
-import { readLastStep } from "./tail-read";
+import { readTail } from "./tail-read";
 
 /** What we remember about one sub-agent's transcript between scans. */
 interface TranscriptState {
   mtimeMs: number;
   size: number;
   lastStep: LastStep | null;
+  turnEnded: boolean;
   lastActivityAt: string;
 }
 
@@ -81,6 +82,8 @@ export async function scanActivityIn(
       startedAt: read.startedAt,
       lastActivityAt: transcript?.lastActivityAt ?? read.startedAt,
       lastStep: transcript?.lastStep ?? null,
+      // No transcript yet: no turn has been taken, let alone ended.
+      turnEnded: transcript?.turnEnded ?? false,
     };
 
     if (read.kind === "unreadable") {
@@ -139,7 +142,7 @@ async function refreshTranscriptState(
   const fresh: TranscriptState = {
     mtimeMs: st.mtimeMs,
     size: st.size,
-    lastStep: await readLastStep(entry.transcriptPath, st.size),
+    ...(await readTail(entry.transcriptPath, st.size)),
     lastActivityAt: new Date(st.mtimeMs).toISOString(),
   };
   state.set(entry.agentId, fresh);

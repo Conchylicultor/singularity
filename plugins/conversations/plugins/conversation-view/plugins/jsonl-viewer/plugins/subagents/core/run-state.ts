@@ -31,6 +31,11 @@ export interface SubagentRunStateInput {
   taskNotifications: readonly TaskNotificationEvent[];
   /** From the sub-agent's meta file. `undefined` = it has not landed yet. */
   requestShape: SubagentRequestShape | undefined;
+  /**
+   * The sub-agent's OWN transcript closes its newest turn (the row's
+   * `turnEnded`). `undefined` = no row yet. Positive evidence only.
+   */
+  turnEnded: boolean | undefined;
   /** The parent conversation's status. */
   conversationStatus: ConversationStatus;
 }
@@ -39,9 +44,8 @@ export interface SubagentRunStateInput {
  * The ONE computation of a sub-agent's state, so the card, the pane title and
  * any future consumer cannot disagree.
  *
- * There is no end-of-run marker inside a sub-agent's own transcript — the last
- * line is an ordinary assistant line — so the file cannot answer this. The
- * PARENT transcript can, and differently per request shape:
+ * The PARENT transcript is the authority where it speaks, and differently per
+ * request shape:
  *
  * - **foreground** — the parent's `tool_result` lands only at completion, so its
  *   presence means finished.
@@ -49,7 +53,19 @@ export interface SubagentRunStateInput {
  *   acknowledgement and means nothing; completion arrives later as the
  *   `task-notification` carrying the same tool-use id.
  * - **unknown shape** (meta not landed) — neither signal can be trusted to mean
- *   completion, so fall through to the parent's own liveness.
+ *   completion, so fall through.
+ *
+ * Then the sub-agent's OWN transcript: the harness streams an assistant message
+ * in pieces with `stop_reason: null`, and only the last piece of an ended turn
+ * carries `end_turn`. For a sub-agent started by ANOTHER sub-agent this is the
+ * only signal there is — its launching call and any notification live in the
+ * spawner's transcript, never the conversation's — so without it such a
+ * sub-agent read "running" until the whole conversation stopped. It is
+ * positive-only (older Claude Code versions never wrote it), and a named
+ * teammate woken by a later message appends a user line, which the next read
+ * sees as an open turn again.
+ *
+ * Last, the parent's own liveness.
  *
  * Deliberately NO staleness timeout as a fourth answer: a sub-agent that has
  * written nothing for five minutes may be inside one long tool call, and a
@@ -73,6 +89,7 @@ export function subagentRunState(
   ) {
     return { kind: "finished" };
   }
+  if (input.turnEnded === true) return { kind: "finished" };
   // No completion recorded. The parent is the only thing that can still be
   // hosting it, so its liveness decides between "still going" and "stopped
   // without ever saying so".

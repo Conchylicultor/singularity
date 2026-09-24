@@ -11,14 +11,14 @@ import { join } from "node:path";
 // an already-loaded module's exports IN PLACE, so a wrapper that reached back
 // through the namespace object would resolve to the mock and call itself
 // forever. Same shape as `watcher.test.ts`'s `realReadChain`, same reason.
-const { readLastStep: realReadLastStep, TAIL_WINDOW_BYTES } =
+const { readTail: realReadTail, TAIL_WINDOW_BYTES } =
   await import("./tail-read");
 const readPaths: string[] = [];
 void mock.module("./tail-read", () => ({
   TAIL_WINDOW_BYTES,
-  readLastStep: (path: string, size: number) => {
+  readTail: (path: string, size: number) => {
     readPaths.push(path);
-    return realReadLastStep(path, size);
+    return realReadTail(path, size);
   },
 }));
 
@@ -253,6 +253,7 @@ describe("scanActivityIn", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.lastStep).toBeNull();
     expect(rows[0]!.lastActivityAt).toBe(rows[0]!.startedAt);
+    expect(rows[0]!.turnEnded).toBe(false);
     expect(readPaths).toHaveLength(0);
   });
 });

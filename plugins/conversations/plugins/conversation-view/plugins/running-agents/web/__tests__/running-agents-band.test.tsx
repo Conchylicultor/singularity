@@ -132,6 +132,7 @@ function entry(over: {
       requestShape: over.requestShape,
       startedAt: ago(over.startedAgo).toISOString(),
       lastActivityAt: ago(over.endedAgo ?? 0).toISOString(),
+      turnEnded: false,
       lastStep,
     },
     state: over.state,

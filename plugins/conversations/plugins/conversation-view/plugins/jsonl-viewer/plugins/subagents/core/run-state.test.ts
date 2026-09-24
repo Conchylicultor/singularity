@@ -37,6 +37,7 @@ describe("subagentRunState", () => {
         agentToolEvent: agentCall(true),
         taskNotifications: [],
         requestShape: "foreground",
+        turnEnded: false,
         conversationStatus: "working",
       }),
     ).toEqual({ kind: "finished" });
@@ -49,6 +50,7 @@ describe("subagentRunState", () => {
         agentToolEvent: agentCall(true),
         taskNotifications: [],
         requestShape: "background",
+        turnEnded: false,
         conversationStatus: "working",
       }),
     ).toEqual({ kind: "running" });
@@ -64,6 +66,7 @@ describe("subagentRunState", () => {
           notification(TOOL_USE_ID),
         ],
         requestShape: "background",
+        turnEnded: false,
         conversationStatus: "working",
       }),
     ).toEqual({ kind: "finished" });
@@ -79,6 +82,7 @@ describe("subagentRunState", () => {
           notification(undefined),
         ],
         requestShape: "background",
+        turnEnded: false,
         conversationStatus: "working",
       }),
     ).toEqual({ kind: "running" });
@@ -91,6 +95,7 @@ describe("subagentRunState", () => {
         agentToolEvent: agentCall(false),
         taskNotifications: [],
         requestShape: "background",
+        turnEnded: false,
         conversationStatus: "waiting",
       }),
     ).toEqual({ kind: "running" });
@@ -103,6 +108,7 @@ describe("subagentRunState", () => {
         agentToolEvent: agentCall(false),
         taskNotifications: [],
         requestShape: "background",
+        turnEnded: false,
         conversationStatus: "done",
       }),
     ).toEqual({ kind: "ended-without-reporting" });
@@ -117,6 +123,7 @@ describe("subagentRunState", () => {
         agentToolEvent: agentCall(true),
         taskNotifications: [],
         requestShape: undefined,
+        turnEnded: false,
         conversationStatus: "working",
       }),
     ).toEqual({ kind: "running" });
@@ -126,6 +133,46 @@ describe("subagentRunState", () => {
         agentToolEvent: undefined,
         taskNotifications: [],
         requestShape: undefined,
+        turnEnded: false,
+        conversationStatus: "done",
+      }),
+    ).toEqual({ kind: "ended-without-reporting" });
+  });
+
+  test("nested teammate: no launching call or notification in the conversation, but its own turn ended — finished", () => {
+    // conv-1790156090-2opp: six teammates started by a sub-agent, whose own
+    // transcripts closed with `end_turn`, read "running" for over an hour
+    // because nothing in the conversation's transcript could ever finish them.
+    expect(
+      subagentRunState({
+        toolUseId: "",
+        agentToolEvent: undefined,
+        taskNotifications: [],
+        requestShape: "background",
+        turnEnded: true,
+        conversationStatus: "working",
+      }),
+    ).toEqual({ kind: "finished" });
+  });
+
+  test("no end marker seen is not evidence either way: liveness still decides", () => {
+    expect(
+      subagentRunState({
+        toolUseId: "",
+        agentToolEvent: undefined,
+        taskNotifications: [],
+        requestShape: "background",
+        turnEnded: false,
+        conversationStatus: "working",
+      }),
+    ).toEqual({ kind: "running" });
+    expect(
+      subagentRunState({
+        toolUseId: "",
+        agentToolEvent: undefined,
+        taskNotifications: [],
+        requestShape: "background",
+        turnEnded: undefined,
         conversationStatus: "done",
       }),
     ).toEqual({ kind: "ended-without-reporting" });
