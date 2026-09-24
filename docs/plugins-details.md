@@ -3844,7 +3844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
@@ -3857,7 +3857,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
-              - `infra/paths.REPO_ROOT`
               - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
             - Exports (values):
               - `checkpointPrototype`
@@ -19691,7 +19690,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
-          - `apps/prototypes/files`
           - `backup`
           - `backup/sources/claude-settings`
           - `backup/sources/project-memory`

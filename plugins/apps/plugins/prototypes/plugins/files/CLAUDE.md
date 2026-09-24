@@ -5,7 +5,7 @@ that drive gallery refresh and iframe auto-reload.
 
 ## Where the content lives: the `apps/prototypes` data dir (`prototypesDir`)
 
-This plugin creates the dir, seeds `_template/` into it, serves it and watches
+This plugin creates the dir, mints prototypes into it, serves it and watches
 it — but it does not DECLARE it. The dir is the Prototypes app's one data dir,
 declared at the app root (`plugins/apps/plugins/prototypes/data-dirs/index.ts`,
 via `defineAppDataDir(prototypesApp, …)`), because an app owns exactly one
@@ -22,9 +22,14 @@ app the moment it is written — no build, no commit, no merge — and it surviv
 the worktree that authored it. Recoverable through the `prototypes` backup
 source (git no longer is the safety net).
 
-The one exception is `_template/`, which IS code: it ships in the repo and
-`seedTemplate()` copies it into the data dir on boot (temp-then-rename, because
-every backend races to do it; never overwrites an existing one).
+The one exception is `_template/`, which IS code: it lives in the repo
+(`prototypes/_template/`) and is read from there, never copied into the data
+dir. A mint copies it from the checkout that is running — main's app from
+main's template, a worktree's deploy or CLI from its own branch's — so a
+template change reaches new prototypes the moment it lands, and can be tried on
+a branch first. (There used to be a copy in the data dir, seeded once on boot
+and never overwritten; every template change after that seed silently stopped
+reaching new prototypes.)
 
 Enforcement splits the same way. The `prototypes:self-contained` check now only
 guards the repo half — the template is valid, and no prototype folder is
@@ -53,19 +58,17 @@ renaming later would change the id. Nothing is lost to a human: every surface
 displays `meta.title`, read out of `<title>`.
 
 `shared/mint.ts` — `mintPrototype({ title? })` → `{ id, dir }` — is the one way a
-prototype comes into existence. It copies the SEEDED `_template/` (not the
-repo's, so it works in a compiled release and inherits an edit the user made to
-the template) into a fresh id, then stamps `<title>` when a name was given. It
+prototype comes into existence. It copies the running checkout's
+`prototypes/_template/` (`templateDir()`) into a fresh id, then stamps `<title>`
+when a name was given. It
 lives in `shared/` because it touches `fs` (so not `core/`, which the browser
 imports) and because `./singularity prototype new` calls it with no backend
 running (so not `server/`) — the same split `shared/read-folder.ts` makes.
 
-`shared/template.ts` holds what the two writers into this directory share:
-`copyFolderOnce()` (temp-then-rename, never overwrites, treats a lost rename race
-as "somebody else got there first") and `seededTemplateDir()`, which seeds the
-template on demand for a CLI mint on a host whose backend has never booted. Boot's
-`seedTemplate()` and the mint both go through it, so the never-overwrite rule and
-the race handling exist once.
+`shared/template.ts` holds `templateDir()` (the running checkout's template;
+throws when it is missing) and `copyFolderOnce()` (temp-then-rename, never
+overwrites, treats a lost rename race as "somebody else got there first"), which
+the mint copies through.
 
 Three consequences worth knowing:
 
@@ -403,7 +406,7 @@ XHR, Chrome blocks file→file XHR, so an external `.jsx` works perfectly throug
 this server and renders nothing on double-click. JSX goes inline. (A plain
 `<script src="fixtures.js">` is an ordinary script load and is fine.)
 
-`_template/` is checked the same way (the seed must itself be self-contained)
+`_template/` is checked the same way (the template must itself be self-contained)
 but its name is not a forbidden reference target. The check catches copied
 *files*, never copied *design*.
 
@@ -421,7 +424,7 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
@@ -434,7 +437,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/endpoints.implement`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
-    - `infra/paths.REPO_ROOT`
     - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
   - Exports (values):
     - `checkpointPrototype`

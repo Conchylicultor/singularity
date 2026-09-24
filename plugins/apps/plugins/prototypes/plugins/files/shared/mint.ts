@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { newPrototypeId, PROTOTYPE_ENTRY_FILE } from "../core";
 import { openHistoryStore } from "./history/store";
-import { copyFolderOnce, seededTemplateDir } from "./template";
+import { copyFolderOnce, templateDir } from "./template";
 
 // THE one way a prototype comes into existence.
 //
@@ -47,7 +47,8 @@ const MAX_MINT_ATTEMPTS = 8;
 export async function mintPrototype(
   opts: { title?: string } = {},
 ): Promise<{ id: string; dir: string }> {
-  const template = await seededTemplateDir();
+  prototypesDir.ensure();
+  const template = await templateDir();
 
   for (let attempt = 0; attempt < MAX_MINT_ATTEMPTS; attempt++) {
     const id = newPrototypeId();

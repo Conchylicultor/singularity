@@ -312,7 +312,6 @@ run everywhere.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
-    - `apps/prototypes/files`
     - `backup`
     - `backup/sources/claude-settings`
     - `backup/sources/project-memory`

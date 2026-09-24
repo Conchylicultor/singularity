@@ -11,7 +11,6 @@ import {
 } from "./history";
 import { prototypePicksLiveResource } from "./picks";
 import { prototypeStatusesLiveResource } from "./status";
-import { seedTemplate } from "./seed";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -139,10 +138,8 @@ export async function startPrototypesWatcher(): Promise<void> {
 
   // @parcel/watcher errors if the watched dir doesn't exist; the content is
   // authored separately (and lives outside any checkout), so ensure it exists
-  // before subscribing. Seeding the template needs the dir too, and needs to
-  // land before the first list so the blank page is there to copy.
+  // before subscribing.
   prototypesDir.ensure();
-  await seedTemplate();
 
   // The tree as it stands at boot is the baseline, so the first genuine edit is
   // what bumps the version — not the first tick after start.
