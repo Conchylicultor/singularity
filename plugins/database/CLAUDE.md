@@ -297,7 +297,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `conversations/all-conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-progress`
-    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
     - `conversations/session-chain`
@@ -350,8 +349,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `tasks`
     - `tasks/auto-start`
     - `tasks/task-category`
-    - `tasks/task-effort`
-    - `tasks/task-preprompt`
     - `tasks/task-source-url`
     - `tasks/tasks-core`
     - `toolchain`

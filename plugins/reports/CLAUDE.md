@@ -30,6 +30,24 @@ same shape as `meta.fanOutPerWindow`, and deliberately no spelling for "never".
 A dismissed row comes back unread on the next occurrence past the window;
 occurrences inside it only bump `count`.
 
+## Readers page over HTTP; a tick says when to re-read
+
+`reports` is excluded from the change feed — a crash loop UPDATEs its hot row
+thousands of times a minute, and live-ticking that amplifies load during the
+very storms it records. So there is no row-carrying live resource. Readers use
+three endpoints in `core/endpoints.ts`: `POST /api/reports/query` (the Reports
+DataView's keyset page), `GET /api/reports/facets` (distinct kinds / sources for
+its enum filters) and `GET /api/reports/:id` (one row, `null` when absent).
+
+They refetch when `reports.revision` moves (`server/internal/revision.ts`): an
+in-process counter, never a DB read, pushed with a 2 s debounce. Every writer
+that changes what a reader sees bumps it — `recordReport` after a
+non-rate-limited upsert (duress-buffered and on-disk-buffered reports replay
+through it), `investigateReport` after linking a task, and the boot noise
+backfill when it flips a flag. The nightly retention sweep does not: a swept row
+disappears on the reader's next refetch. A new writer must call
+`bumpReportsRevision()` or open panes will not see its change.
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -60,7 +78,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `Reports`
 - Server:
   - Contributes:
-    - `resource.declare` "reports"
+    - `resource.declare` "reports.revision"
     - `ConfigV2.Register` "reports"
     - `change-feed-exclusion` "reports"
     - `fork-data-exclusion` "reports"
@@ -72,12 +90,21 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`
+    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/host/duress.createShedBuffer`
     - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
+    - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.compileWhere`
+    - `primitives/data-view/server-query.FieldColumnMap`
+    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/keyset.buildSortKeys`
+    - `primitives/keyset.keyValuesOf`
+    - `primitives/keyset.orderByClauses`
+    - `primitives/keyset.seekPredicate`
     - `shell/notifications.recordNotification`
     - `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
@@ -100,30 +127,45 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportInvestigationSink`
     - `ReportKind`
     - `ReportNoiseRule`
-    - `reportsResource`
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`
-  - Resources: `reports` (push)
+  - Resources: `reports.revision` (push)
   - Routes:
     - `POST /api/reports`
     - `POST /api/reports/:id/investigate`
+    - `POST /api/reports/query`
+    - `GET /api/reports/facets`
+    - `GET /api/reports/:id`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/data-view.FilterGroupSchema`
     - `primitives/live-state.resourceDescriptor`
     - `primitives/pane.defineRoute`
   - Exports (types):
+    - `QueryReportsBody`
+    - `QueryReportsResponse`
     - `Report`
+    - `ReportByIdResponse`
+    - `ReportFacets`
     - `ReportFingerprintContext`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
+    - `getReport`
+    - `queryReports`
+    - `QueryReportsBodySchema`
+    - `QueryReportsResponseSchema`
+    - `ReportByIdResponseSchema`
     - `reportDetailRoute`
+    - `reportFacets`
+    - `ReportFacetsSchema`
     - `ReportSchema`
     - `reportsConfig`
-    - `reportsResource`
+    - `reportsRevisionResource`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:

@@ -11860,7 +11860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
-              - `primitives/live-state.useResource`
+              - `primitives/live-state.usePointResource`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "config"
@@ -11871,13 +11871,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
               - `conversations.conversationTurnCompleted`
               - `conversations.readConversationTurns`
-              - `database.db`
               - `infra/claude-cli.ClaudeCliError`
               - `infra/claude-cli.runClaudePrint`
               - `infra/entities.defaultNow`
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
+              - `infra/query-resource.windowQueryResource`
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core.getConversation`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
@@ -11887,13 +11887,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `turnSummaries`
               - `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
-            - Resources: `turn-summaries` (push)
+            - Resources: `turn-summaries` (keyed, point)
           - Shared:
-            - Exports (types):
-              - `TurnSummariesPayload`
-              - `TurnSummary`
+            - Exports (types): `TurnSummary`
             - Exports (values):
-              - `TurnSummariesPayloadSchema`
               - `turnSummariesResource`
               - `turnSummaryConfig`
               - `TurnSummarySchema`
@@ -12358,6 +12355,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -12385,7 +12384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `_conversationSummaries`
           - `conversationSummariesResource`
         - Register: `mcpTool('submit_conversation_summary')`
-        - Resources: `conversation-summaries` (push)
+        - Resources: `conversation-summaries` (keyed)
         - Routes: `POST /api/conversation-summary/:conversationId/generate`
       - Core:
         - Uses:
@@ -12396,7 +12395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/int/config.intField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
-          - `primitives/live-state.resourceDescriptor`
+          - `primitives/live-state.keyedResourceDescriptor`
         - Exports (types):
           - `ConversationSummary`
           - `Phase`
@@ -12563,7 +12562,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/all-conversations`
       - `conversations/conversation-category`
       - `conversations/conversation-progress`
-      - `conversations/conversation-view/turn-summary`
       - `conversations/conversations-view/grouped`
       - `conversations/conversations-view/queue`
       - `conversations/session-chain`
@@ -12616,8 +12614,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks`
       - `tasks/auto-start`
       - `tasks/task-category`
-      - `tasks/task-effort`
-      - `tasks/task-preprompt`
       - `tasks/task-source-url`
       - `tasks/tasks-core`
       - `toolchain`
@@ -14489,6 +14485,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.navigate`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
+          - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useEndpoint`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -14500,7 +14499,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/launch.LaunchAgentPopover`
-          - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
@@ -16366,6 +16364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities`
           - `primitives/data-view/custom-columns`
           - `release`
+          - `reports`
           - `runs`
       - Server:
         - Exports (types):
@@ -18491,6 +18490,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/queue`
           - `debug/queue-health`
           - `debug/read-set`
+          - `debug/reports`
           - `debug/slow-ops`
           - `debug/slow-ops/cluster`
           - `debug/timeline`
@@ -19864,6 +19864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `conversations/conversation-view/notes`
+          - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
@@ -19871,6 +19872,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/auto-start`
           - `tasks/task-category`
+          - `tasks/task-effort`
+          - `tasks/task-preprompt`
           - `tasks/tasks-core`
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
@@ -27820,6 +27823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/tree`
           - `primitives/data-view/view-order`
           - `release`
+          - `reports`
           - `runs`
           - `tasks/task-deps-tree`
           - `tasks/task-list`
@@ -28116,6 +28120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/union-query`
               - `release`
+              - `reports`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
@@ -29026,6 +29031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource`
           - `primitives/data-view/union-query`
           - `release`
+          - `reports`
           - `runs`
       - Server:
         - Exports (types):
@@ -32243,7 +32249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Reports`
   - Server:
     - Contributes:
-      - `resource.declare` "reports"
+      - `resource.declare` "reports.revision"
       - `ConfigV2.Register` "reports"
       - `change-feed-exclusion` "reports"
       - `fork-data-exclusion` "reports"
@@ -32255,12 +32261,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
       - `database/sql-column.parsedJson`
+      - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/host/duress.createShedBuffer`
       - `infra/host/duress.ShedSummary`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
+      - `primitives/data-view/server-query.augmentServerQuery`
+      - `primitives/data-view/server-query.compileWhere`
+      - `primitives/data-view/server-query.FieldColumnMap`
+      - `primitives/data-view/server-query.OperatorSqlResolver`
+      - `primitives/keyset.buildSortKeys`
+      - `primitives/keyset.keyValuesOf`
+      - `primitives/keyset.orderByClauses`
+      - `primitives/keyset.seekPredicate`
       - `shell/notifications.recordNotification`
       - `shell/notifications.setMutedByMetadata`
     - DB schema: `plugins/reports/server/internal/tables.ts`
@@ -32283,30 +32298,45 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reportInvestigationSink`
       - `ReportKind`
       - `ReportNoiseRule`
-      - `reportsResource`
     - Register:
       - `defineWarmup('reports.backfill-noise')`
       - `defineJob('retention.reports')`
-    - Resources: `reports` (push)
+    - Resources: `reports.revision` (push)
     - Routes:
       - `POST /api/reports`
       - `POST /api/reports/:id/investigate`
+      - `POST /api/reports/query`
+      - `GET /api/reports/facets`
+      - `GET /api/reports/:id`
   - Core:
     - Uses:
       - `config_v2.defineConfig`
       - `fields/int/config.intField`
+      - `infra/endpoints.defineEndpoint`
+      - `primitives/data-view.FilterGroupSchema`
       - `primitives/live-state.resourceDescriptor`
       - `primitives/pane.defineRoute`
     - Exports (types):
+      - `QueryReportsBody`
+      - `QueryReportsResponse`
       - `Report`
+      - `ReportByIdResponse`
+      - `ReportFacets`
       - `ReportFingerprintContext`
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
+      - `getReport`
+      - `queryReports`
+      - `QueryReportsBodySchema`
+      - `QueryReportsResponseSchema`
+      - `ReportByIdResponseSchema`
       - `reportDetailRoute`
+      - `reportFacets`
+      - `ReportFacetsSchema`
       - `ReportSchema`
       - `reportsConfig`
-      - `reportsResource`
+      - `reportsRevisionResource`
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
@@ -34256,7 +34286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.useResource`
+          - `primitives/live-state.usePointResources`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
@@ -34266,9 +34296,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "task-efforts"
           - `taskLaunchServer` "effort"
         - Uses:
-          - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
+          - `infra/query-resource.windowQueryResource`
           - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
@@ -34278,7 +34308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setTaskEffort`
           - `taskEffortsResource`
           - `tasksEffort`
-        - Resources: `task-efforts` (push)
+        - Resources: `task-efforts` (keyed, point)
         - Routes:
           - `PUT /api/task-efforts/:taskId`
           - `DELETE /api/task-efforts/:taskId`
@@ -34291,14 +34321,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `conversations`
       - Shared:
-        - Exports (types):
-          - `TaskEffort`
-          - `TaskEffortsPayload`
+        - Exports (types): `TaskEffort`
         - Exports (values):
           - `deleteTaskEffort`
           - `putTaskEffort`
           - `TaskEffortSchema`
-          - `TaskEffortsPayloadSchema`
           - `taskEffortsResource`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
       - Web:
@@ -34413,7 +34440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.useResource`
+          - `primitives/live-state.usePointResources`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
@@ -34423,9 +34450,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "task-preprompts"
           - `taskLaunchServer` "preprompt"
         - Uses:
-          - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
+          - `infra/query-resource.windowQueryResource`
           - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
@@ -34435,7 +34462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setTaskPreprompt`
           - `taskPrepromptsResource`
           - `tasksPreprompt`
-        - Resources: `task-preprompts` (push)
+        - Resources: `task-preprompts` (keyed, point)
         - Routes:
           - `PUT /api/task-preprompts/:taskId`
           - `DELETE /api/task-preprompts/:taskId`
@@ -34447,14 +34474,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/conversation-preprompt`
       - Shared:
-        - Exports (types):
-          - `TaskPreprompt`
-          - `TaskPrepromptsPayload`
+        - Exports (types): `TaskPreprompt`
         - Exports (values):
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-          - `TaskPrepromptsPayloadSchema`
           - `taskPrepromptsResource`
     - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt.
       - Web:

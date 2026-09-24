@@ -7,6 +7,7 @@ import {
 import { _reports } from "./tables";
 import { reportInvestigationSink } from "./investigation-sink";
 import { ReportKind } from "./report-kinds";
+import { bumpReportsRevision } from "./revision";
 
 // Appended to every report-filed task. The agent that picks one up is about to
 // debug, so point them at the debugging map first — it routes them to the right
@@ -93,6 +94,9 @@ export async function investigateReport(
             .update(_reports)
             .set({ taskId: result.taskId, updatedAt: new Date() })
             .where(eq(_reports.id, row.id));
+          // The row now links a task: open readers (the detail pane's
+          // "View task" button, the list) refetch.
+          bumpReportsRevision();
         }
         return { taskId: result.taskId };
       }),

@@ -14,6 +14,7 @@
     - `infra/query-resource`
     - `primitives/data-view/union-query`
     - `release`
+    - `reports`
     - `runs`
 - Server:
   - Exports (types):

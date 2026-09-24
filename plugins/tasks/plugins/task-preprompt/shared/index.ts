@@ -1,7 +1,3 @@
-export {
-  TaskPrepromptSchema,
-  TaskPrepromptsPayloadSchema,
-  taskPrepromptsResource,
-} from "./schemas";
-export type { TaskPreprompt, TaskPrepromptsPayload } from "./schemas";
+export { TaskPrepromptSchema, taskPrepromptsResource } from "./schemas";
+export type { TaskPreprompt } from "./schemas";
 export { putTaskPreprompt, deleteTaskPreprompt } from "./endpoints";

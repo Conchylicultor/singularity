@@ -3,10 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEndpointMutation,
   getEndpointErrorMessage,
@@ -18,11 +15,9 @@ import {
   Stack,
   selfClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  conversationSummariesResource,
-  type ConversationSummary,
-} from "../../core";
+import type { ConversationSummary } from "../../core";
 import { generateConversationSummary } from "../../shared/endpoints";
+import { useLatestConversationSummary } from "../hooks";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 
 // Bound the spinner so a wedged Sonnet conversation eventually surfaces
@@ -32,16 +27,19 @@ const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
   const convId = conversationPane.useRouteEntry()?.params.convId;
-  const summariesResult = useResource(conversationSummariesResource);
+  // No conversation in the route → there is nothing to summarise, so nothing
+  // to subscribe to. Split rather than subscribe with a placeholder id: the
+  // hook only runs once the id is known.
+  if (!convId) return null;
+  return <ConversationSummaryPane convId={convId} />;
+}
+
+function ConversationSummaryPane({ convId }: { convId: string }) {
+  const latestResult = useLatestConversationSummary(convId);
 
   return (
-    <ResourceView resource={summariesResult} fallback={<Loading />}>
-      {(summariesData) => (
-        <SummaryPaneInner
-          convId={convId}
-          latest={summariesData[convId ?? ""]?.[0]}
-        />
-      )}
+    <ResourceView resource={latestResult} fallback={<Loading />}>
+      {(latest) => <SummaryPaneInner convId={convId} latest={latest} />}
     </ResourceView>
   );
 }
@@ -50,8 +48,8 @@ function SummaryPaneInner({
   convId,
   latest,
 }: {
-  convId: string | undefined;
-  latest: ConversationSummary | undefined;
+  convId: string;
+  latest: ConversationSummary | null;
 }) {
   const generate = useEndpointMutation(generateConversationSummary, {
     onError: (err) =>
@@ -119,7 +117,6 @@ function SummaryPaneInner({
 
   async function onSummarize() {
     if (pendingSince !== null) return;
-    if (!convId) return;
     setPendingSince(Date.now());
     try {
       await generate.mutateAsync({ params: { conversationId: convId } });

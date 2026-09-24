@@ -15,6 +15,7 @@ import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
+import { bumpReportsRevision } from "./revision";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { ReportKind } from "./report-kinds";
@@ -333,7 +334,9 @@ export async function recordReport(
   // gating on it would permanently mute any long-lived singleton fingerprint
   // (e.g. the slow-op rollup) after its first burst.
   if (limited) {
-    // Keep the row's count accurate but don't churn the bus.
+    // Keep the row's count accurate but don't churn the bus: no bell write and
+    // no `reports.revision` bump, so an open Reports pane stops refetching while
+    // this fingerprint bursts (its count catches up on the next unlimited one).
     return {
       outcome: "recorded",
       reportId: row.id,
@@ -341,6 +344,10 @@ export async function recordReport(
       rateLimited: true,
     };
   }
+
+  // The durable write landed: tell open Reports readers to refetch (debounced
+  // server-side, so a storm costs one push per window).
+  bumpReportsRevision();
 
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
   // as benign version-skew at a glance.

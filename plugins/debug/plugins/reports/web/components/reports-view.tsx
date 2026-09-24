@@ -1,24 +1,32 @@
 import { useMemo } from "react";
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
-import { reportsResource } from "@plugins/reports/core";
-import type { Report } from "@plugins/reports/core";
+import {
+  fetchEndpoint,
+  useEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
+import { queryReports, reportFacets } from "@plugins/reports/core";
+import type { Report, ReportFacets } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import {
+  useRefetchOnReportsRevision,
+  useReportsChangeTick,
+} from "../internal/revision";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const REPORTS_VIEW = defineDataView("debug.reports");
 
+// The rows are server-paged (POST /api/reports/query), so only a window is ever
+// loaded here. Sort / filter / search compile to SQL server-side; every
+// sortable/filterable field id below must match a key of the server's
+// COLUMN_MAP (plugins/reports/server/internal/handle-query.ts).
 export function ReportsView({
   selectedId,
   onSelect,
@@ -26,54 +34,38 @@ export function ReportsView({
   selectedId?: string;
   onSelect: (id: string) => void;
 }) {
-  const result = useResource(reportsResource);
-  // One render path for both states (mirrors the sonata library): while
-  // loading, DataView renders its own skeleton via `loading` and the field
-  // schema is still built from the (empty) rows.
-  return matchResource(result, {
-    pending: () => (
-      <ReportsTable
-        rows={[]}
-        loading
-        selectedId={selectedId}
-        onSelect={onSelect}
-      />
-    ),
-    error: () => (
-      <ReportsTable
-        rows={[]}
-        loading
-        selectedId={selectedId}
-        onSelect={onSelect}
-      />
-    ),
-    ready: (rows) => (
-      <ReportsTable
-        rows={rows}
-        loading={false}
-        selectedId={selectedId}
-        onSelect={onSelect}
-      />
-    ),
-  });
+  const changeTick = useReportsChangeTick();
+  // The enum filter options: every kind / source in the table, not just the
+  // loaded page. Refetched in place when the tick moves.
+  const facets = useEndpoint(reportFacets, {});
+  useRefetchOnReportsRevision(facets.refetch);
+  // While the facets are unknown the enum fields carry no option list — never an
+  // empty one, which would claim the table has no kinds.
+  const fields = useReportFields(facets.data);
+
+  return (
+    <DataView<Report>
+      rows={[]}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["table", "list"]}
+      defaultView="table"
+      storageKey={REPORTS_VIEW}
+      selectedRowId={selectedId}
+      onRowActivate={(r) => onSelect(r.id)}
+      emptyState={<>No reports recorded yet.</>}
+      dataSource={{
+        changeTick,
+        fetchPage: (args) => fetchEndpoint(queryReports, {}, { body: args }),
+      }}
+    />
+  );
 }
 
-function ReportsTable({
-  rows,
-  loading,
-  selectedId,
-  onSelect,
-}: {
-  rows: Report[];
-  loading: boolean;
-  selectedId?: string;
-  onSelect: (id: string) => void;
-}) {
-  // Enum options derived from the live rows so the filter chip lists exactly
-  // the kinds / sources currently present.
-  const fields: FieldDef<Report>[] = useMemo(() => {
-    const distinct = (pick: (r: Report) => string) =>
-      [...new Set(rows.map(pick))].sort().map((v) => ({ value: v, label: v }));
+function useReportFields(facets: ReportFacets | undefined): FieldDef<Report>[] {
+  return useMemo(() => {
+    const optionsOf = (values: string[] | undefined) =>
+      values?.map((v) => ({ value: v, label: v }));
 
     return [
       {
@@ -81,7 +73,7 @@ function ReportsTable({
         label: "Kind",
         type: "enum",
         value: (r) => r.kind,
-        options: distinct((r) => r.kind),
+        options: optionsOf(facets?.kinds),
         cell: (r) => (
           <Badge variant="muted" className="font-mono">
             {r.kind}
@@ -96,7 +88,7 @@ function ReportsTable({
         label: "Source",
         type: "enum",
         value: (r) => r.source,
-        options: distinct((r) => r.source),
+        options: optionsOf(facets?.sources),
         cell: (r) => (
           <Badge variant="muted" className="font-mono">
             {r.source}
@@ -145,7 +137,7 @@ function ReportsTable({
         width: "4rem",
       },
       {
-        id: "lastSeen",
+        id: "lastSeenAt",
         label: "When",
         type: "date",
         value: (r) => r.lastSeenAt,
@@ -174,8 +166,9 @@ function ReportsTable({
         id: "summary",
         label: "Summary",
         type: "text",
-        // `value` returns the human message so full-text search matches the
-        // summary; the visible cell still routes through the per-kind slot.
+        // `value` is the human message (search runs server-side, over the
+        // message / kind / fingerprint); the visible cell routes through the
+        // per-kind slot.
         value: (r) => r.message,
         cell: (r) => <Reports.KindView.Dispatch report={r} />,
         primary: true,
@@ -183,22 +176,7 @@ function ReportsTable({
         width: "minmax(0,2fr)",
       },
     ];
-  }, [rows]);
-
-  return (
-    <DataView<Report>
-      rows={rows}
-      fields={fields}
-      rowKey={(r) => r.id}
-      views={["table", "list"]}
-      defaultView="table"
-      storageKey={REPORTS_VIEW}
-      loading={loading}
-      selectedRowId={selectedId}
-      onRowActivate={(r) => onSelect(r.id)}
-      emptyState={<>No reports recorded yet.</>}
-    />
-  );
+  }, [facets]);
 }
 
 /**

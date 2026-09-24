@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import type { z } from "zod";
+import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -14,14 +14,24 @@ export const taskPrepromptShape = defineExtensionShape({
 export const TaskPrepromptSchema = taskPrepromptShape.schema;
 export type TaskPreprompt = z.infer<typeof TaskPrepromptSchema>;
 
-export const TaskPrepromptsPayloadSchema = z.record(
-  z.string(),
-  TaskPrepromptSchema,
-);
-export type TaskPrepromptsPayload = z.infer<typeof TaskPrepromptsPayloadSchema>;
-
-export const taskPrepromptsResource = resourceDescriptor<TaskPrepromptsPayload>(
-  "task-preprompts",
-  TaskPrepromptsPayloadSchema,
-  {},
-);
+// Bounded POINT resource. The selection is 1:1 with its task, so the point
+// identity IS the side-table's pk (`taskId`, stored as `parent_id`): one
+// subscribed id names exactly one task's preprompt.
+//
+// Every consumer asks about ONE task and needs an exact answer — the launch
+// option's picker both reads and writes this row — so `point` is the right bound
+// rather than a window, which could silently render a selected preprompt as
+// "None". The change feed routes a write to a tuple iff the changed ids
+// intersect its set, so selecting one task's preprompt never sweeps the table.
+//
+// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// the bounded working-set contract).
+//
+// The server half is compiled from the extension handle in
+// `server/internal/resource.ts`; the wire shape is `TaskPreprompt[]`.
+export const taskPrepromptsResource =
+  pointQueryResourceDescriptor<TaskPreprompt>(
+    "task-preprompts",
+    TaskPrepromptSchema,
+    "taskId",
+  );

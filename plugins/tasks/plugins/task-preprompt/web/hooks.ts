@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import {
   mapResource,
-  useResource,
+  usePointResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { taskPrepromptsResource } from "../shared/schemas";
@@ -13,8 +14,11 @@ import { taskPrepromptsResource } from "../shared/schemas";
 export function useTaskPreprompt(
   taskId: string | null | undefined,
 ): ResourceResult<string | null> {
-  const result = useResource(taskPrepromptsResource);
-  return mapResource(result, (byTask) =>
-    taskId ? (byTask[taskId]?.prepromptId ?? null) : null,
-  );
+  // `usePointResources` rather than `usePointResource`: this hook's signature is
+  // nullish-tolerant and a hook cannot be called conditionally. An empty id set
+  // encodes to `{ ids: "" }`, which the server's point loader short-circuits with
+  // no query at all.
+  const ids = useMemo(() => (taskId ? [taskId] : []), [taskId]);
+  const result = usePointResources(taskPrepromptsResource, ids);
+  return mapResource(result, (rows) => rows[0]?.prepromptId ?? null);
 }

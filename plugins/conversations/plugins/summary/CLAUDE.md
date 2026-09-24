@@ -18,6 +18,8 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
@@ -45,7 +47,7 @@
     - `_conversationSummaries`
     - `conversationSummariesResource`
   - Register: `mcpTool('submit_conversation_summary')`
-  - Resources: `conversation-summaries` (push)
+  - Resources: `conversation-summaries` (keyed)
   - Routes: `POST /api/conversation-summary/:conversationId/generate`
 - Core:
   - Uses:
@@ -56,7 +58,7 @@
     - `fields/int/config.intField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
-    - `primitives/live-state.resourceDescriptor`
+    - `primitives/live-state.keyedResourceDescriptor`
   - Exports (types):
     - `ConversationSummary`
     - `Phase`

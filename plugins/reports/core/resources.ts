@@ -27,8 +27,16 @@ export const ReportSchema = z.object({
 });
 export type Report = z.infer<typeof ReportSchema>;
 
-export const reportsResource = resourceDescriptor<Report[]>(
-  "reports",
-  z.array(ReportSchema),
-  [],
+// Scalar invalidation tick for the Reports list and detail pane. The `reports`
+// table is excluded from the change feed (a crash storm UPDATEs its hot rows
+// thousands of times a minute), so nothing pushes rows. Instead the server holds
+// an in-process counter it bumps after a durable write that would change what a
+// reader sees, and pushes it at most once per debounce window. Readers keep it OUT
+// of their query key and refetch the page / row in place when `rev` moves (the
+// `runs.revision` precedent). In memory: after a restart it reads 0 again, and a
+// freshly mounted reader fetches over HTTP anyway.
+export const reportsRevisionResource = resourceDescriptor<{ rev: number }>(
+  "reports.revision",
+  z.object({ rev: z.number().int() }),
+  { rev: 0 },
 );

@@ -1,17 +1,13 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import {
-  reportsRootRoute,
-  reportDetailRoute,
-  reportsResource,
-} from "@plugins/reports/core";
+import { reportsRootRoute, reportDetailRoute } from "@plugins/reports/core";
 import { ReportsView } from "./components/reports-view";
 import { ReportDetail } from "./components/report-detail";
+import { useReport } from "./internal/use-report";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. Component identifiers below are function
@@ -23,10 +19,22 @@ export const reportsPane = Pane.define({
   component: ReportsBody,
 });
 
-function useResolveReport({ reportId }: { reportId: string }) {
-  const result = useResource(reportsResource);
-  if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((r) => r.id === reportId) };
+function useResolveReport({ reportId }: { reportId: string }): {
+  pending: boolean;
+  found: boolean;
+} {
+  const read = useReport(reportId);
+  switch (read.status) {
+    case "found":
+      return { pending: false, found: true };
+    case "missing":
+      return { pending: false, found: false };
+    // A failed read must not discard a deep link: it stays pending and the
+    // body renders what broke.
+    case "pending":
+    case "error":
+      return { pending: true, found: false };
+  }
 }
 
 export const reportDetailPane = Pane.define({

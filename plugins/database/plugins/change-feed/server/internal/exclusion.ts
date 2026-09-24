@@ -31,7 +31,8 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // fires only on `origin === identityTable`, which an excluded (trigger-less) table
 // can never produce — so the policy would be dead config that silently degrades
 // the resource to hydrate-on-mount. A resource that reads an excluded table must
-// be a plain push resource (no identityTable), like reportsResource/slowOpsResource.
+// be a plain push resource (no identityTable), like slowOpsResource — or an
+// endpoint read refreshed by an in-process revision tick, like `reports.revision`.
 export const ExcludeFromChangeFeed = defineServerContribution<{
   table: PgTable;
   reason: string;

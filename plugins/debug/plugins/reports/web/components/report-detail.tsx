@@ -1,12 +1,10 @@
 import { MdAutoFixHigh, MdOpenInNew } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
-import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports, investigate } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -22,14 +20,16 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
+import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { reportDetailPane } from "../panes";
+import { useReport } from "../internal/use-report";
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
-  const result = useResource(reportsResource);
+  const read = useReport(reportId);
   const { serverGraph } = useStaleFrontend();
 
-  if (result.pending) {
+  if (read.status === "pending") {
     return (
       <PaneChrome pane={reportDetailPane} title="Report">
         <Loading />
@@ -37,19 +37,21 @@ export function ReportDetail() {
     );
   }
 
-  const report = result.data.find((r) => r.id === reportId);
-  if (!report) {
+  if (read.status !== "found") {
     return (
       <PaneChrome pane={reportDetailPane} title="Report">
         <Center className="h-full">
           <Text as="div" variant="body" className="text-muted-foreground">
-            Report not found.
+            {read.status === "missing"
+              ? "Report not found."
+              : `Could not load this report: ${getEndpointErrorMessage(read.error)}`}
           </Text>
         </Center>
       </PaneChrome>
     );
   }
 
+  const { report, refetch } = read;
   return (
     <PaneChrome pane={reportDetailPane} title={report.kind}>
       <ControlSizeProvider size="xs">
@@ -65,7 +67,7 @@ export function ReportDetail() {
               {report.message}
             </Text>
 
-            <Investigate report={report} />
+            <Investigate report={report} onLinked={refetch} />
 
             <Stack gap="sm">
               <Field label="Kind" value={report.kind} mono />
@@ -189,7 +191,14 @@ function TimeField({ label, date }: { label: string; date: Date }) {
   );
 }
 
-function Investigate({ report }: { report: Report }) {
+function Investigate({
+  report,
+  onLinked,
+}: {
+  report: Report;
+  /** Re-read the row once investigate has linked its task. */
+  onLinked: () => Promise<unknown>;
+}) {
   if (report.taskId != null) {
     const taskId = report.taskId;
     return (
@@ -227,6 +236,9 @@ function Investigate({ report }: { report: Report }) {
         align="start"
         getRequest={async (userText) => {
           const { taskId } = await investigate(report.id);
+          // The row now carries the task id: show "View task" without waiting
+          // for the debounced `reports.revision` tick.
+          void onLinked();
           const parts: string[] = [];
           parts.push(`## Report (${report.kind})\n`);
           parts.push(`**Source:** ${report.source}`);

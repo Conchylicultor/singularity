@@ -43,16 +43,23 @@ describe("findUncoveredScopePolicies", () => {
   });
 
   test("excluded table (uncovered) → flagged with reason 'excluded'", () => {
-    const resources = scoped(["reportsResource", "reports"]);
+    const resources = scoped(["crash-log", "crash_log"]);
     expect(
-      findUncovered(resources, /* covered */ [], /* excluded */ ["reports"]),
-    ).toEqual([{ key: "reportsResource", identityTable: "reports", reason: "excluded" }]);
+      findUncovered(resources, /* covered */ [], /* excluded */ ["crash_log"]),
+    ).toEqual([
+      { key: "crash-log", identityTable: "crash_log", reason: "excluded" },
+    ]);
   });
 
   test("rollup table (uncovered, feed-exempt) → flagged with reason 'rollup'", () => {
     const resources = scoped(["r", "task_latest_conversation"]);
     expect(
-      findUncovered(resources, [], [], /* exempt */ ["task_latest_conversation"]),
+      findUncovered(
+        resources,
+        [],
+        [],
+        /* exempt */ ["task_latest_conversation"],
+      ),
     ).toEqual([
       { key: "r", identityTable: "task_latest_conversation", reason: "rollup" },
     ]);
@@ -70,7 +77,9 @@ describe("findUncoveredScopePolicies", () => {
     // Defensive: exclusion/exempt sets only classify; they never add a violation
     // for a table that DID get a trigger.
     const resources = scoped(["ok", "tasks"]);
-    expect(findUncovered(resources, ["tasks"], ["tasks"], ["tasks"])).toEqual([]);
+    expect(findUncovered(resources, ["tasks"], ["tasks"], ["tasks"])).toEqual(
+      [],
+    );
   });
 
   test("mixed set → each uncovered resource classified, covered ones dropped", () => {
@@ -176,7 +185,11 @@ describe("formatUncoveredScopeError", () => {
   test("groups by reason, each with its own heading and fix", () => {
     const msg = formatUncoveredScopeError([
       { key: "exc", identityTable: "reports", reason: "excluded" },
-      { key: "roll", identityTable: "task_latest_conversation", reason: "rollup" },
+      {
+        key: "roll",
+        identityTable: "task_latest_conversation",
+        reason: "rollup",
+      },
       { key: "typo", identityTable: "taskz", reason: "uncovered" },
     ]);
     expect(msg).toContain("3 keyed live-state");
@@ -184,7 +197,9 @@ describe("formatUncoveredScopeError", () => {
     expect(msg).toContain("rollup");
     expect(msg).toContain("VIEW");
     // Section order is excluded → rollup → uncovered.
-    expect(msg.indexOf("ExcludeFromChangeFeed")).toBeLessThan(msg.indexOf("rollup"));
+    expect(msg.indexOf("ExcludeFromChangeFeed")).toBeLessThan(
+      msg.indexOf("rollup"),
+    );
   });
 
   test("within a section, violations are listed one per line, sorted", () => {

@@ -1,5 +1,5 @@
 import { MdWarning, MdArrowForward } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { usePointResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   CollapsibleChevron,
   useCollapsible,
@@ -46,10 +46,10 @@ export function TurnSummaryCard({
 }: {
   conversation: ConversationRecord;
 }) {
-  const result = useResource(turnSummariesResource);
+  const result = usePointResource(turnSummariesResource, conversation.id);
   const { open, toggle } = useCollapsible({ defaultOpen: true });
   if (result.pending) return null;
-  const summary = result.data[conversation.id];
+  const summary = result.data;
   if (!summary) return null;
 
   const caveats = parseBullets(summary.caveats);

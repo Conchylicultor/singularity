@@ -1,7 +1,3 @@
-export {
-  TurnSummarySchema,
-  TurnSummariesPayloadSchema,
-  turnSummariesResource,
-} from "./schemas";
-export type { TurnSummary, TurnSummariesPayload } from "./schemas";
+export { TurnSummarySchema, turnSummariesResource } from "./schemas";
+export type { TurnSummary } from "./schemas";
 export { turnSummaryConfig } from "./config";

@@ -1893,6 +1893,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/tree`
     - `primitives/data-view/view-order`
     - `release`
+    - `reports`
     - `runs`
     - `tasks/task-deps-tree`
     - `tasks/task-list`

@@ -40,7 +40,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.useResource`
+    - `primitives/live-state.usePointResource`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
@@ -51,13 +51,13 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `config_v2.getConfig`
     - `conversations.conversationTurnCompleted`
     - `conversations.readConversationTurns`
-    - `database.db`
     - `infra/claude-cli.ClaudeCliError`
     - `infra/claude-cli.runClaudePrint`
     - `infra/entities.defaultNow`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
+    - `infra/query-resource.windowQueryResource`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
@@ -67,13 +67,10 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `turnSummaries`
     - `turnSummariesResource`
   - Register: `defineJob('turn-summary.generate')`
-  - Resources: `turn-summaries` (push)
+  - Resources: `turn-summaries` (keyed, point)
 - Shared:
-  - Exports (types):
-    - `TurnSummariesPayload`
-    - `TurnSummary`
+  - Exports (types): `TurnSummary`
   - Exports (values):
-    - `TurnSummariesPayloadSchema`
     - `turnSummariesResource`
     - `turnSummaryConfig`
     - `TurnSummarySchema`

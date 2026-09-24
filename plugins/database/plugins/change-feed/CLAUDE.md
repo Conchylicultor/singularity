@@ -113,8 +113,9 @@ contribution/registry sets:
   query-resource-compiled resources uniformly, because the check reads the
   runtime's stored `identityTable` string, not source text. Fix: point the resource
   at a real triggered base table (not a view/rollup), drop the exclusion, or make
-  it a plain push resource with no `identityTable` (like
-  `reportsResource`/`slowOpsResource`).
+  it a plain push resource with no `identityTable` (like `slowOpsResource`), or
+  serve it from an endpoint refreshed by an in-process revision tick (like the
+  Reports DataView and its `reports.revision` tick).
 
 ## The LISTEN connection
 

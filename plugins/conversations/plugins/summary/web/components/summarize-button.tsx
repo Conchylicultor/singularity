@@ -1,23 +1,19 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import {
-  conversationSummariesResource,
-  type ConversationSummary,
-} from "../../core";
+import { useLatestConversationSummary } from "../hooks";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
 
 export function SummarizeButton() {
   const { convId } = conversationPane.useParams();
-  const summariesResult = useResource(conversationSummariesResource);
+  const latestResult = useLatestConversationSummary(convId);
   const { isOpen, toggle } = convSummaryPane.useToggle({});
 
   // Render disabled-neutral while pending — badge depends on data so we must
   // not flash the wrong (no-badge) state during the load window.
-  if (summariesResult.pending) {
+  if (latestResult.pending) {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}
@@ -34,8 +30,7 @@ export function SummarizeButton() {
     );
   }
 
-  const summaries: ConversationSummary[] | undefined = summariesResult.data[convId];
-  const latest = summaries?.[0];
+  const latest = latestResult.data;
 
   if (!latest) {
     return (

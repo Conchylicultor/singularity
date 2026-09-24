@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import type { z } from "zod";
+import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { StoredEffortSchema } from "@plugins/conversations/plugins/effort-provider/core";
@@ -20,11 +20,23 @@ export const taskEffortShape = defineExtensionShape({
 export const TaskEffortSchema = taskEffortShape.schema;
 export type TaskEffort = z.infer<typeof TaskEffortSchema>;
 
-export const TaskEffortsPayloadSchema = z.record(z.string(), TaskEffortSchema);
-export type TaskEffortsPayload = z.infer<typeof TaskEffortsPayloadSchema>;
-
-export const taskEffortsResource = resourceDescriptor<TaskEffortsPayload>(
+// Bounded POINT resource. The mode is 1:1 with its task, so the point identity
+// IS the side-table's pk (`taskId`, stored as `parent_id`): one subscribed id
+// names exactly one task's mode.
+//
+// Every consumer asks about ONE task and needs an exact answer — the launch
+// option's picker both reads and writes this row — so `point` is the right bound
+// rather than a window, which could silently render a set mode as "none". The
+// change feed routes a write to a tuple iff the changed ids intersect its set,
+// so setting one task's mode never sweeps the table.
+//
+// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// the bounded working-set contract).
+//
+// The server half is compiled from the extension handle in
+// `server/internal/resource.ts`; the wire shape is `TaskEffort[]`.
+export const taskEffortsResource = pointQueryResourceDescriptor<TaskEffort>(
   "task-efforts",
-  TaskEffortsPayloadSchema,
-  {},
+  TaskEffortSchema,
+  "taskId",
 );

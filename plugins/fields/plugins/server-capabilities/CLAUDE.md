@@ -136,6 +136,7 @@ call.
     - `infra/entities`
     - `primitives/data-view/custom-columns`
     - `release`
+    - `reports`
     - `runs`
 - Server:
   - Exports (types):

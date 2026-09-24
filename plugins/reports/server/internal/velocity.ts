@@ -1,6 +1,6 @@
 // In-process sliding window per fingerprint. A fingerprint firing more than
 // THRESHOLD times within WINDOW_MS trips the crashloop flag; while tripped,
-// `recordReport` stops touching the linked task and skips the resource notify.
+// `recordReport` skips the bell notification and the `reports.revision` bump.
 // State is ephemeral by design — a process restart breaks the loop anyway.
 
 const WINDOW_MS = 60_000;

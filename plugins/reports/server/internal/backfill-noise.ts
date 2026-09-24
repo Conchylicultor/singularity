@@ -5,6 +5,7 @@ import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server"
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "./tables";
 import { isNoiseReport } from "./noise-rules";
+import { bumpReportsRevision } from "./revision";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
 // the stored `reports.noise` flag and the linked notification's `muted` flag.
@@ -30,6 +31,7 @@ export async function backfillNoiseClassification(): Promise<void> {
     })
     .from(_reports);
 
+  let flipped = false;
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
   for (const row of rows) {
@@ -52,9 +54,12 @@ export async function backfillNoiseClassification(): Promise<void> {
     });
     if (noise !== row.noise) {
       await db.update(_reports).set({ noise }).where(eq(_reports.id, row.id));
+      flipped = true;
     }
     (noise ? noiseIds : signalIds).push(row.id);
   }
+  // A reclassified row changes the Noise column of an open Reports pane.
+  if (flipped) bumpReportsRevision();
 
   // Reconcile EVERY linked notification's `muted` to its report row's current
   // noise — not just rows whose flag flipped this boot. A notification can

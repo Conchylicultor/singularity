@@ -5,9 +5,19 @@ Debug app pane listing every recorded report, including low-signal "noise" crash
 never hidden here. A crash is the first `kind` of report; future kinds (e.g. slow
 operations) appear here too.
 
-Opened from the Debug sidebar ("Reports"). Reads the web-safe `reportsResource`
-live-state handle from `@plugins/reports/core`, so the list updates in real time as
-new reports are recorded.
+Opened from the Debug sidebar ("Reports"). The list is a server-paged DataView
+over `POST /api/reports/query` (sort / filter / search run as SQL, keyset
+pagination); the Kind and Source filter options come from `GET /api/reports/facets`,
+and the detail pane (and its route resolve) reads one row through
+`GET /api/reports/:id`. All three are declared in `@plugins/reports/core`.
+
+Nothing pushes rows: the `reports` table is excluded from the change feed. Every
+surface instead refetches in place when the `reports.revision` tick moves — an
+in-process counter the reports engine bumps after a write, pushed at most once
+per 2 s — so the list, the filter options and an open detail pane stay current
+through a crash storm at a bounded cost. The sortable / filterable field ids in
+`reports-view.tsx` must match the server's `COLUMN_MAP` keys in
+`plugins/reports/server/internal/handle-query.ts`.
 
 Each row shows:
 
@@ -39,6 +49,9 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -50,7 +63,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/launch.LaunchAgentPopover`
-    - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "reports_last_seen_idx" ON "reports" USING btree ("last_seen_at","id");
