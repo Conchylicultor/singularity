@@ -31,7 +31,9 @@ const out = arg("out", "/tmp/allow-chip");
 const tokenPath = join(worktree, token);
 
 if (existsSync(tokenPath)) {
-  throw new Error(`${tokenPath} already exists — refusing to remove a bypass the user created`);
+  throw new Error(
+    `${tokenPath} already exists — refusing to remove a bypass the user created`,
+  );
 }
 
 const r = report("allow-monitor chip is pushed");
