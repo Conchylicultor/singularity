@@ -60,6 +60,8 @@ await withBrowser(async (h) => {
     await kinds(),
     `A:${PROTOTYPE_FRAME_KIND}`,
   );
+  // The size a fresh canvas opens at — the one the prototype declares.
+  const freshChip = await chip();
 
   // Work the canvas: the real app, a copy of A, a preset, a fixed zoom.
   await addSource(page, "Real app");
@@ -96,7 +98,7 @@ await withBrowser(async (h) => {
     await kinds(),
     `A:${PROTOTYPE_FRAME_KIND}`,
   );
-  r.eq("…at the default size", (await chip()).startsWith("Responsive"), true);
+  r.eq("…at the size it declares", await chip(), freshChip);
 
   r.ok(
     "no page errors",
