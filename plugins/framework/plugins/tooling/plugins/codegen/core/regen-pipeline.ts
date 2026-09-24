@@ -1,6 +1,7 @@
 import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
+import { stampOverrideLegends } from "./override-legend-stamp";
 import { generatePluginDocs } from "./docgen";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import {
@@ -170,7 +171,9 @@ export async function regenerateRegistryCodegen({
  *   - token-group-vars: BEFORE the build-time CSS single-owner checks
  *     (`css-vars-single-owner`, `css-vars-supplied`) consume it; safe here since
  *     it only reads token-group descriptors.
- *   - config-origins: LAST — depends on every config_v2 directive registered above.
+ *   - config-origins: after everything above — depends on every config_v2
+ *     directive registered above.
+ *   - override legends: LAST — reads the same descriptor set as the origins.
  */
 export async function regenerateManifestCodegen({
   root,
@@ -219,6 +222,13 @@ export async function regenerateManifestCodegen({
     );
     await onStep("configOrigins", "generate config origins", () =>
       generateConfigOrigins({ root }),
+    );
+    // After the origins: the stamp reads the same descriptor set. It writes
+    // only comment lines into overrides that already exist (never a file, never
+    // a marker), so unlike the seeder it belongs in this shared pipeline — push
+    // normalizes a legend a runtime write or a hand edit dropped.
+    await onStep("overrideLegends", "stamp config override legends", () =>
+      stampOverrideLegends({ root }),
     );
   } finally {
     // Disarm so a guard never leaks into a later run / unrelated barrel import.

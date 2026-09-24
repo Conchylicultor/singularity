@@ -1,4 +1,10 @@
 // @hash 7a19e94c7c7a
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The popover reads top to bottom, so these are ordered by how much of the
 // conversation's own work each kind carries: what it designed, then what it
 // wrote, then what it read. Skills last — they are what the agent was told,

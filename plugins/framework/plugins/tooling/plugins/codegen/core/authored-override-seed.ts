@@ -6,6 +6,7 @@ import {
   REVIEW_MARKER,
   configFileOwner,
   hasReviewMarker,
+  withOverrideLegend,
 } from "@plugins/config_v2/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
@@ -58,14 +59,21 @@ export interface AuthoredOverrideSeedResult {
   remarked: string[];
 }
 
-/** `// @hash <hash>` + the marker block + the body, verbatim. */
+/**
+ * `// @hash <hash>` + the descriptor's `// @legend` block + the marker block +
+ * the body. The legend goes through the same `withOverrideLegend` the per-build
+ * stamp uses, so a file this pass writes is already in its final shape — no
+ * second build needed to settle it.
+ */
 function renderHeaderedFile(
   hash: string,
+  descriptor: ConfigDescriptor,
   markerLines: string[],
   body: string,
 ): string {
-  return (
-    `// @hash ${hash}\n` + markerLines.map((l) => `${l}\n`).join("") + body
+  return withOverrideLegend(
+    `// @hash ${hash}\n` + markerLines.map((l) => `${l}\n`).join("") + body,
+    descriptor.overrideLegend ?? [],
   );
 }
 
@@ -233,6 +241,7 @@ async function remarkIfStale(opts: {
     file: opts.filePath,
     content: renderHeaderedFile(
       opts.originHash,
+      opts.descriptor,
       remarkMarkerLines(opts.descriptor, delta),
       body,
     ),
@@ -307,6 +316,7 @@ export async function applyAuthoredOverrideSeeding(opts: {
           file: basePath,
           content: renderHeaderedFile(
             originHash,
+            descriptor,
             seedMarkerLines(descriptor),
             originBody,
           ),

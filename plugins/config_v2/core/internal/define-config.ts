@@ -12,6 +12,7 @@ interface DefineConfigOpts<F extends FieldsRecord> {
   fields: F;
   scope?: "app";
   source?: ConfigSource;
+  overrideLegend?: readonly string[];
   requiresAuthoredOverride?: {
     guidance: string[];
     seedWhen?: (defaults: Record<string, unknown>) => boolean;
@@ -70,6 +71,7 @@ export function defineConfig<const F extends FieldsRecord>(
     originDefaultsFrom: opts.originDefaultsFrom ?? "descriptor",
     scope: opts.scope,
     source: opts.source ?? "manual",
+    overrideLegend: opts.overrideLegend,
     requiresAuthoredOverride: opts.requiresAuthoredOverride,
   });
 }

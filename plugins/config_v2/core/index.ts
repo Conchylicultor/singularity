@@ -63,6 +63,7 @@ export {
   configSnapshot,
 } from "./internal/endpoints";
 export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
+export { LEGEND_MARKER, withOverrideLegend } from "./internal/override-legend";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";
 export { configFileOwner } from "./internal/config-file-owner";
 export { mapConfigLists } from "./internal/collections";

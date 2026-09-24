@@ -8470,6 +8470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `forkScope`
       - `hasConflict`
       - `hasReviewMarker`
+      - `LEGEND_MARKER`
       - `mapConfigLists`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -8488,6 +8489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stringifyConfigValue`
       - `threeWayMerge`
       - `validationIssues`
+      - `withOverrideLegend`
   - Cross-plugin:
     - Imported by:
       - `apps-core/surface/floating`
@@ -17399,6 +17401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.readTypedConfig`
               - `config_v2.REVIEW_MARKER`
               - `config_v2.stringifyConfigValue`
+              - `config_v2.withOverrideLegend`
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`

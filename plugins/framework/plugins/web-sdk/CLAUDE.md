@@ -122,6 +122,11 @@ build plus one edit — you never author the file, locate an origin, or type a h
 3. arrange `"items"` for how the slot renders, DELETE the `// @review` line
 4. `./singularity build`
 
+That file is also where a slot's items are **positioned**: a `{ "type": "spacer", "id": "…" }`
+node pushes every item after it to the far end of the row. Splitting one row across two
+slots to right-align some items is the wrong tool (`spacer/no-split-slot-row` flags it) —
+the node forms are listed in the `// @legend` block the build keeps at the top of the file.
+
 `./singularity check reorderable-slots-in-sync` names the exact override path a new slot
 will owe, before any build. If the order should never be user-curated the slot is headless —
 use `defineMountSlot`, which is not reorderable and owes nothing. Details:

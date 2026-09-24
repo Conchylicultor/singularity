@@ -211,6 +211,18 @@ commit, so a marker minted there would land unreviewed; it asserts marker-free i
 Design:
 [`research/2026-07-23-global-authored-override-seeding.md`](../../research/2026-07-23-global-authored-override-seeding.md).
 
+### Override legend (`overrideLegend`)
+
+`defineConfig({ overrideLegend: [...] })` declares how to hand-write the descriptor's
+values. The build keeps those lines as a `// @legend` block right under `// @hash` in
+**every** existing committed override (base and `@app/<id>/` forks) — `withOverrideLegend`
+(core) is the one writer, called by the `overrideLegends` step of the shared codegen
+pipeline and by the seeder. Re-stamped every build because nothing else keeps it: the
+runtime writer re-serializes without comments, and authors delete what they don't need
+today. The block is build-owned (hand edits inside it are lost); it never creates a file
+or touches the body. Consumer: reorder's `reorderDirectiveDescriptor`
+(`REORDER_NODE_LEGEND`), so every slot's layout file says a spacer exists.
+
 ### Internal architecture
 
 - **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and `diffNormalForm` (the layer-comparison normal form behind the tiers/modified attribution). It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
@@ -414,6 +426,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `forkScope`
     - `hasConflict`
     - `hasReviewMarker`
+    - `LEGEND_MARKER`
     - `mapConfigLists`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
@@ -432,6 +445,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `stringifyConfigValue`
     - `threeWayMerge`
     - `validationIssues`
+    - `withOverrideLegend`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`

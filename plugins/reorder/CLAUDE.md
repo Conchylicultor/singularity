@@ -30,6 +30,7 @@ The data-level counterpart to `<Slot.Render>` for consumers that draw their **ow
 
 ## Rules for plugins using reorder
 
+- **Position is a node, not a slot.** To push some of a slot's items to the far end of its row, put a `{ "type": "spacer", "id": "…" }` node before them in the slot's order file — never define a second slot rendered beside the first (`spacer/no-split-slot-row` flags two slots sharing one row). Every committed order file carries the node forms in a build-maintained `// @legend` block (`overrideLegend` on the directive descriptor), so the answer is in the file you edit.
 - All `RenderSlot` contributions must provide `id: string` (enforced by the type).
 - Hosts use `<Slot.Render>`, not `slot.useContributions()`.
 - `excludeFromReorder: true` opts a single contribution out (used by the edit-layout switch itself).

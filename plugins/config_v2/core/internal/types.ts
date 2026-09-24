@@ -67,6 +67,14 @@ export interface ConfigDescriptor<
   // `guidance` is descriptor-supplied prose, written into the seeded file as
   // comment lines. The seeding engine never authors family-specific text, so a
   // new family that owes an authored override costs zero engine edits.
+  // Comment lines the build keeps at the top of EVERY committed override of
+  // this descriptor (`config/<tree>/<name>.jsonc` and its `@app/<id>/` forks),
+  // as a `// @legend` block right under `// @hash`: how to hand-write this
+  // descriptor's values. Re-stamped on every build because nothing else keeps
+  // it — the runtime writer re-serializes the document without comments, and
+  // an author editing the file deletes what they don't need today. The block is
+  // build-owned: hand edits inside it are overwritten.
+  readonly overrideLegend?: readonly string[];
   readonly requiresAuthoredOverride?: {
     guidance: string[];
     // "Is there anything here to author?" — the descriptor's own answer, asked

@@ -1,4 +1,10 @@
 // @hash be126a7f61c3
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The Sonata player's header, read left to right. It is one row now — the
 // leading group, a spacer, then the trailing cluster — so what used to be two
 // zones is an arrangement in this file.

@@ -10,6 +10,8 @@ description: >
 
 High-level map of where to look. Open the linked `CLAUDE.md` for details.
 
+Theme work stops being theme work the moment it moves, aligns or splits anything (a chip to the right, a new row, a re-wrap): load the [`css` skill](../css/SKILL.md) before touching layout. In particular, positioning a slot's items is a spacer in its order config, not a new slot.
+
 ## Theme model (read first)
 A **theme** is a named, sparse set of token values across the token groups. Each **scope** — the desktop, or one app — selects ONE theme; nothing is stored per token group, so an app cannot own part of a look and inherit the rest. A group a theme never mentions paints that group's schema defaults (in git), never another scope's choice. There are no global presets: the **Default** theme is simply every group's schema defaults.
 → [`plugins/ui/plugins/theme-engine/CLAUDE.md`](../../../plugins/ui/plugins/theme-engine/CLAUDE.md) (model, resolution, copy-on-write edits, missing-theme reporting)

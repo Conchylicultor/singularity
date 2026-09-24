@@ -56,6 +56,11 @@ export function reorderDirectiveDescriptor(
     // concluding the committed origin is stale (it never matches, and never
     // will).
     originDefaultsFrom: "build",
+    // Kept at the top of every committed layout file by the build, whatever
+    // wrote it last: the file is where someone decides where a slot's items
+    // go, and "a slot is a flat list of ids" is the reading that leads to a
+    // second slot for the items meant for the other end of the row.
+    overrideLegend: REORDER_NODE_LEGEND,
     // A slot's on-screen order must be a deliberate, committed layout — never
     // the natural order contributions happen to load in. `./singularity build`
     // seeds the override (and re-marks it when the catalog shifts underneath);
@@ -72,7 +77,6 @@ export function reorderDirectiveDescriptor(
         // second list is how this one silently went stale (it never learned
         // about the `header` container).
         ...REORDER_NODE_LEGEND,
-        "At most one spacer per slot.",
       ],
       // A slot with FEWER THAN TWO contributions has no arrangement to make:
       // one item can only be ordered one way, and zero items order nothing at
