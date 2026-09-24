@@ -25,10 +25,10 @@ export const FRAME_GAP = 24;
 /** A frame's header row, plus the gap under it. */
 export const FRAME_HEAD = 34;
 
-/** Dragged widths stay in this range. */
+/** The Width slider's range. */
 export const MIN_WIDTH = 360;
 export const MAX_WIDTH = 2560;
-/** A dragged width this close to a preset's snaps onto it. */
+/** A slider width moved this close to a preset snaps onto it. */
 export const SNAP_PX = 28;
 
 /** The zoom slider's range, as scales. */
@@ -132,23 +132,40 @@ function visible(
 }
 
 /**
- * A width dragged off a frame's edge: clamped to the drag range, and snapped
- * onto a preset it lands within {@link SNAP_PX} of.
+ * A width picked on the size menu's Width slider: clamped to the slider's
+ * range, and snapped onto a preset it moves to within {@link SNAP_PX} of.
+ * Only a move TOWARD a preset snaps (as the slider primitive's detent does),
+ * so stepping away from one — an arrow key from 1024 to 1025 — is never pulled
+ * back onto it.
  */
-export function snapWidth(w: number): {
+export function snapWidth(
+  w: number,
+  from: number,
+): {
   width: number;
   preset: PresetName | null;
 } {
   const clamped = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w)));
-  const snap = SIZE_PRESETS.find((p) => Math.abs(p.w - clamped) < SNAP_PX);
+  const snap = SIZE_PRESETS.find(
+    (p) =>
+      Math.abs(p.w - clamped) < SNAP_PX &&
+      Math.abs(p.w - clamped) < Math.abs(p.w - from),
+  );
   return snap
     ? { width: snap.w, preset: snap.name }
     : { width: clamped, preset: null };
 }
 
-/** The size a drag to `w` lands on, keeping `height` unless it snaps. */
-export function sizeForDrag(w: number, height: number): CanvasSize {
-  const { width, preset } = snapWidth(w);
+/**
+ * The size the Width slider lands on when moved from `from` to `w`, keeping
+ * `height` unless it snaps onto a preset.
+ */
+export function sizeForWidth(
+  w: number,
+  from: number,
+  height: number,
+): CanvasSize {
+  const { width, preset } = snapWidth(w, from);
   return preset !== null
     ? { kind: "preset", preset }
     : { kind: "custom", w: width, h: height };

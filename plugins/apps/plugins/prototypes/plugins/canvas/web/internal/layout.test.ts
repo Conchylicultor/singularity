@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { layoutFrames, roomPerFrame, sizeForDrag, snapWidth } from "./layout";
+import { layoutFrames, roomPerFrame, sizeForWidth, snapWidth } from "./layout";
 
 describe("roomPerFrame", () => {
   it("shares the width between frames, less padding and gaps", () => {
@@ -112,18 +112,30 @@ describe("layoutFrames", () => {
 });
 
 describe("snapWidth", () => {
-  it("snaps within 28px of a preset", () => {
-    expect(snapWidth(1420)).toEqual({ width: 1440, preset: "Laptop" });
-    expect(snapWidth(1000)).toEqual({ width: 1000, preset: null });
+  it("snaps within 28px of a preset it moves toward", () => {
+    expect(snapWidth(1420, 1300)).toEqual({ width: 1440, preset: "Laptop" });
+    expect(snapWidth(1000, 900)).toEqual({ width: 1000, preset: null });
   });
 
-  it("clamps to the drag range", () => {
-    expect(snapWidth(10).width).toBe(360);
-    expect(snapWidth(5000).width).toBe(2560);
+  it("never pulls a move away from a preset back onto it", () => {
+    expect(snapWidth(1441, 1440)).toEqual({ width: 1441, preset: null });
+    expect(snapWidth(1460, 1450)).toEqual({ width: 1460, preset: null });
   });
 
-  it("a drag off the presets is a custom size at the current height", () => {
-    expect(sizeForDrag(1000, 700)).toEqual({ kind: "custom", w: 1000, h: 700 });
-    expect(sizeForDrag(400, 700)).toEqual({ kind: "preset", preset: "Phone" });
+  it("clamps to the slider's range", () => {
+    expect(snapWidth(10, 800).width).toBe(360);
+    expect(snapWidth(5000, 800).width).toBe(2560);
+  });
+
+  it("a width off the presets is a custom size at the current height", () => {
+    expect(sizeForWidth(1000, 900, 700)).toEqual({
+      kind: "custom",
+      w: 1000,
+      h: 700,
+    });
+    expect(sizeForWidth(400, 500, 700)).toEqual({
+      kind: "preset",
+      preset: "Phone",
+    });
   });
 });

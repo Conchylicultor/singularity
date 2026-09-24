@@ -25,11 +25,8 @@ import {
 import {
   BOARD_PAD,
   FRAME_GAP,
-  FRAME_HEAD,
   layoutFrames,
   roomPerFrame,
-  sizeForDrag,
-  snapWidth,
   type FrameLayout,
 } from "../internal/layout";
 import { useWindowSize } from "../internal/use-window-size";
@@ -167,8 +164,7 @@ export function useFrameNames(
 }
 
 /**
- * One frame on the board: header, screen, the right-edge drag handle and the
- * options pill. Centred by auto margins (not `justify-content: center`), so
+ * One frame on the board: header, screen and the options pill. Centred by auto margins (not `justify-content: center`), so
  * frames bigger than the canvas scroll instead of clipping.
  */
 function FrameCard({
@@ -197,7 +193,6 @@ function FrameCard({
   const { canvas, dispatch } = usePrototypeDetail();
   const selected = canvas.selected === frame.id;
   const screenWidth = layout.width * layout.scale;
-  const screenHeight = layout.visibleHeight * layout.scale;
 
   return (
     <div
@@ -254,10 +249,6 @@ function FrameCard({
           </Stack>
         )}
       </CanvasFrameView>
-      <DragHandle
-        layout={layout}
-        top={FRAME_HEAD + Math.min(screenHeight, 600) / 2 - 22}
-      />
     </div>
   );
 }
@@ -286,83 +277,6 @@ function SelectableScreen({
     >
       {children}
     </div>
-  );
-}
-
-/**
- * The right-edge handle: drag it and EVERY frame follows (the size is
- * canvas-wide), snapping onto a preset it lands near. Pointer capture, so the
- * drag keeps its handle without a window listener.
- */
-function DragHandle({
-  layout,
-  top,
-}: {
-  layout: FrameLayout;
-  top: number;
-}): ReactElement {
-  const { dispatch } = usePrototypeDetail();
-  const [drag, setDrag] = useState<{
-    x0: number;
-    w0: number;
-    scale: number;
-    height: number;
-  } | null>(null);
-  const [tip, setTip] = useState<string | null>(null);
-
-  return (
-    <>
-      <Placed
-        x={{ end: -14, size: 10 }}
-        y={{ start: top, size: 44 }}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Drag to resize every frame"
-        className={cn(
-          "cursor-ew-resize touch-none rounded-sm",
-          drag !== null
-            ? "bg-primary"
-            : cn("bg-border hover:bg-primary", hoverRevealTarget),
-        )}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.currentTarget.setPointerCapture(e.pointerId);
-          setDrag({
-            x0: e.clientX,
-            w0: layout.width,
-            scale: layout.scale,
-            height: layout.height,
-          });
-        }}
-        onPointerMove={(e) => {
-          if (drag === null) return;
-          const w = drag.w0 + (e.clientX - drag.x0) / drag.scale;
-          const size = sizeForDrag(w, drag.height);
-          const { width, preset } = snapWidth(w);
-          setTip(`${String(width)}px${preset === null ? "" : ` · ${preset}`}`);
-          dispatch({ type: "setSize", size });
-        }}
-        onPointerUp={() => {
-          setDrag(null);
-          setTip(null);
-        }}
-        onPointerCancel={() => {
-          setDrag(null);
-          setTip(null);
-        }}
-      />
-      {tip !== null ? (
-        <Placed
-          x={{ end: -18, shift: "100%" }}
-          y={{ start: top + 10 }}
-          className="rounded-sm bg-primary px-xs text-primary-foreground"
-        >
-          <Text variant="caption" className="whitespace-nowrap font-semibold">
-            {tip}
-          </Text>
-        </Placed>
-      ) : null}
-    </>
   );
 }
 

@@ -20,8 +20,11 @@ import {
 import { SIZE_PRESETS } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { CanvasSize } from "../internal/canvas-model";
 import {
+  MAX_WIDTH,
   MAX_ZOOM,
+  MIN_WIDTH,
   MIN_ZOOM,
+  sizeForWidth,
   sizeName,
   zoomFromPercent,
   type FrameLayout,
@@ -31,7 +34,8 @@ import { useWindowSize } from "../internal/use-window-size";
 
 /**
  * Size, zoom and Whole page: ONE chip for the whole canvas ("This window
- * 1728 × 990 | Fit · 62%"), opening a menu with the sizes, the zoom (Fit,
+ * 1728 × 990 | Fit · 62%"), opening a menu with the sizes, a Width slider for
+ * any width between them (snapping onto a preset), the zoom (Fit,
  * a 10–200% slider, and a value box that jumps to 100%) and the Whole page
  * switch. Every frame follows it.
  *
@@ -72,10 +76,7 @@ export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
       }
     >
       <ControlPanel>
-        <ControlPanel.Section
-          label="Size"
-          description="Or drag a frame's right edge for any width."
-        >
+        <ControlPanel.Section label="Size">
           <ControlPanel.Row
             select="radio"
             checked={size.kind === "responsive"}
@@ -122,6 +123,30 @@ export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
               Custom
             </ControlPanel.Row>
           ) : null}
+        </ControlPanel.Section>
+        <ControlPanel.Section label="Width">
+          <Stack direction="row" gap="sm" align="center">
+            <Fill>
+              <Slider
+                aria-label="Width"
+                title="Any width; snaps onto a preset it comes near"
+                className="w-full"
+                min={MIN_WIDTH}
+                max={MAX_WIDTH}
+                step={1}
+                value={Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, layout.width))}
+                onValueChange={(w) =>
+                  dispatch({
+                    type: "setSize",
+                    size: sizeForWidth(w, layout.width, layout.height),
+                  })
+                }
+              />
+            </Fill>
+            <span className="w-14 text-right tabular-nums text-muted-foreground">
+              {layout.width}px
+            </span>
+          </Stack>
         </ControlPanel.Section>
         <ControlPanel.Section label="Zoom">
           <Stack direction="row" gap="sm" align="center">

@@ -118,7 +118,7 @@ export function screen(page: Page, letter: string): Locator {
 }
 
 /**
- * A frame's whole card: header, screen, options pill and drag handle. The
+ * A frame's whole card: header, screen and options pill. The
  * screen sits in the selectable wrapper, inside the header/screen stack,
  * inside the card.
  */
@@ -173,7 +173,7 @@ export async function frameValue(
 }
 
 /**
- * Reveal a frame's hover chrome (header actions, options pill, drag handle) by
+ * Reveal a frame's hover chrome (header actions, options pill) by
  * putting the pointer over its header row, which the page's own iframe never
  * covers.
  */

@@ -3,8 +3,8 @@
 // lays the page out at the room's own size; a device preset lays every frame's page out at that device's size; Fit
 // shrinks the frame to the room while 100% and the zoom slider set the scale
 // exactly; Whole page makes the frame as tall as its document (nothing left to
-// scroll inside); and dragging a frame's right edge resizes every frame, snapping
-// onto a preset it lands near and otherwise giving a Custom width.
+// scroll inside); and the Width slider resizes every frame, snapping onto a
+// preset it moves near and otherwise giving a Custom width.
 // Manual only — nothing runs this automatically.
 //
 // Usage:
@@ -24,10 +24,8 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
-  card,
   dismiss,
   frameDoc,
-  hoverCard,
   letters,
   openCanvas,
   openSizeMenu,
@@ -235,7 +233,7 @@ await withBrowser(async (h) => {
   await page.getByRole("switch", { name: /Whole page/ }).click();
   await dismiss(page);
 
-  // The drag handle: every frame follows, snapping onto a preset near it.
+  // The Width slider: every frame follows, snapping onto a preset near it.
   await page.getByRole("button", { name: "Frame", exact: true }).click();
   await waitFor(
     () => letters(page),
@@ -246,28 +244,26 @@ await withBrowser(async (h) => {
   const desk = await settle("B", (v) => v.w === 1920);
   if (!desk.ok) throw new Error("frame B never reached Desktop");
 
-  async function dragTo(width: number): Promise<void> {
-    const now = await measure(page, meta, "A");
-    if (!now) throw new Error("frame A has no size");
-    await hoverCard(page, "A");
-    const handle = card(page, "A").getByRole("separator", {
-      name: "Drag to resize every frame",
-    });
-    const box = await handle.boundingBox();
-    if (!box) throw new Error("no drag handle");
-    const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x + (width - now.w) * now.scale, y, { steps: 8 });
-    await page.mouse.up();
-    await page.mouse.move(2, 2);
+  // Sets the range input as a pointer drag would: the native value setter
+  // (React tracks the property) and an input event.
+  async function slideTo(width: number): Promise<void> {
+    await openSizeMenu(page);
+    await page.getByRole("slider", { name: "Width" }).evaluate((el, w) => {
+      const set = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      if (!set) throw new Error("no value setter on HTMLInputElement");
+      set.call(el, String(w));
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, width);
+    await dismiss(page);
   }
 
-  await dragTo(1450);
+  await slideTo(1450);
   const snapped = await settle("B", (v) => v.w === 1440 && v.h === 900);
   r.ok(
-    "dragging near 1440 snaps every frame onto Laptop",
+    "sliding near 1440 snaps every frame onto Laptop",
     snapped.ok,
     JSON.stringify(snapped.value),
   );
@@ -277,10 +273,10 @@ await withBrowser(async (h) => {
     await chipText(page),
   );
 
-  await dragTo(1000);
+  await slideTo(1000);
   const custom = await settle("B", (v) => Math.abs(v.w - 1000) <= 2);
   r.ok(
-    "dragging off the presets gives a custom width, in every frame",
+    "sliding off the presets gives a custom width, in every frame",
     custom.ok,
     JSON.stringify(custom.value),
   );

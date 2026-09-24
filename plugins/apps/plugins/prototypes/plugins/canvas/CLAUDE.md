@@ -154,16 +154,16 @@ One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit 
   (Phone 390×844, Tablet 820×1180, Laptop 1440×900, Desktop 1920×1080, Wide
   2560×1440 — real devices at their default scaling, never CSS breakpoints; a
   frame is that device's screen, and a longer page scrolls inside it), or
-  **Custom** (a width dragged off the presets). A fresh canvas (none saved in
+  **Custom** (a width slid off the presets). A fresh canvas (none saved in
   this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="window">`
   — `window`, a preset's name or `responsive`; This window when absent), so a mock always
   opens at the screen it was drawn for rather than at whatever room the pane
   happens to have. The presets and that tag's parser are one list, owned by
   `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
   prototype list before the canvas exists, so it never opens at a stand-in.
-- **The drag handle** on a frame's right edge resizes EVERY frame (the size is
-  canvas-wide), in 360–1920 px, snapping onto a preset it lands within 28 px of;
-  a tip shows the width and the preset while dragging.
+- **The Width slider** in the same menu resizes EVERY frame (the size is
+  canvas-wide), in 360–2560 px, snapping onto a preset it moves within 28 px
+  of. Only a move toward a preset snaps, so an arrow key can step off one.
 - **Zoom** is **Fit** (the default: the largest scale at which the whole frame
   is visible; at Responsive that is 100%) or a fixed scale from the 10–200%
   slider (with a detent at 100%). The value box beside the slider jumps to
@@ -241,8 +241,8 @@ manual, default to the first prototype declaring an option with 3+ values and a
 
 - `canvas-frames.ts` — + Frame copies the last frame, B's picks are its own,
   link, spread and gather, Keep only + Undo, Close;
-- `canvas-size.ts` — presets, Fit vs 100% and the slider, Whole page, drag
-  snap;
+- `canvas-size.ts` — presets, Fit vs 100% and the slider, Whole page, Width
+  slider snap;
 - `canvas-version.ts` — the per-frame stepper moves only its frame, arrows
   stay put;
 - `canvas-remember.ts` — a fresh browser opens A alone; frames, size and zoom
@@ -258,7 +258,7 @@ navigation, so it starts from nothing remembered.
 
 ## Plugin reference
 
-- Description: The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
+- Description: The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
 - Web:
   - Slots:
     - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
