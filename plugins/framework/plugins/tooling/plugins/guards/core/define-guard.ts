@@ -56,6 +56,7 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
   return {
     name: def.name,
     matcher: def.matcher,
+    ...(def.bypassToken ? { bypassToken: def.bypassToken } : {}),
     check(input: I, ctx: GuardContext): Verdict | Promise<Verdict> {
       if (def.bypassToken && ctx.hasBypass(def.bypassToken)) return ctx.allow();
       const result = def.check(input, ctx);

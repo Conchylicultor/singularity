@@ -1,9 +1,7 @@
+import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { getAllowFiles } from "../shared/endpoints";
-import { handleGetAllowFiles } from "./internal/allow-files-handler";
+import { allowFilesLiveResource } from "./internal/allow-files-resource";
 
 export default {
-  httpRoutes: {
-    [getAllowFiles.route]: handleGetAllowFiles,
-  },
+  contributions: [Resource.Declare(allowFilesLiveResource)],
 } satisfies ServerPluginDefinition;

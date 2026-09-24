@@ -1,4 +1,5 @@
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
+import { ReconnectSchedule } from "./reconnect-backoff";
 
 export interface ReconnectingEventSourceOptions {
   url: string;
@@ -9,17 +10,14 @@ export interface ReconnectingEventSourceOptions {
   events?: string[];
 }
 
-const BACKOFF_MS = [500, 1000, 2000, 5000];
-
 // Thin reconnecting wrapper around a native EventSource. Opens one real
-// connection per instance directly against `opts.url` and retries with
-// bounded backoff. Status transitions are published to the global
+// connection per instance directly against `opts.url` and retries with the
+// shared jittered backoff (`ReconnectSchedule`). Status transitions are published to the global
 // `ws-status-bus` so the health toast ("Reconnected to server") fires for
 // SSE drops the same way it does for WS.
 export class ReconnectingEventSource {
   private es: EventSource | null = null;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private attempt = 0;
+  private reconnect = new ReconnectSchedule();
   private closed = false;
   private status: WsStatus = "connecting";
 
@@ -30,10 +28,7 @@ export class ReconnectingEventSource {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
+    this.reconnect.cancel();
     if (this.es) {
       this.es.onerror = null;
       this.es.close();
@@ -44,13 +39,15 @@ export class ReconnectingEventSource {
 
   private connect = () => {
     if (this.closed) return;
-    this.setStatus(this.attempt === 0 ? "connecting" : "reconnecting");
+    this.setStatus(
+      this.reconnect.isFirstAttempt ? "connecting" : "reconnecting",
+    );
 
     const es = new EventSource(this.opts.url);
     this.es = es;
 
     es.onopen = () => {
-      this.attempt = 0;
+      this.reconnect.reset();
       this.setStatus("open");
     };
 
@@ -69,10 +66,8 @@ export class ReconnectingEventSource {
       es.onerror = null;
       es.close();
       this.es = null;
-      const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
-      this.attempt++;
       this.setStatus("reconnecting");
-      this.retryTimer = setTimeout(this.connect, delay);
+      this.reconnect.schedule(this.connect);
     };
   };
 

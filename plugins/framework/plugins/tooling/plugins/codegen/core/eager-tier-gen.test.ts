@@ -190,10 +190,10 @@ describe("bootCriticalKeysIn", () => {
     // `opts: { defaultLimit: number; bootCritical?: true }` is a type position —
     // `bootCritical?:` is not the `bootCritical: true` field the scan reads.
     const src = `
-      export function windowResourceDescriptor<El>(
-        key: string, elementSchema: ZodParser<El>, keyOf: (row: unknown) => string,
+      export function windowQueryResourceDescriptor<Row>(
+        key: string, rowSchema: ZodParser<Row>, pkField: keyof Row & string,
         opts: { defaultLimit: number; bootCritical?: true },
-      ): WindowResourceDescriptor<El> { return d; }
+      ): WindowQueryResourceContract<Row> { return d; }
     `;
     expect(bootCriticalKeysIn(src, "window.ts")).toEqual([]);
   });

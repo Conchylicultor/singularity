@@ -1,3 +1,5 @@
+import { exponential, withJitter } from "@plugins/packages/plugins/retry/core";
+
 export interface FetchWithRetryOptions {
   retries?: number;
   retryOn?: number[];
@@ -20,7 +22,10 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const retries = opts.retries ?? 3;
   const retryOn = opts.retryOn ?? DEFAULT_RETRY_ON;
-  const backoffMs = opts.backoffMs ?? 300;
+  const delay = withJitter(
+    exponential({ initial: opts.backoffMs ?? 300, max: Infinity }),
+    0.3,
+  );
 
   for (let attempt = 0; ; attempt++) {
     const last = attempt >= retries;
@@ -30,9 +35,6 @@ export async function fetchWithRetry(
     } catch (err) {
       if (last || init?.signal?.aborted) throw err;
     }
-    const jitter = Math.random() * 0.3 + 0.85;
-    await new Promise((r) =>
-      setTimeout(r, backoffMs * Math.pow(2, attempt) * jitter),
-    );
+    await new Promise((r) => setTimeout(r, delay(attempt)));
   }
 }

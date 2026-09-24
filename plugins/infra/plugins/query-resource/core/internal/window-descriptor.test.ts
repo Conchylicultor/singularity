@@ -3,19 +3,21 @@
  * property: the SAME logical selector must always produce the SAME params
  * object (boot hydration, the useResource subscription, and the server loader
  * must land on one per-tuple state), so encode is canonical and decode is
- * strict. Run: `bun test plugins/primitives/plugins/live-state/core/window.test.ts`.
+ * strict.
  */
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { pointResourceDescriptor, windowResourceDescriptor } from "./window";
-import { resourceDescriptorByKey } from "./resource";
+import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import {
+  pointQueryResourceDescriptor,
+  windowQueryResourceDescriptor,
+} from "./window-descriptor";
 
 const el = z.object({ id: z.string() });
-const keyOf = (r: unknown) => (r as { id: string }).id;
 
-describe("windowResourceDescriptor", () => {
-  const win = windowResourceDescriptor("test.window.codec", el, keyOf, {
+describe("windowQueryResourceDescriptor", () => {
+  const win = windowQueryResourceDescriptor("test.window.codec", el, "id", {
     defaultLimit: 100,
     bootCritical: true,
   });
@@ -23,6 +25,7 @@ describe("windowResourceDescriptor", () => {
   test("registers a keyed z.array descriptor with the boot flag and defaultParams", () => {
     expect(resourceDescriptorByKey("test.window.codec")).toBe(win);
     expect(win.keyed.keyOf({ id: "a" })).toBe("a");
+    expect(win.queryPk).toBe("id");
     expect(win.bootCritical).toBe(true);
     expect(win.initialData).toEqual([]);
     expect(win.schema.parse([{ id: "a" }])).toEqual([{ id: "a" }]);
@@ -45,7 +48,9 @@ describe("windowResourceDescriptor", () => {
     expect(() => win.window.encode({ limit: 0 })).toThrow(/positive integer/);
     expect(() => win.window.encode({ limit: -5 })).toThrow(/positive integer/);
     expect(() => win.window.encode({ limit: 2.5 })).toThrow(/positive integer/);
-    expect(() => win.window.encode({ limit: Number.NaN })).toThrow(/positive integer/);
+    expect(() => win.window.encode({ limit: Number.NaN })).toThrow(
+      /positive integer/,
+    );
   });
 
   test("decode is STRICT: missing or malformed limit throws (`{}` must never alias the default window)", () => {
@@ -58,13 +63,15 @@ describe("windowResourceDescriptor", () => {
 
   test("factory rejects an invalid defaultLimit at declaration", () => {
     expect(() =>
-      windowResourceDescriptor("test.window.codec-bad", el, keyOf, { defaultLimit: 0 }),
+      windowQueryResourceDescriptor("test.window.codec-bad", el, "id", {
+        defaultLimit: 0,
+      }),
     ).toThrow(/positive integer/);
   });
 });
 
-describe("pointResourceDescriptor", () => {
-  const pt = pointResourceDescriptor("test.point.codec", el, keyOf);
+describe("pointQueryResourceDescriptor", () => {
+  const pt = pointQueryResourceDescriptor("test.point.codec", el, "id");
 
   test("registers a keyed descriptor with no defaultParams (point resources are never boot-critical)", () => {
     expect(resourceDescriptorByKey("test.point.codec")).toBe(pt);

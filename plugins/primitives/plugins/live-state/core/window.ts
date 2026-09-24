@@ -1,6 +1,4 @@
-import { z } from "zod";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { keyedResourceDescriptor, type ResourceDescriptor } from "./resource";
+import type { ResourceDescriptor } from "./resource";
 
 // Bounded-membership selector encodings — the wire params for the two bounded
 // resource kinds of the bounded working-set contract
@@ -26,14 +24,6 @@ export type PointParams = { ids: string };
 /** Client-side window selection. `limit` defaults to the descriptor's `defaultLimit`. */
 export interface WindowSelector {
   limit?: number;
-}
-
-function assertWindowLimit(limit: number, context: string): void {
-  if (!Number.isSafeInteger(limit) || limit <= 0) {
-    throw new Error(
-      `${context}: window limit must be a positive integer, got ${limit}`,
-    );
-  }
 }
 
 /**
@@ -76,93 +66,4 @@ export interface PointResourceDescriptor<El> extends ResourceDescriptor<
     /** Pure params → ids decode (the server membership `idsOf`). `""` decodes to `[]`. */
     decode: (params: Record<string, string>) => string[];
   };
-}
-
-/**
- * Declare a bounded ordered-window keyed resource. Wraps
- * `keyedResourceDescriptor` (schema stays `z.array(element)`, so `useResource`
- * callers still get `El[]` and the keyed delta wire is unchanged) and attaches
- * the window codec + the canonical `defaultParams` tuple. The matching server
- * half is `windowQueryResource(descriptor, spec)` in `infra/query-resource`.
- */
-export function windowResourceDescriptor<El>(
-  key: string,
-  elementSchema: ZodParser<El>,
-  keyOf: (row: unknown) => string,
-  opts: { defaultLimit: number; bootCritical?: true },
-): WindowResourceDescriptor<El> {
-  const { defaultLimit, ...rest } = opts;
-  assertWindowLimit(defaultLimit, `windowResourceDescriptor("${key}")`);
-
-  const encode = (sel?: WindowSelector): WindowParams => {
-    const limit = sel?.limit ?? defaultLimit;
-    assertWindowLimit(limit, `windowResourceDescriptor("${key}").encode`);
-    return { limit: String(limit) };
-  };
-  const decode = (params: Record<string, string>): { limit: number } => {
-    const raw = params.limit;
-    if (raw === undefined || !/^[1-9][0-9]*$/.test(raw)) {
-      throw new Error(
-        `windowResourceDescriptor("${key}").decode: params.limit must be a ` +
-          `canonical positive-integer string, got ${JSON.stringify(raw)}`,
-      );
-    }
-    return { limit: Number(raw) };
-  };
-
-  const d = keyedResourceDescriptor<El[], WindowParams>(
-    key,
-    z.array(elementSchema),
-    [],
-    keyOf,
-    rest,
-  );
-  return Object.assign(d, {
-    defaultParams: encode(),
-    window: { defaultLimit, encode, decode },
-  });
-}
-
-/**
- * Declare an explicit point-set keyed resource. The id-set codec lives on the
- * descriptor so the client hooks and the server compiler share one encoding;
- * `decode` doubles as the server membership `idsOf`. Point resources are never
- * `bootCritical` (post-mount hydration is the recorded decision — the server
- * cannot know a client's id set at snapshot time). The matching server half is
- * `windowQueryResource(descriptor, spec)` with `point: { by }`.
- */
-export function pointResourceDescriptor<El>(
-  key: string,
-  elementSchema: ZodParser<El>,
-  keyOf: (row: unknown) => string,
-): PointResourceDescriptor<El> {
-  const encode = (ids: readonly string[]): PointParams => {
-    for (const id of ids) {
-      if (id === "" || id.includes(",")) {
-        throw new Error(
-          `pointResourceDescriptor("${key}").encode: ids must be non-empty and ` +
-            `comma-free, got ${JSON.stringify(id)}`,
-        );
-      }
-    }
-    return { ids: [...new Set(ids)].sort().join(",") };
-  };
-  const decode = (params: Record<string, string>): string[] => {
-    const raw = params.ids;
-    if (raw === undefined) {
-      throw new Error(
-        `pointResourceDescriptor("${key}").decode: params.ids is missing — a ` +
-          `point subscription has no meaning without an id set`,
-      );
-    }
-    return raw === "" ? [] : raw.split(",");
-  };
-
-  const d = keyedResourceDescriptor<El[], PointParams>(
-    key,
-    z.array(elementSchema),
-    [],
-    keyOf,
-  );
-  return Object.assign(d, { point: { encode, decode } });
 }

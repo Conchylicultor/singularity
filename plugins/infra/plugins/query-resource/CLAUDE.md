@@ -271,11 +271,12 @@ importing `db` never touches a worktree — no test env shim needed.
 - Core:
   - Uses:
     - `primitives/live-state.keyedResourceDescriptor`
-    - `primitives/live-state.pointResourceDescriptor`
+    - `primitives/live-state.PointParams`
     - `primitives/live-state.PointResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
-    - `primitives/live-state.windowResourceDescriptor`
+    - `primitives/live-state.WindowParams`
     - `primitives/live-state.WindowResourceDescriptor`
+    - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `PointQueryResourceContract`
     - `QueryResourceContract`

@@ -138,16 +138,6 @@ export const resourceDescriptorFactories = {
     keyed: false,
     membership: null,
   },
-  windowResourceDescriptor: {
-    barrel: LIVE_STATE_CORE,
-    keyed: true,
-    membership: "window",
-  },
-  pointResourceDescriptor: {
-    barrel: LIVE_STATE_CORE,
-    keyed: true,
-    membership: "point",
-  },
   queryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
     keyed: true,
@@ -191,7 +181,7 @@ export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
  *
  * A scanner needs this to tell a DECLARATION from an IMPLEMENTATION. Inside
  * `live-state` and `query-resource`, a factory is called with a computed key
- * (`windowResourceDescriptor(key, …)` inside `windowQueryResourceDescriptor`) —
+ * (`keyedResourceDescriptor(key, …)` inside `windowQueryResourceDescriptor`) —
  * that is the wrapper implementing the factory, not a plugin declaring a
  * resource. Everywhere else the key must be a literal at the call site, because
  * a scanner reading source text has no other way to see it.

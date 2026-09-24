@@ -4397,6 +4397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `songAttachments`
               - `songsLiveResource`
               - `updateSongMeta`
+            - Resources: `sonata-songs` (push)
             - Routes:
               - `DELETE /api/sonata/songs/:id`
               - `PATCH /api/sonata/songs/:id`
@@ -4719,6 +4720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `playbackHistoryLiveResource`
               - `songPlayback`
+            - Resources: `sonata-playback-history` (push)
             - Routes: `POST /api/sonata/songs/:id/play`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
@@ -4962,6 +4964,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `chordModeLiveResource`
                   - `songChordMode`
+                - Resources: `sonata-chord-mode` (push)
                 - Routes: `POST /api/sonata/songs/:id/chord-mode`
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
@@ -5040,6 +5043,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `keyAutoDetectLiveResource`
                   - `songKeyAutoDetect`
+                - Resources: `sonata-key-auto-detect` (push)
                 - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/key-readout`
@@ -5102,6 +5106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `rhythmLiveResource`
                   - `songRhythm`
+                - Resources: `sonata-rhythm` (push)
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
             - **`voicing-controls`** — Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.
               - Web:
@@ -5395,6 +5400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `setSourceMissing`
                   - `songMidi`
                   - `songMidiLiveResource`
+                - Resources: `sonata-song-midi` (push)
                 - Routes:
                   - `POST /api/sonata/songs/midi`
                   - `GET /api/sonata/songs/:id/midi`
@@ -5603,6 +5609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `_trackView`
               - `trackViewLiveResource`
+            - Resources: `sonata-track-view` (push)
             - Routes:
               - `POST /api/sonata/songs/:songId/track-view`
               - `DELETE /api/sonata/songs/:songId/track-view`
@@ -5668,6 +5675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `songTranspose`
               - `transposeLiveResource`
+            - Resources: `sonata-transpose` (push)
             - Routes: `POST /api/sonata/songs/:id/transpose`
         - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet).
           - Web:
@@ -9676,23 +9684,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/vscode`
               - `review`
               - `tasks/attempt-view`
-        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
+        - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
           - Web:
             - Contributes: `Conversation.Header` → `AllowMonitorChip`
             - Uses:
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.Conversation`
-              - `infra/endpoints.useEndpoint`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
+              - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
           - Server:
+            - Contributes: `resource.declare` "allow-files"
             - Uses:
-              - `infra/endpoints.implement`
+              - `infra/file-watcher.createFileWatcher`
+              - `infra/file-watcher.FileWatcher`
               - `tasks/tasks-core.getConversation`
-            - Routes: `GET /api/conversations/:id/allow-files`
+            - Resources: `allow-files` (push)
           - Shared:
-            - Exports (values): `getAllowFiles`
+            - Exports (types): `AllowFiles`
+            - Exports (values):
+              - `allowFilesResource`
+              - `AllowFilesSchema`
         - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
           - Web:
             - Slots: `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.page`, `conversations.conversation-view.artifacts.prototype`, `conversations.conversation-view.artifacts.research`, `conversations.conversation-view.artifacts.screenshot`, `conversations.conversation-view.artifacts.skill`
@@ -17626,6 +17639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
               - `conversations/conversation-ui/row`
+              - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
@@ -17737,6 +17751,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WatchSubject`
               - `WindowEntry`
             - Exports (values):
+              - `BYPASS_TOKENS`
               - `classify`
               - `createContext`
               - `defineGuard`
@@ -17806,6 +17821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
             - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
             - **`namespace-identity`** — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
+            - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
@@ -18429,7 +18445,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/all-conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-view`
-          - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code/docs-button`
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/dependencies`
@@ -18902,6 +18917,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/files`
           - `apps/sonata/sources/midi/folders`
           - `config_v2`
+          - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/op-status`
           - `conversations/transcript-watcher`
@@ -19819,11 +19835,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `primitives/live-state.keyedResourceDescriptor`
-          - `primitives/live-state.pointResourceDescriptor`
+          - `primitives/live-state.PointParams`
           - `primitives/live-state.PointResourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
-          - `primitives/live-state.windowResourceDescriptor`
+          - `primitives/live-state.WindowParams`
           - `primitives/live-state.WindowResourceDescriptor`
+          - `primitives/live-state.WindowSelector`
         - Exports (types):
           - `PointQueryResourceContract`
           - `QueryResourceContract`
@@ -21607,6 +21624,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineTriggerEvent('page.blocksChanged')`
           - `defineTrashSource('pages')`
           - `defineTrashSource('page-blocks')`
+        - Resources:
+          - `page-blocks` (push)
+          - `pages` (push)
         - Routes:
           - `GET /api/pages`
           - `GET /api/pages/:pageId/blocks`
@@ -22248,6 +22268,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageLinksLiveResource`
           - `reindexPage`
         - Register: `defineJob('page.links.reindex')`
+        - Resources:
+          - `page-backlinks` (push)
+          - `page-links` (push)
       - Web:
         - Uses:
           - `page/editor.PageIcon`
@@ -27929,6 +27952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `_dataViewCustomValues`
               - `customColumnValuesLiveResource`
+            - Resources: `data-view-custom-values` (push)
             - Routes:
               - `POST /api/data-view/custom-values`
               - `POST /api/data-view/custom-values/delete-column`
@@ -28284,6 +28308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `_dataViewRowOrder`
               - `applyRowOrder`
               - `rowOrderLiveResource`
+            - Resources: `data-view-row-order` (push)
             - Routes: `POST /api/data-view/row-order`
           - Core:
             - Uses:
@@ -29244,7 +29269,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `NotificationsClient`
           - `NotificationsProvider`
           - `pendingMountSnapshot`
-          - `pointResourceDescriptor`
           - `queryKeyFor`
           - `resourceDescriptor`
           - `resourceDescriptorByKey`
@@ -29262,7 +29286,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `usePointResources`
           - `useResource`
           - `useWindowResource`
-          - `windowResourceDescriptor`
       - Cross-plugin:
         - Imported by:
           - `active-data`
@@ -29338,6 +29361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `conversations/conversation-view`
+          - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/code`
@@ -29439,14 +29463,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `centralResourceDescriptor`
           - `compareTxWatermark`
           - `keyedResourceDescriptor`
-          - `pointResourceDescriptor`
           - `resolvableSchema`
           - `resolved`
           - `resourceDescriptor`
           - `resourceDescriptorByKey`
           - `tolerantEnum`
           - `unresolved`
-          - `windowResourceDescriptor`
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:

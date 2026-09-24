@@ -1,5 +1,11 @@
 # Bounded working-set resource contract — design
 
+> **Update 2026-09-23:** the raw `windowResourceDescriptor` / `pointResourceDescriptor`
+> factories named below no longer exist. Their codec moved into
+> `windowQueryResourceDescriptor` / `pointQueryResourceDescriptor` (`infra/query-resource/core`),
+> the only factories now; live-state keeps the descriptor types and hooks. See
+> `research/2026-09-23-global-live-state-hygiene.md` §1.
+
 **Parent direction:** [`research/perfs/2026-07-18-bounded-working-set-architecture.md`](./perfs/2026-07-18-bounded-working-set-architecture.md)
 (the thrashing-cliff mechanism and the principle: *an interaction's working set must be
 O(visible/changed), never O(total state)*). That doc is philosophy + sequencing; **this doc is the

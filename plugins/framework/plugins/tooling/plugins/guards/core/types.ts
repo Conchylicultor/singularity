@@ -117,6 +117,8 @@ export interface AgentInput {
 export interface Guard<I = unknown> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
+  /** File at the worktree root whose presence lets this guard's calls through. */
+  bypassToken?: string;
   check(input: I, ctx: GuardContext): Verdict | Promise<Verdict>;
 }
 

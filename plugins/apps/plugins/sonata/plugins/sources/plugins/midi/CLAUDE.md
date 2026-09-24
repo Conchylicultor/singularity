@@ -57,6 +57,7 @@ while the column/sort/filter come free. `useSongMidiMap()` is the batch hook a
     - `setSourceMissing`
     - `songMidi`
     - `songMidiLiveResource`
+  - Resources: `sonata-song-midi` (push)
   - Routes:
     - `POST /api/sonata/songs/midi`
     - `GET /api/sonata/songs/:id/midi`

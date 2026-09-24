@@ -13,16 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { MdBolt } from "react-icons/md";
-import {
-  DEFAULT_EMIT_DURATION_MS,
-  MAX_EMIT_RATE,
-} from "../../core";
+import { DEFAULT_EMIT_DURATION_MS, MAX_EMIT_RATE } from "../../core";
 import {
   startEmit,
   stopEmit,
@@ -39,12 +42,19 @@ const STATUS_REFETCH_MS = 1000;
 
 export function EmitPane() {
   const { data: resourcesData } = useEndpoint(listResourcesForEmit, {});
-  const status = useEndpoint(getEmitStatus, {}, {
-    refetchInterval: STATUS_REFETCH_MS,
-  });
+  const status = useEndpoint(
+    getEmitStatus,
+    {},
+    {
+      // eslint-disable-next-line polling-safety/no-refetch-interval -- the emitter is the push generator; its own status has no resource (see above)
+      refetchInterval: STATUS_REFETCH_MS,
+    },
+  );
   const active = status.data?.active ?? false;
 
-  const start = useEndpointMutation(startEmit, { invalidates: [getEmitStatus] });
+  const start = useEndpointMutation(startEmit, {
+    invalidates: [getEmitStatus],
+  });
   const stop = useEndpointMutation(stopEmit, { invalidates: [getEmitStatus] });
 
   // Only keyed resources with subscribers can produce an OBSERVABLE no-op push —
@@ -67,8 +77,12 @@ export function EmitPane() {
   // calling Date.now() inside render (React Compiler purity requirement).
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => { setNowMs(Date.now()); }, 1000);
-    return () => { clearInterval(id); };
+    const id = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
   }, []);
 
   // Manual key wins when typed (free-text fallback for an off-screen resource).
@@ -96,9 +110,10 @@ export function EmitPane() {
             </Stack>
             <Text variant="caption" tone="muted">
               Drives N no-op live-state pushes/sec for one resource through the
-              real change-feed code path, so re-render / DOM-churn bugs reproduce
-              deterministically. Auto-stops after the duration below; only keyed
-              resources with live subscribers produce an observable push.
+              real change-feed code path, so re-render / DOM-churn bugs
+              reproduce deterministically. Auto-stops after the duration below;
+              only keyed resources with live subscribers produce an observable
+              push.
             </Text>
           </Stack>
 
@@ -115,7 +130,9 @@ export function EmitPane() {
             >
               <SelectTrigger aria-label="Resource key" className="w-full">
                 <SelectValue>
-                  {(v: string | null) => v ?? "Pick a subscribed keyed resource…"}
+                  {(v: string | null) =>
+                    v ?? "Pick a subscribed keyed resource…"
+                  }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -241,7 +258,8 @@ function StatusView({
   if (!status.active) {
     return (
       <Text variant="caption" tone="muted">
-        Idle. {status.ticks > 0 ? `Last session fired ${status.ticks} ticks.` : ""}
+        Idle.{" "}
+        {status.ticks > 0 ? `Last session fired ${status.ticks} ticks.` : ""}
       </Text>
     );
   }
@@ -267,8 +285,8 @@ function StatusView({
       </Text>
       {noSubscribers ? (
         <Placeholder tone="error">
-          Nobody subscribed to this key — no churn is observable. Open a view that
-          renders this resource, or pick one with live subscribers.
+          Nobody subscribed to this key — no churn is observable. Open a view
+          that renders this resource, or pick one with live subscribers.
         </Placeholder>
       ) : null}
     </Stack>

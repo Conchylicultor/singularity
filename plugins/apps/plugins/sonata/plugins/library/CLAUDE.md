@@ -195,6 +195,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songAttachments`
     - `songsLiveResource`
     - `updateSongMeta`
+  - Resources: `sonata-songs` (push)
   - Routes:
     - `DELETE /api/sonata/songs/:id`
     - `PATCH /api/sonata/songs/:id`

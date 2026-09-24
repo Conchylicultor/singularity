@@ -133,6 +133,7 @@ plus a per-song reset.
   - Exports (values):
     - `_trackView`
     - `trackViewLiveResource`
+  - Resources: `sonata-track-view` (push)
   - Routes:
     - `POST /api/sonata/songs/:songId/track-view`
     - `DELETE /api/sonata/songs/:songId/track-view`

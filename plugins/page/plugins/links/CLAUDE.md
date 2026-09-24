@@ -36,6 +36,9 @@
     - `pageLinksLiveResource`
     - `reindexPage`
   - Register: `defineJob('page.links.reindex')`
+  - Resources:
+    - `page-backlinks` (push)
+    - `page-links` (push)
 - Web:
   - Uses:
     - `page/editor.PageIcon`

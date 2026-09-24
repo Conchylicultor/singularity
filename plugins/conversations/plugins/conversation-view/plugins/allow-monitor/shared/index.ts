@@ -1,1 +1,2 @@
-export { getAllowFiles } from "./endpoints";
+export { allowFilesResource, AllowFilesSchema } from "./resources";
+export type { AllowFiles } from "./resources";

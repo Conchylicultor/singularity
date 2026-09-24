@@ -51,6 +51,7 @@ inferred key.
   - Exports (values):
     - `keyAutoDetectLiveResource`
     - `songKeyAutoDetect`
+  - Resources: `sonata-key-auto-detect` (push)
   - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
 - Cross-plugin:
   - Imported by: `apps/sonata/rich/key-readout`

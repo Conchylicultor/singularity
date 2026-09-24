@@ -4,7 +4,7 @@ import { AllowMonitorChip } from "./components/allow-monitor-chip";
 
 export default {
   description:
-    "Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.",
+    "Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.",
   contributions: [
     Conversation.Header({ id: "allow-monitor", component: AllowMonitorChip }),
   ],

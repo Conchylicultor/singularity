@@ -13,7 +13,9 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
@@ -28,18 +30,57 @@ import {
   usePointResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
-  pointResourceDescriptor,
-  windowResourceDescriptor,
+  keyedResourceDescriptor,
+  type PointParams,
+  type PointResourceDescriptor,
+  type WindowParams,
+  type WindowResourceDescriptor,
 } from "@plugins/primitives/plugins/live-state/core";
 
 const Row = z.object({ id: z.string(), n: z.number() });
 type Row = z.infer<typeof Row>;
 const keyOf = (r: unknown) => (r as Row).id;
 
-const winResource = windowResourceDescriptor<Row>("test.hooks.window", Row, keyOf, {
-  defaultLimit: 2,
+// Minimal descriptors satisfying the window / point interfaces. The real
+// factories (and their codec tests) live in infra/query-resource, which this
+// plugin cannot import; these hooks only read `window.encode` / `point.encode`
+// and `defaultParams`, so a canonical stand-in codec is all they need.
+const winEncode = (sel?: { limit?: number }): WindowParams => ({
+  limit: String(sel?.limit ?? 2),
 });
-const ptResource = pointResourceDescriptor<Row>("test.hooks.point", Row, keyOf);
+const winResource: WindowResourceDescriptor<Row> = Object.assign(
+  keyedResourceDescriptor<Row[], WindowParams>(
+    "test.hooks.window",
+    z.array(Row),
+    [],
+    keyOf,
+  ),
+  {
+    defaultParams: winEncode(),
+    window: {
+      defaultLimit: 2,
+      encode: winEncode,
+      decode: () => ({ limit: 2 }),
+    },
+  },
+);
+const ptResource: PointResourceDescriptor<Row> = Object.assign(
+  keyedResourceDescriptor<Row[], PointParams>(
+    "test.hooks.point",
+    z.array(Row),
+    [],
+    keyOf,
+  ),
+  {
+    point: {
+      encode: (ids: readonly string[]): PointParams => ({
+        ids: [...new Set(ids)].sort().join(","),
+      }),
+      decode: (params: Record<string, string>) =>
+        params.ids ? params.ids.split(",") : [],
+    },
+  },
+);
 
 function makeClient(): QueryClient {
   return new QueryClient({
@@ -51,7 +92,9 @@ function makeClient(): QueryClient {
 
 function mount<R>(client: QueryClient, useHook: () => R) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+    <NotificationsProvider queryClient={client}>
+      {children}
+    </NotificationsProvider>
   );
   const rendered = renderHook(useHook, { wrapper });
   const notifications = getNotificationsClient();
@@ -63,9 +106,15 @@ function mount<R>(client: QueryClient, useHook: () => R) {
 describe("useWindowResource", () => {
   it("a bare call lands on the descriptor's defaultParams tuple — a boot-hydrated value settles it with no load", async () => {
     const client = makeClient();
-    const rows: Row[] = [{ id: "a", n: 1 }, { id: "b", n: 2 }];
+    const rows: Row[] = [
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ];
     // Boot-snapshot's hydration path: seed the DEFAULT-window tuple before mount.
-    client.setQueryData(queryKeyFor(winResource.key, winResource.defaultParams), rows);
+    client.setQueryData(
+      queryKeyFor(winResource.key, winResource.defaultParams),
+      rows,
+    );
 
     const { result } = mount(client, () => useWindowResource(winResource));
     await waitFor(() => expect(result.current.pending).toBe(false));
@@ -78,7 +127,9 @@ describe("useWindowResource", () => {
   it("an explicit limit subscribes on the canonical {limit} tuple", () => {
     const client = makeClient();
     mount(client, () => useWindowResource(winResource, { limit: 5 }));
-    expect(client.getQueryState(queryKeyFor(winResource.key, { limit: "5" }))).toBeDefined();
+    expect(
+      client.getQueryState(queryKeyFor(winResource.key, { limit: "5" })),
+    ).toBeDefined();
   });
 });
 
@@ -89,7 +140,9 @@ describe("usePointResource", () => {
     expect(result.current.pending).toBe(true);
 
     act(() => {
-      client.setQueryData(queryKeyFor(ptResource.key, { ids: "a" }), [{ id: "a", n: 7 }]);
+      client.setQueryData(queryKeyFor(ptResource.key, { ids: "a" }), [
+        { id: "a", n: 7 },
+      ]);
     });
     await waitFor(() => expect(result.current.pending).toBe(false));
     const r = result.current;
@@ -100,7 +153,9 @@ describe("usePointResource", () => {
 
   it("settles to null (a determinate non-value) when the server answers with no row", async () => {
     const client = makeClient();
-    const { result } = mount(client, () => usePointResource(ptResource, "missing"));
+    const { result } = mount(client, () =>
+      usePointResource(ptResource, "missing"),
+    );
 
     act(() => {
       client.setQueryData(queryKeyFor(ptResource.key, { ids: "missing" }), []);
@@ -117,10 +172,15 @@ describe("usePointResource", () => {
 describe("usePointResources", () => {
   it("subscribes on the canonical sorted/deduped multi-id tuple", async () => {
     const client = makeClient();
-    const rows: Row[] = [{ id: "a", n: 1 }, { id: "b", n: 2 }];
+    const rows: Row[] = [
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ];
     client.setQueryData(queryKeyFor(ptResource.key, { ids: "a,b" }), rows);
 
-    const { result } = mount(client, () => usePointResources(ptResource, ["b", "a", "a"]));
+    const { result } = mount(client, () =>
+      usePointResources(ptResource, ["b", "a", "a"]),
+    );
     await waitFor(() => expect(result.current.pending).toBe(false));
     const r = result.current;
     if (r.pending) throw new Error("unreachable");

@@ -1,6 +1,9 @@
 import { useMemo, useState, type ReactElement } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -114,7 +117,11 @@ function computeCeiling(resources: ResourceReadSet[]): {
     const covered = new Set(r.coveredOrigins);
     const uncovered = r.readSetBases.filter((t) => !covered.has(t)).sort();
     if (uncovered.length > 0) {
-      silentFull.push({ key: r.key, uncovered, coveredOrigins: [...r.coveredOrigins].sort() });
+      silentFull.push({
+        key: r.key,
+        uncovered,
+        coveredOrigins: [...r.coveredOrigins].sort(),
+      });
     } else {
       scoped += 1;
     }
@@ -125,7 +132,9 @@ function computeCeiling(resources: ResourceReadSet[]): {
   return { silentFull, explicitFull, scoped };
 }
 
-function computeDiff(resources: ResourceReadSet[]): { overBroad: OverBroadFlag[] } {
+function computeDiff(resources: ResourceReadSet[]): {
+  overBroad: OverBroadFlag[];
+} {
   const readsByKey = new Map<string, Set<string>>();
   for (const r of resources) readsByKey.set(r.key, new Set(r.readSet));
 
@@ -144,7 +153,8 @@ function computeDiff(resources: ResourceReadSet[]): { overBroad: OverBroadFlag[]
         return true;
       })
       .sort();
-    if (overBroadUps.length > 0) overBroad.push({ key: r.key, upstreams: overBroadUps });
+    if (overBroadUps.length > 0)
+      overBroad.push({ key: r.key, upstreams: overBroadUps });
   }
 
   return { overBroad };
@@ -171,13 +181,22 @@ function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
 }
 
 export function ReadSetView(): ReactElement {
-  const { data } = useEndpoint(resourcesReadSetEndpoint, {}, { refetchInterval: 5000 });
+  /* eslint-disable polling-safety/no-refetch-interval -- inspects the live-state runtime itself; a resource of its own read set would perturb what it measures */
+  const { data } = useEndpoint(
+    resourcesReadSetEndpoint,
+    {},
+    { refetchInterval: 5000 },
+  );
+  /* eslint-enable polling-safety/no-refetch-interval */
 
   const resources = useMemo(() => data?.resources ?? [], [data]);
   const captured = useMemo(() => buildCapturedIndex(resources), [resources]);
   const ceiling = useMemo(() => computeCeiling(resources), [resources]);
   const { overBroad } = useMemo(() => computeDiff(resources), [resources]);
-  const notifyEntries = useMemo(() => buildNotifyEntries(resources), [resources]);
+  const notifyEntries = useMemo(
+    () => buildNotifyEntries(resources),
+    [resources],
+  );
 
   if (!data) {
     return (
@@ -216,7 +235,11 @@ function Caveat(): ReactElement {
 
 // ── Section A: captured table → [resources] index ──────────────────────────
 
-function CapturedIndexSection({ entries }: { entries: TableEntry[] }): ReactElement {
+function CapturedIndexSection({
+  entries,
+}: {
+  entries: TableEntry[];
+}): ReactElement {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -231,7 +254,8 @@ function CapturedIndexSection({ entries }: { entries: TableEntry[] }): ReactElem
   return (
     <Stack as="section" gap="sm">
       <SectionLabel>
-        Captured index <span className="opacity-60">{entries.length} tables</span>
+        Captured index{" "}
+        <span className="opacity-60">{entries.length} tables</span>
       </SectionLabel>
       <SearchInput
         value={query}
@@ -239,7 +263,9 @@ function CapturedIndexSection({ entries }: { entries: TableEntry[] }): ReactElem
         placeholder="Filter by table or resource…"
       />
       {entries.length === 0 ? (
-        <Text variant="caption" tone="muted">No tables captured yet — browse to run loaders.</Text>
+        <Text variant="caption" tone="muted">
+          No tables captured yet — browse to run loaders.
+        </Text>
       ) : (
         <Stack gap="sm">
           {filtered.map((e) => (
@@ -275,12 +301,18 @@ function ChipRow({
   return (
     <Stack gap="2xs">
       <Stack direction="row" gap="sm" align="baseline" justify="between">
-        <Text variant="caption" className="font-mono">{label}</Text>
-        <Text as="span" variant="caption" tone="muted" className="tabular-nums">{count}</Text>
+        <Text variant="caption" className="font-mono">
+          {label}
+        </Text>
+        <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+          {count}
+        </Text>
       </Stack>
       <Cluster gap="2xs">
         {chips.map((c) => (
-          <Badge key={c.key} variant={variant} mono>{c.text}</Badge>
+          <Badge key={c.key} variant={variant} mono>
+            {c.text}
+          </Badge>
         ))}
       </Cluster>
     </Stack>
@@ -289,7 +321,11 @@ function ChipRow({
 
 // ── Section D: notify provenance (hand vs feed, L4 parallel run) ────────────
 
-function NotifyProvenanceSection({ entries }: { entries: NotifyEntry[] }): ReactElement {
+function NotifyProvenanceSection({
+  entries,
+}: {
+  entries: NotifyEntry[];
+}): ReactElement {
   const gaps = useMemo(() => entries.filter((e) => e.gap).length, [entries]);
 
   return (
@@ -323,7 +359,9 @@ function NotifyProvenanceSection({ entries }: { entries: NotifyEntry[] }): React
 function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
   return (
     <Stack direction="row" gap="sm" align="baseline" justify="between">
-      <Text variant="caption" className="font-mono">{entry.key}</Text>
+      <Text variant="caption" className="font-mono">
+        {entry.key}
+      </Text>
       <Cluster gap="2xs">
         {entry.gap ? <Badge variant="destructive">read-set gap</Badge> : null}
         <Badge variant={entry.gap ? "warning" : "muted"} mono>
@@ -357,7 +395,8 @@ function CeilingSection({
 
       {silentFull.length === 0 ? (
         <Text variant="caption" tone="muted">
-          No silent FULLs — every scoped resource's read-set stays inside its coveredOrigins.
+          No silent FULLs — every scoped resource's read-set stays inside its
+          coveredOrigins.
         </Text>
       ) : (
         <Stack gap="sm">
@@ -370,9 +409,13 @@ function CeilingSection({
                 chips={s.uncovered.map((t) => ({ key: t, text: t }))}
               />
               <Cluster gap="2xs">
-                <Text as="span" variant="caption" tone="muted">covered</Text>
+                <Text as="span" variant="caption" tone="muted">
+                  covered
+                </Text>
                 {s.coveredOrigins.map((t) => (
-                  <Badge key={t} mono>{t}</Badge>
+                  <Badge key={t} mono>
+                    {t}
+                  </Badge>
                 ))}
               </Cluster>
             </Stack>
@@ -386,13 +429,25 @@ function CeilingSection({
           <span className="opacity-60">{explicitFull.length}</span>
         </SectionLabel>
         {explicitFull.length === 0 ? (
-          <Text variant="caption" tone="muted">No resources declare an explicit FULL recompute.</Text>
+          <Text variant="caption" tone="muted">
+            No resources declare an explicit FULL recompute.
+          </Text>
         ) : (
           <Stack gap="2xs">
             {explicitFull.map((e) => (
-              <Stack key={e.key} direction="row" gap="sm" align="baseline" justify="between">
-                <Text variant="caption" className="font-mono">{e.key}</Text>
-                <Text as="span" variant="caption" tone="muted">{e.reason}</Text>
+              <Stack
+                key={e.key}
+                direction="row"
+                gap="sm"
+                align="baseline"
+                justify="between"
+              >
+                <Text variant="caption" className="font-mono">
+                  {e.key}
+                </Text>
+                <Text as="span" variant="caption" tone="muted">
+                  {e.reason}
+                </Text>
               </Stack>
             ))}
           </Stack>
@@ -400,7 +455,9 @@ function CeilingSection({
       </Stack>
 
       {scoped > 0 ? (
-        <Text variant="caption" tone="muted">{scoped} resources fully scoped.</Text>
+        <Text variant="caption" tone="muted">
+          {scoped} resources fully scoped.
+        </Text>
       ) : null}
     </Stack>
   );
@@ -408,7 +465,11 @@ function CeilingSection({
 
 // ── Section C: over-broad edges vs dependsOn ────────────────────────────────
 
-function DiffSection({ overBroad }: { overBroad: OverBroadFlag[] }): ReactElement {
+function DiffSection({
+  overBroad,
+}: {
+  overBroad: OverBroadFlag[];
+}): ReactElement {
   return (
     <Stack as="section" gap="lg">
       <SectionLabel>
@@ -416,7 +477,9 @@ function DiffSection({ overBroad }: { overBroad: OverBroadFlag[] }): ReactElemen
         <span className="opacity-60">{overBroad.length}</span>
       </SectionLabel>
       {overBroad.length === 0 ? (
-        <Text variant="caption" tone="muted">No over-broad edges — every declared upstream shares a read table.</Text>
+        <Text variant="caption" tone="muted">
+          No over-broad edges — every declared upstream shares a read table.
+        </Text>
       ) : (
         <Stack gap="sm">
           {overBroad.map((o) => (

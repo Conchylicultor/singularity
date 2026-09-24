@@ -1,4 +1,5 @@
 export { GUARDS } from "./registry";
+export { BYPASS_TOKENS } from "./bypass-tokens";
 export type {
   AllowVerdict,
   DenyVerdict,

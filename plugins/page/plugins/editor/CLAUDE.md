@@ -4054,6 +4054,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTriggerEvent('page.blocksChanged')`
     - `defineTrashSource('pages')`
     - `defineTrashSource('page-blocks')`
+  - Resources:
+    - `page-blocks` (push)
+    - `pages` (push)
   - Routes:
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`

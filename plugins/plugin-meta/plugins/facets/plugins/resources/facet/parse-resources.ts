@@ -26,8 +26,9 @@ import type { ResourceDef, ResourceFacetData } from "../core";
 // references that descriptor: `defineResource(descriptor, opts)` /
 // `windowQueryResource(descriptor, spec)` (in `server/` or `central/`). The
 // legacy flat form `defineResource({ key, mode })` inlines the key at the
-// register site. The key is resolved across files the way the `routes` facet
-// resolves `[endpoint.route]` computed keys: an extract-time
+// register site, as a literal or as `<descriptor>.key`. The key is resolved
+// across files the way the `routes` facet resolves `[endpoint.route]` computed
+// keys: an extract-time
 // `name → descriptor` map, built over the serving plugin's own sources and, for
 // a descriptor imported from another plugin's barrel, over that plugin's.
 //
@@ -212,15 +213,25 @@ export function parseFileBindings(src: string): FileBindings {
 /**
  * Resolve one register call's `argsText` to a `ResourceDef`.
  *
+ * Two shapes carry a key. The DESCRIPTOR form passes a descriptor identifier as
+ * the first argument (`defineResource(tasksResource, opts)`). The FLAT form
+ * inlines an object literal whose `key:` is either a string literal or a
+ * descriptor's `.key` (`defineResource({ key: pagesResource.key, mode, … })`) —
+ * both name the same descriptor, so both resolve through the same
+ * {@link resolveDescriptorIdentifier}.
+ *
  * `null` only for a shape this scanner could never have resolved: the flat form
- * with no literal `key:`, or a descriptor argument that is a RUNTIME VALUE — an
+ * with no `key:` at all, or a descriptor that is a RUNTIME VALUE — an
  * identifier bound by neither an import nor a module-level const, i.e. a
  * function parameter, which is how the query compiler calls
  * `defineResource(descriptor, …)` on a descriptor handed to it.
  *
- * THROWS when the identifier IS bound in the file but resolves to no descriptor.
- * That is the shape that used to disappear silently, and it is exactly what a
- * descriptor minted by an unknown factory looks like from here.
+ * THROWS on everything else it cannot read: an identifier that IS bound in the
+ * file but resolves to no descriptor (what a descriptor minted by an unknown
+ * factory looks like from here), and a flat `key:` that is neither a literal nor
+ * `<identifier>.key` (an interpolated template, a call, a bare constant). Both
+ * used to disappear silently — the flat branch dropped 14 real resources from
+ * docs/plugins-details.md before it resolved `X.key`.
  */
 export function resolveRegisterCall(
   marker: string,
@@ -231,51 +242,63 @@ export function resolveRegisterCall(
   resolveImported: ImportedDescriptorResolver,
 ): ResourceDef | null {
   const head = stripLeadingTrivia(argsText);
+  const modeField = parseStringField(argsText, "mode");
   if (head.startsWith("{")) {
     // Flat inline object form: key + optional mode live in the object literal.
     const keyField = parseStringField(argsText, "key");
-    // `absent`/`dynamic` → no statically-resolvable key: a non-literal key is
-    // exactly the runtime-value case the descriptor-index path exists to handle,
-    // so fall through to `null` (drop from the static resource list).
-    if (keyField.kind !== "value") return null;
-    const modeField = parseStringField(argsText, "mode");
+    if (keyField.kind === "absent") return null;
+    if (keyField.kind === "value") {
+      const mode = modeField.kind === "value" ? modeField.value : "push";
+      return { key: keyField.value, mode };
+    }
+    const member = /^([A-Za-z_$][\w$]*)\.key$/.exec(keyField.expr.trim());
+    if (!member) {
+      throw new Error(
+        unresolvableCallIdMessage({
+          marker,
+          file: where.file,
+          line: where.line,
+          expr: keyField.expr,
+          hint:
+            "A register call's `key:` is read from source text by the docs facet, so " +
+            "it must be a string literal or `<descriptor>.key` naming a descriptor " +
+            "declared with a literal key — anything else would silently vanish from " +
+            "docs/plugins-details.md. Pass the descriptor's `.key`, or inline the literal.",
+        }),
+      );
+    }
+    const info = resolveDescriptorIdentifier(
+      marker,
+      member[1]!,
+      bindings,
+      index,
+      where,
+      resolveImported,
+    );
+    if (!info) return null;
+    // The flat form's literal `mode:` is what the runtime serves; the
+    // descriptor only supplies the key (and bounded membership, if any).
     const mode = modeField.kind === "value" ? modeField.value : "push";
-    return { key: keyField.value, mode };
+    return info.membership
+      ? { key: info.key, mode, membership: info.membership }
+      : { key: info.key, mode };
   }
   // Descriptor form: the first arg is an identifier bound to a descriptor.
   const idMatch = /^([A-Za-z_$][\w$]*)/.exec(head);
   if (!idMatch) return null;
-  const local = idMatch[1]!;
-  const binding = bindings.get(local);
-  const info =
-    index.get(binding?.exported ?? local) ??
-    (binding?.specifier != null
-      ? resolveImported(binding.specifier, binding.exported)
-      : null);
-  if (!info) {
-    if (!binding) return null; // runtime value — a parameter, never resolvable from text
-    throw new Error(
-      unresolvableCallIdMessage({
-        marker,
-        file: where.file,
-        line: where.line,
-        expr: local,
-        hint:
-          `\`${local}\` is bound in this file but is not a descriptor this scanner ` +
-          "can resolve. If it comes from a descriptor factory the vocabulary does " +
-          "not know, add that factory to " +
-          "plugins/framework/plugins/tooling/plugins/resource-vocabulary/core — " +
-          "until it is listed, this resource is invisible to docs/plugins-details.md " +
-          "and to the eager-tier generator. Otherwise declare the descriptor as a " +
-          "module-level const with a literal key and pass that identifier.",
-      }),
-    );
-  }
+  const info = resolveDescriptorIdentifier(
+    marker,
+    idMatch[1]!,
+    bindings,
+    index,
+    where,
+    resolveImported,
+  );
+  if (!info) return null;
   // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
   // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
   // non-literal `mode:` is the runtime-value case the descriptor already resolves,
   // so `absent`/`dynamic` both fall through to the descriptor-implied default.
-  const modeField = parseStringField(argsText, "mode");
   const mode =
     modeField.kind === "value"
       ? modeField.value
@@ -285,6 +308,46 @@ export function resolveRegisterCall(
   return info.membership
     ? { key: info.key, mode, membership: info.membership }
     : { key: info.key, mode };
+}
+
+/**
+ * Resolve a descriptor identifier used at a register call — through the
+ * plugin's own descriptor index, then (for an import) the other plugin's.
+ * `null` when it is a runtime value (bound by neither an import nor a
+ * module-level const); THROWS when it is bound but names no descriptor.
+ */
+function resolveDescriptorIdentifier(
+  marker: string,
+  local: string,
+  bindings: FileBindings,
+  index: Map<string, DescriptorInfo>,
+  where: { file: string; line: number },
+  resolveImported: ImportedDescriptorResolver,
+): DescriptorInfo | null {
+  const binding = bindings.get(local);
+  const info =
+    index.get(binding?.exported ?? local) ??
+    (binding?.specifier != null
+      ? resolveImported(binding.specifier, binding.exported)
+      : null);
+  if (info) return info;
+  if (!binding) return null; // runtime value — a parameter, never resolvable from text
+  throw new Error(
+    unresolvableCallIdMessage({
+      marker,
+      file: where.file,
+      line: where.line,
+      expr: local,
+      hint:
+        `\`${local}\` is bound in this file but is not a descriptor this scanner ` +
+        "can resolve. If it comes from a descriptor factory the vocabulary does " +
+        "not know, add that factory to " +
+        "plugins/framework/plugins/tooling/plugins/resource-vocabulary/core — " +
+        "until it is listed, this resource is invisible to docs/plugins-details.md " +
+        "and to the eager-tier generator. Otherwise declare the descriptor as a " +
+        "module-level const with a literal key and pass that identifier.",
+    }),
+  );
 }
 
 /** Parse every register call in `files` (one runtime), resolving keys via `index`. */

@@ -100,6 +100,7 @@ how the caller obtained it.
   - Exports (values):
     - `_dataViewCustomValues`
     - `customColumnValuesLiveResource`
+  - Resources: `data-view-custom-values` (push)
   - Routes:
     - `POST /api/data-view/custom-values`
     - `POST /api/data-view/custom-values/delete-column`

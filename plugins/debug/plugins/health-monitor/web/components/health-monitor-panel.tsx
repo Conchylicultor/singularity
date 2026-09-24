@@ -433,7 +433,9 @@ export function HealthMonitorPanel(): ReactElement {
   const { data, error, dataUpdatedAt } = useEndpoint(
     getHealthData,
     {},
+    /* eslint-disable polling-safety/no-refetch-interval -- a sampled time series read from disk by main, meant to answer even when the backend a push would come from is wedged */
     { query: { windowMs: WINDOW_MS }, refetchInterval: POLL_MS },
+    /* eslint-enable polling-safety/no-refetch-interval */
   );
 
   if (error) {

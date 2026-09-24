@@ -11,7 +11,7 @@
 // subscription would silently read nothing, so there is exactly one definition.
 //
 // Neither component may contain `:` (the separator) or `,` (the point codec's id
-// separator — `pointResourceDescriptor.encode` throws on a comma). Conversation
+// separator — `pointQueryResourceDescriptor`'s `point.encode` throws on a comma). Conversation
 // ids are `conv-<ts>-<slug>`; category ids are UUIDs minted by the settings UI or
 // hand-authored slugs in `config.jsonc`.
 export function categoryRowId(

@@ -1,6 +1,7 @@
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { publishNetDiag } from "./net-diag-bus";
 import { CrossTabElection } from "./cross-tab-election";
+import { ReconnectSchedule } from "./reconnect-backoff";
 import type {
   WebSocketLike,
   MakeWebSocket,
@@ -29,8 +30,6 @@ export interface SharedWebSocketHooks {
 // leader transparently. On leader failure (tab frozen/closed), a follower
 // takes over within ~12 seconds.
 
-const BACKOFF_MS = [500, 1000, 2000, 5000];
-
 type WsRelayMsg =
   | { kind: "rx"; data: string }
   | { kind: "tx"; data: string }
@@ -55,8 +54,7 @@ export class SharedWebSocket {
   private makeWebSocket: MakeWebSocket;
   private ws: WebSocketLike | null = null;
   private queue: string[] = [];
-  private attempt = 0;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnect = new ReconnectSchedule();
   private closed = false;
   private lastStatus: WsStatus | null = null;
 
@@ -74,55 +72,61 @@ export class SharedWebSocket {
       makeBroadcastChannel?: MakeBroadcastChannel;
       locks?: LockManagerLike | null;
     } = {};
-    if (hooks?.heartbeatMs !== undefined) electionOpts.heartbeatMs = hooks.heartbeatMs;
-    if (hooks?.timeoutMs !== undefined) electionOpts.timeoutMs = hooks.timeoutMs;
+    if (hooks?.heartbeatMs !== undefined)
+      electionOpts.heartbeatMs = hooks.heartbeatMs;
+    if (hooks?.timeoutMs !== undefined)
+      electionOpts.timeoutMs = hooks.timeoutMs;
     if (hooks?.makeBroadcastChannel !== undefined) {
       electionOpts.makeBroadcastChannel = hooks.makeBroadcastChannel;
     }
     if (hooks?.locks !== undefined) electionOpts.locks = hooks.locks;
 
-    this.election = new CrossTabElection<WsRelayMsg>(name, {
-      onElected: () => this.startLeading(),
-      onDemoted: () => this.onDemoted(),
-      onFollowerMessage: (msg) => {
-        if (msg.kind === "tx") this.writeOrQueue(msg.data);
-      },
-      onLeaderMessage: (msg) => {
-        switch (msg.kind) {
-          case "rx":
-            this.dispatchMessage(msg.data);
-            break;
-          case "open": {
-            // The leader rebroadcasts "open" to ALL followers whenever a new tab
-            // joins (onFollowerJoined below). A follower already at OPEN must
-            // NOT re-dispatch onopen: consumers treat onopen as "fresh
-            // connection, replay state" (NotificationsClient replays its whole
-            // sub set), so an unconditional dispatch made every existing tab
-            // re-replay on every tab join. A genuine reconnect still
-            // dispatches, because the leader's "close" broadcast reset this
-            // follower to CONNECTING first.
-            const wasOpen = this.readyState === SharedWebSocket.OPEN;
-            this.readyState = SharedWebSocket.OPEN;
-            this.setStatus("open");
-            publishNetDiag({ type: "ws-open", url: this.url });
-            if (!wasOpen) this.dispatchOpen();
-            break;
+    this.election = new CrossTabElection<WsRelayMsg>(
+      name,
+      {
+        onElected: () => this.startLeading(),
+        onDemoted: () => this.onDemoted(),
+        onFollowerMessage: (msg) => {
+          if (msg.kind === "tx") this.writeOrQueue(msg.data);
+        },
+        onLeaderMessage: (msg) => {
+          switch (msg.kind) {
+            case "rx":
+              this.dispatchMessage(msg.data);
+              break;
+            case "open": {
+              // The leader rebroadcasts "open" to ALL followers whenever a new tab
+              // joins (onFollowerJoined below). A follower already at OPEN must
+              // NOT re-dispatch onopen: consumers treat onopen as "fresh
+              // connection, replay state" (NotificationsClient replays its whole
+              // sub set), so an unconditional dispatch made every existing tab
+              // re-replay on every tab join. A genuine reconnect still
+              // dispatches, because the leader's "close" broadcast reset this
+              // follower to CONNECTING first.
+              const wasOpen = this.readyState === SharedWebSocket.OPEN;
+              this.readyState = SharedWebSocket.OPEN;
+              this.setStatus("open");
+              publishNetDiag({ type: "ws-open", url: this.url });
+              if (!wasOpen) this.dispatchOpen();
+              break;
+            }
+            case "close":
+              this.readyState = SharedWebSocket.CONNECTING;
+              this.setStatus("reconnecting");
+              publishNetDiag({ type: "ws-close", url: this.url });
+              break;
+            case "tx":
+              break;
           }
-          case "close":
-            this.readyState = SharedWebSocket.CONNECTING;
-            this.setStatus("reconnecting");
-            publishNetDiag({ type: "ws-close", url: this.url });
-            break;
-          case "tx":
-            break;
-        }
+        },
+        onFollowerJoined: () => {
+          if (this.ws?.readyState === SharedWebSocket.OPEN) {
+            this.election.broadcast({ kind: "open" });
+          }
+        },
       },
-      onFollowerJoined: () => {
-        if (this.ws?.readyState === SharedWebSocket.OPEN) {
-          this.election.broadcast({ kind: "open" });
-        }
-      },
-    }, electionOpts);
+      electionOpts,
+    );
   }
 
   /**
@@ -153,10 +157,19 @@ export class SharedWebSocket {
     this.readyState = SharedWebSocket.CLOSED;
     this.teardownWs();
     this.election.close();
+    /* eslint-disable promise-safety/no-bare-catch -- a throwing onclose listener must not break close() */
     try {
-      this.onclose?.(new CloseEvent("close", { code: 1000, reason: "handle closed", wasClean: true }));
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch { /* ignore */ }
+      this.onclose?.(
+        new CloseEvent("close", {
+          code: 1000,
+          reason: "handle closed",
+          wasClean: true,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+    /* eslint-enable promise-safety/no-bare-catch */
   }
 
   // --- leader: WebSocket management -----------------------------------------
@@ -164,20 +177,19 @@ export class SharedWebSocket {
   private startLeading(): void {
     if (this.closed) return;
     this.teardownWs();
-    this.attempt = 0;
+    this.reconnect.reset();
     this.setStatus("connecting");
     this.connectWs();
   }
 
   private connectWs = (): void => {
     if (this.closed) return;
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
+    this.reconnect.cancel();
 
     const proto =
-      typeof location !== "undefined" && location.protocol === "https:" ? "wss" : "ws";
+      typeof location !== "undefined" && location.protocol === "https:"
+        ? "wss"
+        : "ws";
     const host = typeof location !== "undefined" ? location.host : "";
     const absUrl = /^wss?:\/\//i.test(this.url)
       ? this.url
@@ -194,12 +206,17 @@ export class SharedWebSocket {
     this.ws = ws;
 
     ws.onopen = () => {
-      this.attempt = 0;
+      this.reconnect.reset();
       this.readyState = SharedWebSocket.OPEN;
       while (this.queue.length > 0) {
         const msg = this.queue.shift()!;
-        // eslint-disable-next-line promise-safety/no-bare-catch
-        try { ws.send(msg); } catch { /* ignore */ }
+        /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+        try {
+          ws.send(msg);
+        } catch {
+          /* ignore */
+        }
+        /* eslint-enable promise-safety/no-bare-catch */
       }
       this.setStatus("open");
       publishNetDiag({ type: "ws-open", url: this.url });
@@ -214,8 +231,13 @@ export class SharedWebSocket {
     };
 
     ws.onerror = () => {
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      try { this.onerror?.(new Event("error")); } catch { /* ignore */ }
+      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+      try {
+        this.onerror?.(new Event("error"));
+      } catch {
+        /* ignore */
+      }
+      /* eslint-enable promise-safety/no-bare-catch */
     };
 
     ws.onclose = () => {
@@ -230,32 +252,26 @@ export class SharedWebSocket {
   };
 
   private scheduleReconnect(): void {
-    const base = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
-    // Jitter each reconnect by a fresh 0.5–1.5× factor (mirrors the
-    // fetch-with-retry idiom, wider band). When a shared restart closes the
-    // whole tab fleet at once, a fixed backoff would wake every tab in the same
-    // millisecond and re-herd the backend; the per-call random spread
-    // de-synchronizes them. Computed inline so repeated cycles don't resonate.
-    const delay = base * (0.5 + Math.random());
-    this.attempt++;
-    publishNetDiag({ type: "ws-reconnect-scheduled", url: this.url, attempt: this.attempt });
-    this.retryTimer = setTimeout(this.connectWs, delay);
+    const attempt = this.reconnect.schedule(this.connectWs);
+    publishNetDiag({ type: "ws-reconnect-scheduled", url: this.url, attempt });
   }
 
   private writeOrQueue(data: string): void {
     if (this.ws && this.ws.readyState === SharedWebSocket.OPEN) {
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      try { this.ws.send(data); } catch { /* ignore */ }
+      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+      try {
+        this.ws.send(data);
+      } catch {
+        /* ignore */
+      }
+      /* eslint-enable promise-safety/no-bare-catch */
     } else {
       this.queue.push(data);
     }
   }
 
   private teardownWs(): void {
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
+    this.reconnect.cancel();
     if (this.ws) {
       const ws = this.ws;
       this.ws = null;
@@ -263,21 +279,36 @@ export class SharedWebSocket {
       ws.onmessage = null;
       ws.onerror = null;
       ws.onclose = null;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      try { ws.close(); } catch { /* ignore */ }
+      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      /* eslint-enable promise-safety/no-bare-catch */
     }
   }
 
   // --- dispatchers ----------------------------------------------------------
 
   private dispatchOpen(): void {
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    try { this.onopen?.(new Event("open")); } catch { /* ignore */ }
+    /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+    try {
+      this.onopen?.(new Event("open"));
+    } catch {
+      /* ignore */
+    }
+    /* eslint-enable promise-safety/no-bare-catch */
   }
 
   private dispatchMessage(data: string): void {
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    try { this.onmessage?.(new MessageEvent("message", { data })); } catch { /* ignore */ }
+    /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+    try {
+      this.onmessage?.(new MessageEvent("message", { data }));
+    } catch {
+      /* ignore */
+    }
+    /* eslint-enable promise-safety/no-bare-catch */
   }
 
   // --- introspection (read-only; Layer 2 inspector) -------------------------

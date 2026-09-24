@@ -71,26 +71,13 @@ describe("buildDescriptorIndex", () => {
       export const taskAutoStartResource = pointQueryResourceDescriptor<TaskAutoStartRow>(
         "tasks-auto-start", TaskAutoStartRowSchema, "taskId",
       );
-      export const rawWindowResource = windowResourceDescriptor<Row>(
-        "raw-window", RowSchema, keyOf, { defaultLimit: 50 },
-      );
-      export const rawPointResource = pointResourceDescriptor<Row>(
-        "raw-point", RowSchema, keyOf,
-      );
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
     expect(index.get("notificationsResource")?.membership).toBe("window");
     expect(index.get("taskAutoStartResource")?.membership).toBe("point");
-    expect(index.get("rawWindowResource")?.membership).toBe("window");
-    expect(index.get("rawPointResource")?.membership).toBe("point");
-    // All four are keyed at runtime — membership is the only thing that tells a
+    // Both are keyed at runtime — membership is the only thing that tells a
     // bounded resource apart from the legacy unbounded keyed form.
-    for (const name of [
-      "notificationsResource",
-      "taskAutoStartResource",
-      "rawWindowResource",
-      "rawPointResource",
-    ]) {
+    for (const name of ["notificationsResource", "taskAutoStartResource"]) {
       expect(index.get(name)?.keyed).toBe(true);
     }
   });
@@ -127,11 +114,11 @@ describe("buildDescriptorIndex", () => {
   });
 
   it("lets the plugin that OWNS a factory call it with a computed key", () => {
-    // `windowResourceDescriptor` implemented in terms of `keyedResourceDescriptor`
-    // — the wrapper, not a declaration.
+    // `windowQueryResourceDescriptor` implemented in terms of
+    // `keyedResourceDescriptor` — the wrapper, not a declaration.
     const src = `
-      export function windowResourceDescriptor(key, elementSchema, keyOf, opts) {
-        const d = keyedResourceDescriptor(key, z.array(elementSchema), [], keyOf, rest);
+      export function windowQueryResourceDescriptor(key, rowSchema, pkField, opts) {
+        const d = keyedResourceDescriptor(key, z.array(rowSchema), [], pkKeyOf(pkField), rest);
         return Object.assign(d, { window: { encode, decode } });
       }
     `;

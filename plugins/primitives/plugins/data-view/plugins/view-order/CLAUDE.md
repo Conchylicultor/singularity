@@ -226,6 +226,7 @@ set). Identical posture to `data_view_custom_values`.
     - `_dataViewRowOrder`
     - `applyRowOrder`
     - `rowOrderLiveResource`
+  - Resources: `data-view-row-order` (push)
   - Routes: `POST /api/data-view/row-order`
 - Core:
   - Uses:

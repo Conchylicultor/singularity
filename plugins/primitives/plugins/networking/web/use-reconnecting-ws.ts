@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
+import { ReconnectSchedule } from "./reconnect-backoff";
 
 export interface ReconnectingWsOptions {
   url: string;
@@ -15,13 +16,12 @@ export interface ReconnectingWsHandle {
   close: () => void;
 }
 
-const BACKOFF_MS = [500, 1000, 2000, 5000];
 const SEND_QUEUE_LIMIT = 1000;
 const CLOSE_SENTINEL = 4000;
 
-export function useReconnectingWebSocket(
-  opts: ReconnectingWsOptions,
-): { current: ReconnectingWsHandle | null } {
+export function useReconnectingWebSocket(opts: ReconnectingWsOptions): {
+  current: ReconnectingWsHandle | null;
+} {
   const handleRef = useRef<ReconnectingWsHandle | null>(null);
   const optsRef = useLatestRef(opts);
 
@@ -29,8 +29,7 @@ export function useReconnectingWebSocket(
     if (opts.enabled === false) return;
 
     let ws: WebSocket | null = null;
-    let attempt = 0;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const reconnect = new ReconnectSchedule();
     let disposed = false;
     const queue: string[] = [];
 
@@ -41,12 +40,12 @@ export function useReconnectingWebSocket(
 
     const connect = () => {
       if (disposed) return;
-      setStatus(attempt === 0 ? "connecting" : "reconnecting");
+      setStatus(reconnect.isFirstAttempt ? "connecting" : "reconnecting");
       ws = new WebSocket(opts.url);
 
       ws.addEventListener("open", () => {
         if (disposed || !ws) return;
-        attempt = 0;
+        reconnect.reset();
         setStatus("open");
         optsRef.current.onOpen?.(ws);
         while (queue.length > 0 && ws.readyState === WebSocket.OPEN) {
@@ -64,15 +63,8 @@ export function useReconnectingWebSocket(
           setStatus("closed");
           return;
         }
-        // Equal jitter (base/2 + rand·base/2): de-syncs the whole fleet's
-        // reconnect after a shared backend restart, so N tabs don't all resubscribe
-        // in the same backoff tick and stampede the server. Math.random is fine in
-        // app code (the ban is Workflow-script-only).
-        const base = BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]!;
-        const delay = base / 2 + Math.random() * (base / 2);
-        attempt++;
         setStatus("reconnecting");
-        retryTimer = setTimeout(connect, delay);
+        reconnect.schedule(connect);
       });
 
       ws.addEventListener("error", () => {
@@ -90,7 +82,7 @@ export function useReconnectingWebSocket(
       },
       close() {
         disposed = true;
-        if (retryTimer) clearTimeout(retryTimer);
+        reconnect.cancel();
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.close(CLOSE_SENTINEL);
         } else if (ws) {
@@ -103,7 +95,7 @@ export function useReconnectingWebSocket(
 
     return () => {
       disposed = true;
-      if (retryTimer) clearTimeout(retryTimer);
+      reconnect.cancel();
       if (ws) {
         if (ws.readyState === WebSocket.OPEN) ws.close(CLOSE_SENTINEL);
         else ws.close();

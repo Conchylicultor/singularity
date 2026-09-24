@@ -7,7 +7,7 @@
  * exists, shared by the client hook, the record endpoint and the SQL upsert.
  *
  * Both halves must be non-empty and comma-free: the point codec joins subscribed
- * ids with `,` (`pointResourceDescriptor.encode`), so a comma would silently
+ * ids with `,` (`pointQueryResourceDescriptor`'s `point.encode`), so a comma would silently
  * split one id into two. That codec throws on the same condition — we throw
  * HERE, one level earlier, so the message names the namespace/key the caller
  * actually passed rather than the derived id.

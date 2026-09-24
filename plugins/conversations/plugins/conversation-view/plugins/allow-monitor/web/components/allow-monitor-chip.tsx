@@ -1,6 +1,6 @@
 import { MdWarning } from "react-icons/md";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getAllowFiles } from "../../shared/endpoints";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { allowFilesResource } from "../../shared";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -8,13 +8,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();
-  const { data } = useEndpoint(
-    getAllowFiles,
-    { id: convId },
-    { refetchInterval: 3_000 },
-  );
-
-  const allowFiles = data?.allowFiles ?? [];
+  const result = useResource(allowFilesResource, { id: convId });
+  // An alarm, not a data display: nothing to show until the server has said a
+  // bypass file exists.
+  if (result.pending) return null;
+  const { allowFiles } = result.data;
   if (allowFiles.length === 0) return null;
 
   return (

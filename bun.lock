@@ -3037,6 +3037,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-namespace-identity",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/polling-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-polling-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-promise-safety",
       "version": "0.0.1",
@@ -7328,6 +7332,8 @@
     "@singularity/plugin-framework-tooling-lint-marker-scan-safety": ["@singularity/plugin-framework-tooling-lint-marker-scan-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/marker-scan-safety"],
 
     "@singularity/plugin-framework-tooling-lint-namespace-identity": ["@singularity/plugin-framework-tooling-lint-namespace-identity@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity"],
+
+    "@singularity/plugin-framework-tooling-lint-polling-safety": ["@singularity/plugin-framework-tooling-lint-polling-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/polling-safety"],
 
     "@singularity/plugin-framework-tooling-lint-promise-safety": ["@singularity/plugin-framework-tooling-lint-promise-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety"],
 

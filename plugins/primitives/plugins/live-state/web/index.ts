@@ -68,8 +68,6 @@ export {
   keyedResourceDescriptor,
   centralResourceDescriptor,
   resourceDescriptorByKey,
-  windowResourceDescriptor,
-  pointResourceDescriptor,
 } from "../core";
 export type {
   ResourceDescriptor,

@@ -33,6 +33,7 @@ moved (see `apps/prototypes/files`).
     - `apps/prototypes/files`
     - `apps/sonata/sources/midi/folders`
     - `config_v2`
+    - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/op-status`
     - `conversations/transcript-watcher`

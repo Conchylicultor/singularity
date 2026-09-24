@@ -142,6 +142,7 @@ can blind or deafen all of them at once.
     - `WatchSubject`
     - `WindowEntry`
   - Exports (values):
+    - `BYPASS_TOKENS`
     - `classify`
     - `createContext`
     - `defineGuard`
