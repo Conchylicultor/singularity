@@ -40,7 +40,7 @@ other content lives in sub-plugins:
   frames (A, B, C…), each with its own version stepper and options pill (frame
   A reads and writes the shared picks, the others hold their own), one
   canvas-wide size & zoom chip, link / spread / keep only, swipe — all
-  remembered by the browser per prototype. Owns the `FrameSource` and frame-actions slots.
+  remembered per pane for the tab's session. Owns the `FrameSource` and frame-actions slots.
 - **`compare`** — the canvas's **Real app** frame: the real thing the
   prototype declares it mocks (`<meta name="mocks" content="<kind>:<ref>">`),
   contributed as a `FrameSource`. Owns the dispatch; each kind of counterpart
@@ -70,7 +70,7 @@ whose app surface still stands).
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:
-  - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered by the browser per prototype, so a reload reopens it as it was left.
+  - **`canvas`** — The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a drag handle that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
   - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (a layout-harness fixture, a live component specimen, the running app at a route) is a child plugin.
     - Plugins:

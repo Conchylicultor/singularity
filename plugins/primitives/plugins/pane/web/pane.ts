@@ -593,6 +593,8 @@ export interface PaneStore {
       paneId: string;
       params: Record<string, string>;
       options?: PaneOptions;
+      /** The pane instance's id to keep; a fresh one when absent. */
+      uuid?: string;
     }>,
   ): void;
   clearRoute(): void;
@@ -690,11 +692,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       paneId: string;
       params: Record<string, string>;
       options?: PaneOptions;
+      uuid?: string;
     }>,
   ): void {
     if (typeof window === "undefined") return;
+    // A restored slot keeps its uuid: it is the SAME pane instance coming back
+    // (a reload, a background tab rebuilt from persistence), so whatever is
+    // keyed by the instance (a Miller column's collapse, a pane's own saved
+    // state) comes back with it.
     const route: PaneSlot[] = slots.map((s) =>
-      createSlot(s.paneId, s.params, s.options ?? {}),
+      createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
     );
     if (route.length === 0) return;
     setRoute(route);
@@ -1298,6 +1305,7 @@ export function restoreRoute(
     paneId: string;
     params: Record<string, string>;
     options?: PaneOptions;
+    uuid?: string;
   }>,
 ): void {
   liveStoreSink.peek().restoreRoute(slots);

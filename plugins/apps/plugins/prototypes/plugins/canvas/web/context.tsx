@@ -13,6 +13,7 @@ import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   readDraft,
   writeDraft,
+  type DraftOptions,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import {
@@ -68,26 +69,31 @@ export interface CanvasSourceEntry {
 }
 
 /**
- * Where a remembered canvas is saved: this browser's localStorage, one entry
- * per prototype. A month without a visit forgets it.
+ * Where a remembered canvas is saved: this browser TAB's sessionStorage, one
+ * entry per pane instance and prototype. A reload reopens it; closing the tab
+ * throws it away — a comparison is a throwaway, never carried to a new session.
+ * Held for as long as the tab lives, however long that is.
  */
+const SAVED_CANVAS: DraftOptions = {
+  storage: "session",
+  ttl: Number.POSITIVE_INFINITY,
+};
 const SAVED_CANVAS_KEY = "prototypes.canvas";
-const SAVED_CANVAS_TTL = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * The canvas this browser last left `name` in, or a fresh one at `size` — the
+ * The canvas saved under `slot` in this tab, or a fresh one at `size` — the
  * size the prototype declares.
  */
-function openCanvas(name: string, size: PrototypeViewport): CanvasState {
+function openCanvas(slot: string, size: PrototypeViewport): CanvasState {
   const raw = readDraft<unknown>(SAVED_CANVAS_KEY, {
-    scope: name,
-    ttl: SAVED_CANVAS_TTL,
+    ...SAVED_CANVAS,
+    scope: slot,
   });
   if (raw === null) return initialCanvasState({ size });
   const restored = restoreCanvas(raw);
   if (restored.kind === "restored") return restored.state;
   // Written by an older shape of the canvas: open fresh, and say why.
-  console.warn(`Saved canvas of ${name} not reopened: ${restored.reason}`);
+  console.warn(`Saved canvas ${slot} not reopened: ${restored.reason}`);
   return initialCanvasState({ size });
 }
 
@@ -110,9 +116,11 @@ export interface PrototypeDetailContextValue {
   sources: readonly CanvasSourceEntry[];
 }
 
-/** The canvas as the provider holds it: for one prototype. */
+/** The canvas as the provider holds it: for one prototype, in one saved slot. */
 interface Held {
   name: string;
+  /** Where it is saved (`<pane instance>:<prototype>`), or `null` when it is not. */
+  slot: string | null;
   state: CanvasState;
 }
 const PrototypeDetailContext =
@@ -136,12 +144,14 @@ export function usePrototypeDetail(): PrototypeDetailContextValue {
 interface PrototypeDetailProviderProps {
   name: string;
   /**
-   * Reopen the canvas this browser last left the prototype in, and save every
-   * change to it — the detail pane's canvas. Off for a surface that shows one
-   * given frame (Present's new-tab page), and always off inside an embedded
-   * document, so a framed copy of the app never rewrites the host's canvas.
+   * The pane instance to remember the canvas for (the pane's route-entry
+   * `uuid`, which a reload restores): every change is saved under it in this
+   * browser tab, and a reload reopens it. A new pane instance — another app tab,
+   * another browser tab, a new visit — starts fresh at frame A. Omitted by a
+   * surface that shows one given frame (Present's new-tab page), and ignored
+   * inside an embedded document, so a framed copy of the app never writes.
    */
-  remember?: boolean;
+  remember?: string;
   /** The version frame A opens on — `null` (the default) for the live folder. Not with `remember`. */
   initialVersion?: PrototypeVersion | null;
   /**
@@ -185,7 +195,7 @@ export function PrototypeDetailProvider(
 function DetailProvider({
   name,
   size,
-  remember = false,
+  remember,
   initialVersion = null,
   initialPicks,
   children,
@@ -229,26 +239,34 @@ function DetailProvider({
     [stored.pending, stored.error, stored.data],
   );
 
-  // The canvas belongs to ONE prototype: held with its name, so opening another
-  // prototype opens its own canvas without an effect resetting anything. When
-  // remembered, it is read synchronously here, so the first paint is already
-  // the saved canvas rather than the defaults swapped out a moment later.
-  const persist = remember && !isEmbeddedDocument();
+  // The canvas belongs to ONE prototype in ONE pane instance: held with both,
+  // so opening another opens its own canvas without an effect resetting
+  // anything. The prototype is part of the slot because a pane instance can be
+  // pointed at another prototype in place. A saved canvas is read synchronously
+  // here, so the first paint is already it rather than the defaults swapped out
+  // a moment later.
+  const slot =
+    remember !== undefined && !isEmbeddedDocument()
+      ? `${remember}:${name}`
+      : null;
   const open = (): Held => ({
     name,
-    state: persist
-      ? openCanvas(name, size)
-      : initialCanvasState({
-          size,
-          version: initialVersion,
-          picks: initialPicks ?? "shared",
-        }),
+    slot,
+    state:
+      slot !== null
+        ? openCanvas(slot, size)
+        : initialCanvasState({
+            size,
+            version: initialVersion,
+            picks: initialPicks ?? "shared",
+          }),
   });
   const [held, setHeld] = useState<Held>(open);
   let current = held;
-  if (held.name !== name) {
-    // Another prototype: its canvas, set during render (React's "adjust state
-    // on a prop change" pattern) rather than by an effect after paint.
+  if (held.name !== name || held.slot !== slot) {
+    // Another prototype or pane instance: its canvas, set during render
+    // (React's "adjust state on a prop change" pattern) rather than by an
+    // effect after paint.
     current = open();
     setHeld(current);
   }
@@ -293,9 +311,12 @@ function DetailProvider({
     const { state, effects } = canvasReducer(before, action, sharedSnapshot());
     if (state === before && effects.length === 0) return;
     latest.current = { from: current, state };
-    setHeld({ name, state });
-    if (persist) {
-      writeDraft(SAVED_CANVAS_KEY, serializeCanvas(state), { scope: name });
+    setHeld({ name, slot, state });
+    if (slot !== null) {
+      writeDraft(SAVED_CANVAS_KEY, serializeCanvas(state), {
+        ...SAVED_CANVAS,
+        scope: slot,
+      });
     }
     for (const effect of effects) runEffect(effect);
   });

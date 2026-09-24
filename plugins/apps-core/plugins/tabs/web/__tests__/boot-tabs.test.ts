@@ -155,6 +155,10 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
     expect(
       state.kind === "resolved" ? state.slots.map((s) => s.paneId) : null,
     ).toEqual(["page"]);
+    // The same pane instance comes back: it keeps its uuid.
+    expect(
+      state.kind === "resolved" ? state.slots.map((s) => s.uuid) : null,
+    ).toEqual(["u1"]);
   });
 
   it("different deep link: persisted rawPath ≠ the URL ⇒ seeds a pending route", () => {

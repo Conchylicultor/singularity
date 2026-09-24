@@ -130,7 +130,7 @@ export function serializeRoute(store: PaneStore): PersistedSlot[] {
  * the same normalization `parseUrl` applies (its `rawPath` output), so a persisted
  * rawPath compares equal to `parseUrl(...).rawPath` for the same URL.
  */
-function normalizeRawPath(path: string): string {
+export function normalizeRawPath(path: string): string {
   return path === "/" ? "" : path.replace(/^\/+|\/+$/g, "");
 }
 

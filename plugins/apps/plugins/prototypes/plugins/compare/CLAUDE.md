@@ -4,7 +4,7 @@ The prototype canvas's **Real app** frame: the real thing a prototype says it
 mocks, live and interactive, beside the mock at the canvas's size. It is a
 `FrameSource` contribution to the `canvas` plugin (id `REAL_APP_SOURCE`,
 `"real-app"`, in `core/`; add label "Real app"), so it arrives through the
-canvas's `+ Real app` button (and stays, since the canvas is remembered). The size, zoom,
+canvas's `+ Real app` button (and stays across a reload, since the canvas is remembered for the tab's session). The size, zoom,
 side-by-side and swipe are the canvas's — this plugin paints no layout.
 
 It owns two things and names no kind of counterpart:

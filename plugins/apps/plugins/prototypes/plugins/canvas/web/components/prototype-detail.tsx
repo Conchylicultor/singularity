@@ -28,13 +28,14 @@ import { Canvas } from "./canvas";
  * id, Done, the layout switch, the add buttons) are NOT rendered here — they
  * are contributions to `prototypeDetailPane.Actions`, so any plugin can add to
  * the header. The state they share lives in {@link PrototypeDetailProvider},
- * which wraps `PaneChrome` so the header renders inside it, and which reopens
- * the canvas this browser last left the prototype in.
+ * which wraps `PaneChrome` so the header renders inside it. The canvas is
+ * remembered for this pane instance, so a reload reopens it as it was.
  */
 export function PrototypeDetail(): ReactElement {
   const { name } = prototypeDetailPane.useParams();
+  const instance = prototypeDetailPane.useRouteEntry()?.uuid;
   return (
-    <PrototypeDetailProvider name={name} remember>
+    <PrototypeDetailProvider name={name} remember={instance}>
       <PaneChrome
         pane={prototypeDetailPane}
         title={<PrototypeTitle name={name} />}

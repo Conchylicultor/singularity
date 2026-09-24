@@ -18,10 +18,22 @@ type Envelope<T> = { v: T; ts: number };
 export interface DraftOptions {
   scope?: string;
   ttl?: number;
+  /**
+   * Where the value lives: `local` (the default) outlives the tab and is shared
+   * by every tab of the origin; `session` is this browser tab's own — it
+   * survives a reload and dies with the tab, and no other tab sees it.
+   */
+  storage?: "local" | "session";
+}
+
+function storageOf(options?: DraftOptions): Storage {
+  return options?.storage === "session" ? sessionStorage : localStorage;
 }
 
 export function draftKey(key: string, scope?: string): string {
-  return scope ? `singularity:draft:${key}:${scope}` : `singularity:draft:${key}`;
+  return scope
+    ? `singularity:draft:${key}:${scope}`
+    : `singularity:draft:${key}`;
 }
 
 /**
@@ -38,11 +50,12 @@ export function readDraft<T>(key: string, options?: DraftOptions): T | null {
   const sKey = draftKey(key, options?.scope);
   const ttl = options?.ttl ?? DEFAULT_DRAFT_TTL;
   try {
-    const raw = localStorage.getItem(sKey);
+    const store = storageOf(options);
+    const raw = store.getItem(sKey);
     if (!raw) return null;
     const envelope = JSON.parse(raw) as Envelope<T>;
     if (Date.now() - envelope.ts > ttl) {
-      localStorage.removeItem(sKey);
+      store.removeItem(sKey);
       return null;
     }
     return envelope.v;
@@ -64,7 +77,7 @@ export function writeDraft<T>(
   const sKey = draftKey(key, options?.scope);
   try {
     const envelope: Envelope<T> = { v: value, ts: Date.now() };
-    localStorage.setItem(sKey, JSON.stringify(envelope));
+    storageOf(options).setItem(sKey, JSON.stringify(envelope));
     window.dispatchEvent(
       new CustomEvent(DRAFT_SYNC_EVENT, { detail: { storageKey: sKey } }),
     );
@@ -80,7 +93,7 @@ export function writeDraft<T>(
 export function clearDraft(key: string, options?: DraftOptions): void {
   const sKey = draftKey(key, options?.scope);
   try {
-    localStorage.removeItem(sKey);
+    storageOf(options).removeItem(sKey);
     window.dispatchEvent(
       new CustomEvent(DRAFT_SYNC_EVENT, { detail: { storageKey: sKey } }),
     );

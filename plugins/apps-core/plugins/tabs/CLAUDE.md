@@ -40,6 +40,13 @@ shows. The canonicalization redirect (apps-layout) stays URL-driven
 Because `tabId`s are sessionStorage-stable, a snapshot stamped before a reload
 still matches after it, so back/forward keeps working across reloads.
 
+Pane instances survive a reload too: every restored slot keeps its `uuid`
+(`restoreRoute` passes it through), and when the address bar is the URL the
+focused tab was saved on, the panes parsed from it take the saved slots' uuids
+(same pane, same params, same position — `keepInstanceIds`). So state keyed by
+the pane instance (a Miller column's collapse, the prototype canvas) comes back
+after a reload, while a new link still opens new instances.
+
 ## In-app links: one URL resolution, two destinations
 
 `navigate(url, { newTab })` is the only way to open a pane, in this tab or a

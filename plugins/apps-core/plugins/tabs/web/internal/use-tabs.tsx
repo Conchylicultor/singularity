@@ -42,7 +42,9 @@ import {
 import {
   appPathFor,
   loadPersistedTabs,
+  normalizeRawPath,
   savePersistedTabs,
+  type PersistedSlot,
   type PersistedTab,
   type Tab,
 } from "./tabs-store";
@@ -278,6 +280,35 @@ function backForwardEntryTabId(): string | undefined {
  * as the id of the single minted tab, so the shell adapter's `restore()` still
  * recognises the entries around it instead of a freshly-minted stranger.
  */
+/**
+ * The URL's slots, each carrying the uuid of the persisted slot at its position
+ * when that slot is the same pane at the same params — the instance a reload
+ * brings back. Any slot that differs is a new instance and keeps its fresh id.
+ */
+function keepInstanceIds(
+  slots: readonly PaneSlot[],
+  persisted: readonly PersistedSlot[],
+): PaneSlot[] {
+  return slots.map((slot, i) => {
+    const prev = persisted[i];
+    return prev !== undefined &&
+      prev.paneId === slot.paneId &&
+      sameParams(prev.params, slot.params)
+      ? { ...slot, uuid: prev.uuid }
+      : slot;
+  });
+}
+
+function sameParams(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k])
+  );
+}
+
 export function bootTabs(
   apps: AppList,
   seedAppId: string,
@@ -361,7 +392,15 @@ export function bootTabs(
     (t) => t.tabId === focused.tabId,
   );
   if (parsed.status === "matched" && parsed.slots.length > 0) {
-    focused.store.restoreRoute(parsed.slots);
+    // A plain reload of the URL the tab was on is the SAME panes coming back:
+    // they keep their instance ids. The URL still decides which panes there are.
+    focused.store.restoreRoute(
+      persistedFocused !== undefined &&
+        resolved !== undefined &&
+        persistedFocused.rawPath === normalizeRawPath(resolved.routePath)
+        ? keepInstanceIds(parsed.slots, persistedFocused.route)
+        : parsed.slots,
+    );
   } else if (parsed.status === "matched") {
     focused.store.clearRoute();
   } else if (
