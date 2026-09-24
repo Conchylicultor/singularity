@@ -11,11 +11,16 @@ afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 // A Singularity checkout: a `.git` FILE (as in a worktree) plus the CLI.
 const singularity = join(root, "singularity-wt");
-mkdirSync(join(singularity, "plugins/framework/plugins/cli/bin"), { recursive: true });
-mkdirSync(join(singularity, "plugins/x"), { recursive: true });
+mkdirSync(join(singularity, "plugins/framework/plugins/cli/bin"), {
+  recursive: true,
+});
+mkdirSync(join(singularity, "src/deep"), { recursive: true });
 writeFileSync(join(singularity, ".git"), "gitdir: elsewhere\n");
 writeFileSync(join(singularity, "singularity"), "#!/bin/sh\n");
-writeFileSync(join(singularity, "plugins/framework/plugins/cli/bin/index.ts"), "");
+writeFileSync(
+  join(singularity, "plugins/framework/plugins/cli/bin/index.ts"),
+  "",
+);
 
 // Some other repository.
 const other = join(root, "pg-client-embedded");
@@ -26,7 +31,8 @@ const notARepo = join(root, "plain");
 mkdirSync(notARepo);
 
 const blocks = (command: string, cwd: string) =>
-  (gitPushGuard.check({ command }, createContext(cwd)) as Verdict).kind === "deny";
+  (gitPushGuard.check({ command }, createContext(cwd)) as Verdict).kind ===
+  "deny";
 
 describe("git-push guard targets only Singularity checkouts", () => {
   test("blocks a push from a Singularity checkout", () => {
@@ -34,7 +40,7 @@ describe("git-push guard targets only Singularity checkouts", () => {
   });
 
   test("blocks from a subdirectory of a Singularity checkout", () => {
-    expect(blocks("git push", join(singularity, "plugins/x"))).toBe(true);
+    expect(blocks("git push", join(singularity, "src/deep"))).toBe(true);
   });
 
   test("allows a push from another repo", () => {

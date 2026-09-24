@@ -26,16 +26,20 @@ export const gitPushGuard = defineGuard<BashInput>({
         if (c.name !== "git") return false;
         const git = readGitInvocation(c);
         if (git.subcommand !== "push") return false;
-        return git.repo.kind === "unknown" || classifyRepo(git.repo.path).kind !== "other";
+        return (
+          git.repo.kind === "unknown" ||
+          classifyRepo(git.repo.path).kind !== "other"
+        );
       },
       ctx.cwd,
     );
     if (!gitPush) return null;
 
     return {
-      blocked: "`git push` into the Singularity repo is not allowed — agents must use the Singularity CLI.",
+      blocked:
+        "`git push` into the Singularity repo is not allowed — agents must use the Singularity CLI.",
       why: "Raw git push bypasses validation checks, worktree-merge flow, and branch protection. A previous agent ran `git push origin main` directly and corrupted shared state.",
-      hint: "Use `./singularity push -m \"commit message\"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-Singularity repo are allowed — run them from that repo's directory, or with `git -C <dir> push`.)",
+      hint: 'Use `./singularity push -m "commit message"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-Singularity repo are allowed — run them from that repo\'s directory, or with `git -C <dir> push`.)',
     };
   },
 });

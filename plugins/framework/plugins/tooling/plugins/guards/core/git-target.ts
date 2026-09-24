@@ -16,7 +16,12 @@ export interface GitInvocation {
 }
 
 /** Global options (before the subcommand) that consume the next token. */
-const VALUE_OPTIONS = new Set(["-c", "--exec-path", "--namespace", "--config-env"]);
+const VALUE_OPTIONS = new Set([
+  "-c",
+  "--exec-path",
+  "--namespace",
+  "--config-env",
+]);
 const REPO_OPTIONS = ["--git-dir", "--work-tree"];
 const REPO_ENV = /(^|\s)(GIT_DIR|GIT_WORK_TREE)=/;
 
@@ -44,7 +49,9 @@ export function readGitInvocation(call: ShellCall): GitInvocation {
   }
   return {
     subcommand: args[i],
-    repo: unknown ? { kind: "unknown", why: unknown } : { kind: "dir", path: dir },
+    repo: unknown
+      ? { kind: "unknown", why: unknown }
+      : { kind: "dir", path: dir },
   };
 }
 
@@ -70,7 +77,8 @@ export function classifyRepo(dir: string): RepoKind {
   for (;;) {
     if (existsSync(join(cur, ".git"))) {
       const isSingularity =
-        existsSync(join(cur, "singularity")) && existsSync(join(cur, CLI_ENTRY));
+        existsSync(join(cur, "singularity")) &&
+        existsSync(join(cur, CLI_ENTRY));
       return { kind: isSingularity ? "singularity" : "other", root: cur };
     }
     const parent = dirname(cur);
