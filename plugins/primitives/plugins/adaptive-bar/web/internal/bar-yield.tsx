@@ -93,13 +93,19 @@ export function yieldFloorPx(el: HTMLElement | null): number {
 
 /**
  * Drops a growing yield cell's grow while its bar holds an explicit slack
- * claimant (`data-slack-claim`, a reorder spacer), so the two never split the
- * row's slack. `flex-initial` (0 1 auto), not `grow-0`: the grow cell's basis
- * is 0, so dropping only the grow would collapse the title to nothing — it has
- * to go back to its own content width, still free to shrink below it.
+ * claimant (`data-slack-claim`, a reorder spacer) OUTSIDE the cell, so the two
+ * never split the row's slack. `flex-initial` (0 1 auto), not `grow-0`: the
+ * grow cell's basis is 0, so dropping only the grow would collapse the title to
+ * nothing — it has to go back to its own content width, still free to shrink
+ * below it.
+ *
+ * A claimant INSIDE the cell (a spacer in the title's own slot, e.g. the
+ * conversation header pushing its chips right) is the opposite case: that
+ * spacer can only take slack the cell has, so the cell must keep growing —
+ * hence `not-has-…`, or the whole title would bunch at the row's end.
  */
 const YIELD_TO_SLACK_CLAIM =
-  "group-has-[[data-slack-claim]]/adaptive-bar:flex-initial";
+  "group-has-[[data-slack-claim]]/adaptive-bar:not-has-[[data-slack-claim]]:flex-initial";
 
 export interface AdaptiveBarYieldProps {
   /**

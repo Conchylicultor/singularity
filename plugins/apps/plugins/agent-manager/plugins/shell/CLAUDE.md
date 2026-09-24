@@ -4,9 +4,11 @@
 
 ## Plugin reference
 
-- Description: App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+- Description: App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
 - Web:
-  - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
+  - Contributes:
+    - `Apps.App` "Agent Manager" → `AgentManagerLayout`
+    - `ThemeEngine.Theme` "Mist"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
@@ -20,6 +22,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/pane.currentRoutePath`
     - `shell.Shell`
+    - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `agentManagerApp`

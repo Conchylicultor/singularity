@@ -107,6 +107,7 @@ keeps reading the old location until then.
     - `config_v2/settings`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
+    - `ui/segmented-progress-bar`
     - `ui/theme-engine`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`

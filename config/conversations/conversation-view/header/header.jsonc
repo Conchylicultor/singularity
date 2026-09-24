@@ -9,10 +9,12 @@
   "items": [
     "conversations.agents:agent-avatar",
     "conversations.conversation-view:title",
-    "conversations.conversation-view.status:status",
-    "conversations.conversation-view.model:model",
-    "conversations.conversation-progress:progress",
+    // Pushes the chips to the right edge (Mist, proto-1789643584-ldt6).
+    { "type": "spacer", "id": "title-end" },
     "conversations.conversation-preprompt:preprompt",
-    "conversations.conversation-view.allow-monitor:allow-monitor"
+    "conversations.conversation-view.allow-monitor:allow-monitor",
+    "conversations.conversation-view.model:model",
+    "conversations.conversation-view.status:status",
+    "conversations.conversation-progress:progress"
   ]
 }

@@ -1,0 +1,6 @@
+// @hash b7a47ff1112e
+{
+  // The agent manager's progress is a small pie (Mist, proto-1789643584-ldt6):
+  // in the conversation header and in each queue row.
+  "variant": "pie"
+}

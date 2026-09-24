@@ -266,9 +266,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree.pagesTreePane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
-        - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+        - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
           - Web:
-            - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
+            - Contributes:
+              - `Apps.App` "Agent Manager" → `AgentManagerLayout`
+              - `ThemeEngine.Theme` "Mist"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
@@ -282,6 +284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/pane.currentRoutePath`
               - `shell.Shell`
+              - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `agentManagerApp`
@@ -6565,6 +6568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2/settings`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
+      - `ui/segmented-progress-bar`
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
@@ -11917,8 +11921,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/pane-restore.reportCorruptSavedRoute`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/fill.Fill`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/line.Line`
-          - `primitives/css/ui-kit.ButtonGroup`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DropdownMenu`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/css/ui-kit.SidebarMenu`
@@ -24669,6 +24675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/notifications`
               - `tasks/task-graph`
               - `tasks/task-status`
+              - `ui/segmented-progress-bar/pie`
               - `ui/tab-bar`
               - `ui/tree-disclosure/column`
               - `ui/tree-disclosure/dimmed-leaf`
@@ -25779,6 +25786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
+              - `ui/segmented-progress-bar/pie`
               - `ui/tokens/shadow`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -26392,6 +26400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/task-notification`
               - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/tasks-panel`
+              - `conversations/conversations-view`
               - `debug/health-monitor`
               - `debug/live-state-health`
               - `debug/profiling/ops/op-gantt`
@@ -27380,6 +27389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
+              - `ui/segmented-progress-bar/pie`
               - `ui/segmented-progress-bar/segmented`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
@@ -30245,6 +30255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/ui-context/element-picker`
               - `tasks/task-draft-form`
               - `ui/segmented-progress-bar/dots`
+              - `ui/segmented-progress-bar/pie`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.foundations`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
@@ -34969,12 +34980,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
-        - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.segmented`
+        - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`
         - Contributes:
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Progress bar variant"
           - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
         - Uses:
+          - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
@@ -35005,6 +35017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations/conversation-progress`
           - `ui/segmented-progress-bar/dots`
+          - `ui/segmented-progress-bar/pie`
           - `ui/segmented-progress-bar/segmented`
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
@@ -35013,6 +35026,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/inline.Inline`
               - `primitives/css/text.Text`
+              - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
+        - **`pie`** — Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover names the current step.
+          - Web:
+            - Contributes: `SegmentedProgressBarSlots.Variant` "Pie" → `PieRenderer`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/ui-kit.cn`
               - `primitives/overlay/tooltip.WithTooltip`
               - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
@@ -35175,7 +35197,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-          - `ThemeEngine.Theme` ← `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
@@ -35275,6 +35297,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/chrome-theme`
           - `apps-core/surface/floating`
+          - `apps/agent-manager/shell`
           - `apps/chord/shell`
           - `apps/home/shell`
           - `apps/website/shell`

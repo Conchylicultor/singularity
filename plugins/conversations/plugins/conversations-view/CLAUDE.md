@@ -17,8 +17,10 @@
     - `conversations/pane-restore.reportCorruptSavedRoute`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
-    - `primitives/css/ui-kit.ButtonGroup`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.SidebarMenu`

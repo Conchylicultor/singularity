@@ -466,6 +466,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
+        - **`pie`** — Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover names the current step.
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
     - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
       - Plugins:

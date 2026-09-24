@@ -45,6 +45,7 @@ no-provider default is `md`.
     - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`
+    - `conversations/conversations-view`
     - `debug/health-monitor`
     - `debug/live-state-health`
     - `debug/profiling/ops/op-gantt`

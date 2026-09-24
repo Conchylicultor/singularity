@@ -1,14 +1,19 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 
+// Each status is a bordered pill; the live one (working) takes the accent for
+// its text and outline, so the one conversation doing something reads at a glance.
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
-  starting: "bg-muted text-muted-foreground",
-  working: "bg-muted text-muted-foreground",
-  waiting: "bg-muted text-muted-foreground",
-  gone: "bg-warning/15 text-warning",
-  done: "bg-muted text-muted-foreground/60 italic",
+  starting: "bg-muted text-muted-foreground border-border",
+  working: "bg-muted text-primary border-primary/40",
+  waiting: "bg-muted text-muted-foreground border-border",
+  gone: "bg-warning/15 text-warning border-warning/30",
+  done: "bg-muted text-muted-foreground/60 italic border-border",
 };
 
 // Semantic overrides where the display word differs from the status key
@@ -26,7 +31,11 @@ export function StatusBadge() {
   const conversation = useConversationById(convId);
   if (!conversation) return null;
   return (
-    <Badge colorClass={STATUS_CLASSES[conversation.status]}>
+    <Badge
+      shape="pill"
+      colorClass={STATUS_CLASSES[conversation.status]}
+      className="border"
+    >
       {prettify(conversation.status)}
     </Badge>
   );
