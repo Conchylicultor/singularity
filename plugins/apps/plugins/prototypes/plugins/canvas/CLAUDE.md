@@ -116,7 +116,9 @@ recorded versions oldest first, the newest one being the live folder when it
 is clean, plus a last "Live · unsaved" stop when the folder has changes no
 version holds yet. The label opens the version list ("Versions of B", a
 `DataView` whose row actions are the `PrototypeVersionActions` slot — the
-canvas ships "open the conversation that recorded it"), and on a past version
+canvas ships **Compare in a new frame** (a copy of this frame, same picks,
+showing that version; the stepper hands the frame to its row actions through
+`VersionListFrameContext`) and "open the conversation that recorded it"), and on a past version
 it ends with **Make vN the latest** (confirm, restore, back to live; the store
 saves the current state first, so nothing is lost).
 
@@ -251,6 +253,7 @@ remembered.
     - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
     - `PrototypeFrameActions` "duplicate" → `DuplicateFrameAction`
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
+    - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
   - Uses:
     - `apps-core/tabs.navigate`

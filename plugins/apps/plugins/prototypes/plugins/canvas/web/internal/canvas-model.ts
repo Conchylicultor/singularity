@@ -101,8 +101,15 @@ export type CanvasEffect =
   | { kind: "replaceShared"; picks: StoredPicks };
 
 export type CanvasAction =
-  /** Add a prototype frame: a copy of `from` (or of the last prototype frame). */
-  | { type: "addPrototype"; from?: FrameId }
+  /**
+   * Add a prototype frame: a copy of `from` (or of the last prototype frame),
+   * showing `version` instead of the copied one when given (`null` = live).
+   */
+  | {
+      type: "addPrototype";
+      from?: FrameId;
+      version?: PrototypeVersion | null;
+    }
   | { type: "addSource"; source: string }
   | { type: "remove"; id: FrameId }
   /** Close every frame but `id` (the provider keeps the state before, for Undo). */
@@ -195,14 +202,15 @@ export function canvasReducer(
         ? {
             id: state.nextId,
             kind: "prototype",
-            version: src.version,
+            version:
+              action.version === undefined ? src.version : action.version,
             picks: { ...picksOf(src, shared) },
           }
         : // No prototype frame left to copy: the new one IS frame A.
           {
             id: state.nextId,
             kind: "prototype",
-            version: null,
+            version: action.version ?? null,
             picks: "shared",
           };
       return promoteA(

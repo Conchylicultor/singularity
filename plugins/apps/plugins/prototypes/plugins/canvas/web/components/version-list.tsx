@@ -1,4 +1,5 @@
-import { MdOpenInNew } from "react-icons/md";
+import { createContext, useContext } from "react";
+import { MdAddToPhotos, MdOpenInNew } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -19,6 +20,22 @@ import type {
 import { PrototypeVersionActions } from "../slots";
 
 const VERSIONS_VIEW = defineDataView("prototypes.versions");
+
+/**
+ * What a row action may do to the frame whose list it sits in: the version that
+ * frame shows (its sha, `undefined` on the unsaved stop), and — when the list
+ * belongs to a canvas frame — `compare`, which opens a version in a new frame
+ * beside it.
+ */
+export interface VersionListFrame {
+  shownSha: string | undefined;
+  compare: ((version: PrototypeVersion) => void) | undefined;
+}
+
+export const VersionListFrameContext = createContext<VersionListFrame>({
+  shownSha: undefined,
+  compare: undefined,
+});
 
 /**
  * How each kind of version reads. Keyed by the store's closed kind set, so a
@@ -126,6 +143,25 @@ export function OpenVersionConversation({
           newTab,
         }),
       )}
+    />
+  );
+}
+
+/**
+ * Open this version in a new frame beside the one whose list it is — same
+ * picks, this version — so an older design sits next to the current one. Not
+ * offered on the version the frame already shows.
+ */
+export function CompareVersionAction({
+  row,
+}: ItemActionProps<PrototypeVersion>) {
+  const { shownSha, compare } = useContext(VersionListFrameContext);
+  if (compare === undefined || row.sha === shownSha) return null;
+  return (
+    <IconButton
+      icon={MdAddToPhotos}
+      label={`Compare v${row.n} in a new frame`}
+      onClick={() => compare(row)}
     />
   );
 }

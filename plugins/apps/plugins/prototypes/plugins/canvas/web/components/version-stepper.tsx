@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { MdChevronLeft, MdChevronRight, MdRestore } from "react-icons/md";
 import {
   Button,
@@ -27,7 +27,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { isPastStep, type VersionStep } from "../internal/version-steps";
 import { useVersionStepping } from "../internal/use-version-stepping";
-import { VersionList } from "./version-list";
+import { VersionList, VersionListFrameContext } from "./version-list";
 
 /** Which version a stepper moves: the pair, so every frame steps on its own. */
 export interface VersionStepperProps {
@@ -38,6 +38,8 @@ export interface VersionStepperProps {
   /** The version on screen — `null` for the live folder. */
   shown: PrototypeVersion | null;
   show: (version: PrototypeVersion | null) => void;
+  /** Open `version` in a new frame beside this one (a list row action). */
+  compare?: (version: PrototypeVersion) => void;
 }
 
 /**
@@ -112,6 +114,7 @@ function ReadyStepper({
   letter,
   shown,
   show,
+  compare,
 }: VersionStepperProps & { history: PrototypeHistory }): ReactElement {
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
@@ -120,6 +123,22 @@ function ReadyStepper({
   // The version a past stop shows — what "Make vN the latest" restores.
   const restorable =
     current?.kind === "version" && isPastStep(current) ? current.version : null;
+  const shownSha =
+    current?.kind === "version" ? current.version.sha : undefined;
+  // What the list's row actions may do to this frame (Compare in a new frame).
+  const listFrame = useMemo(
+    () => ({
+      shownSha,
+      compare:
+        compare === undefined
+          ? undefined
+          : (version: PrototypeVersion) => {
+              setOpen(false);
+              compare(version);
+            },
+    }),
+    [shownSha, compare],
+  );
 
   return (
     <Pill past={past}>
@@ -146,19 +165,19 @@ function ReadyStepper({
           <Text variant="eyebrow" tone="faint">
             Versions of {letter}
           </Text>
-          <VersionList
-            history={history}
-            selected={
-              current?.kind === "version" ? current.version.sha : undefined
-            }
-            onPick={(version) => {
-              const step = model.steps.find(
-                (s) => s.kind === "version" && s.version.sha === version.sha,
-              );
-              go(step ?? null);
-              setOpen(false);
-            }}
-          />
+          <VersionListFrameContext value={listFrame}>
+            <VersionList
+              history={history}
+              selected={shownSha}
+              onPick={(version) => {
+                const step = model.steps.find(
+                  (s) => s.kind === "version" && s.version.sha === version.sha,
+                );
+                go(step ?? null);
+                setOpen(false);
+              }}
+            />
+          </VersionListFrameContext>
           {restorable !== null ? (
             <Button
               variant="secondary"

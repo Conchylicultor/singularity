@@ -12,7 +12,10 @@ import {
   DuplicateFrameAction,
   KeepOnlyFrameAction,
 } from "./components/frame-actions";
-import { OpenVersionConversation } from "./components/version-list";
+import {
+  CompareVersionAction,
+  OpenVersionConversation,
+} from "./components/version-list";
 
 export { prototypeDetailPane } from "./panes";
 export {
@@ -76,6 +79,10 @@ export default {
     PrototypeFrameActions({ id: "keep-only", component: KeepOnlyFrameAction }),
     PrototypeFrameActions({ id: "duplicate", component: DuplicateFrameAction }),
     PrototypeFrameActions({ id: "close", component: CloseFrameAction }),
+    PrototypeVersionActions({
+      id: "compare",
+      component: CompareVersionAction,
+    }),
     PrototypeVersionActions({
       id: "open-conversation",
       component: OpenVersionConversation,

@@ -92,6 +92,24 @@ describe("addPrototype", () => {
     expect(proto(s, 2).picks).toEqual({ design: "slate" });
   });
 
+  it("shows the version asked for, keeping the copied frame's picks", () => {
+    const s0 = run(initialCanvasState({ version: v3 }), {
+      type: "setPick",
+      id: 1,
+      option: "design",
+      value: "paper",
+    }).state;
+    const { state } = run(
+      s0,
+      { type: "addPrototype", from: 1, version: null },
+      { design: "paper" },
+    );
+    const b = proto(state, 1);
+    expect(b.version).toBeNull();
+    expect(b.picks).toEqual({ design: "paper" });
+    expect(proto(state, 0).version).toBe(v3);
+  });
+
   it("makes a new frame A when only sources are left", () => {
     let s = initialCanvasState({ source: "real-app" });
     s = run(s, { type: "keepOnly", id: 2 }).state;

@@ -94,6 +94,9 @@ function FrameVersion({
       show={(version) =>
         dispatch({ type: "setVersion", id: frame.id, version })
       }
+      compare={(version) =>
+        dispatch({ type: "addPrototype", from: frame.id, version })
+      }
     />
   );
 }
