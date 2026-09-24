@@ -75,13 +75,32 @@ Each extension names its parent key (`songId`, `conversationId`, `taskId`, `bloc
 
 ### Loaders
 
-Because the handle is an entity, a loader has no row projection left to write:
+A side table holds one row per parent, and a reader almost always wants the row of the ONE parent on screen. So the default is a **point resource**: the client subscribes to the ids it draws, and a write to another parent's row never reaches it. The reference is `conversations/conversation-progress`:
+
+```ts
+// shared/ — the descriptor, keyed on the shape's key
+export const progressResource = pointQueryResourceDescriptor<Progress>(
+  "conversation-progress", ProgressSchema, "conversationId");
+
+// server/internal/resource.ts
+export const progressLiveResource = windowQueryResource(progressResource, {
+  from: conversationProgress,                          // no `select`: wireColumns + the PK identity are derived
+  point: { by: conversationProgress.table.conversationId },
+});
+
+// web — no whole-table read, no `.find(id)`
+const progress = usePointResource(progressResource, conversationId);
+```
+
+Because the handle is an entity, no form has a row projection left to write:
 
 | Resource form | Loader |
 |---|---|
-| push `defineResource` | `schema: z.array(ext.schema)`, `loader: () => db.select(ext.wireColumns).from(ext.table)` |
-| `windowQueryResource` / `queryResource` | `from: ext`, **no `select`** — query-resource defaults the projection to `wireColumns` and the identity to the single PK — and `point: { by: ext.table.<key> }` |
-| push resource folding rows into a `Record` | `db.select(ext.wireColumns)`, then the fold; each value's schema is `ext.schema` |
+| **point** `windowQueryResource` (default) | `from: ext`, **no `select`** — query-resource defaults the projection to `wireColumns` and the identity to the single PK — and `point: { by: ext.table.<key> }` |
+| push `defineResource` over the whole table — **legacy, do not copy** | `schema: z.array(ext.schema)`, `loader: () => db.select(ext.wireColumns).from(ext.table)` |
+| push resource folding rows into a `Record` — **legacy, do not copy** | `db.select(ext.wireColumns)`, then the fold; each value's schema is `ext.schema` |
+
+The two push forms re-send every parent's row to every subscriber on any write, and make each reader pick its one row with `.find(id)`. The Sonata per-song settings, `task-efforts` and `task-preprompts` still use them: they are on the legacy list awaiting migration (`research/2026-07-18-global-bounded-working-set-resource-contract.md`), not precedent. A reader that needs every parent's row — typically to sort the parent list by an extension column — is an open design question in the live-resources redesign, not a reason to reach for a push form.
 
 A `select: { conversationId: t.parentId, … }` map or a `.map((r) => ({ songId: r.parentId, … }))` is the hand-rolled projection `no-hand-rolled-entity-projection` bans: a column added to the table silently misses the wire.
 
