@@ -36,7 +36,7 @@ its **`package.json` `description`** — set it, or the plugin lands in
 **Every command is a sub-plugin; `bin/` holds no command at all.** It is now just
 the host: `index.ts` (bootstrap), `cli.ts` (the program), `register-commands.ts`
 (the one translation into commander) and `run-cli.ts` (the process-boundary
-harness). Four sub-plugins carry what more than one command needs, and a command
+harness). Five sub-plugins carry what more than one command needs, and a command
 reaches them through their `cli/` barrels:
 
 | sub-plugin | what it carries |
@@ -45,6 +45,7 @@ reaches them through their `cli/` barrels:
 | `op-runtime` | broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output |
 | `migrations` | drizzle generation and the interactive prompt driver |
 | `git-artifacts` | re-deriving generated artifacts after a merge driver, and installing the drivers |
+| `doctor` | `assertPrerequisites` — the prerequisite doctor (`doctor.sh`, also `mise run doctor`) as the first step of `start` and a deploying `build` |
 
 A command's own ordered *stage sequence* lives in its own `cli/internal/` —
 build's eight-file pipeline is build-private, and `converge-script` is deploy's.
@@ -444,6 +445,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
   - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
   - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
+  - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain, Claude Code signed in) in one run, with its fix. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
   - **`format`** — `./singularity format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
   - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
   - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.

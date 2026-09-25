@@ -206,6 +206,15 @@ const MISE_INSTALL_DIR = /(^|\/)mise\/installs\//;
 const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
 
 /**
+ * Whether `path` has a mise shims directory on it — the one way mise's tools
+ * are reachable that `normalizeRuntimePath` can put first. False means the
+ * normalised PATH is the raw one, and every tool only mise installed is absent.
+ */
+export function hasMiseShims(path: string): boolean {
+  return path.split(":").some((entry) => MISE_SHIMS_DIR.test(entry));
+}
+
+/**
  * PATH, with mise's resolved tool directories removed and its shims FIRST.
  *
  * A shell with mise activated does not put mise's shims on PATH and leave it

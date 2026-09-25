@@ -2,20 +2,53 @@
 
 One-time environment setup for developing Singularity.
 
-## Prerequisites
+## Install
 
-[mise](https://mise.jdx.dev) installs the whole toolchain (Bun, Go, tmux, Rust) at the exact versions `mise.lock` records:
+One pass, in order, on macOS (Linux notes inline). Every step is a prerequisite of
+the next.
 
 ```sh
-curl https://mise.run | sh   # once per machine, see mise's docs for other installers
-mise install                 # from the repo root
+# 1. Xcode command-line tools: git, and the C linker Rust builds with.
+#    (Linux: sudo apt install git curl build-essential, or your distro's equivalent.)
+xcode-select --install
+
+# 2. mise, activated in your shell: it installs the exact Bun, Go, tmux and Rust
+#    releases mise.lock records. Use ~/.bashrc and `activate bash` for bash.
+curl https://mise.run | sh
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+exec zsh    # a new shell, with mise active
+
+# 3. Claude Code, signed in: every agent the app launches runs on it.
+curl -fsSL https://claude.ai/install.sh | bash
+claude auth login
+
+# 4. The repo, and its toolchain.
+git clone <repo url> singularity && cd singularity
+mise trust && mise install   # trust this checkout's mise.toml, then install
+
+# 5. The app.
+./singularity start               # compiles and starts the gateway, and brings up Postgres
+./singularity build --allow-main  # builds the app and deploys it
 ```
 
-Don't install Bun or Go another way: a copy outside mise bypasses `mise.lock`.
+`mise install` also runs the repo's `setup` task (trusts every worktree's
+`mise.toml`, points git at the repo's hooks) and ends with the **doctor**, which
+names every missing prerequisite at once, each with the command that fixes it.
+Continue only once it says `all present`. Re-run it any time with
+`mise run doctor`. `./singularity start` and `build` also run it first, so a
+missing tool is reported before any long step rather than minutes into one.
+
+Don't install Bun or Go another way (Homebrew included): a copy outside mise
+bypasses `mise.lock`, and the build's `toolchain:resolved` check rejects a
+release other than the locked one.
 
 **Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./singularity start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
 
 Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
+
+The app is then at <http://singularity.localhost:9000>. `start` is a one-time,
+system-level step — it leaves a daemon running, and it does not survive a
+reboot, so run it again after one.
 
 ## Postgres
 
@@ -46,24 +79,7 @@ In this mode the cluster is yours, not the app's, so nothing provisions inside i
 
 ## Git hooks
 
-After cloning, point git at the repo's hooks directory once per clone:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-`core.hooksPath` lives in `.git/config` (not tracked), so it cannot be committed. Setting it once applies across every worktree of that clone. The `.githooks/prepare-commit-msg` hook auto-stamps commits made inside a Claude pane with a `Singularity-Conversation` trailer, so the server can attribute commits to the conversation that authored them.
-
-## First run
-
-```sh
-./singularity start              # compiles and starts the gateway, and brings up Postgres
-./singularity build --allow-main # builds the app and deploys it
-```
-
-The app is then at <http://singularity.localhost:9000>. `start` is a one-time,
-system-level step — it leaves a daemon running, and it does not survive a
-reboot, so run it again after one.
+`mise install` sets them (its `setup` task runs `git config core.hooksPath .githooks`). `core.hooksPath` lives in `.git/config` (not tracked), so it cannot be committed, and one setting covers every worktree of the clone. The `.githooks/prepare-commit-msg` hook auto-stamps commits made inside a Claude pane with a `Singularity-Conversation` trailer, so the server can attribute commits to the conversation that authored them.
 
 ## If you cloned someone else's repo
 

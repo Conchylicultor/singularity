@@ -11,7 +11,11 @@ move proven before it lands.
   issue). Plus the pure lock parsing and before/after comparison.
 - `check/`: `toolchain:resolved`. Every tool requests `latest`. The lock records
   one exact release per tool, at or above its floor and not held. The runtime
-  PATH resolves each tool to that release.
+  PATH resolves each tool to that release. A tool absent from the runtime PATH
+  is reported with the rest, never thrown. With no mise shims on PATH the hint
+  says to activate mise rather than blaming something that shadows it. Whether a
+  tool is installed at all is checked earlier, at `mise install` time, by the
+  doctor (`framework/cli/plugins/doctor`).
 - `cli/`: `./singularity toolchain upgrade [--tool a,b]`. Updates mise itself.
   Picks the newest non-held release of each tool, then runs the gates (every
   check with no cache, every test, and the moved tools' smoke tests) on the

@@ -208,6 +208,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Imported by: `release`
 - Core:
   - Exports (values):
+    - `hasMiseShims`
     - `isRuntimeEnvName`
     - `normalizeRuntimePath`
     - `pickHostEnv`

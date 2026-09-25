@@ -1,12 +1,16 @@
-# External prerequisites (not managed by mise):
-#   - claude CLI    (already installed at ~/.local/bin/claude)
+# What mise does NOT provide, and docs/setup.md installs first:
+#   - Xcode command-line tools on macOS (git, and the C linker Rust uses)
+#   - Claude Code, signed in (every agent runs on it)
+# `mise run doctor` names whatever is missing, each with its fix; it also runs
+# at the end of every `mise install`, and first in `./singularity start/build`.
 #
 # Postgres is NOT one: the app ships its own cluster, and the script that
 # starts it creates the base `singularity` database inside it. See
 # docs/setup.md.
 #
-# The `setup` task runs automatically after `mise install` and does one thing:
-# trust every worktree's mise.toml, once, machine-global. It is idempotent.
+# The `setup` task runs automatically after `mise install`: it trusts every
+# worktree's mise.toml (machine-global) and points git at the repo's hooks
+# (per clone). Both are idempotent.
 
 [settings]
 experimental = true  # required for the [hooks] block below
@@ -29,7 +33,7 @@ tmux = "latest"
 rust = "latest"  # cargo + rustc for the Tauri desktop release shell (tauri/); end users need none of this
 
 [tasks.setup]
-description = "Trust every worktree's mise.toml (idempotent)"
+description = "Trust every worktree's mise.toml and set the git hooks (idempotent)"
 run = '''
 # Trust every current & future worktree's mise.toml in one shot. Each `git
 # worktree add` inherits this committed config at a fresh, untrusted path, so
@@ -42,7 +46,17 @@ run = '''
 # so this is correct whether setup runs from the main clone or from a worktree.
 main_root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 mise settings add trusted_config_paths "$main_root/.claude/worktrees"
+# The repo's hooks (.githooks/prepare-commit-msg stamps the conversation that
+# authored a commit). core.hooksPath lives in .git/config, which is shared by
+# every worktree of the clone and cannot be committed — so set it here.
+git config core.hooksPath .githooks
 '''
 
+[tasks.doctor]
+description = "Name every missing prerequisite at once, each with its fix"
+run = "sh plugins/framework/plugins/cli/plugins/doctor/doctor.sh"
+
 [hooks]
-postinstall = "mise run setup"
+# The doctor last: after the toolchain is in, it names anything mise cannot
+# install (Xcode tools, Claude Code) or activate (the user's shell).
+postinstall = "mise run setup && mise run doctor"

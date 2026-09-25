@@ -73,6 +73,7 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
+import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { clearMergeMarkers } from "@plugins/framework/plugins/cli/core";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
@@ -493,6 +494,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       minify: opts.minify,
     });
   }
+
+  // Every missing dev prerequisite at once, before any of the ~10 minutes
+  // below — the hermetic posture above launches no agent and needs none.
+  await assertPrerequisites();
 
   // Mark this process as a build: dist-comparing checks (map-in-sync) skip
   // while the dist they'd inspect is the one this build replaces.

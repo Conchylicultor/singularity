@@ -1,0 +1,125 @@
+#!/bin/sh
+# Singularity's prerequisite check: names EVERY missing prerequisite in one run,
+# each with the command that fixes it, then exits 1 if anything was missing.
+#
+# POSIX sh on purpose: its most important case is Bun itself missing, where no
+# TypeScript can run. Run it from the checkout it checks (the cwd is the
+# checkout):
+#
+#   mise run doctor      — by hand; also the tail of every `mise install`
+#   ./singularity start / build — their first step (see ./cli/prerequisites.ts)
+#
+# It asks only "is it there". Which release (floors, holds, shadowing) is
+# `toolchain:resolved`'s job, and the tool list itself comes from mise.toml +
+# mise.lock through mise, so adding a tool there needs no change here.
+#
+# Probes are builtins plus the tools being checked (id, uname, xcode-select,
+# git, mise, claude), so the test can stub every one of them on PATH.
+
+missing=0
+report=""
+
+# miss <what> <why> <fix...>
+miss() {
+  missing=$((missing + 1))
+  report="$report
+  x $1
+      $2"
+  shift 2
+  for fix in "$@"; do
+    report="$report
+      \$ $fix"
+  done
+}
+
+# ── Not root ────────────────────────────────────────────────────────────────
+# Same fact as assertSupportedHost (plugins/infra/plugins/launcher).
+if [ "$(id -u)" = "0" ]; then
+  miss "Running as root" \
+    "Postgres' initdb refuses to run as root, so the embedded cluster (and every backend) cannot start. Run as a non-root user." \
+    "adduser --disabled-password --gecos '' singularity && su - singularity"
+fi
+
+# ── Xcode command-line tools (macOS) and a working git ──────────────────────
+os="$(uname -s)"
+if [ "$os" = "Darwin" ] && ! xcode-select -p >/dev/null 2>&1; then
+  miss "Xcode command-line tools" \
+    "git and the C linker Rust builds with come from them." \
+    "xcode-select --install"
+elif ! git --version >/dev/null 2>&1; then
+  # On macOS without the CLT, /usr/bin/git is a stub — reported above instead.
+  miss "git" "The repo, its worktrees and every push run on git." \
+    "sudo apt install git curl build-essential   # or your distro's equivalent"
+fi
+
+# ── mise, active in the shell ───────────────────────────────────────────────
+case "$SHELL" in
+  */bash) rc="$HOME/.bashrc"; sh_name=bash ;;
+  *) rc="$HOME/.zshrc"; sh_name=zsh ;;
+esac
+activate="echo 'eval \"\$(~/.local/bin/mise activate $sh_name)\"' >> $rc   # then open a new shell"
+
+mise_bin="$(command -v mise 2>/dev/null)"
+if [ -z "$mise_bin" ] && [ -x "$HOME/.local/bin/mise" ]; then
+  mise_bin="$HOME/.local/bin/mise"
+fi
+
+if [ -z "$mise_bin" ]; then
+  miss "mise" \
+    "It installs the exact Bun, Go, tmux and Rust releases mise.lock records." \
+    "curl https://mise.run | sh" "$activate" "mise install"
+else
+  # Active = either `mise activate` ran in this shell (it exports MISE_SHELL),
+  # or its shims are on PATH (what agent shells and the runtime use). Checking
+  # PATH for tool install dirs would pass under `mise run` whether or not the
+  # user's own shell can find them.
+  shims="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims"
+  case ":$PATH:" in
+    *":$shims:"* | *":$shims/:"*) active=1 ;;
+    *) if [ -n "$MISE_SHELL" ]; then active=1; else active=0; fi ;;
+  esac
+  if [ "$active" = "0" ]; then
+    miss "mise is installed but not active in your shell" \
+      "Without it \`bun\` (and ./singularity) is not found." \
+      "$activate"
+  fi
+
+  # The ceiling keeps a worktree from also reading main's mise.toml (see
+  # plugins/toolchain/shared/mise.ts).
+  if ! MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" install --dry-run-code >/dev/null 2>&1; then
+    tools="$(MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" ls --missing 2>/dev/null | while read -r name version _; do printf '%s ' "$name@$version"; done)"
+    miss "Toolchain not installed: ${tools:-see \`mise ls --missing\`}" \
+      "The releases mise.lock records for this checkout." \
+      "mise install"
+  fi
+fi
+
+# ── Claude Code, signed in ──────────────────────────────────────────────────
+# The same lookup order as CLAUDE in plugins/infra/plugins/paths/server/internal/bins.ts
+# (doctor.test.ts keeps the candidate paths in step).
+claude_bin="${SINGULARITY_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}"
+if [ -z "$claude_bin" ]; then
+  for candidate in "$HOME/.local/bin/claude" "/opt/homebrew/bin/claude" "/usr/local/bin/claude"; do
+    if [ -x "$candidate" ]; then claude_bin="$candidate"; break; fi
+  done
+fi
+
+if [ -z "$claude_bin" ]; then
+  miss "Claude Code" "Every agent the app launches runs on it." \
+    "curl -fsSL https://claude.ai/install.sh | bash" "claude auth login"
+else
+  case "$("$claude_bin" auth status --json 2>/dev/null)" in
+    *'"loggedIn": true'* | *'"loggedIn":true'*) ;;
+    *) miss "Claude Code is not signed in" "Agents cannot start without an account." \
+      "claude auth login" ;;
+  esac
+fi
+
+if [ "$missing" -eq 0 ]; then
+  echo "Singularity prerequisites: all present."
+  exit 0
+fi
+echo "Singularity prerequisites: $missing missing.$report
+
+Setup, in order: docs/setup.md"
+exit 1

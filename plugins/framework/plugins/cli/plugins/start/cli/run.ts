@@ -1,4 +1,5 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import {
@@ -22,6 +23,8 @@ const DEFAULT_PORT = 9000;
 const run: CliAction<[], { force?: boolean; logLevel: string }> = async (
   opts,
 ) => {
+  // Every missing dev prerequisite at once, before the gateway compile.
+  await assertPrerequisites();
   // Same host preconditions as a release launch: the dev gateway supervises
   // the same embedded cluster, so the same machine facts have to hold.
   assertSupportedHost();

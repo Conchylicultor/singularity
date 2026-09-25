@@ -16767,6 +16767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/bootstrap.adaptiveTimeoutMs`
               - `framework/cli/bootstrap.ensureDeps`
               - `framework/cli/bootstrap.HolderObservation`
+              - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/cli/migrations.generateMigration`
               - `framework/cli/migrations.MigrationAnswer`
@@ -16810,6 +16811,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
         - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
+        - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain, Claude Code signed in) in one run, with its fix. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/start`
+          - Cli:
+            - Exports (values): `assertPrerequisites`
         - **`format`** — `./singularity format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
         - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
           - Cross-plugin:
@@ -16964,6 +16972,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
         - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+          - Cli:
+            - Uses: `framework/cli/doctor.assertPrerequisites`
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
             - Uses:
@@ -19544,6 +19554,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `release`
       - Core:
         - Exports (values):
+          - `hasMiseShims`
           - `isRuntimeEnvName`
           - `normalizeRuntimePath`
           - `pickHostEnv`

@@ -2629,6 +2629,10 @@
       "name": "@singularity/plugin-framework-cli-deploy",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/doctor": {
+      "name": "@singularity/plugin-framework-cli-doctor",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/format": {
       "name": "@singularity/plugin-framework-cli-format",
       "version": "0.0.1",
@@ -7152,6 +7156,8 @@
     "@singularity/plugin-framework-cli-db": ["@singularity/plugin-framework-cli-db@workspace:plugins/framework/plugins/cli/plugins/db"],
 
     "@singularity/plugin-framework-cli-deploy": ["@singularity/plugin-framework-cli-deploy@workspace:plugins/framework/plugins/cli/plugins/deploy"],
+
+    "@singularity/plugin-framework-cli-doctor": ["@singularity/plugin-framework-cli-doctor@workspace:plugins/framework/plugins/cli/plugins/doctor"],
 
     "@singularity/plugin-framework-cli-format": ["@singularity/plugin-framework-cli-format@workspace:plugins/framework/plugins/cli/plugins/format"],
 

@@ -5,6 +5,7 @@ import {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_HOST_ENV,
   RUNTIME_WITHHELD_ENV,
+  hasMiseShims,
   normalizeRuntimePath,
   pickHostEnv,
   pickRuntimeEnv,
@@ -185,6 +186,20 @@ describe("normalizeRuntimePath", () => {
   test("a path that merely mentions mise elsewhere is not a tool directory", () => {
     const plain = "/fixture/mise-tools/bin:/fixture/mise/installs-backup";
     expect(normalizeRuntimePath(plain)).toBe(plain);
+  });
+});
+
+describe("hasMiseShims", () => {
+  test("true for a shims entry, with or without a trailing slash", () => {
+    expect(hasMiseShims("/usr/bin:/opt/data/mise/shims")).toBe(true);
+    expect(hasMiseShims("/opt/data/mise/shims/:/bin")).toBe(true);
+  });
+
+  test("false for a PATH without one, install dirs included", () => {
+    expect(hasMiseShims("/usr/bin:/bin")).toBe(false);
+    expect(hasMiseShims("/opt/data/mise/installs/bun/1.4.2/bin:/bin")).toBe(
+      false,
+    );
   });
 });
 

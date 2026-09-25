@@ -4,7 +4,10 @@ import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { normalizeRuntimePath } from "@plugins/infra/plugins/launcher/core";
+import {
+  hasMiseShims,
+  normalizeRuntimePath,
+} from "@plugins/infra/plugins/launcher/core";
 import type {
   Check,
   CheckResult,
@@ -67,14 +70,28 @@ const check: Check = {
       ...process.env,
       PATH: normalizeRuntimePath(process.env.PATH ?? ""),
     };
+    // Without mise's shims the runtime PATH is the raw one, and every tool
+    // mise alone installed is simply absent. That is its own diagnosis, with
+    // its own fix — not the "something shadows mise" hint below.
+    const shimsOnPath = hasMiseShims(env.PATH);
     const mismatches: string[] = [];
     for (const spec of TOOLS) {
       const want = locked.get(spec.name)?.[0];
-      const probe = await spawnCaptured([...spec.versionArgv], {
-        cwd: root,
-        env,
-        timeoutMs: PROBE_TIMEOUT_MS,
-      });
+      let probe: Awaited<ReturnType<typeof spawnCaptured>>;
+      try {
+        probe = await spawnCaptured([...spec.versionArgv], {
+          cwd: root,
+          env,
+          timeoutMs: PROBE_TIMEOUT_MS,
+        });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        // Collected, not thrown: every missing tool is named in ONE run.
+        mismatches.push(
+          `${spec.name}: \`${spec.versionArgv[0]}\` is not on the runtime PATH (mise.lock records ${want}).`,
+        );
+        continue;
+      }
       const said = `${probe.stdout}\n${probe.stderr}`.trim();
       const got =
         probe.exitCode === 0
@@ -94,9 +111,11 @@ const check: Check = {
       return {
         ok: false,
         message: mismatches.join("\n"),
-        hint:
-          "Run `mise install` in this checkout to install the locked releases. If a tool still resolves elsewhere, " +
-          "something ahead of mise's shims on PATH is shadowing it.",
+        hint: shimsOnPath
+          ? "Run `mise install` in this checkout to install the locked releases. If a tool still resolves elsewhere, " +
+            "something ahead of mise's shims on PATH is shadowing it."
+          : "mise's shims are not on PATH, so nothing mise installed can be found. Activate mise in your shell " +
+            "(`mise activate`, see docs/setup.md), then `mise install`; `mise run doctor` lists anything else missing.",
       };
     }
     return { ok: true };

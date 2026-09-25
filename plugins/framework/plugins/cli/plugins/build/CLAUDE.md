@@ -58,6 +58,7 @@ through `SINGULARITY_BUILD_DETACHED` instead.
     - `framework/cli/bootstrap.adaptiveTimeoutMs`
     - `framework/cli/bootstrap.ensureDeps`
     - `framework/cli/bootstrap.HolderObservation`
+    - `framework/cli/doctor.assertPrerequisites`
     - `framework/cli/git-artifacts.registerMergeDrivers`
     - `framework/cli/migrations.generateMigration`
     - `framework/cli/migrations.MigrationAnswer`
