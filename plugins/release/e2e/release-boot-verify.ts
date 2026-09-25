@@ -36,6 +36,7 @@ import {
   detectOsColorScheme,
   numArg,
   report,
+  requestFailure,
   requireArg,
   withBrowser,
   type ColorScheme,
@@ -101,13 +102,12 @@ await withBrowser(async (h) => {
   const { consoleErrors, pageErrors } = captured;
 
   page.on("requestfailed", (req) => {
-    // Chromium reports canceled/aborted requests here too; keep the raw reason so
-    // the report can distinguish a real dial failure from a benign navigation abort.
-    requestFailures.push({
-      url: req.url(),
-      bucket: bucket(req.url()),
-      reason: req.failure()?.errorText ?? "unknown",
-    });
+    // `requestFailure` drops Chromium's empty-body artifact (a successful 204
+    // reported as ERR_ABORTED). What remains never got a response; keep the raw
+    // reason so the report can tell a real dial failure from a navigation abort.
+    const reason = requestFailure(req);
+    if (reason === null) return;
+    requestFailures.push({ url: req.url(), bucket: bucket(req.url()), reason });
   });
   page.on("response", (res) => {
     if (res.status() >= 400) {
@@ -203,7 +203,8 @@ await withBrowser(async (h) => {
     failures.push(`${consoleErrors.length} console error(s)`);
 
   // Storm detection: count backend failures per bucket (real dial failures, not
-  // benign navigation aborts), plus any 5xx / repeated 4xx on /api or /ws.
+  // ERR_ABORTED — a genuine abort the page caused itself, e.g. a navigation
+  // cancelling in-flight requests), plus any 5xx / repeated 4xx on /api or /ws.
   const stormCounts: Record<StormBucket, number> = { api: 0, ws: 0, zero: 0 };
   for (const f of requestFailures) {
     if (isStormBucket(f.bucket) && f.reason !== "net::ERR_ABORTED")

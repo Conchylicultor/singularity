@@ -107,9 +107,16 @@ error" report *during* duress — a report storm set off by the storm-suppressio
 mechanism itself. Do not "upgrade" the status.
 
 Nothing is lost. `clientLog`'s buffer re-queues the rejected batch in order and
-retries it: on the next debounced flush, on the WS reconnect, and — new — on a
-one-shot timer armed on the failure edge, so a tab that goes quiet right after a
-rejection still drains. That buffer is also capped per channel (4 000 lines,
+retries it — and the retry honours the backoff. A rejected POST ends the flush pass
+and sets a **hold** whose single timer (armed on the failure edge, never a poll) is
+the only thing that flushes next: 5 s after a plain failure, 30 s after a 429.
+While held, new `clientLog` lines only buffer and WS `open` events send nothing;
+the one exception is that an `open` lifts a plain-failure hold (the backend is back),
+never a 429 hold (the duress latch is host-wide; a reconnect says nothing about it).
+Flushes are **single-flight**: a trigger while one runs marks it dirty and it goes
+round once more, so batches never interleave or reorder. Do not add a flush trigger
+that bypasses `requestFlush` — several sockets publish WS `open`, and each bypass
+re-POSTs straight into the 429. That buffer is also capped per channel (4 000 lines,
 **drop-oldest** — the opposite of the server shed buffer's drop-newest, because
 the browser has no first-N-durable guarantee and its newest lines describe the
 problem the user is looking at). A drop is never silent: one

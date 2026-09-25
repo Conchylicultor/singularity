@@ -6,13 +6,37 @@
  * array shape. One shape here, with live arrays a script can assert on at the end
  * ("no page errors during the run") without threading state through the flow.
  */
-import type { Page } from "playwright";
+import type { Page, Request } from "playwright";
 
 export interface Captured {
   pageErrors: string[];
   consoleErrors: string[];
-  /** `<method> <url> — <failure text>` for requests the browser never completed. */
+  /**
+   * `<method> <url> — <failure text>` for requests that never got a response
+   * (see `requestFailure`). A successful 204 is not in here.
+   */
   failedRequests: string[];
+}
+
+/**
+ * The failure text for a request that genuinely never got a response, or `null`
+ * when a response did arrive and the `requestfailed` event is Chromium's
+ * empty-body artifact.
+ *
+ * Chromium, as seen through Playwright, fires `requestfailed … net::ERR_ABORTED`
+ * for a SUCCESSFUL fetch whose response body is empty — a 204, or a 200 with no
+ * body — while the page's `await fetch()` resolves normally. Every void endpoint
+ * answers 204 (`infra/endpoints/core/implement.ts`), so without this every
+ * `clientLog` flush, and every other void mutation, reads as a failed request.
+ * The two cases differ synchronously: the artifact has
+ * `timing().responseStart >= 0` (and `response()` resolves to the real status),
+ * while a genuine abort — `AbortController`, a navigation, a close mid-flight,
+ * a dial failure — has `responseStart === -1` and no response.
+ * Diagnosis: research/2026-09-25-framework-e2e-empty-body-requestfailed.md.
+ */
+export function requestFailure(req: Request): string | null {
+  if (req.timing().responseStart >= 0) return null;
+  return req.failure()?.errorText ?? "unknown";
 }
 
 /**
@@ -41,7 +65,9 @@ export function capture(page: Page, label?: string): Captured {
   });
 
   page.on("requestfailed", (req) => {
-    const line = `${req.method()} ${req.url()} — ${req.failure()?.errorText ?? "unknown"}`;
+    const failure = requestFailure(req);
+    if (failure === null) return;
+    const line = `${req.method()} ${req.url()} — ${failure}`;
     captured.failedRequests.push(line);
     console.log(`REQUESTFAILED${tag}:`, line);
   });

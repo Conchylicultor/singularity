@@ -278,9 +278,15 @@ await withBrowser(async (h) => {
     await snap(page, OUT, "after-menu-close");
   }
 
-  // `failedRequests` is deliberately excluded: the log-emit beacon is aborted by
-  // design on teardown, so it is noise here, not a defect.
-  const errors = [...captured.pageErrors, ...captured.consoleErrors];
-  r.ok("no page or console errors", errors.length === 0, errors.join("\n"));
+  const errors = [
+    ...captured.pageErrors,
+    ...captured.consoleErrors,
+    ...captured.failedRequests,
+  ];
+  r.ok(
+    "no page errors, console errors or failed requests",
+    errors.length === 0,
+    errors.join("\n"),
+  );
   await r.finish();
 });

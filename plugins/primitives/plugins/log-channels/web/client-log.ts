@@ -9,6 +9,14 @@ import { emitLogs, MAX_EMIT_LINES } from "../core";
 // the agent can read with `tail`/`cat` — no browser/Playwright needed. Lines are
 // buffered per channel and flushed (debounced) to POST /api/logs/emit, which
 // appends them to the per-worktree logs directory (see persist.ts / logs CLAUDE.md).
+//
+// Flush invariants (every trigger goes through `requestFlush`):
+// - Single-flight: at most one flush runs; a trigger during it re-runs it once after.
+// - Hold after failure: a rejected POST sets a hold whose one timer is the ONLY
+//   thing that flushes next — 5 s after a plain failure, 30 s after a 429. The
+//   debounce and WS-`open` triggers are no-ops meanwhile, except that an `open`
+//   lifts a plain-failure hold (the backend is back); it never lifts a 429 hold.
+// - No polling: timers exist only for the debounce and on a failure edge.
 
 type LogStream = "stdout" | "stderr";
 interface BufferedLine {
@@ -39,7 +47,6 @@ const MAX_BUFFERED_LINES = 4_000;
 /** Backoff after a failed flush, and the longer one the server's 429 asks for. */
 const RETRY_DELAY_MS = 5_000;
 const BACKPRESSURE_RETRY_DELAY_MS = 30_000;
-let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function clientLog(
   channel: string,
@@ -88,32 +95,111 @@ function toWire(l: BufferedLine): {
 }
 
 function scheduleFlush(): void {
-  if (flushTimer !== null) return;
+  // During a hold nothing but the retry timer may flush, so there is nothing to
+  // debounce — and no reason to arm a timer at all.
+  if (flushTimer !== null || hold !== null) return;
   // Single trailing debounce timer — not a poll loop. Cleared once it fires.
   flushTimer = setTimeout(() => {
     flushTimer = null;
-    void flush();
+    requestFlush("debounce");
   }, FLUSH_DELAY_MS);
 }
 
 /**
- * Arm ONE retry after a failed flush. This is a timer on a FAILURE EDGE, not a
- * poll loop: nothing is ever scheduled while flushes succeed, and the timer clears
- * itself the moment it fires. It exists because the other two retry triggers are
- * both events that may never come — a later `clientLog` call and a WS reconnect —
- * so a tab that goes quiet right after a rejection would otherwise strand its
- * buffered lines until the next page load.
+ * Why the last flush failed, which decides how a WS reconnect treats the hold:
+ * - `failure`: the backend refused or was unreachable (mid-restart, the
+ *   `./singularity build` case). A reconnect proves it is back, so it lifts the hold.
+ * - `backpressure`: the server answered 429 because the host-global duress latch is
+ *   set. A reconnect says nothing about the latch, so only the timer lifts it.
  */
-function scheduleRetry(delayMs: number): void {
-  if (retryTimer !== null) return;
-  retryTimer = setTimeout(() => {
-    retryTimer = null;
-    void flush();
-  }, delayMs);
+type HoldKind = "failure" | "backpressure";
+
+/**
+ * The hold after a failed flush. The kind and its ONE retry timer live in one value,
+ * so "held" and "a retry is armed" cannot disagree: while `hold` is set, the timer is
+ * the only thing that flushes (the debounce and a WS `open` are no-ops, except that an
+ * `open` lifts a `failure` hold), and the timer's firing is what clears it.
+ *
+ * The timer sits on a FAILURE EDGE, not a poll loop: nothing is ever scheduled while
+ * flushes succeed, and it clears itself the moment it fires. It exists because the
+ * other two triggers are events that may never come — a later `clientLog` call and a
+ * WS reconnect — so a tab that goes quiet right after a rejection would otherwise
+ * strand its buffered lines until the next page load.
+ */
+let hold: { kind: HoldKind; timer: ReturnType<typeof setTimeout> } | null =
+  null;
+
+function setHold(kind: HoldKind): void {
+  // Only a flush sets a hold, and a flush only runs with none in place (see
+  // `requestFlush`) — so a live hold here is a broken invariant, not a merge case.
+  if (hold !== null) throw new Error("[clientLog] hold set twice");
+  const delayMs =
+    kind === "backpressure" ? BACKPRESSURE_RETRY_DELAY_MS : RETRY_DELAY_MS;
+  hold = {
+    kind,
+    timer: setTimeout(() => {
+      hold = null;
+      requestFlush("retry");
+    }, delayMs),
+  };
 }
 
-async function flush(): Promise<void> {
-  let retryDelayMs: number | null = null;
+function clearHold(): void {
+  if (hold === null) return;
+  clearTimeout(hold.timer);
+  hold = null;
+}
+
+/**
+ * Single-flight state. At most one flush runs at a time; a request arriving while
+ * one runs marks it `dirty`, and the running flush goes round once more when it
+ * finishes. So batches never interleave, a failed batch's re-queue can only land
+ * ahead of lines that are genuinely newer, and N concurrent triggers cost one POST
+ * stream, not N.
+ */
+let running = false;
+let dirty = false;
+
+type FlushTrigger = "debounce" | "ws-open" | "retry";
+
+/** The one entry point to a flush — every trigger goes through the hold gate here. */
+function requestFlush(trigger: FlushTrigger): void {
+  if (trigger === "ws-open" && hold?.kind === "failure") clearHold();
+  // The retry timer clears the hold before calling in, so a remaining hold means
+  // this is a debounce / WS trigger arriving during a backoff: drop it.
+  if (hold !== null) return;
+  if (running) {
+    dirty = true;
+    return;
+  }
+  void runFlush();
+}
+
+async function runFlush(): Promise<void> {
+  running = true;
+  try {
+    do {
+      dirty = false;
+      const failed = await drainBuffer();
+      if (failed !== null) {
+        // The retry timer now owns the next attempt; a `dirty` set meanwhile is
+        // folded into it (the retry drains everything buffered by then).
+        setHold(failed);
+        break;
+      }
+    } while (dirty);
+  } finally {
+    running = false;
+    dirty = false;
+  }
+}
+
+/**
+ * One pass over every channel. Stops at the FIRST rejected batch — a 429 or an
+ * unreachable backend will refuse the next channel's POST just the same, and each
+ * refused POST is exactly the traffic the rejection asked us to shed.
+ */
+async function drainBuffer(): Promise<HoldKind | null> {
   for (const [channel, lines] of buffer) {
     // Drain this channel in batches the server will accept (≤ MAX_EMIT_LINES).
     // A single over-cap POST would be rejected with 400 on every retry forever,
@@ -127,35 +213,31 @@ async function flush(): Promise<void> {
           { body: { channel, lines: drained.map(toWire) } },
         );
       } catch (err) {
+        if (!(err instanceof Error)) throw err;
         // Deliberate, self-correcting re-queue: the backend may be mid-restart
-        // (the `./singularity build` case) or refusing ingress while the host is
-        // under duress (429). Put the lines back, preserving order ahead of
-        // anything newly buffered, and retry.
+        // or refusing ingress while the host is under duress (429). Put the lines
+        // back ahead of anything newly buffered — single-flight guarantees nothing
+        // older is in flight — and re-apply the cap, since the buffer kept growing
+        // while this batch was out.
         lines.unshift(...drained);
-        // Surface the failure for visibility without breaking the retry loop.
-        if (err instanceof Error) {
-          // A 429 is the server saying "stop, the box is on fire" — back off far
-          // harder than for a plain restart, which resolves in seconds.
-          const backpressure =
-            err instanceof EndpointError && err.status === 429;
-          retryDelayMs = Math.max(
-            retryDelayMs ?? 0,
-            backpressure ? BACKPRESSURE_RETRY_DELAY_MS : RETRY_DELAY_MS,
-          );
-          console.debug("[clientLog] flush failed, will retry:", err.message);
-          break; // Stop draining this channel; retry the rest on the next flush.
-        } else {
-          throw err;
-        }
+        capBuffer(lines);
+        // Surface the failure for visibility; the hold's timer retries.
+        console.debug("[clientLog] flush failed, will retry:", err.message);
+        // A 429 is the server saying "stop, the box is on fire" — back off far
+        // harder than for a plain restart, which resolves in seconds.
+        return err instanceof EndpointError && err.status === 429
+          ? "backpressure"
+          : "failure";
       }
     }
   }
-  if (retryDelayMs !== null) scheduleRetry(retryDelayMs);
+  return null;
 }
 
 // Reconnect flush: when the worktree WS channel comes back up after the backend
-// restart, drain anything buffered during the downtime. The worktree
-// notifications channel publishes on this global bus via SharedWebSocket.
+// restart, drain anything buffered during the downtime. Several sockets publish on
+// this global bus (via SharedWebSocket), so this fires often — the hold gate and
+// single-flight in `requestFlush` are what keep it from multiplying POSTs.
 subscribeWsStatus((ev) => {
-  if (ev.status === "open") void flush();
+  if (ev.status === "open") requestFlush("ws-open");
 });

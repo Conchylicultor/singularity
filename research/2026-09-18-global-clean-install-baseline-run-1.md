@@ -198,6 +198,10 @@ mentions this, and a new user's first reboot looks like the install broke.
 **12. Minor: the browser fails to post its logs on first load.**
 Six `POST /api/logs/emit → net::ERR_ABORTED` on the freshly deployed app. Not
 blocking; worth a look.
+*Diagnosed 2026-09-25: a false positive in the e2e harness, not an app failure.
+The six emits succeeded with a 204, which Chromium reports to Playwright as
+`requestfailed ERR_ABORTED` because the body is empty. See
+`research/2026-09-25-framework-e2e-empty-body-requestfailed.md`.*
 
 ## Two notes about the harness itself
 
