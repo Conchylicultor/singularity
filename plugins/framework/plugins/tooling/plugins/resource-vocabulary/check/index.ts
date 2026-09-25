@@ -15,6 +15,7 @@ import { resourceDescriptorFactories, resourceRegisterMarkers } from "../core";
 // is a real, checkable edge that still erases completely.
 import type * as ServerCoreBarrel from "@plugins/framework/plugins/server-core/core";
 import type * as QueryResourceServerBarrel from "@plugins/infra/plugins/query-resource/server";
+import type * as LiveServerBarrel from "@plugins/network/plugins/live/server";
 
 // The register-marker half of the vocabulary's completeness assertion.
 //
@@ -54,9 +55,29 @@ type RegisterMarkerNames<M> = {
     : never;
 }[keyof M];
 
+/**
+ * A served collection: one call serving both resources a `liveCollection`
+ * mints (`serveCollection`). Structural, like {@link ServedResource}.
+ */
+interface ServedCollection {
+  window: ServedResource;
+  rows: ServedResource;
+}
+
+/** Every export of `M` that is a function returning a served collection. */
+type CollectionMarkerNames<M> = {
+  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
+    ? [R] extends [ServedCollection]
+      ? K
+      : never
+    : never;
+}[keyof M];
+
 type ServingMarkerName =
   | RegisterMarkerNames<typeof ServerCoreBarrel>
-  | RegisterMarkerNames<typeof QueryResourceServerBarrel>;
+  | RegisterMarkerNames<typeof QueryResourceServerBarrel>
+  | RegisterMarkerNames<typeof LiveServerBarrel>
+  | CollectionMarkerNames<typeof LiveServerBarrel>;
 
 type Assert<T extends true> = T;
 

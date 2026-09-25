@@ -1,8 +1,8 @@
-import { useEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
+import { useEventSourceRow } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 /**
- * The result of looking one source up in the live sources window.
+ * The result of looking one source up by id.
  *
  * A discriminated union rather than `EventSource | null`, because the three
  * non-answers mean genuinely different things to a caller and a `null` would
@@ -17,21 +17,22 @@ export type SourceLookup =
   | { status: "missing" };
 
 /**
- * One source out of the live `events.sources` window. Every section of the
- * detail pane reads through this, so they all share one subscription.
+ * One source, live, by id. Every section of the detail pane reads through this,
+ * so they all share one subscription (the same `(key, params)` tuple).
  *
- * NOTE the window bound: `eventSourcesResource` is an ordered window (newest
- * first, default 100), so a source outside it reports `missing`. That is the
- * documented contract of the resource, not a bug here — `events-core` exposes no
- * point read for a single source that does not throw on 404.
+ * A point read on the `events.sources` collection's `:rows` sibling, not a
+ * `.find` over a window: `missing` means the source does not exist — never that
+ * it sits outside the newest-100 window, which is what the old window lookup
+ * reported for an older source.
  */
 export function useEventSource(sourceId: string): SourceLookup {
-  const result = useEventSources();
+  const result = useEventSourceRow(sourceId);
   if (result.pending) {
     return result.error
       ? { status: "error", error: result.error }
       : { status: "pending" };
   }
-  const source = result.data.find((s) => s.id === sourceId);
-  return source ? { status: "found", source } : { status: "missing" };
+  return result.found
+    ? { status: "found", source: result.row }
+    : { status: "missing" };
 }

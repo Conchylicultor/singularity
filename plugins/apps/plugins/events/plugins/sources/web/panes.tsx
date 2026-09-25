@@ -90,9 +90,7 @@ function EventSourceDetailPaneView(): ReactNode {
   if (lookup.status === "missing") {
     return (
       <PaneChrome pane={eventSourceDetailPane} title="Source">
-        <Placeholder>
-          This source no longer exists, or it is outside the loaded window.
-        </Placeholder>
+        <Placeholder>This source no longer exists.</Placeholder>
       </PaneChrome>
     );
   }

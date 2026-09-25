@@ -1,27 +1,24 @@
 import { count, eq, max, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
+import { serveCollection } from "@plugins/network/plugins/live/server";
 import {
-  eventSourcesResource as eventSourcesDescriptor,
+  eventSources,
   eventsRevisionResource as eventsRevisionDescriptor,
   eventRunsRevisionResource as eventRunsRevisionDescriptor,
 } from "../../core";
 import { _eventSources, _eventSourceRuns, _events } from "./tables";
 
-// The compiled bounded window over `event_sources` (newest first). Every column
-// is on the wire — a source row is small and the whole thing is what the sources
-// pane renders — so no explicit `select`. `createdAt` is immutable, so a status /
-// fingerprint / watermark write is an in-place upsert with no ids query; only an
-// insert or delete re-derives membership.
-export const eventSourcesServerResource = windowQueryResource(
-  eventSourcesDescriptor,
-  {
-    from: _eventSources,
-    orderBy: { col: _eventSources.createdAt, dir: "desc" },
-    window: { maxLimit: 500 },
-  },
-);
+// The sources collection over `event_sources`: its window (filterable on
+// status / enabled, sortable by createdAt / name) and its `:rows` point sibling.
+// Every column is on the wire — a source row is small and the whole thing is
+// what the sources pane renders. `createdAt` never changes; `name` does, so a
+// rename costs one bounded ids query per subscribed window (the order signature
+// covers every sortable column), while a status / fingerprint / watermark write
+// stays an in-place upsert.
+export const eventSourcesServed = serveCollection(eventSources, {
+  from: _eventSources,
+});
 
 // The live invalidation tick for the events DataView. It means "the events
 // QUERY's result may have moved", which is NOT the same as "an events row

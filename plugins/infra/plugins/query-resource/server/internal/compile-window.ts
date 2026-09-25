@@ -1,4 +1,5 @@
 import { and, inArray, type SQL } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { db as realDb } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import type {
@@ -15,6 +16,7 @@ import {
 import type {
   PointParams,
   WindowParams,
+  WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
   PointQueryResourceContract,
@@ -43,7 +45,10 @@ import type {
 //   membership authority cannot drift), and `orderSignatureOf` (the canonical
 //   encoding of the declared order columns' wire values — an UPDATE that moves
 //   an order column re-derives the window instead of going stale), emitted as
-//   `membership: { kind: "window", windowIdsOf, orderSignatureOf }`.
+//   `membership: { kind: "window", windowIdsOf, orderSignatureOf }`. A
+//   function `orderBy` is resolved per params tuple (the rendered ORDER BY
+//   memoized per canonical order), and its signature covers the declared
+//   `signatureColumns` — every column any tuple may sort by.
 // - **point**: the loader as a scoped read over `ctx?.affectedIds ??
 //   decode(params)` (an empty id set short-circuits to `[]` — a legitimately
 //   empty value, no query), emitted as `membership: { kind: "point", idsOf }`
@@ -53,8 +58,8 @@ import type {
 // requires an own-identity scoped resource, and the runtime enforces
 // keyed + identityTable at registration.
 
-type AnyWindowContract<Row> =
-  WindowQueryResourceContract<Row> | PointQueryResourceContract<Row>;
+type AnyWindowContract<Row, P extends WindowParams = WindowParams> =
+  WindowQueryResourceContract<Row, P, never> | PointQueryResourceContract<Row>;
 
 function guard(
   condition: unknown,
@@ -74,7 +79,7 @@ function guard(
  * declaration is a boot crash, never a silent misbehavior.
  */
 export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
-  contract: AnyWindowContract<Row>,
+  contract: AnyWindowContract<Row, P & WindowParams>,
   spec: WindowQueryResourceSpec<P>,
 ): CompiledQuery<Row, P> {
   const key = contract.key;
@@ -107,9 +112,9 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       "spec declares `point` but the descriptor carries no point codec — declare it with pointQueryResourceDescriptor(...).",
     );
     guard(
-      spec.orderBy === undefined,
+      spec.orderBy === undefined && spec.signatureColumns === undefined,
       key,
-      "`orderBy` is meaningless with `point` — point sets are unordered (entrants append).",
+      "`orderBy` / `signatureColumns` are meaningless with `point` — point sets are unordered (entrants append).",
     );
     guard(
       spec.identity?.pk === undefined || spec.identity.pk === spec.point.by,
@@ -163,7 +168,8 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   }
 
   // Window kind.
-  const codec = (contract as WindowQueryResourceContract<Row>).window;
+  const codec = (contract as WindowQueryResourceContract<Row, P & WindowParams>)
+    .window;
   guard(
     codec,
     key,
@@ -174,7 +180,20 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     key,
     "a bounded window REQUIRES `orderBy` — without a total order, `LIMIT n` names no stable window.",
   );
-  const { maxLimit } = spec.window!;
+  const specMaxLimit = spec.window!.maxLimit;
+  guard(
+    specMaxLimit === undefined ||
+      codec.maxLimit === undefined ||
+      specMaxLimit === codec.maxLimit,
+    key,
+    `window.maxLimit (${specMaxLimit}) disagrees with the descriptor's maxLimit (${codec.maxLimit}) — the client's encoder and the server clamp must be one number. Declare it in one place.`,
+  );
+  const maxLimit = specMaxLimit ?? codec.maxLimit;
+  guard(
+    maxLimit !== undefined,
+    key,
+    "declare `window.maxLimit` on the spec or `maxLimit` on the descriptor's window codec — a window needs a clamp.",
+  );
   guard(
     Number.isSafeInteger(maxLimit) && maxLimit > 0,
     key,
@@ -189,27 +208,53 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   const { tableName, rel, pkColumn, keyField, selectMap, columns } =
     resolveIdentity(spec.from, spec.identity, spec.select);
 
-  // Declared order keys + the pk tiebreaker (skipped when a key already targets
-  // the pk column — same rule as keyset's `buildSortKeys`), rendered with
-  // explicit NULLS LAST so a future cursor's seek stays symmetric.
-  const declared: WindowOrderKey[] = Array.isArray(spec.orderBy)
-    ? spec.orderBy
-    : [spec.orderBy];
+  const orderSpec = spec.orderBy;
+  const orderFn = typeof orderSpec === "function" ? orderSpec : undefined;
+  const staticOrder: WindowOrderKey[] | undefined =
+    typeof orderSpec === "function"
+      ? undefined
+      : Array.isArray(orderSpec)
+        ? orderSpec
+        : [orderSpec];
+  guard(
+    staticOrder || (spec.signatureColumns && spec.signatureColumns.length > 0),
+    key,
+    "a function `orderBy` REQUIRES a non-empty `signatureColumns` — the union of every column it may sort by, so an UPDATE to any of them re-derives the window.",
+  );
 
-  // Order signature: the canonical join of the row's declared-order-column wire
-  // values (the auto pk tiebreaker is immutable, hence excluded). Always emitted
-  // for the window kind — no opt-in surface: the runtime compares it per
-  // refilled member row and re-derives the window (one bounded `windowIdsOf`)
-  // when it moved, so an UPDATE that bumps an order column (a `createdAt`
-  // resurface) reorders the wire window instead of leaving it stale. Every
-  // declared order column must therefore be projected — the signature is
-  // computed over the wire row the loader returns.
-  const orderFields = declared.map((k) => {
-    const field = wireFieldFor(spec.select, columns, k.col);
+  // Order signature: the canonical join of the row's signature-column wire
+  // values — the declared order columns for a static order, `signatureColumns`
+  // when given (the auto pk tiebreaker is immutable, hence excluded). Always
+  // emitted for the window kind — no opt-in surface: the runtime compares it
+  // per refilled member row and re-derives the window (one bounded
+  // `windowIdsOf`) when it moved, so an UPDATE that bumps an order column (a
+  // `createdAt` resurface) reorders the wire window instead of leaving it
+  // stale. Every signature column must therefore be projected — the signature
+  // is computed over the wire row the loader returns.
+  const signatureColumns: PgColumn[] =
+    spec.signatureColumns ?? staticOrder!.map((k) => k.col);
+  const covered = (col: PgColumn): boolean =>
+    col === pkColumn ||
+    signatureColumns.some((c) => c === col || c.name === col.name);
+  // An order column outside the signature would reorder without the runtime
+  // noticing — the tuple's order would go stale. Checked at module eval for a
+  // static order, per resolved order for a function one.
+  const assertCovered = (order: readonly WindowOrderKey[]): void => {
+    for (const k of order) {
+      guard(
+        covered(k.col),
+        key,
+        `the order column "${k.col.name}" is not in \`signatureColumns\` — an UPDATE to it would leave the window's order stale. Add it to \`signatureColumns\`.`,
+      );
+    }
+  };
+  if (staticOrder) assertCovered(staticOrder);
+  const orderFields = signatureColumns.map((col) => {
+    const field = wireFieldFor(spec.select, columns, col);
     guard(
       field !== undefined,
       key,
-      `the order column "${k.col.name}" is not projected — the window's order ` +
+      `the order column "${col.name}" is not projected — the window's order ` +
         `signature is derived from the wire row, so every declared order column ` +
         `must appear in \`select\`.`,
     );
@@ -222,21 +267,45 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
           JSON.stringify((row as Record<string, unknown>)[f]) ?? "undefined",
       )
       .join("\u0000");
-  const keys: SortKey[] = declared.map((k) => ({
-    fieldId: k.col.name,
-    col: k.col,
-    dir: k.dir ?? "asc",
-    nullable: k.nullable ?? false,
-  }));
-  if (!keys.some((k) => k.col === pkColumn)) {
-    keys.push({
-      fieldId: pkColumn.name,
-      col: pkColumn,
-      dir: "asc",
-      nullable: false,
-    });
-  }
-  const orderSql = orderByClauses(keys);
+
+  // Declared order keys + the pk tiebreaker (skipped when a key already targets
+  // the pk column — same rule as keyset's `buildSortKeys`), rendered with
+  // explicit NULLS LAST so a future cursor's seek stays symmetric.
+  const renderOrder = (declared: readonly WindowOrderKey[]): SQL[] => {
+    const keys: SortKey[] = declared.map((k) => ({
+      fieldId: k.col.name,
+      col: k.col,
+      dir: k.dir ?? "asc",
+      nullable: k.nullable ?? false,
+    }));
+    if (!keys.some((k) => k.col === pkColumn)) {
+      keys.push({
+        fieldId: pkColumn.name,
+        col: pkColumn,
+        dir: "asc",
+        nullable: false,
+      });
+    }
+    return orderByClauses(keys);
+  };
+  const staticOrderSql = staticOrder ? renderOrder(staticOrder) : undefined;
+  // Per-params order, memoized per canonical order. Bounded by the resolver's
+  // own vocabulary (its sortable columns × directions), never by the params.
+  const orderMemo = new Map<string, SQL[]>();
+  const orderSqlOf = (params: P): SQL[] => {
+    if (staticOrderSql) return staticOrderSql;
+    const declared = orderFn!(params);
+    const canonical = JSON.stringify(
+      declared.map((k) => [k.col.name, k.dir ?? "asc", k.nullable ?? false]),
+    );
+    let rendered = orderMemo.get(canonical);
+    if (!rendered) {
+      assertCovered(declared);
+      rendered = renderOrder(declared);
+      orderMemo.set(canonical, rendered);
+    }
+    return rendered;
+  };
 
   // The subscription's decoded limit, clamped — ONE helper feeds the loader AND
   // `windowIdsOf`, so the value the clients see and the membership authority can
@@ -254,7 +323,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     let q = from();
     const w = resolveWhere(params);
     if (w) q = q.where(w);
-    return q.orderBy(...orderSql).limit(limitOf(params));
+    return q.orderBy(...orderSqlOf(params)).limit(limitOf(params));
   }
 
   // Scoped refill: `where ∧ pk IN affectedIds`, NO order/limit — a partial
@@ -282,7 +351,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       .from(rel);
     const w = resolveWhere(params);
     if (w) q = q.where(w);
-    const rows = await q.orderBy(...orderSql).limit(limitOf(params));
+    const rows = await q.orderBy(...orderSqlOf(params)).limit(limitOf(params));
     return rows.map((r) => String(r[keyField]));
   };
 
@@ -313,10 +382,14 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
  * LOUD throw at module evaluation (boot crash) on drift, exactly like
  * `queryResource`.
  */
-export function windowQueryResource<Row>(
-  descriptor: WindowQueryResourceContract<Row>,
-  spec: WindowQueryResourceSpec<WindowParams>,
-): Resource<Row[], WindowParams>;
+export function windowQueryResource<
+  Row,
+  P extends WindowParams = WindowParams,
+  S extends WindowSelector = WindowSelector,
+>(
+  descriptor: WindowQueryResourceContract<Row, P, S>,
+  spec: WindowQueryResourceSpec<P>,
+): Resource<Row[], P>;
 export function windowQueryResource<Row>(
   descriptor: PointQueryResourceContract<Row>,
   spec: WindowQueryResourceSpec<PointParams>,

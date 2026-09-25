@@ -5,14 +5,19 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   useResource,
-  useWindowResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useLive,
+  useLiveRow,
+  type LiveListResult,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   createEventSource,
   deleteEventSource,
   eventRunsRevisionResource,
-  eventSourcesResource,
+  eventSources,
   eventsRevisionResource,
   getEventSourceRun,
   listEventSourceRuns,
@@ -24,13 +29,23 @@ import {
 } from "../../core";
 
 /**
- * The configured sources, live. A bounded window (newest first) — pass `limit`
- * only when a surface genuinely needs more than the descriptor's default.
+ * The configured sources, live: the collection's default window (newest first,
+ * 100). A surface that needs another filter, order or size reads
+ * `useLive(eventSources, { … })` directly.
  */
-export function useEventSources(opts?: {
-  limit?: number;
-}): ResourceResult<EventSource[]> {
-  return useWindowResource(eventSourcesResource, opts);
+export function useEventSources(): LiveListResult<EventSource> {
+  return useLive(eventSources);
+}
+
+/**
+ * One source by id, live: pending, then found or determinately absent. Reads the
+ * collection's point sibling, so it answers for ANY source — not only the ones a
+ * window happens to hold.
+ */
+export function useEventSourceRow(
+  sourceId: string,
+): LiveRowResult<EventSource> {
+  return useLiveRow(eventSources, sourceId);
 }
 
 /**

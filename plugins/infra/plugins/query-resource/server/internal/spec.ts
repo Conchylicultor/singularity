@@ -202,16 +202,37 @@ export interface WindowQueryResourceSpec<
    * detected as a membership exit/entry by the runtime's window path.
    */
   where?: SQL | ((params: P) => SQL | undefined);
-  /** Window total order — REQUIRED for `window`, forbidden for `point` (point sets are unordered). */
-  orderBy?: WindowOrderKey | WindowOrderKey[];
+  /**
+   * Window total order — REQUIRED for `window`, forbidden for `point` (point
+   * sets are unordered). Static keys, or a per-params resolver
+   * (`(params) => WindowOrderKey[]`, like `where`) for a client-chosen sort: the
+   * compiler resolves it per subscription tuple and memoizes the rendered
+   * ORDER BY per canonical order (column name + dir + nullable). Either way the
+   * pk tiebreaker and NULLS LAST are appended. A resolver REQUIRES
+   * `signatureColumns`.
+   */
+  orderBy?:
+    WindowOrderKey | WindowOrderKey[] | ((params: P) => WindowOrderKey[]);
+  /**
+   * The columns the window's order signature covers — REQUIRED with a
+   * function `orderBy` (the union of every column it may sort by), optional
+   * with a static one (default: the declared order columns). One signature per
+   * resource, not per tuple: an UPDATE to ANY listed column re-derives each
+   * member tuple's window (one bounded ids query), even a tuple not sorting by
+   * it. Every column must be projected, and a resolved order column outside
+   * this set throws — its reorder would otherwise go stale.
+   */
+  signatureColumns?: PgColumn[];
   /**
    * Ordered-window kind. `maxLimit` clamps every subscription's decoded
-   * `limit` (the loader AND `windowIdsOf`, identically). The default limit
-   * lives ONLY on the descriptor (`windowQueryResourceDescriptor`'s
-   * `defaultLimit`) — the single source both the client hook and the boot
-   * path read; the compiler asserts `defaultLimit <= maxLimit` at module eval.
+   * `limit` (the loader AND `windowIdsOf`, identically). It may instead come
+   * from the descriptor (`contract.window.maxLimit`); when both are given they
+   * must be equal, and at least one is required. The default limit lives ONLY
+   * on the descriptor (`windowQueryResourceDescriptor`'s `defaultLimit`) — the
+   * single source both the client hook and the boot path read; the compiler
+   * asserts `defaultLimit <= maxLimit` at module eval.
    */
-  window?: { maxLimit: number };
+  window?: { maxLimit?: number };
   /**
    * Explicit point-set kind. `by` is the column the subscribed id set matches —
    * it IS the resource's identity pk (the change-feed routes by intersecting

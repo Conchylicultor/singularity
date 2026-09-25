@@ -65,7 +65,7 @@ export {
   type RefreshAllResult,
 } from "./internal/endpoints";
 export {
-  eventSourcesResource,
+  eventSources,
   eventsRevisionResource,
   eventRunsRevisionResource,
 } from "./internal/resources";

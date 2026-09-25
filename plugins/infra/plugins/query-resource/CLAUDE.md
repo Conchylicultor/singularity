@@ -108,7 +108,13 @@ throw in `compileQuery`. Absent ⇒ byte-identical to pre-M5. Design:
 
 ## Bounded membership: `windowQueryResource` (window / point)
 
-> **DEFAULT for new resources.** A NEW DB-backed collection resource is declared with
+> **DEFAULT for new collections: `liveCollection` + `serveCollection`** (`network/live`),
+> which compile down to the two `windowQueryResource` calls below (a window with
+> per-params `where` / `orderBy`, and a `:rows` point sibling) — reach for
+> `windowQueryResource` directly only for what `serveCollection` cannot express yet
+> (a hand-written loader, a projection). See `plugins/network/plugins/live/CLAUDE.md`.
+>
+> A NEW DB-backed collection resource is bounded — declared with
 > `windowQueryResource` (window or point membership) — the unbounded `queryResource` form and
 > hand-written unbounded keyed/push collections above are **legacy pending migration**; do not
 > use them as precedent for new work. Reach for plain `queryResource` only for a set that is
@@ -162,6 +168,20 @@ What the compiler derives per kind:
   identity ids with each tuple's set, so any other column could never
   intersect (declaring both `identity.pk` and a different `by` throws).
 
+**Client-chosen order (`orderBy` as a function).** `orderBy` may be
+`(params) => WindowOrderKey[]`, like `where`: each subscription tuple sorts by
+the order its own params resolve (the rendered ORDER BY is memoized per
+canonical order; the pk tiebreaker and NULLS LAST are still appended). A
+function `orderBy` **requires `signatureColumns`** — the union of every column it
+may sort by. The order signature is one per resource, so an UPDATE to any listed
+column re-derives each member tuple's window (one bounded ids query), even a
+tuple not sorting by it. A resolved order column outside `signatureColumns`
+throws on first use; a static `orderBy` may pass `signatureColumns` too (it must
+cover the declared order columns). A richer window codec may carry extra params
+keys (`{ limit; where?; order? }`) — descriptor, contract and compiler are
+generic over `P extends WindowParams` — and may carry `window.maxLimit` on the
+descriptor instead of the spec (both given ⇒ must be equal; neither ⇒ throw).
+
 **Order-column updates are HANDLED.** `orderSignatureOf` is the canonical join of
 the declared order columns' wire values (the auto pk tiebreaker is excluded; every
 declared order column must be projected, or module eval throws). The runtime
@@ -179,8 +199,9 @@ membership is always incremental); bounded resources are never L2-persisted
 fallback loader at the descriptor's `defaultParams` — the identical tuple
 `useWindowResource` subscribes to. `defaultLimit` lives ONLY on the descriptor
 (the client default and the boot default must be one number); the spec carries
-only `maxLimit`. Every misuse (window+point, missing `orderBy`,
-`defaultLimit > maxLimit`, kind/descriptor drift, `point.by` ≠ identity pk,
+at most `maxLimit`. Every misuse (window+point, missing `orderBy`,
+`defaultLimit > maxLimit`, spec/descriptor `maxLimit` disagreement, a function
+`orderBy` without `signatureColumns`, an unprojected signature column, kind/descriptor drift, `point.by` ≠ identity pk,
 `queryPk` ≠ derived keyField) throws at module eval — a bad spec is a boot crash,
 never a silent misbehavior.
 
@@ -289,7 +310,6 @@ importing `db` never touches a worktree — no test env shim needed.
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/deploy/health`
-    - `apps/events/events-core`
     - `apps/mail/reading-pane`
     - `apps/pages/agent-origin`
     - `apps/pages/starred`
@@ -301,6 +321,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
+    - `network/live`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `primitives/usage-rank`

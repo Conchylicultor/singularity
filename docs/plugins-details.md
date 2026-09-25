@@ -2105,20 +2105,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-field`
-        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
+        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources collection + events revision tick.
           - Web:
             - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
             - Uses:
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveListResult`
+              - `network/live.LiveRowResult`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
-              - `primitives/live-state.useWindowResource`
             - Exports (values):
               - `EventSources`
               - `useCreateEventSource`
               - `useDeleteEventSource`
               - `useEventSourceOrigin`
+              - `useEventSourceRow`
               - `useEventSourceRun`
               - `useEventSourceRuns`
               - `useEventSources`
@@ -2131,6 +2135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `resource.declare` "events.sources"
+              - `resource.declare` "events.sources:rows"
               - `resource.declare` "events.revision"
               - `resource.declare` "events.runs-revision"
             - Uses:
@@ -2139,7 +2144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
-              - `infra/query-resource.windowQueryResource`
+              - `network/live.serveCollection`
             - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
             - Exports (types):
               - `EventSourceType`
@@ -2158,7 +2163,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineEventSourceType`
               - `deleteSource`
               - `eventRunsRevisionServerResource`
-              - `eventSourcesServerResource`
+              - `eventSourcesServed`
               - `eventsRevisionServerResource`
               - `eventsTable`
               - `getEventSourceType`
@@ -2177,6 +2182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `events.revision` (push)
               - `events.runs-revision` (push)
               - `events.sources` (keyed, window)
+              - `events.sources:rows` (keyed, point)
             - Routes:
               - `GET /api/events/sources`
               - `POST /api/events/sources`
@@ -2202,7 +2208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
               - `infra/endpoints.defineEndpoint`
-              - `infra/query-resource.windowQueryResourceDescriptor`
+              - `network/live.liveCollection`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `CreateEventSourceBody`
@@ -2236,8 +2242,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceRunEventSchema`
               - `eventSourceRunFields`
               - `EventSourceRunSchema`
+              - `eventSources`
               - `EventSourceSchema`
-              - `eventSourcesResource`
               - `eventsRevisionResource`
               - `externalUrl`
               - `ExtractedEventSchema`
@@ -2281,7 +2287,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
-              - `apps/events/sources/source-field`
               - `apps/events/sources/url-extract`
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
@@ -2366,6 +2371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/events-core.useCreateEventSource`
               - `apps/events/events-core.useDeleteEventSource`
               - `apps/events/events-core.useEventSourceOrigin`
+              - `apps/events/events-core.useEventSourceRow`
               - `apps/events/events-core.useEventSources`
               - `apps/events/events-core.useUpdateEventSource`
               - `apps/events/shell.Events`
@@ -2694,7 +2700,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `EventList.Fields` "source" → `SourceField`
                 - Uses:
                   - `apps/events/event-list.EventList`
-                  - `apps/events/events-core.useEventSources`
+                  - `network/live.useLive`
+                  - `primitives/live-state.matchResource`
             - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe reads the URL through one transport-blind pipeline (SSRF-guarded plain fetch, or a real browser when the source's Fetch mode says so or the site answers a bot challenge), refuses a page it cannot read whole or that has no readable text at all, and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
               - Web:
                 - Contributes: `EventSources.Type` "Web page"
@@ -17858,11 +17865,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DescriptorFactory`
               - `DescriptorFactoryName`
               - `DescriptorShapeIsWidening`
+              - `MintedResource`
               - `RegisterMarker`
               - `RegisterMarkerName`
               - `ResourceMembership`
             - Exports (values):
               - `isResourceVocabularyOwner`
+              - `LIVE_CORE`
+              - `LIVE_SERVER`
               - `LIVE_STATE_CORE`
               - `QUERY_RESOURCE_CORE`
               - `QUERY_RESOURCE_SERVER`
@@ -19859,7 +19869,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/browser/bookmarks`
           - `apps/deploy/health`
-          - `apps/events/events-core`
           - `apps/mail/reading-pane`
           - `apps/pages/agent-origin`
           - `apps/pages/starred`
@@ -19871,6 +19880,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
+          - `network/live`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `primitives/usage-rank`
@@ -20657,6 +20667,75 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `layouts/full-pane`
           - `layouts/miller`
+
+- **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
+  - Plugins:
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's filterable/sortable names to a table's columns and compiles its window + `:rows` point resources through windowQueryResource) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.
+      - Web:
+        - Uses:
+          - `primitives/live-state.ResourceDescriptor`
+          - `primitives/live-state.ResourceResult`
+          - `primitives/live-state.usePointResource`
+          - `primitives/live-state.useResource`
+        - Exports (types):
+          - `LiveIdsQuery`
+          - `LiveListResult`
+          - `LivePaging`
+          - `LiveRowResult`
+        - Exports (values):
+          - `useLive`
+          - `useLiveRow`
+      - Server:
+        - Uses:
+          - `infra/query-resource.EntitySource`
+          - `infra/query-resource.QueryDb`
+          - `infra/query-resource.WindowOrderKey`
+          - `infra/query-resource.windowQueryResource`
+          - `infra/query-resource.WindowQueryResourceSpec`
+        - Exports (types):
+          - `CollectionSource`
+          - `CollectionSpecs`
+          - `ServeCollectionOptions`
+          - `ServedCollection`
+        - Exports (values):
+          - `compileCollection`
+          - `liveClauseSql`
+          - `liveOpSql`
+          - `serveCollection`
+      - Core:
+        - Uses:
+          - `infra/query-resource.PointQueryResourceContract`
+          - `infra/query-resource.pointQueryResourceDescriptor`
+          - `infra/query-resource.WindowQueryResourceContract`
+          - `infra/query-resource.windowQueryResourceDescriptor`
+        - Exports (types):
+          - `LiveClause`
+          - `LiveCollection`
+          - `LiveCollectionSpec`
+          - `LiveColumnFilter`
+          - `LiveDecodedQuery`
+          - `LiveFilterable`
+          - `LiveOperands`
+          - `LiveOpId`
+          - `LiveOrderBy`
+          - `LiveQuery`
+          - `LiveScalar`
+          - `LiveSortDirection`
+          - `LiveWhere`
+          - `LiveWindowCodec`
+          - `LiveWindowDescriptor`
+          - `LiveWindowParams`
+        - Exports (values):
+          - `compareScalars`
+          - `LIVE_LIST_MAX`
+          - `liveCollection`
+          - `liveOps`
+          - `matchesLiveWhere`
+          - `testLiveClause`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/events/events-core`
+          - `apps/events/sources/source-field`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -29323,6 +29402,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources`
+          - `apps/events/sources/source-field`
           - `apps/mail/mail-core`
           - `apps/mail/reading-pane`
           - `apps/mail/sync-status`
@@ -29416,6 +29496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs`
           - `infra/query-resource`
           - `infra/trash`
+          - `network/live`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`

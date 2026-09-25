@@ -10,11 +10,14 @@ module types, filtered by return type:
 
 - `core/` — `resourceDescriptorFactories satisfies Record<MintingFactoryName,
   DescriptorFactory>`, where `MintingFactoryName` is every export of
-  `live-state/core` and `query-resource/core` returning a resource descriptor.
+  `live-state/core`, `query-resource/core` and `network/live/core` returning a
+  resource descriptor — or a collection (`{ window, rows }` of descriptors,
+  i.e. `liveCollection`).
   Add a factory to either barrel and omit it here → `tsc` fails with the missing
   key named. Delete a factory → the stale entry fails as an excess property.
-- `check/` — the same derivation for the register markers, over `server-core/core`
-  and `query-resource/server`. It lives there rather than in `core/` because
+- `check/` — the same derivation for the register markers, over `server-core/core`,
+  `query-resource/server` and `network/live/server` (a served resource, or a served
+  collection `{ window, rows }` — `serveCollection`). It lives there rather than in `core/` because
   runtime isolation grants `core -> core` only. Its `run()` half checks the one
   thing types cannot see: that each entry's `barrel` really exports it (that field
   is read only by scanner error messages, so nothing else would notice it rot).
@@ -31,11 +34,19 @@ declares nothing, so nothing failed.
 - `plugin-meta/facets/plugins/resources` — the docs facet.
 - `framework/tooling/codegen/core/eager-tier-gen.ts` — `bootCritical: true` pins.
 
+## One call, several keys
+
+Each factory entry lists what one call `mints`: `{ suffix, keyed, membership }`
+per runtime resource. A plain factory mints one (suffix `""`);
+`liveCollection("k", …)` mints `k` (window) and `k:rows` (point). Scanners emit
+one resource per minted entry, so the docs show both keys, and a register marker
+whose first argument names a collection (`serveCollection`) serves all of them.
+
 Deliberately NOT rewired: `keyed-resource-scope` and `no-db-backed-notify`. Each
 names one marker on purpose, to ban one shape.
 
 `isResourceVocabularyOwner(dir)` answers what both scanners need: inside
-`live-state` / `query-resource` a factory call is the wrapper *implementing* it
+`live-state` / `query-resource` / `network/live` a factory call is the wrapper *implementing* it
 (computed key), not a resource declaration. Everywhere else the key must be a
 literal at the call site — a scanner reading source text has no other way to see
 it, so both scanners throw rather than guess.
@@ -52,11 +63,14 @@ it, so both scanners throw rather than guess.
     - `DescriptorFactory`
     - `DescriptorFactoryName`
     - `DescriptorShapeIsWidening`
+    - `MintedResource`
     - `RegisterMarker`
     - `RegisterMarkerName`
     - `ResourceMembership`
   - Exports (values):
     - `isResourceVocabularyOwner`
+    - `LIVE_CORE`
+    - `LIVE_SERVER`
     - `LIVE_STATE_CORE`
     - `QUERY_RESOURCE_CORE`
     - `QUERY_RESOURCE_SERVER`

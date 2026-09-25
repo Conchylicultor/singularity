@@ -19,6 +19,7 @@ import {
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { compileWindowQuery, windowQueryResource } from "./compile-window";
@@ -44,6 +45,20 @@ const winDescriptor = (
   opts: { defaultLimit: number } = { defaultLimit: 100 },
 ) =>
   windowQueryResourceDescriptor(`test.cw.win-${seq++}`, rowSchema, "id", opts);
+// A richer window codec (extra `order` key, descriptor-carried maxLimit) —
+// the shape a client-sortable collection declares.
+type SortParams = { limit: string; order?: string };
+const sortDescriptor = (
+  maxLimit?: number,
+): WindowQueryResourceContract<z.infer<typeof rowSchema>, SortParams> => {
+  const base = winDescriptor({ defaultLimit: 10 });
+  return { ...base, window: { ...base.window, maxLimit } };
+};
+const byOrder = (p: SortParams) => [
+  p.order === "parent"
+    ? { col: rows.parentId, nullable: true }
+    : { col: rows.n, dir: "desc" as const },
+];
 const ptDescriptor = () =>
   pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id");
 
@@ -366,6 +381,95 @@ describe("compileWindowQuery — point", () => {
   });
 });
 
+describe("compileWindowQuery — per-params orderBy", () => {
+  test("each tuple's loader AND windowIdsOf read the order its params resolve", async () => {
+    const { db, calls } = fakeDb();
+    const { serverOpts } = compileWindowQuery(sortDescriptor(50), {
+      from: rows,
+      select: { id: rows.id, n: rows.n, parentId: rows.parentId },
+      orderBy: byOrder,
+      signatureColumns: [rows.n, rows.parentId],
+      window: {},
+      db,
+    });
+    await serverOpts.loader({ limit: "5" });
+    await serverOpts.loader({ limit: "5", order: "parent" });
+    const membership = serverOpts.membership!;
+    if (membership.kind !== "window") throw new Error("unreachable");
+    await membership.windowIdsOf({ limit: "5", order: "parent" });
+    await serverOpts.loader({ limit: "9999" }); // clamped to the descriptor's maxLimit
+    expect(calls.map((c) => c.sql)).toEqual([
+      `select "id", "n", "parent_id" from "rows" order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `select "id", "n", "parent_id" from "rows" order by "rows"."parent_id" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `select "id" from "rows" order by "rows"."parent_id" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `select "id", "n", "parent_id" from "rows" order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+    ]);
+    expect(calls[3]!.params).toEqual([50]);
+  });
+
+  test("orderSignatureOf covers every signature column, whichever order a tuple uses", () => {
+    const { db } = fakeDb();
+    const { serverOpts } = compileWindowQuery(sortDescriptor(50), {
+      from: rows,
+      select: { id: rows.id, n: rows.n, parent: rows.parentId },
+      orderBy: byOrder,
+      signatureColumns: [rows.n, rows.parentId],
+      window: {},
+      db,
+    });
+    const membership = serverOpts.membership!;
+    if (membership.kind !== "window") throw new Error("unreachable");
+    const sig = membership.orderSignatureOf!;
+    expect(sig({ id: "a", n: 1, parent: "p" })).toBe(
+      sig({ id: "b", n: 1, parent: "p" }),
+    );
+    expect(sig({ id: "a", n: 1, parent: "p" })).not.toBe(
+      sig({ id: "a", n: 2, parent: "p" }),
+    );
+    expect(sig({ id: "a", n: 1, parent: "p" })).not.toBe(
+      sig({ id: "a", n: 1, parent: "q" }),
+    );
+  });
+
+  test("a static orderBy with signatureColumns widens the signature; the SQL is unchanged", async () => {
+    const { db, calls } = fakeDb();
+    const { serverOpts } = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      select: { id: rows.id, n: rows.n, parentId: rows.parentId },
+      orderBy: { col: rows.n },
+      signatureColumns: [rows.n, rows.parentId],
+      window: { maxLimit: 500 },
+      db,
+    });
+    await serverOpts.loader({ limit: "3" });
+    expect(calls[0]!.sql).toBe(
+      `select "id", "n", "parent_id" from "rows" order by "rows"."n" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+    );
+    const membership = serverOpts.membership!;
+    if (membership.kind !== "window") throw new Error("unreachable");
+    const sig = membership.orderSignatureOf!;
+    expect(sig({ id: "a", n: 1, parentId: "p" })).not.toBe(
+      sig({ id: "a", n: 1, parentId: "q" }),
+    );
+  });
+
+  test("a resolved order column outside signatureColumns throws on first use", async () => {
+    const { db } = fakeDb();
+    const { serverOpts } = compileWindowQuery(sortDescriptor(50), {
+      from: rows,
+      select: { id: rows.id, n: rows.n, parentId: rows.parentId },
+      orderBy: byOrder,
+      signatureColumns: [rows.n],
+      window: {},
+      db,
+    });
+    await serverOpts.loader({ limit: "5" }); // n: covered
+    expect(() => serverOpts.loader({ limit: "5", order: "parent" })).toThrow(
+      /order column "parent_id" is not in `signatureColumns`/,
+    );
+  });
+});
+
 describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
   const { db } = fakeDb();
   const base = { from: rows, select: { id: rows.id, n: rows.n }, db };
@@ -416,6 +520,80 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         window: { maxLimit: 2.5 },
       }),
     ).toThrow(/maxLimit must be a positive integer/);
+  });
+
+  test("function orderBy without signatureColumns", () => {
+    expect(() =>
+      compileWindowQuery(sortDescriptor(50), {
+        ...base,
+        orderBy: byOrder,
+        window: {},
+      }),
+    ).toThrow(/function `orderBy` REQUIRES a non-empty `signatureColumns`/);
+  });
+
+  test("an unprojected signature column", () => {
+    expect(() =>
+      compileWindowQuery(sortDescriptor(50), {
+        ...base, // projects id, n — not parent_id
+        orderBy: byOrder,
+        signatureColumns: [rows.n, rows.parentId],
+        window: {},
+      }),
+    ).toThrow(/order column "parent_id" is not projected/);
+  });
+
+  test("a static order column outside signatureColumns", () => {
+    expect(() =>
+      compileWindowQuery(winDescriptor(), {
+        ...base,
+        orderBy: { col: rows.n },
+        signatureColumns: [rows.parentId],
+        window: { maxLimit: 500 },
+      }),
+    ).toThrow(/order column "n" is not in `signatureColumns`/);
+  });
+
+  test("spec and descriptor maxLimit disagree", () => {
+    expect(() =>
+      compileWindowQuery(sortDescriptor(50), {
+        ...base,
+        orderBy: { col: rows.n },
+        window: { maxLimit: 60 },
+      }),
+    ).toThrow(
+      /window\.maxLimit \(60\) disagrees with the descriptor's maxLimit \(50\)/,
+    );
+  });
+
+  test("spec and descriptor maxLimit agreeing compiles", () => {
+    expect(() =>
+      compileWindowQuery(sortDescriptor(50), {
+        ...base,
+        orderBy: { col: rows.n },
+        window: { maxLimit: 50 },
+      }),
+    ).not.toThrow();
+  });
+
+  test("no maxLimit anywhere", () => {
+    expect(() =>
+      compileWindowQuery(sortDescriptor(), {
+        ...base,
+        orderBy: { col: rows.n },
+        window: {},
+      }),
+    ).toThrow(/declare `window\.maxLimit`/);
+  });
+
+  test("point with signatureColumns", () => {
+    expect(() =>
+      compileWindowQuery(ptDescriptor(), {
+        ...base,
+        signatureColumns: [rows.n],
+        point: { by: rows.id },
+      }),
+    ).toThrow(/point sets are unordered/);
   });
 
   test("point with orderBy (point sets are unordered)", () => {

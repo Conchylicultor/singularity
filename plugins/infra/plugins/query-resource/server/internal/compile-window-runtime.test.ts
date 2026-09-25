@@ -27,6 +27,7 @@ import {
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import { compileWindowQuery } from "./compile-window";
 import type { QueryDb, SelectMap } from "./spec";
@@ -88,8 +89,61 @@ function liveDb() {
   return { db, table };
 }
 
+// Two sortable columns (`n`, `m`) for the per-params order suite: the fake reads
+// the ORDER BY column off the rendered SQL, so each tuple's windowed reads sort
+// by the order its own params resolved.
+const sortT = pgTable("sorted", {
+  id: text("id").primaryKey(),
+  n: integer("n").notNull(),
+  m: integer("m").notNull(),
+});
+const sortSchema = z.object({ id: z.string(), n: z.number(), m: z.number() });
+
+function sortDb() {
+  const table = new Map<string, { n: number; m: number }>();
+  const dialect = new PgDialect();
+  const qb = new QueryBuilder();
+  const wrap = (q: any): any => ({
+    where: (p: SQL) => wrap(q.where(p)),
+    orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
+    limit: (nn: number) => wrap(q.limit(nn)),
+    then: (
+      resolve: (v: unknown[]) => unknown,
+      reject?: (e: unknown) => unknown,
+    ) => {
+      const { sql, params } = dialect.sqlToQuery(q.getSQL());
+      const all = [...table.entries()].map(([id, c]) => ({ id, ...c }));
+      let rows: unknown[];
+      if (sql.includes(" in (")) {
+        const ids = params as string[];
+        rows = all.filter((r) => ids.includes(r.id));
+      } else {
+        const col = sql.includes(`order by "sorted"."m"`) ? "m" : "n";
+        const limit = params[params.length - 1] as number;
+        const window = all
+          .sort((a, b) => a[col] - b[col] || (a.id < b.id ? -1 : 1))
+          .slice(0, limit);
+        rows = sql.startsWith(`select "id" from`)
+          ? window.map((r) => ({ id: r.id }))
+          : window;
+      }
+      return Promise.resolve(rows).then(resolve, reject);
+    },
+  });
+  const makeFrom = (builder: any) => ({
+    from: (t: any) => wrap(builder.from(t)),
+  });
+  const db = {
+    select: (fields?: SelectMap) =>
+      makeFrom(fields ? qb.select(fields) : qb.select()),
+    selectDistinct: (fields: SelectMap) => makeFrom(qb.selectDistinct(fields)),
+  } as unknown as QueryDb;
+  return { db, table };
+}
+
 interface SentFrame {
   key: string;
+  params?: ResourceParams;
   kind: string;
   value?: unknown;
   upserts?: [string, unknown][];
@@ -97,8 +151,8 @@ interface SentFrame {
   order?: string[];
 }
 
-function harness() {
-  const runtime = createResourceRuntime({ readSet: () => ["rows"] });
+function harness(table = "rows") {
+  const runtime = createResourceRuntime({ readSet: () => [table] });
   const frames: SentFrame[] = [];
   const ws = {
     send(raw: string) {
@@ -246,6 +300,73 @@ describe("compiled window resource — end-to-end", () => {
     expect(ds[0]!.deletes).toEqual([]); // not an exit — it left via `order`
     expect(ds[0]!.order).toEqual(["a", "d"]);
     expect(ds[0]!.upserts).toEqual([["d", { id: "d", n: 4 }]]);
+  });
+});
+
+describe("compiled window resource — per-params orderBy, end-to-end", () => {
+  // A richer window codec: `order` is an additive params key. Static-typed as
+  // the contract generic so the compile below pins that such a descriptor
+  // type-checks against `compileWindowQuery` / `WindowQueryResourceSpec<P>`.
+  type SortParams = { limit: string; order?: string };
+
+  test("two tuples sort differently over one table; a signature-column UPDATE reorders only the tuple sorted by it", async () => {
+    const { db, table } = sortDb();
+    const key = `test.cwr.sort-${seq++}`;
+    const base = windowQueryResourceDescriptor(key, sortSchema, "id", {
+      defaultLimit: 2,
+    });
+    const descriptor: WindowQueryResourceContract<
+      z.infer<typeof sortSchema>,
+      SortParams
+    > = { ...base, window: { ...base.window, maxLimit: 10 } };
+    const { serverOpts } = compileWindowQuery(descriptor, {
+      from: sortT,
+      orderBy: (p: SortParams) => [
+        { col: p.order === "m" ? sortT.m : sortT.n },
+      ],
+      signatureColumns: [sortT.n, sortT.m],
+      window: {}, // maxLimit comes from the descriptor
+      db,
+    });
+    const h = harness("sorted");
+    h.runtime.defineResource(descriptor, serverOpts);
+
+    table.set("a", { n: 1, m: 3 });
+    table.set("b", { n: 2, m: 2 });
+    table.set("c", { n: 3, m: 1 });
+    const byN: SortParams = { limit: "2" };
+    const byM: SortParams = { limit: "2", order: "m" };
+    await h.subscribe(key, byN);
+    await h.subscribe(key, byM);
+
+    const acks = h.frames.filter((f) => f.kind === "sub-ack");
+    expect(
+      acks.map((f) => (f.value as { id: string }[]).map((r) => r.id)),
+    ).toEqual([
+      ["a", "b"],
+      ["c", "b"],
+    ]);
+
+    // c's `m` moves: the byM tuple (c a member, signature moved) re-derives
+    // its window — c sorts last and leaves via `order`, a is pulled in. The byN
+    // tuple does not sort by m and c is not its member: nothing ships there.
+    table.set("c", { n: 3, m: 9 });
+    h.runtime.applyDbChange({
+      table: "sorted",
+      op: "U",
+      ids: ["c"],
+      origin: "sorted",
+      identityBase: "sorted",
+    });
+    await tick();
+
+    const ds = h.deltas(key);
+    const forM = ds.filter((f) => f.params?.order === "m");
+    expect(forM).toHaveLength(1);
+    expect(forM[0]!.order).toEqual(["b", "a"]);
+    expect(forM[0]!.upserts).toEqual([["a", { id: "a", n: 1, m: 3 }]]);
+    const forN = ds.filter((f) => f.params?.order === undefined);
+    for (const f of forN) expect(f.order ?? ["a", "b"]).toEqual(["a", "b"]);
   });
 });
 

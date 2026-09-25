@@ -4,6 +4,7 @@ import { EventSources } from "./slots";
 export { EventSources } from "./slots";
 export {
   useEventSources,
+  useEventSourceRow,
   useEventsRevision,
   useEventSourceRuns,
   useEventSourceRun,

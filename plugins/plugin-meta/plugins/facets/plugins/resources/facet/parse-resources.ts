@@ -88,11 +88,12 @@ export type FileBindings = Map<string, Binding>;
 export type ImportedDescriptorResolver = (
   specifier: string,
   exportedName: string,
-) => DescriptorInfo | null;
+) => DescriptorInfo[] | null;
 
 /**
  * Scan sources for descriptor factory calls and map each declared const name to
- * its `{ key, keyed, membership }`. Pass the WHOLE plugin's sources: a descriptor
+ * one `{ key, keyed, membership }` PER RESOURCE THE CALL MINTS — one for a plain
+ * descriptor factory, two for `liveCollection("k", …)` (`k` and `k:rows`). Pass the WHOLE plugin's sources: a descriptor
  * is declared in `core/`/`shared/` but referenced by the register call in
  * `server/`/`central/`.
  *
@@ -107,8 +108,8 @@ export type ImportedDescriptorResolver = (
 export function buildDescriptorIndex(
   files: SourceFile[],
   opts: { ownerPlugin: boolean },
-): Map<string, DescriptorInfo> {
-  const index = new Map<string, DescriptorInfo>();
+): Map<string, DescriptorInfo[]> {
+  const index = new Map<string, DescriptorInfo[]>();
   for (const { path, src } of files) {
     let masked: string | null = null;
     for (const [factory, entry] of Object.entries(
@@ -140,11 +141,14 @@ export function buildDescriptorIndex(
             }),
           );
         }
-        index.set(name, {
-          key: id.value,
-          keyed: entry.keyed,
-          membership: entry.membership,
-        });
+        index.set(
+          name,
+          entry.mints.map((m) => ({
+            key: id.value + m.suffix,
+            keyed: m.keyed,
+            membership: m.membership,
+          })),
+        );
       }
     }
   }
@@ -211,7 +215,8 @@ export function parseFileBindings(src: string): FileBindings {
 }
 
 /**
- * Resolve one register call's `argsText` to a `ResourceDef`.
+ * Resolve one register call's `argsText` to the `ResourceDef`s it serves — one
+ * per resource its descriptor minted (a collection serves several).
  *
  * Two shapes carry a key. The DESCRIPTOR form passes a descriptor identifier as
  * the first argument (`defineResource(tasksResource, opts)`). The FLAT form
@@ -220,7 +225,7 @@ export function parseFileBindings(src: string): FileBindings {
  * both name the same descriptor, so both resolve through the same
  * {@link resolveDescriptorIdentifier}.
  *
- * `null` only for a shape this scanner could never have resolved: the flat form
+ * Empty only for a shape this scanner could never have resolved: the flat form
  * with no `key:` at all, or a descriptor that is a RUNTIME VALUE — an
  * identifier bound by neither an import nor a module-level const, i.e. a
  * function parameter, which is how the query compiler calls
@@ -237,19 +242,19 @@ export function resolveRegisterCall(
   marker: string,
   argsText: string,
   bindings: FileBindings,
-  index: Map<string, DescriptorInfo>,
+  index: Map<string, DescriptorInfo[]>,
   where: { file: string; line: number },
   resolveImported: ImportedDescriptorResolver,
-): ResourceDef | null {
+): ResourceDef[] {
   const head = stripLeadingTrivia(argsText);
   const modeField = parseStringField(argsText, "mode");
   if (head.startsWith("{")) {
     // Flat inline object form: key + optional mode live in the object literal.
     const keyField = parseStringField(argsText, "key");
-    if (keyField.kind === "absent") return null;
+    if (keyField.kind === "absent") return [];
     if (keyField.kind === "value") {
       const mode = modeField.kind === "value" ? modeField.value : "push";
-      return { key: keyField.value, mode };
+      return [{ key: keyField.value, mode }];
     }
     const member = /^([A-Za-z_$][\w$]*)\.key$/.exec(keyField.expr.trim());
     if (!member) {
@@ -267,7 +272,7 @@ export function resolveRegisterCall(
         }),
       );
     }
-    const info = resolveDescriptorIdentifier(
+    const infos = resolveDescriptorIdentifier(
       marker,
       member[1]!,
       bindings,
@@ -275,18 +280,19 @@ export function resolveRegisterCall(
       where,
       resolveImported,
     );
-    if (!info) return null;
     // The flat form's literal `mode:` is what the runtime serves; the
     // descriptor only supplies the key (and bounded membership, if any).
     const mode = modeField.kind === "value" ? modeField.value : "push";
-    return info.membership
-      ? { key: info.key, mode, membership: info.membership }
-      : { key: info.key, mode };
+    return (infos ?? []).map((info) =>
+      info.membership
+        ? { key: info.key, mode, membership: info.membership }
+        : { key: info.key, mode },
+    );
   }
   // Descriptor form: the first arg is an identifier bound to a descriptor.
   const idMatch = /^([A-Za-z_$][\w$]*)/.exec(head);
-  if (!idMatch) return null;
-  const info = resolveDescriptorIdentifier(
+  if (!idMatch) return [];
+  const infos = resolveDescriptorIdentifier(
     marker,
     idMatch[1]!,
     bindings,
@@ -294,20 +300,21 @@ export function resolveRegisterCall(
     where,
     resolveImported,
   );
-  if (!info) return null;
   // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
   // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
   // non-literal `mode:` is the runtime-value case the descriptor already resolves,
   // so `absent`/`dynamic` both fall through to the descriptor-implied default.
-  const mode =
-    modeField.kind === "value"
-      ? modeField.value
-      : info.keyed
-        ? "keyed"
-        : "push";
-  return info.membership
-    ? { key: info.key, mode, membership: info.membership }
-    : { key: info.key, mode };
+  return (infos ?? []).map((info) => {
+    const mode =
+      modeField.kind === "value"
+        ? modeField.value
+        : info.keyed
+          ? "keyed"
+          : "push";
+    return info.membership
+      ? { key: info.key, mode, membership: info.membership }
+      : { key: info.key, mode };
+  });
 }
 
 /**
@@ -320,10 +327,10 @@ function resolveDescriptorIdentifier(
   marker: string,
   local: string,
   bindings: FileBindings,
-  index: Map<string, DescriptorInfo>,
+  index: Map<string, DescriptorInfo[]>,
   where: { file: string; line: number },
   resolveImported: ImportedDescriptorResolver,
-): DescriptorInfo | null {
+): DescriptorInfo[] | null {
   const binding = bindings.get(local);
   const info =
     index.get(binding?.exported ?? local) ??
@@ -353,7 +360,7 @@ function resolveDescriptorIdentifier(
 /** Parse every register call in `files` (one runtime), resolving keys via `index`. */
 export function parseRegisterCalls(
   files: SourceFile[],
-  index: Map<string, DescriptorInfo>,
+  index: Map<string, DescriptorInfo[]>,
   resolveImported: ImportedDescriptorResolver,
 ): ResourceDef[] {
   const out: ResourceDef[] = [];
@@ -363,7 +370,7 @@ export function parseRegisterCalls(
     for (const marker of Object.keys(resourceRegisterMarkers)) {
       if (!src.includes(marker)) continue; // cheap fast-path
       for (const call of findMarkerCalls(src, marker)) {
-        const def = resolveRegisterCall(
+        const defs = resolveRegisterCall(
           marker,
           call.argsText,
           bindings,
@@ -371,7 +378,8 @@ export function parseRegisterCalls(
           { file: path, line: lineAt(src, call.index) },
           resolveImported,
         );
-        if (def && !seen.has(def.key)) {
+        for (const def of defs) {
+          if (seen.has(def.key)) continue;
           seen.add(def.key);
           out.push(def);
         }

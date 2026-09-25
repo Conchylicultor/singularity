@@ -1,25 +1,27 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
-import { EventSourceSchema, type EventSource } from "./schema";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { EventSourceSchema } from "./schema";
+import { SOURCE_STATUSES } from "./vocab";
 
 /**
- * The configured sources, as a BOUNDED ordered window (newest first, default 100
- * / max 500) — the default contract for a new DB-backed collection resource
- * (`research/2026-07-18-global-bounded-working-set-resource-contract.md`). The
- * set is small in practice but user-grown, so it gets a real bound rather than
- * an unbounded `queryResource`.
+ * The configured sources, as a live collection: a bounded window (newest first
+ * by default, 100 / max 500) plus its `:rows` point sibling for by-id reads.
+ * The set is small in practice but user-grown, so it gets a real bound rather
+ * than an unbounded read.
  *
- * `createdAt` is the order column and is immutable, so a status/fingerprint write
- * stays on the zero-ids-query in-place path; only an insert/delete costs an
- * O(window) membership re-derive.
+ * Consumers may filter on `status` / `enabled` and sort by `createdAt` / `name`
+ * (`useLive(eventSources, { … })`); one row by id is `useLiveRow` — which reads
+ * the point sibling, so a source outside any window is still found.
  */
-export const eventSourcesResource = windowQueryResourceDescriptor<EventSource>(
-  "events.sources",
-  EventSourceSchema,
-  "id",
-  { defaultLimit: 100 },
-);
+export const eventSources = liveCollection("events.sources", {
+  row: EventSourceSchema,
+  id: "id",
+  filterable: { status: z.enum(SOURCE_STATUSES), enabled: z.boolean() },
+  sortable: ["createdAt", "name"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  maxLimit: 500,
+});
 
 /**
  * Scalar invalidation tick for the `events` table: a cheap `{ rev }` the server

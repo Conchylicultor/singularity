@@ -5,6 +5,7 @@ import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/
 // is a real, checkable edge that still erases completely.
 import type * as LiveStateBarrel from "@plugins/primitives/plugins/live-state/core";
 import type * as QueryResourceBarrel from "@plugins/infra/plugins/query-resource/core";
+import type * as LiveBarrel from "@plugins/network/plugins/live/core";
 
 // The closed set of ways a plugin declares a live-state resource, as DATA, so
 // every build-time scanner that has to recognise one reads the same list.
@@ -18,7 +19,7 @@ import type * as QueryResourceBarrel from "@plugins/infra/plugins/query-resource
 // factory produced no match and therefore no data — indistinguishable from a
 // plugin that genuinely declares nothing, which is why nothing noticed.
 //
-// So the list is not authored free-hand. Its KEY SET is derived from the two
+// So the list is not authored free-hand. Its KEY SET is derived from the
 // barrels' own module types, filtered by return type: a factory exported from
 // either barrel and missing here is a `tsc` error at the `satisfies` below,
 // naming the missing key. Nothing about the NAME is inspected — membership in
@@ -48,6 +49,8 @@ export const QUERY_RESOURCE_CORE = "@plugins/infra/plugins/query-resource/core";
 export const SERVER_CORE = "@plugins/framework/plugins/server-core/core";
 export const QUERY_RESOURCE_SERVER =
   "@plugins/infra/plugins/query-resource/server";
+export const LIVE_CORE = "@plugins/network/plugins/live/core";
+export const LIVE_SERVER = "@plugins/network/plugins/live/server";
 
 /**
  * The bounded working-set membership a factory attaches to its descriptor, or
@@ -56,13 +59,30 @@ export const QUERY_RESOURCE_SERVER =
  */
 export type ResourceMembership = "window" | "point";
 
+/** One runtime resource a factory call mints. */
+export interface MintedResource {
+  /**
+   * Appended to the call's literal key to form this resource's key — `""` for
+   * the key itself. `liveCollection("events.sources", …)` mints
+   * `events.sources` (suffix `""`) and `events.sources:rows` (suffix `":rows"`).
+   */
+  suffix: string;
+  /** Row-keyed delta-sync (server `mode: "keyed"`) rather than whole-value push. */
+  keyed: boolean;
+  /** Bounded membership the resource carries, `null` when it declares none. */
+  membership: ResourceMembership | null;
+}
+
 export interface DescriptorFactory {
   /** Barrel the factory is exported from — quoted in scanner error messages. */
   barrel: string;
-  /** Row-keyed delta-sync (server `mode: "keyed"`) rather than whole-value push. */
-  keyed: boolean;
-  /** Bounded membership the factory attaches, `null` when it declares none. */
-  membership: ResourceMembership | null;
+  /**
+   * Every resource one call mints, in declaration order. One entry (suffix
+   * `""`) for a plain descriptor factory; a collection factory mints several
+   * from one literal key, and a scanner that read only the first would hide
+   * the rest from the docs and the eager tier.
+   */
+  mints: readonly MintedResource[];
 }
 
 export interface RegisterMarker {
@@ -108,9 +128,30 @@ type DescriptorFactoryNames<M> = {
     : never;
 }[keyof M];
 
+/**
+ * A collection declaration: one call minting a window descriptor and its
+ * `:rows` point sibling (`liveCollection`). Matched structurally for the same
+ * reason as {@link MintedDescriptor}.
+ */
+interface MintedCollection {
+  window: MintedDescriptor;
+  rows: MintedDescriptor;
+}
+
+/** Every export of `M` that is a function returning a collection declaration. */
+type CollectionFactoryNames<M> = {
+  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
+    ? [R] extends [MintedCollection]
+      ? K
+      : never
+    : never;
+}[keyof M];
+
 type MintingFactoryName =
   | DescriptorFactoryNames<typeof LiveStateBarrel>
-  | DescriptorFactoryNames<typeof QueryResourceBarrel>;
+  | DescriptorFactoryNames<typeof QueryResourceBarrel>
+  | DescriptorFactoryNames<typeof LiveBarrel>
+  | CollectionFactoryNames<typeof LiveBarrel>;
 
 // ── The vocabulary ─────────────────────────────────────────────────
 
@@ -125,33 +166,34 @@ type MintingFactoryName =
 export const resourceDescriptorFactories = {
   resourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    keyed: false,
-    membership: null,
+    mints: [{ suffix: "", keyed: false, membership: null }],
   },
   keyedResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    keyed: true,
-    membership: null,
+    mints: [{ suffix: "", keyed: true, membership: null }],
   },
   centralResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    keyed: false,
-    membership: null,
+    mints: [{ suffix: "", keyed: false, membership: null }],
   },
   queryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    keyed: true,
-    membership: null,
+    mints: [{ suffix: "", keyed: true, membership: null }],
   },
   windowQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    keyed: true,
-    membership: "window",
+    mints: [{ suffix: "", keyed: true, membership: "window" }],
   },
   pointQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    keyed: true,
-    membership: "point",
+    mints: [{ suffix: "", keyed: true, membership: "point" }],
+  },
+  liveCollection: {
+    barrel: LIVE_CORE,
+    mints: [
+      { suffix: "", keyed: true, membership: "window" },
+      { suffix: ":rows", keyed: true, membership: "point" },
+    ],
   },
 } satisfies Record<MintingFactoryName, DescriptorFactory>;
 
@@ -162,7 +204,8 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
  * `defineExternalResource` are the resource runtime's own two primitives,
  * re-presented identically by `server-core/core` and `central-core/core`;
  * `queryResource` / `windowQueryResource` are the query compiler's wrappers
- * around the first.
+ * around the first, and `serveCollection` serves both resources a
+ * `liveCollection` mints (its first argument resolves to every minted key).
  *
  * Completeness is asserted in this plugin's `check/` — see the header note.
  */
@@ -171,6 +214,7 @@ export const resourceRegisterMarkers = {
   defineExternalResource: { barrel: SERVER_CORE },
   queryResource: { barrel: QUERY_RESOURCE_SERVER },
   windowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
+  serveCollection: { barrel: LIVE_SERVER },
 } satisfies Record<string, RegisterMarker>;
 
 export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
@@ -180,7 +224,7 @@ export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
  * from the entries' barrels, so it cannot drift from them.
  *
  * A scanner needs this to tell a DECLARATION from an IMPLEMENTATION. Inside
- * `live-state` and `query-resource`, a factory is called with a computed key
+ * `live-state`, `query-resource` and `network/live`, a factory is called with a computed key
  * (`keyedResourceDescriptor(key, …)` inside `windowQueryResourceDescriptor`) —
  * that is the wrapper implementing the factory, not a plugin declaring a
  * resource. Everywhere else the key must be a literal at the call site, because

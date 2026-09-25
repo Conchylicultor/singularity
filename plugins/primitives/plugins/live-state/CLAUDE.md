@@ -361,12 +361,20 @@ already takes the rebuild path) — live in
 
 ### Bounded windows and point reads (window / point descriptors)
 
-> **DEFAULT for new resources.** New DB-backed collection descriptors are bounded
-> (window / point), declared with `windowQueryResourceDescriptor` /
-> `pointQueryResourceDescriptor` from `infra/query-resource/core` and served by
-> `windowQueryResource` on the server. `keyedResourceDescriptor` over an unbounded
-> collection is legacy pending migration — don't copy existing unbounded resources
-> as precedent. See `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
+> **DEFAULT for new collections: `liveCollection`** (`network/live`). Declare it
+> once in `core/` (`liveCollection(key, { row, id, filterable, sortable, default,
+> maxLimit })`), serve it with `serveCollection(c, { from })`, and read it with
+> `useLive(c, query?)` / `useLiveRow(c, id)`. It mints a window and a point resource
+> from one declaration, so a consumer asks a query (filter / order / limit, or ids)
+> and never picks the bound itself. See `plugins/network/plugins/live/CLAUDE.md` and
+> `research/2026-09-25-global-unified-live-resource-api.md`.
+>
+> The lower-level window / point descriptors below (`windowQueryResourceDescriptor` /
+> `pointQueryResourceDescriptor` + `windowQueryResource`) are what it is built on;
+> existing resources declared with them migrate to `liveCollection`.
+> `keyedResourceDescriptor` over an unbounded collection is legacy pending
+> migration — don't copy existing unbounded resources as precedent. See
+> `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
 
 The bounded working-set contract rides the SAME keyed wire — **a window is just a
 params tuple**. Live-state owns only the descriptor **types** (`core/window.ts`:
@@ -714,6 +722,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources`
+    - `apps/events/sources/source-field`
     - `apps/mail/mail-core`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
@@ -807,6 +816,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `infra/jobs`
     - `infra/query-resource`
     - `infra/trash`
+    - `network/live`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/instructions/instructions-page`
     - `page/annotations/todo/task-link`

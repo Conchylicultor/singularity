@@ -165,6 +165,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/events-core.useCreateEventSource`
     - `apps/events/events-core.useDeleteEventSource`
     - `apps/events/events-core.useEventSourceOrigin`
+    - `apps/events/events-core.useEventSourceRow`
     - `apps/events/events-core.useEventSources`
     - `apps/events/events-core.useUpdateEventSource`
     - `apps/events/shell.Events`

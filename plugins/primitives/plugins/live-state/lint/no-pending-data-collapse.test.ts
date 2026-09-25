@@ -266,6 +266,14 @@ ruleTester.run(
         `,
         errors: [{ messageId: "pendingCollapse" }],
       },
+      // A live collection read collapsed to an empty list.
+      {
+        code: `
+          const sources = useLive(eventSources);
+          const rows = sources.pending ? [] : sources.data;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
       // The canonical collapse.
       {
         code: `

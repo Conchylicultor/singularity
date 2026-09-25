@@ -1,6 +1,8 @@
 export {
   LIVE_STATE_CORE,
   QUERY_RESOURCE_CORE,
+  LIVE_CORE,
+  LIVE_SERVER,
   QUERY_RESOURCE_SERVER,
   SERVER_CORE,
   isResourceVocabularyOwner,
@@ -12,6 +14,7 @@ export type {
   DescriptorFactory,
   DescriptorFactoryName,
   DescriptorShapeIsWidening,
+  MintedResource,
   RegisterMarker,
   RegisterMarkerName,
   ResourceMembership,

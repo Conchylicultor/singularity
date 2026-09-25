@@ -233,7 +233,7 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
 // Each name must still be a DISTINCT identifier for the textual scan
 // (`\bresourceDescriptor` does not match inside `queryResourceDescriptor`),
 // which is what `findMarkerCalls` guarantees.
-const DESCRIPTOR_FACTORIES = Object.keys(resourceDescriptorFactories);
+const DESCRIPTOR_FACTORIES = Object.entries(resourceDescriptorFactories);
 
 /** Every identifier imported from any `@plugins/` specifier in `src`. */
 function pluginImportedIdents(src: string): Set<string> {
@@ -329,7 +329,7 @@ async function watchedSlotIn(
 export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
   const keys: string[] = [];
   let masked: string | null = null;
-  for (const factory of DESCRIPTOR_FACTORIES) {
+  for (const [factory, entry] of DESCRIPTOR_FACTORIES) {
     if (!src.includes(factory)) continue; // cheap fast-path
     masked ??= maskSource(src);
     for (const span of markerCallSpans(masked, factory)) {
@@ -351,7 +351,9 @@ export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
           }),
         );
       }
-      keys.push(id.value);
+      // A collection factory mints several resources from one literal key;
+      // every one of them is boot-critical.
+      for (const m of entry.mints) keys.push(id.value + m.suffix);
     }
   }
   return keys;

@@ -208,6 +208,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
     - **`route-fallback`** — Loading placeholder for an unmatched pane route while the deferred plugin tier is still loading; renders null once loading settles so a genuinely-invalid URL falls through to not-found.
 
+- **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
+  - Plugins:
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's filterable/sortable names to a table's columns and compiles its window + `:rows` point resources through windowQueryResource) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.
+
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.

@@ -15,7 +15,12 @@ import type { ResourceDescriptor } from "./resource";
 // `WindowParams` (absent field = absent key), so cursor-less windows keep
 // their paramsKey byte-identical when the cursor slot lands.
 
-/** Ordered-window params: the first `limit` rows of the server-fixed total order. */
+/**
+ * Ordered-window params: the first `limit` rows of the server-fixed total order.
+ * A richer window codec extends this with its own additive string keys (e.g.
+ * `{ limit: string; where?: string; order?: string }`) — every descriptor,
+ * contract and compiler type is generic over a `P extends WindowParams`.
+ */
 export type WindowParams = { limit: string };
 
 /** Explicit point-set params: sorted, deduped, comma-joined row ids. */
@@ -32,19 +37,31 @@ export interface WindowSelector {
  * Carries the window codec so the client hook, the boot paths, and the server
  * compiler all derive params from ONE encode/decode pair (no duplication).
  */
-export interface WindowResourceDescriptor<El> extends ResourceDescriptor<
-  El[],
-  WindowParams
-> {
+export interface WindowResourceDescriptor<
+  El,
+  P extends WindowParams = WindowParams,
+  S extends WindowSelector = WindowSelector,
+> extends ResourceDescriptor<El[], P> {
   keyed: { keyOf: (row: unknown) => string };
   /** The canonical default-window params — `window.encode({})`. */
-  defaultParams: WindowParams;
+  defaultParams: P;
   window: {
     /** The window every consumer gets when it names none (client hook default AND server boot default). */
     defaultLimit: number;
+    /**
+     * The largest window a subscription may name. Optional here: when present,
+     * the server compiler reads it as the clamp (and a spec's own `maxLimit`, if
+     * also given, must equal it) — so a codec whose encoder rejects limits above
+     * `maxLimit` and the server clamp are one number.
+     */
+    maxLimit?: number;
     /** Canonical encode: `{ limit }` → `{ limit: "100" }`. Throws on a non-positive/non-integer limit. */
-    encode: (sel?: WindowSelector) => WindowParams;
-    /** STRICT decode — the server compiler's limit source. Throws on a missing or malformed `limit`. */
+    encode: (sel?: S) => P;
+    /**
+     * STRICT decode — the server compiler's limit source. Throws on a missing or
+     * malformed `limit`. A richer codec may decode extra fields beyond `limit`;
+     * the compiler reads only `limit`.
+     */
     decode: (params: Record<string, string>) => { limit: number };
   };
 }

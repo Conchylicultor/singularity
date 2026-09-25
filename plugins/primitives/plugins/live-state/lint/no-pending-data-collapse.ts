@@ -80,6 +80,11 @@ const RESOURCE_HOOKS = new Set([
   "usePointResource",
   "usePointResources",
   "useWindowResource",
+  // `network/live`'s collection read: a `ResourceResult<Row[]>` (plus paging
+  // handles on the settled arm), so `pending ? [] : r.data` is the same collapse.
+  // `useLiveRow` needs no entry — it has no `data` to collapse into: its
+  // settled arms are `found: true` (with `row`) and `found: false`.
+  "useLive",
 ]);
 
 type Ctx = Readonly<

@@ -30,7 +30,11 @@ import {
 // defaulting decode would let `{}` and the default window name the same
 // logical window under two paramsKeys, doubling every per-tuple state).
 
-export type WindowQueryResourceContract<Row> = WindowResourceDescriptor<Row> & {
+export type WindowQueryResourceContract<
+  Row,
+  P extends WindowParams = WindowParams,
+  S extends WindowSelector = WindowSelector,
+> = WindowResourceDescriptor<Row, P, S> & {
   /** The row field the client `keyOf` reads — matched against the server keyField. */
   queryPk: string;
 };

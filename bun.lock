@@ -3429,6 +3429,14 @@
       "name": "@singularity/plugin-layouts-route-fallback",
       "version": "0.0.1",
     },
+    "plugins/network": {
+      "name": "@singularity/plugin-network",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live": {
+      "name": "@singularity/plugin-network-live",
+      "version": "0.0.1",
+    },
     "plugins/packages": {
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
@@ -7530,6 +7538,10 @@
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
     "@singularity/plugin-layouts-route-fallback": ["@singularity/plugin-layouts-route-fallback@workspace:plugins/layouts/plugins/route-fallback"],
+
+    "@singularity/plugin-network": ["@singularity/plugin-network@workspace:plugins/network"],
+
+    "@singularity/plugin-network-live": ["@singularity/plugin-network-live@workspace:plugins/network/plugins/live"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 

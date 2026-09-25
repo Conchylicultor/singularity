@@ -9,7 +9,7 @@ import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-co
  * branch for it.
  *
  * The entity prop is the `sourceId`, NOT the row: the row lives in a shared live
- * window resource every section already subscribes to (`useEventSource`), so
+ * by-id subscription every section already reads (`useEventSource`), so
  * threading the id keeps each section responsible for its own freshness and lets
  * a section mount without the pane having resolved the row first.
  *

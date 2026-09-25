@@ -39,28 +39,36 @@ describe("buildDescriptorIndex", () => {
       );
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
-    expect(index.get("tasksResource")).toEqual({
-      key: "tasks",
-      keyed: true,
-      membership: null,
-    });
-    expect(index.get("taskDetailResource")).toEqual({
-      key: "task-detail",
-      keyed: false,
-      membership: null,
-    });
+    expect(index.get("tasksResource")).toEqual([
+      {
+        key: "tasks",
+        keyed: true,
+        membership: null,
+      },
+    ]);
+    expect(index.get("taskDetailResource")).toEqual([
+      {
+        key: "task-detail",
+        keyed: false,
+        membership: null,
+      },
+    ]);
     // `centralResourceDescriptor` was known to the eager-tier generator and NOT
     // to this scanner — the two hardcoded lists that are now one vocabulary.
-    expect(index.get("authStateResource")).toEqual({
-      key: "auth-state",
-      keyed: false,
-      membership: null,
-    });
-    expect(index.get("queryBackedResource")).toEqual({
-      key: "query-backed",
-      keyed: true,
-      membership: null,
-    });
+    expect(index.get("authStateResource")).toEqual([
+      {
+        key: "auth-state",
+        keyed: false,
+        membership: null,
+      },
+    ]);
+    expect(index.get("queryBackedResource")).toEqual([
+      {
+        key: "query-backed",
+        keyed: true,
+        membership: null,
+      },
+    ]);
   });
 
   it("indexes the bounded-membership factories that used to be invisible", () => {
@@ -73,13 +81,27 @@ describe("buildDescriptorIndex", () => {
       );
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
-    expect(index.get("notificationsResource")?.membership).toBe("window");
-    expect(index.get("taskAutoStartResource")?.membership).toBe("point");
+    expect(index.get("notificationsResource")?.[0]?.membership).toBe("window");
+    expect(index.get("taskAutoStartResource")?.[0]?.membership).toBe("point");
     // Both are keyed at runtime — membership is the only thing that tells a
     // bounded resource apart from the legacy unbounded keyed form.
     for (const name of ["notificationsResource", "taskAutoStartResource"]) {
-      expect(index.get(name)?.keyed).toBe(true);
+      expect(index.get(name)?.[0]?.keyed).toBe(true);
     }
+  });
+
+  it("emits one entry per key a collection mints", () => {
+    const src = `
+      export const eventSources = liveCollection("events.sources", {
+        row: EventSourceSchema, id: "id", filterable: {}, sortable: ["name"],
+        default: { orderBy: [["name", "asc"]], limit: 100 }, maxLimit: 500,
+      });
+    `;
+    const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
+    expect(index.get("eventSources")).toEqual([
+      { key: "events.sources", keyed: true, membership: "window" },
+      { key: "events.sources:rows", keyed: true, membership: "point" },
+    ]);
   });
 
   it("resolves a local (non-exported) const and ignores factory names in strings/comments", () => {
@@ -89,11 +111,13 @@ describe("buildDescriptorIndex", () => {
       const label = "keyedResourceDescriptor(\\"fake\\", …)";
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
-    expect(index.get("localDesc")).toEqual({
-      key: "local",
-      keyed: false,
-      membership: null,
-    });
+    expect(index.get("localDesc")).toEqual([
+      {
+        key: "local",
+        keyed: false,
+        membership: null,
+      },
+    ]);
     expect(index.has("commented")).toBe(false);
     expect(index.has("fake")).toBe(false);
     expect(index.size).toBe(1);
@@ -170,15 +194,22 @@ describe("parseFileBindings", () => {
 });
 
 describe("resolveRegisterCall", () => {
-  const index = new Map<string, DescriptorInfo>([
-    ["tasksResource", { key: "tasks", keyed: true, membership: null }],
+  const index = new Map<string, DescriptorInfo[]>([
+    ["tasksResource", [{ key: "tasks", keyed: true, membership: null }]],
     [
       "mainAheadCountResource",
-      { key: "main-ahead-count", keyed: false, membership: null },
+      [{ key: "main-ahead-count", keyed: false, membership: null }],
     ],
     [
       "notificationsResource",
-      { key: "notifications", keyed: true, membership: "window" },
+      [{ key: "notifications", keyed: true, membership: "window" }],
+    ],
+    [
+      "sourcesCollection",
+      [
+        { key: "sources", keyed: true, membership: "window" },
+        { key: "sources:rows", keyed: true, membership: "point" },
+      ],
     ],
   ]);
   const bound = (
@@ -196,7 +227,7 @@ describe("resolveRegisterCall", () => {
       where,
       NOTHING_IMPORTED,
     );
-    expect(def).toEqual({ key: "reports", mode: "invalidate" });
+    expect(def).toEqual([{ key: "reports", mode: "invalidate" }]);
   });
 
   it("defaults the flat form's mode to push", () => {
@@ -209,7 +240,7 @@ describe("resolveRegisterCall", () => {
         where,
         NOTHING_IMPORTED,
       ),
-    ).toEqual({ key: "slow-ops", mode: "push" });
+    ).toEqual([{ key: "slow-ops", mode: "push" }]);
   });
 
   it("resolves a descriptor identifier through an import alias, keyed → keyed", () => {
@@ -221,7 +252,7 @@ describe("resolveRegisterCall", () => {
       where,
       NOTHING_IMPORTED,
     );
-    expect(def).toEqual({ key: "tasks", mode: "keyed" });
+    expect(def).toEqual([{ key: "tasks", mode: "keyed" }]);
   });
 
   it("carries the descriptor's bounded membership onto the served resource", () => {
@@ -237,11 +268,28 @@ describe("resolveRegisterCall", () => {
       where,
       NOTHING_IMPORTED,
     );
-    expect(def).toEqual({
-      key: "notifications",
-      mode: "keyed",
-      membership: "window",
-    });
+    expect(def).toEqual([
+      {
+        key: "notifications",
+        mode: "keyed",
+        membership: "window",
+      },
+    ]);
+  });
+
+  it("serves every resource a collection minted", () => {
+    const defs = resolveRegisterCall(
+      "serveCollection",
+      `sourcesCollection, { from: _sources }`,
+      bound("sourcesCollection", "sourcesCollection", "../../core"),
+      index,
+      where,
+      NOTHING_IMPORTED,
+    );
+    expect(defs).toEqual([
+      { key: "sources", mode: "keyed", membership: "window" },
+      { key: "sources:rows", mode: "keyed", membership: "point" },
+    ]);
   });
 
   it("honours an explicit serverOpts mode over the non-keyed default", () => {
@@ -253,10 +301,10 @@ describe("resolveRegisterCall", () => {
       where,
       NOTHING_IMPORTED,
     );
-    expect(def).toEqual({ key: "main-ahead-count", mode: "push" });
+    expect(def).toEqual([{ key: "main-ahead-count", mode: "push" }]);
   });
 
-  it("returns null for an unbound identifier (generic wrapper param)", () => {
+  it("returns nothing for an unbound identifier (generic wrapper param)", () => {
     expect(
       resolveRegisterCall(
         "defineResource",
@@ -266,7 +314,7 @@ describe("resolveRegisterCall", () => {
         where,
         NOTHING_IMPORTED,
       ),
-    ).toBeNull();
+    ).toEqual([]);
   });
 
   it("throws when the identifier IS bound but resolves to no descriptor", () => {
@@ -316,13 +364,13 @@ describe("resolveRegisterCall", () => {
       (specifier, name) =>
         specifier === "@plugins/apps/plugins/mail/plugins/mail-core/core" &&
         name === "mailSyncStateResource"
-          ? { key: "mail-sync-state", keyed: false, membership: null }
+          ? [{ key: "mail-sync-state", keyed: false, membership: null }]
           : null,
     );
-    expect(def).toEqual({ key: "mail-sync-state", mode: "push" });
+    expect(def).toEqual([{ key: "mail-sync-state", mode: "push" }]);
   });
 
-  it("returns null for a flat object with no key", () => {
+  it("returns nothing for a flat object with no key", () => {
     expect(
       resolveRegisterCall(
         "defineResource",
@@ -332,7 +380,7 @@ describe("resolveRegisterCall", () => {
         where,
         NOTHING_IMPORTED,
       ),
-    ).toBeNull();
+    ).toEqual([]);
   });
 });
 
