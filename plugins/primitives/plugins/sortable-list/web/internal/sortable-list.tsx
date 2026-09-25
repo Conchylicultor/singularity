@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import {
   DndContext,
+  DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -11,6 +13,7 @@ import {
 import {
   arrayMove,
   SortableContext,
+  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   horizontalListSortingStrategy,
   type SortingStrategy,
@@ -37,6 +40,16 @@ export interface SortableListProps {
    * the app tab bar to tear a chip into a floating window, Chrome-style.
    */
   onDragOut?: (id: string, point: { x: number; y: number }) => void;
+  /**
+   * Opt-in keyboard reordering: a focused activator (the handle, or the item
+   * itself) picks up with Space/Enter, moves with the arrow keys, drops with
+   * Space/Enter. Off by default because without a `handle` the item wrapper is
+   * the activator, and it would swallow Space/Enter bubbling up from buttons
+   * inside the item.
+   */
+  keyboard?: boolean;
+  /** Fires with the dragged id when a drag starts, and `null` when it ends or is cancelled. */
+  onActiveChange?: (activeId: string | null) => void;
   children: ReactNode;
 }
 
@@ -52,6 +65,8 @@ export function SortableList({
   orientation,
   strategy,
   onDragOut,
+  keyboard,
+  onActiveChange,
   children,
 }: SortableListProps) {
   const resolvedStrategy =
@@ -59,10 +74,18 @@ export function SortableList({
     (orientation === "horizontal"
       ? horizontalListSortingStrategy
       : verticalListSortingStrategy);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 4 },
+  });
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  const sensors = useSensors(pointerSensor, keyboard ? keyboardSensor : null);
+  const [activeId, setActiveIdState] = useState<string | null>(null);
+  const setActiveId = (id: string | null) => {
+    setActiveIdState(id);
+    onActiveChange?.(id);
+  };
   const [optimisticItems, setOptimisticItems] = useState<string[] | null>(null);
 
   // Clear optimistic state when canonical items update (server roundtrip
@@ -126,14 +149,10 @@ export function SortableList({
       <SortableContext items={effectiveItems} strategy={resolvedStrategy}>
         {children}
       </SortableContext>
-      {overlay && (
-        <DragOverlayWrapper activeId={activeId} overlay={overlay} />
-      )}
+      {overlay && <DragOverlayWrapper activeId={activeId} overlay={overlay} />}
     </DndContext>
   );
 }
-
-import { DragOverlay } from "@dnd-kit/core";
 
 function DragOverlayWrapper({
   activeId,

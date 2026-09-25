@@ -2,19 +2,9 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { MdAdd, MdClose, MdScience } from "react-icons/md";
 import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
+  SortableList,
   arrayMove,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -126,13 +116,6 @@ export function TaskDraftForm({
 }: TaskDraftFormProps) {
   const isAgentWorktree = useIsAgentWorktree();
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    // A focused grip moves with Space, then ↑/↓, then Space to drop.
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
 
   useEffect(() => {
     if (autoFocusId) {
@@ -206,12 +189,9 @@ export function TaskDraftForm({
         : undefined,
   };
 
-  const onDragEnd = (event: DragEndEvent) => {
-    setDraggingId(null);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const from = cards.findIndex((c) => c.localId === active.id);
-    const to = cards.findIndex((c) => c.localId === over.id);
+  const onMove = (activeId: string, overId: string) => {
+    const from = cards.findIndex((c) => c.localId === activeId);
+    const to = cards.findIndex((c) => c.localId === overId);
     if (from < 0 || to < 0) return;
     onCardsChange(arrayMove(cards, from, to));
   };
@@ -255,63 +235,57 @@ export function TaskDraftForm({
         )}
       </Line>
 
-      <DndContext
-        sensors={sensors}
-        onDragStart={(e) => setDraggingId(String(e.active.id))}
-        onDragEnd={onDragEnd}
-        onDragCancel={() => setDraggingId(null)}
+      {/* A focused grip moves with Space, then ↑/↓, then Space to drop. */}
+      <SortableList
+        items={cards.map((c) => c.localId)}
+        onMove={onMove}
+        keyboard
+        onActiveChange={setDraggingId}
       >
-        <SortableContext
-          items={cards.map((c) => c.localId)}
-          strategy={verticalListSortingStrategy}
-        >
-          <Stack gap="none">
-            {cards.map((card, idx) => {
-              const isHead = idx === 0;
-              return (
-                <Fragment key={card.localId}>
-                  {idx > 0 && (
-                    <ChainConnector
-                      linked={card.linkedToPrev}
-                      prevNumber={idx}
-                      onToggle={() => toggleLink(idx)}
-                      onInsert={() => insertAt(idx)}
-                      onRemove={() => removeAt(idx)}
-                      disabled={submitting || !!draggingId}
-                    />
-                  )}
-                  <TaskDraftCard
-                    isHead={isHead}
-                    insertRef={isHead ? headInsertRef : undefined}
-                    cardId={card.localId}
-                    index={idx}
-                    text={card.text}
-                    launchOptions={card.options}
-                    autoFocus={autoFocusId === card.localId}
-                    movable={isMulti}
-                    disabled={submitting}
-                    onTextChange={(t) => updateCard(idx, { text: t })}
-                    onLaunchOptionsChange={(o) =>
-                      updateCard(idx, { options: o })
-                    }
-                    onSubmitChord={() => {
-                      if (!disabled) onSubmit();
-                    }}
-                    includeUrl={card.includeUrl ?? captureUrlDefault}
-                    onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
-                    relateMode={isHead ? relateMode : undefined}
-                    onRelateModeChange={isHead ? onRelateModeChange : undefined}
-                    showIndependentRelate={
-                      isHead ? showIndependentRelate : undefined
-                    }
-                    relateExtras={isHead ? headExtras : undefined}
+        <Stack gap="none">
+          {cards.map((card, idx) => {
+            const isHead = idx === 0;
+            return (
+              <Fragment key={card.localId}>
+                {idx > 0 && (
+                  <ChainConnector
+                    linked={card.linkedToPrev}
+                    prevNumber={idx}
+                    onToggle={() => toggleLink(idx)}
+                    onInsert={() => insertAt(idx)}
+                    onRemove={() => removeAt(idx)}
+                    disabled={submitting || !!draggingId}
                   />
-                </Fragment>
-              );
-            })}
-          </Stack>
-        </SortableContext>
-      </DndContext>
+                )}
+                <TaskDraftCard
+                  isHead={isHead}
+                  insertRef={isHead ? headInsertRef : undefined}
+                  cardId={card.localId}
+                  index={idx}
+                  text={card.text}
+                  launchOptions={card.options}
+                  autoFocus={autoFocusId === card.localId}
+                  movable={isMulti}
+                  disabled={submitting}
+                  onTextChange={(t) => updateCard(idx, { text: t })}
+                  onLaunchOptionsChange={(o) => updateCard(idx, { options: o })}
+                  onSubmitChord={() => {
+                    if (!disabled) onSubmit();
+                  }}
+                  includeUrl={card.includeUrl ?? captureUrlDefault}
+                  onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
+                  relateMode={isHead ? relateMode : undefined}
+                  onRelateModeChange={isHead ? onRelateModeChange : undefined}
+                  showIndependentRelate={
+                    isHead ? showIndependentRelate : undefined
+                  }
+                  relateExtras={isHead ? headExtras : undefined}
+                />
+              </Fragment>
+            );
+          })}
+        </Stack>
+      </SortableList>
 
       <Line className="gap-sm">
         <WithTooltip

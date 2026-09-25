@@ -169,6 +169,64 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "unlinked");
 
+  // Pointer drag keeps the card's shape. Without a DragOverlay, dnd-kit scales
+  // the dragged item to the rect it is over; a card serialized with
+  // `CSS.Transform` was squashed onto its shorter neighbour. Make card 3 tall,
+  // drag it over the one-line card 2, measure mid-drag, then carry it back
+  // and drop it where it started, so the order the rest of the script asserts
+  // is untouched. (Not Escape: that would also dismiss the popover.)
+  await field(page, 2).click();
+  await page.keyboard.press("End");
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("Shift+Enter");
+    await page.keyboard.type(`line ${i}`);
+  }
+  const tall = page.locator('[data-card-index="2"]');
+  const restHeight = (await tall.boundingBox())!.height;
+  const shortHeight = (await page
+    .locator('[data-card-index="1"]')
+    .boundingBox())!.height;
+  r.ok(
+    "card 3 is taller than card 2 before the drag",
+    restHeight > shortHeight + 20,
+  );
+  const grip = (await grips.nth(2).boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  // Past the 4px activation distance, then onto card 2's centre.
+  const target = (await page.locator('[data-card-index="1"]').boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y - 10, { steps: 4 });
+  await page.mouse.move(grip.x + grip.width / 2, target.y + target.height / 2, {
+    steps: 8,
+  });
+  await page.waitForTimeout(300);
+  await snap(page, out, "mid-drag");
+  const dragged = await tall.evaluate((el) => {
+    const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+    return {
+      scaleX: m.a,
+      scaleY: m.d,
+      height: el.getBoundingClientRect().height,
+    };
+  });
+  r.eq("mid-drag: no vertical scale on the dragged card", dragged.scaleY, 1);
+  r.eq("mid-drag: no horizontal scale on the dragged card", dragged.scaleX, 1);
+  r.ok(
+    `mid-drag: the dragged card keeps its height (${restHeight} → ${dragged.height})`,
+    Math.abs(dragged.height - restHeight) < 1,
+  );
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2, {
+    steps: 8,
+  });
+  await page.waitForTimeout(200);
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  r.eq(
+    "dropped in place: bravo is still second",
+    await cardText(page, 1),
+    "bravo",
+  );
+
   // Keyboard reorder: dnd-kit's KeyboardSensor on the focused grip.
   await grips.nth(1).focus();
   await page.keyboard.press("Space");

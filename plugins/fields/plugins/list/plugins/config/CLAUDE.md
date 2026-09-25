@@ -37,6 +37,7 @@ external keys** (the DataView `views` list is the example — its ids key
   - Uses:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `primitives/sortable-list.arrayMove`
 - Core:
   - Uses:
     - `fields.FieldDef`

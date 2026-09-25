@@ -144,6 +144,9 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`
     - `primitives/slot-render.defineRenderSlot`
+    - `primitives/sortable-list.arrayMove`
+    - `primitives/sortable-list.SortableItem`
+    - `primitives/sortable-list.SortableList`
     - `primitives/text-editor/composer.ComposerAttachButton`
     - `primitives/text-editor/composer.ComposerField`
     - `primitives/text-editor/composer.ComposerRule`

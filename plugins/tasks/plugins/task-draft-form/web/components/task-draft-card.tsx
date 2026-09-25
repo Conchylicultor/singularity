@@ -1,8 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { CSSProperties } from "react";
 import { MdDragIndicator } from "react-icons/md";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -66,77 +64,66 @@ export function TaskDraftCard({
   showIndependentRelate,
   relateExtras,
 }: TaskDraftCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: cardId });
-
-  const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   const showRelate = isHead && !!onRelateModeChange;
 
   return (
-    <Stack
-      gap="none"
-      ref={setNodeRef}
-      style={style}
-      data-card-index={index}
-      className={cn(
-        // No border and no padding of its own: the composer field below is the
-        // card's only box. This is the box that moves while dragging, and what
-        // the grip is pinned to — the grip alone starts a drag, so selecting
-        // text in the field never does.
-        "group/card relative",
-        isDragging && "opacity-50 shadow-lg",
-      )}
+    <SortableItem
+      id={cardId}
+      handle
+      wrapperProps={{ "data-card-index": index }}
+      className={({ isDragging }) =>
+        cn(
+          // No border and no padding of its own: the composer field below is
+          // the card's only box. This is the box that moves while dragging, and
+          // what the grip is pinned to — the grip alone starts a drag, so
+          // selecting text in the field never does.
+          "group/card relative",
+          isDragging && "opacity-50 shadow-lg",
+        )
+      }
     >
-      <TaskDraftComposer
-        cardId={cardId}
-        text={text}
-        launchOptions={launchOptions}
-        autoFocus={autoFocus}
-        disabled={disabled}
-        onTextChange={onTextChange}
-        onLaunchOptionsChange={onLaunchOptionsChange}
-        onSubmitChord={onSubmitChord}
-        isHead={isHead}
-        insertRef={hostInsertRef}
-        includeUrl={includeUrl}
-        onToggleUrl={onToggleUrl}
-        relate={
-          showRelate
-            ? {
-                value: relateMode,
-                onChange: onRelateModeChange!,
-                showIndependent: showIndependentRelate,
-                extras: relateExtras,
-              }
-            : null
-        }
-      />
-      {/* Always visible once there is a second card — a hover-only handle reads
-          as "there is no handle" — and dimmed until the card is hovered. */}
-      {movable && (
-        <Pin to="top-right" offset="xs">
-          <IconButton
-            ref={setActivatorNodeRef}
-            icon={MdDragIndicator}
-            label="Drag to reorder"
+      {({ handleProps }) => (
+        <Stack gap="none">
+          <TaskDraftComposer
+            cardId={cardId}
+            text={text}
+            launchOptions={launchOptions}
+            autoFocus={autoFocus}
             disabled={disabled}
-            {...attributes}
-            {...listeners}
-            className="cursor-grab opacity-60 transition-opacity focus-visible:opacity-100 active:cursor-grabbing group-hover/card:opacity-100"
+            onTextChange={onTextChange}
+            onLaunchOptionsChange={onLaunchOptionsChange}
+            onSubmitChord={onSubmitChord}
+            isHead={isHead}
+            insertRef={hostInsertRef}
+            includeUrl={includeUrl}
+            onToggleUrl={onToggleUrl}
+            relate={
+              showRelate
+                ? {
+                    value: relateMode,
+                    onChange: onRelateModeChange!,
+                    showIndependent: showIndependentRelate,
+                    extras: relateExtras,
+                  }
+                : null
+            }
           />
-        </Pin>
+          {/* Always visible once there is a second card — a hover-only handle
+              reads as "there is no handle" — and dimmed until the card is
+              hovered. */}
+          {movable && (
+            <Pin to="top-right" offset="xs">
+              <IconButton
+                icon={MdDragIndicator}
+                label="Drag to reorder"
+                disabled={disabled}
+                {...handleProps}
+                className="cursor-grab opacity-60 transition-opacity focus-visible:opacity-100 active:cursor-grabbing group-hover/card:opacity-100"
+              />
+            </Pin>
+          )}
+        </Stack>
       )}
-    </Stack>
+    </SortableItem>
   );
 }

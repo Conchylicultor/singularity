@@ -16077,6 +16077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `primitives/sortable-list.arrayMove`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -31489,12 +31490,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `fields/list/config`
           - `layouts/miller`
           - `primitives/collapsible-wrap`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
           - `reorder`
           - `reorder/editor`
+          - `tasks/task-draft-form`
       - Web:
         - Exports (types):
           - `SortableItemProps`
@@ -31502,6 +31505,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SortableListProps`
           - `SortingStrategy`
         - Exports (values):
+          - `arrayMove`
           - `rectSortingStrategy`
           - `SortableItem`
           - `SortableList`
@@ -34517,6 +34521,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`
           - `primitives/slot-render.defineRenderSlot`
+          - `primitives/sortable-list.arrayMove`
+          - `primitives/sortable-list.SortableItem`
+          - `primitives/sortable-list.SortableList`
           - `primitives/text-editor/composer.ComposerAttachButton`
           - `primitives/text-editor/composer.ComposerField`
           - `primitives/text-editor/composer.ComposerRule`

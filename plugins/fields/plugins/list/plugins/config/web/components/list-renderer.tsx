@@ -1,4 +1,4 @@
-import { arrayMove } from "@dnd-kit/sortable";
+import { arrayMove } from "@plugins/primitives/plugins/sortable-list/web";
 import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldsRecord } from "@plugins/fields/core";
 import {
