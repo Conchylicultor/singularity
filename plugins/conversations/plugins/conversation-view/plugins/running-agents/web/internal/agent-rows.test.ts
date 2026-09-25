@@ -99,6 +99,28 @@ describe("agentRow", () => {
     expect(row.background).toBe(false);
   });
 
+  test("a stringly-typed run_in_background (the harness accepts it) reads as the boolean it spells", () => {
+    const launch = (value: string) =>
+      agentRow(
+        entry({
+          id: "s",
+          row: {
+            kind: "undescribed",
+            agentId: "s",
+            reason: "missing",
+            startedAt: at(0).toISOString(),
+            lastActivityAt: at(1).toISOString(),
+            turnEnded: false,
+            lastStep: null,
+          },
+          agentToolEvent: call({ run_in_background: value }),
+        }),
+      );
+    expect(launch("true").background).toBe(true);
+    expect(launch("false").background).toBe(false);
+    expect(() => launch("yes")).toThrow();
+  });
+
   test("an unreadable meta still yields a row, described by the parent's call", () => {
     const row = agentRow(
       entry({
