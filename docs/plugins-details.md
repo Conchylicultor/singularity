@@ -16819,7 +16819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
         - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
-        - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain, Claude Code signed in) in one run, with its fix. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
+        - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
           - Cross-plugin:
             - Imported by:
               - `framework/cli/build`

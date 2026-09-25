@@ -71,7 +71,8 @@ describe("doctor.sh", () => {
     const m = machine();
     healthy(m);
     const { code, out } = await doctor(m);
-    expect(out).toContain("all present");
+    expect(out).toContain("all required present");
+    expect(out).not.toContain("recommended");
     expect(code).toBe(0);
   });
 
@@ -83,9 +84,10 @@ describe("doctor.sh", () => {
     stub(m.bin, "xcode-select", "exit 2");
     const { code, out } = await doctor(m, [m.bin]);
     expect(code).toBe(1);
-    expect(out).toContain("3 missing");
+    expect(out).toContain("2 missing");
     expect(out).toContain("xcode-select --install");
     expect(out).toContain("curl https://mise.run | sh");
+    expect(out).toContain("1 recommended");
     expect(out).toContain("https://claude.ai/install.sh");
   });
 
@@ -112,7 +114,7 @@ describe("doctor.sh", () => {
     expect(out).toContain("mise activate zsh");
   });
 
-  test("names the missing locked tools, and a signed-out Claude Code", async () => {
+  test("names the missing locked tools, and advises on a signed-out Claude Code", async () => {
     const m = machine();
     healthy(m);
     stub(
@@ -128,9 +130,27 @@ describe("doctor.sh", () => {
     stub(m.bin, "claude", `echo '{ "loggedIn": false }'; exit 1`);
     const { code, out } = await doctor(m);
     expect(code).toBe(1);
-    expect(out).toContain("2 missing");
+    expect(out).toContain("1 missing");
     expect(out).toContain("go@1.27.1 rust@1.95.0");
+    expect(out).toContain("1 recommended");
     expect(out).toContain("claude auth login");
+  });
+
+  test("Claude Code absent or signed out is advice, not a failure", async () => {
+    const m = machine();
+    healthy(m);
+    stub(m.bin, "claude", `echo '{ "loggedIn": false }'; exit 1`);
+    const signedOut = await doctor(m);
+    expect(signedOut.code).toBe(0);
+    expect(signedOut.out).toContain("all required present");
+    expect(signedOut.out).toContain("Claude Code is not signed in");
+    expect(signedOut.out).toContain("claude auth login");
+
+    rmSync(join(m.bin, "claude"));
+    const absent = await doctor(m);
+    expect(absent.code).toBe(0);
+    expect(absent.out).toContain("1 recommended");
+    expect(absent.out).toContain("https://claude.ai/install.sh");
   });
 
   test("looks for claude where the server does (paths/server bins.ts)", () => {

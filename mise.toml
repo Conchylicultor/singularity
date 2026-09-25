@@ -1,6 +1,7 @@
 # What mise does NOT provide, and docs/setup.md installs first:
 #   - Xcode command-line tools on macOS (git, and the C linker Rust uses)
-#   - Claude Code, signed in (every agent runs on it)
+#   - Claude Code, signed in (every agent runs on it; recommended, not required)
+# install.sh (repo root) does all of it in one command.
 # `mise run doctor` names whatever is missing, each with its fix; it also runs
 # at the end of every `mise install`, and first in `./singularity start/build`.
 #

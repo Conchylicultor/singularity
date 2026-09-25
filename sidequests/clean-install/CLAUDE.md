@@ -33,7 +33,35 @@ command to get a shell inside it.
 Flags: `--gui` (window instead of headless — needed once, for the
 interactive Claude Code login), `--keep` (don't delete on success), `--from
 N` (resume a kept VM at step N instead of reinstalling from scratch),
-`--name`/`--out`/`--cpu`/`--memory` (see `run.sh --help`).
+`--name`/`--out`/`--cpu`/`--memory` (see `run.sh --help`), and `--steps <file>` (which steps file to run; default
+`steps.sh`).
+
+## `steps-install.sh` — the one-command install
+
+```bash
+sidequests/clean-install/run.sh --steps steps-install.sh
+CLEAN_INSTALL_SH=$PWD/install.sh sidequests/clean-install/run.sh --steps steps-install.sh   # before it is on main
+```
+
+The README's one command (`curl … install.sh | bash`), then what a new user
+would check: a new terminal finds the tools, the app answers and renders, it
+comes back by itself after a reboot, and `mise run doctor` is clean. Every
+step is `from-docs`; a run passes only with no other tag and no
+`_EXPECT_FAIL`. Headless and unattended: Claude Code is installed but not
+signed in, which the doctor reports as advice, not a failure.
+`CLEAN_INSTALL_SH` pipes a local `install.sh` instead of fetching the URL, for
+verifying a change before it is on main.
+
+When the change also touches what the installer clones (e.g. the doctor), the
+guest must install that tree, not `main`. Snapshot it into a git bundle (a
+throwaway repo outside the worktree: tracked + untracked files, one commit,
+`git bundle create x.bundle main`), hand it over with `--upload
+<bundle>:/tmp/singularity.bundle`, and pass `CLEAN_INSTALL_ARGS="--repo
+/tmp/singularity.bundle"` — the installer's own `--repo`, the one a fork uses.
+
+A step may set `<fn>_REBOOT=1`: `run.sh` reboots the guest (`sudo shutdown -r
+now`) and records the time until ssh answers again, instead of running the
+step's text.
 
 `run.sh` refuses to run if its output dir would land under `~/.singularity`,
 or if the VM name doesn't start with `si-clean` — both so a mistake here
@@ -57,7 +85,7 @@ at the top of `steps.sh`.
   Still worth noting `sudo` use as friction even though the guest won't
   prompt.
 - Claude Code login needs a person and `--gui --keep`, then resume with
-  `--from`.
+  `--from`. `steps-install.sh` does not need it: the app runs signed out.
 - The vanilla image has no Tart Guest Agent, so `tart exec` doesn't work
   against it at all — every guest command goes over ssh. `run.sh` generates
   a throwaway ed25519 key per run, types the guest's default password

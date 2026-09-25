@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Runs steps.sh inside a throwaway macOS VM, from a clean clone of the
+# Runs a steps file (default steps.sh) inside a throwaway macOS VM, from a clean clone of the
 # cirruslabs macos-tahoe-vanilla image, and records exactly what happened.
 # See CLAUDE.md in this directory for what this is and what it does not cover.
 #
 # Usage:
-#   ./run.sh [--name <vm>] [--out <dir>] [--gui] [--keep] [--cpu N] [--memory MB] [--disk-size GB] [--from <step-number>]
+#   ./run.sh [--steps <file>] [--name <vm>] [--out <dir>] [--gui] [--keep] [--cpu N] [--memory MB] [--disk-size GB] [--from <step-number>]
 #
+# --steps     The steps file to run, relative to this directory or absolute.
+#             Default steps.sh (run 1's baseline, against docs/setup.md);
+#             steps-install.sh is the one-command installer's run.
 # --name      VM name. Must start with "si-clean" (safety check below).
 #             Default: si-clean-<YYYYmmdd-HHMMSS>
 # --out       Where logs/summary go. Must NOT be under ~/.singularity.
@@ -22,6 +25,9 @@
 #             brew+go+bun+postgres+node_modules+Chromium+the embedded PG
 #             cluster.
 # --from N    Skip steps 1..N-1 and start at step N (resuming a --keep VM).
+# --upload L:G  Copy the host file L to G in the guest (scp) before the first
+#             step. Repeatable. For handing the guest something a new user
+#             would fetch from the network once it is published.
 
 set -euo pipefail
 
@@ -38,6 +44,8 @@ CPU=6
 MEMORY=12288
 DISK_SIZE=90
 FROM=1
+STEPS_FILE="steps.sh"
+UPLOADS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,8 +57,10 @@ while [[ $# -gt 0 ]]; do
     --memory) MEMORY="$2"; shift 2 ;;
     --disk-size) DISK_SIZE="$2"; shift 2 ;;
     --from) FROM="$2"; shift 2 ;;
+    --steps) STEPS_FILE="$2"; shift 2 ;;
+    --upload) UPLOADS+=("$2"); shift 2 ;;
     -h|--help)
-      sed -n '2,20p' "${BASH_SOURCE[0]}"
+      sed -n '2,31p' "${BASH_SOURCE[0]}"
       exit 0
       ;;
     *)
@@ -59,6 +69,15 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+case "$STEPS_FILE" in
+  /*) ;;
+  *) STEPS_FILE="$SCRIPT_DIR/$STEPS_FILE" ;;
+esac
+if [[ ! -f "$STEPS_FILE" ]]; then
+  echo "No such steps file: $STEPS_FILE" >&2
+  exit 1
+fi
 
 if [[ -z "$VM_NAME" ]]; then
   VM_NAME="si-clean-$(date +%Y%m%d-%H%M%S)"
@@ -96,6 +115,7 @@ mkdir -p "$OUT_DIR"
 
 echo "VM name : $VM_NAME"
 echo "Out dir : $OUT_DIR"
+echo "Steps   : $STEPS_FILE"
 echo "CPU/RAM : $CPU cores / ${MEMORY}MB"
 echo "Disk    : ${DISK_SIZE}GB"
 echo
@@ -193,6 +213,25 @@ ensure_ssh_access() {
   fi
 }
 
+# Reboots the guest and waits until this run's key works again. A real
+# reboot, not a tart stop/start: what comes back afterwards is exactly what a
+# user's machine would bring back by itself (e.g. the gateway's launchd
+# LaunchAgent, which loads when the auto-logged-in `admin` session starts).
+reboot_guest() {
+  printf 'sudo shutdown -r now\n' | guest_run || true
+  local deadline=$((SECONDS + 120))
+  while keyed_ssh_ok && (( SECONDS < deadline )); do sleep 2; done
+  VM_IP="$("$TART" ip "$VM_NAME" --wait 240)"
+  deadline=$((SECONDS + 480))
+  until keyed_ssh_ok; do
+    if (( SECONDS >= deadline )); then
+      echo "guest did not answer ssh within 480s of rebooting" >&2
+      return 1
+    fi
+    sleep 3
+  done
+}
+
 fail_and_leave_running() {
   local msg="$1"
   echo "$msg" >&2
@@ -256,10 +295,16 @@ if ! wait_for_sshd; then
 fi
 ensure_ssh_access
 
-# ---- run steps.sh's steps --------------------------------------------------
+for up in ${UPLOADS[@]+"${UPLOADS[@]}"}; do
+  log "Uploading ${up%%:*} -> guest:${up#*:}"
+  scp -q -i "$SSH_KEY" "${SSH_OPTS[@]}" "${up%%:*}" "admin@$VM_IP:${up#*:}" \
+    || fail_and_leave_running "ERROR: upload of ${up%%:*} failed."
+done
+
+# ---- run the steps file's steps ----------------------------------------------
 
 # shellcheck source=./steps.sh
-source "$SCRIPT_DIR/steps.sh"
+source "$STEPS_FILE"
 
 SUMMARY="$OUT_DIR/summary.tsv"
 if [[ "$FROM" -le 1 || ! -f "$SUMMARY" ]]; then
@@ -297,7 +342,14 @@ for fn in "${STEPS[@]}"; do
 
   START=$SECONDS
   set +e
-  printf '%s\n' "$CMD_TEXT" | guest_run >"$LOG_FILE" 2>&1
+  REBOOT_VAR="${fn}_REBOOT"
+  if [[ "${!REBOOT_VAR:-0}" == "1" ]]; then
+    # A <fn>_REBOOT=1 step reboots the guest (its own command text is only
+    # what gets logged); its duration is the time until ssh answers again.
+    reboot_guest >"$LOG_FILE" 2>&1
+  else
+    printf '%s\n' "$CMD_TEXT" | guest_run >"$LOG_FILE" 2>&1
+  fi
   EXIT_CODE=$?
   set -e
   DURATION=$((SECONDS - START))

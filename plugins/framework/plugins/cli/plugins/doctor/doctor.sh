@@ -1,6 +1,9 @@
 #!/bin/sh
 # Singularity's prerequisite check: names EVERY missing prerequisite in one run,
-# each with the command that fixes it, then exits 1 if anything was missing.
+# each with the command that fixes it, then exits 1 if anything REQUIRED was
+# missing. A recommended one (Claude Code) is named with its fix too, but does
+# not fail the run: nothing that stands the app up uses it, and the running app
+# refuses each use of it with the same fix (infra/claude-cli/availability).
 #
 # POSIX sh on purpose: its most important case is Bun itself missing, where no
 # TypeScript can run. Run it from the checkout it checks (the cwd is the
@@ -18,6 +21,8 @@
 
 missing=0
 report=""
+advised=0
+advice=""
 
 # miss <what> <why> <fix...>
 miss() {
@@ -28,6 +33,19 @@ miss() {
   shift 2
   for fix in "$@"; do
     report="$report
+      \$ $fix"
+  done
+}
+
+# advise <what> <why> <fix...> — named with its fix, but not counted as missing.
+advise() {
+  advised=$((advised + 1))
+  advice="$advice
+  ! $1
+      $2"
+  shift 2
+  for fix in "$@"; do
+    advice="$advice
       \$ $fix"
   done
 }
@@ -96,7 +114,9 @@ else
   fi
 fi
 
-# ── Claude Code, signed in ──────────────────────────────────────────────────
+# ── Claude Code, signed in (recommended) ────────────────────────────────────
+# Advice, not a requirement: the app builds and runs without it, and agents
+# are the one thing that needs it — the app says so where they are launched.
 # The same lookup order as resolveClaudeBin() in plugins/infra/plugins/paths/server/internal/bins.ts
 # (doctor.test.ts keeps the candidate paths in step).
 claude_bin="${SINGULARITY_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}"
@@ -107,21 +127,29 @@ if [ -z "$claude_bin" ]; then
 fi
 
 if [ -z "$claude_bin" ]; then
-  miss "Claude Code" "Every agent the app launches runs on it." \
+  advise "Claude Code" "Every agent the app launches runs on it; until then the app runs without agents." \
     "curl -fsSL https://claude.ai/install.sh | bash" "claude auth login"
 else
   case "$("$claude_bin" auth status --json 2>/dev/null)" in
     *'"loggedIn": true'* | *'"loggedIn":true'*) ;;
-    *) miss "Claude Code is not signed in" "Agents cannot start without an account." \
+    *) advise "Claude Code is not signed in" "Agents cannot start without an account; the app runs without them." \
       "claude auth login" ;;
   esac
 fi
 
+if [ "$advised" -gt 0 ]; then
+  recommended="
+
+$advised recommended:$advice"
+else
+  recommended=""
+fi
+
 if [ "$missing" -eq 0 ]; then
-  echo "Singularity prerequisites: all present."
+  echo "Singularity prerequisites: all required present.$recommended"
   exit 0
 fi
-echo "Singularity prerequisites: $missing missing.$report
+echo "Singularity prerequisites: $missing missing.$report$recommended
 
 Setup, in order: docs/setup.md"
 exit 1

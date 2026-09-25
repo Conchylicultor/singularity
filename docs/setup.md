@@ -2,10 +2,23 @@
 
 One-time environment setup for developing Singularity.
 
-## Install
+## Quick install
 
-One pass, in order, on macOS (Linux notes inline). Every step is a prerequisite of
-the next.
+```sh
+curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/install.sh | bash
+```
+
+Or `./install.sh` from inside a clone or fork you already have. Options:
+`--dir <path>` (default `~/singularity`), `--repo <url>` (your fork),
+`--no-shell-rc`; piped, pass them after `bash -s --`. It runs the steps
+below (the Claude Code sign-in last, offered once the app is up), skipping
+whatever is already done, so re-running it resumes
+where it stopped. It lists what it will change before changing anything.
+
+## Install, step by step
+
+What [`install.sh`](../install.sh) does. One pass, in order, on macOS (Linux
+notes inline). Every step is a prerequisite of the next.
 
 ```sh
 # 1. Xcode command-line tools: git, and the C linker Rust builds with.
@@ -34,7 +47,10 @@ mise trust && mise install   # trust this checkout's mise.toml, then install
 `mise install` also runs the repo's `setup` task (trusts every worktree's
 `mise.toml`, points git at the repo's hooks) and ends with the **doctor**, which
 names every missing prerequisite at once, each with the command that fixes it.
-Continue only once it says `all present`. Re-run it any time with
+Continue only once it says `all required present`. Claude Code is the one
+*recommended* item: the doctor names it with its fix but does not stop on it,
+since the app builds and runs without it — only agents need it, and the app
+says so where they are launched (the health report's Claude Code row). Re-run it any time with
 `mise run doctor`. `./singularity start` and `build` also run it first, so a
 missing tool is reported before any long step rather than minutes into one.
 

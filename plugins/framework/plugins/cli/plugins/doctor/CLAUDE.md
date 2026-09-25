@@ -21,6 +21,13 @@ locked toolchain installed (`mise install --dry-run-code`, tools named by
 `infra/paths/server/internal/bins.ts`, kept in step by `doctor.test.ts`) and
 signed in (`claude auth status --json`).
 
+Claude Code is **recommended, not required**: `advise` names it with its fix,
+but the doctor still exits 0. Nothing that stands the app up (`start`, `build`)
+uses it, and the app gates each real use itself (below) — so gating on it here
+would only stop a new user from seeing the app before they have an account,
+and make the one-command installer (`install.sh`) wait on a browser sign-in.
+Everything else is a `miss` and fails the run.
+
 It asks only "is it there". Which release — floors, holds, something shadowing
 mise — is `toolchain:resolved`'s job (`plugins/toolchain`). The tool list is
 mise's, read from `mise.toml` + `mise.lock`, so adding a tool there needs no
@@ -38,7 +45,7 @@ Git hooks are not checked: mise's `setup` task sets `core.hooksPath` on every
 
 ## Plugin reference
 
-- Description: The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain, Claude Code signed in) in one run, with its fix. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
+- Description: The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`
