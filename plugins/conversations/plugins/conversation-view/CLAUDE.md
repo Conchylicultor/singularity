@@ -68,7 +68,6 @@
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`

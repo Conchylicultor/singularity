@@ -46,7 +46,6 @@
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/agents`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/commits-graph`

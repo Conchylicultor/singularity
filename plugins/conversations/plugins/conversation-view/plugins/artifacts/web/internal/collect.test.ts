@@ -44,6 +44,7 @@ describe("collectArtifacts", () => {
       pending: false,
       byKind: new Map(),
       total: 0,
+      made: new Map(),
       count: 0,
     });
   });
@@ -76,6 +77,7 @@ describe("collectArtifacts", () => {
     // Three artifacts in the panel, two of them the conversation's own work.
     expect(result.total).toBe(3);
     expect(result.count).toBe(2);
+    expect([...result.made]).toEqual([["made", 2]]);
     expect(result.byKind.get("looked")?.map((i) => i.key)).toEqual(["a"]);
   });
 
@@ -88,6 +90,45 @@ describe("collectArtifacts", () => {
 
     expect(result.total).toBe(1);
     expect(result.count).toBe(0);
+  });
+
+  test("a produced kind counts only what was created or edited, not read", () => {
+    const result = collectArtifacts(
+      [
+        kindOn("read", "Read", "referenced"),
+        kindOn("write", "Write", "created"),
+      ],
+      { pending: false, data: EVENTS },
+    );
+    if (result.pending) throw new Error("expected settled");
+
+    // The read-only kind is listed, but draws nothing on the button.
+    expect(result.byKind.get("read")?.length).toBe(1);
+    expect(result.made.has("read")).toBe(false);
+    expect(result.made.get("write")).toBe(2);
+    expect(result.count).toBe(2);
+  });
+
+  test("an item read then written counts once, as made", () => {
+    const docs: KindExtractor = {
+      id: "doc",
+      origin: "produced",
+      extract: (event) =>
+        event.kind === "tool-call"
+          ? [
+              {
+                kind: "doc",
+                key: String(event.input),
+                relation: event.name === "Read" ? "referenced" : "created",
+                at: event.at,
+              },
+            ]
+          : [],
+    };
+    const result = collectArtifacts([docs], { pending: false, data: EVENTS });
+    if (result.pending) throw new Error("expected settled");
+
+    expect(result.made.get("doc")).toBe(2);
   });
 
   test("repeat sightings inside one kind collapse to one item", () => {

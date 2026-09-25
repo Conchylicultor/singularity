@@ -27,7 +27,7 @@ ConversationArtifacts.Kind({
   id: "prototype",
   label: "Prototypes",
   icon: MdDesktopWindows,
-  origin: "produced",      // or "consumed" — see "What the number means"
+  origin: "produced",      // or "consumed" — see "What the closed button shows"
   extract: (event) => …,   // PURE — runs per event, before anything renders
   Section: PrototypeSection,
 });
@@ -47,23 +47,35 @@ job:
   prototypes list, a page's name) and a lookup is a hook. It is mounted only
   while the popover is open, and only when the kind found something.
 
-### What the number means
+### What the closed button shows
 
-The number beside the glyph is what the conversation **made**, not what the
-panel lists. A kind says which it is with `origin`, and it is required, so a new
-kind decides rather than inflating the count by existing:
+The closed button says **what the conversation made**, at a glance: one glyph
+per kind it created or edited something of, then a single number for all of
+them — "prototypes, pages and research: 4" without opening anything. The
+per-kind split is in the tooltip. This is where a conversation's design docs
+surface; there is no separate Docs button.
 
-- `"produced"` — prototypes, pages, research docs. These count.
-- `"consumed"` — the pictures the agent read, the skills it loaded. These get
-  their own section like any other and count for nothing. A turn that took four
-  screenshots on the way to one page made one thing, not five, and a button that
-  said "5" would be describing the agent's route rather than the user's work.
+Two filters decide what reaches the button, and neither touches the panel:
+
+- **The kind's `origin`**, required so a new kind decides rather than cluttering
+  the button by existing:
+  - `"produced"` — prototypes, pages, research docs. These show.
+  - `"consumed"` — the pictures the agent read, the skills it loaded. These get
+    their own section like any other and never reach the button. A turn that
+    took four screenshots on the way to one page made one thing, and a button
+    covered in cameras and bolts would describe the agent's route rather than
+    the user's work.
+- **The item's relation**: only `created` and `edited` count. A research doc the
+  agent only read is listed in the panel (muted, no mark) but is not something
+  the conversation made.
 
 So the panel normally lists more rows than the button counts. That is why the
-panel's own heading carries no number — two different numbers an inch apart
-under the same word read as a contradiction — and why the button's tooltip says
-"*N* made". A conversation that only looked at things still opens the panel,
-with no number on the button at all rather than a "0" its own rows contradict.
+panel's own heading carries no number — two numbers an inch apart under the
+same word read as a contradiction — and why the button's tooltip says "made or
+changed". A conversation that made nothing shows the generic glyph alone and
+still opens the panel, rather than a "0" its own rows contradict. The glyphs
+follow the slot's reorder config (and its hidden kinds), so the button and the
+panel's sections cannot disagree on order.
 
 ### What a section should render
 
@@ -103,8 +115,8 @@ Two kinds outrank the mock, and the rule is where the row GOES: a prototype row
 opens the Prototypes app and a page row opens Pages, so each wears that app's
 own rail icon rather than the mock's drawing of one — you should land in the
 thing whose mark you just clicked. Research has no app of its own (a row opens
-the file-peek pane), so it takes the mock's flask, and deliberately not the Docs
-toolbar button's page glyph: here it sits directly beside Pages, and two
+the file-peek pane), so it takes the mock's flask, and deliberately not a page
+glyph: here — and on the closed button — it sits directly beside Pages, and two
 document glyphs in a row read as one kind split in two.
 
 **No per-kind colour.** Every glyph, title and mark takes the normal
@@ -144,6 +156,8 @@ here.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`
+    - `reorder.isNodeData`
+    - `reorder.useReorderedEntries`
   - Exports (types):
     - `ArtifactKind`
     - `ArtifactRowProps`

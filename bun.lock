@@ -1375,10 +1375,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-code",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-docs-button",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane": {
       "name": "@singularity/plugin-conversations-conversation-view-code-file-pane",
       "version": "0.0.1",
@@ -6556,8 +6552,6 @@
     "@singularity/plugin-conversations-conversation-view-branch": ["@singularity/plugin-conversations-conversation-view-branch@workspace:plugins/conversations/plugins/conversation-view/plugins/branch"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
-
-    "@singularity/plugin-conversations-conversation-view-code-docs-button": ["@singularity/plugin-conversations-conversation-view-code-docs-button@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button"],
 
     "@singularity/plugin-conversations-conversation-view-code-file-pane": ["@singularity/plugin-conversations-conversation-view-code-file-pane@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane"],
 

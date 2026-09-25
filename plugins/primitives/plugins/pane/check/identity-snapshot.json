@@ -151,12 +151,6 @@
       "parent": null
     },
     {
-      "paneId": "conv-docs",
-      "segment": "docs",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "conv-file-tree",
       "segment": "files",
       "appIndex": false,

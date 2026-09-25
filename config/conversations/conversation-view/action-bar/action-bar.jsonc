@@ -1,4 +1,4 @@
-// @hash 0240f4db202b
+// @hash b1cf0a6dffc5
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -14,7 +14,6 @@
     "conversations.conversation-view.open-app:open-app",
     "code-explorer:explorer",
     "apps.agent-manager.pages-nav:pages",
-    "conversations.conversation-view.code.docs-button:docs",
     "conversations.conversation-view.artifacts:artifacts",
     "conversations.conversation-view.push-profiling:push-profiling",
     "conversations.conversation-view.commits-graph:commits-graph",

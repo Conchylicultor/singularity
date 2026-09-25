@@ -10,9 +10,9 @@ import { researchTitle } from "../internal/research-docs";
 
 /**
  * The design docs' glyph — a flask, the mark the mock draws for research
- * (`proto-1789731211-jeis`). Deliberately not the Docs toolbar button's page
- * glyph: here it sits directly beside Pages, and two document glyphs in a row
- * read as one kind of thing split in two.
+ * (`proto-1789731211-jeis`). Deliberately not a page glyph: here — and on the
+ * closed Artifacts button — it sits directly beside Pages, and two document
+ * glyphs in a row read as one kind of thing split in two.
  */
 export const RESEARCH_ICON = MdScience;
 

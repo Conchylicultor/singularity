@@ -41,7 +41,6 @@ no-provider default is `md`.
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`

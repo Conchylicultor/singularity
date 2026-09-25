@@ -29,7 +29,14 @@ export type ConversationArtifactsResult =
       /** Every artifact, across every kind — what the panel lists. */
       total: number;
       /**
-       * Artifacts of `"produced"` kinds only — the number on the button.
+       * What the conversation MADE, per kind id: the items of `"produced"`
+       * kinds it created or edited — never one it only read. A kind with
+       * nothing made has no entry, so the closed button draws exactly the kinds
+       * listed here, each with its number.
+       */
+      made: ReadonlyMap<string, number>;
+      /**
+       * The sum of `made` — the whole of what the conversation produced.
        *
        * Lower than `total` whenever the conversation looked at things it did
        * not make, and `0` for one that only looked: the panel still has
@@ -67,11 +74,17 @@ export function collectArtifacts(
     kinds.filter((kind) => kind.origin === "produced").map((kind) => kind.id),
   );
   const byKind = mergeHits(hits);
+  const made = new Map<string, number>();
   let total = 0;
   let count = 0;
   for (const [id, items] of byKind) {
     total += items.length;
-    if (produced.has(id)) count += items.length;
+    if (!produced.has(id)) continue;
+    // Reading a doc is not making it: only a created or edited item counts.
+    const n = items.filter((item) => item.relation !== "referenced").length;
+    if (n === 0) continue;
+    made.set(id, n);
+    count += n;
   }
-  return { pending: false, byKind, total, count };
+  return { pending: false, byKind, total, made, count };
 }

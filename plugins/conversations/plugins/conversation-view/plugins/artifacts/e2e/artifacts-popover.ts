@@ -6,11 +6,12 @@
  * Four claims, none of which a unit test over the extractors can make, because
  * each one is about the HOST rather than about any one kind:
  *
- *   1. the closed button carries a count, and that count is the number of
- *      artifacts the popover then lists under its PRODUCED kinds — a host that
- *      counted from the merged hits but dropped a kind while rendering would
- *      still show "12", and one that counted the pictures the agent merely
- *      looked at would overstate what the conversation made;
+ *   1. the closed button carries one glyph per kind the conversation made
+ *      something of and a single total, which never exceeds what the popover lists
+ *      under its PRODUCED kinds — the button counts only what was created or
+ *      edited, the panel also lists what was only read, and one that counted
+ *      the pictures the agent merely looked at would overstate what the
+ *      conversation made;
  *   2. every heading in the panel is a registered kind, and they appear in
  *      registry order — the popover names no kind, so a heading it invented, or
  *      an order of its own, is a bug in the host;
@@ -165,21 +166,23 @@ await withBrowser(async (h) => {
 
   // --- 1. the closed button, once the transcript has arrived -----------------
   // While the events are still coming the button is a disabled glyph with no
-  // count on purpose, so the count is waited FOR rather than read immediately.
+  // counts on purpose, so they are waited FOR rather than read immediately.
+  // Each kind the conversation made something of draws its glyph; one total follows.
   const settled = await waitFor(
-    async () => (await button.innerText()).trim(),
-    (text) => /^\d+$/.test(text),
+    async () =>
+      (await button.locator(".tabular-nums").allTextContents()).map(Number),
+    (counts) => counts.length === 1,
     { timeoutMs: 60_000 },
   );
   await snap(page, out, "before");
 
-  const made = Number(settled.value);
+  const made = settled.value.reduce((a, b) => a + b, 0);
   r.ok(
-    `the button shows a count (${JSON.stringify(settled.value)} after ${settled.waitedMs}ms)`,
+    `the button shows one total (${JSON.stringify(settled.value)} after ${settled.waitedMs}ms)`,
     settled.ok,
   );
-  r.ok(`the count is not zero (${made})`, made > 0);
-  r.ok("the button is enabled once it has a count", await button.isEnabled());
+  r.ok(`the counts are not zero (${made})`, made > 0);
+  r.ok("the button is enabled once it has counts", await button.isEnabled());
 
   // --- 2. open it -----------------------------------------------------------
   await button.click();
@@ -188,10 +191,10 @@ await withBrowser(async (h) => {
 
   // Two kinds resolve their titles from a live list and draw a skeleton per
   // item until it lands, so the panel is only done when its counted sections
-  // add up to what the button claimed.
+  // list at least what the button claimed (more when a doc was only read).
   const loaded = await waitFor(
     async () => await listedCount(page, COUNTED_LABELS),
-    (n) => n === made,
+    (n) => n >= made,
     { timeoutMs: 30_000 },
   );
   await snap(page, out, "popover");
@@ -222,10 +225,9 @@ await withBrowser(async (h) => {
     const n = await entriesAt(page, index).count();
     r.ok(`"${label}" lists something (${n})`, n > 0);
   }
-  r.eq(
-    "the button's count is what the popover lists under its produced kinds",
-    loaded.value,
-    made,
+  r.ok(
+    `the button's total fits inside what the popover lists under its produced kinds (${made} ≤ ${loaded.value})`,
+    loaded.ok,
   );
   // The uncounted kinds are what make that a claim rather than a tautology:
   // this conversation looked at things, and the button did not count them.

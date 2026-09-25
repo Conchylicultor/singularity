@@ -66,7 +66,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `conversations/conversation-preprompt`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`

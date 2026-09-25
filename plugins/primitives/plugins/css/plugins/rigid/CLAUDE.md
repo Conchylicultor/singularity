@@ -89,7 +89,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `config_v2/settings`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/environment`

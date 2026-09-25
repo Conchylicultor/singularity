@@ -145,7 +145,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversations.conversation-view.above-prompt-input", pluginId: "conversations.conversation-view", configName: "above-prompt-input" },
   { slotId: "conversations.conversation-view.action-bar.action-bar", pluginId: "conversations.conversation-view.action-bar", configName: "action-bar" },
   { slotId: "conversations.conversation-view.artifacts.kind", pluginId: "conversations.conversation-view.artifacts", configName: "kind" },
-  { slotId: "conversations.conversation-view.code.docs-button.conv-docs.actions", pluginId: "conversations.conversation-view.code.docs-button", configName: "conv-docs.actions" },
   { slotId: "conversations.conversation-view.code.file-pane.file-peek.actions", pluginId: "conversations.conversation-view.code.file-pane", configName: "file-peek.actions" },
   { slotId: "conversations.conversation-view.commits-graph.conv-commits-graph.actions", pluginId: "conversations.conversation-view.commits-graph", configName: "conv-commits-graph.actions" },
   { slotId: "conversations.conversation-view.conversation.actions", pluginId: "conversations.conversation-view", configName: "conversation.actions" },

@@ -70,18 +70,15 @@ await withBrowser(async (h) => {
     marker: `button[aria-label="${BUTTON}"]`,
   });
 
-  // While the transcript is still arriving the button is a disabled glyph with
-  // no count, so the count is waited FOR rather than read.
+  // While the transcript is still arriving the button is a disabled glyph, and
+  // it stays disabled when the conversation touched nothing — so enabled is
+  // what "there is a panel to measure" looks like.
   const settled = await waitFor(
-    async () => (await button.innerText()).trim(),
-    (text) => /^\d+$/.test(text),
+    async () => await button.isEnabled(),
+    (enabled) => enabled,
     { timeoutMs: 60_000 },
   );
-  r.ok(
-    `the button settled on a count (${JSON.stringify(settled.value)})`,
-    settled.ok,
-  );
-  if (Number(settled.value) === 0) {
+  if (!settled.ok) {
     r.note(
       `conversation ${CONV} lists no artifacts — pass --conv <id> for one that does`,
     );

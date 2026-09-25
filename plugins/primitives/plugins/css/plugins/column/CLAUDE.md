@@ -68,7 +68,6 @@ Only present slots render — an absent slot produces no region and no phantom g
     - `apps/studio/graph`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `debug/boot-profile`

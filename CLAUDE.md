@@ -206,7 +206,7 @@ It prints the deploy it resolved and the matched button's state, and writes
 ```bash
 ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
 ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --path /agents/c/<id> --click "Design docs" --out /tmp/docs
+  --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
 ```
 
 `--path <route>` picks the screen; `--viewport 1280x900`, `--wait <ms>` and

@@ -122,7 +122,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/screenshot`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/commits-graph`

@@ -58,7 +58,6 @@ attribute type carries.
     - `code-explorer/commit-detail`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/subagents`

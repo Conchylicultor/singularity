@@ -199,7 +199,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`

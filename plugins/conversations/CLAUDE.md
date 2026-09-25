@@ -212,7 +212,6 @@
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/artifacts/skill`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`
@@ -283,7 +282,6 @@
       - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
       - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
         - Plugins:
-          - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
           - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
             - Plugins:
               - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

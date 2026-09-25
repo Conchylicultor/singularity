@@ -1,10 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import { MdCategory } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
+import { ConversationArtifacts, type ArtifactKind } from "../slots";
 import { useConversationArtifacts } from "../use-conversation-artifacts";
 import { ArtifactsCloseContext } from "../internal/close-context";
 import { ArtifactsPanel } from "./artifacts-panel";
@@ -18,12 +21,14 @@ const LABEL = "Artifacts";
  * Three states, and the first one matters: while the transcript is still
  * arriving the button is a plain disabled glyph with **no count**, because "0"
  * would be a claim about the user's work that reverses itself a moment later.
- * Once settled it opens whenever anything was found, and shows the number of
- * things the conversation MADE beside the glyph — which is fewer than the
- * panel lists, because pictures it looked at and skills it loaded are listed
- * without counting (`ArtifactKind.origin`). A conversation that only looked at
- * things opens the same panel with no number at all, rather than a "0" the
- * rows underneath contradict.
+ * Once settled it opens whenever anything was found, and the closed button
+ * says WHAT the conversation made: one glyph per kind it created or edited
+ * something of, then ONE number for all of them — so "prototypes and pages,
+ * three things" reads at a glance, without opening anything. Only `"produced"` kinds show there,
+ * and only what was created or edited: the pictures it looked at, the skills
+ * it loaded and the docs it merely read are listed in the panel but never on
+ * the button (`ArtifactKind.origin`). A conversation that made nothing shows
+ * the generic glyph alone, rather than a "0" the rows underneath contradict.
  */
 export function ArtifactsButton() {
   const { convId } = conversationPane.useParams();
@@ -49,6 +54,7 @@ export function ArtifactsButton() {
     <ArtifactsReady
       byKind={artifacts.byKind}
       total={artifacts.total}
+      made={artifacts.made}
       count={artifacts.count}
       open={open}
       onOpenChange={setOpen}
@@ -56,20 +62,51 @@ export function ArtifactsButton() {
   );
 }
 
+/**
+ * The kinds the conversation made something of, in the order the panel lists
+ * them — the slot's reorder config, read through the same tree the panel's
+ * `Render` applies, so the button and the sections below it cannot disagree.
+ * A kind the user hid from the panel is hidden here too.
+ */
+function useMadeKinds(
+  made: ReadonlyMap<string, number>,
+): { kind: ArtifactKind & { id: string }; n: number }[] {
+  const contributions = ConversationArtifacts.Kind.useContributions();
+  // The clean contributions carry `_pluginId` + `id`, which is all the reorder
+  // entry key needs; they lack `_slot`, so widen through `unknown`.
+  const { entries } = useReorderedEntries(
+    ConversationArtifacts.Kind.id,
+    contributions as unknown as Contribution[],
+  );
+  return useMemo(() => {
+    const out: { kind: ArtifactKind & { id: string }; n: number }[] = [];
+    for (const entry of entries) {
+      if (isNodeData(entry)) continue;
+      const kind = entry as unknown as ArtifactKind & { id: string };
+      const n = made.get(kind.id);
+      if (n !== undefined) out.push({ kind, n });
+    }
+    return out;
+  }, [entries, made]);
+}
+
 function ArtifactsReady({
   byKind,
   total,
+  made,
   count,
   open,
   onOpenChange,
 }: {
   byKind: ReadonlyMap<string, ArtifactItem[]>;
   total: number;
+  made: ReadonlyMap<string, number>;
   count: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  const madeKinds = useMadeKinds(made);
 
   if (total === 0) {
     return (
@@ -97,19 +134,31 @@ function ArtifactsReady({
       trigger={
         <Button
           variant={open ? "secondary" : "ghost"}
-          // The number is what the conversation MADE, so the tooltip says so —
-          // the panel underneath lists more than that, and a reader comparing
-          // the two deserves the word rather than a second number.
-          title={count > 0 ? `${LABEL} — ${count} made` : LABEL}
+          // The number is what the conversation MADE, so the tooltip says so
+          // and splits it by kind — the panel underneath lists more than that,
+          // and a reader comparing the two deserves the words.
+          title={
+            madeKinds.length > 0
+              ? `${LABEL} — made or changed: ${madeKinds
+                  .map(({ kind, n }) => `${kind.label} ${n}`)
+                  .join(", ")}`
+              : LABEL
+          }
           aria-label={LABEL}
           aria-pressed={open}
           className="gap-xs"
         >
-          <MdCategory className="size-4" />
-          {count > 0 && (
-            <Text variant="caption" className="tabular-nums">
-              {count}
-            </Text>
+          {madeKinds.length === 0 ? (
+            <MdCategory className="size-4" />
+          ) : (
+            <>
+              {madeKinds.map(({ kind }) => (
+                <kind.icon key={kind.id} className="size-4" />
+              ))}
+              <Text variant="caption" className="tabular-nums">
+                {count}
+              </Text>
+            </>
           )}
         </Button>
       }

@@ -567,7 +567,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
-    - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`

@@ -1,4 +1,4 @@
-// @hash 0240f4db202b
+// @hash b1cf0a6dffc5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,7 +9,6 @@
     "apps.agent-manager.pages-nav:pages",
     "code-explorer:explorer",
     "conversations.conversation-view.artifacts:artifacts",
-    "conversations.conversation-view.code.docs-button:docs",
     "conversations.conversation-view.commits-graph:commits-graph",
     "conversations.conversation-view.jsonl-viewer.event-counter:event-counter",
     "conversations.conversation-view.open-app:open-app",
