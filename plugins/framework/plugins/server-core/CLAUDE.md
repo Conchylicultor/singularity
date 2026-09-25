@@ -188,6 +188,13 @@ Create `plugins/{name}/server/index.ts` default-exporting the `ServerPluginDefin
 the implementations in `server/internal/`, and run `./singularity build` — the registry is
 generated, never hand-edited (root `CLAUDE.md` → "Registry exclusivity").
 
+`server/` may import its own `core/`, `shared/` and `data-dirs/` (relative) and other
+plugins' `server`, `core` and `data-dirs` barrels — never `web/`, its own included (root
+`CLAUDE.md` → "Plugin boundary rules"). Tests sit beside the code as `*.test.ts` and import
+it by relative path; a helper other server suites reuse goes in `server/testing/index.ts`
+(`@plugins/{name}/server/testing`), or in `core/testing/` when web tests use it too — never
+in the public `server/index.ts`.
+
 ## Path Aliases
 
 `@plugins/*` is declared **once** in the root `tsconfig.base.json` and inherited via

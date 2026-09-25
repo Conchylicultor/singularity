@@ -62,11 +62,15 @@ When a plugin collects sub-plugin contributions (e.g. facets, checks, collected 
 
 This pattern applies to *genuinely open* sets — ones where future plugins must add entries without editing your code. For a **closed list** both runtimes need (types, constants, a dropdown's options, a validation allowlist), prefer plain data in `core/` rather than introducing a slot and the web↔server codegen bridge it implies for a set you can enumerate today.
 
-### Plugin boundary rules (enforced by `./singularity check plugin-boundaries`)
+### Plugin boundary rules (enforced by `./singularity check boundary-rules` and `./singularity check plugin-boundaries`)
 
+Two checks split the work. `boundary-rules` answers *which folder may import which*, from one table (`folders` in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`); `plugin-boundaries` owns the import grammar, barrels and cycles (rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md) and [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
+
+- **Every file sits in a known folder.** A plugin contains only the folders in the vocabulary in `plugins/framework/plugins/plugin-id/core` — barrel folders (`RUNTIME_FOLDERS`: `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`) and leaf folders (`LEAF_FOLDERS`: `check`, `lint`, `facet`, `bin`, `scripts`, `fixtures`, `vite`, `prewarm`) — plus `plugins/` for child plugins. A loose `.ts` at the plugin root, a folder outside the vocabulary, or a file under `plugins/` that no child plugin claims is a violation. A new kind of folder is one entry in that vocabulary plus its row in the table (tsc enforces the row).
+- **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (e.g. `core` → `core` only; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). It applies to relative imports inside your own plugin exactly as to `@plugins/…` imports of another: `core/` importing its own `../server/x` fails like importing `@plugins/other/server`. A leaf folder (`check/`, `lint/`, `bin/`, …) is never an import target. The channels between folders are `core/` (public) and `shared/` (plugin-private).
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
-- **Cross-plugin import grammar.** Only runtime barrels are legal: `@plugins/<name>/{web,server,core}` for top-level plugins, or `@plugins/<name>/plugins/.../.../{web,server,core}` for any nesting depth. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (enforced by R10). Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
-- **Test code is its own dimension.** A file is test code if it is named `*.test.ts(x)`, sits under `__tests__/`, or sits under `<runtime>/testing/`. It follows its folder's row; code that ships may never import it (same plugin or another). Only test code and `check/` may import it — and `@plugins/<name>/<runtime>/testing` is the one extra legal import ending, a plugin's published test helpers. `e2e/` gets none. And a public barrel export that only tests import is a violation (plugin-boundaries R13) — it belongs in `<runtime>/testing/`, or the test imports the internal file. Enforced by `boundary-rules`; see `plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md`.
+- **Cross-plugin import grammar.** A specifier must end at a barrel folder: `@plugins/<name>/<runtime>` for top-level plugins, or `@plugins/<name>/plugins/.../.../<runtime>` for any nesting depth — or at `<runtime>/testing`, a plugin's published test helpers. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (R10), and your own `shared/` is imported by relative path. Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
+- **Test code is its own dimension.** A file is test code if it is named `*.test.ts(x)`, sits under `__tests__/`, or sits under `<runtime>/testing/` (directly under a barrel folder, never under `e2e/`). It follows its folder's row. Only test code and `check/` may import it; everything else ships, `e2e/` included, and may not — even from the same folder. A public barrel publishes no test support: no `*ForTest(s)` names, nothing taken from a test-support module (R12), and no name whose every importer is test code (R13). Your own plugin's tests import the internal file by relative path; a helper other suites reuse goes in `<runtime>/testing/` (see Testing).
 - **No cross-plugin re-exports.** Import the source barrel directly — never proxy another plugin's symbols through your own barrel. Re-exports hide the real dependency. Right: `import { X } from "@plugins/tasks/plugins/task-draft-form/web"`. Wrong: re-exporting `X` from `@plugins/tasks/web` so others don't have to. This is enforced **transitively and name-level**: routing the proxy through an internal file (`export { X } from "./types"` where `./types` re-exports another plugin's `X`) or via import-then-reexport (`import { X } from "@plugins/other/core"; export { X };`) is caught the same as a direct re-export. There is no umbrella/parent→descendant exception.
 - **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports of the plugin's own internal files, type aliases, and a single `export default { … } satisfies PluginDefinition`. No `const`/`let`, no logic, no side effects.
 - **Registry exclusivity.** Default-export plugin imports (`import fooPlugin from "@plugins/foo/web"`) belong only in the autogenerated registry roots (`web.generated.ts` / `server.generated.ts` / `central.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` composition roots — the exact exempt set is the `exclude` list in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`. You never register a plugin by hand: create its `<runtime>/index.ts` and run `./singularity build`, which regenerates these files from the filesystem (the `plugins-registry-in-sync` check fails on drift).
@@ -81,10 +85,14 @@ This pattern applies to *genuinely open* sets — ones where future plugins must
 │   └── {name}/
 │       ├── web/      # Frontend code
 │       ├── server/   # Backend code
+│       ├── central/  # Central-runtime code (shared across worktrees)
 │       ├── core/     # Public API — types/utils importable cross-plugin and from server/web
 │       ├── shared/   # Private DRY — shared between web/server within this plugin only, never imported cross-plugin
+│       ├── cli/, e2e/, provision/, data-dirs/   # other barrel folders (CLI verbs, Playwright scripts, install steps, data-dir declarations)
 │       ├── lint/     # ESLint rules contributed by this plugin (optional)
-│       └── check/    # Custom Check[] enforced by ./singularity check (optional)
+│       ├── check/    # Custom Check[] enforced by ./singularity check (optional)
+│       ├── bin/, scripts/, facet/, fixtures/, vite/, prewarm/   # other leaf folders — discovered or run by path, never imported
+│       └── plugins/  # child plugins
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── cli/              # Agent CLI (TypeScript, Commander.js)
@@ -297,9 +305,16 @@ source is pure logic; `web/__tests__/` is jsdom/React (auto-discovered by the
 root `vitest.config.ts`, no per-plugin config). Never run a bare `bun test` /
 `vitest` — invoking a runner directly has caveats the CLI handles.
 
+A test of your own plugin imports the file under test (and any internal helper)
+by relative path — never through the public barrel just because it is there.
 Test helpers another test (or a check) reuses go in `<runtime>/testing/index.ts`,
 imported as `@plugins/<name>/<runtime>/testing` — never in the runtime's public
-barrel, and never in `__tests__/` (that is where the jsdom runner looks for suites).
+barrel, never in `__tests__/` (that is where the jsdom runner looks for suites),
+never loose in the plugin or in `check/`. Pick the runtime by who uses the helper:
+`web/testing/` for web tests only, `server/testing/` for server tests only, and
+`core/testing/` for a helper both web and server tests use (both rows reach
+`core`). A testing barrel may also re-export a real function another plugin's
+test checks against. Only test code and `check/` may import a testing barrel.
 Before writing a fixture, search the *Test helpers* items in
 `docs/plugins-details.md` (plugins with one are marked `[test helpers]` in the
 compact index) — every testing barrel's exports are listed there.

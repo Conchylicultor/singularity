@@ -192,8 +192,8 @@ carry a `// UNSAFE: <reason>` comment. Import from `@plugins/framework/plugins/w
 Nothing to register by hand (root `CLAUDE.md` → "Registry exclusivity"). `./singularity
 build` regenerates `core/web.generated.ts` — a `CollectedEntry[]` of `() => import(...)`
 loaders with `dependsOn` inferred from import statements. Same discovery substrate for every
-runtime (`server`, `central`, `check`, `lint`, `facet`), each marked with
-`defineCollectedDir("<runtime>")` in its `core/`.
+collected folder (`server`, `central`, `check`, `lint`, `facet`, …), each marked with
+`defineCollectedDir("<folder>")` in its `core/`.
 
 ## Bootstrap Flow
 
@@ -241,16 +241,24 @@ For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/en
 
 ## File Structure
 
-Root `CLAUDE.md` → "Folder Structure" covers the per-plugin runtime dirs. Inside them:
+Root `CLAUDE.md` → "Folder Structure" and "Plugin boundary rules" cover the per-plugin
+folders. The set is closed: a plugin holds only the folders in `plugin-id/core`'s
+vocabulary (plus `plugins/` for children), a loose `.ts` at its root is a violation, and
+each folder's import row in `tooling/boundaries/core/boundary-config.ts` applies to its own
+relative imports too — `web/` may reach its own `core/` and `shared/`, never `../server`.
+Inside the web and server folders:
 
 ```
 plugins/{name}/
 ├── web/index.ts       # default export: PluginDefinition
 ├── web/slots.ts       # optional: slots this plugin defines for others to extend
 ├── web/components/    # internal React components — never inline them in index.ts
+├── web/__tests__/     # jsdom/React suites (test code — nothing that ships imports it)
+├── web/testing/       # optional: test helpers other suites reuse, @plugins/{name}/web/testing
 ├── server/index.ts    # default export: ServerPluginDefinition; named exports = public API
 ├── server/internal/   # handlers, business logic — never imported externally
-└── scripts/           # standalone entry points invoked outside the server/web build
+├── core/testing/      # optional: test helpers both web and server tests use
+└── scripts/           # standalone entry points run by path — never imported
 ```
 
 ## Adding a New Plugin

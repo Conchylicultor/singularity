@@ -1,8 +1,33 @@
 # plugin-boundaries
 
-Implements the cross-plugin boundary rules (R1–R13) enforced by
+Implements the plugin-structure rules (R1–R13) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
-root `CLAUDE.md`.
+root `CLAUDE.md` → "Plugin boundary rules".
+
+This check does **not** decide which folder may import which. That is
+`boundary-rules` (`tooling/boundaries`), which applies one `folders` table to
+every import, relative ones inside a plugin included, and also owns "every file
+sits in a known folder" and "only test code and `check/` may import test code".
+What this check owns:
+
+| Rule | Id | What it fails |
+| --- | --- | --- |
+| R1 | `package` | a plugin's `package.json` `"name"` out of sync with its path |
+| R3 | `barrel-required`, `barrel-purity`, `cross-plugin-reexport` | a runtime folder (or a `<runtime>/testing/` holding TypeScript) with no `index.ts`; logic in a barrel; a barrel surfacing another plugin's name |
+| R4 | `grammar` | a cross-plugin specifier that ends anywhere but `<runtime>` or `<runtime>/testing` |
+| R5 | `default-import` | a plugin's default export imported outside the registry roots |
+| R6 | `cycle` | a cycle in the cross-plugin import graph (per runtime) |
+| R7 | `workspace-import` | an `@singularity/plugin-*` specifier |
+| R8 | `relative-cross-plugin` | a relative path escaping into another plugin |
+| R9 | `inline-import` | an inline `import("…")` type expression targeting a barrel |
+| R10 | `cross-plugin-internal`, `shared-use-relative` | another plugin's `shared/`; your own `shared/` via the `@plugins` alias instead of a relative path |
+| R11 | `unknown-dir` | a top-level directory in a plugin that is not a plugin folder |
+| R12 | `test-support-in-public-barrel` | test support published from a public barrel |
+| R13 | `test-only-public-export` | a public barrel name whose every importer is test code |
+
+R4–R10 look only at imports that cross a plugin boundary (R10's
+`shared-use-relative` is the one intra-plugin case); inside a plugin, deep paths
+are fine, and the folder rows are `boundary-rules`' job.
 
 ## Package name (R1) is generated, R1 only guards it
 

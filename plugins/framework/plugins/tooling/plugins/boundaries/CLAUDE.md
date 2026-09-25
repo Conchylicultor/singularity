@@ -31,7 +31,11 @@ Test code is a second dimension beside the folder, defined once by
 `__tests__/` or `testing/`.
 
 - **It follows its folder's row.** A helper in `server/testing/` gets the
-  `server` row. No row mentions test code.
+  `server` row. No row mentions test code. So the runtime a testing barrel sits
+  under is chosen by who must reach it: `web/testing/` is reachable only from
+  web tests, `server/testing/` only from server-side ones, and a helper that
+  both web and server tests use goes in `core/testing/` (every row reaches
+  `core`).
 - **Only code that verifies may import it.** That is test code itself plus
   `VERIFYING_FOLDERS` (`check/`). Everything else ships — `e2e/` included, since
   it drives the running app rather than importing code — and importing test
