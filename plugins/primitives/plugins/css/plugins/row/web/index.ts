@@ -12,6 +12,7 @@ export {
   SectionHeaderRow,
   type SectionHeaderRowProps,
   type SectionHeaderVariant,
+  type SectionHeaderDisclosure,
 } from "./internal/section-header-row";
 
 export default {

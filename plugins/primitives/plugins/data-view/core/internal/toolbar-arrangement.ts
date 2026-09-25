@@ -88,9 +88,10 @@ export interface HostedToolbarParts {
    */
   options: ReactNode;
   /**
-   * The collapsed view switcher, when the surface authors more than one view;
-   * otherwise (one view, a pinned surface, no active view) `null`. Render it
-   * when present: it is the only way to change views.
+   * The collapsed view switcher, in `HostedToolbar.forms.switcher`, when the
+   * surface authors more than one view; otherwise (one view, a pinned surface,
+   * no active view) `null`. Render it when present: it is the only way to
+   * change views — and lay the frame out for its absence too.
    */
   switcher: ReactNode;
   /** The create affordance (`DataViewProps.creators`) in its compact form, or
@@ -98,6 +99,31 @@ export interface HostedToolbarParts {
   creators: ReactNode;
   /** The rows — the active view, or its loading / no-views state. */
   body: ReactNode;
+  /**
+   * The shell's header-measurement ref. A frame whose header STICKS (a
+   * sidebar list's header line) attaches it to that sticky box, so the shell
+   * publishes its height as `--dv-header-offset` and grouped views pin their
+   * section headers below it rather than under it. A frame whose header
+   * scrolls away with the rows (a card) leaves it unattached, and the offset
+   * stays `0px`.
+   */
+  stickyRef: (node: HTMLElement | null) => void;
+}
+
+/**
+ * The forms the host builds a hosted frame's parts in — {@link
+ * ToolbarPartForms}' counterpart for {@link HostedToolbar}. Data, not
+ * components: the host still builds the part, the frame only picks its shape.
+ */
+export interface HostedToolbarForms {
+  /**
+   * `chip` (default): the collapsed switcher as a pill-shaped chip — what a
+   * frame whose header is a card title wants. `row`: a full-width row (the
+   * view's icon in the lead column, its name, a chevron shown on hover and
+   * while the menu is open) — for a list that is the whole surface, where the
+   * switcher reads as the list's own heading line. Same menu either way.
+   */
+  switcher: "chip" | "row";
 }
 
 /**
@@ -117,6 +143,8 @@ export interface HostedToolbarParts {
 export interface HostedToolbar {
   kind: "hosted";
   frame: ComponentType<HostedToolbarParts>;
+  /** The shape of each part the host builds; absent ⇒ `{ switcher: "chip" }`. */
+  forms?: HostedToolbarForms;
 }
 
 /** `DataViewProps.toolbar`: a band layout, or a host-drawn frame. */

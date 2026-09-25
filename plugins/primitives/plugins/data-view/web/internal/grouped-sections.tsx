@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
 
@@ -50,6 +51,18 @@ export interface GroupedSectionsProps {
    * group, one JS state — on a single row.
    */
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
+  /**
+   * The header treatment — the surface's `DataViewProps.groupHeaders`, threaded
+   * through the view's render props. Absent ⇒ `"standard"`, which renders the
+   * exact node this chrome has always rendered.
+   *
+   * `"quiet"` reads the header as one run — label, then its count right beside
+   * it ("Queue 6") — with the fold chevron trailing that run and shown only on
+   * hover / keyboard focus (`SectionHeaderRow disclosure="trailing"`). The
+   * count moves from the trailing cluster into the label's run; a section's
+   * `headerActions` stay in the trailing cluster, hover-revealed as before.
+   */
+  headerStyle?: DataViewGroupHeaders;
   /** This section's body — rendered inside the collapsible content. */
   children: (section: DataViewSection<unknown>) => ReactNode;
 }
@@ -95,8 +108,10 @@ export function GroupedSections({
   collapsedSections,
   setSectionCollapsed,
   headerActions,
+  headerStyle = "standard",
   children,
 }: GroupedSectionsProps): ReactNode {
+  const quiet = headerStyle === "quiet";
   return (
     <Stack gap="none">
       <StickyStack
@@ -119,34 +134,53 @@ export function GroupedSections({
               onOpenChange={(open) => setSectionCollapsed?.(key, !open)}
             >
               <StickyStackItem itemKey={key} mask layer="raised">
-                <SectionHeaderRow
-                  // The label is the grouped column's VALUE, not a name this
-                  // chrome chose — so it is spelled the way the data spells it.
-                  variant="value"
-                  className="rail-follow"
-                  // This `null` test is the ONLY thing between a section and an
-                  // empty `RowActions` — which is not nothing: the cluster is a
-                  // flex item, so an empty one still spends the `gap` below and
-                  // pulls that section's count off the edge its neighbours line
-                  // up on. Hence the contract that `headerActions` returns
-                  // `null`, not a component that renders nothing: a component
-                  // is an element, and an element is never `null`.
-                  actions={
-                    action == null ? (
-                      count
-                    ) : (
-                      // `gap="xs"` is load-bearing rather than decorative: the
-                      // header has only ever carried the count, so nothing has
-                      // ever sat beside it, and the two would otherwise touch.
-                      <Stack direction="row" gap="xs" align="center">
-                        {count}
+                {quiet ? (
+                  <SectionHeaderRow
+                    variant="value"
+                    className="rail-follow"
+                    disclosure="trailing"
+                    // The count is part of the label's run here, so the
+                    // trailing cluster holds only an action — and, like the
+                    // standard header, nothing at all when there is none.
+                    actions={
+                      action == null ? undefined : (
                         <RowActions pin={null}>{action}</RowActions>
-                      </Stack>
-                    )
-                  }
-                >
-                  {section.label}
-                </SectionHeaderRow>
+                      )
+                    }
+                  >
+                    {section.label}
+                    {count}
+                  </SectionHeaderRow>
+                ) : (
+                  <SectionHeaderRow
+                    // The label is the grouped column's VALUE, not a name this
+                    // chrome chose — so it is spelled the way the data spells it.
+                    variant="value"
+                    className="rail-follow"
+                    // This `null` test is the ONLY thing between a section and an
+                    // empty `RowActions` — which is not nothing: the cluster is a
+                    // flex item, so an empty one still spends the `gap` below and
+                    // pulls that section's count off the edge its neighbours line
+                    // up on. Hence the contract that `headerActions` returns
+                    // `null`, not a component that renders nothing: a component
+                    // is an element, and an element is never `null`.
+                    actions={
+                      action == null ? (
+                        count
+                      ) : (
+                        // `gap="xs"` is load-bearing rather than decorative: the
+                        // header has only ever carried the count, so nothing has
+                        // ever sat beside it, and the two would otherwise touch.
+                        <Stack direction="row" gap="xs" align="center">
+                          {count}
+                          <RowActions pin={null}>{action}</RowActions>
+                        </Stack>
+                      )
+                    }
+                  >
+                    {section.label}
+                  </SectionHeaderRow>
+                )}
               </StickyStackItem>
               <CollapsibleContent>{children(section)}</CollapsibleContent>
             </CollapsibleProvider>

@@ -8,7 +8,10 @@
 - Web:
   - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
   - Uses:
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/sticky.Sticky`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineDataViewSources`
     - `primitives/data-view.MergedDataView`

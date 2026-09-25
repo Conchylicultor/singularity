@@ -122,6 +122,26 @@ wrapping the control. Address the control the way a user does
 (`getByRole("button", { name })`), not by clicking a `data-testid` you put on the
 row.
 
+## `SectionHeaderRow`: where the disclosure sits
+
+`SectionHeaderRow` is `Row` as a collapsible header. `disclosure` places its
+chevron:
+
+- **`"lead"`** (default) — before the label, always visible; a static header
+  (`collapsible={false}`) keeps the chevron's box invisible so a mixed stack
+  aligns on one title column.
+- **`"trailing"`** — right after the label run (so a label + count run reads
+  "Queue 6 ›"), shown only while the row is hovered or its control has keyboard
+  focus. The label then starts on the rows' own column — a quiet group header
+  (`DataViewProps.groupHeaders="quiet"`). `aria-expanded`, `aria-controls` and
+  the click target are unchanged.
+
+The trailing reveal is `hover-reveal`'s `useHoverReveal` (per-instance state;
+pointer enter/leave on the row box, keyboard-only focus on the control, each
+composed with a caller's own handler) rather than a Tailwind group: `Row`'s
+`group/row-actions` belongs to the action cluster, and headers are few enough
+that the state costs nothing.
+
 ## Row is not a data list
 
 `Row` is for *single* rows and transient chrome (menus, pickers, nav, tab
@@ -144,6 +164,8 @@ genuine transient-chrome list escapes with
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/css/line.Line`
     - `primitives/css/ui-kit.cn`
+    - `primitives/hover-reveal.hoverRevealClass`
+    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
   - Exports (types):
@@ -152,6 +174,7 @@ genuine transient-chrome list escapes with
     - `RowHover`
     - `RowProps`
     - `RowSize`
+    - `SectionHeaderDisclosure`
     - `SectionHeaderRowProps`
     - `SectionHeaderVariant`
   - Exports (values):
@@ -197,6 +220,7 @@ genuine transient-chrome list escapes with
     - `primitives/data-view`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
+    - `primitives/data-view/view-core`
     - `primitives/folder-picker`
     - `primitives/log-channels`
     - `primitives/outline/rail`

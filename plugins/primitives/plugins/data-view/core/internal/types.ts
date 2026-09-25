@@ -553,6 +553,21 @@ export interface ManualOrderConfig<TRow> {
  */
 export type DataViewDensity = "comfortable" | "compact";
 
+/**
+ * How a grouped view draws its group headers. `"standard"` (the default) is
+ * the chevron-led header with the count at the far right; `"quiet"` is one
+ * run — label, then its count right beside it — with the fold chevron trailing
+ * it and shown only on hover or keyboard focus. A per-surface declaration like
+ * {@link DataViewDensity}: a narrow list that wants its headers to read as
+ * captions over the rows asks for `"quiet"`.
+ *
+ * Honoured by every view that draws its headers through `GroupedSections`
+ * (list, gallery, tree, icons). The table composes its own `col-span-full`
+ * header rows inside `data-table` and ignores it — a deliberate no-op, like
+ * its handling of `rowTone`.
+ */
+export type DataViewGroupHeaders = "standard" | "quiet";
+
 export interface DataViewRenderProps<TRow> {
   /** RAW rows. Each view applies the processing matching its own semantics
    * (gallery/table call `useFlatRows`; the tree feeds them straight to `TreeList`). */
@@ -664,6 +679,13 @@ export interface DataViewRenderProps<TRow> {
    * width, so there is nothing a compact surface would want them to drop.
    */
   density?: DataViewDensity;
+  /**
+   * The surface's group-header treatment, threaded from
+   * `DataViewProps.groupHeaders` exactly like `density`. Absent ⇒
+   * `"standard"`. A view hands it to `GroupedSections` as `headerStyle`; the
+   * table ignores it (see {@link DataViewGroupHeaders}).
+   */
+  groupHeaders?: DataViewGroupHeaders;
 }
 
 /**
@@ -1014,6 +1036,11 @@ export interface DataViewBaseProps<TRow> {
    * `"comfortable"`.
    */
   density?: DataViewDensity;
+  /**
+   * How grouped views draw their group headers — see
+   * {@link DataViewGroupHeaders}. Default `"standard"`.
+   */
+  groupHeaders?: DataViewGroupHeaders;
   /**
    * The search field's placeholder, naming what this surface searches
    * ("Search apps"). Default `"Search…"`.

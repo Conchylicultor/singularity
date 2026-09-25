@@ -5,6 +5,7 @@ import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plug
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
   DataViewDensity,
+  DataViewGroupHeaders,
   DataViewId,
   DataViewSurfaceChrome,
 } from "../../core";
@@ -40,6 +41,9 @@ interface MergedDataViewBaseProps<THostProps> {
    *  `actions`. It is a property of the surface, so it applies whichever source
    *  the active view-instance binds to. */
   density?: DataViewDensity;
+  /** The group-header treatment, forwarded like `density` — a property of the
+   *  surface, whichever source the active instance binds to. */
+  groupHeaders?: DataViewGroupHeaders;
   /** The search placeholder, forwarded like `toolbar`. */
   searchPlaceholder?: string;
 }
@@ -68,6 +72,7 @@ export function MergedDataView<THostProps>(
     actions,
     defaultView,
     density,
+    groupHeaders,
     toolbar,
     searchPlaceholder,
   } = props;
@@ -107,6 +112,7 @@ export function MergedDataView<THostProps>(
       title={title}
       actions={actions}
       density={density}
+      groupHeaders={groupHeaders}
       toolbar={toolbar}
       searchPlaceholder={searchPlaceholder}
     >

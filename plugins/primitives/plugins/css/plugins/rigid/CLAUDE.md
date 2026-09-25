@@ -87,6 +87,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`
+    - `conversations/conversation-ui/item`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/dependencies`
@@ -131,6 +132,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `primitives/commit-list`
     - `primitives/data-view`
     - `primitives/data-view/list`
+    - `primitives/data-view/view-core`
     - `primitives/graph-canvas`
     - `primitives/loading`
     - `primitives/search`

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
   DataViewDensity,
+  DataViewGroupHeaders,
   DataViewId,
   DataViewProps,
   DataViewToolbarSpec,
@@ -33,6 +34,9 @@ export interface DataViewShellChrome {
    * single place the body reads it from. Absent ⇒ `"comfortable"`.
    */
   density?: DataViewDensity;
+  /** The surface's group-header treatment (`DataViewProps.groupHeaders`), a
+   *  surface property carried like `density`. Absent ⇒ `"standard"`. */
+  groupHeaders?: DataViewGroupHeaders;
   /** The surface's toolbar (`DataViewProps.toolbar`): a band arrangement, or a
    *  hosted frame; absent ⇒ the default bar. A surface property, carried like
    *  `density`. */
@@ -49,7 +53,8 @@ export interface DataViewShellChrome {
 /**
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
- * `defaultView` / `views` / `density` / `toolbar` / `searchPlaceholder`).
+ * `defaultView` / `views` / `density` / `groupHeaders` / `toolbar` /
+ * `searchPlaceholder`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
@@ -64,6 +69,7 @@ export type DataViewSourceBundle<TRow> = Omit<
   | "defaultView"
   | "views"
   | "density"
+  | "groupHeaders"
   | "toolbar"
   | "searchPlaceholder"
 >;

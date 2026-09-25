@@ -547,6 +547,7 @@ sections.length === 1 && sections[0]!.key === null ? (
     sections={sections}
     collapsedSections={props.collapsedSections}
     setSectionCollapsed={props.setSectionCollapsed}
+    headerStyle={props.groupHeaders}
   >
     {(section) => renderBody(section.entries)}
   </GroupedSections>
@@ -561,6 +562,27 @@ groups, degrading to the swap hand-off above that** — in every view, for free.
 There is **no per-view header-inset axis**: `GroupedSections` owns `rail-follow`
 on its `SectionHeaderRow`, so every group header sits on the one rail (see "The
 rail" below) — no view passes a `headerClassName`.
+
+### `groupHeaders` — standard or quiet headers, per surface
+
+`DataViewProps.groupHeaders?: "standard" | "quiet"` is a surface declaration like
+`density`: `DataView` / `MergedDataView` hand it to `DataViewShellFrame`, it
+rides `DataViewShellChrome`, and the body threads it into
+`DataViewRenderProps.groupHeaders`, which every `GroupedSections` view passes as
+`headerStyle`.
+
+- **`"standard"`** (default) — chevron first, the count at the far right. An
+  absent value renders the exact node it always did (pinned by
+  `web/__tests__/grouped-sections.test.tsx`), so no surface changes unless it
+  asks.
+- **`"quiet"`** — one run: the label, then its count right beside it
+  ("Queue 6"), with the fold chevron trailing that run and shown only on hover
+  or keyboard focus (`SectionHeaderRow disclosure="trailing"`). For a narrow
+  list whose headers should read as captions over the rows (the agent-manager
+  conversation sidebar). `headerActions` stay in the trailing cluster.
+
+list, gallery, tree and icons honour it; the **table ignores it** — it composes
+its own `col-span-full` header rows inside `data-table` (see below).
 
 ### `headerActions` — one affordance, scoped to one section
 
@@ -719,12 +741,28 @@ the host hands it the parts to place (`HostedToolbarParts`,
 - **`body`** — the rows. Loading and no-views states come through the same
   frame (`options`/`switcher` `null`), so the card never reflows as config
   settles.
+- **`stickyRef`** — the shell's header-measurement ref. A frame whose header
+  sticks attaches it to that sticky box, and the shell publishes its height as
+  `--dv-header-offset`, so grouped views pin their section headers below the
+  frame's header instead of under it. A card whose header scrolls away leaves it
+  unattached.
+
+`forms?: { switcher: "chip" | "row" }` picks the switcher's shape — data, like an
+arrangement's `ToolbarPartForms`; the host still builds it. `chip` (default) is
+the pill a card title wants; `row` is `CollapsedViewSwitcher appearance="row"`, a
+full-width `Row` (the view's icon in the rows' lead column, its name, a chevron
+shown on hover and while the menu is open) for a list that IS the surface, where
+the switcher reads as the list's heading line. Same menu either way. The
+conversation sidebar is the reference: `SIDEBAR_TOOLBAR` in
+`conversations-view/plugins/data-view` — one sticky line
+`[switcher (Fill)] [options]`, `stickyRef` on the `Sticky`.
 
 It is **not an arrangement**: an arrangement lays out a band and must render the
 switcher and search inline, and the compact fold ignores it. Hosted has no band,
 so neither applies. `title` / `actions` are a **type error** beside it
 (`DataViewSurfaceChrome` is a union): the frame is the header and renders its own.
-No sticky band means no measured header offset — `--dv-header-offset` is `0px`.
+No sticky band means no measured header offset — `--dv-header-offset` is `0px` —
+unless the frame attaches `stickyRef` to a sticky header of its own.
 
 Declare `frame` at module scope: it is a component, and a new identity per render
 remounts the whole card. **Config is unchanged** — a hosted surface still has
@@ -1906,6 +1944,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `CreateOption`
     - `DataViewAggregateConfig`
     - `DataViewDensity`
+    - `DataViewGroupHeaders`
     - `DataViewId`
     - `DataViewProps`
     - `DataViewRenderProps`
@@ -1935,6 +1974,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `GroupingPlanContext`
     - `HierarchyConfig`
     - `HostedToolbar`
+    - `HostedToolbarForms`
     - `HostedToolbarParts`
     - `ItemActionProps`
     - `ItemActionsDescriptor`

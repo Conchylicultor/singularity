@@ -139,6 +139,7 @@ primitive exists to name.
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view`
     - `conversations/recover`
     - `debug/broadcasts`
     - `debug/claude-cli-calls`
@@ -175,6 +176,7 @@ primitive exists to name.
     - `primitives/commit-list`
     - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/list`
+    - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/folder-picker`

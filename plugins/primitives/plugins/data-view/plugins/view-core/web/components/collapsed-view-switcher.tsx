@@ -2,6 +2,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { MdAdd, MdExpandMore, MdSettings } from "react-icons/md";
 import {
   Button,
+  cn,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -12,6 +13,14 @@ import {
   DropdownMenuSubContent,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  hoverRevealClass,
+  useHoverReveal,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
@@ -33,19 +42,36 @@ import { AddViewMenuItems } from "./add-view-menu-items";
  * it: the chip is already the menu's trigger, and one element cannot trigger
  * two popups without one click opening both. So the panel opens only from its
  * menu row.
+ *
+ * `appearance` picks the trigger's shape, never the menu:
+ * - **`chip`** (default) — a secondary pill: icon, name, chevron.
+ * - **`row`** — a full-width `Row`: the view's icon in the row's lead column
+ *   (the column a list's rows put their own lead in, so the switcher reads as
+ *   the list's heading line), the name, and a chevron that appears only on
+ *   hover / keyboard focus and while the menu (or the settings panel) is open.
  */
 export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   instances,
   activeId,
   onSelect,
   actions,
+  appearance = "chip",
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   onSelect: (id: string) => void;
   actions: ViewActionsCore;
+  /** The trigger's shape — see above. Default `"chip"`. */
+  appearance?: "chip" | "row";
 }): ReactNode {
-  const chipRef = useRef<HTMLButtonElement>(null);
+  // The settings panel's anchor: whichever trigger rendered. Written through a
+  // callback because the two triggers type their `ref` differently (`Button`
+  // is a `<button>`, `Row` an `HTMLElement` it decides the tag of).
+  const anchorRef = useRef<HTMLElement | null>(null);
+  const setAnchor = (el: HTMLElement | null) => {
+    anchorRef.current = el;
+  };
+  const reveal = useHoverReveal();
   // WHICH view's settings are open (see EditableViewSwitcher): a boolean would
   // silently re-aim an open panel at a different view when the active one changes.
   const [settingsForId, setSettingsForId] = useState<string | null>(null);
@@ -58,74 +84,104 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   const others = instances.filter((r) => r.instance.id !== active.instance.id);
   const settingsInstance = settingsForId === active.instance.id ? active : null;
 
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              ref={chipRef}
-              variant="secondary"
-              shape="pill"
-              aria-label={`View: ${active.instance.name}`}
-            >
-              <ActiveIcon className="text-muted-foreground" />
-              {active.instance.name}
-              <MdExpandMore className="text-faint-foreground" />
-            </Button>
-          }
+  const label = `View: ${active.instance.name}`;
+  const trigger = (popupOpen: boolean) =>
+    appearance === "row" ? (
+      // `Row` infers a `<button>` from the `onClick` the menu trigger merges
+      // in, so the trigger stays a native button (and the row's own focus
+      // ring, hover tint and single-line truncation come with it).
+      <Row
+        ref={setAnchor}
+        aria-label={label}
+        // `sm`: the row form heads a dense list (a sidebar), so it takes the
+        // list rows' caption size — at `md` it would read as a heading.
+        size="sm"
+        icon={<ActiveIcon className="text-muted-foreground" />}
+        {...reveal.groupProps}
+      >
+        <Fill>{active.instance.name}</Fill>
+        <MdExpandMore
+          className={cn(
+            "text-faint-foreground",
+            rigidClass(),
+            hoverRevealClass(reveal.revealed || popupOpen),
+          )}
         />
-        <DropdownMenuContent align="start">
-          {others.map((r) => {
-            const Icon: ViewTypeMeta["icon"] = r.viewType.icon;
-            return (
+      </Row>
+    ) : (
+      <Button
+        ref={setAnchor}
+        variant="secondary"
+        shape="pill"
+        aria-label={label}
+      >
+        <ActiveIcon className="text-muted-foreground" />
+        {active.instance.name}
+        <MdExpandMore className="text-faint-foreground" />
+      </Button>
+    );
+
+  return (
+    // The scope hears every popup opened inside it — the menu and the settings
+    // panel — so a row trigger's chevron holds while either is open.
+    <PopupOpenScope>
+      {(popupOpen) => (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={trigger(popupOpen)} />
+            <DropdownMenuContent align="start">
+              {others.map((r) => {
+                const Icon: ViewTypeMeta["icon"] = r.viewType.icon;
+                return (
+                  <DropdownMenuItem
+                    key={r.instance.id}
+                    onClick={() => {
+                      setSettingsForId(null);
+                      onSelect(r.instance.id);
+                    }}
+                  >
+                    <Icon className="size-4" />
+                    {r.instance.name}
+                  </DropdownMenuItem>
+                );
+              })}
+              {others.length > 0 ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <MdAdd className="size-4" />
+                  Add view
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <AddViewMenuItems actions={actions} />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuItem
-                key={r.instance.id}
-                onClick={() => {
-                  setSettingsForId(null);
-                  onSelect(r.instance.id);
-                }}
+                onClick={() => setSettingsForId(active.instance.id)}
               >
-                <Icon className="size-4" />
-                {r.instance.name}
+                <MdSettings className="size-4" />
+                View settings…
               </DropdownMenuItem>
-            );
-          })}
-          {others.length > 0 ? <DropdownMenuSeparator /> : null}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <MdAdd className="size-4" />
-              Add view
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <AddViewMenuItems actions={actions} />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuItem
-            onClick={() => setSettingsForId(active.instance.id)}
-          >
-            <MdSettings className="size-4" />
-            View settings…
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {settingsInstance ? (
-        <ControlPanelPopover
-          anchor={chipRef}
-          open
-          onOpenChange={(open) => {
-            if (!open) setSettingsForId(null);
-          }}
-          align="start"
-          label={`${settingsInstance.instance.name} settings`}
-        >
-          <ViewSettingsPopover
-            instance={settingsInstance}
-            actions={actions}
-            onClose={() => setSettingsForId(null)}
-          />
-        </ControlPanelPopover>
-      ) : null}
-    </>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {settingsInstance ? (
+            <ControlPanelPopover
+              anchor={anchorRef}
+              open
+              onOpenChange={(open) => {
+                if (!open) setSettingsForId(null);
+              }}
+              align="start"
+              label={`${settingsInstance.instance.name} settings`}
+            >
+              <ViewSettingsPopover
+                instance={settingsInstance}
+                actions={actions}
+                onClose={() => setSettingsForId(null)}
+              />
+            </ControlPanelPopover>
+          ) : null}
+        </>
+      )}
+    </PopupOpenScope>
   );
 }

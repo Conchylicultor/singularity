@@ -9489,10 +9489,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
@@ -11931,7 +11933,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
             - Uses:
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/sticky.Sticky`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineDataViewSources`
               - `primitives/data-view.MergedDataView`
@@ -24693,6 +24698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
+              - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
@@ -25131,6 +25137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/running-agents`
               - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
+              - `conversations/conversations-view/data-view`
               - `conversations/recover`
               - `debug/broadcasts`
               - `debug/claude-cli-calls`
@@ -25167,6 +25174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list`
               - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/list`
+              - `primitives/data-view/view-core`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/folder-picker`
@@ -25473,6 +25481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/running-agents`
               - `conversations/conversations-view`
+              - `conversations/conversations-view/data-view`
               - `debug/broadcasts`
               - `debug/memory`
               - `debug/profiling`
@@ -25796,6 +25805,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/commit-detail`
               - `config_v2/config-link`
               - `config_v2/settings`
+              - `conversations/conversation-ui/item`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/dependencies`
@@ -25840,6 +25850,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list`
               - `primitives/data-view`
               - `primitives/data-view/list`
+              - `primitives/data-view/view-core`
               - `primitives/graph-canvas`
               - `primitives/loading`
               - `primitives/search`
@@ -25867,6 +25878,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.useCollapsibleContext`
               - `primitives/css/line.Line`
               - `primitives/css/ui-kit.cn`
+              - `primitives/hover-reveal.hoverRevealClass`
+              - `primitives/hover-reveal.useHoverReveal`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
             - Exports (types):
@@ -25875,6 +25888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RowHover`
               - `RowProps`
               - `RowSize`
+              - `SectionHeaderDisclosure`
               - `SectionHeaderRowProps`
               - `SectionHeaderVariant`
             - Exports (values):
@@ -25920,6 +25934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
+              - `primitives/data-view/view-core`
               - `primitives/folder-picker`
               - `primitives/log-channels`
               - `primitives/outline/rail`
@@ -26501,6 +26516,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas`
               - `code-explorer/commit-detail`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversations-view/data-view`
               - `debug/profiling/ops/op-gantt`
               - `debug/queue`
               - `debug/trace/pane`
@@ -27921,6 +27937,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateOption`
           - `DataViewAggregateConfig`
           - `DataViewDensity`
+          - `DataViewGroupHeaders`
           - `DataViewId`
           - `DataViewProps`
           - `DataViewRenderProps`
@@ -27950,6 +27967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GroupingPlanContext`
           - `HierarchyConfig`
           - `HostedToolbar`
+          - `HostedToolbarForms`
           - `HostedToolbarParts`
           - `ItemActionProps`
           - `ItemActionsDescriptor`
@@ -28322,10 +28340,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields.FieldRenderer`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/fill.Fill`
               - `primitives/css/grow.growClass`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
@@ -28341,6 +28363,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/sortable-list.SortableItem`
               - `primitives/sortable-list.SortableList`
               - `primitives/view-switcher.useActiveViewId`
@@ -28924,6 +28947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/image`
           - `page/place`
           - `page/video`
+          - `primitives/css/row`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
           - `primitives/overlay/image-viewer`
@@ -30246,6 +30270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
+              - `primitives/data-view/view-core`
               - `primitives/overlay/floating-action`
               - `primitives/row-actions`
           - Web:
@@ -30870,7 +30895,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/tree`
-    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
+    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
         - Imported by:
           - `active-data/commit-link`
@@ -30924,6 +30949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-header`
           - `tasks/task-list`
       - Web:
+        - Exports (types): `RelativeTimeFormat`
         - Exports (values):
           - `ElapsedTime`
           - `formatElapsed`

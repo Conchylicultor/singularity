@@ -1,14 +1,26 @@
 import { useEffect, useState } from "react";
 
-export function formatRelativeTime(date: Date): string {
+/**
+ * How a relative time is spelled:
+ * - `"ago"` (default) — "just now", "11m ago", "3h ago", "2d ago".
+ * - `"short"` — "now", "11m", "3h", "2d": the dense-list spelling, for a
+ *   trailing column where "ago" is implied by the position.
+ */
+export type RelativeTimeFormat = "ago" | "short";
+
+export function formatRelativeTime(
+  date: Date,
+  format: RelativeTimeFormat = "ago",
+): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return format === "short" ? "now" : "just now";
+  const suffix = format === "short" ? "" : " ago";
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes}m${suffix}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}h${suffix}`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days}d${suffix}`;
 }
 
 function useAutoUpdate(date: Date) {
@@ -24,9 +36,16 @@ function useAutoUpdate(date: Date) {
   }, [date]);
 }
 
-export function RelativeTime({ date, className }: { date: Date; className?: string }) {
+export function RelativeTime({
+  date,
+  className,
+  format,
+}: {
+  date: Date;
+  className?: string;
+  /** Spelling of the time; defaults to `"ago"`. See {@link RelativeTimeFormat}. */
+  format?: RelativeTimeFormat;
+}) {
   useAutoUpdate(date);
-  return (
-    <span className={className}>{formatRelativeTime(date)}</span>
-  );
+  return <span className={className}>{formatRelativeTime(date, format)}</span>;
 }

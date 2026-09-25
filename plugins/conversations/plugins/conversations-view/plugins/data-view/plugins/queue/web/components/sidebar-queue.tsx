@@ -4,7 +4,10 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
 import { queueFields } from "./queue-fields";
-import { QueueItemActions, CloseConversationContext } from "./queue-item-actions";
+import {
+  QueueItemActions,
+  CloseConversationContext,
+} from "./queue-item-actions";
 
 /**
  * The Queue source of the merged conversation-sidebar DataView: the priority
@@ -35,13 +38,18 @@ export function QueueSource({
         onRowActivate: (r) => onNavigate(r.id),
         viewOptions: {
           list: {
-            renderRow: (c: QueueRow) => <ConversationItem conv={c} layout="block" />,
+            renderRow: (c: QueueRow) => (
+              <ConversationItem conv={c} layout="line" />
+            ),
+            size: "sm",
           },
         },
         itemActions: QueueItemActions,
         aggregate: {
           getKey: (r) =>
-            r.section === "pinned" || r.section === "queued" || r.section === "working"
+            r.section === "pinned" ||
+            r.section === "queued" ||
+            r.section === "working"
               ? r.taskId
               : null,
           pickRepresentative: (m) =>
@@ -53,7 +61,11 @@ export function QueueSource({
           onMove: (id, dest) => {
             if (!dest.targetId || !dest.zone) return;
             if (dest.targetId === id) return;
-            dispatchReorder({ conversationId: id, targetId: dest.targetId, zone: dest.zone });
+            dispatchReorder({
+              conversationId: id,
+              targetId: dest.targetId,
+              zone: dest.zone,
+            });
           },
           // No `onReseat` on purpose. `pinned` and `queued` are the two
           // draggable sections and they share one rank space, but which of the

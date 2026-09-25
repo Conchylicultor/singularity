@@ -16,6 +16,9 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import type { RelativeTimeFormat } from "@plugins/primitives/plugins/relative-time/web";
 import { Item } from "../slots";
 
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
@@ -66,7 +69,15 @@ export type ConversationItemConv = {
 
 export type ConversationItemProps = {
   conv: ConversationItemConv;
-  layout?: "block" | "inline";
+  /**
+   * - `block` (default): avatar, title row, then a chips + "11m ago" row.
+   * - `inline`: one flow line `[avatar] [title] [sys] [chips]`, no time — the chip
+   *   shape used mid-sentence.
+   * - `line`: one line-container row `[●] [title] [sys] [chips] [11m]` — the
+   *   dense list shape (agent-manager sidebar). The status dot sits in a fixed
+   *   icon-sized lead box so every title starts on the same column.
+   */
+  layout?: "block" | "inline" | "line";
 };
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
@@ -114,12 +125,26 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   );
 }
 
-export function ConvRelativeTime({ conv }: { conv: ConversationItemConv }) {
+export function ConvRelativeTime({
+  conv,
+  format,
+  className,
+}: {
+  conv: ConversationItemConv;
+  /** Relative-time spelling: `"ago"` (default, "11m ago") or `"short"` ("11m"). */
+  format?: RelativeTimeFormat;
+  className?: string;
+}) {
   const isSystem = conv.kind === "system";
   return (
-    <span className="text-3xs tabular-nums text-muted-foreground/60">
+    <span
+      className={cn(
+        "text-3xs tabular-nums text-muted-foreground/60",
+        className,
+      )}
+    >
       {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ` : null}
-      <RelativeTime date={conv.createdAt} />
+      <RelativeTime date={conv.createdAt} format={format} />
     </span>
   );
 }
@@ -129,6 +154,34 @@ export function ConversationItem({
   layout = "block",
 }: ConversationItemProps) {
   const active = conv.status === "working";
+  if (layout === "line") {
+    // rigid lead | flexible title | chips + rigid time. The ONE Fill holds the
+    // title so it is what truncates; the lead box and the time are rigid, the
+    // sys badge and chips never shrink below their own content.
+    return (
+      // `h-lh`: the row is exactly one text line tall. The chips (a badge, the
+      // pie) centre on that line and may bleed into the row's padding, so a row
+      // carrying one is as tall as a row without — the list's height estimate.
+      <Line className={cn("h-lh w-full gap-sm", active && "opacity-60")}>
+        {/* Icon-sized lead box: the dot is centred in the same column an icon
+            would occupy, so titles line up whatever the dot's own size. */}
+        <Center className={cn("icon-auto", rigidClass())}>
+          <ConvStatusDot conv={conv} />
+        </Center>
+        <Fill>
+          <ConvTitle conv={conv} />
+        </Fill>
+        {/* Chips hug their content (a flex item never shrinks below it), so
+            no wrapper — an empty wrapper would still take a gap. */}
+        <ConvSysBadge conv={conv} />
+        {/* xs chips: the compact text step, matching the short time beside them. */}
+        <ControlSizeProvider size="xs">
+          <ChipsSlot conv={conv} />
+        </ControlSizeProvider>
+        <ConvRelativeTime conv={conv} format="short" className={rigidClass()} />
+      </Line>
+    );
+  }
   if (layout === "inline") {
     return (
       <Inline gap="xs" className={cn("max-w-full", active && "opacity-60")}>

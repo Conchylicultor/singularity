@@ -86,8 +86,9 @@ export function HistorySource({
         viewOptions: {
           list: {
             renderRow: (c: Conversation) => (
-              <ConversationItem conv={c} layout="block" />
+              <ConversationItem conv={c} layout="line" />
             ),
+            size: "sm",
           },
         },
         itemActions: HistoryItemActions,

@@ -141,3 +141,47 @@ describe("hosted toolbar — options trigger", () => {
     expect(screen.getByPlaceholderText("Search agents")).toBeTruthy();
   });
 });
+
+/** Two authored views, settled — enough for the shell to build a switcher. */
+function readyModel(): ViewModel {
+  const inst = (id: string) => ({
+    instance: { id, name: id, type: "list" },
+    viewType: { icon: () => null },
+  });
+  return {
+    ready: true,
+    instances: [inst("Queue"), inst("History")],
+    activeId: "Queue",
+    setActiveView: () => {},
+    actions: { availableSources: [] },
+  } as unknown as ViewModel;
+}
+
+function renderSwitcherChip(toolbar: HostedToolbar) {
+  return render(
+    <PluginProvider plugins={[plugin]}>
+      <DataViewShellFrame
+        storageKey={STORAGE_KEY}
+        viewModel={readyModel()}
+        toolbar={toolbar}
+      >
+        {(_active, chrome) => <div>{chrome.switcher.chip}</div>}
+      </DataViewShellFrame>
+    </PluginProvider>,
+  );
+}
+
+describe("hosted toolbar — switcher form", () => {
+  it("builds the chip form when the frame names no form", () => {
+    renderSwitcherChip(hosted);
+    const trigger = screen.getByRole("button", { name: "View: Queue" });
+    expect(trigger.className).toContain("rounded-full");
+  });
+
+  it("builds the row form when the frame asks for it", () => {
+    renderSwitcherChip({ ...hosted, forms: { switcher: "row" } });
+    const trigger = screen.getByRole("button", { name: "View: Queue" });
+    expect(trigger.className).toContain("w-full");
+    expect(trigger.className).not.toContain("rounded-full");
+  });
+});

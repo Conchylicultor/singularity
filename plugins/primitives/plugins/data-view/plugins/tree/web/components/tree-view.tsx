@@ -705,6 +705,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           sections={grouped.sections}
           collapsedSections={props.collapsedSections}
           setSectionCollapsed={props.setSectionCollapsed}
+          headerStyle={props.groupHeaders}
           headerActions={(section) =>
             renderSectionExpandAll(
               grouped.rowsBySectionKey.get(section.key)!,

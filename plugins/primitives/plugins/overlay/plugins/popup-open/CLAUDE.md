@@ -58,6 +58,7 @@ edges). Same precedent as `overlay-boundary`.
   - Imported by:
     - `primitives/adaptive-bar`
     - `primitives/css/ui-kit`
+    - `primitives/data-view/view-core`
     - `primitives/overlay/floating-action`
     - `primitives/row-actions`
 - Web:

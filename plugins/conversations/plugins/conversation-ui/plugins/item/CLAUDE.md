@@ -6,16 +6,21 @@ Surfaces wrap their own button/link around it. For the chip case that wrapper
 already exists — the sibling `chip` plugin — so reach for `ConversationChip`
 before hand-rolling a seventh clickable pill.
 
-`<ConversationItem conv layout? active?>` ships two layouts:
+`<ConversationItem conv layout? active?>` ships three layouts:
 
 - `layout="block"` (default) — `[●] [title] [sys]` with a relative-time
   meta line below (`spawnedBy · time` for system conversations). Used by
-  the sidebar conversations list and the Attempts section in task detail.
+  the Attempts section in task detail.
 - `layout="inline"` — single line `[●] [title] [sys]`, no time. Used by
   the inline `conv-<id>` chip rendered inside assistant text.
+- `layout="line"` — one line-container row `[●] [title] [sys] [chips] [11m]`:
+  the status dot (no avatar) in an icon-sized lead box so titles share a
+  column, the title as the one `Fill` that truncates, the `Item.Chips`, then
+  the short relative time. Used by the agent-manager sidebar's Queue and
+  History sources.
 
-The atoms (`ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `ConvRelativeTime`)
-plus the `CONV_STATUS_DOT` constant are exported alongside so surfaces with
+The atoms (`ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `ConvRelativeTime` — which
+takes `format="ago" | "short"`) plus the `CONV_STATUS_DOT` constant are exported alongside so surfaces with
 bespoke layouts can compose directly. (For relative-time formatting, import
 `formatRelativeTime` from `@plugins/primitives/plugins/relative-time/web`
 directly — it is no longer re-exported here.)
@@ -32,10 +37,12 @@ directly — it is no longer re-exported here.)
   - Uses:
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`

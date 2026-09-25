@@ -394,6 +394,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       sections={sections}
       collapsedSections={props.collapsedSections}
       setSectionCollapsed={props.setSectionCollapsed}
+      headerStyle={props.groupHeaders}
     >
       {(section) =>
         renderGrid(

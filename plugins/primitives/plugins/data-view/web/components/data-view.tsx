@@ -9,6 +9,7 @@ import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
   type DataViewDensity,
+  type DataViewGroupHeaders,
   type DataViewId,
   type DataViewProps,
   type DataViewToolbarSpec,
@@ -71,6 +72,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       actions={props.actions}
       creators={props.creators}
       density={props.density}
+      groupHeaders={props.groupHeaders}
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       pinnedView={props.pinnedView}
@@ -105,6 +107,7 @@ export function DataViewShellFrame(props: {
   actions?: ReactNode;
   creators?: CreateOption[];
   density?: DataViewDensity;
+  groupHeaders?: DataViewGroupHeaders;
   toolbar?: DataViewToolbarSpec;
   searchPlaceholder?: string;
   /** Present → this host shows one named instance and paints no switcher. */
@@ -125,6 +128,7 @@ export function DataViewShellFrame(props: {
     actions,
     creators,
     density,
+    groupHeaders,
     toolbar,
     searchPlaceholder,
     pinnedView,
@@ -170,6 +174,7 @@ export function DataViewShellFrame(props: {
           switcher={null}
           creators={hostedCreators(creators)}
           body={content}
+          stickyRef={toolbarRef}
         />
       </Stack>
     ) : (
@@ -242,12 +247,20 @@ export function DataViewShellFrame(props: {
       ? { strip: null, chip: null }
       : {
           strip: <EditableViewSwitcher {...switcherInputs} />,
-          chip: <CollapsedViewSwitcher {...switcherInputs} />,
+          chip: (
+            <CollapsedViewSwitcher
+              {...switcherInputs}
+              // Only a hosted frame picks the switcher's form; a band
+              // arrangement places today's chip.
+              appearance={hosted ? (toolbar.forms?.switcher ?? "chip") : "chip"}
+            />
+          ),
         },
     switcherCount: pinned ? 1 : instances.length,
     title,
     actions,
     density,
+    groupHeaders,
     toolbar,
     searchPlaceholder,
     stickyRef: toolbarRef,

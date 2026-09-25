@@ -381,6 +381,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           // The surface's own declaration, straight off the chrome (the ONE
           // place both hosts set it) — the view child decides what to tighten.
           density: chrome.density,
+          groupHeaders: chrome.groupHeaders,
         };
 
         // The ONE context every toolbar control and settings contribution reads —
@@ -466,6 +467,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
               switcher={chrome.switcherCount > 1 ? chrome.switcher.chip : null}
               creators={hostedCreators(creators)}
               body={body}
+              stickyRef={chrome.stickyRef}
             />
           );
         }

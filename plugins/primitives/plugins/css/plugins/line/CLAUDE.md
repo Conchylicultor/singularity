@@ -69,6 +69,7 @@ attribute type carries.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view`
     - `debug/broadcasts`
     - `debug/memory`
     - `debug/profiling`

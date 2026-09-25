@@ -87,6 +87,7 @@ vi.mock("@plugins/primitives/plugins/data-view/web", async () => {
         switcher: null,
         creators: null,
         body,
+        stickyRef: () => {},
       });
     },
   };

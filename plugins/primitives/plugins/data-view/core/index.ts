@@ -9,6 +9,7 @@ export type {
   ToolbarPartForms,
   HostedToolbar,
   HostedToolbarParts,
+  HostedToolbarForms,
   DataViewToolbarSpec,
 } from "./internal/toolbar-arrangement";
 export { isHostedToolbar } from "./internal/toolbar-arrangement";
@@ -62,6 +63,7 @@ export type {
   DataViewProps,
   DataViewSurfaceChrome,
   DataViewDensity,
+  DataViewGroupHeaders,
   TableCellProps,
   CellEditorProps,
   FilterValueInputProps,

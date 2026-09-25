@@ -185,10 +185,14 @@ contributions each surface passes in, and per-entry plugin id
     - `config_v2/fields.FieldRenderer`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
@@ -204,6 +208,7 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/view-switcher.useActiveViewId`

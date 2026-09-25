@@ -5,6 +5,10 @@ import {
   CollapsibleChevron,
   useCollapsibleContext,
 } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  hoverRevealClass,
+  useHoverReveal,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { Row } from "./row";
 
 /**
@@ -33,6 +37,27 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
   title: "text-body font-semibold",
   value: "text-caption font-medium text-muted-foreground",
 };
+
+/**
+ * Where the disclosure chevron sits, and when it shows.
+ *
+ * - **`lead`** (default) — before the label, always visible: the classic
+ *   collapsible header, whose chevron column every title in a stack aligns on.
+ * - **`trailing`** — right after the label run, and only while the row is
+ *   hovered or its control has keyboard focus — the chevron is decoration,
+ *   the row itself is the control. For a QUIET
+ *   header whose label should start flush on the rows' own column: a group
+ *   header that reads "Queue 6", with the fold affordance appearing where the
+ *   pointer already is. `aria-expanded` and the click target are unchanged —
+ *   only where the ink sits, and when, differs.
+ *
+ * The reveal is the `hover-reveal` primitive's per-instance state
+ * (`useHoverReveal`), not a Tailwind group: `Row` already publishes
+ * `group/row-actions` for its action cluster, and a chevron keyed off that
+ * group would borrow a name another primitive owns. Headers are few (one per
+ * section), so the per-row state costs nothing measurable.
+ */
+export type SectionHeaderDisclosure = "lead" | "trailing";
 
 /**
  * The passthrough ({@link Passthrough}) is handed straight to `Row`, which
@@ -65,6 +90,8 @@ export interface SectionHeaderRowProps extends Passthrough {
    * column across a stack that mixes both kinds.
    */
   collapsible?: boolean;
+  /** Chevron placement — see {@link SectionHeaderDisclosure}. Default `"lead"`. */
+  disclosure?: SectionHeaderDisclosure;
   className?: string;
   children: React.ReactNode;
 }
@@ -87,6 +114,7 @@ export function SectionHeaderRow({
   variant = "eyebrow",
   actions,
   collapsible = true,
+  disclosure = "lead",
   className,
   children,
   ...rest
@@ -94,6 +122,11 @@ export function SectionHeaderRow({
   const ctx = useCollapsibleContext();
   const open = openProp ?? ctx?.open ?? false;
   const onClick = onClickProp ?? ctx?.toggle;
+  const trailing = disclosure === "trailing";
+  // Called unconditionally (hooks), but only WIRED on the trailing path: a lead
+  // chevron is always visible, so its row carries no reveal handlers at all and
+  // renders exactly the node it always has.
+  const reveal = useHoverReveal();
 
   if (!collapsible) {
     // No `onClick` ⇒ `Row` renders a non-interactive <div>, so the `actions`
@@ -107,13 +140,72 @@ export function SectionHeaderRow({
         // `invisible` (which also takes it out of the a11y tree) means the
         // spacer IS the thing it reserves space for — it cannot drift from the
         // chevron's size the way a hand-measured spacer box would.
-        icon={<CollapsibleChevron className="invisible" />}
+        //
+        // A trailing disclosure has no lead column to keep, so a static header
+        // in that mode reserves nothing: its label starts where a collapsible
+        // trailing header's does.
+        icon={
+          trailing ? undefined : <CollapsibleChevron className="invisible" />
+        }
         actionsAlwaysVisible
         actions={actions}
         className={cn(VARIANT_CLASS[variant], className)}
         {...rest}
       >
         {children}
+      </Row>
+    );
+  }
+
+  if (trailing) {
+    // The reveal handlers ride the passthrough, which `Row` routes by
+    // destination: pointer enter/leave land on the row BOX (so hovering any of
+    // it reveals), focus/blur on the CONTROL (so Tab reaching the header does).
+    // Each is composed with a caller's own handler rather than replacing it.
+    const { groupProps } = reveal;
+    // A caller's own handlers for the four keys, read by NAME off the
+    // passthrough (inspecting the bag, not diverting it — the whole bag is
+    // still spread onto `Row` below, and the composed handler written after
+    // it is the one that lands).
+    type Handler = ((e: React.SyntheticEvent<HTMLElement>) => void) | undefined;
+    const caller = {
+      onPointerEnter: rest.onPointerEnter as Handler,
+      onPointerLeave: rest.onPointerLeave as Handler,
+      onFocus: rest.onFocus as Handler,
+      onBlur: rest.onBlur as Handler,
+    };
+    return (
+      <Row
+        aria-expanded={open}
+        aria-controls={ctx?.contentId}
+        onClick={onClick}
+        actionsAlwaysVisible
+        hover="muted"
+        actions={actions}
+        className={cn(VARIANT_CLASS[variant], className)}
+        {...rest}
+        onPointerEnter={(e: React.PointerEvent<HTMLElement>) => {
+          groupProps.onPointerEnter();
+          caller.onPointerEnter?.(e);
+        }}
+        onPointerLeave={(e: React.PointerEvent<HTMLElement>) => {
+          groupProps.onPointerLeave();
+          caller.onPointerLeave?.(e);
+        }}
+        onFocus={(e) => {
+          groupProps.onFocus(e);
+          caller.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          groupProps.onBlur(e);
+          caller.onBlur?.(e);
+        }}
+      >
+        {children}
+        <CollapsibleChevron
+          open={open}
+          className={hoverRevealClass(reveal.revealed)}
+        />
       </Row>
     );
   }
