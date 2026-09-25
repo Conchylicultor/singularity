@@ -97,7 +97,7 @@ else
 fi
 
 # ── Claude Code, signed in ──────────────────────────────────────────────────
-# The same lookup order as CLAUDE in plugins/infra/plugins/paths/server/internal/bins.ts
+# The same lookup order as resolveClaudeBin() in plugins/infra/plugins/paths/server/internal/bins.ts
 # (doctor.test.ts keeps the candidate paths in step).
 claude_bin="${SINGULARITY_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}"
 if [ -z "$claude_bin" ]; then

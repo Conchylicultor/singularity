@@ -1,6 +1,7 @@
 import { recordReport } from "@plugins/reports/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createConversation as createConversationEndpoint } from "../../core/endpoints";
+import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { createConversation, TranscriptCutError } from "./lifecycle";
 
 export const handleCreate = implement(
@@ -25,6 +26,9 @@ export const handleCreate = implement(
       // transcript, …). Expected, and nothing was written — a 409, not a report.
       if (err instanceof TranscriptCutError)
         throw new HttpError(409, err.message);
+      // Claude Code missing or signed out: the machine's state, already shown
+      // by the health report — a 409 carrying the fix, not a crash report.
+      if (err instanceof ClaudeCodeUnavailableError) throw err;
       const message = err instanceof Error ? err.message : String(err);
       console.error("[conversations] createConversation failed", err);
       // Caught errors don't reach the unhandledRejection hook, so feed them to

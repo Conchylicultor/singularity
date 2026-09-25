@@ -1,6 +1,10 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
-import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
+import {
+  ClaudeCodeUnavailableError,
+  noteClaudeCodeFailure,
+  requireClaudeBin,
+} from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   cliFlagFor,
@@ -102,7 +106,7 @@ export async function runClaudePrint(
     // `cwd: "/tmp"` so claude doesn't auto-discover project CLAUDE.md files even
     // with --system-prompt set (defensive — the system prompt replacement should
     // already cover this).
-    const result = await spawnCaptured([CLAUDE_BIN, ...args], {
+    const result = await spawnCaptured([requireClaudeBin(), ...args], {
       cwd: "/tmp",
       env: claudeEnv,
       stdin: input.prompt,
@@ -118,6 +122,9 @@ export async function runClaudePrint(
       );
     }
     if (result.exitCode !== 0) {
+      // A refusal can be Claude Code itself (signed out since the last check),
+      // so the status the app shows is re-checked against this evidence.
+      noteClaudeCodeFailure();
       const detail =
         result.stderr.trim() || result.stdout.trim() || "<no output>";
       throw new ClaudeCliError(
@@ -131,7 +138,10 @@ export async function runClaudePrint(
     throw err;
   } finally {
     const durationMs = Math.round(performance.now() - startedAt);
-    if (caughtError) {
+    // A missing CLI is not a crash of this caller: it is the machine's state,
+    // and the Claude Code health row already shows it with the fix. Reporting
+    // it here would file one report per background title/summary call.
+    if (caughtError && !(caughtError instanceof ClaudeCodeUnavailableError)) {
       reportServerError({
         message: `[claude-cli] ${input.source.name}: ${caughtError.message}`,
         stack: caughtError.stack,

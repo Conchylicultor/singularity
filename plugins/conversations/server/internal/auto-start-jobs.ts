@@ -26,6 +26,7 @@ import {
   prepareConversation,
   type PreparedConversation,
 } from "./lifecycle";
+import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 
 // The transactional heart of an auto-launch: claim the marker and commit the
 // launch on ONE transaction. Returns whether this call launched.
@@ -210,6 +211,17 @@ export const maybeLaunchTaskJob = defineJob({
     }
     // Some other dep is still blocking; another trigger will fire later.
     if (await hasBlockingDep(taskId, db)) return;
+    // Claude Code missing or signed out: leave the task armed rather than
+    // throw (graphile would retry into a dead letter). When Claude Code turns
+    // ready, `onClaudeCodeReady` re-runs the armed-task reconcile, which wakes
+    // this job again.
+    const claude = await checkClaudeCode();
+    if (claude.kind !== "ready") {
+      console.warn(
+        `[tasks.maybe-launch] task ${taskId} stays armed: Claude Code is ${claude.kind}`,
+      );
+      return;
+    }
 
     // `launchTaskNow` reads the marker again for its model: one indexed read,
     // and it keeps `not-armed` launchTaskNow's own answer rather than an

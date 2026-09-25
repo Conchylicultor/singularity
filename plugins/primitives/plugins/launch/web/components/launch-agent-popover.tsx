@@ -24,6 +24,7 @@ import {
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
 import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
+import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 
 /**
  * An on/off choice the caller adds to the form. The form draws it and hands
@@ -118,6 +119,9 @@ export function LaunchAgentForm({
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
   const openPane = useOpenPane();
+  // Claude Code missing or signed out: say so, with the fix, where the Launch
+  // button is — rather than filing a launch that cannot run.
+  const claudeBlock = useClaudeCodeLaunchBlock();
 
   const submit = async () => {
     const req = await getRequest(text, toggleValues);
@@ -189,13 +193,18 @@ export function LaunchAgentForm({
           }
         />
       ))}
+      {claudeBlock !== null ? (
+        <Text as="div" variant="caption" tone="destructive">
+          {claudeBlock}
+        </Text>
+      ) : null}
       <Line>
         {/* The empty flexible cell: the button sits flush right in its own
             track rather than floating over the toggles above it. */}
         <Fill />
         {/* `submit` returns a promise, so the button pends and locks itself for
             the whole round trip with no wiring of our own. */}
-        <Button disabled={disabled} onClick={submit}>
+        <Button disabled={disabled || claudeBlock !== null} onClick={submit}>
           Launch
         </Button>
       </Line>

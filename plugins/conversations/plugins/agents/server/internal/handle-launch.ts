@@ -8,6 +8,7 @@ import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provi
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
+import { assertClaudeCodeReady } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 
 function formatLaunchTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -28,6 +29,8 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
   if (!agent.prompt) {
     throw new HttpError(400, "Agent has no prompt (folder node)");
   }
+  // Before the launch's task is filed, so a refusal leaves nothing behind.
+  await assertClaudeCodeReady();
 
   // A model choice (family or pinned version); the spawn resolves it.
   const model = body.model ?? agent.model ?? DEFAULT_MODEL_CHOICE;

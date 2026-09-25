@@ -141,10 +141,12 @@ describe("doctor.sh", () => {
       ),
       "utf8",
     );
-    const claudeBlock = bins.slice(bins.indexOf("export const CLAUDE"));
+    const claudeBlock = bins.slice(
+      bins.indexOf("export const CLAUDE_CANDIDATES"),
+    );
     const candidates = [
       ...claudeBlock
-        .slice(0, claudeBlock.indexOf("]);"))
+        .slice(0, claudeBlock.indexOf("];"))
         .matchAll(/[`"]([^`"]*\/claude)[`"]/g),
     ].map(([, p]) => p!.replace(/^\$\{[^}]*\}/, "$HOME"));
     expect(candidates.length).toBeGreaterThan(0);

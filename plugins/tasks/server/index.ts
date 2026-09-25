@@ -15,7 +15,11 @@ import {
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleDepsMove } from "./internal/handle-deps-move";
 import { handleRepoInfo } from "./internal/handle-repo-info";
-import { autoStartReconcileWarmup } from "./internal/auto-start-reconcile";
+import {
+  autoStartReconcileWarmup,
+  startRelaunchOnClaudeReady,
+  stopRelaunchOnClaudeReady,
+} from "./internal/auto-start-reconcile";
 import { addTaskTool } from "./internal/mcp-tools";
 import {
   listTasks,
@@ -55,6 +59,12 @@ export default {
     [getRepoInfo.route]: handleRepoInfo,
   },
   register: [addTaskTool, autoStartReconcileWarmup],
+  onReady: () => {
+    startRelaunchOnClaudeReady();
+  },
+  onShutdown: () => {
+    stopRelaunchOnClaudeReady();
+  },
   // The `pushes` ledger used to be filled from here, by a `tasks.push-ingest`
   // job hung off the `git.refAdvanced` trigger plus a host-scoped boot warm-up.
   // Both are gone: the ledger is a projection of `main` owned by `tasks-core`,

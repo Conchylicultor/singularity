@@ -47,6 +47,7 @@ started" notification confirms it), so its props are the form's minus
     - `conversations/model-provider.useDefaultModel`
     - `conversations/model-provider.useSetDefaultModel`
     - `conversations/model-provider.useVisibleModels`
+    - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/fill.Fill`
     - `primitives/css/fill.fillClasses`

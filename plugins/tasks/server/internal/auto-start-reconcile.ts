@@ -1,6 +1,8 @@
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
+import { onClaudeCodeReady } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 
 // Wake the launcher once for every armed task at boot.
 //
@@ -35,3 +37,22 @@ export const autoStartReconcileWarmup = defineWarmup({
   scope: "host",
   run: () => reconcileArmedTasks(),
 });
+
+// Armed tasks the queue left armed because Claude Code was missing or signed
+// out (maybeLaunchTaskJob returns rather than retrying into a dead letter) are
+// woken the moment it turns ready — the same catch-up as the boot reconcile.
+// Main only, like the warm-up above.
+let unsubscribe: (() => void) | undefined;
+
+export function startRelaunchOnClaudeReady(): void {
+  unsubscribe ??= onClaudeCodeReady(() => {
+    if (!isMain()) return;
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- enqueues durable jobs; the status transition that fired it must not wait on them
+    void reconcileArmedTasks();
+  });
+}
+
+export function stopRelaunchOnClaudeReady(): void {
+  unsubscribe?.();
+  unsubscribe = undefined;
+}

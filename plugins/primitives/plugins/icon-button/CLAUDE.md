@@ -127,6 +127,7 @@ icon+count button it stands in for — carries a per-site
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `fields/enum/column-config`
+    - `infra/claude-cli/availability`
     - `infra/events-test`
     - `page/editor`
     - `page/formatting/color`

@@ -204,7 +204,7 @@ may be a real command (`/compact`).
   - Uses:
     - `conversations.Runtime`
     - `conversations/model-provider.resolveCliFlag`
-    - `infra/paths.CLAUDE`
+    - `infra/claude-cli/availability.requireClaudeBin`
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `infra/paths.PS`
     - `infra/paths.TMUX`

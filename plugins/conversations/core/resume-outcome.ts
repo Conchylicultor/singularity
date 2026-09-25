@@ -9,10 +9,14 @@ import { z } from "zod";
  *   a repairable condition, never a reason to consider the conversation over.
  * - `no-session` — no Claude session id was ever persisted, so there is no
  *   transcript for `claude --resume` to reattach to.
+ * - `claude-code-unavailable` — Claude Code is not installed or not signed in
+ *   on this machine, so no session can run. Repairable from a terminal; the
+ *   message carries the command.
  */
 export const ResumeBlockedReasonSchema = z.enum([
   "worktree-missing",
   "no-session",
+  "claude-code-unavailable",
 ]);
 export type ResumeBlockedReason = z.infer<typeof ResumeBlockedReasonSchema>;
 

@@ -113,6 +113,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
     - `infra/attachments.Attachments`
+    - `infra/claude-cli/availability.assertClaudeCodeReady`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/query-resource.compileEdges`

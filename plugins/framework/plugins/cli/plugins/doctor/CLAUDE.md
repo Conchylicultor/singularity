@@ -17,7 +17,7 @@ What it checks: not root; Xcode command-line tools (macOS) and a working git;
 mise installed and active in the shell (`MISE_SHELL` set, or its shims on PATH —
 tool install dirs on PATH do not count, since `mise run` adds them itself); the
 locked toolchain installed (`mise install --dry-run-code`, tools named by
-`mise ls --missing`); Claude Code installed (same lookup as `CLAUDE` in
+`mise ls --missing`); Claude Code installed (same lookup as `resolveClaudeBin()` in
 `infra/paths/server/internal/bins.ts`, kept in step by `doctor.test.ts`) and
 signed in (`claude auth status --json`).
 
@@ -25,6 +25,11 @@ It asks only "is it there". Which release — floors, holds, something shadowing
 mise — is `toolchain:resolved`'s job (`plugins/toolchain`). The tool list is
 mise's, read from `mise.toml` + `mise.lock`, so adding a tool there needs no
 change here.
+
+The running app asks the Claude Code half again on its own — sign-outs and
+uninstalls happen between builds — through `infra/claude-cli/plugins/availability`
+(the health report's Claude Code row, and a refusal with the fix before any
+launch).
 
 Git hooks are not checked: mise's `setup` task sets `core.hooksPath` on every
 `mise install`.

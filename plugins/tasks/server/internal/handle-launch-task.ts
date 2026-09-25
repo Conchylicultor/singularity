@@ -3,6 +3,7 @@ import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { resolveLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { launchTaskNow } from "@plugins/conversations/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { assertClaudeCodeReady } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { launchTask } from "../../core/endpoints";
 
 // File a task with its launch options, and start it now — the operation the
@@ -27,6 +28,10 @@ export const handleLaunchTask = implement(launchTask, async ({ body }) => {
   // Before any task exists, so an unknown id or a bad value leaves nothing
   // half-filed behind.
   const resolved = resolveLaunchOptions(body.options, "launch");
+  // Likewise a machine that cannot run the agent: refused before the task is
+  // filed, or its marker would launch it by itself the moment Claude Code
+  // became ready — long after the user was told it failed.
+  await assertClaudeCodeReady();
 
   let taskId: string;
   if ("id" in body.task) {

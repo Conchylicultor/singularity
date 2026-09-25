@@ -9,7 +9,8 @@ import {
   resolveEffortSettings,
   type EffortLevel,
 } from "@plugins/conversations/plugins/effort-provider/core";
-import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
+import { TMUX } from "@plugins/infra/plugins/paths/server";
+import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
@@ -509,6 +510,11 @@ export const tmuxRuntime: ConversationRuntime = {
     // retry would loop forever on the duplicate error.
     if (await this.isRunning(conversationId)) return;
 
+    // Looked up now, and a missing CLI throws HERE (ClaudeCodeUnavailableError)
+    // rather than starting a pane whose shell prints `command not found` and
+    // dies — tmux itself would report success.
+    const claudeBin = requireClaudeBin();
+
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
     // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the
@@ -545,7 +551,8 @@ export const tmuxRuntime: ConversationRuntime = {
       ? resolveEffortSettings(opts.effort)
       : undefined;
     const claudeBase = [
-      CLAUDE,
+      // Single-quoted: the path is spliced into the pane's shell command.
+      `'${claudeBin.replaceAll("'", `'\\''`)}'`,
       cliFlag && `--model ${cliFlag}`,
       effortFlag && `--effort ${effortFlag}`,
       // JSON contains no single quotes, so single-quote wrapping is shell-safe.

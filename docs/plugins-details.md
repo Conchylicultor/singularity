@@ -8828,6 +8828,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database.isTransientDbError`
       - `database/fork.databaseForkJob`
       - `infra/attachments.getAttachment`
+      - `infra/claude-cli/availability.assertClaudeCodeReady`
+      - `infra/claude-cli/availability.checkClaudeCode`
+      - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/events.defineTriggerEvent`
@@ -9134,6 +9137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/derived-views.View`
           - `database/sql-column.parsedText`
           - `infra/attachments.Attachments`
+          - `infra/claude-cli/availability.assertClaudeCodeReady`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/query-resource.compileEdges`
@@ -12272,7 +12276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.Runtime`
           - `conversations/model-provider.resolveCliFlag`
-          - `infra/paths.CLAUDE`
+          - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/paths.CLAUDE_SESSIONS_DIR`
           - `infra/paths.PS`
           - `infra/paths.TMUX`
@@ -17945,7 +17949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
@@ -18235,11 +18239,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.db`
           - `database/admin.ExcludeFromFork`
+          - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
+          - `infra/claude-cli/availability.noteClaudeCodeFailure`
+          - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
-          - `infra/paths.CLAUDE`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports (types): `RunClaudePrintInput`
         - Exports (values):
@@ -18291,6 +18297,61 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
           - `tasks/task-title`
+      - Plugins:
+        - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`.
+          - Web:
+            - Contributes:
+              - `Core.Root` → `RecheckOnReturn`
+              - `HealthReport.Row` "Claude Code" → `ClaudeCodeDetail`
+            - Uses:
+              - `infra/endpoints.fetchEndpoint`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.useResource`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepCommand`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
+              - `shell/health-report.HealthReport`
+            - Exports (values):
+              - `useClaudeCodeLaunchBlock`
+              - `useClaudeCodeStatus`
+          - Server:
+            - Contributes: `resource.declare` "claude-code-status"
+            - Uses:
+              - `infra/endpoints.implement`
+              - `infra/paths.resolveClaudeBin`
+            - Exports (values):
+              - `assertClaudeCodeReady`
+              - `checkClaudeCode`
+              - `ClaudeCodeUnavailableError`
+              - `noteClaudeCodeFailure`
+              - `onClaudeCodeReady`
+              - `requireClaudeBin`
+            - Resources: `claude-code-status` (push)
+            - Routes: `POST /api/claude-code/recheck`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `ClaudeCodeBlock`
+              - `ClaudeCodeStatus`
+            - Exports (values):
+              - `CLAUDE_CODE_FIX`
+              - `claudeCodeBlockMessage`
+              - `claudeCodeFixCommands`
+              - `claudeCodeProblem`
+              - `claudeCodeStatusResource`
+              - `ClaudeCodeStatusSchema`
+              - `recheckClaudeCode`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations`
+              - `conversations/agents`
+              - `conversations/runtime-tmux`
+              - `infra/claude-cli`
+              - `primitives/launch`
+              - `tasks`
     - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
       - Server:
         - Uses:
@@ -18490,6 +18551,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/attachments`
           - `infra/boot-snapshot`
           - `infra/claude-cli`
+          - `infra/claude-cli/availability`
           - `infra/events`
           - `infra/events-test`
           - `infra/health`
@@ -19714,7 +19776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/cli/test`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
-          - `infra/claude-cli`
+          - `infra/claude-cli/availability`
           - `infra/git/git-watcher`
           - `infra/jobs/supervised-job`
           - `infra/launcher`
@@ -19736,6 +19798,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Exports (types):
           - `AppIdentity`
+          - `ClaudeBinLookup`
           - `DataDir`
           - `DataDirArea`
           - `DataDirInput`
@@ -19752,7 +19815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `checkoutNamespace`
           - `checkoutRef`
           - `checkoutWorktreeName`
-          - `CLAUDE`
+          - `CLAUDE_CANDIDATES`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
@@ -19778,6 +19841,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `releaseIdentity`
           - `REPO_ROOT`
           - `repoConfigDir`
+          - `resolveClaudeBin`
           - `RUN_ARTIFACTS_RETENTION`
           - `RUN_TERMINAL_SUFFIX`
           - `RUN_TRANSCRIPT_SUFFIX`
@@ -29014,6 +29078,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `fields/enum/column-config`
+          - `infra/claude-cli/availability`
           - `infra/events-test`
           - `page/editor`
           - `page/formatting/color`
@@ -29213,6 +29278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider.useDefaultModel`
           - `conversations/model-provider.useSetDefaultModel`
           - `conversations/model-provider.useVisibleModels`
+          - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
@@ -29490,6 +29556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/web-core`
           - `infra/boot-snapshot`
           - `infra/claude-cli`
+          - `infra/claude-cli/availability`
           - `infra/events`
           - `infra/health`
           - `infra/jobs`
@@ -31169,6 +31236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth/apple-signing/setup-wizard`
           - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
+          - `infra/claude-cli/availability`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
         - Slots: `Shortcuts.Shortcut` ← `apps-core.surface.floating`, `apps-core.surface.solo`, `reorder.edit-mode`
@@ -33283,7 +33351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
-        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.health`, `tasks.worktree-identity`
+        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.claude-cli.availability`, `infra.health`, `tasks.worktree-identity`
         - Uses:
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -33321,6 +33389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/query-deadline`
           - `debug/queue-health`
           - `debug/sentinel`
+          - `infra/claude-cli/availability`
           - `infra/health`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`
@@ -33754,6 +33823,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations.maybeLaunchTaskJob`
       - `database.db`
       - `infra/attachments.getAttachment`
+      - `infra/claude-cli/availability.assertClaudeCodeReady`
+      - `infra/claude-cli/availability.onClaudeCodeReady`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/mcp.Mcp`

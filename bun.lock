@@ -3186,6 +3186,10 @@
       "name": "@singularity/plugin-infra-claude-cli",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/claude-cli/plugins/availability": {
+      "name": "@singularity/plugin-infra-claude-cli-availability",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/corpus-index": {
       "name": "@singularity/plugin-infra-corpus-index",
       "version": "0.0.1",
@@ -7420,6 +7424,8 @@
     "@singularity/plugin-infra-boot-snapshot": ["@singularity/plugin-infra-boot-snapshot@workspace:plugins/infra/plugins/boot-snapshot"],
 
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
+
+    "@singularity/plugin-infra-claude-cli-availability": ["@singularity/plugin-infra-claude-cli-availability@workspace:plugins/infra/plugins/claude-cli/plugins/availability"],
 
     "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
 

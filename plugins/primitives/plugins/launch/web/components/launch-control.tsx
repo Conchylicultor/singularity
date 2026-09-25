@@ -33,6 +33,7 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 
 export type LaunchRequest = {
   prompt?: string;
@@ -204,8 +205,13 @@ export function LaunchControl({
     onLaunched,
   });
   const defaultModel = useDefaultModel();
+  // Claude Code missing or signed out: no agent can start, so the control says
+  // why (and how to fix it) instead of launching one that dies.
+  const claudeBlock = useClaudeCodeLaunchBlock();
+  const off = disabled || claudeBlock !== null;
+  const launchTitle = claudeBlock ?? `Launch ${choiceLabel(defaultModel)}`;
 
-  const busy = disabled || launching !== null;
+  const busy = off || launching !== null;
   const btnVariant = variant;
   const blue =
     variant === "default"
@@ -223,7 +229,7 @@ export function LaunchControl({
           aspect="icon"
           disabled={busy}
           aria-label={`Launch ${choiceLabel(defaultModel)}`}
-          title={`Launch ${choiceLabel(defaultModel)}`}
+          title={launchTitle}
           onClick={() => launch(defaultModel)}
         >
           <MdPlayArrow className={choiceIconSize(defaultModel)} />
@@ -234,7 +240,7 @@ export function LaunchControl({
               <Button
                 variant="ghost"
                 aspect="icon"
-                disabled={disabled}
+                disabled={off}
                 aria-label="Choose model"
                 className="px-none"
               />
@@ -255,7 +261,7 @@ export function LaunchControl({
           render={
             <Button
               variant={btnVariant}
-              disabled={disabled}
+              disabled={off}
               // eslint-disable-next-line layout/no-adhoc-layout -- flexible dropdown button absorbing slack inside the (raw) ButtonGroup row and spreading its own label↔chevron; no primitive composes onto the shadcn Button's internal flex
               className={cn(
                 "gap-xs",
@@ -275,7 +281,7 @@ export function LaunchControl({
         variant={btnVariant}
         disabled={busy}
         aria-label={`Launch ${choiceLabel(defaultModel)}`}
-        title={`Launch ${choiceLabel(defaultModel)}`}
+        title={launchTitle}
         onClick={() => launch(defaultModel)}
         className={cn(
           "px-sm",

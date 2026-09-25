@@ -343,7 +343,7 @@ run everywhere.
     - `framework/cli/test`
     - `framework/tooling/checks`
     - `framework/tooling/guards`
-    - `infra/claude-cli`
+    - `infra/claude-cli/availability`
     - `infra/git/git-watcher`
     - `infra/jobs/supervised-job`
     - `infra/launcher`
@@ -365,6 +365,7 @@ run everywhere.
 - Server:
   - Exports (types):
     - `AppIdentity`
+    - `ClaudeBinLookup`
     - `DataDir`
     - `DataDirArea`
     - `DataDirInput`
@@ -381,7 +382,7 @@ run everywhere.
     - `checkoutNamespace`
     - `checkoutRef`
     - `checkoutWorktreeName`
-    - `CLAUDE`
+    - `CLAUDE_CANDIDATES`
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
@@ -407,6 +408,7 @@ run everywhere.
     - `releaseIdentity`
     - `REPO_ROOT`
     - `repoConfigDir`
+    - `resolveClaudeBin`
     - `RUN_ARTIFACTS_RETENTION`
     - `RUN_TERMINAL_SUFFIX`
     - `RUN_TRANSCRIPT_SUFFIX`

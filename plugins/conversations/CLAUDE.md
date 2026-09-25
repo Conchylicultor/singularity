@@ -49,6 +49,9 @@
     - `database.isTransientDbError`
     - `database/fork.databaseForkJob`
     - `infra/attachments.getAttachment`
+    - `infra/claude-cli/availability.assertClaudeCodeReady`
+    - `infra/claude-cli/availability.checkClaudeCode`
+    - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`

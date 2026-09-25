@@ -24,6 +24,8 @@
     - `conversations.maybeLaunchTaskJob`
     - `database.db`
     - `infra/attachments.getAttachment`
+    - `infra/claude-cli/availability.assertClaudeCodeReady`
+    - `infra/claude-cli/availability.onClaudeCodeReady`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/mcp.Mcp`

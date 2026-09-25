@@ -6,6 +6,7 @@ import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
+import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { Runtime } from "./runtime";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
@@ -86,6 +87,21 @@ export const spawnConversationJob = defineJob({
       }
       await Runtime.get(runtimeId).create(conversationId, worktreePath, create);
     } catch (err) {
+      // Claude Code went missing between the launch's check and this spawn.
+      // Retrying cannot help until the user installs it, so say that — with
+      // the fix — and stop. The row stays `starting`, and the poller's
+      // starting timeout moves it to `gone`, from where Resume works once
+      // Claude Code is back.
+      if (err instanceof ClaudeCodeUnavailableError) {
+        await recordNotification({
+          type: "conversation",
+          title: "Claude Code is not available",
+          description: `${conversationId}: ${err.message}`,
+          variant: "error",
+          dedupeKey: `spawn-error:${conversationId}`,
+        });
+        return;
+      }
       const message = err instanceof Error ? err.message : String(err);
       await recordNotification({
         type: "conversation",

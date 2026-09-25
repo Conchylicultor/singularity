@@ -18,6 +18,11 @@ import {
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { Runtime } from "./runtime";
 import {
+  assertClaudeCodeReady,
+  checkClaudeCode,
+} from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { claudeCodeBlockMessage } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import {
   DEFAULT_MODEL_CHOICE,
   resolveModel,
   type ConversationModel,
@@ -150,6 +155,10 @@ export async function prepareConversation(
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
   // Resolve now so an unknown runtime throws before anything is written.
   Runtime.get(runtimeId);
+  // An agent that cannot run is refused here, with the fix, before a task,
+  // attempt or job exists — not started as a pane that dies on `command not
+  // found` or sits at a login prompt (ClaudeCodeUnavailableError).
+  await assertClaudeCodeReady();
 
   // When forking, inherit the source's attempt (same worktree) and claude
   // session id; let the caller still override `model` so the +Sonnet/+Opus
@@ -484,9 +493,10 @@ export class ResumeBlockedError extends Error {
 }
 
 // Everything that must be true before a conversation can be handed to
-// `claude --resume`. Pure and side-effect free ON PURPOSE: a refusal has to
-// leave the conversation byte-for-byte as it was, so this runs before the stale
-// pane is killed and before any status is written.
+// `claude --resume`. Side-effect free ON PURPOSE (it reads, and at most asks
+// Claude Code again whether it is signed in): a refusal has to leave the
+// conversation byte-for-byte as it was, so this runs before the stale pane is
+// killed and before any status is written.
 //
 // The worktree check is the load-bearing one. A conversation's checkout can be
 // reclaimed underneath it while its branch and transcript survive, and
@@ -494,7 +504,9 @@ export class ResumeBlockedError extends Error {
 // silently starts the pane in $HOME. Unchecked, resuming such a conversation
 // boots the agent in the user's home directory with a transcript full of
 // repo-relative paths, and the only symptom is a trust prompt for `~`.
-function preflightResume(row: Conversation): { kind: "ok" } | ResumeBlocked {
+async function preflightResume(
+  row: Conversation,
+): Promise<{ kind: "ok" } | ResumeBlocked> {
   if (!row.claudeSessionId) {
     return {
       kind: "blocked",
@@ -513,6 +525,16 @@ function preflightResume(row: Conversation): { kind: "ok" } | ResumeBlocked {
         `\`git worktree add ${row.worktreePath} ${branch}\` to bring the conversation back.`,
     };
   }
+  // Last: the only check that may start a process (a re-probe when the last
+  // answer is not a recent `ready`).
+  const claude = await checkClaudeCode();
+  if (claude.kind !== "ready") {
+    return {
+      kind: "blocked",
+      reason: "claude-code-unavailable",
+      message: claudeCodeBlockMessage(claude),
+    };
+  }
   return { kind: "ok" };
 }
 
@@ -525,7 +547,7 @@ function preflightResume(row: Conversation): { kind: "ok" } | ResumeBlocked {
 // every statement below is destructive (kills the pane, rewrites status), so the
 // check must sit at the mutation, not one frame above it.
 async function respawnResume(row: Conversation): Promise<void> {
-  const preflight = preflightResume(row);
+  const preflight = await preflightResume(row);
   if (preflight.kind === "blocked") {
     throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
@@ -557,7 +579,7 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   // the conversation exactly where the user left it. (`respawnResume` asserts
   // the same invariant; this call is what turns it into a clean 409 with an
   // actionable message rather than a generic failure.)
-  const preflight = preflightResume(row);
+  const preflight = await preflightResume(row);
   if (preflight.kind === "blocked") {
     throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
@@ -587,7 +609,7 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   if (!row) throw new Error(`Conversation ${id} not found`);
   if (!row.hibernatedAt) return { kind: "not-hibernated" };
 
-  const preflight = preflightResume(row);
+  const preflight = await preflightResume(row);
   if (preflight.kind === "blocked") return preflight;
 
   await respawnResume(row);
@@ -661,7 +683,7 @@ export async function rewindConversationAt(
   const row = await getConversation(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
 
-  const preflight = preflightResume(row);
+  const preflight = await preflightResume(row);
   if (preflight.kind === "blocked") {
     return { ok: false, reason: preflight.reason, message: preflight.message };
   }
