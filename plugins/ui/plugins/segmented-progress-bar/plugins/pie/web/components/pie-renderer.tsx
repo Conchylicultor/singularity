@@ -1,9 +1,12 @@
 import { useId } from "react";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
+import {
+  ProgressStepsTooltip,
+  progressStepLabel,
+} from "@plugins/ui/plugins/segmented-progress-bar/web";
 
 // The circle is drawn in a 16-unit box centred on (8, 8), radius 8.
 const C = 8;
@@ -33,29 +36,30 @@ const FILL = {
  *
  * `compact` is the list-row form: a bare 12px pie. Otherwise it is the header
  * form: a 16px pie in a round, icon-button-sized target that greys on hover.
- * Both name the current step in a tooltip.
+ * Both show every step in a tooltip.
  */
 export function PieRenderer({
   steps,
   activeStep,
+  summary,
   compact = false,
 }: SegmentedProgressBarProps) {
-  const n = steps.length;
   const current = steps.findIndex((s) => s.id === activeStep);
-  const label = `${steps[current]?.label ?? activeStep} · step ${current + 1} of ${n}`;
+  const label = progressStepLabel({ steps, activeStep });
+  const tooltip = { steps, activeStep, summary };
   const pie = <Pie steps={steps} current={current} compact={compact} />;
 
   if (compact) {
     return (
-      <WithTooltip content={label}>
+      <ProgressStepsTooltip {...tooltip}>
         <span role="img" aria-label={label} className={rigidClass()}>
           {pie}
         </span>
-      </WithTooltip>
+      </ProgressStepsTooltip>
     );
   }
   return (
-    <WithTooltip content={label} side="bottom">
+    <ProgressStepsTooltip {...tooltip} side="bottom">
       <Center
         as="span"
         role="img"
@@ -68,7 +72,7 @@ export function PieRenderer({
       >
         {pie}
       </Center>
-    </WithTooltip>
+    </ProgressStepsTooltip>
   );
 }
 

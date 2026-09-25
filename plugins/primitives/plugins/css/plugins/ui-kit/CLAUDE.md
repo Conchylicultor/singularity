@@ -799,8 +799,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `tasks/task-status`
     - `ui/breadcrumb-separator/chevron`
     - `ui/breadcrumb-separator/slash`
+    - `ui/segmented-progress-bar`
     - `ui/segmented-progress-bar/pie`
-    - `ui/segmented-progress-bar/segmented`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`
     - `ui/sidebar-framing/inset`

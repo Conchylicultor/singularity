@@ -4,7 +4,7 @@ import { PieRenderer } from "./components/pie-renderer";
 
 export default {
   description:
-    "Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover names the current step.",
+    "Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover lists every step.",
   contributions: [
     SegmentedProgressBarSlots.Variant({
       id: "pie",

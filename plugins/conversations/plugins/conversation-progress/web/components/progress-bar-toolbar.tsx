@@ -2,10 +2,8 @@ import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { PHASE_ORDER, PHASE_LABELS } from "../../shared/schemas";
+import { PHASE_STEPS, PROGRESS_SUMMARY } from "../../shared/schemas";
 import { useProgressFor } from "../internal/use-progress";
-
-const STEPS = PHASE_ORDER.map((p) => ({ id: p, label: PHASE_LABELS[p] }));
 
 export function ProgressBarToolbar() {
   const { convId } = conversationPane.useParams();
@@ -19,7 +17,11 @@ export function ProgressBarToolbar() {
   if (!progress) return null;
   return (
     <Inline gap="none">
-      <SegmentedProgressBar steps={STEPS} activeStep={progress.phase} />
+      <SegmentedProgressBar
+        steps={PHASE_STEPS}
+        activeStep={progress.phase}
+        summary={PROGRESS_SUMMARY}
+      />
     </Inline>
   );
 }

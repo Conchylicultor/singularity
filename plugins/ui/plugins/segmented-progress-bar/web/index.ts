@@ -7,6 +7,10 @@ import { SegmentedProgressBar } from "./slots";
 import { VariantPicker } from "./components/variant-picker";
 
 export { SegmentedProgressBar } from "./components/segmented-progress-bar";
+export {
+  ProgressStepsTooltip,
+  progressStepLabel,
+} from "./components/progress-steps-tooltip";
 export { SegmentedProgressBar as SegmentedProgressBarSlots } from "./slots";
 export type { SegmentedProgressBarVariantContribution } from "./slots";
 export type { SegmentedProgressBarProps, Step } from "../core";

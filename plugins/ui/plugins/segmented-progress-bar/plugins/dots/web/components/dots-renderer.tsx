@@ -1,11 +1,12 @@
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
+import { ProgressStepsTooltip } from "@plugins/ui/plugins/segmented-progress-bar/web";
 
 export function DotsRenderer({
   steps,
   activeStep,
+  summary,
   compact = false,
 }: SegmentedProgressBarProps) {
   const currentIndex = steps.findIndex((s) => s.id === activeStep);
@@ -22,36 +23,38 @@ export function DotsRenderer({
     return { step, i, dotClass };
   });
 
+  const tooltip = { steps, activeStep, summary };
+
   if (compact) {
     return (
-      <Inline gap="2xs">
-        {dots.map(({ step, dotClass }) => (
-          <WithTooltip key={step.id} content={step.label}>
-            <span className={dotClass} />
-          </WithTooltip>
-        ))}
-      </Inline>
+      <ProgressStepsTooltip {...tooltip}>
+        <Inline gap="2xs">
+          {dots.map(({ step, dotClass }) => (
+            <span key={step.id} className={dotClass} />
+          ))}
+        </Inline>
+      </ProgressStepsTooltip>
     );
   }
 
   const activeLabel = steps[currentIndex]?.label ?? activeStep;
 
   return (
-    <Inline gap="xs">
-      {dots.map(({ step, i, dotClass }) => (
-        <Inline key={step.id} gap="xs">
-          <WithTooltip content={step.label}>
+    <ProgressStepsTooltip {...tooltip}>
+      <Inline gap="xs">
+        {dots.map(({ step, i, dotClass }) => (
+          <Inline key={step.id} gap="xs">
             <span className={dotClass} />
-          </WithTooltip>
-          {i < steps.length - 1 && (
-            <span className="h-px w-3 bg-muted-foreground/30" />
-          )}
-        </Inline>
-      ))}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label offset after the dot row; inline sibling, no flex parent to own it */}
-      <Text variant="caption" className="ml-0.5 text-muted-foreground">
-        {activeLabel}
-      </Text>
-    </Inline>
+            {i < steps.length - 1 && (
+              <span className="h-px w-3 bg-muted-foreground/30" />
+            )}
+          </Inline>
+        ))}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label offset after the dot row; inline sibling, no flex parent to own it */}
+        <Text variant="caption" className="ml-0.5 text-muted-foreground">
+          {activeLabel}
+        </Text>
+      </Inline>
+    </ProgressStepsTooltip>
   );
 }

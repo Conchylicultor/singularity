@@ -25263,6 +25263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot`
               - `stats/cost`
               - `stats/responsiveness`
+              - `ui/segmented-progress-bar`
               - `ui/segmented-progress-bar/segmented`
               - `ui/theme-engine/theme-customizer`
               - `ui/theme-engine/theme-gallery`
@@ -27499,8 +27500,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
+              - `ui/segmented-progress-bar`
               - `ui/segmented-progress-bar/pie`
-              - `ui/segmented-progress-bar/segmented`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
               - `ui/sidebar-framing/inset`
@@ -30397,8 +30398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/launch-options`
               - `tasks/task-description`
               - `tasks/task-draft-form`
-              - `ui/segmented-progress-bar/dots`
-              - `ui/segmented-progress-bar/pie`
+              - `ui/segmented-progress-bar`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.chord.trainer`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.canvas`, `apps.prototypes.gallery`, `apps.prototypes.present`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.foundations`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
@@ -35145,8 +35145,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
+          - `primitives/css/grid.Grid`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/overlay/tooltip.WithTooltip`
+          - `primitives/overlay/tooltip.WithTooltipProps`
           - `primitives/slot-render.renderIsolated`
           - `ui/theme-engine.ThemeEngine`
         - Exports (types):
@@ -35154,6 +35158,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SegmentedProgressBarVariantContribution`
           - `Step`
         - Exports (values):
+          - `progressStepLabel`
+          - `ProgressStepsTooltip`
           - `SegmentedProgressBar`
           - `SegmentedProgressBarSlots`
       - Server:
@@ -35180,25 +35186,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/inline.Inline`
               - `primitives/css/text.Text`
-              - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/segmented-progress-bar.ProgressStepsTooltip`
               - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
-        - **`pie`** — Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover names the current step.
+        - **`pie`** — Pie progress: a small circle cut into one wedge per step, filled clockwise from the top in accent shades; hover lists every step.
           - Web:
             - Contributes: `SegmentedProgressBarSlots.Variant` "Pie" → `PieRenderer`
             - Uses:
               - `primitives/css/center.Center`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
-              - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/segmented-progress-bar.progressStepLabel`
+              - `ui/segmented-progress-bar.ProgressStepsTooltip`
               - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
           - Web:
             - Contributes: `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
             - Uses:
               - `primitives/css/grid.Grid`
-              - `primitives/css/ui-kit.Tooltip`
-              - `primitives/css/ui-kit.TooltipContent`
-              - `primitives/css/ui-kit.TooltipTrigger`
+              - `ui/segmented-progress-bar.ProgressStepsTooltip`
               - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
     - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
       - Web:

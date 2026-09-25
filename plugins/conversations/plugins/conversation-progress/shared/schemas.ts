@@ -18,6 +18,25 @@ export const PHASE_LABELS: Record<ConversationPhase, string> = {
   pushed: "Pushed",
 };
 
+// One line per phase, for someone seeing the progress bar for the first time —
+// each restates the rule the heuristic job classifies by.
+export const PHASE_DESCRIPTIONS: Record<ConversationPhase, string> = {
+  research: "Reading and exploring — no files changed yet.",
+  design: "Writing a plan — only files under research/ changed.",
+  implementation: "Changing code in its worktree.",
+  pushed: "Its work is merged into main.",
+};
+
+/** The steps of the progress bar, in order, with their tooltip copy. */
+export const PHASE_STEPS = PHASE_ORDER.map((p) => ({
+  id: p,
+  label: PHASE_LABELS[p],
+  description: PHASE_DESCRIPTIONS[p],
+}));
+
+/** What the progress bar tracks — the steps tooltip's subtitle. */
+export const PROGRESS_SUMMARY = "How far this agent has got with its task";
+
 // The two enums the progress row is made of, each written once: these ARE the
 // decoders of the `phase` / `source` columns (the fields of the shape below,
 // which server/internal/tables.ts builds the table from) and the wire schema's
