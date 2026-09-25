@@ -7,7 +7,7 @@ import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 /**
  * Mist, the agent manager's look (prototype proto-1789643584-ldt6): cool,
  * lifted slate surfaces, a teal accent, and no colour beyond what the theme
- * has a slot for — selection and hover are neutral greys, never a teal wash.
+ * has a slot for — selection, hover and focus are neutral greys, never a teal wash.
  *
  * The surface ramp, darkest first: the page (`background`), the sidebar and
  * cards one step up, then the quiet fill every hover, chip, pill and selected
@@ -29,6 +29,8 @@ const DARK = {
   // One hairline for every border; the prompt field's outline one step firmer.
   border: "oklch(0.33 0.018 244 / 0.45)",
   input: "oklch(0.35 0.02 244 / 0.7)",
+  // Focus is grey, never teal: the prompt field and every control ring in it.
+  ring: "oklch(0.66 0.014 238)",
 };
 
 /** A readable light inversion: Mist is designed dark, but a theme resolves in both modes. */
@@ -44,6 +46,7 @@ const LIGHT = {
   tealInk: "oklch(0.99 0 0)",
   border: "oklch(0.25 0.02 244 / 0.1)",
   input: "oklch(0.25 0.02 244 / 0.2)",
+  ring: "oklch(0.48 0.014 240)",
 };
 
 const colorPalette = colorPaletteGroup.fragment({
@@ -74,7 +77,7 @@ const colorPalette = colorPaletteGroup.fragment({
     infoForeground: "oklch(0.2 0.03 244)",
     border: DARK.border,
     input: DARK.input,
-    ring: DARK.teal,
+    ring: DARK.ring,
   },
   light: {
     background: LIGHT.page,
@@ -102,7 +105,7 @@ const colorPalette = colorPaletteGroup.fragment({
     infoForeground: "oklch(0.99 0 0)",
     border: LIGHT.border,
     input: LIGHT.input,
-    ring: LIGHT.teal,
+    ring: LIGHT.ring,
   },
 });
 
@@ -119,7 +122,7 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
     sidebarBorder: DARK.border,
     sidebarAccent: DARK.fill,
     sidebarAccentForeground: DARK.text,
-    sidebarRing: DARK.teal,
+    sidebarRing: DARK.ring,
   },
   light: {
     sidebar: LIGHT.panel,
@@ -129,7 +132,7 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
     sidebarBorder: LIGHT.border,
     sidebarAccent: LIGHT.fill,
     sidebarAccentForeground: LIGHT.text,
-    sidebarRing: LIGHT.teal,
+    sidebarRing: LIGHT.ring,
   },
 });
 
