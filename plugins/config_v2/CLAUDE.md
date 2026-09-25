@@ -81,7 +81,7 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
 
 **User overrides:** UI `setConfig` or manual edits create `~/.singularity/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash.
 
-**Conflict detection:** When git config changes, the propagated origin hash updates. A stale user override hash triggers `console.warn` on server start. (UI notification not yet wired.)
+**Conflict detection:** When git config changes, the propagated origin hash updates, and a user override still carrying the old hash becomes a **conflict**: the new git value takes effect, and the settings UI surfaces the conflict (Keep / Accept / Merge) — see [Conflict precedence](#conflict-precedence-origin-wins-until-reconciled). A user override therefore never silently masks a committed change; it only wins while the git value it was written against is unchanged.
 
 ### App scopes: per-app config in git
 
@@ -104,7 +104,7 @@ This is the base-override workflow (Layer 1) one path segment deeper. Any regist
 - **Read.** `useConfig` decides whether to read the scoped key purely from membership in the live `configV2ScopesResource` (`config-v2.scopes`, keyed by `{ path }`), recomputed from `scopeHasOwnConfig` on every scoped-file change — so a scope counts whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. While the list loads it falls back to the global value, never `descriptor.defaults`. `useScopeForked` remains a read hook for the theme "Customize for app" toggle but does **not** gate `useConfig`.
 - **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope with **no own config yet** auto-snapshots the current base into that scope's origin (the same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. A write when no **base** origin exists at all still throws "run ./singularity build".
 
-**Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` recomputed each build, so its non-overridden fields track the git base as of the last build, not a runtime base edit. A runtime user fork layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global.
+**Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` recomputed each build, so its non-overridden fields track the git base as of the last build, not a runtime base edit. A runtime user fork layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global. The fork wins only while its hash matches: committing (or changing) the scope rewrites the scope's origin under a runtime fork, so the fork goes stale — the committed value takes effect and the user sees a conflict, exactly as for a base override.
 
 **Per-app scopes in settings:** the config detail pane is scope-aware — a **Base** tab plus one tab per customized app (live from `configV2ScopesResource`); selecting a tab re-keys every read and write to that `scopeId`. **`+` App** forks a new per-descriptor customization (`fork-descriptor-scope`); **Stop customizing** (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin.
 

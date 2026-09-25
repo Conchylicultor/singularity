@@ -1,0 +1,6 @@
+// @hash 3b71fc14a37d
+{
+  // Mist (proto-1789643584-ldt6) draws the sidebar and the main area edge to
+  // edge. Committed per app so it holds even if the base default changes.
+  "variant": "flush"
+}
