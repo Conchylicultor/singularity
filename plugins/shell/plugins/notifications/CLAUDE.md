@@ -10,31 +10,36 @@
   - Uses:
     - `apps-core/tabs.navigate`
     - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
+    - `primitives/cursor-pagination.InfiniteScrollFooter`
+    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useWindowResource`
+    - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
   - Exports (types): `ToastArgs`
-  - Exports (values):
-    - `notificationsResource`
-    - `toast`
+  - Exports (values): `toast`
 - Server:
   - Contributes:
     - `resource.declare` "notifications"
+    - `resource.declare` "notifications:rows"
+    - `resource.declare` "notifications:groups"
     - `fork-data-exclusion` "notifications"
   - Uses:
     - `database.db`
@@ -44,17 +49,19 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
-    - `infra/query-resource.windowQueryResource`
+    - `network/live.serveCollection`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports (types): `RecordNotificationInput`
   - Exports (values):
     - `_notifications`
-    - `notificationsResource`
     - `recordNotification`
     - `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
-  - Resources: `notifications` (keyed, window)
+  - Resources:
+    - `notifications` (keyed, window)
+    - `notifications:groups` (push)
+    - `notifications:rows` (keyed, point)
   - Routes:
     - `POST /api/notifications`
     - `POST /api/notifications/dismiss-all`

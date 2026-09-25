@@ -38,6 +38,8 @@
     - `framework/tooling.RepoFiles`
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
+    - `framework/tooling/resource-vocabulary.isResourceVocabularyOwner`
+    - `framework/tooling/resource-vocabulary.PreloadFlag`
     - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/macrotask-yield.createTimeSlicer`
@@ -71,6 +73,7 @@
     - `plugin-meta/parse-utils.parseBarrelExports`
     - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStaticCallId`
+    - `plugin-meta/parse-utils.parseStringField`
     - `plugin-meta/parse-utils.readIfExists`
     - `plugin-meta/parse-utils.unresolvableCallIdMessage`
     - `plugin-meta/parse-utils.walkFilesAsync`

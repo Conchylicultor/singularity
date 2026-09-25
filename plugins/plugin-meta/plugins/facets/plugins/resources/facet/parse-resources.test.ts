@@ -101,6 +101,7 @@ describe("buildDescriptorIndex", () => {
     expect(index.get("eventSources")).toEqual([
       { key: "events.sources", keyed: true, membership: "window" },
       { key: "events.sources:rows", keyed: true, membership: "point" },
+      { key: "events.sources:groups", keyed: false, membership: null },
     ]);
   });
 
@@ -209,6 +210,7 @@ describe("resolveRegisterCall", () => {
       [
         { key: "sources", keyed: true, membership: "window" },
         { key: "sources:rows", keyed: true, membership: "point" },
+        { key: "sources:groups", keyed: false, membership: null },
       ],
     ],
   ]);
@@ -289,6 +291,8 @@ describe("resolveRegisterCall", () => {
     expect(defs).toEqual([
       { key: "sources", mode: "keyed", membership: "window" },
       { key: "sources:rows", mode: "keyed", membership: "point" },
+      // A grouping is a plain push value: no row identity, no membership.
+      { key: "sources:groups", mode: "push" },
     ]);
   });
 

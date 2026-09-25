@@ -38,12 +38,12 @@ the web renders the add/configure form generically from the same record via the
 `EventSources.Type` slot. **A new source type therefore ships zero form code.**
 
 A type also answers "which page does a configured source of mine stand for?" via
-the optional web-slot `originUrl(config)`, read back through two hooks that
-differ only in what the caller is holding: `useEventSourceOrigin()` takes the
-source ROW and needs nothing but the registry (the Sources list's `open` action),
-while `useSourceOriginUrl()` adds the id→row join against the live sources window
-for a caller holding only a `sourceId` (an event linking back to its origin).
-Either way a surface names no source type. Omit `originUrl` for a type that
+the optional web-slot `originUrl(config)`, read back through
+`useEventSourceOrigin()`. It takes a `SourceRef` (`{ type, config }`) and needs
+nothing but the registry: the Sources list passes its row, and an events list
+passes the ref the server joined onto each event row (`SourcedEvent` — the
+`queryEvents` and `listRunEvents` rows), so no caller ever looks a `sourceId` up
+in the bounded sources window. Either way a surface names no source type. Omit `originUrl` for a type that
 stands for no page (`manual`).
 
 Both gate the answer through `externalUrl` at the mint: a type reads its URL out
@@ -165,12 +165,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useRefreshAllEventSources`
     - `useRefreshEventSourceNow`
     - `useRunEvents`
-    - `useSourceOriginUrl`
     - `useUpdateEventSource`
 - Server:
   - Contributes:
     - `resource.declare` "events.sources"
     - `resource.declare` "events.sources:rows"
+    - `resource.declare` "events.sources:groups"
     - `resource.declare` "events.revision"
     - `resource.declare` "events.runs-revision"
   - Uses:
@@ -217,6 +217,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `events.revision` (push)
     - `events.runs-revision` (push)
     - `events.sources` (keyed, window)
+    - `events.sources:groups` (push)
     - `events.sources:rows` (keyed, point)
   - Routes:
     - `GET /api/events/sources`
@@ -261,6 +262,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RunEvent`
     - `RunEventAction`
     - `RunOutcome`
+    - `SourcedEvent`
+    - `SourceRef`
     - `SourceState`
     - `SourceStatus`
     - `UpdateEventSourceBody`
@@ -302,6 +305,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RunEventSchema`
     - `SOURCE_STATES`
     - `SOURCE_STATUSES`
+    - `SourcedEventSchema`
+    - `SourceRefSchema`
     - `sourceState`
     - `updateEventSource`
     - `UpdateEventSourceBodySchema`

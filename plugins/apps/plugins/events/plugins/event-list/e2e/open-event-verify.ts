@@ -6,8 +6,9 @@
  *
  * The interesting arm is the FALLBACK: an extraction commonly yields no
  * per-event link, so the row must open the page the event was extracted from —
- * resolved generically through `events-core`'s `useSourceOriginUrl()`, whose
- * answer the source type supplies via `originUrl`.
+ * resolved generically through `events-core`'s `useEventSourceOrigin()` from the
+ * source ref the server joins onto each event row, whose answer the source type
+ * supplies via `originUrl`.
  *
  * The expected destination is read from the app's own state (the events query +
  * the sources endpoint), never hard-coded here: the script picks a REAL row,
@@ -90,8 +91,12 @@ await withBrowser(async (h) => {
   );
   r.ok("a destination is resolvable for the target event", expected !== null);
 
-  // Scope to a row by the event's own title: toolbar chips are buttons too.
-  const row = page.locator("button").filter({ hasText: target!.title }).first();
+  // Scope to a row by the event's own title: toolbar chips are buttons too. By
+  // ROLE, not tag: a list row is a <button>, a gallery card a role="button" box.
+  const row = page
+    .getByRole("button")
+    .filter({ hasText: target!.title })
+    .first();
   const haveRow = (await row.count()) > 0;
   r.ok(`the target event's row is rendered ("${target!.title}")`, haveRow);
 

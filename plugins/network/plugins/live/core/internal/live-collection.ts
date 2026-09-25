@@ -1,17 +1,27 @@
+import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import {
+  resourceDescriptor,
+  type ResourceDescriptor,
+} from "@plugins/primitives/plugins/live-state/core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
   type PointQueryResourceContract,
   type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
-import type { LiveScalar } from "./ops";
-import type {
-  LiveDecodedQuery,
-  LiveFilterable,
-  LiveOrderBy,
-  LiveQuery,
-  LiveWindowParams,
+import { LIVE_LIST_MAX, type LiveScalar } from "./ops";
+import {
+  LIVE_GROUP_DEFAULT_LIMIT,
+  type LiveDecodedGroupQuery,
+  type LiveDecodedQuery,
+  type LiveFilterable,
+  type LiveGroup,
+  type LiveGroupParams,
+  type LiveGroupQuery,
+  type LiveOrderBy,
+  type LiveQuery,
+  type LiveWindowParams,
 } from "./query";
 import { createLiveQueryCodec } from "./query-codec";
 
@@ -45,19 +55,64 @@ export type LiveWindowDescriptor<Row, F, S extends string> = Omit<
   window: LiveWindowCodec<F, S>;
 };
 
+/** The groups descriptor's codec: the grouping query ⇄ wire-params pair, plus its bounds. */
+export interface LiveGroupCodec<F> {
+  /** Groups a grouping query returns when it names no `limit`. */
+  defaultLimit: number;
+  /** No grouping query returns more groups than this (`LIVE_LIST_MAX`). */
+  maxLimit: number;
+  /** Canonical encode. Throws on a non-filterable `groupBy`, a bad `where`, a limit above max, or an `orderBy`. */
+  encode: (query: LiveGroupQuery<F>) => LiveGroupParams;
+  /** STRICT decode. Throws unless `params` is exactly a canonical encoding. */
+  decode: (
+    params: Record<string, string>,
+  ) => LiveDecodedGroupQuery<keyof F & string>;
+}
+
+/**
+ * `${key}:groups` — a plain (non-keyed) push value per grouping query. Every
+ * filterable column's values share the wire schema (any scalar or NULL); the
+ * server validates each value against its column's own filterable schema.
+ */
+export type LiveGroupsDescriptor<F> = ResourceDescriptor<
+  LiveGroup<LiveScalar>[],
+  LiveGroupParams
+> & { keyed?: never; groups: LiveGroupCodec<F> };
+
+/**
+ * A collection's row schema: a zod OBJECT, so its keys can be read — the server
+ * projects exactly these keys, which is what keeps a server-only column (a
+ * dedup key, a secret) off the wire.
+ */
+export type LiveRowSchema<Row> = ZodParser<Row> & {
+  readonly shape: { readonly [K in keyof NoInfer<Row>]-?: unknown };
+};
+
+/**
+ * When a collection's default window is loaded: `"none"` (on first mount) or
+ * `"boot"` (hydrated by the boot snapshot before first paint; pins the owning
+ * plugin to the eager tier). Only the window is ever preloaded — the server
+ * cannot know a tab's id sets or grouping queries at boot.
+ */
+export type LivePreload = "none" | "boot";
+
 export interface LiveCollection<Row, F, S extends string> {
   key: string;
   /** `key` — the ordered, filtered, bounded window. */
   window: LiveWindowDescriptor<Row, F, S>;
   /** `${key}:rows` — explicit id sets; answers "does this row exist", ignoring any filter. */
   rows: PointQueryResourceContract<Row>;
+  /** `${key}:groups` — the values a filterable column takes, with counts. */
+  groups: LiveGroupsDescriptor<F>;
   id: keyof Row & string;
+  /** The row schema's keys — exactly the fields the server projects. */
+  rowKeys: readonly (keyof Row & string)[];
   filterable: F;
   sortable: readonly S[];
 }
 
 export interface LiveCollectionSpec<Row, F, S extends string> {
-  row: ZodParser<Row>;
+  row: LiveRowSchema<Row>;
   /** The row field that identifies a row (the point sibling's id set, the window's tiebreaker). */
   id: keyof Row & string;
   filterable: F;
@@ -65,13 +120,16 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   default: { orderBy: LiveOrderBy<S>; limit: number };
   /** Hard cap on any window's limit. There is no unbounded spelling. */
   maxLimit: number;
+  /** Default `"none"`. `"boot"` preloads the DEFAULT WINDOW only (see {@link LivePreload}). */
+  preload?: LivePreload;
 }
 
 /**
- * Declare a live collection: one declaration minting two resources — `key`
- * (window membership: filtered, ordered, limited) and `${key}:rows` (point
- * membership: explicit ids). Bounded by construction: a default limit and a
- * `maxLimit` are required.
+ * Declare a live collection: one declaration minting three resources — `key`
+ * (window membership: filtered, ordered, limited), `${key}:rows` (point
+ * membership: explicit ids) and `${key}:groups` (a filterable column's values
+ * with counts). Bounded by construction: a default limit and a `maxLimit` are
+ * required, and a grouping query is capped at `LIVE_LIST_MAX` groups.
  *
  * `key` stays a positional string literal: the build scanners read it statically.
  */
@@ -105,18 +163,44 @@ export function liveCollection<
   // Built on the existing factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The
   // default window encodes to the same `{ limit }` bytes either way.
+  // Only the window is ever boot-critical: `:rows` and `:groups` have no
+  // default tuple the server could load before a tab names one.
+  const preloadOpts: { bootCritical?: true } =
+    spec.preload === "boot" ? { bootCritical: true } : {};
   const window = Object.assign(
     windowQueryResourceDescriptor(key, spec.row, spec.id, {
       defaultLimit: spec.default.limit,
+      ...preloadOpts,
     }),
     { window: windowCodec, defaultParams: windowCodec.encode() },
   );
   const rows = pointQueryResourceDescriptor(`${key}:rows`, spec.row, spec.id);
+  const groupCodec: LiveGroupCodec<F> = {
+    defaultLimit: LIVE_GROUP_DEFAULT_LIMIT,
+    maxLimit: LIVE_LIST_MAX,
+    encode: codec.encodeGroups,
+    decode: codec.decodeGroups,
+  };
+  const groups = Object.assign(
+    resourceDescriptor<LiveGroup<LiveScalar>[], LiveGroupParams>(
+      `${key}:groups`,
+      z.array(
+        z.object({
+          value: z.union([z.string(), z.number(), z.boolean()]).nullable(),
+          count: z.number().int().nonnegative(),
+        }),
+      ),
+      [],
+    ),
+    { groups: groupCodec },
+  );
   return {
     key,
     window,
     rows,
+    groups,
     id: spec.id,
+    rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
     filterable: spec.filterable,
     sortable: spec.sortable,
   };

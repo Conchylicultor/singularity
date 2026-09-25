@@ -336,6 +336,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `reorder`
     - `reorder/node-types`
     - `reports`
+    - `shell/notifications`
     - `shell/toast`
     - `tasks/auto-start`
     - `tasks/launch-options`

@@ -2043,8 +2043,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "event-list"
               - `Events.Sidebar` "Events"
             - Uses:
+              - `apps/events/events-core.useEventSourceOrigin`
               - `apps/events/events-core.useEventsRevision`
-              - `apps/events/events-core.useSourceOriginUrl`
               - `apps/events/shell.Events`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/badge.Badge`
@@ -2088,7 +2088,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `apps/events/events-core.EVENT_CATEGORIES`
-              - `apps/events/events-core.EventSchema`
+              - `apps/events/events-core.SourcedEventSchema`
               - `infra/endpoints.defineEndpoint`
               - `primitives/data-view.FilterGroupSchema`
             - Exports (types):
@@ -2131,12 +2131,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useRefreshAllEventSources`
               - `useRefreshEventSourceNow`
               - `useRunEvents`
-              - `useSourceOriginUrl`
               - `useUpdateEventSource`
           - Server:
             - Contributes:
               - `resource.declare` "events.sources"
               - `resource.declare` "events.sources:rows"
+              - `resource.declare` "events.sources:groups"
               - `resource.declare` "events.revision"
               - `resource.declare` "events.runs-revision"
             - Uses:
@@ -2183,6 +2183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `events.revision` (push)
               - `events.runs-revision` (push)
               - `events.sources` (keyed, window)
+              - `events.sources:groups` (push)
               - `events.sources:rows` (keyed, point)
             - Routes:
               - `GET /api/events/sources`
@@ -2227,6 +2228,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RunEvent`
               - `RunEventAction`
               - `RunOutcome`
+              - `SourcedEvent`
+              - `SourceRef`
               - `SourceState`
               - `SourceStatus`
               - `UpdateEventSourceBody`
@@ -2268,6 +2271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RunEventSchema`
               - `SOURCE_STATES`
               - `SOURCE_STATUSES`
+              - `SourcedEventSchema`
+              - `SourceRefSchema`
               - `sourceState`
               - `updateEventSource`
               - `UpdateEventSourceBodySchema`
@@ -12561,6 +12566,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/query-resource`
       - `infra/retention`
       - `infra/trash`
+      - `network/live`
       - `page/annotations/agent-access`
       - `page/annotations/agent-notes/authorship`
       - `page/annotations/instructions`
@@ -17424,6 +17430,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/tooling.RepoFiles`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
+              - `framework/tooling/resource-vocabulary.isResourceVocabularyOwner`
+              - `framework/tooling/resource-vocabulary.PreloadFlag`
               - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.createTimeSlicer`
@@ -17457,6 +17465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.parseBarrelExports`
               - `plugin-meta/parse-utils.parseBoolField`
               - `plugin-meta/parse-utils.parseStaticCallId`
+              - `plugin-meta/parse-utils.parseStringField`
               - `plugin-meta/parse-utils.readIfExists`
               - `plugin-meta/parse-utils.unresolvableCallIdMessage`
               - `plugin-meta/parse-utils.walkFilesAsync`
@@ -17703,6 +17712,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder`
               - `reorder/node-types`
               - `reports`
+              - `shell/notifications`
               - `shell/toast`
               - `tasks/auto-start`
               - `tasks/launch-options`
@@ -17856,6 +17866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DescriptorFactoryName`
               - `DescriptorShapeIsWidening`
               - `MintedResource`
+              - `PreloadFlag`
               - `RegisterMarker`
               - `RegisterMarkerName`
               - `ResourceMembership`
@@ -19956,7 +19967,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `primitives/usage-rank`
-          - `shell/notifications`
           - `tasks/auto-start`
           - `tasks/task-category`
           - `tasks/task-effort`
@@ -20742,7 +20752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's filterable/sortable names to a table's columns and compiles its window + `:rows` point resources through windowQueryResource) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
@@ -20759,8 +20769,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useLiveRow`
       - Server:
         - Uses:
+          - `database.db`
           - `infra/query-resource.EntitySource`
           - `infra/query-resource.QueryDb`
+          - `infra/query-resource.SelectMap`
           - `infra/query-resource.WindowOrderKey`
           - `infra/query-resource.windowQueryResource`
           - `infra/query-resource.WindowQueryResourceSpec`
@@ -20780,17 +20792,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.pointQueryResourceDescriptor`
           - `infra/query-resource.WindowQueryResourceContract`
           - `infra/query-resource.windowQueryResourceDescriptor`
+          - `primitives/live-state.resourceDescriptor`
+          - `primitives/live-state.ResourceDescriptor`
         - Exports (types):
           - `LiveClause`
           - `LiveCollection`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
+          - `LiveDecodedGroupQuery`
           - `LiveDecodedQuery`
           - `LiveFilterable`
+          - `LiveGroup`
+          - `LiveGroupCodec`
+          - `LiveGroupParams`
+          - `LiveGroupQuery`
+          - `LiveGroupsDescriptor`
+          - `LiveGroupValue`
           - `LiveOperands`
           - `LiveOpId`
           - `LiveOrderBy`
+          - `LivePreload`
           - `LiveQuery`
+          - `LiveRowSchema`
           - `LiveScalar`
           - `LiveSortDirection`
           - `LiveWhere`
@@ -20808,6 +20831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
+          - `shell/notifications`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -25808,6 +25832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `review/code-review`
               - `search/quick-find`
+              - `shell/notifications`
               - `stats/commits`
         - **`radio-group`** — Native radio-group control: <RadioGroup options value onChange> mints its own HTML `name` per mount (useId) so two groups on one page are structurally two groups, plus the no-adhoc-radio lint rule keeping raw <input type="radio"> out of feature code.
           - Web:
@@ -27665,6 +27690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/mail/search`
           - `primitives/data-view`
+          - `shell/notifications`
       - Core:
         - Exports (types): `CursorPage`
         - Exports (values): `cursorPageSchema`
@@ -29620,7 +29646,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/code-review`
           - `review/plugin-changes`
           - `runs`
-          - `shell/notifications`
           - `stats/responsiveness`
           - `tasks`
           - `tasks/attempt-view`
@@ -29787,6 +29812,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
           - `screenshot`
           - `search/quick-find`
+          - `shell/notifications`
           - `stats/commits`
           - `tasks/attempt-view`
           - `tasks/task-dependencies`
@@ -33453,31 +33479,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps-core/tabs.navigate`
           - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
+          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.cn`
+          - `primitives/cursor-pagination.InfiniteScrollFooter`
+          - `primitives/cursor-pagination.useInfiniteScroll`
           - `primitives/icon-button.IconButton`
-          - `primitives/live-state.useWindowResource`
+          - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
           - `shell/toast.showToast`
         - Exports (types): `ToastArgs`
-        - Exports (values):
-          - `notificationsResource`
-          - `toast`
+        - Exports (values): `toast`
       - Server:
         - Contributes:
           - `resource.declare` "notifications"
+          - `resource.declare` "notifications:rows"
+          - `resource.declare` "notifications:groups"
           - `fork-data-exclusion` "notifications"
         - Uses:
           - `database.db`
@@ -33487,17 +33518,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports (types): `RecordNotificationInput`
         - Exports (values):
           - `_notifications`
-          - `notificationsResource`
           - `recordNotification`
           - `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`
-        - Resources: `notifications` (keyed, window)
+        - Resources:
+          - `notifications` (keyed, window)
+          - `notifications:groups` (push)
+          - `notifications:rows` (keyed, point)
         - Routes:
           - `POST /api/notifications`
           - `POST /api/notifications/dismiss-all`

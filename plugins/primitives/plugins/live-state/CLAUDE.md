@@ -838,7 +838,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `review/code-review`
     - `review/plugin-changes`
     - `runs`
-    - `shell/notifications`
     - `stats/responsiveness`
     - `tasks`
     - `tasks/attempt-view`

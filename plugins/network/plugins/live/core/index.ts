@@ -2,14 +2,23 @@ export { liveCollection } from "./internal/live-collection";
 export type {
   LiveCollection,
   LiveCollectionSpec,
+  LiveGroupCodec,
+  LiveGroupsDescriptor,
+  LivePreload,
+  LiveRowSchema,
   LiveWindowCodec,
   LiveWindowDescriptor,
 } from "./internal/live-collection";
 export type {
   LiveClause,
   LiveColumnFilter,
+  LiveDecodedGroupQuery,
   LiveDecodedQuery,
   LiveFilterable,
+  LiveGroup,
+  LiveGroupParams,
+  LiveGroupQuery,
+  LiveGroupValue,
   LiveOrderBy,
   LiveQuery,
   LiveSortDirection,

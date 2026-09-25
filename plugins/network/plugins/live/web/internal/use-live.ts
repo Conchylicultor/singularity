@@ -7,13 +7,19 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import type {
   LiveCollection,
+  LiveGroup,
+  LiveGroupQuery,
+  LiveGroupValue,
   LiveQuery,
 } from "@plugins/network/plugins/live/core";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
-// (`where` / `orderBy` / `limit`) or an explicit id set — and never picks the
-// wire resource or its params: the window goes to `key`, an id set to the
-// `:rows` point sibling, and the encoding is the declaration's own codec.
+// (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
+// — and never picks the wire resource or its params: the window goes to `key`,
+// a grouping to `:groups`, an id set to the `:rows` point sibling, and the
+// encoding is the declaration's own codec. A grouping is a window over the
+// grouped relation, so it shares the window's result and grow logic; only a
+// read whose result has different STATES (`useLiveRow`) gets its own hook.
 
 /** What a window read adds to its settled arm. */
 export interface LivePaging {
@@ -41,16 +47,68 @@ export type LiveRowResult<Row> =
   | { pending: false; found: true; row: Row }
   | { pending: false; found: false };
 
-type AnyDescriptor<Row> = ResourceDescriptor<Row[], Record<string, string>>;
+type AnyDescriptor = ResourceDescriptor<unknown, Record<string, string>>;
 
 /**
- * Read a live collection.
+ * A growable list query, reduced to what the grow logic needs: the resource,
+ * how to encode it at a given limit, the limit asked for, and the step / cap a
+ * grow moves by. `base` (the query WITHOUT its limit, canonically encoded)
+ * identifies which list a grow belongs to.
+ */
+interface ListShape {
+  descriptor: AnyDescriptor;
+  base: string;
+  encode: (limit: number) => Record<string, string>;
+  askedLimit: number;
+  step: number;
+  maxLimit: number;
+}
+
+function listShape<Row, F, S extends string>(
+  collection: LiveCollection<Row, F, S>,
+  query: LiveQuery<F, S> | LiveGroupQuery<F> | undefined,
+): ListShape {
+  if (query && "groupBy" in query && query.groupBy !== undefined) {
+    const codec = collection.groups.groups;
+    // `groupBy` present ⇒ the group arm (a window query types it `never`).
+    const groupQuery = query as LiveGroupQuery<F>;
+    // The WHOLE query goes to the codec (limit replaced), so a stray `orderBy`
+    // from an untyped caller throws there instead of being dropped here.
+    const encode = (limit: number) => codec.encode({ ...groupQuery, limit });
+    return {
+      descriptor: collection.groups as AnyDescriptor,
+      // `groupBy` rides in `base`, so a grow never outlives a change of column.
+      base: JSON.stringify(["groups", encode(1)]),
+      encode,
+      askedLimit: query.limit ?? codec.defaultLimit,
+      step: codec.defaultLimit,
+      maxLimit: codec.maxLimit,
+    };
+  }
+  const codec = collection.window.window;
+  const { where, orderBy } = (query ?? {}) as LiveQuery<F, S>;
+  return {
+    descriptor: collection.window as AnyDescriptor,
+    base: JSON.stringify(["window", codec.encode({ where, orderBy })]),
+    encode: (limit) => codec.encode({ where, orderBy, limit }),
+    askedLimit: query?.limit ?? codec.defaultLimit,
+    step: codec.defaultLimit,
+    maxLimit: codec.maxLimit,
+  };
+}
+
+/**
+ * Read a live collection. The QUERY's shape picks what is read — a consumer
+ * never names a wire resource or its params.
  *
  * - `useLive(c)` / `useLive(c, { where, orderBy, limit })` — a bounded window.
  *   Its settled arm adds `canGrow` / `growing` / `loadMore()`; while a grown
  *   window loads, the hook STAYS settled on the previous rows (`growing: true`)
  *   — those rows are server-vouched and still subscribed — so `if (pending)`
  *   never flashes a spinner over a list that already rendered.
+ * - `useLive(c, { groupBy, where?, limit? })` — the values a filterable column
+ *   takes (with counts), ordered by count desc then value. The same list result
+ *   as a window: `loadMore()` pages through groups.
  * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
  *   No paging fields: an id set is not a window.
  */
@@ -58,53 +116,54 @@ export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query: LiveIdsQuery,
 ): ResourceResult<Row[]>;
+export function useLive<
+  Row,
+  F,
+  S extends string,
+  const G extends keyof F & string,
+>(
+  collection: LiveCollection<Row, F, S>,
+  query: LiveGroupQuery<F, G>,
+): LiveListResult<LiveGroup<LiveGroupValue<F, G>>>;
 export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query?: LiveQuery<F, S>,
 ): LiveListResult<Row>;
 export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
-  query?: LiveQuery<F, S> | LiveIdsQuery,
-): LiveListResult<Row> | ResourceResult<Row[]> {
-  const codec = collection.window.window;
+  query?: LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery,
+): LiveListResult<unknown> | ResourceResult<Row[]> {
   const ids = query && "ids" in query ? query.ids : undefined;
-  const windowQuery = query && !("ids" in query) ? query : undefined;
-
-  // The query WITHOUT its limit identifies which window a grow belongs to; a
-  // grow is forgotten (back to the asked limit) as soon as the query changes.
-  // Encoded through the codec, so two spellings of one query are one identity.
-  const where = windowQuery?.where;
-  const orderBy = windowQuery?.orderBy;
-  const baseKey = JSON.stringify(
-    ids === undefined ? codec.encode({ where, orderBy }) : null,
+  const shape = listShape(
+    collection,
+    query && "ids" in query ? undefined : query,
   );
-  const askedLimit = windowQuery?.limit ?? codec.defaultLimit;
+
+  // A grow is forgotten (back to the asked limit) as soon as the query changes.
   const [grown, setGrown] = useState<{
     base: string;
     from: number;
     limit: number;
   } | null>(null);
-  const grow = grown?.base === baseKey ? grown : null;
-  const limit = grow?.limit ?? askedLimit;
+  const grow = ids === undefined && grown?.base === shape.base ? grown : null;
+  const limit = grow?.limit ?? shape.askedLimit;
 
   const idsKey =
     ids === undefined ? null : collection.rows.point.encode(ids).ids;
   const paramsKey = JSON.stringify(
-    idsKey !== null ? { ids: idsKey } : codec.encode({ where, orderBy, limit }),
+    idsKey !== null ? { ids: idsKey } : shape.encode(limit),
   );
-  const prevKey = JSON.stringify(
-    grow ? codec.encode({ where, orderBy, limit: grow.from }) : null,
-  );
+  const prevKey = JSON.stringify(grow ? shape.encode(grow.from) : null);
   const params = useMemo(
     () => JSON.parse(paramsKey) as Record<string, string>,
     [paramsKey],
   );
 
-  const descriptor: AnyDescriptor<Row> =
-    idsKey !== null ? collection.rows : collection.window;
+  const descriptor: AnyDescriptor =
+    idsKey !== null ? (collection.rows as AnyDescriptor) : shape.descriptor;
   const current = useResource(descriptor, params);
 
-  // The window a grow started from, kept subscribed ONLY while the grown one is
+  // The list a grow started from, kept subscribed ONLY while the grown one is
   // loading (then this collapses onto `params`, a shared refcount, and the old
   // tuple is released).
   const growing = grow !== null && current.pending && current.error === null;
@@ -114,28 +173,30 @@ export function useLive<Row, F, S extends string>(
   );
   const previous = useResource(descriptor, prevParams);
 
-  if (idsKey !== null) return current;
+  if (idsKey !== null) return current as ResourceResult<Row[]>;
 
   const loadMore = () => {
-    const next = Math.min(limit + codec.defaultLimit, codec.maxLimit);
+    const next = Math.min(limit + shape.step, shape.maxLimit);
     if (next === limit) return;
-    setGrown({ base: baseKey, from: limit, limit: next });
+    setGrown({ base: shape.base, from: limit, limit: next });
   };
 
   if (growing && !previous.pending) {
     return {
       pending: false,
-      data: previous.data,
+      data: previous.data as unknown[],
       refetch: previous.refetch,
       canGrow: false,
       growing: true,
       loadMore,
     };
   }
-  if (current.pending) return current;
+  if (current.pending) return current as LiveListResult<unknown>;
+  const data = current.data as unknown[];
   return {
     ...current,
-    canGrow: current.data.length === limit && limit < codec.maxLimit,
+    data,
+    canGrow: data.length === limit && limit < shape.maxLimit,
     growing: false,
     loadMore,
   };

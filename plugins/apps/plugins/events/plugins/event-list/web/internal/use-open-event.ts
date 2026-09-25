@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import { useSourceOriginUrl } from "@plugins/apps/plugins/events/plugins/events-core/web";
+import { useEventSourceOrigin } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import {
   externalUrl,
-  type EventRecord,
+  type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 /**
@@ -11,24 +11,26 @@ import {
  *
  * The fallback is what makes activation worth wiring at all — an extraction that
  * yields a title and a date but no per-event link is the common case, and the
- * source page is still the answer to "show me this". It is resolved generically
- * through `useSourceOriginUrl`, so this surface names no source type.
+ * source page is still the answer to "show me this". It is resolved from the
+ * source ref the server joins onto every listed event (`SourcedEvent`), through
+ * `useEventSourceOrigin`, so this surface names no source type and reads no
+ * sources window: whatever row it holds, it holds the answer.
  *
  * Only the event's own URL is gated here: it is a model-written value off a
  * scraped page, so it passes `externalUrl` before it can be a destination. The
- * fallback needs no gate — `useSourceOriginUrl` already applies the same one at
+ * fallback needs no gate — `useEventSourceOrigin` already applies the same one at
  * the mint.
  *
  * `null` = this event has no destination (a hand-entered event on a manual
  * source, typically). Kept as a separate resolver from the opener so the row's
  * link chip and the row click agree on the target by construction.
  */
-export function useEventUrl(): (event: EventRecord) => string | null {
-  const originUrl = useSourceOriginUrl();
+export function useEventUrl(): (event: SourcedEvent) => string | null {
+  const originOf = useEventSourceOrigin();
   return useCallback(
-    (event: EventRecord): string | null =>
-      externalUrl(event.url) ?? originUrl(event.sourceId),
-    [originUrl],
+    (event: SourcedEvent): string | null =>
+      externalUrl(event.url) ?? originOf(event.source),
+    [originOf],
   );
 }
 
@@ -36,10 +38,10 @@ export function useEventUrl(): (event: EventRecord) => string | null {
  * Activate an event: open its page in a new tab. A no-op for an event with no
  * destination — there is nothing to fail at, and nothing to say.
  */
-export function useOpenEvent(): (event: EventRecord) => void {
+export function useOpenEvent(): (event: SourcedEvent) => void {
   const eventUrl = useEventUrl();
   return useCallback(
-    (event: EventRecord): void => {
+    (event: SourcedEvent): void => {
       const target = eventUrl(event);
       if (target === null) return;
       window.open(target, "_blank", "noopener,noreferrer");

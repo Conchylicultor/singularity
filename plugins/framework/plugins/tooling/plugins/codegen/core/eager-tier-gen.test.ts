@@ -169,7 +169,25 @@ describe("computeEagerTier", () => {
   });
 });
 
+const NOT_OWNER = { ownerPlugin: false };
+
 describe("bootCriticalKeysIn", () => {
+  test("a vocabulary owner's wrapper call is not a declaration site; the same call elsewhere throws", () => {
+    // `liveCollection` forwarding a caller's `preload: "boot"` to the window
+    // factory it wraps: a literal flag, a computed key.
+    const src = `
+      const window = windowQueryResourceDescriptor(key, spec.row, spec.id, {
+        defaultLimit: spec.default.limit, bootCritical: true,
+      });
+    `;
+    expect(bootCriticalKeysIn(src, "live.ts", { ownerPlugin: true })).toEqual(
+      [],
+    );
+    expect(() => bootCriticalKeysIn(src, "live.ts", NOT_OWNER)).toThrow(
+      /live\.ts:2: windowQueryResourceDescriptor/,
+    );
+  });
+
   test("reads a bootCritical key from every descriptor factory, bounded ones included", () => {
     // `windowQueryResourceDescriptor` is the case this scanner was blind to: it
     // kept its own four-name list and the bounded factories were never added, so
@@ -183,7 +201,39 @@ describe("bootCriticalKeysIn", () => {
       );
       export const quietResource = resourceDescriptor<Q>("quiet", S, null);
     `;
-    expect(bootCriticalKeysIn(src, "a.ts")).toEqual(["tasks", "notifications"]);
+    expect(bootCriticalKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
+      "tasks",
+      "notifications",
+    ]);
+  });
+
+  test("a collection's preload marks its window only, never :rows or :groups", () => {
+    const src = `
+      export const notifications = liveCollection("notifications", {
+        row: S, id: "id", filterable: {}, sortable: ["createdAt"],
+        default: { orderBy: [["createdAt", "desc"]], limit: 200 }, maxLimit: 500,
+        preload: "boot",
+      });
+      export const sources = liveCollection("events.sources", {
+        row: S, id: "id", filterable: {}, sortable: ["name"],
+        default: { orderBy: [["name", "asc"]], limit: 100 }, maxLimit: 500,
+      });
+      export const lazy = liveCollection("lazy", {
+        row: S, id: "id", filterable: {}, sortable: ["name"],
+        default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 1,
+        preload: "none",
+      });
+    `;
+    expect(bootCriticalKeysIn(src, "c.ts", NOT_OWNER)).toEqual([
+      "notifications",
+    ]);
+  });
+
+  test("throws on a collection whose preload is not a literal", () => {
+    const src = `export const c = liveCollection("c", { row: S, id: "id", preload: mode });`;
+    expect(() => bootCriticalKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
+      /c\.ts:1: liveCollection\(…\) `preload:` is not a static string literal — got `mode`/,
+    );
   });
 
   test("a factory's own declaration is not a bootCritical call", () => {
@@ -195,15 +245,17 @@ describe("bootCriticalKeysIn", () => {
         opts: { defaultLimit: number; bootCritical?: true },
       ): WindowQueryResourceContract<Row> { return d; }
     `;
-    expect(bootCriticalKeysIn(src, "window.ts")).toEqual([]);
+    expect(bootCriticalKeysIn(src, "window.ts", NOT_OWNER)).toEqual([]);
   });
 
   test("throws on a bootCritical declaration whose key is not a literal", () => {
     const src = `export const r = resourceDescriptor(RESOURCE_KEY, S, null, { bootCritical: true });`;
-    expect(() => bootCriticalKeysIn(src, "r.ts")).toThrow(
+    expect(() => bootCriticalKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
       /r\.ts:1: resourceDescriptor/,
     );
-    expect(() => bootCriticalKeysIn(src, "r.ts")).toThrow(/RESOURCE_KEY/);
+    expect(() => bootCriticalKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
+      /RESOURCE_KEY/,
+    );
   });
 
   test("ignores a factory call written inside a string or comment", () => {
@@ -211,7 +263,7 @@ describe("bootCriticalKeysIn", () => {
       // export const x = resourceDescriptor("commented", S, null, { bootCritical: true });
       const label = "resourceDescriptor(\\"fake\\", S, null, { bootCritical: true })";
     `;
-    expect(bootCriticalKeysIn(src, "s.ts")).toEqual([]);
+    expect(bootCriticalKeysIn(src, "s.ts", NOT_OWNER)).toEqual([]);
   });
 });
 

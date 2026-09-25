@@ -16,7 +16,7 @@ type IconType = ComponentType<{ className?: string }>;
  * opt-in escape hatch for bespoke chrome (a "Connect" button), never the default.
  *
  * `originUrl` is the type's answer to "which web page does a configured source of
- * yours stand for?" — read generically by `useSourceOriginUrl` so a surface can
+ * yours stand for?" — read generically by `useEventSourceOrigin` so a surface can
  * link an event back to where it came from without ever naming a source type. A
  * type that stands for no page (`manual`: the user IS the extractor) simply omits
  * it, which is why it is optional rather than a required `null`-returning stub.

@@ -1,6 +1,7 @@
 import { db } from "@plugins/database/server";
 import { reconcileReadSetTable } from "@plugins/database/plugins/live-state-snapshot/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { notificationsServed } from "./resources";
 
 const log = defineLogSink({
   id: "notifications",
@@ -8,11 +9,13 @@ const log = defineLogSink({
     "Notifications ops log: boot-time read-set reconciliation (stale live-state reader eviction).",
 });
 
-// The `notifications` table has exactly one live-state reader — the
-// `notifications` resource. Assert that invariant on boot: evict any stale
-// `notifications` edge that a past mis-attribution baked into another resource's
-// read-set. The read-set index is append-only + persisted + re-seeded, so a
-// historical mis-attribution never self-heals otherwise (see
+// The `notifications` table's only live-state readers are the resources the
+// `notifications` collection mints (its window, `:rows` and `:groups`) — read
+// from the served collection's `keys`, so adding a sibling can never evict it.
+// Assert that invariant on boot: evict any stale `notifications` edge that a
+// past mis-attribution baked into another resource's read-set. The read-set
+// index is append-only + persisted + re-seeded, so a historical
+// mis-attribution never self-heals otherwise (see
 // research/2026-07-07-global-read-set-notifications-attribution-noise.md). This is
 // a durable guard — it also catches any future regression on the same table.
 //
@@ -23,7 +26,11 @@ const log = defineLogSink({
 // boot, mirroring live-state-snapshot's own graceful-degradation hooks.
 export async function reconcileNotificationsReadSet(): Promise<void> {
   try {
-    const changed = await reconcileReadSetTable(db, "notifications", ["notifications"]);
+    const changed = await reconcileReadSetTable(
+      db,
+      "notifications",
+      notificationsServed.keys,
+    );
     if (changed > 0) {
       log.publish(
         `evicted stale 'notifications' read-set edge from ${changed} persisted resource read-set(s)`,

@@ -14,6 +14,7 @@ export type {
   DescriptorFactory,
   DescriptorFactoryName,
   DescriptorShapeIsWidening,
+  PreloadFlag,
   MintedResource,
   RegisterMarker,
   RegisterMarkerName,

@@ -10,6 +10,6 @@ export type {
 
 export default {
   description:
-    "Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent).",
+    "Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent).",
   contributions: [],
 } satisfies PluginDefinition;

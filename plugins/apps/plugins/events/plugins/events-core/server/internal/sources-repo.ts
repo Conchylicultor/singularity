@@ -184,7 +184,8 @@ export async function listRuns(
  *
  * The action is projected ONTO the event row rather than nested beside it, so
  * the DataView that renders this treats "what happened to it" as one more
- * dimension of the row, filterable and groupable like any other.
+ * dimension of the row, filterable and groupable like any other. The event's
+ * source ref rides along (see `SourcedEventSchema`).
  */
 export async function listRunEvents(
   runId: string,
@@ -196,9 +197,13 @@ export async function listRunEvents(
       // column set here would silently drop a field added to `eventFields`.
       ...getTableColumns(_events),
       action: _eventSourceRunEvents.action,
+      // What the row opens when the event has no page of its own — joined here
+      // so the client resolves it without a read of the sources window.
+      source: { type: _eventSources.type, config: _eventSources.config },
     })
     .from(_eventSourceRunEvents)
     .innerJoin(_events, eq(_events.id, _eventSourceRunEvents.eventId))
+    .innerJoin(_eventSources, eq(_eventSources.id, _events.sourceId))
     .where(eq(_eventSourceRunEvents.runId, runId))
     .orderBy(_events.startsAt)
     .limit(limit);

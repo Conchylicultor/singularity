@@ -15,10 +15,7 @@ export {
   useRefreshEventSourceNow,
   useRefreshAllEventSources,
 } from "./internal/hooks";
-export {
-  useEventSourceOrigin,
-  useSourceOriginUrl,
-} from "./internal/source-origin";
+export { useEventSourceOrigin } from "./internal/source-origin";
 
 export default {
   description:

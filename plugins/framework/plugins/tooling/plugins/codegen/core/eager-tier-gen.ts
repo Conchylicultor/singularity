@@ -14,10 +14,15 @@ import {
   markerCallSpans,
   maskSource,
   parseBoolField,
+  parseStringField,
   parseStaticCallId,
   unresolvableCallIdMessage,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { resourceDescriptorFactories } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+import {
+  isResourceVocabularyOwner,
+  resourceDescriptorFactories,
+  type PreloadFlag,
+} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
 import {
   buildRegistryGenContext,
   collectEntriesWithDeps,
@@ -309,24 +314,37 @@ async function watchedSlotIn(
 }
 
 /**
- * Every `bootCritical: true` descriptor key in ONE source file, in source order.
+ * Every boot-critical descriptor key in ONE source file, in source order.
+ *
+ * Each factory spells its preload flag its own way — read from the shared
+ * vocabulary (`bootCritical: true` on a descriptor factory, `preload: "boot"`
+ * on a collection) — and only the mints the flag reaches (`preloadable`) are
+ * boot-critical: a collection's preload hydrates its default window, never
+ * its `:rows` / `:groups` siblings.
  *
  * The file is FULL-masked (so a factory written inside a comment, string or
- * template literal is never matched) and each key is read back from the ORIGINAL
- * by offset. THROWS — naming `displayPath`, the line and the offending
+ * template literal is never matched) and each key is read back from the
+ * ORIGINAL by offset. THROWS — naming `displayPath`, the line and the offending
  * expression — on a boot-critical declaration whose key is not a static string
- * literal. The key used to fall back to `"(unknown)"`, which pins the plugin
- * eager (right) but names it in the manifest as a key that matches nothing
- * (wrong, and silent). A boot-critical resource is one whose absence before
- * first paint is a visible loading flash, so the one thing this scan must not do
- * is guess.
+ * literal, and on a `preload:` whose value is not a literal. The key used to
+ * fall back to `"(unknown)"`, which pins the plugin eager (right) but names it
+ * in the manifest as a key that matches nothing (wrong, and silent). A
+ * boot-critical resource is one whose absence before first paint is a visible
+ * loading flash, so the one thing this scan must not do is guess.
  *
- * The plugins that OWN the factories need no exemption here (unlike the docs
- * facet's index, which reads EVERY declaration): a wrapper forwards its caller's
- * opts rather than writing a `bootCritical: true` literal, so no call inside
- * `live-state` / `query-resource` reaches the key read at all.
+ * `ownerPlugin` skips the file entirely: inside the plugins that OWN the
+ * factories (`isResourceVocabularyOwner`), a factory call is the wrapper
+ * IMPLEMENTING one — `liveCollection` calling `windowQueryResourceDescriptor(key,
+ * …, { bootCritical: true })` for a caller's `preload: "boot"` — with a computed
+ * key, not a plugin declaring a resource. The declaration site is the caller's.
+ * The docs facet's index exempts the same plugins through the same predicate.
  */
-export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
+export function bootCriticalKeysIn(
+  src: string,
+  displayPath: string,
+  opts: { ownerPlugin: boolean },
+): string[] {
+  if (opts.ownerPlugin) return [];
   const keys: string[] = [];
   let masked: string | null = null;
   for (const [factory, entry] of DESCRIPTOR_FACTORIES) {
@@ -334,29 +352,52 @@ export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
     masked ??= maskSource(src);
     for (const span of markerCallSpans(masked, factory)) {
       const argsText = src.slice(span.open + 1, span.close);
-      if (!parseBoolField(argsText, "bootCritical")) continue;
+      const where = { file: displayPath, line: lineAt(src, span.identifier) };
+      if (!preloadsBoot(factory, entry.preload, argsText, where)) continue;
       const id = parseStaticCallId(src, span);
       if (id.kind !== "value") {
         throw new Error(
           unresolvableCallIdMessage({
             marker: factory,
-            file: displayPath,
-            line: lineAt(src, span.identifier),
+            ...where,
             expr: id.kind === "dynamic" ? id.expr : "",
             hint:
-              "A `bootCritical: true` descriptor pins its plugin into the eager " +
+              "A boot-critical descriptor pins its plugin into the eager " +
               "load tier, and this manifest is built from source text — so the key " +
               "must be a literal at the declaration site. Inline the literal " +
               "instead of hoisting or interpolating it.",
           }),
         );
       }
-      // A collection factory mints several resources from one literal key;
-      // every one of them is boot-critical.
-      for (const m of entry.mints) keys.push(id.value + m.suffix);
+      for (const m of entry.mints) {
+        if (m.preloadable) keys.push(id.value + m.suffix);
+      }
     }
   }
   return keys;
+}
+
+/** Whether one factory call's args set its preload flag. Throws on a non-literal `preload:`. */
+function preloadsBoot(
+  factory: string,
+  flag: PreloadFlag,
+  argsText: string,
+  where: { file: string; line: number },
+): boolean {
+  if (flag.field === "bootCritical") {
+    return parseBoolField(argsText, "bootCritical");
+  }
+  const field = parseStringField(argsText, flag.field);
+  if (field.kind === "absent") return false;
+  if (field.kind === "dynamic") {
+    throw new Error(
+      `${where.file}:${where.line}: ${factory}(…) \`${flag.field}:\` is not a ` +
+        `static string literal — got \`${field.expr}\`. It decides whether this ` +
+        "declaration pins its plugin into the eager load tier, and this manifest " +
+        "is built from source text — write the literal at the declaration site.",
+    );
+  }
+  return field.value === flag.value;
 }
 
 // ── Render + public API ────────────────────────────────────────────
@@ -436,8 +477,11 @@ async function scanEagerTierInputs(
         // against web entries in the pure core, so a descriptor in a
         // web-entryless plugin throws).
         const keys: string[] = [];
+        const ownerPlugin = isResourceVocabularyOwner(`plugins/${node.path}`);
         for (const { rel, text } of sources) {
-          keys.push(...bootCriticalKeysIn(text, join(ctx.root, rel)));
+          keys.push(
+            ...bootCriticalKeysIn(text, join(ctx.root, rel), { ownerPlugin }),
+          );
           await tick();
         }
         if (keys.length > 0)

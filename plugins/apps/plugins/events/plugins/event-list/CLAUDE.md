@@ -66,9 +66,9 @@ X" as much as "source is-not-empty" — is the view saying "I am asking about
 sources", and it then gets exactly what it asked for, a disabled source's events
 included; a fixed predicate would instead make that history unreachable.
 
-The predicate is a subquery over `event_sources` (a small user-grown table),
-stated positively as "the source is active". Not a denormalized `enabled` copy on
-the event row: that duplicates a *mutable* FK attribute across an unbounded
+The predicate is on the joined `event_sources` row (the query joins it anyway, to
+send each event's source ref), stated positively as "the source is active". Not
+a denormalized `enabled` copy on the event row: that duplicates a *mutable* FK attribute across an unbounded
 table, and every flip of the toggle would owe a backfill.
 
 Freshness when the toggle flips is not this plugin's problem: `events-core`'s
@@ -94,8 +94,11 @@ not a copy of mail's app-scoped route.
 `onRowActivate` (host-level, so list/table/gallery agree) resolves
 `event.url ?? source origin URL` through `externalUrl()`. The fallback is the
 common case — an extraction often yields no per-event link — and it comes from
-`events-core`'s `useSourceOriginUrl()`, whose answer each source type supplies
-via its `originUrl`. This plugin still names no source type. No destination
+the `source: SourceRef` the query joins onto every row (`SourcedEvent`), read
+through `events-core`'s `useEventSourceOrigin()`, whose answer each source type
+supplies via its `originUrl`. No sources window is read, so an event of any
+source resolves, and nothing is ever "not loaded yet". This plugin still names no
+source type. No destination
 (hand-entered event) → the click is a no-op.
 
 ## Config is the only source of view instances
@@ -123,8 +126,8 @@ part of the query key.
     - `Pane.Register` "event-list"
     - `Events.Sidebar` "Events"
   - Uses:
+    - `apps/events/events-core.useEventSourceOrigin`
     - `apps/events/events-core.useEventsRevision`
-    - `apps/events/events-core.useSourceOriginUrl`
     - `apps/events/shell.Events`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
@@ -168,7 +171,7 @@ part of the query key.
 - Core:
   - Uses:
     - `apps/events/events-core.EVENT_CATEGORIES`
-    - `apps/events/events-core.EventSchema`
+    - `apps/events/events-core.SourcedEventSchema`
     - `infra/endpoints.defineEndpoint`
     - `primitives/data-view.FilterGroupSchema`
   - Exports (types):

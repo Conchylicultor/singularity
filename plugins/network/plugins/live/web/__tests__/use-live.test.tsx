@@ -151,6 +151,106 @@ describe("useLive — window", () => {
   });
 });
 
+describe("useLive — groupBy", () => {
+  const groups = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      value: i % 2 === 0,
+      count: count - i,
+    }));
+
+  it("subscribes on the :groups tuple and goes pending → settled with paging handles", async () => {
+    const c = collection();
+    const client = makeClient();
+    const { result } = mount(client, () =>
+      useLive(c, { groupBy: "on", limit: 2 }),
+    );
+    expect(result.current.pending).toBe(true);
+    act(() => {
+      client.setQueryData(
+        queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "2" }),
+        groups(2),
+      );
+    });
+    await waitFor(() => expect(result.current.pending).toBe(false));
+    const r = result.current;
+    if (r.pending) throw new Error("unreachable");
+    // Typed: `on` is a boolean column, so a group's value is boolean | null.
+    const value: boolean | null = r.data[0]!.value;
+    expect(value).toBe(true);
+    expect(r.data).toEqual(groups(2));
+    expect(r.canGrow).toBe(true);
+    expect(r.growing).toBe(false);
+  });
+
+  it("a where rides in the canonical group tuple", () => {
+    const c = collection();
+    const client = makeClient();
+    mount(client, () => useLive(c, { groupBy: "on", where: { on: true } }));
+    expect(
+      client.getQueryState(
+        queryKeyFor(`${c.key}:groups`, {
+          groupBy: "on",
+          limit: "50",
+          where: '{"on":true}',
+        }),
+      ),
+    ).toBeDefined();
+  });
+
+  it("loadMore stays settled on the previous groups while the grown tuple loads", async () => {
+    const c = collection();
+    const client = makeClient();
+    client.setQueryData(
+      queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "2" }),
+      groups(2),
+    );
+    const { result } = mount(client, () =>
+      useLive(c, { groupBy: "on", limit: 2 }),
+    );
+    await waitFor(() => expect(result.current.pending).toBe(false));
+
+    act(() => {
+      const r = result.current;
+      if (r.pending) throw new Error("unreachable");
+      r.loadMore();
+    });
+    const mid = result.current;
+    if (mid.pending) throw new Error("grow must not flash pending");
+    expect(mid.growing).toBe(true);
+    expect(mid.data).toEqual(groups(2));
+
+    // One default group page (50) past 2, clamped to the group max (100).
+    act(() => {
+      client.setQueryData(
+        queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "52" }),
+        groups(3),
+      );
+    });
+    await waitFor(() => {
+      const r = result.current;
+      expect(!r.pending && !r.growing && r.data.length === 3).toBe(true);
+    });
+    const grown = result.current;
+    if (grown.pending) throw new Error("unreachable");
+    expect(grown.canGrow).toBe(false); // 3 < 52: every group is loaded
+  });
+
+  it("rejects an orderBy and a non-filterable column at the type level", () => {
+    const c = collection();
+    const client = makeClient();
+    const ordered = { groupBy: "on", orderBy: [["n", "asc"]] } as const;
+    const ungroupable = { groupBy: "n" } as const;
+    // @ts-expect-error — a grouping has a fixed order
+    const useOrdered = () => useLive(c, ordered);
+    // @ts-expect-error — `n` is sortable but not filterable
+    const useUngroupable = () => useLive(c, ungroupable);
+    expect(() => mount(client, useOrdered)).toThrow(/fixed order/);
+    expect(() => mount(client, useUngroupable)).toThrow(
+      /not a filterable column/,
+    );
+  });
+});
+
 describe("useLive — ids", () => {
   it("an id set reads the :rows sibling on its canonical tuple, with no paging fields", async () => {
     const c = collection();

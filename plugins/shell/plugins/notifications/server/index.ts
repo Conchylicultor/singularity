@@ -1,7 +1,6 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
-import { notificationsResource } from "./internal/resources";
+import { notificationsServed } from "./internal/resources";
 import { _notifications } from "./internal/tables";
 import { handleCreate } from "./internal/handle-create";
 import { handleDismiss } from "./internal/handle-dismiss";
@@ -17,7 +16,6 @@ import {
 } from "../shared/endpoints";
 
 export { _notifications } from "./internal/tables";
-export { notificationsResource } from "./internal/resources";
 export { recordNotification } from "./internal/record-notification";
 export type { RecordNotificationInput } from "./internal/record-notification";
 export { setMutedByMetadata } from "./internal/reclassify-muted";
@@ -25,7 +23,7 @@ export { setMutedByMetadata } from "./internal/reclassify-muted";
 export default {
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [
-    Resource.Declare(notificationsResource),
+    ...notificationsServed.declare,
     // The sharpest case in the whole exclusion set. A notification has NO
     // worktree column, the resource is boot-critical and read unscoped, and
     // `ttlCleanupJob` declares no `perWorktree` so it runs on main only. A
@@ -41,7 +39,7 @@ export default {
   // ttlCleanupJob declares `schedule` — the jobs worker seeds its cron item at
   // startup, so no onReady enqueue is needed.
   register: [ttlCleanupJob],
-  // Assert the notifications-table sole-reader invariant on boot, evicting any
+  // Assert the notifications-table reader invariant (only the collection's own resources) on boot, evicting any
   // stale read-set edge a past mis-attribution baked in. See
   // ./internal/reconcile-read-set.ts for the full rationale.
   onReady: reconcileNotificationsReadSet,

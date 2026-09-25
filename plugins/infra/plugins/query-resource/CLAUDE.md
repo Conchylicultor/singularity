@@ -325,7 +325,6 @@ importing `db` never touches a worktree — no test env shim needed.
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `primitives/usage-rank`
-    - `shell/notifications`
     - `tasks/auto-start`
     - `tasks/task-category`
     - `tasks/task-effort`

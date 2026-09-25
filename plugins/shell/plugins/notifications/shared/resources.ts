@@ -1,17 +1,24 @@
-import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
-import { NotificationSchema, type Notification } from "./schema";
+import { z } from "zod";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { NotificationSchema, NotificationVariantSchema } from "./schema";
 
-// Bounded ordered window (desc createdAt, default 200 / max 500) — the bounded
-// working-set migration off the former full-collection K/full scan. Rows key on
-// `id`; the server half is a `windowQueryResource`. The `dismissed = false`
-// where-flip is a membership exit/entry, and the resurface `createdAt` bump is an
-// order-column change the runtime's order-signature seam re-floats via one bounded
-// ids query — so a dismiss and a resurface both ship correct incremental deltas,
-// and count/lastSeenAt-only dedup bumps stay in-place (zero ids queries). Web
-// consumers read it via `useWindowResource`; the wire shape stays `Notification[]`.
-export const notificationsResource = windowQueryResourceDescriptor<Notification>(
-  "notifications",
-  NotificationSchema,
-  "id",
-  { defaultLimit: 200, bootCritical: true },
-);
+// The undismissed notifications, as a live collection: a bounded window (newest
+// first, 200 / max 500) plus its `:rows` and `:groups` siblings. The base
+// membership (`dismissed = false`) is the server's `where`, so a dismiss is a
+// membership exit; a resurface bumps `createdAt`, which the window's order
+// signature re-floats, while a count/lastSeenAt-only dedup bump stays an
+// in-place upsert. `preload: "boot"` hydrates the default window (`{ limit:
+// "200" }`) in the boot snapshot — the bell is always mounted.
+//
+// The bell's chips group on `type` / `variant` (`useLive(notifications, {
+// groupBy })`) and a picked chip reads a filtered window, so a type seen only in
+// older rows still has a chip and lists all of its rows.
+export const notifications = liveCollection("notifications", {
+  row: NotificationSchema,
+  id: "id",
+  filterable: { type: z.string(), variant: NotificationVariantSchema },
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 200 },
+  maxLimit: 500,
+  preload: "boot",
+});

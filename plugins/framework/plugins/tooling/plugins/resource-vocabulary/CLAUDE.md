@@ -64,6 +64,7 @@ it, so both scanners throw rather than guess.
     - `DescriptorFactoryName`
     - `DescriptorShapeIsWidening`
     - `MintedResource`
+    - `PreloadFlag`
     - `RegisterMarker`
     - `RegisterMarkerName`
     - `ResourceMembership`

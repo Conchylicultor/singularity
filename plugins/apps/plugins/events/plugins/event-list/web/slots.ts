@@ -1,9 +1,10 @@
 import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
-import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import type { SourcedEvent } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 export const EventList = {
   /**
-   * Extra DataView `FieldDef<EventRecord>[]` injected by other plugins.
+   * Extra DataView `FieldDef<SourcedEvent>[]` injected by other plugins — typed
+   * on the row the list actually holds (the event plus its joined source ref).
    *
    * A field extension is a *component* (not plain data) so its `value` closure
    * can capture hook-loaded data — which is exactly what the `source` dimension
@@ -16,5 +17,5 @@ export const EventList = {
    * projects (`sourceId`) is already bound in the server `COLUMN_MAP`, so
    * filtering and sorting on it compile to SQL with no edit to this plugin.
    */
-  Fields: defineFieldExtensions<EventRecord>(),
+  Fields: defineFieldExtensions<SourcedEvent>(),
 };

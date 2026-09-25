@@ -1,16 +1,17 @@
 import { useMemo } from "react";
-import { externalUrl, type EventSource } from "../../core";
+import { externalUrl, type SourceRef } from "../../core";
 import { EventSources } from "../slots";
-import { useEventSources } from "./hooks";
 
 /**
- * Resolve one source ROW to the web page it stands for — "what is this source?"
- * — or `null` when it stands for none.
+ * Resolve one source — a whole row, or the `SourceRef` an event row carries — to
+ * the web page it stands for ("what is this source?", "where did this event come
+ * from?"), or `null` when it stands for none.
  *
- * The registry is the whole of it: a row carries its own `type` and `config`, so
+ * The registry is the whole of it: a ref carries its own `type` and `config`, so
  * this needs nothing but the `EventSources.Type` contribution that knows how to
- * read a `config` of that type. A surface holding the row therefore asks nothing
- * of the live sources window, and a new source type ships its `originUrl` and is
+ * read a `config` of that type. A surface holding the ref therefore asks nothing
+ * of the live sources window — an events list gets the ref joined onto each
+ * event row by the server, so no source id is ever looked up here — and a new source type ships its `originUrl` and is
  * picked up here with zero edits.
  *
  * A resolver function rather than a per-row hook, so a list can resolve every
@@ -29,42 +30,12 @@ import { useEventSources } from "./hooks";
  * section says an invalid blob), and the only thing a caller can do with it here
  * is not offer a link.
  */
-export function useEventSourceOrigin(): (source: EventSource) => string | null {
+export function useEventSourceOrigin(): (source: SourceRef) => string | null {
   const types = EventSources.Type.useContributions();
 
   return useMemo(() => {
     const byType = new Map(types.map((t) => [t.id, t]));
-    return (source: EventSource): string | null =>
+    return (source: SourceRef): string | null =>
       externalUrl(byType.get(source.type)?.originUrl?.(source.config) ?? null);
   }, [types]);
-}
-
-/**
- * The same answer for a surface that holds only a source ID — "where did this
- * event come from?".
- *
- * The id→row join lives here because `events-core` is the one plugin holding BOTH
- * halves: the live `event_sources` rows and the type registry. A consumer
- * therefore gets the answer without importing the sources plugin or naming a
- * source type.
- *
- * A resolver function rather than a per-id hook: the events list asks for one row
- * out of a rendered window at click time, so a hook per row would mean a
- * subscription per row for a value only one of them ever needs.
- *
- * `null` adds one arm to {@link useEventSourceOrigin}'s: the source is not in the
- * live window (yet, or at all).
- */
-export function useSourceOriginUrl(): (sourceId: string) => string | null {
-  const sources = useEventSources();
-  const originOf = useEventSourceOrigin();
-
-  return useMemo(() => {
-    const rows = sources.pending ? [] : sources.data;
-    const byId = new Map(rows.map((s) => [s.id, s]));
-    return (sourceId: string): string | null => {
-      const source = byId.get(sourceId);
-      return source === undefined ? null : originOf(source);
-    };
-  }, [sources, originOf]);
 }

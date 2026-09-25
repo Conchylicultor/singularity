@@ -14,5 +14,5 @@ export type {
 
 export default {
   description:
-    "Unified live-resource API, server half: serveCollection (binds a liveCollection's filterable/sortable names to a table's columns and compiles its window + `:rows` point resources through windowQueryResource) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.",
+    "Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.",
 } satisfies ServerPluginDefinition;

@@ -1,167 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
-import { useWindowResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { recentClientIds } from "../internal/toast";
-import { notificationsResource } from "../../shared/resources";
-import {
-  dismissNotification,
-  dismissAllNotifications,
-  markAllNotificationsRead,
-} from "../../shared/endpoints";
-import type { Notification } from "../../shared/schema";
-
-const VARIANT_BORDER: Record<Notification["variant"], string> = {
-  error: "border-l-destructive",
-  warning: "border-l-warning",
-  info: "border-l-info",
-  success: "border-l-success",
-};
-
-const VARIANT_TEXT: Record<Notification["variant"], string> = {
-  error: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
-  success: "text-success",
-};
-
-const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
-  error: "border-l-destructive/40",
-  warning: "border-l-warning/40",
-  info: "border-l-info/40",
-  success: "border-l-success/40",
-};
-
-const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
-  error: "text-destructive/70",
-  warning: "text-warning/70",
-  info: "text-info/70",
-  success: "text-success/70",
-};
-
-function NotificationRow({
-  n,
-  dismiss,
-  onClose,
-}: {
-  n: Notification;
-  dismiss: (id: string) => void;
-  onClose: () => void;
-}) {
-  const clientId =
-    typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
-  return (
-    <Stack
-      as="li"
-      direction="row"
-      gap="sm"
-      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
-      onClick={
-        n.linkTo?.startsWith("/")
-          ? () => {
-              navigate(n.linkTo!);
-              onClose();
-            }
-          : undefined
-      }
-    >
-      <Fill>
-        <Line className="gap-xs">
-          <Text
-            as="p"
-            variant="label"
-            className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}
-          >
-            {n.title}
-          </Text>
-          {n.muted && (
-            <Badge
-              variant="muted"
-              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-            >
-              muted
-            </Badge>
-          )}
-        </Line>
-        {n.description && n.description !== n.title && (
-          <Text
-            as="p"
-            variant="caption"
-            className="text-muted-foreground line-clamp-2"
-          >
-            {n.description}
-          </Text>
-        )}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
-        <Stack direction="row" gap="sm" align="center" className="mt-0.5">
-          <RelativeTime
-            date={n.lastSeenAt}
-            className="text-3xs text-muted-foreground"
-          />
-          {n.count > 1 && (
-            <span
-              className="text-3xs text-muted-foreground tabular-nums"
-              title={`Recurred ${n.count} times — collapsed into one entry`}
-            >
-              &times;{n.count > 99 ? "99+" : n.count}
-            </span>
-          )}
-          {n.type && (
-            <span className="text-3xs text-muted-foreground">{n.type}</span>
-          )}
-          {clientId != null && (
-            <span className="text-3xs text-muted-foreground">
-              {clientId === getTabId() ? "this tab" : "another tab"}
-            </span>
-          )}
-          {n.linkTo?.startsWith("/") && (
-            <span className="text-3xs text-muted-foreground hover:text-foreground">
-              View &rarr;
-            </span>
-          )}
-        </Stack>
-      </Fill>
-      <Text
-        as="button"
-        variant="body"
-        // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
-        className={cn(
-          rigidClass(),
-          "text-muted-foreground hover:text-foreground leading-none",
-        )}
-        onClick={(e) => {
-          e.stopPropagation();
-          dismiss(n.id);
-        }}
-        aria-label="Dismiss"
-      >
-        &times;
-      </Text>
-    </Stack>
-  );
-}
+import { notifications } from "../../shared/resources";
+import { markAllNotificationsRead } from "../../shared/endpoints";
+import { NotificationsPanel } from "./notifications-panel";
 
 export function BellButton() {
   const [open, setOpen] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const notificationsResult = useWindowResource(notificationsResource);
+  // The default window (newest 200 undismissed) — boot-preloaded, so the bell
+  // paints settled. It drives the toasts, the unread badge and the trigger; the
+  // popover body reads its own queries and mounts only while open.
+  const notificationsResult = useLive(notifications);
 
   // prevIdsRef must always run — it tracks new-notification arrivals for toasts.
   const prevIdsRef = useRef<Set<string> | null>(null);
@@ -220,32 +76,6 @@ export function BellButton() {
     ? "bg-destructive text-destructive-foreground"
     : "bg-warning text-warning-foreground";
 
-  const uniqueTypes = Array.from(new Set(list.map((n) => n.type))).filter(
-    Boolean,
-  );
-  const hasErrors = list.some((n) => n.variant === "error");
-
-  const filtered = list.filter((n) =>
-    typeFilter === "all"
-      ? true
-      : typeFilter === "errors"
-        ? n.variant === "error"
-        : n.type === typeFilter,
-  );
-
-  const isCountedUnread = (n: Notification) =>
-    !n.read && !n.muted && (n.variant === "error" || n.variant === "warning");
-  const unreadFiltered = filtered.filter(isCountedUnread);
-  const restFiltered = filtered.filter((n) => !isCountedUnread(n));
-
-  function dismiss(id: string) {
-    void fetchEndpoint(dismissNotification, { id });
-  }
-
-  function dismissAll() {
-    void fetchEndpoint(dismissAllNotifications, {});
-  }
-
   function onOpenChange(next: boolean) {
     if (next) {
       hadUnreadRef.current = unreadCount > 0;
@@ -287,116 +117,13 @@ export function BellButton() {
       width="xl"
       padding="none"
     >
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        justify="between"
-        className="px-md py-sm border-b"
-      >
-        <Text variant="body" className="font-semibold">
-          Notifications
-        </Text>
-        {list.length > 0 && (
-          <Text
-            as="button"
-            variant="caption"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={dismissAll}
-          >
-            Clear all
-          </Text>
-        )}
-      </Stack>
-      {list.length > 0 && (
-        <Scroll axis="x" className="px-md py-xs border-b">
-          <Stack direction="row" gap="xs">
-            {(
-              [
-                "all",
-                ...(hasErrors ? ["errors"] : []),
-                ...uniqueTypes,
-              ] as string[]
-            ).map((chip) => (
-              <ToggleChip
-                key={chip}
-                variant="ghost"
-                active={typeFilter === chip}
-                onClick={() => {
-                  setTypeFilter(chip);
-                }}
-                // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
-                className="shrink-0"
-              >
-                {chip === "all"
-                  ? "All"
-                  : chip.charAt(0).toUpperCase() + chip.slice(1)}
-              </ToggleChip>
-            ))}
-          </Stack>
-        </Scroll>
-      )}
-      {list.length === 0 ? (
-        <Text
-          as="p"
-          variant="body"
-          className="px-md py-xl text-center text-muted-foreground"
-        >
-          No notifications
-        </Text>
-      ) : filtered.length === 0 ? (
-        <Text
-          as="p"
-          variant="body"
-          className="px-md py-xl text-center text-muted-foreground"
-        >
-          No notifications for this filter
-        </Text>
-      ) : (
-        <Scroll className="max-h-96">
-          {unreadFiltered.length > 0 && (
-            <>
-              <div
-                className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive bg-destructive/5" : "text-warning bg-warning/5"}`}
-              >
-                Unread ({unreadFiltered.length})
-              </div>
-              <ul>
-                {unreadFiltered.map((n) => (
-                  <NotificationRow
-                    key={n.id}
-                    n={n}
-                    dismiss={dismiss}
-                    onClose={() => {
-                      setOpen(false);
-                    }}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-          {restFiltered.length > 0 && (
-            <>
-              {unreadFiltered.length > 0 && (
-                <div className="px-md py-xs text-3xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
-                  Earlier
-                </div>
-              )}
-              <ul>
-                {restFiltered.map((n) => (
-                  <NotificationRow
-                    key={n.id}
-                    n={n}
-                    dismiss={dismiss}
-                    onClose={() => {
-                      setOpen(false);
-                    }}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-        </Scroll>
+      {open && (
+        <NotificationsPanel
+          empty={list.length === 0}
+          onClose={() => {
+            setOpen(false);
+          }}
+        />
       )}
     </InlinePopover>
   );

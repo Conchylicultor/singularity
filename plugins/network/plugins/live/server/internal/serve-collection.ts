@@ -1,27 +1,41 @@
-import { and, getTableColumns, sql, type SQL } from "drizzle-orm";
+import { and, count, getTableColumns, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { Resource as ResourceContribution } from "@plugins/framework/plugins/server-core/core";
-import type { Resource } from "@plugins/framework/plugins/resource-runtime/core";
+import { db as realDb } from "@plugins/database/server";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import {
+  defineResource,
+  Resource as ResourceContribution,
+} from "@plugins/framework/plugins/server-core/core";
+import type {
+  Resource,
+  ServerResourceOptions,
+} from "@plugins/framework/plugins/resource-runtime/core";
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
 import {
   windowQueryResource,
   type EntitySource,
   type QueryDb,
+  type SelectMap,
   type WindowOrderKey,
   type WindowQueryResourceSpec,
 } from "@plugins/infra/plugins/query-resource/server";
 import type {
   LiveCollection,
+  LiveGroup,
+  LiveGroupParams,
+  LiveScalar,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
 import { liveClauseSql } from "./op-sql";
 
 // `serveCollection` — the server half of a `liveCollection`. One call binds the
-// declaration's filterable and sortable names to the table's columns and
-// compiles BOTH minted resources through the existing bounded compiler
-// (`windowQueryResource`): the window (where / order decoded per subscription
-// tuple) and the `:rows` point sibling (explicit id sets, no filter). Nothing
-// here is a new runtime path — only the specs are derived.
+// declaration's row fields to the table's columns and compiles all THREE minted
+// resources: the window (where / order decoded per subscription tuple) and the
+// `:rows` point sibling through the existing bounded compiler
+// (`windowQueryResource`), and `:groups` as a plain push value per grouping
+// query (`GROUP BY` the column, re-run by the runtime whenever a table it read
+// changes — the read-set is captured automatically, so it needs no scope
+// policy). Nothing here is a new runtime path — only the specs are derived.
 
 /** A table, or an `infra/entities` Entity (read through its table). */
 export type CollectionSource = PgTable | EntitySource;
@@ -33,13 +47,10 @@ type ColumnNamesOf<T> = T extends EntitySource
     ? keyof T["_"]["columns"] & string
     : never;
 
-/** Every name the collection filters or sorts by — each must bind to a column. */
-type BoundNames<F, S extends string> = (keyof F & string) | S;
-
 /**
- * `columns` is optional while every filterable / sortable name is a column of
- * `from` by property name, and REQUIRED — naming exactly the missing ones —
- * when some are not (a renamed column). A name bound nowhere is a tsc error.
+ * `columns` is optional while every row field is a column of `from` by
+ * property name, and REQUIRED — naming exactly the missing ones — when some
+ * are not (a renamed column). A row field bound nowhere is a tsc error.
  */
 type ColumnOverrides<T, N extends string> = [
   Exclude<N, ColumnNamesOf<T>>,
@@ -51,19 +62,29 @@ type ColumnOverrides<T, N extends string> = [
       };
     };
 
-export type ServeCollectionOptions<
-  T extends CollectionSource,
-  F,
-  S extends string,
-> = {
+export type ServeCollectionOptions<T extends CollectionSource, Row> = {
   from: T;
+  /**
+   * The collection's base membership: the collection IS the rows of `from`
+   * matching it (e.g. `eq(t.dismissed, false)`). ANDed into the window, the
+   * `:rows` point reads and every grouping. A mutable column is fine — a flip
+   * is a membership exit for the window and the point set, and a recount for
+   * the groups.
+   */
+  where?: SQL;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
-} & ColumnOverrides<T, BoundNames<F, S>>;
+} & ColumnOverrides<T, keyof Row & string>;
 
 export interface CollectionSpecs {
   window: WindowQueryResourceSpec<LiveWindowParams>;
   rows: WindowQueryResourceSpec<PointParams>;
+  /** The `:groups` server half — the two-arg `defineResource` opts. */
+  groups: ServerResourceOptions<LiveGroup<LiveScalar>[], LiveGroupParams> & {
+    mode: "push";
+  };
+  /** The derived projection: exactly the row schema's keys. */
+  select: SelectMap;
 }
 
 export interface ServedCollection<Row> {
@@ -71,8 +92,13 @@ export interface ServedCollection<Row> {
   window: Resource<Row[], LiveWindowParams>;
   /** The point sibling (`${key}:rows`). */
   rows: Resource<Row[], PointParams>;
+  /** The groups sibling (`${key}:groups`). */
+  groups: Resource<LiveGroup<LiveScalar>[], LiveGroupParams>;
+  /** Every minted key — `[key, key:rows, key:groups]`. */
+  keys: string[];
   /** Spread into the plugin's `contributions`: one `Resource.Declare` per minted resource. */
   declare: [
+    ReturnType<typeof ResourceContribution.Declare>,
     ReturnType<typeof ResourceContribution.Declare>,
     ReturnType<typeof ResourceContribution.Declare>,
   ];
@@ -83,7 +109,7 @@ function isEntitySource(from: CollectionSource): from is EntitySource {
 }
 
 /**
- * Derive the two bounded specs for a collection. Exported apart from
+ * Derive the three specs for a collection. Exported apart from
  * `serveCollection` (which also registers) so a test can compile them against
  * a fake or throwaway `db` and its own runtime — the `compileWindowQuery`
  * pattern. Every binding miss throws here, at module eval.
@@ -95,70 +121,142 @@ export function compileCollection<
   T extends CollectionSource,
 >(
   collection: LiveCollection<Row, F, S>,
-  opts: ServeCollectionOptions<T, F, S>,
+  opts: ServeCollectionOptions<T, Row>,
 ): CollectionSpecs {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
   const from: CollectionSource = opts.from;
   const table = isEntitySource(from) ? from.table : from;
-  const tableColumns = getTableColumns(table) as Record<string, PgColumn>;
+  // An entity binds through its WIRE columns — the ones it already agreed to
+  // put on the wire — never a server-only column of its table.
+  const sourceColumns: Record<string, PgColumn> = isEntitySource(from)
+    ? from.wireColumns
+    : (getTableColumns(table) as Record<string, PgColumn>);
   const overrides = (opts.columns ?? {}) as Record<
     string,
     PgColumn | undefined
   >;
   const columnOf = (name: string): PgColumn =>
     overrides[name] ??
-    tableColumns[name] ??
+    sourceColumns[name] ??
     fail(
-      `"${name}" binds to no column of the source — pass it in \`columns\`.`,
+      `row field "${name}" binds to no column of the source — pass it in \`columns\`.`,
     );
 
-  const filterable = Object.keys(collection.filterable as object);
+  // The projection IS the row schema: every row field bound to a column, and
+  // nothing else — so a server-only column (a dedup key) cannot reach the
+  // wire. Filterable / sortable / id names are row fields by type; each is
+  // checked here too, since a binding is a runtime fact.
   const bound = new Map<string, PgColumn>();
+  for (const name of collection.rowKeys) bound.set(name, columnOf(name));
+  const filterable = Object.keys(collection.filterable as object);
   for (const name of [...filterable, ...collection.sortable, collection.id]) {
-    bound.set(name, columnOf(name));
+    if (!bound.has(name)) fail(`"${name}" is not a field of the row schema.`);
   }
+  const select: SelectMap = Object.fromEntries(bound);
   // The comparison target is the column RENDERED as SQL, never the column
   // object: an operand is not a stored value, and a column would run its
   // write-side encoder over it (see `op-sql.ts`).
   const target = (name: string): SQL => sql`${bound.get(name)!}`;
 
-  const codec = collection.window.window;
-  const where = (params: LiveWindowParams): SQL | undefined => {
-    const clauses = codec.decode(params).where;
-    if (clauses.length === 0) return undefined;
-    return and(...clauses.map((c) => liveClauseSql(target(c.column), c)));
+  const base = opts.where;
+  const allOf = (parts: (SQL | undefined)[]): SQL | undefined => {
+    const present = parts.filter((p): p is SQL => p !== undefined);
+    return present.length === 0 ? undefined : and(...present);
   };
+
+  const codec = collection.window.window;
+  const where = (params: LiveWindowParams): SQL | undefined =>
+    allOf([
+      base,
+      ...codec
+        .decode(params)
+        .where.map((c) => liveClauseSql(target(c.column), c)),
+    ]);
   const orderBy = (params: LiveWindowParams): WindowOrderKey[] =>
     codec.decode(params).orderBy.map(([name, dir]) => {
       const col = bound.get(name)!;
       return { col, dir, nullable: !col.notNull };
     });
 
+  // One boundary cast — the `compileWindowQuery` precedent.
+  const db: QueryDb = opts.db ?? (realDb as unknown as QueryDb);
+  const groupCodec = collection.groups.groups;
+  const filterSchemas = collection.filterable as Readonly<
+    Record<string, ZodParser<LiveScalar>>
+  >;
+  // `SELECT col AS value, count(*) … GROUP BY col ORDER BY count DESC, col`.
+  // NULL is its own group (sorted last among equal counts); `C` collation makes
+  // the value tiebreak code-point order, matching core's `compareScalars`.
+  // Each value is checked against its column's own filterable schema: the wire
+  // schema is shared by every column, so this is where a value the column's
+  // operand could never name (an enum drifted past its schema) fails loudly.
+  const groupsLoader = async (
+    params: LiveGroupParams,
+  ): Promise<LiveGroup<LiveScalar>[]> => {
+    const q = groupCodec.decode(params);
+    const col = bound.get(q.groupBy)!;
+    const predicate = allOf([
+      base,
+      ...q.where.map((c) => liveClauseSql(target(c.column), c)),
+    ]);
+    let query = db
+      .select<LiveGroup<LiveScalar>>({
+        value: col,
+        count: count().as("count"),
+      })
+      .from(table);
+    if (predicate) query = query.where(predicate);
+    const rows = await query
+      .groupBy(col)
+      .orderBy(sql`count(*) DESC`, sql`${col} ASC NULLS LAST`)
+      .limit(q.limit);
+    const schema = filterSchemas[q.groupBy]!;
+    for (const row of rows) {
+      if (row.value === null) continue;
+      if (!schema.safeParse(row.value).success) {
+        fail(
+          `group value ${JSON.stringify(row.value)} of "${q.groupBy}" does not parse ` +
+            `as its filterable schema — the column holds a value no filter could name.`,
+        );
+      }
+    }
+    return rows;
+  };
+
+  const withDb = opts.db ? { db: opts.db } : {};
   return {
     window: {
       from: opts.from,
+      select,
       where,
       orderBy,
       // Every sortable column: one order signature per resource, so an UPDATE
       // to any of them re-derives each member tuple's window.
       signatureColumns: collection.sortable.map((name) => bound.get(name)!),
       window: {}, // maxLimit comes from the declaration's codec
-      ...(opts.db ? { db: opts.db } : {}),
+      ...withDb,
     },
     rows: {
       from: opts.from,
+      select,
       point: { by: bound.get(collection.id)! },
-      ...(opts.db ? { db: opts.db } : {}),
+      // A base-where flip makes the refill omit a requested id — the point
+      // path's membership exit, so the row leaves the tuple.
+      ...(base ? { where: base } : {}),
+      ...withDb,
     },
+    groups: { mode: "push", loader: groupsLoader },
+    select,
   };
 }
 
 /**
- * Serve a `liveCollection` from a table (or Entity). Filterable and sortable
- * names bind to columns by property name — type-checked against `from`; a
- * renamed column goes in `columns`. Returns both compiled resources and their
+ * Serve a `liveCollection` from a table (or Entity). Row fields bind to
+ * columns by property name — type-checked against `from`; a renamed column
+ * goes in `columns`. The projection is exactly the row schema's fields.
+ * Returns the three compiled resources, their keys, and their
  * `Resource.Declare` contributions:
  *
  * ```ts
@@ -173,17 +271,21 @@ export function serveCollection<
   T extends CollectionSource,
 >(
   collection: LiveCollection<Row, F, S>,
-  opts: ServeCollectionOptions<T, F, S>,
+  opts: ServeCollectionOptions<T, Row>,
 ): ServedCollection<Row> {
   const specs = compileCollection(collection, opts);
   const window = windowQueryResource(collection.window, specs.window);
   const rows = windowQueryResource(collection.rows, specs.rows);
+  const groups = defineResource(collection.groups, specs.groups);
   return {
     window,
     rows,
+    groups,
+    keys: [window.key, rows.key, groups.key],
     declare: [
       ResourceContribution.Declare(window),
       ResourceContribution.Declare(rows),
+      ResourceContribution.Declare(groups),
     ],
   };
 }

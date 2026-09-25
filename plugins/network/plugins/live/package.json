@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-network-live",
-  "description": "Unified live-resource API. core: liveCollection (one declaration minting a bounded window resource and its point-set `:rows` sibling), the LiveWhere filter language and its op table (in-memory tests), and the strict canonical query codec. server: serveCollection (binds a collection's filterable/sortable names to a table's columns and compiles its window + point resources) and the op table's SQL half. web: useLive (window with canGrow/growing/loadMore, or an id set) and useLiveRow (pending / found / absent).",
+  "description": "Unified live-resource API. core: liveCollection (one declaration minting a bounded window resource, its point-set `:rows` sibling and its `:groups` grouping; optional boot preload of the window), the LiveWhere filter language and its op table (in-memory tests), and the strict canonical query codecs. server: serveCollection (binds a collection's row fields to a table's columns — the projection is the row schema — ANDs a base where into every read, and compiles all three resources) and the op table's SQL half. web: useLive (window or grouping with canGrow/growing/loadMore, or an id set) and useLiveRow (pending / found / absent).",
   "private": true,
   "version": "0.0.1"
 }

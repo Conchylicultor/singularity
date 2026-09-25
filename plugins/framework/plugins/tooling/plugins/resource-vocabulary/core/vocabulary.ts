@@ -64,18 +64,37 @@ export interface MintedResource {
   /**
    * Appended to the call's literal key to form this resource's key — `""` for
    * the key itself. `liveCollection("events.sources", …)` mints
-   * `events.sources` (suffix `""`) and `events.sources:rows` (suffix `":rows"`).
+   * `events.sources` (suffix `""`), `events.sources:rows` (suffix `":rows"`)
+   * and `events.sources:groups` (suffix `":groups"`).
    */
   suffix: string;
   /** Row-keyed delta-sync (server `mode: "keyed"`) rather than whole-value push. */
   keyed: boolean;
   /** Bounded membership the resource carries, `null` when it declares none. */
   membership: ResourceMembership | null;
+  /**
+   * Whether the call's preload flag reaches THIS resource. A collection's
+   * preload hydrates its default window only — its point and groups siblings
+   * have no default tuple the server could load before a tab names one — so a
+   * scanner marking every mint boot-critical would pin resources nothing
+   * preloads.
+   */
+  preloadable: boolean;
 }
+
+/**
+ * How a factory call spells "hydrate before first paint", as the scanners read
+ * it from source text: a `bootCritical: true` field on the old descriptor
+ * factories, `preload: "boot"` on a collection.
+ */
+export type PreloadFlag =
+  { field: "bootCritical" } | { field: "preload"; value: "boot" };
 
 export interface DescriptorFactory {
   /** Barrel the factory is exported from — quoted in scanner error messages. */
   barrel: string;
+  /** The field a call sets to preload what it mints (see {@link PreloadFlag}). */
+  preload: PreloadFlag;
   /**
    * Every resource one call mints, in declaration order. One entry (suffix
    * `""`) for a plain descriptor factory; a collection factory mints several
@@ -130,12 +149,13 @@ type DescriptorFactoryNames<M> = {
 
 /**
  * A collection declaration: one call minting a window descriptor and its
- * `:rows` point sibling (`liveCollection`). Matched structurally for the same
+ * `:rows` point and `:groups` siblings (`liveCollection`). Matched structurally for the same
  * reason as {@link MintedDescriptor}.
  */
 interface MintedCollection {
   window: MintedDescriptor;
   rows: MintedDescriptor;
+  groups: MintedDescriptor;
 }
 
 /** Every export of `M` that is a function returning a collection declaration. */
@@ -163,36 +183,55 @@ type MintingFactoryName =
  * the missing key named, and an entry for a factory that no longer exists fails
  * as an excess property.
  */
+const BOOT_CRITICAL: PreloadFlag = { field: "bootCritical" };
+
 export const resourceDescriptorFactories = {
   resourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    mints: [{ suffix: "", keyed: false, membership: null }],
+    preload: BOOT_CRITICAL,
+    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
   },
   keyedResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    mints: [{ suffix: "", keyed: true, membership: null }],
+    preload: BOOT_CRITICAL,
+    mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
   centralResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    mints: [{ suffix: "", keyed: false, membership: null }],
+    preload: BOOT_CRITICAL,
+    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
   },
   queryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    mints: [{ suffix: "", keyed: true, membership: null }],
+    preload: BOOT_CRITICAL,
+    mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
   windowQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    mints: [{ suffix: "", keyed: true, membership: "window" }],
+    preload: BOOT_CRITICAL,
+    mints: [
+      { suffix: "", keyed: true, membership: "window", preloadable: true },
+    ],
   },
   pointQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    mints: [{ suffix: "", keyed: true, membership: "point" }],
+    preload: BOOT_CRITICAL,
+    mints: [
+      { suffix: "", keyed: true, membership: "point", preloadable: true },
+    ],
   },
   liveCollection: {
     barrel: LIVE_CORE,
+    preload: { field: "preload", value: "boot" },
     mints: [
-      { suffix: "", keyed: true, membership: "window" },
-      { suffix: ":rows", keyed: true, membership: "point" },
+      { suffix: "", keyed: true, membership: "window", preloadable: true },
+      { suffix: ":rows", keyed: true, membership: "point", preloadable: false },
+      {
+        suffix: ":groups",
+        keyed: false,
+        membership: null,
+        preloadable: false,
+      },
     ],
   },
 } satisfies Record<MintingFactoryName, DescriptorFactory>;
@@ -204,7 +243,7 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
  * `defineExternalResource` are the resource runtime's own two primitives,
  * re-presented identically by `server-core/core` and `central-core/core`;
  * `queryResource` / `windowQueryResource` are the query compiler's wrappers
- * around the first, and `serveCollection` serves both resources a
+ * around the first, and `serveCollection` serves every resource a
  * `liveCollection` mints (its first argument resolves to every minted key).
  *
  * Completeness is asserted in this plugin's `check/` — see the header note.

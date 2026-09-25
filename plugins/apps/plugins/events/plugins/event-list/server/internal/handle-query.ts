@@ -1,8 +1,8 @@
 import {
   and,
   eq,
+  getTableColumns,
   ilike,
-  inArray,
   isNull,
   or,
   sql,
@@ -94,33 +94,28 @@ export const handleQuery = implement(queryEvents, async ({ body }) => {
     // Events of a DISABLED source are hidden the same way — also a default, also
     // overridden the moment the filter names `sourceId`. See scope.ts.
     //
-    // Stated POSITIVELY ("the source is active") rather than as a NOT IN, so the
-    // predicate reads as what it means and cannot be tripped by nullability;
-    // `events.source_id` is NOT NULL and FK-cascaded, so every surviving event
-    // has exactly one source row and the subquery is a total answer.
-    //
-    // A subquery, not a denormalized `enabled` copy on the event row:
-    // `event_sources` is a small user-grown table (the sources UI itself windows
-    // it at ~100 rows) indexed on `enabled`, so this costs nothing — whereas
-    // copying a MUTABLE FK attribute onto an unbounded table would turn every
-    // toggle of the switch into a backfill over every event of that source.
+    // A predicate on the JOINED source row (below), not a denormalized `enabled`
+    // copy on the event row: copying a MUTABLE FK attribute onto an unbounded
+    // table would turn every toggle of the switch into a backfill over every
+    // event of that source. `events.source_id` is NOT NULL and FK-cascaded, so
+    // the inner join drops no event and this reads as exactly what it means.
     shouldHideInactiveSources(filter)
-      ? inArray(
-          eventsTable.sourceId,
-          db
-            .select({ id: _eventSources.id })
-            .from(_eventSources)
-            .where(eq(_eventSources.enabled, true)),
-        )
+      ? eq(_eventSources.enabled, true)
       : undefined,
     searchWhere(query),
     compileWhere(filter, COLUMN_MAP, resolver),
     seek,
   );
 
+  // Each row carries its source's ref, so the client resolves "where did this
+  // come from?" from the row it holds — see `SourcedEventSchema`.
   const rows = await db
-    .select()
+    .select({
+      ...getTableColumns(eventsTable),
+      source: { type: _eventSources.type, config: _eventSources.config },
+    })
     .from(eventsTable)
+    .innerJoin(_eventSources, eq(_eventSources.id, eventsTable.sourceId))
     .where(where)
     .orderBy(...orderByClauses(keys))
     .limit(limit + 1);

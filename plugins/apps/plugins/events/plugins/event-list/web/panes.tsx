@@ -16,6 +16,7 @@ import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import {
   externalUrl,
   type EventRecord,
+  type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { queryEvents } from "../core";
 import { eventFieldDefs } from "./internal/fields";
@@ -54,7 +55,7 @@ function EventListPaneView(): ReactElement {
 
   return (
     <PaneChrome pane={eventListPane} title="Events">
-      <DataView<EventRecord>
+      <DataView<SourcedEvent>
         storageKey={EVENTS_LIST_VIEW}
         rows={[]}
         fields={eventFieldDefs}

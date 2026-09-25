@@ -323,6 +323,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `infra/query-resource`
     - `infra/retention`
     - `infra/trash`
+    - `network/live`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/instructions`

@@ -32,9 +32,18 @@ const { encode, decode } = sources.window.window;
 const _asContract: WindowQueryResourceContract<Row> = sources.window;
 
 describe("liveCollection", () => {
-  it("mints the window key and its :rows point sibling", () => {
+  it("mints the window key and its :rows and :groups siblings", () => {
     expect(sources.window.key).toBe("live-test.codec");
     expect(sources.rows.key).toBe("live-test.codec:rows");
+    expect(sources.groups.key).toBe("live-test.codec:groups");
+    expect(sources.rowKeys).toEqual([
+      "id",
+      "name",
+      "status",
+      "enabled",
+      "count",
+      "createdAt",
+    ]);
     expect(sources.window.defaultParams).toEqual({ limit: "100" });
     expect(sources.window.window.maxLimit).toBe(500);
     expect(_asContract.window.decode({ limit: "7" }).limit).toBe(7);
@@ -235,5 +244,133 @@ describe("decode", () => {
     for (const params of nonCanonical) {
       expect(() => decode(params)).toThrow(/not canonical/);
     }
+  });
+});
+
+describe("preload", () => {
+  const spec = {
+    row: RowSchema,
+    id: "id",
+    filterable: { enabled: z.boolean() },
+    sortable: ["name"],
+    default: { orderBy: [["name", "asc"]], limit: 10 },
+    maxLimit: 10,
+  } as const;
+
+  it("is off by default", () => {
+    const c = liveCollection("live-test.preload-none", spec);
+    expect(c.window.bootCritical).toBeUndefined();
+  });
+
+  it('"boot" marks the window only — never :rows or :groups', () => {
+    const c = liveCollection("live-test.preload-boot", {
+      ...spec,
+      preload: "boot",
+    });
+    expect(c.window.bootCritical).toBe(true);
+    expect(c.window.defaultParams).toEqual({ limit: "10" });
+    expect(c.rows.bootCritical).toBeUndefined();
+    expect(c.groups.bootCritical).toBeUndefined();
+  });
+});
+
+describe("groups codec", () => {
+  const groups = sources.groups.groups;
+
+  it("encodes groupBy + the default limit, where only when non-empty", () => {
+    expect(groups.defaultLimit).toBe(50);
+    expect(groups.maxLimit).toBe(100);
+    expect(groups.encode({ groupBy: "status" })).toEqual({
+      groupBy: "status",
+      limit: "50",
+    });
+    expect(groups.encode({ groupBy: "status", where: {} })).toEqual({
+      groupBy: "status",
+      limit: "50",
+    });
+  });
+
+  it("canonicalises where exactly as a window does", () => {
+    const a = groups.encode({
+      groupBy: "status",
+      where: { enabled: { eq: true }, count: { in: [3, 1, 3] } },
+      limit: 20,
+    });
+    const b = groups.encode({
+      groupBy: "status",
+      where: { count: { in: [1, 3] }, enabled: true },
+      limit: 20,
+    });
+    expect(a).toEqual(b);
+    expect(a).toEqual({
+      groupBy: "status",
+      limit: "20",
+      where: '{"count":{"in":[1,3]},"enabled":true}',
+    });
+    expect(a.where).toBe(
+      encode({ where: { enabled: true, count: { in: [1, 3] } } }).where,
+    );
+  });
+
+  it("round-trips through a strict decode", () => {
+    const params = groups.encode({
+      groupBy: "enabled",
+      where: { status: { ne: "idle" } },
+    });
+    expect(groups.decode(params)).toEqual({
+      groupBy: "enabled",
+      limit: 50,
+      where: [{ column: "status", op: "ne", operand: "idle" }],
+    });
+  });
+
+  it("throws on an undeclared column, a limit above max, and an orderBy", () => {
+    // @ts-expect-error — "name" is not filterable, so it cannot be grouped on
+    expect(() => groups.encode({ groupBy: "name" })).toThrow(
+      /not a filterable column/,
+    );
+    expect(() => groups.encode({ groupBy: "status", limit: 101 })).toThrow(
+      /exceeds 100/,
+    );
+    expect(() => groups.encode({ groupBy: "status", limit: 0 })).toThrow(
+      /positive integer/,
+    );
+    expect(() =>
+      groups.encode({
+        groupBy: "status",
+        // @ts-expect-error — a grouping has a fixed order
+        orderBy: [["name", "asc"]],
+      }),
+    ).toThrow(/fixed order/);
+  });
+
+  it("decode rejects undeclared columns, bad limits, unknown params and non-canonical spellings", () => {
+    expect(() => groups.decode({ groupBy: "name", limit: "50" })).toThrow(
+      /not a filterable column/,
+    );
+    expect(() => groups.decode({ groupBy: "status", limit: "101" })).toThrow(
+      /exceeds 100/,
+    );
+    expect(() => groups.decode({ groupBy: "status", limit: "050" })).toThrow(
+      /canonical/,
+    );
+    expect(() => groups.decode({ groupBy: "status" })).toThrow(/canonical/);
+    expect(() =>
+      groups.decode({
+        groupBy: "status",
+        limit: "50",
+        order: '[["name","asc"]]',
+      }),
+    ).toThrow(/unknown param "order"/);
+    expect(() =>
+      groups.decode({ groupBy: "status", limit: "50", where: "{}" }),
+    ).toThrow(/not canonical/);
+    expect(() =>
+      groups.decode({
+        groupBy: "status",
+        limit: "50",
+        where: '{"enabled":{"eq":true}}',
+      }),
+    ).toThrow(/not canonical/);
   });
 });

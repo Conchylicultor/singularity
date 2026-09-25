@@ -8,9 +8,16 @@
  *   3. the Source filter's options are every source sorted by name — read from
  *      the exact window tuple `source-field` subscribes to
  *      (`{ limit: 500, order: [["name","asc"]] }`) and, in the UI, from the
- *      events list's Source filter value picker.
+ *      events list's Source filter value picker;
+ *   4. a source's `enabled` flag is LIVE on both surfaces at once: with the
+ *      sources list and that source's detail pane open side by side, flipping
+ *      it from the detail pane's Scheduling control moves the list row's
+ *      switch, and flipping it back from the row's switch moves the detail
+ *      pane's control — both with no reload (a stamp on `window` survives).
  *
- * Read-only: nothing is written.
+ * WRITES: step 4 toggles the target source's `enabled` twice through the UI,
+ * and a `finally` PATCHes it back to the value it started with, so a run killed
+ * mid-toggle cannot leave a source quietly switched. Everything else is a read.
  *
  * Usage:
  *   ./singularity run plugins/apps/plugins/events/plugins/sources/e2e/live-sources.ts [--headed]
@@ -30,7 +37,11 @@ const r = report("Events · live sources collection");
 interface SourceRow {
   id: string;
   name: string;
+  enabled: boolean;
 }
+
+/** How long a pushed change may take to reach the open tab. */
+const LIVE_TIMEOUT_MS = 10_000;
 
 /** Code-point order — the cluster collates `C`, so this is what SQL returns. */
 const byCodePoint = (a: string, b: string): number =>
@@ -170,6 +181,131 @@ await withBrowser(async (h) => {
   const shown = [...new Set(leafTexts.filter((t) => names.has(t)))];
   r.note(`picker shows ${shown.length} source option(s)`);
   r.eq("the Source filter's options are sorted by name", shown, expected);
+
+  // 4 — `enabled` is live on the list AND the detail pane, both directions.
+  const original = target.enabled;
+  let touched = false;
+  try {
+    await boot(page, pathUrl(`/events/sources/source/${target.id}`), {
+      marker: `[data-pane-id="event-source-detail"]`,
+      settleMs: 1500,
+    });
+    const list = page.locator('[data-pane-id="event-sources"]');
+    const detailPane = page.locator('[data-pane-id="event-source-detail"]');
+    // A stamp on this document: a re-render keeps it, a reload drops it.
+    await page.evaluate(() => {
+      Object.assign(window, { __e2eLiveSources: true });
+    });
+
+    /**
+     * The list row's own switch. Every row's switch is in the DOM (the reveal
+     * is a hover), so a page-wide lookup would find some other row's: pick the
+     * one whose vertical centre sits in the target label's band. Its
+     * accessible name is the action it offers, so match either.
+     */
+    const rowSwitch = async () => {
+      const label = list.getByText(target.name, { exact: true });
+      if ((await label.count()) !== 1) return null;
+      await label.scrollIntoViewIfNeeded();
+      await label.hover();
+      const box = await label.boundingBox();
+      if (box === null) return null;
+      const centre = box.y + box.height / 2;
+      for (const sw of await list
+        .getByRole("switch", { name: /^(Disable|Enable) source$/ })
+        .all()) {
+        const b = await sw.boundingBox();
+        if (b !== null && Math.abs(b.y + b.height / 2 - centre) <= 26) {
+          return sw;
+        }
+      }
+      return null;
+    };
+    /** The row switch's `aria-checked`, read fresh each time. */
+    const rowState = async (): Promise<string | null> => {
+      const sw = await rowSwitch();
+      return sw === null ? null : await sw.getAttribute("aria-checked");
+    };
+    /** The detail pane's Scheduling radio for one position. */
+    const detailRadio = (on: boolean) =>
+      detailPane.getByRole("radio", {
+        name: on ? "Enabled" : "Disabled",
+        exact: true,
+      });
+    const detailState = async (on: boolean): Promise<string | null> =>
+      await detailRadio(on).getAttribute("aria-checked");
+    /** Poll a read to a deadline — the push lands asynchronously. */
+    const settle = async (
+      read: () => Promise<string | null>,
+      want: string,
+    ): Promise<string | null> => {
+      const deadline = Date.now() + LIVE_TIMEOUT_MS;
+      let got = await read();
+      while (got !== want && Date.now() < deadline) {
+        await page.waitForTimeout(250);
+        got = await read();
+      }
+      return got;
+    };
+
+    const on = String(original);
+    const flipped = String(!original);
+    r.eq("the list row's switch reads the stored value", await rowState(), on);
+    r.eq(
+      "the detail pane's Scheduling control reads the stored value",
+      await detailState(original),
+      "true",
+    );
+
+    // Detail → list.
+    touched = true;
+    await detailRadio(!original).click();
+    await snap(page, OUT, "4-toggled-from-detail");
+    r.eq(
+      "toggling from the detail pane moves the list row's switch",
+      await settle(rowState, flipped),
+      flipped,
+    );
+    r.eq(
+      "…and the detail pane's own control",
+      await settle(() => detailState(!original), "true"),
+      "true",
+    );
+
+    // List → detail.
+    const sw = await rowSwitch();
+    r.ok("the target row's switch is found", sw !== null);
+    if (sw !== null) {
+      await page.waitForTimeout(600); // the hover reveal is a CSS transition
+      await sw.click();
+      await snap(page, OUT, "5-toggled-from-list");
+      r.eq(
+        "toggling from the list row moves the detail pane's control",
+        await settle(() => detailState(original), "true"),
+        "true",
+      );
+      r.eq("…and the row's own switch", await settle(rowState, on), on);
+    }
+    r.ok(
+      "both surfaces updated without reloading the page",
+      await page.evaluate(
+        () => Reflect.get(window, "__e2eLiveSources") === true,
+      ),
+    );
+  } finally {
+    // Whatever the UI did (or failed to do), the source ends where it started.
+    if (touched) {
+      const res = await page.request.patch(
+        pathUrl(`/api/events/sources/${target.id}`),
+        { data: { enabled: original } },
+      );
+      r.ok(
+        `cleanup restored enabled=${original} on ${target.id}`,
+        res.ok(),
+        `HTTP ${res.status()}`,
+      );
+    }
+  }
 
   r.ok(
     "no uncaught page errors",

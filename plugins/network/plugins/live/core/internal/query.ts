@@ -44,7 +44,43 @@ export interface LiveQuery<F, S extends string> {
   where?: LiveWhere<F>;
   orderBy?: LiveOrderBy<S>;
   limit?: number;
+  /** A grouping is its own query shape — {@link LiveGroupQuery}. */
+  groupBy?: never;
 }
+
+/**
+ * A grouping query: the values the filterable column `G` takes across the
+ * collection's rows matching `where`, one `{ value, count }` per value. The
+ * order is fixed — count descending, then value (code-point order) — so there
+ * is no `orderBy`. `limit` bounds how many groups come back (default
+ * {@link LIVE_GROUP_DEFAULT_LIMIT}, max `LIVE_LIST_MAX`: a picked set of groups
+ * must still fit one `in` filter).
+ *
+ * `where` applies as given: to keep every chip visible while one is picked,
+ * leave the grouped column out of it.
+ */
+export interface LiveGroupQuery<
+  F,
+  G extends keyof F & string = keyof F & string,
+> {
+  groupBy: G;
+  where?: LiveWhere<F>;
+  limit?: number;
+  orderBy?: never;
+}
+
+/** One group: a value of the grouped column (NULL is its own group) and how many rows carry it. */
+export interface LiveGroup<V> {
+  value: V | null;
+  count: number;
+}
+
+/** The value type of filterable column `G`. */
+export type LiveGroupValue<F, G extends keyof F> =
+  F[G] extends ZodParser<LiveScalar> ? z.output<F[G]> : never;
+
+/** Default number of groups a grouping query returns. */
+export const LIVE_GROUP_DEFAULT_LIMIT = 50;
 
 /**
  * The window resource's wire params: `limit` always, `where` / `order` as
@@ -55,6 +91,16 @@ export type LiveWindowParams = {
   limit: string;
   where?: string;
   order?: string;
+};
+
+/**
+ * The groups resource's wire params: `groupBy` and `limit` always, `where` as
+ * canonical JSON (the window codec's) present only when non-empty.
+ */
+export type LiveGroupParams = {
+  groupBy: string;
+  limit: string;
+  where?: string;
 };
 
 /** One validated, canonical filter clause (plain values already folded into `eq`). */
@@ -68,4 +114,12 @@ export interface LiveDecodedQuery<C extends string, S extends string> {
   /** Sorted by column; empty when unfiltered. */
   where: readonly LiveClause<C>[];
   orderBy: LiveOrderBy<S>;
+}
+
+/** A decoded grouping query with every default filled in. */
+export interface LiveDecodedGroupQuery<C extends string> {
+  groupBy: C;
+  limit: number;
+  /** Sorted by column; empty when unfiltered. */
+  where: readonly LiveClause<C>[];
 }

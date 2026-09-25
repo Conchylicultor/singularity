@@ -170,6 +170,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `review/plugin-changes/file-changes`
     - `screenshot`
     - `search/quick-find`
+    - `shell/notifications`
     - `stats/commits`
     - `tasks/attempt-view`
     - `tasks/task-dependencies`

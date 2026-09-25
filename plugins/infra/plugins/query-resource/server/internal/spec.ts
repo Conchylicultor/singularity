@@ -47,6 +47,8 @@ export type SelectMap = Record<string, PgColumn | SQL.Aliased>;
 // shape; the runtime is what verifies it, at one chokepoint, on every load.
 export interface QueryStep<Row = unknown> extends PromiseLike<Row[]> {
   where(predicate: SQL): QueryStep<Row>;
+  /** Aggregate reads (a collection's `:groups`); the compilers here never group. */
+  groupBy(...columns: (PgColumn | SQL)[]): QueryStep<Row>;
   orderBy(...order: SQL[]): QueryStep<Row>;
   limit(count: number): QueryStep<Row>;
 }

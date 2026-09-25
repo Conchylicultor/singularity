@@ -7,14 +7,14 @@ import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   eventSources,
-  type EventRecord,
+  type SourcedEvent,
   type EventSource,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 /** The `sourceId` enum field over the given source choices. */
 function sourceFields(
   sources: readonly EventSource[],
-): FieldDef<EventRecord>[] {
+): FieldDef<SourcedEvent>[] {
   return [
     {
       id: "sourceId",
@@ -50,7 +50,7 @@ const NO_SOURCES: readonly EventSource[] = [];
  */
 export function SourceField({
   render,
-}: FieldExtensionProps<EventRecord>): ReactNode {
+}: FieldExtensionProps<SourcedEvent>): ReactNode {
   const result = useLive(eventSources, {
     orderBy: [["name", "asc"]],
     limit: 500,
@@ -73,7 +73,7 @@ function SourceOptions({
   render,
 }: {
   sources: readonly EventSource[];
-  render: FieldExtensionProps<EventRecord>["render"];
+  render: FieldExtensionProps<SourcedEvent>["render"];
 }): ReactNode {
   const fields = useMemo(() => sourceFields(sources), [sources]);
   return <>{render(fields)}</>;

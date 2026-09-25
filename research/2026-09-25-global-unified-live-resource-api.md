@@ -255,8 +255,11 @@ existing plugins move under it later with `./singularity plugin move`.
 
 ## Phases after the proof
 
-1. **Filter at scale: the notifications bell.** Its type filter runs over only the newest 200
-   rows, so older notifications of that type never show. The fix is
+1. **Filter at scale: the notifications bell.** ✅ **Done (2026-09-25)** — see
+   `research/2026-09-25-global-live-bell-filter-groupby-preload.md` (server-filtered window,
+   `groupBy` query shape for the chips, `preload: "boot"`, base `where`, derived projection).
+   Its type filter ran over only the newest 200
+   rows, so older notifications of that type never showed. The fix is
    `useLive(notifications, { where: { type } })`. This also proves `preload: "boot"`
    on the default window before bulk migration.
 2. **Values.**

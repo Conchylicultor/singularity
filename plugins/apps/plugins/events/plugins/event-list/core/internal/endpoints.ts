@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { FilterGroupSchema } from "@plugins/primitives/plugins/data-view/core";
-import { EventSchema } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import { SourcedEventSchema } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // Wire mirror of the data-view `SortRule` (no zod schema is exported from
 // data-view/core, so it's declared here for body validation).
@@ -20,7 +20,7 @@ export const QueryEventsBodySchema = z.object({
 export type QueryEventsBody = z.infer<typeof QueryEventsBodySchema>;
 
 export const QueryEventsResponseSchema = z.object({
-  items: z.array(EventSchema),
+  items: z.array(SourcedEventSchema),
   nextCursor: z.string().nullable(),
   hasMore: z.boolean(),
 });

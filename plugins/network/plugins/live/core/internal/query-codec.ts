@@ -6,13 +6,16 @@ import {
   liveOps,
   type LiveScalar,
 } from "./ops";
-import type {
-  LiveClause,
-  LiveDecodedQuery,
-  LiveOrderBy,
-  LiveQuery,
-  LiveSortDirection,
-  LiveWindowParams,
+import {
+  LIVE_GROUP_DEFAULT_LIMIT,
+  type LiveClause,
+  type LiveDecodedGroupQuery,
+  type LiveDecodedQuery,
+  type LiveGroupParams,
+  type LiveOrderBy,
+  type LiveQuery,
+  type LiveSortDirection,
+  type LiveWindowParams,
 } from "./query";
 
 // The window query codec. A subscription is just a params tuple, so the SAME
@@ -36,9 +39,17 @@ export interface LiveQueryCodecSpec {
 export interface LiveQueryCodec<C extends string, S extends string> {
   encode: (query?: LiveQuery<unknown, S>) => LiveWindowParams;
   decode: (params: Record<string, string>) => LiveDecodedQuery<C, S>;
+  /** Canonical encode of a grouping query — the same `where` canonicalisation as a window. */
+  encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
+  /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
+  decodeGroups: (params: Record<string, string>) => LiveDecodedGroupQuery<C>;
 }
 
+/** A grouping query with its column vocabulary erased — the codec validates it at runtime. */
+type AnyGroupQuery = { groupBy: string; where?: object; limit?: number };
+
 const PARAM_KEYS = new Set(["limit", "where", "order"]);
+const GROUP_PARAM_KEYS = new Set(["groupBy", "limit", "where"]);
 
 export function createLiveQueryCodec<C extends string, S extends string>(
   spec: LiveQueryCodecSpec,
@@ -205,7 +216,82 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     return decoded;
   };
 
-  return { encode, decode };
+  // ── Grouping queries ───────────────────────────────────────────────
+  // Same discipline as the window: canonical encode, strict decode. The group
+  // limit is bounded by `LIVE_LIST_MAX` rather than the collection's
+  // `maxLimit` — a picked set of groups must still fit one `in` filter.
+
+  const checkGroupLimit = (limit: number): number => {
+    if (!Number.isSafeInteger(limit) || limit <= 0) {
+      fail(`group limit must be a positive integer, got ${limit}`);
+    }
+    if (limit > LIVE_LIST_MAX) {
+      fail(`group limit ${limit} exceeds ${LIVE_LIST_MAX}`);
+    }
+    return limit;
+  };
+  const checkGroupBy = (column: unknown): C => {
+    if (typeof column !== "string" || spec.filterable[column] === undefined) {
+      fail(
+        `groupBy ${JSON.stringify(column)} is not a filterable column — only a declared filterable column can be grouped on`,
+      );
+    }
+    return column as C;
+  };
+  const encodeDecodedGroups = (
+    q: LiveDecodedGroupQuery<C>,
+  ): LiveGroupParams => {
+    const params: LiveGroupParams = {
+      groupBy: q.groupBy,
+      limit: String(q.limit),
+    };
+    if (q.where.length > 0) params.where = whereJson(q.where);
+    return params;
+  };
+
+  const encodeGroups = (query: AnyGroupQuery): LiveGroupParams => {
+    // Typed out (`orderBy?: never`), but an untyped caller must not have its
+    // order silently ignored.
+    if ((query as { orderBy?: unknown }).orderBy !== undefined) {
+      fail(
+        "a grouping query has a fixed order (count desc, then value) — it takes no orderBy",
+      );
+    }
+    return encodeDecodedGroups({
+      groupBy: checkGroupBy(query.groupBy),
+      limit: checkGroupLimit(query.limit ?? LIVE_GROUP_DEFAULT_LIMIT),
+      where: toClauses(query.where ?? {}),
+    });
+  };
+
+  const decodeGroups = (
+    params: Record<string, string>,
+  ): LiveDecodedGroupQuery<C> => {
+    for (const k of Object.keys(params)) {
+      if (!GROUP_PARAM_KEYS.has(k)) fail(`decodeGroups: unknown param "${k}"`);
+    }
+    const { groupBy, limit, where } = params;
+    if (limit === undefined || !/^[1-9][0-9]*$/.test(limit)) {
+      fail(
+        `decodeGroups: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
+      );
+    }
+    const decoded: LiveDecodedGroupQuery<C> = {
+      groupBy: checkGroupBy(groupBy),
+      limit: checkGroupLimit(Number(limit)),
+      where: where === undefined ? [] : toClauses(parseJsonObject(where, fail)),
+    };
+    const canonical = encodeDecodedGroups(decoded);
+    if (!sameParams(canonical, params)) {
+      fail(
+        `decodeGroups: params are not canonical — got ${JSON.stringify(params)}, ` +
+          `the canonical encoding is ${JSON.stringify(canonical)}`,
+      );
+    }
+    return decoded;
+  };
+
+  return { encode, decode, encodeGroups, decodeGroups };
 }
 
 function canonicalList(values: LiveScalar[]): LiveScalar[] {
@@ -244,7 +330,10 @@ function parseJsonObject(raw: string, fail: (m: string) => never): object {
   return v as object;
 }
 
-function sameParams(a: LiveWindowParams, b: Record<string, string>): boolean {
+function sameParams(
+  a: LiveWindowParams | LiveGroupParams,
+  b: Record<string, string>,
+): boolean {
   const keys = Object.keys(b);
   return (
     keys.length === Object.keys(a).length &&

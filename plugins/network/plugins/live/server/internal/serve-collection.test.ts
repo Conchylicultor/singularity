@@ -19,7 +19,7 @@ import {
   expect,
   test,
 } from "bun:test";
-import { sql } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { boolean, integer, pgTable, text } from "drizzle-orm/pg-core";
 import { Client } from "pg";
@@ -41,11 +41,17 @@ import { compileCollection } from "./serve-collection";
 
 const TABLE = "live_src";
 
+// `hidden` and `secret` are server-only: no row field names them, so the
+// derived projection must never put them on the wire. `hidden` is also the
+// base-membership column of the `where` tests.
 const srcT = pgTable(TABLE, {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   n: integer("n").notNull(),
   enabled: boolean("enabled").notNull(),
+  kind: text("kind"),
+  hidden: boolean("hidden").notNull(),
+  secret: text("secret"),
 });
 
 const SrcSchema = z.object({
@@ -53,6 +59,7 @@ const SrcSchema = z.object({
   name: z.string(),
   n: z.number(),
   enabled: z.boolean(),
+  kind: z.string().nullable(),
 });
 type Src = z.infer<typeof SrcSchema>;
 
@@ -61,7 +68,7 @@ function collection() {
   return liveCollection(`test.live.src-${seq++}`, {
     row: SrcSchema,
     id: "id",
-    filterable: { enabled: z.boolean() },
+    filterable: { enabled: z.boolean(), kind: z.string() },
     sortable: ["n", "name"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 50,
@@ -79,7 +86,9 @@ beforeAll(async () => {
   db = drizzle(client);
   await db.execute(
     sql.raw(
-      `CREATE TABLE ${TABLE} (id text PRIMARY KEY, name text NOT NULL, n integer NOT NULL, enabled boolean NOT NULL)`,
+      `CREATE TABLE ${TABLE} (id text PRIMARY KEY, name text NOT NULL, n integer NOT NULL, ` +
+        `enabled boolean NOT NULL, kind text, hidden boolean NOT NULL DEFAULT false, ` +
+        `secret text NOT NULL DEFAULT 'server-only')`,
     ),
   );
 });
@@ -96,18 +105,29 @@ beforeEach(async () => {
 async function put(...rows: Src[]): Promise<void> {
   for (const r of rows) {
     await db.execute(
-      sql`INSERT INTO ${srcT} (id, name, n, enabled) VALUES (${r.id}, ${r.name}, ${r.n}, ${r.enabled})
-          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, n = EXCLUDED.n, enabled = EXCLUDED.enabled`,
+      sql`INSERT INTO ${srcT} (id, name, n, enabled, kind) VALUES (${r.id}, ${r.name}, ${r.n}, ${r.enabled}, ${r.kind})
+          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, n = EXCLUDED.n, enabled = EXCLUDED.enabled, kind = EXCLUDED.kind`,
     );
   }
 }
 
-const row = (id: string, n: number, enabled = true, name = id): Src => ({
+const row = (
+  id: string,
+  n: number,
+  enabled = true,
+  name = id,
+  kind: string | null = null,
+): Src => ({
   id,
   name,
   n,
   enabled,
+  kind,
 });
+
+const hide = async (id: string, hidden = true): Promise<void> => {
+  await db.execute(sql`UPDATE ${srcT} SET hidden = ${hidden} WHERE id = ${id}`);
+};
 
 interface SentFrame {
   key: string;
@@ -131,12 +151,15 @@ async function until(cond: () => boolean, what: string): Promise<void> {
   }
 }
 
-/** One runtime serving both halves of `c`, over the real table. */
-function serve(c: ReturnType<typeof collection>) {
+/** One runtime serving all three resources of `c`, over the real table. */
+function serve(c: ReturnType<typeof collection>, opts: { where?: SQL } = {}) {
   const specs = compileCollection(c, {
     from: srcT,
     db: db as unknown as QueryDb,
+    ...opts,
   });
+  // Every key reads the one table — the read-set a real server captures
+  // automatically at the DB pool chokepoint on the first load.
   const runtime = createResourceRuntime({ readSet: () => [TABLE] });
   runtime.defineResource(
     c.window,
@@ -146,6 +169,7 @@ function serve(c: ReturnType<typeof collection>) {
     c.rows,
     compileWindowQuery(c.rows, specs.rows).serverOpts,
   );
+  runtime.defineResource(c.groups, specs.groups);
 
   const frames: SentFrame[] = [];
   const handler = runtime.notificationsWsHandler as any;
@@ -173,6 +197,13 @@ function serve(c: ReturnType<typeof collection>) {
       return frames.filter(
         (f) =>
           f.kind === "delta" && f.key === key && sameParams(f.params, params),
+      );
+    },
+    /** Whole-value pushes (a plain push resource's frames). */
+    updates(key: string, params: ResourceParams) {
+      return frames.filter(
+        (f) =>
+          f.kind === "update" && f.key === key && sameParams(f.params, params),
       );
     },
     change(op: "I" | "U" | "D", ids: string[]) {
@@ -276,6 +307,247 @@ describe("serveCollection — compiled window + point, real Postgres", () => {
     expect(ids(await h.subscribe(c.rows.key, params)).sort()).toEqual([
       "a",
       "off",
+    ]);
+  });
+});
+
+describe("serveCollection — derived projection", () => {
+  test("selects exactly the row schema's fields — a server-only column never reaches the wire", async () => {
+    const c = collection();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    expect(Object.keys(specs.select)).toEqual([...c.rowKeys]);
+    expect(Object.keys(specs.select)).not.toContain("secret");
+
+    const h = serve(c);
+    await put(row("a", 1, true, "a", "x"));
+    const [first] = (await h.subscribe(c.key, { limit: "2" })) as Record<
+      string,
+      unknown
+    >[];
+    expect(first).toEqual(row("a", 1, true, "a", "x"));
+    expect(Object.keys(first!).sort()).toEqual([...c.rowKeys].sort());
+    const [pointRow] = (await h.subscribe(c.rows.key, { ids: "a" })) as Record<
+      string,
+      unknown
+    >[];
+    expect(pointRow).toEqual(row("a", 1, true, "a", "x"));
+  });
+
+  test("a row field bound to no column throws at compile time", () => {
+    const Wide = SrcSchema.extend({ bogus: z.string() });
+    const c = liveCollection(`test.live.wide-${seq++}`, {
+      row: Wide,
+      id: "id",
+      filterable: {},
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 1 },
+      maxLimit: 1,
+    });
+    expect(() =>
+      // @ts-expect-error — `bogus` is not a column of srcT, so `columns` is required
+      compileCollection(c, { from: srcT, db: db as unknown as QueryDb }),
+    ).toThrow(/row field "bogus" binds to no column/);
+  });
+});
+
+describe("serveCollection — :groups", () => {
+  async function seed(): Promise<void> {
+    await put(
+      row("a", 1, true, "a", "build"),
+      row("b", 2, true, "b", "build"),
+      row("c", 3, false, "c", "build"),
+      row("d", 4, true, "d", "alert"),
+      row("e", 5, true, "e", "alert"),
+      row("f", 6, true, "f", null),
+      row("g", 7, true, "g", "zeta"),
+      row("h", 8, false, "h", "Alpha"),
+    );
+  }
+
+  function loader(c: ReturnType<typeof collection>, where?: SQL) {
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+      ...(where ? { where } : {}),
+    });
+    return (q: Parameters<typeof c.groups.groups.encode>[0]) =>
+      specs.groups.loader(c.groups.groups.encode(q));
+  }
+
+  test("counts per value, ordered count desc then value (code point), NULL its own group", async () => {
+    const c = collection();
+    await seed();
+    expect(await loader(c)({ groupBy: "kind" })).toEqual([
+      { value: "build", count: 3 },
+      { value: "alert", count: 2 },
+      // Equal counts: code-point order ("A" < "z"), NULL last.
+      { value: "Alpha", count: 1 },
+      { value: "zeta", count: 1 },
+      { value: null, count: 1 },
+    ]);
+    expect(await loader(c)({ groupBy: "enabled" })).toEqual([
+      { value: true, count: 6 },
+      { value: false, count: 2 },
+    ]);
+  });
+
+  test("where filters the rows grouped; the grouped column may be left out to keep every value", async () => {
+    const c = collection();
+    await seed();
+    expect(
+      await loader(c)({ groupBy: "kind", where: { enabled: true } }),
+    ).toEqual([
+      { value: "alert", count: 2 },
+      { value: "build", count: 2 },
+      { value: "zeta", count: 1 },
+      { value: null, count: 1 },
+    ]);
+    expect(
+      await loader(c)({
+        groupBy: "enabled",
+        where: { kind: { isNull: true } },
+      }),
+    ).toEqual([{ value: true, count: 1 }]);
+  });
+
+  test("limit pages through groups in the fixed order", async () => {
+    const c = collection();
+    await seed();
+    const two = await loader(c)({ groupBy: "kind", limit: 2 });
+    const four = await loader(c)({ groupBy: "kind", limit: 4 });
+    expect(two).toEqual([
+      { value: "build", count: 3 },
+      { value: "alert", count: 2 },
+    ]);
+    expect(four.slice(0, 2)).toEqual(two);
+    expect(four).toHaveLength(4);
+  });
+
+  test("the base where applies to every grouping", async () => {
+    const c = collection();
+    await seed();
+    await hide("a");
+    await hide("d");
+    expect(
+      await loader(c, eq(srcT.hidden, false))({ groupBy: "kind" }),
+    ).toEqual([
+      { value: "build", count: 2 },
+      { value: "Alpha", count: 1 },
+      { value: "alert", count: 1 },
+      { value: "zeta", count: 1 },
+      { value: null, count: 1 },
+    ]);
+  });
+
+  test("a value its column's filterable schema cannot name fails loudly", async () => {
+    const c = liveCollection(`test.live.enum-${seq++}`, {
+      row: SrcSchema,
+      id: "id",
+      filterable: { kind: z.enum(["build", "alert"]) },
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 1 },
+      maxLimit: 1,
+    });
+    await seed();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    // The row schema allows any string; the grouped column holds "zeta" and
+    // "Alpha", which the declared operand schema could never name.
+    const failure = await Promise.resolve(
+      specs.groups.loader(c.groups.groups.encode({ groupBy: "kind" })),
+    ).then(
+      () => null,
+      (err: unknown) => err,
+    );
+    expect(String(failure)).toMatch(/does not parse as its filterable schema/);
+  });
+
+  test("a subscribed grouping is re-run and re-pushed on a table change (read-set routing)", async () => {
+    const c = collection();
+    const h = serve(c);
+    await seed();
+    const params = c.groups.groups.encode({ groupBy: "kind", limit: 2 });
+    expect(await h.subscribe(c.groups.key, params)).toEqual([
+      { value: "build", count: 3 },
+      { value: "alert", count: 2 },
+    ]);
+    await put(
+      row("i", 9, true, "i", "alert"),
+      row("j", 10, true, "j", "alert"),
+    );
+    h.change("I", ["i", "j"]);
+    await until(
+      () => h.updates(c.groups.key, params).length > 0,
+      "groups update",
+    );
+    expect(h.updates(c.groups.key, params).at(-1)!.value).toEqual([
+      { value: "alert", count: 4 },
+      { value: "build", count: 3 },
+    ]);
+  });
+});
+
+describe("serveCollection — base where", () => {
+  test("a base-where flip removes the row from the window, the :rows tuple and the group counts", async () => {
+    const c = collection();
+    const h = serve(c, { where: eq(srcT.hidden, false) });
+    await put(
+      row("a", 1, true, "a", "build"),
+      row("b", 2, true, "b", "build"),
+      row("c", 3, true, "c", "alert"),
+    );
+    await hide("c");
+    const windowParams = c.window.window.encode();
+    const pointParams = c.rows.point.encode(["a", "b"]);
+    const groupParams = c.groups.groups.encode({ groupBy: "kind" });
+    expect(ids(await h.subscribe(c.key, windowParams))).toEqual(["a", "b"]);
+    expect(ids(await h.subscribe(c.rows.key, pointParams)).sort()).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(await h.subscribe(c.groups.key, groupParams)).toEqual([
+      { value: "build", count: 2 },
+    ]);
+
+    // `c` (hidden) is outside the collection: not even an explicit id finds it.
+    expect(
+      ids(await h.subscribe(c.rows.key, c.rows.point.encode(["c"]))),
+    ).toEqual([]);
+
+    await hide("b");
+    h.change("U", ["b"]);
+    await until(
+      () =>
+        h.deltas(c.key, windowParams).length > 0 &&
+        h.deltas(c.rows.key, pointParams).length > 0 &&
+        h.updates(c.groups.key, groupParams).length > 0,
+      "flip frames",
+    );
+
+    const w = h.deltas(c.key, windowParams).at(-1)!;
+    expect(w.deletes).toEqual(["b"]);
+    expect(w.order).toEqual(["a"]);
+    const p = h.deltas(c.rows.key, pointParams).at(-1)!;
+    expect(p.deletes).toEqual(["b"]);
+    expect(p.order).toEqual(["a"]);
+    expect(h.updates(c.groups.key, groupParams).at(-1)!.value).toEqual([
+      { value: "build", count: 1 },
+    ]);
+
+    // Flipping back re-enters it: the point set still names `b`.
+    await hide("b", false);
+    h.change("U", ["b"]);
+    await until(
+      () => h.deltas(c.rows.key, pointParams).length > 1,
+      "re-entry delta",
+    );
+    expect(h.deltas(c.rows.key, pointParams).at(-1)!.upserts).toEqual([
+      ["b", row("b", 2, true, "b", "build")],
     ]);
   });
 });
