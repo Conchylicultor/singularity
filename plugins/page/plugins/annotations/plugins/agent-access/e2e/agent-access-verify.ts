@@ -700,10 +700,10 @@ await withBrowser(async (h) => {
   const created = await mustWrite("edit_page", {
     block_id: pageId,
     old_string: PROSE[1]!.md,
-    // One `\n`, not two: a blank line here is an empty paragraph at ROOT, outside
-    // every card, which the notes-only rule refuses — and the refusal would look
-    // nothing like this case's subject.
-    new_string: `${PROSE[1]!.md}\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
+    // Two `\n`: the blank line agents put around a card they insert. It touches
+    // the card's open tag, so it is spacing — not an empty paragraph at ROOT,
+    // outside every card, which the notes-only rule would refuse.
+    new_string: `${PROSE[1]!.md}\n\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
   });
   const noteId = created.note_ids?.[0];
   if (noteId === undefined) {

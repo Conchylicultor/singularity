@@ -179,6 +179,7 @@ export {
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
+  dropBlankLinesBesideTags,
   markdownLineClaim,
   markdownParseTagNames,
   markdownTagIsIdentified,

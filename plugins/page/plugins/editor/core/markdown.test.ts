@@ -21,6 +21,7 @@ import {
   type BlockTagSpelling,
   type MarkdownContext,
   type MarkdownNode,
+  dropBlankLinesBesideTags,
 } from "./markdown";
 import { loadBlockHandles } from "./testing";
 
@@ -1739,6 +1740,117 @@ describe("empty paragraphs", () => {
     // Stated separately, because `toEqual` over the whole forest would still
     // pass if BOTH sides had lost the children.
     expect(back[1]!.children.map(dataText)).toEqual(["kid one", "kid two"]);
+  });
+
+  // -------------------------------------------------------------------------
+  // A blank line an AGENT writes beside a tag line is spacing
+  // -------------------------------------------------------------------------
+  //
+  // Tags sit on lines of their own, so a blank line beside one states nothing a
+  // reader can see — and it is the line anyone writing markdown puts around a
+  // card they insert. Read as an empty paragraph it minted a block in the page's
+  // prose, OUTSIDE the card being written, and edit_page refused the edit.
+
+  const spaced = (md: string): string => dropBlankLinesBesideTags(md, handles);
+
+  test("blank lines around an inserted card are dropped from agent text", () => {
+    const md = [
+      "</human>",
+      "",
+      "<agent-inline>",
+      "Noted",
+      "",
+      "More",
+      "</agent-inline>",
+      "",
+      "",
+      "Outro",
+    ].join("\n");
+    expect(spaced(md)).toBe(
+      [
+        "</human>",
+        "<agent-inline>",
+        "Noted",
+        "",
+        "More",
+        "</agent-inline>",
+        "Outro",
+      ].join("\n"),
+    );
+  });
+
+  test("a blank line between two paragraphs is kept, and so is a fence body", () => {
+    expect(spaced("a\n\nb")).toBe("a\n\nb");
+    const fence = "```\n<quote>\n\n</quote>\n```";
+    expect(spaced(fence)).toBe(fence);
+  });
+
+  test("a name that is not a registered tag is not a tag line", () => {
+    expect(spaced("a\n\n<not-a-block>")).toBe("a\n\n<not-a-block>");
+  });
+
+  test("the PARSER still reads a blank line beside a tag as an empty paragraph", () => {
+    // A spacer already on the page must survive an agent inserting a card beside
+    // it — so the spacing rule is for the agent's text only, never the parse.
+    expect(parse("a\n<quote>\n  q\n</quote>\n\nb").map((b) => b.type)).toEqual([
+      "text",
+      "quote",
+      "text",
+      "text",
+    ]);
+  });
+
+  test("pinned: an empty paragraph BESIDE a card is spelled <text/>", () => {
+    const card = {
+      type: "quote",
+      data: {},
+      expanded: true,
+      children: [node("text", { text: runs("q") })],
+    };
+    const forest = [
+      node("text", { text: runs("a") }),
+      empty(),
+      card,
+      empty(),
+      empty(),
+      node("text", { text: runs("b") }),
+    ];
+    expect(serialize(forest)).toBe(
+      [
+        "a",
+        "<text/>",
+        "<quote>",
+        "  q",
+        "</quote>",
+        "<text/>",
+        "<text/>",
+        "b",
+      ].join("\n"),
+    );
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("pinned: a card ending a nested list pins the empty paragraph after its parent", () => {
+    const forest = [
+      {
+        ...node("text", { text: runs("parent") }),
+        children: [
+          {
+            type: "quote",
+            data: {},
+            expanded: true,
+            children: [node("text", { text: runs("q") })],
+          },
+        ],
+      },
+      empty(),
+      node("text", { text: runs("b") }),
+    ];
+    const md = serialize(forest);
+    expect(md).toBe(
+      ["parent", "  <quote>", "    q", "  </quote>", "<text/>", "b"].join("\n"),
+    );
+    expect(parse(md)).toEqual(forest);
   });
 
   test("an empty paragraph BETWEEN two siblings is still a blank line", () => {

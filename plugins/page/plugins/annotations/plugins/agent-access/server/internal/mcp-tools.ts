@@ -15,6 +15,7 @@ import {
 import { renamePage } from "@plugins/page/plugins/editor/server";
 import {
   blockAuthorOf,
+  dropBlankLinesBesideTags,
   pageBlockHandle,
   type MarkdownContext,
 } from "@plugins/page/plugins/editor/core";
@@ -358,9 +359,11 @@ body becoming the new page's content. There is no separate append tool.
 yourself, or you get a card inside this one rather than the contents of this one
 (nesting is legal, so nothing will stop you).
 
-A blank line is an empty paragraph, the same as pressing Enter twice in the
-editor. Blocks are one per line here, so a blank line you leave between two
-paragraphs becomes a spacer block of its own rather than whitespace.
+A blank line between two paragraphs is an empty paragraph, the same as pressing
+Enter twice in the editor: blocks are one per line here, so it becomes a spacer
+block of its own rather than whitespace. A blank line you write next to a tag line
+(\`<…>\` or \`</…>\`) is just spacing; an empty paragraph that really sits
+beside a tag reads as \`<text/>\`.
 
 This is a MERGE, not an overwrite: the incoming document is aligned against the
 block's existing children, so unchanged blocks keep their identity (and with it
@@ -421,7 +424,13 @@ can open the run that produced it. Returns what the write actually did
     // so the answer it computes on the way rides out on a closure rather than
     // being walked a second time here.
     let authored: string[] = [];
-    const report = await applyMarkdownToBlock(blockId, content, {
+    // A blank line the agent put beside a tag is spacing, not an empty
+    // paragraph (see `dropBlankLinesBesideTags`).
+    const spaced = dropBlankLinesBesideTags(
+      content,
+      serverMarkdownContext().handles,
+    );
+    const report = await applyMarkdownToBlock(blockId, spaced, {
       // The SAME filter the read used, which is what makes the apply a diff
       // against the document the agent actually saw.
       redact: redactHumanAudience,
@@ -500,10 +509,12 @@ page's title as \`# Title\` and a blank line. It is not a block of the page.
   would be accepted.
 - **On any other page it is read-only.** An edit that changes it is refused.
 
-A blank line is an empty paragraph, the same as pressing Enter twice in the
-editor. Blocks are one per line in this document, so a blank line you add is a
-new block — and a new block that lands outside a card is refused like any other.
-Put tags and paragraphs on consecutive lines unless you mean the spacer.
+A blank line between two paragraphs is an empty paragraph, the same as pressing
+Enter twice in the editor. Blocks are one per line in this document, so such a
+blank line you add is a new block — and a new block that lands outside a card is
+refused like any other. A blank line next to a tag line (\`<…>\` or \`</…>\`)
+is just spacing, so you may put blank lines around a card you insert; an empty
+paragraph that really sits beside a tag reads as \`<text/>\`.
 
 A \`\\n\` INSIDE a line is the opposite: a soft line break within that block, the
 same as pressing Shift+Enter in the editor rather than Enter. It is part of that
@@ -645,7 +656,15 @@ the author's even when it sits in yours.`,
       redact: redactHumanAudience,
     });
 
-    const found = findEdits(markdown, oldString, newString);
+    // A blank line the agent put beside a tag — `</human>\n\n<agent-inline>` —
+    // is spacing, not an empty paragraph minted in the page's prose. Only
+    // `new_string` is the agent's own text: a spacer already on the page stays a
+    // spacer when a card lands beside it (see `dropBlankLinesBesideTags`).
+    const found = findEdits(
+      markdown,
+      oldString,
+      dropBlankLinesBesideTags(newString, serverMarkdownContext().handles),
+    );
     if (found.kind === "none") {
       throw new HttpError(
         400,

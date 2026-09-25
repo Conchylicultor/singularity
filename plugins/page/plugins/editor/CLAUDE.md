@@ -3571,7 +3571,17 @@ gains no generator fails the suite instead of quietly going untested.
   therefore unstatable that way, and they mirror those parser rules exactly: a
   node **with children** (which would land under them), the **first** of a
   sibling list and the **last** of one (a leading or trailing run, dropped at a
-  document or tag-body edge). `MarkdownContext.emptyBlocks` — required, beside
+  document or tag-body edge). A fourth is pinned though a blank line could state
+  it: one **beside a tag line** (the previous sibling's last line is a tag's, or
+  the next sibling's first line is — a pinned block counts, so a run beside a
+  card is pinned whole; `pinnedAt`). So a read never holds a blank line beside a
+  tag, and in text an AGENT writes such a line means one thing, spacing:
+  `dropBlankLinesBesideTags` drops it from `edit_page`'s `new_string` and
+  `write_agent_note`'s content before they are parsed. `</human>\n\n<agent-inline>`
+  used to mint an empty paragraph in the page's prose, outside the card, and the
+  edit was refused. The rule is the agent's text's, never the parser's: a spacer
+  already on the page stays one when a card lands beside it.
+  `MarkdownContext.emptyBlocks` — required, beside
   `blankLines`, so a call site that does not state its dialect is a tsc error —
   says what happens there. `"pinned"` emits the handle's tag form instead of the
   blank line (`<text/>`, since `page/text`'s tag declares `attrs: () => ({})`);
@@ -4162,6 +4172,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineBlock`
     - `deleteBlock`
     - `diffBlocks`
+    - `dropBlankLinesBesideTags`
     - `getBlockPage`
     - `hasTextKey`
     - `IdentifiedBlockSchema`

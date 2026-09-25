@@ -70,7 +70,9 @@ export interface MarkdownContext {
    * that follows it and a leading or trailing blank run is dropped outright.
    * `"pinned"` — those three positions (a node with children, the first of its
    * sibling list, the last of it) emit the handle's TAG form instead, so the
-   * round trip is exact. A handle whose type maps to no tag keeps the blank
+   * round trip is exact — and so does a fourth, beside a tag line, so a read
+   * never holds a blank line there (see {@link dropBlankLinesBesideTags}). A
+   * handle whose type maps to no tag keeps the blank
    * line and keeps the loss: the pin never invents a spelling.
    *
    * Required for the same reason `blankLines` is, over the other direction of
@@ -1884,6 +1886,81 @@ function assertNoLineAnnotations(node: MarkdownNode): void {
   );
 }
 
+/** One sibling list, rendered: its lines, and whether the last one is a tag's. */
+interface RenderedList {
+  lines: string[];
+  endsWithTag: boolean;
+}
+
+const EMPTY_LIST: RenderedList = { lines: [], endsWithTag: false };
+
+/**
+ * One node of a sibling list, rendered: its own line(s) — in both spellings when
+ * it is an empty block that could be pinned — and the children the walk emits
+ * below them.
+ */
+interface Segment {
+  head: string[];
+  /** The `<text/>` spelling of an empty block, when its handle has a tag. */
+  pinnedHead: string[] | null;
+  /** Whether `head` is a tag region (its first and last lines are tag lines). */
+  headIsTag: boolean;
+  /** The children the WALK emits below the head (a consuming tag has none). */
+  children: RenderedList;
+  hasChildren: boolean;
+}
+
+function startsWithTag(seg: Segment, pinned: boolean): boolean {
+  return pinned || seg.headIsTag;
+}
+
+function endsWithTag(seg: Segment, pinned: boolean): boolean {
+  if (seg.children.lines.length > 0) return seg.children.endsWithTag;
+  return pinned || seg.headIsTag;
+}
+
+/**
+ * THE PIN: which empty blocks of one sibling list are spelled as their tag
+ * (`<text/>`) rather than as a blank line.
+ *
+ * A blank line carries no indentation of its own: the parser places it by the
+ * block that FOLLOWS it and drops a run with nothing before or after it. So an
+ * empty block is pinned when it:
+ *
+ * - carries children (a blank line would land under them),
+ * - is the first or the last of its sibling list (a leading / trailing run), or
+ * - sits beside a line that is a tag's: the neighbour before it ENDS with a tag
+ *   line, or the neighbour after it STARTS with one. The parser would read that
+ *   blank line back fine; what it buys is a READ that never holds a blank line
+ *   beside a tag, so that in text an agent writes such a line has one meaning —
+ *   spacing — and {@link dropBlankLinesBesideTags} can drop it without ever
+ *   dropping an empty paragraph the agent copied from a read.
+ *
+ * The third rule feeds itself — a pinned block IS a tag line — so a run of empty
+ * blocks beside a card is pinned whole. It only ever adds pins, so iterating to
+ * a fixed point terminates.
+ */
+function pinnedAt(segments: readonly Segment[]): boolean[] {
+  const last = segments.length - 1;
+  const pinned = segments.map(
+    (seg, i) =>
+      seg.pinnedHead !== null && (seg.hasChildren || i === 0 || i === last),
+  );
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const [i, seg] of segments.entries()) {
+      if (pinned[i] || seg.pinnedHead === null) continue;
+      const prev = i > 0 && endsWithTag(segments[i - 1]!, pinned[i - 1]!);
+      const next = i < last && startsWithTag(segments[i + 1]!, pinned[i + 1]!);
+      if (prev || next) {
+        pinned[i] = true;
+        changed = true;
+      }
+    }
+  }
+  return pinned;
+}
+
 export function serializeForestToMarkdown(
   forest: MarkdownNode[],
   ctx: MarkdownContext,
@@ -1900,17 +1977,18 @@ export function serializeForestToMarkdown(
   // Returns the lines for ONE sibling list, at depth 0; the caller indents. The
   // recursion carries the nesting rather than a `depth` counter so a tag can
   // render its own children INSIDE itself and tell the walk not to re-emit them.
-  const renderList = (nodes: MarkdownNode[]): string[] => {
-    const out: string[] = [];
+  //
+  // Two passes, because whether an empty paragraph is PINNED depends on its
+  // neighbours: the first renders every node into a segment (an empty one in
+  // both spellings), the second decides the pins and joins the segments.
+  const renderList = (nodes: MarkdownNode[]): RenderedList => {
+    const segments: Segment[] = [];
     // Per-sibling-list ordinal: 1-based position within the consecutive run of
     // same-type siblings, reset on type change. Each recursive child list starts
     // its own fresh counter (matches render-time numbering).
     let ordinal = 0;
     let prevType: string | null = null;
-    // Indexed rather than `for…of`: the pin below asks whether a node is the
-    // FIRST or the LAST of this sibling list, and both must be exact.
-    for (let index = 0; index < nodes.length; index++) {
-      const n = nodes[index]!;
+    for (const n of nodes) {
       ordinal = n.type === prevType ? ordinal + 1 : 1;
       prevType = n.type;
       const h = byType.get(n.type);
@@ -1928,31 +2006,21 @@ export function serializeForestToMarkdown(
         assertNoLineAnnotations(n);
         const line =
           resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
-        // The pin. A whitespace-only line is an EMPTY block, and a blank line
-        // carries no indentation of its own — so the parser places it by the
-        // block that FOLLOWS it, and drops a run with nothing after it. Three
-        // positions are therefore unstatable that way (they mirror the parser's
-        // own rules): a node with children lands under them, the first of a
-        // sibling list is a leading run, the last is a trailing one. Emit the
-        // handle's tag form there instead, which states depth and position
-        // exactly. A handle with no tag keeps the blank line — the pin never
-        // invents a spelling, so that loss stays, honestly.
+        const children = renderList(n.children);
+        // The pin's spelling, for an EMPTY block only. Whether it is used is the
+        // second pass's call (see `pinnedAt`). A handle with no tag keeps the
+        // blank line — the pin never invents a spelling, so that loss stays,
+        // honestly.
         //
         // It replaces only the LINE: the walk still emits `n.children` below,
         // exactly as for any other flat line. Routing through the tag branch
         // would be a silent delete — a `body: "none"` tag self-closes and
         // CONSUMES its children.
-        const pinned =
-          ctx.emptyBlocks === "pinned" &&
-          line.trim() === "" &&
-          (n.children.length > 0 || index === 0 || index === nodes.length - 1)
+        const pinTag =
+          ctx.emptyBlocks === "pinned" && line.trim() === ""
             ? h && tagForData(h, n.data)
             : null;
-        if (pinned) {
-          out.push(
-            `${openTagPrefix(pinned.name, tagAttrs(pinned, n.data, serializeCtx))}/>`,
-          );
-        } else {
+        segments.push({
           // THE LINE A BLOCK EMITS IS CLAIMED BY THAT BLOCK, OR IT IS ESCAPED —
           // `claimSafeLines` is the whole of it, and it also owns the split.
           //
@@ -1967,11 +2035,16 @@ export function serializeForestToMarkdown(
           // point the string is opaque (prefix, fence and inline text already
           // concatenated), so escaping would collapse every fenced block onto
           // one line and turn the code's own newlines into `\n`.
-          out.push(
-            ...claimSafeLines(line, h, claimers, ctx.softBreaks === "escaped"),
-          );
-        }
-        out.push(...indentLines(renderList(n.children)));
+          head: claimSafeLines(line, h, claimers, ctx.softBreaks === "escaped"),
+          pinnedHead: pinTag
+            ? [
+                `${openTagPrefix(pinTag.name, tagAttrs(pinTag, n.data, serializeCtx))}/>`,
+              ]
+            : null,
+          headIsTag: false,
+          children,
+          hasChildren: n.children.length > 0,
+        });
         continue;
       }
 
@@ -1984,12 +2057,15 @@ export function serializeForestToMarkdown(
         // The block's OWN text between the tags; children still nest below, as
         // for any text block.
         const text = md(h!.text!(n.data));
-        out.push(
-          ...(text.includes("\n")
+        segments.push({
+          head: text.includes("\n")
             ? [`${prefix}>`, ...indentLines(text.split("\n")), `</${tag.name}>`]
-            : [`${prefix}>${text}</${tag.name}>`]),
-        );
-        out.push(...indentLines(renderList(n.children)));
+            : [`${prefix}>${text}</${tag.name}>`],
+          pinnedHead: null,
+          headIsTag: true,
+          children: renderList(n.children),
+          hasChildren: n.children.length > 0,
+        });
         continue;
       }
 
@@ -1999,12 +2075,95 @@ export function serializeForestToMarkdown(
       const emitsChildren =
         tag.body === "children" ||
         (tag.body === "children-when-expanded" && n.expanded);
-      const childLines = emitsChildren ? renderList(n.children) : [];
-      if (childLines.length === 0) out.push(`${prefix}/>`);
-      else out.push(`${prefix}>`, ...indentLines(childLines), `</${tag.name}>`);
+      const childLines = emitsChildren ? renderList(n.children).lines : [];
+      segments.push({
+        head:
+          childLines.length === 0
+            ? [`${prefix}/>`]
+            : [`${prefix}>`, ...indentLines(childLines), `</${tag.name}>`],
+        pinnedHead: null,
+        headIsTag: true,
+        children: EMPTY_LIST,
+        hasChildren: false,
+      });
     }
-    return out;
+
+    const pinned = pinnedAt(segments);
+    const out: string[] = [];
+    for (const [index, seg] of segments.entries()) {
+      out.push(...(pinned[index] ? seg.pinnedHead! : seg.head));
+      out.push(...indentLines(seg.children.lines));
+    }
+    const last = segments.length - 1;
+    return {
+      lines: out,
+      endsWithTag: last >= 0 && endsWithTag(segments[last]!, pinned[last]!),
+    };
   };
 
-  return renderList(forest).join("\n");
+  return renderList(forest).lines.join("\n");
+}
+
+/**
+ * Drop every blank line that sits beside a TAG line (`<name …>`, `<name/>`,
+ * `</name>` for a registered tag name) from text an agent WROTE — an
+ * `edit_page` `new_string`, a `write_agent_note` body — before it is spliced and
+ * parsed.
+ *
+ * In our dialect a blank line is an empty paragraph, but everyone writing
+ * markdown puts one around a card they insert: `</human>\n\n<agent-inline>…`.
+ * Read as an empty paragraph, that line was a block minted in the page's own
+ * prose, outside the card being written, and the whole edit was refused. Tags
+ * sit on lines of their own, so a blank line beside one states nothing a reader
+ * can see — here it is spacing.
+ *
+ * Deliberately a rule for the AGENT'S text, not for the parser: a spacer
+ * already on the page must stay a spacer when an agent inserts a card beside
+ * it, and only the splice knows which lines the agent wrote. It drops no empty
+ * paragraph copied from a read, because the serializer never emits a blank line
+ * beside a tag (the pin, {@link pinnedAt}): such a paragraph reads as `<text/>`.
+ * Fence bodies (code) are left verbatim.
+ */
+export function dropBlankLinesBesideTags(
+  text: string,
+  handles: BlockHandle<unknown>[],
+): string {
+  const names = new Set(tagParsersOf(handles).keys());
+  const fences = claimersOf(handles).fences.map((f) => f.fence);
+  const lines = text.split("\n");
+  // "tag" | "blank" | "other", per line; a fence's lines are all "other".
+  const kinds: ("tag" | "blank" | "other")[] = [];
+  let fenceClose: string | null = null;
+  for (const line of lines) {
+    const content = line.trim();
+    if (fenceClose !== null) {
+      kinds.push("other");
+      if (content.startsWith(fenceClose)) fenceClose = null;
+      continue;
+    }
+    if (content === "") {
+      kinds.push("blank");
+      continue;
+    }
+    const fence = fences.find((f) => content.startsWith(f.open));
+    if (fence) {
+      fenceClose = fence.close;
+      kinds.push("other");
+      continue;
+    }
+    const name = /^<\/?([A-Za-z][\w-]*)/.exec(content)?.[1];
+    kinds.push(name !== undefined && names.has(name) ? "tag" : "other");
+  }
+  const nearest = (from: number, step: 1 | -1): string | undefined => {
+    let i = from;
+    while (kinds[i] === "blank") i += step;
+    return kinds[i];
+  };
+  return lines
+    .filter(
+      (_, i) =>
+        kinds[i] !== "blank" ||
+        (nearest(i, -1) !== "tag" && nearest(i, 1) !== "tag"),
+    )
+    .join("\n");
 }

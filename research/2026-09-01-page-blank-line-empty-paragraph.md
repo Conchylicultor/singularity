@@ -53,6 +53,15 @@ emitted form for everybody.
   both siblings of what follows; no counting rule.
 - A blank run with nothing after it — the start or the end of a document or of a
   container tag body — is dropped.
+- *(Added 2026-09-25.)* A blank line an AGENT writes beside a tag line is
+  spacing: `dropBlankLinesBesideTags` removes it from `edit_page`'s `new_string`
+  and `write_agent_note`'s content before parsing. Agents write
+  `</human>\n\n<agent-inline>…` as a matter of course, and reading that line as
+  an empty paragraph minted a block in the page's prose, so the whole edit was
+  refused. The parser itself is unchanged — a spacer already on the page must
+  stay one when a card is inserted beside it. The serializer pins an empty
+  paragraph beside a tag line as `<text/>`, so a read never holds a blank line
+  there and the rule never drops a paragraph an agent copied from a read.
 
 `markdown.ts` still names no block type: the empty block is minted through
 `defaultTextHandle(handles)` (`markdown.ts:292`), the same accessor the plain-
