@@ -1,11 +1,11 @@
 import { resolveFieldStorage } from "@plugins/fields/plugins/server-capabilities/server";
 import { wireSchema } from "@plugins/infra/plugins/entities/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { pgTable, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, primaryKey, type PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { snakeCase } from "./snake-case";
 import {
-  compileDerivedUpdatedAt,
+  compileFromTable,
   registerDerivedUpdatedAt,
   type DerivedUpdatedAtSpec,
   type TouchRule,
@@ -250,12 +250,7 @@ export function defineEntity(
   // `ServerOnlyKeys<F, M>` is the contract consumers see — at a concrete call
   // site it resolves to the exact server-only keys, so `entity.schema` /
   // `entity.wireColumns` carry the precise omitted types.
-  const derivedUpdatedAt = compileEntityUpdatedAt(
-    name,
-    fields,
-    meta,
-    table as unknown as Record<string, unknown>,
-  );
+  const derivedUpdatedAt = compileEntityUpdatedAt(name, fields, meta, table);
   if (derivedUpdatedAt) registerDerivedUpdatedAt(derivedUpdatedAt);
 
   return Object.freeze({
@@ -275,7 +270,7 @@ function compileEntityUpdatedAt(
   name: string,
   fields: FieldsRecord,
   meta: { updatedAt?: UpdatedAtMeta<FieldsRecord> },
-  table: Record<string, unknown>,
+  table: PgTable,
 ): DerivedUpdatedAtSpec | undefined {
   const decl = meta.updatedAt;
   if (!("updatedAt" in fields)) {
@@ -293,29 +288,11 @@ function compileEntityUpdatedAt(
         `meta.updatedAt must declare how it moves ({ touchedBy }).`,
     );
   }
-  const touchedBy = decl.touchedBy as Record<string, TouchRule<unknown>>;
-  const expected = Object.keys(fields).filter((k) => k !== "updatedAt");
-  const missing = expected.filter((k) => !(k in touchedBy));
-  const extra = Object.keys(touchedBy).filter((k) => !expected.includes(k));
-  if (missing.length > 0 || extra.length > 0) {
-    throw new Error(
-      `defineEntity("${name}"): meta.updatedAt.touchedBy must classify every ` +
-        `column but updatedAt exactly once` +
-        (missing.length > 0 ? `; missing: ${missing.join(", ")}` : "") +
-        (extra.length > 0 ? `; not a column: ${extra.join(", ")}` : "") +
-        `.`,
-    );
-  }
-  const column = (key: string) =>
-    table[key] as { name: string; getSQLType(): string };
-  return compileDerivedUpdatedAt({
-    table: name,
-    updatedAtColumn: column("updatedAt").name,
-    columns: expected.map((key) => ({
-      key,
-      name: column(key).name,
-      sqlType: column(key).getSQLType(),
-      rule: touchedBy[key] as TouchRule<unknown>,
-    })),
-  });
+  // One compiler path with `deriveUpdatedAt`: physical names and SQL types are
+  // read off the built table, and the totality backstop is compileFromTable's.
+  return compileFromTable(
+    table,
+    decl.touchedBy as Readonly<Record<string, TouchRule<unknown>>>,
+    `defineEntity("${name}"): meta.updatedAt.touchedBy`,
+  );
 }

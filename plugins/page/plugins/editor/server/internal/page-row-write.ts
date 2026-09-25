@@ -81,7 +81,7 @@ export async function rewritePageRow(
 
       const data = decide(row);
       if (data === null) return null;
-      await updateBlockFields(ctx.tx, pageId, { data, updatedAt: new Date() });
+      await updateBlockFields(ctx.tx, pageId, { data });
       return { pageId: row.pageId };
     },
     executor,

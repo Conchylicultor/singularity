@@ -1,7 +1,7 @@
 import type { DerivedUpdatedAtSpec } from "./types";
 
 // ── Registry ────────────────────────────────────────────────────────────────
-// Filled by `defineEntity` at module eval. Every `tables.ts` is evaluated during
+// Filled by `defineEntity` / `deriveUpdatedAt` at module eval. Every `tables.ts` is evaluated during
 // plugin load, before any `onReadyBlocking` — the same guarantee
 // `View.getContributions()` relies on — so it is complete when the database
 // plugin installs from it.

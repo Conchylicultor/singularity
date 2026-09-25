@@ -22,7 +22,7 @@ export const conversationCategoriesResource = windowQueryResource(
       categoryId: t.categoryId,
       item: t.item,
       source: t.source,
-      classifiedAt: t.updatedAt,
+      updatedAt: t.updatedAt,
     },
     point: { by: t.id },
   },

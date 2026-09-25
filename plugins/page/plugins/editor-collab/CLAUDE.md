@@ -67,6 +67,7 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.implement`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`

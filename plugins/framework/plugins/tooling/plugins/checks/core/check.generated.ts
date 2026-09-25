@@ -20,6 +20,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/client-tools", id: "database.client-tools", loader: () => import("@plugins/database/plugins/client-tools/check"), dependsOn: [] },
+  { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: ["database/plugins/migrations"] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: [] },

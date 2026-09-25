@@ -8,6 +8,7 @@
 - Server:
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `primitives/rank.nextRankUnder`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`

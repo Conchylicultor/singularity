@@ -35,7 +35,6 @@ export async function upsertCategoryRows(
   source: "haiku" | "manual",
 ): Promise<void> {
   if (entries.length === 0) return;
-  const now = new Date();
   await db
     .insert(t)
     .values(
@@ -45,7 +44,6 @@ export async function upsertCategoryRows(
         categoryId: e.categoryId,
         item: e.item,
         source,
-        updatedAt: now,
       })),
     )
     .onConflictDoUpdate({
@@ -53,7 +51,7 @@ export async function upsertCategoryRows(
       set: {
         item: sql`excluded.item`,
         source: sql`excluded.source`,
-        updatedAt: now,
+        // `updatedAt` is derived: bumped only when item or source changes.
       },
     });
 }

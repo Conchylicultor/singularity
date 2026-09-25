@@ -89,6 +89,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`

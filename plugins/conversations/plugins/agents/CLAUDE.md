@@ -111,6 +111,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `conversations.createConversation`
     - `database.db`
     - `database/derived-tables.DerivedTable`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
     - `infra/attachments.Attachments`

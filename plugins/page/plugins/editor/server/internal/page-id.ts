@@ -135,7 +135,7 @@ export async function recomputePageIdSubtree(
       JOIN resolved r ON c.parent_id = r.id
     )
     UPDATE page_blocks t
-    SET page_id = resolved.page_id, updated_at = now()
+    SET page_id = resolved.page_id
     FROM resolved
     WHERE t.id = resolved.id
       AND t.page_id IS DISTINCT FROM resolved.page_id

@@ -162,6 +162,7 @@ Behavior:
   - Contributes: `resource.declare` "active-data.bindings"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `tasks/tasks-core._conversations`

@@ -452,8 +452,11 @@ export async function upsertReport(
   // only apply when this occurrence is at least as new as the row's
   // last_seen_at, so a replayed older report never clobbers fresher
   // attribution. ON CONFLICT SET expressions all read the PRE-update row, so
-  // every guard sees the same last_seen_at consistently. created_at /
-  // updated_at stay row-write times by design (when the DB learned of it).
+  // every guard sees the same last_seen_at consistently. created_at is the
+  // row-write time (when the DB learned of it); updated_at is derived by the
+  // table's trigger (derived-updated-at) — it moves only when a counted column
+  // (message, data, count, the flags, taskId) really changes, so it is never
+  // written here.
   const isNewest = sql`${occurredAt} >= ${_reports.lastSeenAt}`;
   return await conn
     .insert(_reports)
@@ -486,7 +489,6 @@ export async function upsertReport(
         count: sql`${_reports.count} + 1`,
         firstSeenAt: sql`least(${_reports.firstSeenAt}, ${occurredAt})`,
         lastSeenAt: sql`greatest(${_reports.lastSeenAt}, ${occurredAt})`,
-        updatedAt: new Date(),
         rateLimited: sql`${_reports.rateLimited} OR ${v.limited}`,
         noise: sql`case when ${isNewest} then ${v.noise} else ${_reports.noise} end`,
         lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${_reports.lastClientId} end`,

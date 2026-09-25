@@ -15,16 +15,21 @@ import { SSH_SECRET_NAMESPACE } from "./ssh-secret";
  * we do not hold — the reverse order would produce exactly the "configured but
  * unusable" state this whole design exists to make unrepresentable. The row
  * update is also what fires the change-feed push refreshing `deploy.servers`;
- * the secret write alone is invisible to it.
+ * the secret write alone is invisible to it — so the UPDATE runs even when the
+ * public key is unchanged (the change feed fires per statement; the derived
+ * `updatedAt` then simply stays put).
  */
 export async function storeSshKey(
   serverId: string,
   key: { privateKey: string; publicKey: string },
 ): Promise<ServerRow> {
-  await setSecret({ namespace: SSH_SECRET_NAMESPACE, key: serverId }, key.privateKey);
+  await setSecret(
+    { namespace: SSH_SECRET_NAMESPACE, key: serverId },
+    key.privateKey,
+  );
   const [row] = await db
     .update(_deployServers)
-    .set({ sshPublicKey: key.publicKey, updatedAt: new Date() })
+    .set({ sshPublicKey: key.publicKey })
     .where(eq(_deployServers.id, serverId))
     .returning();
   if (!row) throw new HttpError(404, "Not found");

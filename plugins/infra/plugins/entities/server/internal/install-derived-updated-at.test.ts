@@ -6,7 +6,8 @@
  *
  * Lives in entities (not database/derived-updated-at) because it drives the
  * whole path: `defineEntity`'s declaration → physical column names → compiled
- * trigger → install. It installs exactly its own entity's spec (`installDerivedUpdatedAt(db,
+ * trigger → install, plus the raw-`pgTable` path (`deriveUpdatedAt`). It
+ * installs exactly its own tables' specs (`installDerivedUpdatedAt(db,
  * [spec])`): the registry is process-wide and also holds every other suite's
  * entities, whose tables this database does not have.
  *
@@ -16,7 +17,7 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { text, timestamp } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import {
   createTestDb,
   type TestDb,
@@ -26,7 +27,11 @@ import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { defineEntity } from "./define-entity";
-import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  compileFromTable,
+  deriveUpdatedAt,
+  installDerivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import { defaultNow } from "./types";
 
 const textType = defineFieldType<string>("__dua_db_text__");
@@ -93,6 +98,25 @@ const items = defineEntity(
 const spec = items.derivedUpdatedAt;
 if (!spec) throw new Error("dua_items: expected a derived updatedAt spec");
 
+// A raw drizzle table (no defineEntity) declared through deriveUpdatedAt: the
+// path the hand-written `pgTable`s take.
+const rawNotes = deriveUpdatedAt(
+  pgTable("dua_raw_notes", {
+    id: text("id").primaryKey(),
+    body: jsonb("body").$type<{ text: string }>().notNull(),
+    expanded: text("expanded_state").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }),
+  { touchedBy: { id: false, body: true, expanded: false } },
+);
+const rawSpec = compileFromTable(rawNotes, {
+  id: false,
+  body: true,
+  expanded: false,
+});
+
 const OLD = "2000-01-01T00:00:00.000Z";
 let t: TestDb;
 let seq = 0;
@@ -141,6 +165,15 @@ beforeAll(async () => {
       updated_at     timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await t.db.execute(sql`
+    CREATE TABLE dua_raw_notes (
+      id             text PRIMARY KEY,
+      body           jsonb NOT NULL,
+      expanded_state text NOT NULL,
+      updated_at     timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await installDerivedUpdatedAt(t.db, [rawSpec]);
 });
 
 afterAll(async () => {
@@ -231,5 +264,58 @@ describe("the derived updated_at trigger", () => {
       sql`UPDATE dua_items SET updated_at = updated_at WHERE id = ${id}`,
     );
     expect(await bumped(id)).toBe(false);
+  });
+});
+
+describe("a raw pgTable declared through deriveUpdatedAt", () => {
+  async function insertNote(): Promise<string> {
+    const id = `n${++seq}`;
+    await t.db.insert(rawNotes).values({
+      id,
+      body: { text: "a" },
+      expanded: "open",
+      updatedAt: new Date(OLD),
+    });
+    return id;
+  }
+
+  async function noteBumped(id: string): Promise<boolean> {
+    const [row] = await t.db
+      .select({ updatedAt: rawNotes.updatedAt })
+      .from(rawNotes)
+      .where(eq(rawNotes.id, id));
+    if (!row) throw new Error(`no note ${id}`);
+    return row.updatedAt.getTime() !== new Date(OLD).getTime();
+  }
+
+  test("a counted change bumps", async () => {
+    const id = await insertNote();
+    await t.db
+      .update(rawNotes)
+      .set({ body: { text: "b" } })
+      .where(eq(rawNotes.id, id));
+    expect(await noteBumped(id)).toBe(true);
+  });
+
+  test("a no-op or an uncounted change does not bump", async () => {
+    const id = await insertNote();
+    await t.db
+      .update(rawNotes)
+      .set({ body: { text: "a" }, expanded: "closed" })
+      .where(eq(rawNotes.id, id));
+    expect(await noteBumped(id)).toBe(false);
+  });
+
+  test("writing updated_at raises", async () => {
+    const id = await insertNote();
+    const err = await rejection(
+      t.db
+        .update(rawNotes)
+        .set({ updatedAt: new Date() })
+        .where(eq(rawNotes.id, id)),
+    );
+    expect(
+      `${err.message} ${String((err as { cause?: unknown }).cause)}`,
+    ).toMatch(/dua_raw_notes.updated_at is derived/);
   });
 });

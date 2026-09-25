@@ -233,3 +233,7 @@ widening this change.
 5. **Boot:** check the worktree server log for any
    `updated_at is derived … do not write it` exception. That would name a
    stamp that was missed.
+
+> Done for §6: see `2026-09-25-global-derived-updated-at-raw-tables.md` — raw
+> tables declare via `deriveUpdatedAt`, and the `derived-updated-at:declared`
+> check closes the set.

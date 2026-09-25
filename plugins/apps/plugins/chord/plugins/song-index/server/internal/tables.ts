@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import {
   parsedJson,
   parsedText,
@@ -110,26 +111,46 @@ export const SINGLETON_ROW_ID = 1;
  * in its own process, so the change feed is how the browser hears of it).
  * No row means no load has started on this database.
  */
-export const _chordIndexState = pgTable("chord_index_state", {
-  id: integer("id").primaryKey(),
-  phase: parsedText("phase", IndexPhaseSchema).notNull(),
-  /** Sections loaded so far, during `loading`; the total loaded once `ready`. */
-  done: integer("done"),
-  /** Sections in scope in the snapshot, known once `loading` starts. */
-  total: integer("total"),
-  /** Loop windows loaded; set when `ready`. */
-  windows: integer("windows"),
-  error: text("error"),
-  /** The snapshot file this load reads (`sheetsage-<processed>-<raw>-v<format>`): pins both dump sha256s and the line format. */
-  snapshotName: text("snapshot_name").notNull(),
-  scope: parsedText("scope", LoadScopeSchema).notNull(),
-  derivationVersion: integer("derivation_version").notNull(),
-  /** Sections left out, by reason (snapshot skips and derivation skips), with example ids. */
-  skipped: parsedJson("skipped", SkipSummarySchema).notNull(),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  finishedAt: timestamp("finished_at", { withTimezone: true }),
-});
+export const _chordIndexState = deriveUpdatedAt(
+  pgTable("chord_index_state", {
+    id: integer("id").primaryKey(),
+    phase: parsedText("phase", IndexPhaseSchema).notNull(),
+    /** Sections loaded so far, during `loading`; the total loaded once `ready`. */
+    done: integer("done"),
+    /** Sections in scope in the snapshot, known once `loading` starts. */
+    total: integer("total"),
+    /** Loop windows loaded; set when `ready`. */
+    windows: integer("windows"),
+    error: text("error"),
+    /** The snapshot file this load reads (`sheetsage-<processed>-<raw>-v<format>`): pins both dump sha256s and the line format. */
+    snapshotName: text("snapshot_name").notNull(),
+    scope: parsedText("scope", LoadScopeSchema).notNull(),
+    derivationVersion: integer("derivation_version").notNull(),
+    /** Sections left out, by reason (snapshot skips and derivation skips), with example ids. */
+    skipped: parsedJson("skipped", SkipSummarySchema).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  }),
+  {
+    touchedBy: {
+      phase: true,
+      done: true,
+      total: true,
+      windows: true,
+      error: true,
+      snapshotName: true,
+      scope: true,
+      derivationVersion: true,
+      skipped: true,
+      startedAt: true,
+      finishedAt: true,
+      id: false,
+    },
+  },
+);
 
 /** "This instance uses the chord app": one row, written by `ensure`. Its presence is what lets boot reload a stale index. */
 export const _chordIndexRequest = pgTable("chord_index_request", {

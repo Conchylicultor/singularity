@@ -78,6 +78,7 @@ contributing a section, never by wrapping the pane.
   - Contributes: `resource.declare` "deploy.servers"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/secrets.deleteSecret`
@@ -110,7 +111,7 @@ contributing a section, never by wrapping the pane.
     - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
-  - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
+  - Extended by: `apps/deploy/health` (table `servers_ext_health`)
 - Shared:
   - Exports (types):
     - `CreateServerBody`

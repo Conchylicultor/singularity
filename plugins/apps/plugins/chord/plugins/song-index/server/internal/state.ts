@@ -99,6 +99,7 @@ export async function beginIndexLoad(
   phase: IndexLoadPhase,
 ): Promise<void> {
   const now = new Date();
+  // No `updatedAt`: the column defaults on insert and is derived on update.
   const row = {
     id: SINGLETON_ROW_ID,
     ...target,
@@ -109,7 +110,6 @@ export async function beginIndexLoad(
     error: null,
     skipped: [],
     startedAt: now,
-    updatedAt: now,
     finishedAt: null,
   };
   await db
@@ -119,11 +119,12 @@ export async function beginIndexLoad(
 }
 
 async function updateState(
-  set: Partial<typeof _chordIndexState.$inferInsert>,
+  set: Partial<Omit<typeof _chordIndexState.$inferInsert, "updatedAt">>,
 ): Promise<void> {
+  // `updatedAt` is derived: the trigger bumps it when a column here changes.
   await db
     .update(_chordIndexState)
-    .set({ ...set, updatedAt: new Date() })
+    .set(set)
     .where(eq(_chordIndexState.id, SINGLETON_ROW_ID));
 }
 

@@ -92,7 +92,7 @@ export async function investigateReport(
         if (result.taskId !== row.taskId) {
           await db
             .update(_reports)
-            .set({ taskId: result.taskId, updatedAt: new Date() })
+            .set({ taskId: result.taskId })
             .where(eq(_reports.id, row.id));
           // The row now links a task: open readers (the detail pane's
           // "View task" button, the list) refetch.

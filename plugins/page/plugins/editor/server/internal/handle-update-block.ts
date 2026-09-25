@@ -51,7 +51,7 @@ export const handleUpdateBlock = implement(
           .limit(1);
         if (!row) throw new HttpError(404, "Not found");
 
-        const patch: BlockColumnChanges = { updatedAt: new Date() };
+        const patch: BlockColumnChanges = {};
         if (typeof body.type === "string") patch.type = body.type;
         if (body.data !== undefined) {
           patch.data = rewriteBlockData({

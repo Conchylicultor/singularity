@@ -34,6 +34,7 @@
     - `config_v2.getConfigScopeIds`
     - `config_v2.setConfig`
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`

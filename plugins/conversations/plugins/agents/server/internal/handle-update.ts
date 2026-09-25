@@ -11,7 +11,9 @@ import { isAgentDescendant } from "./hierarchy";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  // `updatedAt` is derived (deriveUpdatedAt on `_agents`): the trigger bumps it
+  // only when a counted column really changes, so the patch never names it.
+  const patch: Record<string, unknown> = {};
   if (typeof body.name === "string") patch.name = body.name;
   if (body.prompt === null || typeof body.prompt === "string") {
     patch.prompt = body.prompt;
@@ -43,11 +45,20 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     }
     patch.parentId = body.parentId;
   }
-  const [updated] = await db
-    .update(_agents)
-    .set(patch)
-    .where(eq(_agents.id, id))
-    .returning({ id: _agents.id });
+  // An empty patch has nothing to write (drizzle rejects an empty `set`): only
+  // confirm the row exists, then answer it as it stands.
+  const [updated] =
+    Object.keys(patch).length === 0
+      ? await db
+          .select({ id: _agents.id })
+          .from(_agents)
+          .where(eq(_agents.id, id))
+          .limit(1)
+      : await db
+          .update(_agents)
+          .set(patch)
+          .where(eq(_agents.id, id))
+          .returning({ id: _agents.id });
   if (!updated) throw new HttpError(404, "Not found");
   // No destination force-expand on a re-parent: expand/collapse is device-local
   // view state owned by the data-view primitive, not a column. `TreeList.

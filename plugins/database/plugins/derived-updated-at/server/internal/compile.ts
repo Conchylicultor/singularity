@@ -15,9 +15,10 @@ import type { DerivedUpdatedAtSpec, TouchRule } from "./types";
 //     (`IS DISTINCT FROM`, so a no-op write never bumps).
 // INSERT is untouched: the column keeps its `defaultNow()`.
 //
-// The declaration itself is entities' (`defineEntity`'s `meta.updatedAt`), which
-// compiles and registers here; installation (boot, after migrations) is
-// `install.ts`, called by the database plugin.
+// The declaration is `defineEntity`'s `meta.updatedAt` (infra/entities) or, for
+// a raw drizzle table, `deriveUpdatedAt` (`from-table.ts`); both compile through
+// `compileFromTable` and register here. Installation (boot, after migrations)
+// is `install.ts`, called by the database plugin.
 // Plan: research/2026-09-25-global-derived-updated-at.md.
 
 /** One column of the table, as the compiler sees it. */
@@ -154,8 +155,8 @@ export function compileDerivedUpdatedAt(
     .map((col) => columnCondition(table, col))
     .filter((c): c is string => c !== null);
   const message = escapeLiteral(
-    `${table}.${updatedAtColumn} is derived (declared in defineEntity's ` +
-      `meta.updatedAt.touchedBy); do not write it`,
+    `${table}.${updatedAtColumn} is derived (declared by its touchedBy); ` +
+      `do not write it`,
   );
   // No counted column ⇒ no bump block: the value never moves after insert.
   const bump =

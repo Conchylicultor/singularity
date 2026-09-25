@@ -87,7 +87,6 @@ export const handleTurnIntoPage = implement(
         // page is that the parent stops showing it — and the `collapsible:
         // "always"` chevron on the page row is the way back in.
         expanded: false,
-        updatedAt: new Date(),
       });
 
       // Seeding is conditional on the block being childless, so a concurrent

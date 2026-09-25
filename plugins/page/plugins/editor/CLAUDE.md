@@ -4008,6 +4008,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `database.currentTxId`
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -4333,9 +4334,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `reports/collab-hydration`
     - `reports/page-undo-conflict`
   - Extended by:
-    - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
-    - `apps/pages/starred` (table `page_blocks_ext_starred`)
-    - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
+    - `apps/pages/agent-origin` (table `editor_ext_origin`)
+    - `apps/pages/starred` (table `editor_ext_starred`)
+    - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
   - Endpoint callers: `editor-collab`
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`

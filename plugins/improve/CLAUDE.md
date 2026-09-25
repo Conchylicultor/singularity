@@ -32,9 +32,7 @@
     - `infra/jobs.defineJob`
     - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/improve/server/internal/tables.ts`
-  - Exports (values):
-    - `_improve_config`
-    - `_improvePendingGroups`
+  - Exports (values): `_improvePendingGroups`
   - Register: `defineJob('improve.apply-group')`
 - Cross-plugin:
   - Imported by:

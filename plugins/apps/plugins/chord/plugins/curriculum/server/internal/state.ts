@@ -50,7 +50,7 @@ export async function updateSelection(
       .values({ id: ROW_ID, ...next })
       .onConflictDoUpdate({
         target: _chordCurriculum.id,
-        set: { ...next, updatedAt: new Date() },
+        set: next,
       });
     return next;
   });

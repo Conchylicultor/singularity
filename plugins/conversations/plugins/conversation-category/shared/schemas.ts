@@ -16,7 +16,8 @@ export const ConversationCategorySchema = z.object({
   // stale label keeps rendering, which beats losing the classification.
   item: z.string(),
   source: CategorySourceSchema,
-  classifiedAt: z.coerce.date(),
+  // When the item or source last changed (derived; see server/internal/tables.ts).
+  updatedAt: z.coerce.date(),
 });
 export type ConversationCategory = z.infer<typeof ConversationCategorySchema>;
 

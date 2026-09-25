@@ -132,6 +132,7 @@ A round nothing was typed into reads exactly like the next one, so after
   - Contributes: `resource.declare` "chord.curriculum"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`

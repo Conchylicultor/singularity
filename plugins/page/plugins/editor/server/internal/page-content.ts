@@ -231,10 +231,7 @@ export async function restorePageContent(
         next,
       });
       if (!dataEqual(pageRow.data, data)) {
-        await updateBlockFields(ctx.tx, pageId, {
-          data,
-          updatedAt: new Date(),
-        });
+        await updateBlockFields(ctx.tx, pageId, { data });
       }
 
       return {

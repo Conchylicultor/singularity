@@ -426,6 +426,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.isSuspendSignal`

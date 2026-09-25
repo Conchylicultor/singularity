@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { bytea } from "@plugins/primitives/plugins/collab-doc/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 
 // One row per text block that has a content CRDT: the compacted
 // `Y.encodeStateAsUpdate(doc)` of the block's per-block `Y.Doc` (per-block CRDT
@@ -17,13 +18,22 @@ import { _blocks } from "@plugins/page/plugins/editor/server";
 //
 // Deliberately NOT excluded from the DB change-feed: the `doc-update` UPDATE is
 // what pushes `blockContentResource` to the block's subscribers.
-export const _pageBlockDocs = pgTable("page_block_docs", {
-  blockId: text("block_id")
-    .primaryKey()
-    .references(() => _blocks.id, { onDelete: "cascade" }),
-  /** `Y.encodeStateAsUpdate(doc)` — compacted whole-doc state. */
-  state: bytea("state").notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+//
+// `updatedAt` is DERIVED (derived-updated-at): it moves when the merged
+// `state` really changes — a doc-update that merges to identical bytes leaves
+// it alone.
+export const _pageBlockDocs = deriveUpdatedAt(
+  pgTable("page_block_docs", {
+    blockId: text("block_id")
+      .primaryKey()
+      .references(() => _blocks.id, { onDelete: "cascade" }),
+    /** `Y.encodeStateAsUpdate(doc)` — compacted whole-doc state. */
+    state: bytea("state").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  }),
+  {
+    touchedBy: { state: true, blockId: false },
+  },
+);

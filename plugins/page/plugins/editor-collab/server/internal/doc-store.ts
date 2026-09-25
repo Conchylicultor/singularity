@@ -74,7 +74,8 @@ export async function initBlockDoc(
  * `SELECT … FOR UPDATE` serializes concurrent merges on the row, the merge is
  * `Y.mergeUpdates` on the raw update bytes (CRDT merge — idempotent and
  * commutative, so replays and races converge) with no intermediate `Y.Doc`,
- * and the UPDATE commits state + updatedAt together. The committed UPDATE fires
+ * and the UPDATE commits the merged state (`updatedAt` is derived by the table's
+ * trigger — it moves only when the bytes really change). The committed UPDATE fires
  * the DB change-feed, which pushes `blockContentResource` to the block's
  * subscribers. `Y.mergeUpdates` requires the v1 update format (the Yjs default
  * used throughout — stored `state` is an `encodeStateAsUpdate` full state,
@@ -103,7 +104,7 @@ export async function mergeBlockDocUpdate(
     const merged = Y.mergeUpdates([row.state, update]);
     await tx
       .update(_pageBlockDocs)
-      .set({ state: merged, updatedAt: new Date() })
+      .set({ state: merged })
       .where(eq(_pageBlockDocs.blockId, blockId));
   });
 }

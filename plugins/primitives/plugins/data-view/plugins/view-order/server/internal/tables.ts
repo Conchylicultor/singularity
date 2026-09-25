@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { rankText } from "@plugins/primitives/plugins/rank/server";
 
 /**
@@ -19,22 +20,33 @@ import { rankText } from "@plugins/primitives/plugins/rank/server";
  * the set. Identical bounded-table posture as `data_view_custom_values`; see this
  * plugin's CLAUDE.md § Retention.
  */
-export const _dataViewRowOrder = pgTable(
-  "data_view_row_order",
+export const _dataViewRowOrder = deriveUpdatedAt(
+  pgTable(
+    "data_view_row_order",
+    {
+      dataViewId: text("data_view_id").notNull(),
+      viewId: text("view_id").notNull(),
+      rowKey: text("row_key").notNull(),
+      rank: rankText("rank").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+    },
+    (t) => [
+      primaryKey({ columns: [t.dataViewId, t.viewId, t.rowKey] }),
+      index("dvro_view_idx").on(t.dataViewId, t.viewId),
+    ],
+  ),
   {
-    dataViewId: text("data_view_id").notNull(),
-    viewId: text("view_id").notNull(),
-    rowKey: text("row_key").notNull(),
-    rank: rankText("rank").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    touchedBy: {
+      rank: true,
+      dataViewId: false,
+      viewId: false,
+      rowKey: false,
+      createdAt: false,
+    },
   },
-  (t) => [
-    primaryKey({ columns: [t.dataViewId, t.viewId, t.rowKey] }),
-    index("dvro_view_idx").on(t.dataViewId, t.viewId),
-  ],
 );

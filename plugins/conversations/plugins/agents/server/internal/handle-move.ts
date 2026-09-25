@@ -69,7 +69,6 @@ export const handleMove = implement(moveAgent, async ({ params, body }) => {
       .set({
         parentId: body.parentId,
         rank: rank.toJSON(),
-        updatedAt: new Date(),
       })
       .where(eq(_agents.id, params.id));
   });

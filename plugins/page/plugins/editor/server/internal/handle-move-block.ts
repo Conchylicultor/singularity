@@ -91,7 +91,6 @@ export const handleMoveBlock = implement(
           parentId: body.parentId,
           rank: rank.toJSON(),
           ...(arrivesFolded ? { expanded: false } : {}),
-          updatedAt: new Date(),
         });
         // Reparenting may move the block (and its subtree) into a different page.
         await recomputePageIdSubtree(ctx.tx, params.id);
@@ -101,10 +100,9 @@ export const handleMoveBlock = implement(
         // embedding a page in a body that `page-tree`'s "two arrows" note forbids;
         // a sidebar drop is not a request to unfold anything in the document.
         if (destParent && destParent.type !== PAGE_BLOCK_TYPE) {
-          await updateBlockFields(ctx.tx, destParent.id, {
-            expanded: true,
-            updatedAt: new Date(),
-          });
+          // `expanded` is a fold, not content: it never moves the parent's
+          // derived `updatedAt`, so re-opening an already-open parent is inert.
+          await updateBlockFields(ctx.tx, destParent.id, { expanded: true });
         }
 
         const [row] = await ctx.tx

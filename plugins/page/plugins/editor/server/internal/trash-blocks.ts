@@ -381,7 +381,6 @@ export async function untrashBlocks(
           parentId: targetParentId,
           pageId: targetPageId,
           rank: targetRank,
-          updatedAt: new Date(),
         });
         restored.push({
           id: root.id,

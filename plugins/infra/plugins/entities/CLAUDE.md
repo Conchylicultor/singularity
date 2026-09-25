@@ -194,6 +194,10 @@ for callers typed against the widened `FieldsRecord` (entity-extensions, which
 builds each side-table's total `touchedBy` itself — own columns count unless
 overridden).
 
+A raw drizzle `pgTable` (not built by `defineEntity`) declares the same thing
+with `deriveUpdatedAt(pgTable(…), { touchedBy })` from
+`database/derived-updated-at` — both go through its one `compileFromTable`.
+
 ## Boundary casts
 
 Casts cross the runtime/type boundary in two places (the rest is precisely
@@ -220,7 +224,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 - Description: Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
 - Server:
   - Uses:
-    - `database/derived-updated-at.compileDerivedUpdatedAt`
+    - `database/derived-updated-at.compileFromTable`
     - `database/derived-updated-at.DerivedUpdatedAtSpec`
     - `database/derived-updated-at.registerDerivedUpdatedAt`
     - `database/derived-updated-at.TouchRule`

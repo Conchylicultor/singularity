@@ -47,7 +47,7 @@
     - `infra/query-resource.queryResource`
     - `infra/ssh.sshRun`
   - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
-  - Entity extension of: `apps/deploy/servers` (table `deploy_servers_ext_health`)
+  - Entity extension of: `apps/deploy/servers` (table `servers_ext_health`)
   - Exports (types):
     - `DeployServerRow`
     - `HostKeyPolicy`

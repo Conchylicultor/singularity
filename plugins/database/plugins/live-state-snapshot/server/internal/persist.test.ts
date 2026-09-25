@@ -90,7 +90,7 @@ describe("captureWatermark", () => {
     // Force xid advancement with a real committed write between captures.
     await persistSnapshot(t.db, "wm-probe", "{}", { n: 1 }, "1", ["t"]);
     await t.db.execute(
-      sql`UPDATE ${sql.raw(LIVE_STATE_SNAPSHOT_TABLE)} SET updated_at = now() WHERE resource_key = ${"wm-probe"}`,
+      sql`UPDATE ${sql.raw(LIVE_STATE_SNAPSHOT_TABLE)} SET persisted_at = now() WHERE resource_key = ${"wm-probe"}`,
     );
     const second = await captureWatermark(t.db);
     expect(BigInt(second) >= BigInt(first)).toBe(true);
@@ -305,5 +305,39 @@ describe("reconcileReadSetTable", () => {
     expect((await selectRow("notifications", "{}"))!.tables_read).toEqual([
       "notifications",
     ]);
+  });
+});
+
+describe("ensureSnapshotTable", () => {
+  async function columns(): Promise<string[]> {
+    const res = await t.db.execute<{ column_name: string }>(
+      sql`SELECT column_name FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = ${LIVE_STATE_SNAPSHOT_TABLE}
+          ORDER BY column_name`,
+    );
+    return res.rows.map((r) => r.column_name);
+  }
+
+  test("renames a legacy updated_at to persisted_at, keeping rows, idempotently", async () => {
+    await t.db.execute(
+      sql.raw(
+        `ALTER TABLE ${LIVE_STATE_SNAPSHOT_TABLE} RENAME COLUMN persisted_at TO updated_at`,
+      ),
+    );
+    await t.db.execute(
+      sql.raw(
+        `INSERT INTO ${LIVE_STATE_SNAPSHOT_TABLE} (resource_key, params_key, value, position) VALUES ('legacy', '{}', '{}'::jsonb, 1)`,
+      ),
+    );
+    await ensureSnapshotTable(t.db);
+    await ensureSnapshotTable(t.db);
+    const cols = await columns();
+    expect(cols).toContain("persisted_at");
+    expect(cols).not.toContain("updated_at");
+    expect(await countRows()).toBe(1);
+    // The upsert writes the renamed column.
+    await persistSnapshot(t.db, "legacy", "{}", { n: 2 }, "2", []);
+    expect(await countRows()).toBe(1);
   });
 });

@@ -89,6 +89,7 @@ how the caller obtained it.
     - `data-view.query-augmentor`
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `fields/server-capabilities.resolveFieldValueTextCast`
     - `infra/endpoints.implement`
     - `primitives/data-view/server-query.AugmentedColumn`

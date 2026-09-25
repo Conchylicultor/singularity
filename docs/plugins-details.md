@@ -54,6 +54,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `resource.declare` "active-data.bindings"
     - Uses:
       - `database.db`
+      - `database/derived-updated-at.deriveUpdatedAt`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `tasks/tasks-core._conversations`
@@ -563,6 +564,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `resource.declare` "chord.curriculum"
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
@@ -830,6 +832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/admin.ExcludeFromBackup`
               - `database/admin.ExcludeFromFork`
               - `database/change-feed.ExcludeFromChangeFeed`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
@@ -1556,6 +1559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/jobs.isSuspendSignal`
@@ -1736,7 +1740,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/query-resource.queryResource`
               - `infra/ssh.sshRun`
             - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
-            - Entity extension of: `apps/deploy/servers` (table `deploy_servers_ext_health`)
+            - Entity extension of: `apps/deploy/servers` (table `servers_ext_health`)
             - Exports (types):
               - `DeployServerRow`
               - `HostKeyPolicy`
@@ -1893,6 +1897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `resource.declare` "deploy.servers"
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/secrets.deleteSecret`
@@ -1925,7 +1930,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
-            - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
+            - Extended by: `apps/deploy/health` (table `servers_ext_health`)
           - Shared:
             - Exports (types):
               - `CreateServerBody`
@@ -3294,7 +3299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.deleteBlocksSubtree`
               - `page/editor.liveBlocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
-            - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
+            - Entity extension of: `page/editor` (table `editor_ext_origin`)
             - Exports (values):
               - `agentPagesServerResource`
               - `pageBlocksOrigin`
@@ -3578,7 +3583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/query-resource.windowQueryResource`
               - `page/editor._blocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
-            - Entity extension of: `page/editor` (table `page_blocks_ext_starred`)
+            - Entity extension of: `page/editor` (table `editor_ext_starred`)
             - Exports (values):
               - `pageBlocksStarred`
               - `setPageStarred`
@@ -9161,6 +9166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.createConversation`
           - `database.db`
           - `database/derived-tables.DerivedTable`
+          - `database/derived-updated-at.deriveUpdatedAt`
           - `database/derived-views.View`
           - `database/sql-column.parsedText`
           - `infra/attachments.Attachments`
@@ -9360,6 +9366,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.conversationTurnCompleted`
           - `conversations.readConversationTurns`
           - `database.db`
+          - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedText`
           - `infra/claude-cli.ClaudeCliError`
           - `infra/claude-cli.runClaudePrint`
@@ -11999,6 +12006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `primitives/rank.nextRankUnder`
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
@@ -12847,19 +12855,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core`
       - Core:
         - Exports (types): `DerivedRollupSpec`
-    - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, and the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations.
+    - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations, and a check that every schema table with an updated_at column declares one.
       - Cross-plugin:
         - Imported by:
+          - `active-data`
+          - `apps/chord/curriculum`
+          - `apps/chord/song-index`
+          - `apps/deploy/deployments`
+          - `apps/deploy/servers`
+          - `conversations/agents`
+          - `conversations/conversation-category`
+          - `conversations/conversations-view/grouped`
           - `database`
           - `infra/entities`
+          - `page/editor`
+          - `page/editor-collab`
+          - `primitives/data-view/custom-columns`
+          - `primitives/data-view/view-order`
+          - `reports`
+          - `ui/theme-engine/saved-themes`
       - Server:
+        - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`
         - Exports (types):
           - `DerivedUpdatedAtSpec`
+          - `TableTouchedBy`
+          - `TableWithUpdatedAt`
           - `TouchRule`
         - Exports (values):
-          - `compileDerivedUpdatedAt`
+          - `compileFromTable`
+          - `deriveUpdatedAt`
           - `installDerivedUpdatedAt`
           - `registerDerivedUpdatedAt`
+          - `registeredDerivedUpdatedAt`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -18100,9 +18127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs.defineJob`
       - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/improve/server/internal/tables.ts`
-    - Exports (values):
-      - `_improve_config`
-      - `_improvePendingGroups`
+    - Exports (values): `_improvePendingGroups`
     - Register: `defineJob('improve.apply-group')`
   - Cross-plugin:
     - Imported by:
@@ -18635,7 +18660,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
       - Server:
         - Uses:
-          - `database/derived-updated-at.compileDerivedUpdatedAt`
+          - `database/derived-updated-at.compileFromTable`
           - `database/derived-updated-at.DerivedUpdatedAtSpec`
           - `database/derived-updated-at.registerDerivedUpdatedAt`
           - `database/derived-updated-at.TouchRule`
@@ -21286,7 +21311,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `tasks/tasks-core.createTask`
                   - `tasks/tasks-core.tasksView`
                 - DB schema: `plugins/page/plugins/annotations/plugins/todo/plugins/task-link/server/internal/tables.ts`
-                - Entity extension of: `page/editor` (table `page_blocks_ext_todo_task`)
+                - Entity extension of: `page/editor` (table `editor_ext_todo_task`)
                 - Exports (values):
                   - `_pageBlocksTodoTaskExt`
                   - `ensureTodoTask`
@@ -21801,6 +21826,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.currentTxId`
           - `database.db`
+          - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -22126,9 +22152,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/collab-hydration`
           - `reports/page-undo-conflict`
         - Extended by:
-          - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
-          - `apps/pages/starred` (table `page_blocks_ext_starred`)
-          - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
+          - `apps/pages/agent-origin` (table `editor_ext_origin`)
+          - `apps/pages/starred` (table `editor_ext_starred`)
+          - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
         - Endpoint callers: `editor-collab`
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
@@ -22148,6 +22174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page.editor.block.onCopy`
         - Uses:
           - `database.db`
+          - `database/derived-updated-at.deriveUpdatedAt`
           - `infra/endpoints.implement`
           - `page/editor._blocks`
           - `page/editor.BlockLifecycle`
@@ -28224,6 +28251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `data-view.query-augmentor`
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `fields/server-capabilities.resolveFieldValueTextCast`
               - `infra/endpoints.implement`
               - `primitives/data-view/server-query.AugmentedColumn`
@@ -28602,6 +28630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `resource.declare` "data-view-row-order"
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `infra/endpoints.implement`
               - `primitives/rank.rankText`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/view-order/server/internal/tables.ts`
@@ -32575,6 +32604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database.db`
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
+      - `database/derived-updated-at.deriveUpdatedAt`
       - `database/sql-column.parsedJson`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
@@ -35711,6 +35741,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfigScopeIds`
               - `config_v2.setConfig`
               - `database.db`
+              - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`

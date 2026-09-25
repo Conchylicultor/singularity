@@ -27,7 +27,7 @@ test("compiles each rule kind into the trigger function", () => {
     `CREATE OR REPLACE FUNCTION "items_derive_updated_at"() RETURNS trigger LANGUAGE plpgsql AS $derive_updated_at$
 BEGIN
   IF NEW."updated_at" IS DISTINCT FROM OLD."updated_at" THEN
-    RAISE EXCEPTION USING MESSAGE = 'items.updated_at is derived (declared in defineEntity''s meta.updatedAt.touchedBy); do not write it';
+    RAISE EXCEPTION USING MESSAGE = 'items.updated_at is derived (declared by its touchedBy); do not write it';
   END IF;
   IF NEW."title" IS DISTINCT FROM OLD."title"
      OR (NEW."status" IS DISTINCT FROM OLD."status" AND (NEW."status" IN ('working', 'done') OR OLD."status" IN ('working'))) THEN

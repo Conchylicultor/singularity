@@ -1,6 +1,10 @@
 import { test, expect } from "bun:test";
 import { z } from "zod";
-import { text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  compileFromTable,
+  deriveUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
@@ -90,6 +94,37 @@ test("defineEntity compiles touchedBy from physical column names and registers i
       },
     }),
   ).toThrow(/declared twice with different touchedBy rules/);
+});
+
+test("deriveUpdatedAt on a raw pgTable compiles the same spec as the equivalent defineEntity", () => {
+  const touchedBy = {
+    id: false,
+    title: true,
+    status: { into: ["working"], outOf: ["done"] },
+    lastViewedAt: false,
+  } as const;
+  const entity = defineEntity("dua_same_items", itemFields(), {
+    primaryKey: "id",
+    columns: {
+      lastViewedAt: { name: "seen_at" },
+      updatedAt: { default: defaultNow() },
+    },
+    updatedAt: { touchedBy },
+  });
+  const raw = pgTable("dua_same_items", {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    status: text("status").$type<Status>().notNull(),
+    lastViewedAt: timestamp("seen_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  });
+  // Registers the same table again: identical rules, so no conflict.
+  deriveUpdatedAt(raw, { touchedBy });
+  const spec = entity.derivedUpdatedAt;
+  if (!spec) throw new Error("expected a derived updatedAt spec");
+  expect(compileFromTable(raw, touchedBy)).toEqual(spec);
 });
 
 test("runtime backstops for callers typed against the widened record", () => {

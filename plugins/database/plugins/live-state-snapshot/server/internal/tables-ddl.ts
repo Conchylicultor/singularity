@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_SNAPSHOT_TABLE} (
   value        jsonb   NOT NULL,
   position     numeric NOT NULL,
   tables_read  text[]  NOT NULL DEFAULT '{}'::text[],
-  updated_at   timestamptz NOT NULL DEFAULT now(),
+  persisted_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (resource_key, params_key)
 );
 `;
@@ -35,7 +35,28 @@ ALTER TABLE ${LIVE_STATE_SNAPSHOT_TABLE}
   ADD COLUMN IF NOT EXISTS tables_read text[] NOT NULL DEFAULT '{}'::text[];
 `;
 
+// Idempotent in-place rename for snapshot tables created when the write-time
+// stamp was spelled `updated_at`. It is WHEN THIS PROCESS LAST PERSISTED THE
+// ROW — a write-time stamp, not a content-derived `updated_at` (which, repo-wide,
+// means "maintained by derived-updated-at"). Guarded on information_schema so it
+// is a no-op on a fresh table (already `persisted_at`) and on a second boot.
+const SNAPSHOT_TABLE_RENAME_PERSISTED_AT = `
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = '${LIVE_STATE_SNAPSHOT_TABLE}'
+      AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE ${LIVE_STATE_SNAPSHOT_TABLE} RENAME COLUMN updated_at TO persisted_at;
+  END IF;
+END
+$$;
+`;
+
 export async function ensureSnapshotTable(db: NodePgDatabase): Promise<void> {
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_DDL));
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_TABLES_READ));
+  await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_RENAME_PERSISTED_AT));
 }

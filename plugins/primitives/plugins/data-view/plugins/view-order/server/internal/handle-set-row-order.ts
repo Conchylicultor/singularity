@@ -38,7 +38,10 @@ export async function applyRowOrder(
   { dataViewId, viewId, writes }: SetRowOrderBody,
 ): Promise<void> {
   if (new Set(writes.map((w) => w.rowKey)).size !== writes.length) {
-    throw new HttpError(400, "setRowOrder: `writes` contains duplicate rowKeys");
+    throw new HttpError(
+      400,
+      "setRowOrder: `writes` contains duplicate rowKeys",
+    );
   }
   for (let i = 1; i < writes.length; i++) {
     if (Rank.compare(writes[i - 1]!.rank, writes[i]!.rank) >= 0) {
@@ -65,12 +68,11 @@ export async function applyRowOrder(
         _dataViewRowOrder.viewId,
         _dataViewRowOrder.rowKey,
       ],
-      set: {
-        rank: sql`excluded.rank`,
-        updatedAt: new Date(),
-      },
+      // `updatedAt` is derived: the trigger bumps it when `rank` changes.
+      set: { rank: sql`excluded.rank` },
       // Skip the UPDATE for a row whose rank is unchanged, so a re-POST of an
-      // already-persisted rank pushes no change-feed diff.
+      // already-persisted rank pushes no change-feed diff (the trigger alone
+      // would keep the stamp still, but not the statement off the feed).
       setWhere: sql`${_dataViewRowOrder.rank} IS DISTINCT FROM excluded.rank`,
     });
 }

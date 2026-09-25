@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Per-widget persistent state for active-data block tags. The card itself
@@ -13,30 +14,42 @@ import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 // the "intent"; the user's follow-up action (created task, launched conv) is
 // stored here keyed by the widget's stable position in the message. Cascades
 // on conversation delete — we don't keep bindings for dropped conversations.
-export const _activeDataBindings = pgTable(
-  "active_data_bindings",
-  {
-    conversationId: text("conversation_id")
-      .notNull()
-      .references(() => _conversations.id, { onDelete: "cascade" }),
-    messageId: text("message_id").notNull(),
-    tag: text("tag").notNull(),
-    occurrenceIndex: integer("occurrence_index").notNull(),
-    // One shape per widget `tag`, owned by that tag's own consumer — which
-    // safe-parses its own schema at the point of use. So this column declares
-    // `unknown` and means it: a decoder here would have nothing to verify, and
-    // a `z.record` would be a claim the registry never makes.
-    payload: jsonb("payload").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => ({
-    pk: primaryKey({
-      columns: [t.conversationId, t.messageId, t.tag, t.occurrenceIndex],
+export const _activeDataBindings = deriveUpdatedAt(
+  pgTable(
+    "active_data_bindings",
+    {
+      conversationId: text("conversation_id")
+        .notNull()
+        .references(() => _conversations.id, { onDelete: "cascade" }),
+      messageId: text("message_id").notNull(),
+      tag: text("tag").notNull(),
+      occurrenceIndex: integer("occurrence_index").notNull(),
+      // One shape per widget `tag`, owned by that tag's own consumer — which
+      // safe-parses its own schema at the point of use. So this column declares
+      // `unknown` and means it: a decoder here would have nothing to verify, and
+      // a `z.record` would be a claim the registry never makes.
+      payload: jsonb("payload").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+    },
+    (t) => ({
+      pk: primaryKey({
+        columns: [t.conversationId, t.messageId, t.tag, t.occurrenceIndex],
+      }),
     }),
-  }),
+  ),
+  {
+    touchedBy: {
+      payload: true,
+      conversationId: false,
+      messageId: false,
+      tag: false,
+      occurrenceIndex: false,
+      createdAt: false,
+    },
+  },
 );

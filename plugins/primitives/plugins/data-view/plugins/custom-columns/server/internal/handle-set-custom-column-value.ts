@@ -35,7 +35,8 @@ export const handleSetCustomColumnValue = implement(
           _dataViewCustomValues.rowKey,
           _dataViewCustomValues.columnId,
         ],
-        set: { value, updatedAt: new Date() },
+        // `updatedAt` is derived: the trigger bumps it only when `value` changes.
+        set: { value },
       });
   },
 );

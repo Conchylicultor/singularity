@@ -266,7 +266,6 @@ export async function copyPageContent(
           rank: r.rank,
           expanded: r.expanded,
           createdAt: now,
-          updatedAt: now,
         });
         copied.push({ sourceId: r.id, copyId: id, type: r.type });
         if (r.type === PAGE_BLOCK_TYPE) {

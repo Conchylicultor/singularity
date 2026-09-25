@@ -121,6 +121,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `conversations.conversationTurnCompleted`
     - `conversations.readConversationTurns`
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedText`
     - `infra/claude-cli.ClaudeCliError`
     - `infra/claude-cli.runClaudePrint`

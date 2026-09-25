@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { integer, pgTable, timestamp } from "drizzle-orm/pg-core";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import {
   parsedJson,
   parsedText,
@@ -21,15 +22,18 @@ import { SelectedChordSchema } from "../../core/selection";
 // imports its schemas from their core modules directly, never through the
 // core barrel.
 
-export const _chordCurriculum = pgTable("chord_curriculum", {
-  /** Always 1: there is one learner per instance, so one selection. */
-  id: integer("id").primaryKey(),
-  /** Every chord that is not off, and whether it is practised or only heard. */
-  chords: parsedJson("chords", z.array(SelectedChordSchema)).notNull(),
-  blanks: parsedText("blanks", BlanksSchema).notNull(),
-  /** The key modes a loop may be in. Never empty. */
-  modes: parsedJson("modes", z.array(HookpadModeSchema).min(1)).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const _chordCurriculum = deriveUpdatedAt(
+  pgTable("chord_curriculum", {
+    /** Always 1: there is one learner per instance, so one selection. */
+    id: integer("id").primaryKey(),
+    /** Every chord that is not off, and whether it is practised or only heard. */
+    chords: parsedJson("chords", z.array(SelectedChordSchema)).notNull(),
+    blanks: parsedText("blanks", BlanksSchema).notNull(),
+    /** The key modes a loop may be in. Never empty. */
+    modes: parsedJson("modes", z.array(HookpadModeSchema).min(1)).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  }),
+  { touchedBy: { chords: true, blanks: true, modes: true, id: false } },
+);

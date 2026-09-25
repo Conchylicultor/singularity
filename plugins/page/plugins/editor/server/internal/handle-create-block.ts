@@ -64,10 +64,7 @@ export const handleCreateBlock = implement(
         },
       ]);
       if (parentId) {
-        await updateBlockFields(ctx.tx, parentId, {
-          expanded: true,
-          updatedAt: new Date(),
-        });
+        await updateBlockFields(ctx.tx, parentId, { expanded: true });
       }
     });
 

@@ -107,7 +107,7 @@ export async function persistSnapshot(
         WHERE resource_key = ${key} AND params_key = ${paramsKey}
       )
       INSERT INTO ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-        (resource_key, params_key, value, position, tables_read, updated_at)
+        (resource_key, params_key, value, position, tables_read, persisted_at)
       VALUES (
         ${key},
         ${paramsKey},
@@ -120,7 +120,7 @@ export async function persistSnapshot(
         SET value = EXCLUDED.value,
             position = EXCLUDED.position,
             tables_read = EXCLUDED.tables_read,
-            updated_at = EXCLUDED.updated_at
+            persisted_at = EXCLUDED.persisted_at
       RETURNING
         (SELECT old_tables FROM prev) AS old_tables,
         tables_read AS new_tables

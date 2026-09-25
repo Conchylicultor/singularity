@@ -53,14 +53,20 @@ import type { PageForestCtx, PageForestTx } from "./page-forest";
  * `research/2026-09-11-page-history-restore-preserves-block-identity.md`.
  */
 
-/** Every column an INSERT may name. `createdAt`/`updatedAt` default in the DB. */
-export type NewBlockRow = typeof _blocks.$inferInsert;
+/**
+ * Every column an INSERT may name. `updatedAt` is not one: it is DERIVED
+ * (`deriveUpdatedAt` in `tables.ts`) — it defaults on insert and the table's
+ * trigger moves it on update — so no write of `page_blocks` can spell it.
+ */
+export type NewBlockRow = Omit<typeof _blocks.$inferInsert, "updatedAt">;
 
 /**
  * The columns a field-scoped UPDATE may name. `id` is excluded — identity is not
- * a field — and `createdAt` is excluded because a row is created once. Nothing
- * is stamped implicitly: the write says exactly what it changes, `updatedAt`
- * included, so a caller can never discover a column it did not author.
+ * a field — and `createdAt` is excluded because a row is created once. The write
+ * says exactly what it changes, so a caller can never discover a column it did
+ * not author; `updatedAt` is not writable at all (see {@link NewBlockRow}) — the
+ * trigger moves it iff a counted column (parent, type, data, rank, trash flag)
+ * really changed.
  *
  * `data` takes the {@link BlockDataRewrite} brand rather than an insert's plain
  * `BlockData`: rewriting an EXISTING row's payload must also prove it keeps the
@@ -781,7 +787,6 @@ export async function writeForestTarget(
         rank: node.rank,
         expanded: node.expanded,
         createdAt: now,
-        updatedAt: now,
       });
       continue;
     }
@@ -809,7 +814,6 @@ export async function writeForestTarget(
       }),
       rank: node.rank,
       expanded: node.expanded,
-      updatedAt: new Date(),
     });
   }
 
@@ -849,7 +853,6 @@ async function placeClaimedPage(
     expanded: node.expanded,
     deletedAt: null,
     trashEntryId: null,
-    updatedAt: new Date(),
   });
   const entryId = claim.trashEntryId;
   if (entryId === null) return;
@@ -951,7 +954,6 @@ function fullRow(b: Block, before: BlockRow): BlockColumnChanges {
     data: rewriteBlockData({ type: b.type, before, next: b.data }),
     rank: b.rank.toJSON(),
     expanded: b.expanded,
-    updatedAt: new Date(),
   };
 }
 
@@ -1054,7 +1056,6 @@ export async function writeBlockPatch(
       rank: b.rank.toJSON(),
       expanded: b.expanded,
       createdAt: now,
-      updatedAt: now,
     })),
   );
   await trashOrphanInserts(
@@ -1087,7 +1088,7 @@ export async function writeBlockPatch(
     //    A blob the target type rejects is a loud 400 here rather than an
     //    unreadable row later.
     const type = namesField(changes, "type") ? changes.type! : before.type;
-    const set: BlockColumnChanges = { updatedAt: new Date() };
+    const set: BlockColumnChanges = {};
     if (placement) {
       set.parentId = placement.parentId;
       set.rank = placement.rank;

@@ -70,13 +70,11 @@ export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
       if (!check.ok) throw new HttpError(422, check.reason);
     }
 
-    const now = new Date();
     const fields = {
       label: input.label,
       extends: input.extends ?? null,
       fragments: input.fragments,
       colorAdjust: input.colorAdjust ?? null,
-      updatedAt: now,
     };
     const [row] = await tx
       .insert(_savedThemes)
@@ -84,7 +82,6 @@ export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
         id,
         source: input.source,
         externalId: input.source === "tweakcn" ? input.externalId : null,
-        createdAt: now,
         ...fields,
       })
       .onConflictDoUpdate({
@@ -124,7 +121,7 @@ async function updateCustomTheme(
     }
     const [updated] = await tx
       .update(_savedThemes)
-      .set({ ...change(toSavedTheme(row)), updatedAt: new Date() })
+      .set(change(toSavedTheme(row)))
       .where(eq(_savedThemes.id, id))
       .returning();
     if (!updated)
@@ -204,7 +201,6 @@ export async function deleteTheme(
           extends: folded.extends ?? null,
           fragments: folded.fragments,
           colorAdjust: folded.colorAdjust ?? null,
-          updatedAt: new Date(),
         })
         .where(eq(_savedThemes.id, child.id));
     }

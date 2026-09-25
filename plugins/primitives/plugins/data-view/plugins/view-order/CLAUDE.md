@@ -219,6 +219,7 @@ set). Identical posture to `data_view_custom_values`.
   - Contributes: `resource.declare` "data-view-row-order"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.implement`
     - `primitives/rank.rankText`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/view-order/server/internal/tables.ts`

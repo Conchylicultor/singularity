@@ -5,7 +5,7 @@ import { conversationCreated } from "@plugins/conversations/server";
 import { IMPROVEMENTS_CATEGORY_ID } from "../core/task-category";
 import { applyGroupJob } from "./internal/apply-group-job";
 
-export { _improve_config, _improvePendingGroups } from "./internal/tables";
+export { _improvePendingGroups } from "./internal/tables";
 
 export default {
   description:

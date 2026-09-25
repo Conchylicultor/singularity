@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
+import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 // Deep relative import on purpose — see `parse-block-data.ts`: drizzle-kit loads
 // this file SYNCHRONOUSLY, and the core barrel would pull the lexical/yjs
@@ -25,89 +26,115 @@ import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
 // insert + reparent via computePageId / recomputePageIdSubtree). It scopes a
 // page's content cheaply and partitions the blocks live resource. It is a
 // nullable self-FK: a page row at the tree root has `pageId = null`.
-export const _blocks = pgTable(
-  "page_blocks",
+//
+// `updatedAt` is DERIVED (derived-updated-at): it moves when the block's
+// content or placement changes — parent, type, payload, rank, trash flag —
+// never on a fold toggle (`expanded`), a `pageId` recompute (a function of the
+// placement that already counted), or the trash ledger correlation. No write
+// site stamps it; the trigger RAISEs on one that tries.
+export const _blocks = deriveUpdatedAt(
+  pgTable(
+    "page_blocks",
+    {
+      id: text("id").primaryKey(),
+      pageId: text("page_id").references((): AnyPgColumn => _blocks.id, {
+        onDelete: "cascade",
+      }),
+      parentId: text("parent_id").references((): AnyPgColumn => _blocks.id, {
+        onDelete: "cascade",
+      }),
+      type: text("type").notNull(),
+      // Branded so every write must come from `parseBlockData()` (the sole write-side
+      // `BlockData` minting site) — an unvalidated `data` is a compile error, not a
+      // convention. Reads are unaffected (`BlockData` is assignable to the `unknown`
+      // readers accept).
+      //
+      // The decoder cannot re-run the per-type parse (it is handed one value, never
+      // its row, so it cannot reach `type`); it states the half that holds for every
+      // block type — the payload is a JSON object — and re-establishes the brand by
+      // provenance. `z.record`, so no block type's keys are stripped. The `jsonb` DDL
+      // is byte-identical, default included, so this generates no migration.
+      data: parsedJson("data", StoredBlockDataSchema)
+        .notNull()
+        .default(asBlockData({})),
+      rank: rankText("rank").notNull(),
+      expanded: boolean("expanded").notNull().default(true),
+      // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
+      // instead of DELETEing the row, so the self-referential FK cascades never
+      // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
+      // version history all survive until purge. `trashEntryId` correlates the
+      // flagged subtree to its `trash_entries` ledger row for exact-restore. The
+      // two are ONE flag spelled twice — see the CHECK below.
+      deletedAt: timestamp("deleted_at", { withTimezone: true }),
+      trashEntryId: text("trash_entry_id"),
+      createdAt: timestamp("created_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+    },
+    (t) => [
+      index("page_blocks_page_parent_rank_idx").on(
+        t.pageId,
+        t.parentId,
+        t.rank,
+      ),
+      index("page_blocks_page_id_idx").on(t.pageId),
+      // Siblings order by `rank`, so two of them sharing one is not a near-miss —
+      // it is an unordered pair, and `Rank.between(r, r)` throws rather than
+      // inventing a key. That crash is how this was found: the sidebar minted a
+      // rank over the `type='page'` projection of a `(parent_id, rank)` space it
+      // only half sees, and landed on a content block's key.
+      //
+      // NOT deferrable: drizzle cannot emit `DEFERRABLE`, and hand-written DDL is
+      // barred (generated migrations are hash-guarded; data migrations are
+      // DML-only). So the check is per-tuple, and any writer that PERMUTES ranks
+      // among siblings must vacate the pairs it reassigns before claiming them —
+      // see `forest-writer.ts`. A plain swap has no safe update order; only a scratch
+      // value does.
+      //
+      // Two PARTIAL unique indexes, both `WHERE deleted_at IS NULL`, so a TRASHED
+      // row keeps its `(parent_id, rank)` without blocking a new live sibling from
+      // reclaiming that slot (and restore re-ranks a colliding root — see
+      // `trash-blocks.ts`). Split in two because drizzle-orm 0.36.4's index builder
+      // has no `nullsNotDistinct`: the `parent_id IS NULL` root-page sibling list
+      // shares one NULL parent, so the default NULL-distinct semantics would exempt
+      // exactly that list from the guard — the second index constrains `rank` alone
+      // over live root rows to close it.
+      uniqueIndex("page_blocks_parent_rank_live_uq")
+        .on(t.parentId, t.rank)
+        .where(sql`deleted_at IS NULL AND parent_id IS NOT NULL`),
+      uniqueIndex("page_blocks_root_rank_live_uq")
+        .on(t.rank)
+        .where(sql`deleted_at IS NULL AND parent_id IS NULL`),
+      index("page_blocks_trash_entry_idx").on(t.trashEntryId),
+      // A trashed row ALWAYS names its ledger entry, and a live row never does.
+      // Half of the ledger invariant "an entry exists ⇔ at least one row carries
+      // its id" (the other half is that the flags are set only by
+      // `trashBlockRoots` in the same transaction as `recordTrashEntry`, and
+      // cleared only by `untrashBlocks`, which deletes its entry in the same
+      // transaction — `trash-blocks.ts`). A writer that sets one flag without the
+      // other is rejected by Postgres rather than leaving a row that is neither
+      // live nor restorable.
+      check(
+        "page_blocks_trash_flags_agree",
+        sql`(deleted_at IS NULL) = (trash_entry_id IS NULL)`,
+      ),
+    ],
+  ),
   {
-    id: text("id").primaryKey(),
-    pageId: text("page_id").references((): AnyPgColumn => _blocks.id, {
-      onDelete: "cascade",
-    }),
-    parentId: text("parent_id").references((): AnyPgColumn => _blocks.id, {
-      onDelete: "cascade",
-    }),
-    type: text("type").notNull(),
-    // Branded so every write must come from `parseBlockData()` (the sole write-side
-    // `BlockData` minting site) — an unvalidated `data` is a compile error, not a
-    // convention. Reads are unaffected (`BlockData` is assignable to the `unknown`
-    // readers accept).
-    //
-    // The decoder cannot re-run the per-type parse (it is handed one value, never
-    // its row, so it cannot reach `type`); it states the half that holds for every
-    // block type — the payload is a JSON object — and re-establishes the brand by
-    // provenance. `z.record`, so no block type's keys are stripped. The `jsonb` DDL
-    // is byte-identical, default included, so this generates no migration.
-    data: parsedJson("data", StoredBlockDataSchema)
-      .notNull()
-      .default(asBlockData({})),
-    rank: rankText("rank").notNull(),
-    expanded: boolean("expanded").notNull().default(true),
-    // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
-    // instead of DELETEing the row, so the self-referential FK cascades never
-    // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
-    // version history all survive until purge. `trashEntryId` correlates the
-    // flagged subtree to its `trash_entries` ledger row for exact-restore. The
-    // two are ONE flag spelled twice — see the CHECK below.
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    trashEntryId: text("trash_entry_id"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    touchedBy: {
+      parentId: true,
+      type: true,
+      data: true,
+      rank: true,
+      deletedAt: true,
+      id: false,
+      pageId: false,
+      expanded: false,
+      trashEntryId: false,
+      createdAt: false,
+    },
   },
-  (t) => [
-    index("page_blocks_page_parent_rank_idx").on(t.pageId, t.parentId, t.rank),
-    index("page_blocks_page_id_idx").on(t.pageId),
-    // Siblings order by `rank`, so two of them sharing one is not a near-miss —
-    // it is an unordered pair, and `Rank.between(r, r)` throws rather than
-    // inventing a key. That crash is how this was found: the sidebar minted a
-    // rank over the `type='page'` projection of a `(parent_id, rank)` space it
-    // only half sees, and landed on a content block's key.
-    //
-    // NOT deferrable: drizzle cannot emit `DEFERRABLE`, and hand-written DDL is
-    // barred (generated migrations are hash-guarded; data migrations are
-    // DML-only). So the check is per-tuple, and any writer that PERMUTES ranks
-    // among siblings must vacate the pairs it reassigns before claiming them —
-    // see `forest-writer.ts`. A plain swap has no safe update order; only a scratch
-    // value does.
-    //
-    // Two PARTIAL unique indexes, both `WHERE deleted_at IS NULL`, so a TRASHED
-    // row keeps its `(parent_id, rank)` without blocking a new live sibling from
-    // reclaiming that slot (and restore re-ranks a colliding root — see
-    // `trash-blocks.ts`). Split in two because drizzle-orm 0.36.4's index builder
-    // has no `nullsNotDistinct`: the `parent_id IS NULL` root-page sibling list
-    // shares one NULL parent, so the default NULL-distinct semantics would exempt
-    // exactly that list from the guard — the second index constrains `rank` alone
-    // over live root rows to close it.
-    uniqueIndex("page_blocks_parent_rank_live_uq")
-      .on(t.parentId, t.rank)
-      .where(sql`deleted_at IS NULL AND parent_id IS NOT NULL`),
-    uniqueIndex("page_blocks_root_rank_live_uq")
-      .on(t.rank)
-      .where(sql`deleted_at IS NULL AND parent_id IS NULL`),
-    index("page_blocks_trash_entry_idx").on(t.trashEntryId),
-    // A trashed row ALWAYS names its ledger entry, and a live row never does.
-    // Half of the ledger invariant "an entry exists ⇔ at least one row carries
-    // its id" (the other half is that the flags are set only by
-    // `trashBlockRoots` in the same transaction as `recordTrashEntry`, and
-    // cleared only by `untrashBlocks`, which deletes its entry in the same
-    // transaction — `trash-blocks.ts`). A writer that sets one flag without the
-    // other is rejected by Postgres rather than leaving a row that is neither
-    // live nor restorable.
-    check(
-      "page_blocks_trash_flags_agree",
-      sql`(deleted_at IS NULL) = (trash_entry_id IS NULL)`,
-    ),
-  ],
 );
