@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core";
+import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/testing";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { classifyDatabase, isBackedUp } from "./select-databases";
 

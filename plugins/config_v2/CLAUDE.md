@@ -426,7 +426,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `forkScope`
     - `hasConflict`
     - `hasReviewMarker`
-    - `LEGEND_MARKER`
     - `mapConfigLists`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
@@ -540,6 +539,9 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ui/theme-engine/theme-gallery`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
+- Test helpers:
+  - Core: `@plugins/config_v2/core/testing`
+    - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
 - Sub-plugins:
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.

@@ -9,7 +9,8 @@ import {
 } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { LEGEND_MARKER, type ConfigDescriptor } from "@plugins/config_v2/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import { LEGEND_MARKER } from "@plugins/config_v2/core/testing";
 import { applyOverrideLegends } from "./override-legend-stamp";
 
 let configDir: string;

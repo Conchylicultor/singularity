@@ -46,6 +46,8 @@ The `page/editor-collab` suite (`server/internal/doc-store.test.ts`) is the
   - Server: `@plugins/database/plugins/db-test-fixture/server/testing`
     - `createTestDb` — Provision a throwaway database on the running cluster: a drizzle handle, its connection string, and `drop()` for the suite's `afterAll`.
     - Types: `CreateTestDbOptions`, `TestDb`
+  - Core: `@plugins/database/plugins/db-test-fixture/core/testing`
+    - `mintTestDbName` — `<prefix>_<pid>_<base36 mintedAt>__testdb`.
 - Sub-plugins:
   - **`sweep`** — Reclaims throwaway test databases left behind when a test process is killed before its afterAll can drop them — the backstop half of createTestDb's lifetime, since a hook cannot run in a process that died. Every drop files a test-database-leaked report, so a destructive sweep is never silent.
   - **`worktree-db`** — Rolled-back-transaction harness for suites that must drive the REAL worktree DB (derived views included) rather than a throwaway: one scenario per transaction, always rolled back, with the excluded-from-fork queue schema installed once per process first.

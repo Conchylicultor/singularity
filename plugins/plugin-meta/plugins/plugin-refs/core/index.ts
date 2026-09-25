@@ -12,7 +12,10 @@ export type {
 export { BOUNDARY_CONFIG, COMPOSITIONS_MANIFEST, findPluginRefs } from "./find";
 export type { FindPluginRefsOptions } from "./find";
 export { scanAsPluginIdRefs, scanRuntimeExceptionRefs } from "./ts-refs";
-export { scanCompositionManifestRefs } from "./config-refs";
+export {
+  scanCompositionManifestRefs,
+  scanReorderItemRefs,
+} from "./config-refs";
 export { maskMarkdown } from "./relative-refs";
 export {
   isWithinDir,

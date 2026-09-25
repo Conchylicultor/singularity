@@ -8461,7 +8461,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `forkScope`
       - `hasConflict`
       - `hasReviewMarker`
-      - `LEGEND_MARKER`
       - `mapConfigLists`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
@@ -8575,6 +8574,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine/theme-gallery`
       - `ui/tweakcn/community-browser`
       - `ui/variant-region`
+  - Test helpers:
+    - Core: `@plugins/config_v2/core/testing`
+      - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
       - Web:
@@ -12790,6 +12792,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Server: `@plugins/database/plugins/db-test-fixture/server/testing`
           - `createTestDb` — Provision a throwaway database on the running cluster: a drizzle handle, its connection string, and `drop()` for the suite's `afterAll`.
           - Types: `CreateTestDbOptions`, `TestDb`
+        - Core: `@plugins/database/plugins/db-test-fixture/core/testing`
+          - `mintTestDbName` — `<prefix>_<pid>_<base36 mintedAt>__testdb`.
       - Plugins:
         - **`sweep`** — Reclaims throwaway test databases left behind when a test process is killed before its afterAll can drop them — the backstop half of createTestDb's lifetime, since a hook cannot run in a process that died. Every drop files a test-database-leaked report, so a destructive sweep is never silent.
           - Server:
@@ -23627,6 +23631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveRelativeRef`
           - `scanAsPluginIdRefs`
           - `scanCompositionManifestRefs`
+          - `scanReorderItemRefs`
           - `scanRuntimeExceptionRefs`
       - Cross-plugin:
         - Imported by: `plugin-meta/relocate`
@@ -23635,7 +23640,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
-          - `scanReorderItemRefs` — The plugin-id half of every reorder override entry key (`"<pluginId>:<contribution id>"`) found in an `items` array of a config JSONC file.
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
       - Server:
         - Uses:
