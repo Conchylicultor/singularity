@@ -14,11 +14,15 @@ whichever backend is alive when it exits records the outcome.
   a fork runs.
 - **Retries:** `runAttempts: 5`, with a durable backoff (~3, 7, 20, 55 s) between
   attempts. A `ForkPlanError` is deterministic, so it becomes a
-  `NonRetryableError` and dead-letters at once (after its bell).
-- **Where failures show:** the `DB fork failed` bell, a dead `database.fork` in
-  Debug → Queue carrying the child's error, and the transcript in the
-  `database-fork` log channel (`logs/database-fork.jsonl` of the supervising
-  backend — main in practice). Both notifications are written from the child.
+  `NonRetryableError` and dead-letters at once (after its report).
+- **Where failures show:** a `db-fork-failed` report (Debug → Reports, with
+  Investigate; its bell row links there), a dead `database.fork` in Debug →
+  Queue carrying the child's error, and the transcript in the `database-fork`
+  log channel (`logs/database-fork.jsonl` of the supervising backend — main in
+  practice). A schema no fork exclusion covers files a `fork-undeclared-schema`
+  report (warning, one row per schema). Both reports are written from the child
+  through the report outbox (`reports/outbox`), which main's drain records — not
+  `recordReport`, whose per-process engine memory would die with the child.
 
 The fork itself (`forkDatabase` in `database/admin`) is idempotent and
 atomic-publish (populate a unique `f_*__forking` temp, rename to the canonical
