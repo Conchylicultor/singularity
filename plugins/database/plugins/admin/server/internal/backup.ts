@@ -1,4 +1,5 @@
 import { stat } from "node:fs/promises";
+import { pgClientBin } from "@plugins/database/plugins/client-tools/server";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { z } from "zod";
@@ -66,7 +67,7 @@ export async function backupDatabase(
   // dump compresses.
   const result = await spawnCaptured(
     [
-      "pg_dump",
+      pgClientBin("pg_dump"),
       "-Fc",
       "-f",
       outFile,

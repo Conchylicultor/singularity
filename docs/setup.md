@@ -4,15 +4,18 @@ One-time environment setup for developing Singularity.
 
 ## Prerequisites
 
-| Tool                | Version | Install                        |
-| ------------------- | ------- | ------------------------------ |
-| Bun                 | >= 1.0  | `brew install oven-sh/bun/bun` |
-| Go                  | >= 1.22 | `brew install go`              |
-| Postgres client CLI | 18      | `brew install postgresql@18`   |
+[mise](https://mise.jdx.dev) installs the whole toolchain (Bun, Go, tmux, Rust) at the exact versions `mise.lock` records:
+
+```sh
+curl https://mise.run | sh   # once per machine, see mise's docs for other installers
+mise install                 # from the repo root
+```
+
+Don't install Bun or Go another way: a copy outside mise bypasses `mise.lock`.
 
 **Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./singularity start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
 
-The Postgres **server** is bundled (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`). The Postgres **client tools** (`pg_dump`, `pg_restore`, `pg_dumpall`) are not bundled yet and must be on PATH — they're used to fork worktree databases. They'll be bundled in a follow-up so this prerequisite goes away.
+Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
 
 ## Postgres
 
@@ -39,7 +42,7 @@ Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./
 
 An empty `services` array disables the gateway's embedded-PG supervisor. The `connection` block tells the server and CLI how to reach your system PG. Then restart the gateway with `./singularity start --force`.
 
-In this mode the cluster is yours, not the app's, so nothing provisions inside it: you're responsible for `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity`.
+In this mode the cluster is yours, not the app's, so nothing provisions inside it: you install and run a Postgres 18 server yourself and create the `singularity` database (on macOS, for example, `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity`). The app still forks and backs up with its own bundled client tools, which are Postgres 18.
 
 ## Git hooks
 

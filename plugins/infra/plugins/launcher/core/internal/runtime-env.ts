@@ -97,6 +97,8 @@ export const RUNTIME_FORWARDED_ENV = {
     "vendored Postgres binaries for the supervised start script (database/embedded/scripts/start.ts)",
   SINGULARITY_PGBOUNCER_BIN:
     "vendored PgBouncer binary for the supervised start script (database/pgbouncer/scripts/start.ts)",
+  SINGULARITY_PG_CLIENT_BIN_DIR:
+    "vendored pg_dump / pg_restore the backend spawns for DB forks and backups (database/client-tools server/internal/bin.ts)",
   SINGULARITY_PG_PORT:
     "the embedded cluster's port, which a preview moves off the default (database/embedded/shared/internal/paths.ts, database/pgbouncer/scripts/start.ts)",
   SINGULARITY_PG_SOCKET_DIR:

@@ -135,7 +135,9 @@ bound would be lost there.
 Everything else stays on the 60 s default: catalog reads (`listDatabases`,
 `databaseExists`, `databaseSizeBytes`, `countActiveConnections`, the fork and backup plans'
 `readSchemaCatalog`, backup's table stats). `pg_dump` / `pg_restore` are
-subprocesses, not pg connections, and are bounded by their own callers.
+subprocesses, not pg connections, and are bounded by their own callers. They
+are the vendored builds `pgClientBin` resolves
+([`client-tools`](../client-tools/CLAUDE.md)), never a PATH lookup.
 
 ## Backup exclusions — "my rows can be left out of the backup"
 
@@ -187,6 +189,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
 - Description: Admin operations for the database plugin — fork, backup, drop, list.
 - Server:
   - Uses:
+    - `database/client-tools.pgClientBin`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
     - `infra/host/host-admission.defineHostPool`

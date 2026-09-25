@@ -70,6 +70,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
+    - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
     - **`connection`** [test helpers] — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
     - **`db-test-fixture`** [test helpers] — Shared throwaway-database fixture for DB-backed test suites.
       - Plugins:

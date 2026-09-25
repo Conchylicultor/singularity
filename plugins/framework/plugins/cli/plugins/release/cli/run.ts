@@ -77,6 +77,7 @@ import {
 //     pg/native/...                vendored embedded-postgres native tree
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
+//     pg-client/bin/{pg_dump,pg_restore}  vendored Postgres client tools
 //     parcel-watcher/watcher.node   vendored @parcel/watcher native addon
 //     config/                      raw git-layer config tree (SINGULARITY_REPO_CONFIG_DIR)
 //     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
@@ -415,13 +416,13 @@ async function bundleSentinelWorker(opts: {
 
 // ── Vendored native packages ──────────────────────────────────────────────────
 //
-// Three native packages are copied into the bundle: the embedded-Postgres tree,
-// the PgBouncer binary, and @parcel/watcher's prebuilt `.node` addon. All three
-// are `os`/`cpu`-gated optionalDependencies, so the repo's node_modules only
+// Four native packages are copied into the bundle: the embedded-Postgres tree,
+// the PgBouncer binary, the Postgres client tools (pg_dump / pg_restore), and
+// @parcel/watcher's prebuilt `.node` addon. All four are `os`/`cpu`-gated optionalDependencies, so the repo's node_modules only
 // ever holds the HOST's variant — a cross-platform release has to fetch the
 // target's.
 //
-// `NativeSource` is that fork, resolved once by the caller so the three
+// `NativeSource` is that fork, resolved once by the caller so the
 // resolvers below stay dumb path builders:
 //
 //   • `repo`   — the host tag: resolve in place, byte-for-byte the pre-`--platform`
@@ -447,7 +448,7 @@ function parcelWatcherPkg(tag: PlatformTag): string {
  *
  * A CLASS, not a bare Error, because one caller asks this as a QUESTION rather
  * than suffering it as a failure: {@link stagedNativesComplete} resolves the
- * three natives to find out whether a cached staged tree is usable, and must
+ * natives to find out whether a cached staged tree is usable, and must
  * distinguish "that file is missing" from any other throw out of the resolvers.
  */
 class MissingNativeError extends Error {}
@@ -483,7 +484,7 @@ function installedVersion(pkgDir: string, what: string): string {
 }
 
 /**
- * Fetch the three native packages for a FOREIGN platform tag and return the dir
+ * Fetch the native packages for a FOREIGN platform tag and return the dir
  * whose `node_modules/` holds them.
  *
  * Two constraints on this fetch, both load-bearing:
@@ -520,6 +521,11 @@ async function stageForeignNatives(opts: {
     "plugins/database/plugins/pgbouncer/node_modules",
     `@equin/pgbouncer-${hostTag}`,
   );
+  const pgClientDir = join(
+    root,
+    "plugins/database/plugins/client-tools/node_modules",
+    `@equin/pg-client-${hostTag}`,
+  );
   const watcherDir = dirname(Bun.resolveSync("@parcel/watcher", root));
 
   const deps: Record<string, string> = {
@@ -528,6 +534,7 @@ async function stageForeignNatives(opts: {
       "embedded-postgres",
     ),
     [`@equin/pgbouncer-${tag}`]: installedVersion(pgbouncerDir, "pgbouncer"),
+    [`@equin/pg-client-${tag}`]: installedVersion(pgClientDir, "pg-client"),
     [parcelWatcherPkg(tag)]: installedVersion(watcherDir, "@parcel/watcher"),
   };
 
@@ -600,7 +607,7 @@ async function stageForeignNatives(opts: {
 }
 
 /**
- * Does a staged tree actually hold the three natives the release will read?
+ * Does a staged tree actually hold the natives the release will read?
  *
  * Asked by RESOLVING them exactly as the copy steps later do, so there is one
  * statement of what a complete staged tree is and a cache hit cannot mean
@@ -622,7 +629,7 @@ function stagedNativesComplete(
   }
 }
 
-/** The three natives a staged tree must provide, or a loud failure naming the
+/** The natives a staged tree must provide, or a loud failure naming the
  *  first one missing. The resolvers ARE the specification — see
  *  {@link stagedNativesComplete}. */
 function assertStagedNativesComplete(
@@ -633,6 +640,7 @@ function assertStagedNativesComplete(
   const src: NativeSource = { kind: "staged", dir };
   embeddedNativeDir(root, tag, src);
   pgbouncerNativeBin(root, tag, src);
+  pgClientNativeBinDir(root, tag, src);
   parcelWatcherNativeNode(root, tag, src);
 }
 
@@ -682,6 +690,34 @@ function pgbouncerNativeBin(
     throw missingNative("pgbouncer native binary", bin, src);
   }
   return bin;
+}
+
+/** The Postgres client tools the backend spawns for forks and backups. */
+const PG_CLIENT_TOOLS = ["pg_dump", "pg_restore"] as const;
+
+/** Resolve the Postgres client tools' native bin dir for the target platform. */
+function pgClientNativeBinDir(
+  root: string,
+  tag: PlatformTag,
+  src: NativeSource,
+): string {
+  const pkg = `@equin/pg-client-${tag}`;
+  const dir =
+    src.kind === "repo"
+      ? join(
+          root,
+          "plugins/database/plugins/client-tools/node_modules",
+          pkg,
+          "native/bin",
+        )
+      : join(src.dir, "node_modules", pkg, "native/bin");
+  // Probe each binary, not the directory (see embeddedNativeDir).
+  for (const tool of PG_CLIENT_TOOLS) {
+    if (!existsSync(join(dir, tool))) {
+      throw missingNative(`${tool} native binary`, join(dir, tool), src);
+    }
+  }
+  return dir;
 }
 
 /** Resolve the @parcel/watcher prebuilt native .node for the target platform. */
@@ -1143,6 +1179,15 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     pgbouncerNativeBin(root, platform, natives),
     join(out, "pgbouncer", "native", "bin", "pgbouncer"),
   );
+
+  // Postgres client tools: the backend spawns them for DB forks and backups
+  // (SINGULARITY_PG_CLIENT_BIN_DIR, set by launch.ts).
+  console.log("  • pg client tools (pg_dump, pg_restore)");
+  mkdirSync(join(out, "pg-client", "bin"), { recursive: true });
+  const pgClientBinDir = pgClientNativeBinDir(root, platform, natives);
+  for (const tool of PG_CLIENT_TOOLS) {
+    cpSync(join(pgClientBinDir, tool), join(out, "pg-client", "bin", tool));
+  }
 
   // @parcel/watcher native addon: bun --compile can't embed .node addons, so the
   // file-watcher loader dlopens this vendored copy at runtime (SINGULARITY_PARCEL_WATCHER_NODE).

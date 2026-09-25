@@ -1,0 +1,12 @@
+{
+  "name": "@singularity/plugin-database-client-tools",
+  "description": "Postgres client tools (pg_dump, pg_restore) from the same release as the embedded server.",
+  "private": true,
+  "version": "0.0.1",
+  "optionalDependencies": {
+    "@equin/pg-client-darwin-arm64": "18.3.0",
+    "@equin/pg-client-darwin-x64": "18.3.0",
+    "@equin/pg-client-linux-x64": "18.3.0",
+    "@equin/pg-client-linux-arm64": "18.3.0"
+  }
+}

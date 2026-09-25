@@ -12639,6 +12639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
         - Uses:
+          - `database/client-tools.pgClientBin`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
           - `infra/host/host-admission.defineHostPool`
@@ -12744,6 +12745,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `reports`
+    - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
+      - Cross-plugin:
+        - Imported by: `database/admin`
+      - Server:
+        - Exports (types): `PgClientTool`
+        - Exports (values):
+          - `pgClientBin`
+          - `PgClientToolMissingError`
     - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
       - Cross-plugin:
         - Imported by:

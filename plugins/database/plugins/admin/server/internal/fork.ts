@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pgClientBin } from "@plugins/database/plugins/client-tools/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { libpqSubprocessEnv } from "./pool";
 import { runDatabaseDdl } from "./database-ddl";
@@ -161,7 +162,7 @@ export async function forkDatabase(
       try {
         const dump = await spawnCaptured(
           [
-            "pg_dump",
+            pgClientBin("pg_dump"),
             "-Fc",
             "-f",
             archive,
@@ -174,7 +175,7 @@ export async function forkDatabase(
           failure = `pg_dump exited ${dump.exitCode ?? dump.signalCode}: ${dump.stderr}`;
         } else {
           const restore = await spawnCaptured(
-            ["pg_restore", "-d", temp, archive],
+            [pgClientBin("pg_restore"), "-d", temp, archive],
             opts,
           );
           if (restore.exitCode !== 0) {

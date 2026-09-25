@@ -17,6 +17,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
+import { pgClientBin } from "@plugins/database/plugins/client-tools/server";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import {
@@ -83,7 +84,7 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     expect(plan.unmatched).toEqual([]);
 
     const restore = await spawnCaptured(
-      ["pg_restore", "-d", restored.connectionString, archive],
+      [pgClientBin("pg_restore"), "-d", restored.connectionString, archive],
       { timeoutMs: 120_000 },
     );
     expect(restore.stderr).toBe("");

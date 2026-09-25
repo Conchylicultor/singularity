@@ -63,6 +63,14 @@ process.env.SINGULARITY_PGBOUNCER_BIN ??= join(
   "bin",
   "pgbouncer",
 );
+// The backend spawns pg_dump / pg_restore for DB forks and backups; a compiled
+// backend's `import.meta.dir` is its virtual FS, so point it at the vendored
+// tools. A forwarded name, so the gateway hands it to the spawned backend.
+process.env.SINGULARITY_PG_CLIENT_BIN_DIR ??= join(
+  bundleRoot,
+  "pg-client",
+  "bin",
+);
 // The migration runner reads its `.sql` files from disk; `import.meta.dir`
 // resolves into the compiled binary's virtual FS, so point it at the vendored
 // `migrations/data` tree. A forwarded name, so the gateway receives it and
