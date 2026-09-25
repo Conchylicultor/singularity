@@ -15,6 +15,7 @@ import {
   type Entity,
   type EntityColumns,
   type EntityMeta,
+  type EntityMetaBase,
 } from "@plugins/infra/plugins/entities/server";
 import type {
   AnyExtensionShape,
@@ -47,7 +48,7 @@ export interface ExtensionMeta<Sh extends AnyExtensionShape> {
   // Per-column DDL (`default`, `name`, `references`) for the plugin's OWN
   // fields only. The key column and the timestamps are the primitive's, so
   // they cannot be declared here.
-  columns?: EntityMeta<OwnFields<Sh>>["columns"];
+  columns?: EntityMetaBase<OwnFields<Sh>>["columns"];
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
   // name and covers the key and the timestamps as well as the plugin's fields.
   indexes?: (
@@ -165,6 +166,10 @@ export function defineExtension<
       createdAt: { default: defaultNow() },
       updatedAt: { default: defaultNow() },
     },
+    // Every side-table carries the primitive's `updatedAt` timestamp, stamped
+    // by `upsert` below — the legacy app-managed arm until extensions declare
+    // their own `touchedBy`.
+    updatedAt: "app-managed",
     serverOnly: shape.serverOnly,
     // `as any` at the runtime/type boundary, as in `define-entity.ts`: the
     // precise `t` type rides in `ExtensionMeta`'s own signature.

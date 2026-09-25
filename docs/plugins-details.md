@@ -12478,6 +12478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/connection.queryText`
       - `database/connection.withQueryDeadline`
       - `database/derived-tables.rebuildDerivedTables`
+      - `database/derived-updated-at.installDerivedUpdatedAt`
       - `database/derived-views.rebuildDerivedViews`
       - `database/derived-views.View`
       - `database/migrations.runMigrations`
@@ -12810,6 +12811,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core`
       - Core:
         - Exports (types): `DerivedRollupSpec`
+    - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, and the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations.
+      - Cross-plugin:
+        - Imported by:
+          - `database`
+          - `infra/entities`
+      - Server:
+        - Exports (types):
+          - `DerivedUpdatedAtSpec`
+          - `TouchRule`
+        - Exports (values):
+          - `compileDerivedUpdatedAt`
+          - `installDerivedUpdatedAt`
+          - `registerDerivedUpdatedAt`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -18629,6 +18643,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
       - Server:
         - Uses:
+          - `database/derived-updated-at.compileDerivedUpdatedAt`
+          - `database/derived-updated-at.DerivedUpdatedAtSpec`
+          - `database/derived-updated-at.registerDerivedUpdatedAt`
+          - `database/derived-updated-at.TouchRule`
           - `fields/server-capabilities-loader`
           - `fields/server-capabilities.resolveFieldStorage`
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
@@ -18640,9 +18658,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `EntityColumnMeta`
           - `EntityColumns`
           - `EntityMeta`
+          - `EntityMetaBase`
           - `EntityReference`
           - `EntityRow`
           - `ServerOnlyKeys`
+          - `TouchedBy`
+          - `UpdatedAtMeta`
         - Exports (values):
           - `defaultNow`
           - `defaultRandom`
@@ -18680,6 +18701,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.Entity`
           - `infra/entities.EntityColumns`
           - `infra/entities.EntityMeta`
+          - `infra/entities.EntityMetaBase`
         - Exports (types):
           - `EntityExtension`
           - `ExtensionIndexBuilders`

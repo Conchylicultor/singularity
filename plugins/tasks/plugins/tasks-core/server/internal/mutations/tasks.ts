@@ -88,8 +88,9 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   if (folderId) await unionTaskClusters(id, folderId, exec);
   // No parent force-expand here: expand/collapse is device-local view state
   // owned by the data-view primitive, not a column. The tree reveals a new child
-  // client-side (`useTreeRow.addChild` expands the row it created under), so the
-  // folder's `updatedAt` no longer moves just because a child was filed into it.
+  // client-side (`useTreeRow.addChild` expands the row it created under). Which
+  // columns move `updatedAt` is declared once, in the tasks entity's `touchedBy`
+  // (`tables.ts`) — the union above relabels `clusterId`, which does not count.
   const [full] = await exec
     .select()
     .from(tasks)
@@ -117,7 +118,9 @@ async function updateTaskOn(
   patch: UpdateTaskPatch,
   exec: DbExecutor,
 ) {
-  const dbPatch: Record<string, unknown> = { updatedAt: new Date() };
+  // No `updatedAt` here: the database derives it from the tasks entity's
+  // `touchedBy` declaration (`tables.ts`), and a write to it raises.
+  const dbPatch: Record<string, unknown> = {};
   if (typeof patch.title === "string") {
     dbPatch.title = patch.title;
     // An explicit title write is human-authored — never re-summarized into the
@@ -153,22 +156,26 @@ async function updateTaskOn(
     }
     dbPatch.folderId = patch.folderId;
   }
-  // The scope brackets the write (typical flip: a drop/hold transition) and
-  // covers the task's dependents too — dropping a task unblocks everything
-  // downstream of it, which no single-task snapshot could see.
-  const updated = await withTaskStatusChange(id, exec, async () => {
-    const [row] = await exec
-      .update(_tasks)
-      .set(dbPatch)
-      .where(eq(_tasks.id, id))
-      .returning({ id: _tasks.id });
-    return row;
-  });
-  if (!updated) return null;
+  // An empty patch writes nothing (drizzle rejects an empty SET); the read
+  // below still answers whether the task exists.
+  if (Object.keys(dbPatch).length > 0) {
+    // The scope brackets the write (typical flip: a drop/hold transition) and
+    // covers the task's dependents too — dropping a task unblocks everything
+    // downstream of it, which no single-task snapshot could see.
+    const updated = await withTaskStatusChange(id, exec, async () => {
+      const [row] = await exec
+        .update(_tasks)
+        .set(dbPatch)
+        .where(eq(_tasks.id, id))
+        .returning({ id: _tasks.id });
+      return row;
+    });
+    if (!updated) return null;
+  }
   // No destination force-expand on a re-file, for the same reason as in
   // `createTask`: the tree opens a collapsed drop target itself
-  // (`TreeList.onDragEnd`), and the destination folder's `updatedAt` is not a
-  // fact about the folder.
+  // (`TreeList.onDragEnd`). The destination folder's row is not written at all,
+  // so its `updatedAt` (derived per `touchedBy` in `tables.ts`) cannot move.
   const [row] = await exec
     .select()
     .from(tasks)
@@ -186,7 +193,7 @@ export async function updateTaskTitle(
     .update(_tasks)
     // Haiku-generated label: keep titleAuto true so the title stays out of the
     // launch prompt (it is just a summary of the description).
-    .set({ title, titleAuto: true, updatedAt: new Date() })
+    .set({ title, titleAuto: true })
     .where(and(eq(_tasks.id, id), inArray(_tasks.title, onlyIfTitleIn)))
     .returning({ id: _tasks.id });
   return !!updated;
@@ -286,7 +293,7 @@ export async function dropTaskTree(id: string): Promise<number> {
     await withTaskStatusChange(ids, tx, async () => {
       await tx
         .update(_tasks)
-        .set({ droppedAt: now, heldAt: null, updatedAt: now })
+        .set({ droppedAt: now, heldAt: null })
         .where(inArray(_tasks.id, ids));
     });
     return ids.length;

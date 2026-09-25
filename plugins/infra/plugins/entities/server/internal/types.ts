@@ -18,6 +18,10 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type {
+  DerivedUpdatedAtSpec,
+  TouchRule,
+} from "@plugins/database/plugins/derived-updated-at/server";
 
 // ─── Storage-only DB defaults ──────────────────────────────────────────────
 // A DB-column default is a DISTINCT concept from a field's wire/backfill
@@ -140,7 +144,7 @@ export type EntityColumns<F extends FieldsRecord, D extends keyof F = never> = {
 // insert model can never drift from the actual `.default()` calls.
 export type DefaultedKeys<
   F extends FieldsRecord,
-  M extends EntityMeta<F>,
+  M extends EntityMetaBase<F>,
 > = M["columns"] extends object
   ? {
       [K in keyof M["columns"]]: M["columns"][K] extends { default: unknown }
@@ -150,7 +154,10 @@ export type DefaultedKeys<
       keyof F
   : never;
 
-export interface EntityMeta<F extends FieldsRecord> {
+// The part of `EntityMeta` that does not depend on whether the record has an
+// `updatedAt` field. The derived-`updatedAt` declaration is layered on top of it
+// (see `EntityMeta` below), because it is REQUIRED exactly when that field exists.
+export interface EntityMetaBase<F extends FieldsRecord> {
   // Single key → `.primaryKey()` on the column; array → composite
   // `primaryKey({ columns })`; absent → no PK (junction / view-like). The array
   // is `readonly` so a `const`-inferred meta (see `defineEntity`) — which makes
@@ -172,13 +179,36 @@ export interface EntityMeta<F extends FieldsRecord> {
   ) => AnyIndexBuilder[];
 }
 
+// ─── Derived `updatedAt` ───────────────────────────────────────────────────
+// Whether a write to a column counts as a change of the record, moving its
+// `updatedAt` — `true` / `false` / `{ into, outOf }`; see `TouchRule` in
+// database/derived-updated-at, which compiles and installs the trigger.
+// A TOTAL classification of every column but `updatedAt` itself: a new column
+// nobody classified is a tsc error, which is the "never miss a field" guarantee.
+export type TouchedBy<F extends FieldsRecord> = {
+  [K in Exclude<keyof F, "updatedAt">]: TouchRule<InferFieldValue<F[K]>>;
+};
+
+// `"app-managed"` is the explicit legacy opt-out: the app stamps `updatedAt` by
+// hand and nothing is enforced. `{ touchedBy }` derives it in the database.
+export type UpdatedAtMeta<F extends FieldsRecord> =
+  "app-managed" | { readonly touchedBy: TouchedBy<F> };
+
+// A record with an `updatedAt` field MUST say how it moves; one without cannot.
+// Conditional on `"updatedAt" extends keyof F`, so a new table with the column
+// cannot skip the decision.
+export type EntityMeta<F extends FieldsRecord> = EntityMetaBase<F> &
+  ("updatedAt" extends keyof F
+    ? { updatedAt: UpdatedAtMeta<F> }
+    : { updatedAt?: never });
+
 // The keys marked `serverOnly` in `meta` — the columns present in the table DDL
 // but ABSENT from the wire schema / `wireColumns`. Mirrors `DefaultedKeys` but
 // simpler: it reads the array element type directly. Absent ⇒ `never` (every
 // column is on the wire).
 export type ServerOnlyKeys<
   F extends FieldsRecord,
-  M extends EntityMeta<F>,
+  M extends EntityMetaBase<F>,
 > = M["serverOnly"] extends readonly (infer K)[] ? K & keyof F : never;
 
 export interface Entity<
@@ -213,6 +243,11 @@ export interface Entity<
     BuildColumns<string, EntityColumns<F, D>, "pg">,
     Exclude<keyof F, S>
   >;
+  // The compiled derived-`updatedAt` trigger, present iff `meta.updatedAt`
+  // declared `touchedBy`. Also recorded in the module registry that
+  // `installDerivedUpdatedAt` installs from; exposed here so a DB test can
+  // install exactly its own entity's trigger.
+  readonly derivedUpdatedAt?: DerivedUpdatedAtSpec;
 }
 
 // Sugar so consumers needn't import zod:

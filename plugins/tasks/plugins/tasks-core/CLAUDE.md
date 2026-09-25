@@ -47,13 +47,20 @@ they are intentionally richer than `entity.schema` (the base table row).
 
 **Tree collapse is not a task field.** There is deliberately no `expanded` column:
 expand/collapse is per-`(surface, view-instance, row)` device-local render state
-owned by the data-view primitive, so a collapse costs no write and never touches
-`updatedAt` (which is a visible, sortable field on the task list). The column, its
+owned by the data-view primitive, so a collapse costs no write at all. The column, its
 patch field, and the two "auto-expand the parent folder when a child is filed"
 blocks in `mutations/tasks.ts` were removed together — the reveal they provided is
 now the tree primitive's generic add-child / drag-reparent reveal. Do not
 reintroduce it; see `plugins/primitives/plugins/data-view/CLAUDE.md` § State split
 and `research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
+
+**`updatedAt` is derived, not written.** On `tasks`, `attempts` and
+`conversations` it is maintained by a database trigger from the `touchedBy`
+declaration in each entity's meta (`server/internal/tables.ts`) — that
+declaration is the single statement of which columns count (e.g. a `clusterId`
+relabel, viewing or hibernating a conversation do not). A write to `updatedAt`
+raises; never stamp it. Mechanism: `plugins/database/plugins/derived-updated-at`,
+design: `research/2026-09-25-global-derived-updated-at.md`.
 
 Keeping the field records + public schemas in `core/` is load-bearing: tasks-core
 is web-imported, but `defineEntity` is server-only (`resolveFieldStorage` needs

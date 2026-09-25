@@ -25,6 +25,7 @@ import {
 
 const eventSources = defineEntity("event_sources", eventSourceFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     config: { default: {} },
     refresh: { default: "manual" },
@@ -42,6 +43,7 @@ const eventSources = defineEntity("event_sources", eventSourceFields, {
 
 const events = defineEntity("events", eventFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     sourceId: {
       references: { column: () => eventSources.table.id, onDelete: "cascade" },

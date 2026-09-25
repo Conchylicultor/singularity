@@ -4,6 +4,12 @@ import type { FieldsRecord } from "@plugins/fields/core";
 import { pgTable, primaryKey } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { snakeCase } from "./snake-case";
+import {
+  compileDerivedUpdatedAt,
+  registerDerivedUpdatedAt,
+  type DerivedUpdatedAtSpec,
+  type TouchRule,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import type {
   ColumnDefault,
   DbDefault,
@@ -11,7 +17,9 @@ import type {
   Entity,
   EntityColumns,
   EntityMeta,
+  EntityMetaBase,
   ServerOnlyKeys,
+  UpdatedAtMeta,
 } from "./types";
 
 // A bare (non-marker) default value. Markers carry a `kind` discriminant; a
@@ -88,14 +96,31 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // on insert). `const` keeps each column meta at its narrow literal type so the
 // presence of `default` survives. (A non-enum default — bool / plain text — never
 // triggered the collapse, which is why slow_ops never caught it.)
+//
+// Two overloads: `meta` may be omitted only when the record has no `updatedAt`
+// field — one that has it must declare `meta.updatedAt` (see `EntityMeta`).
 export function defineEntity<
   F extends FieldsRecord,
   const M extends EntityMeta<F> = EntityMeta<F>,
 >(
   name: string,
   fields: F,
-  meta: M = {} as M,
-): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>> {
+  meta: M,
+): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
+export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
+  name: string,
+  fields: F,
+): Entity<F>;
+// The implementation is typed loosely (`object` in, `unknown` out) so both
+// overloads are compatible with it; the overloads are the contract.
+export function defineEntity(
+  name: string,
+  fields: FieldsRecord,
+  rawMeta: object = {},
+): unknown {
+  const meta = rawMeta as EntityMetaBase<FieldsRecord> & {
+    updatedAt?: UpdatedAtMeta<FieldsRecord>;
+  };
   const builders: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(fields)) {
@@ -160,10 +185,12 @@ export function defineEntity<
     ...(meta.indexes?.(t) ?? []),
   ];
 
-  // The one load-bearing cast: feed the loosely-assembled map as the precise
-  // `EntityColumns<F, …>` so `pgTable`'s own `BuildColumns` infers the exact
-  // select type AND marks DB-defaulted columns optional on insert (the `D`
-  // brand). `extraConfig` is `as any` because `t` was loosened above.
+  // The one load-bearing cast: the loosely-assembled map is fed as
+  // `EntityColumns`, and the overload signatures above restate it as the precise
+  // `Entity<F, DefaultedKeys<F, M>, …>`, so `pgTable`'s own `BuildColumns`
+  // infers the exact select type AND marks DB-defaulted columns optional on
+  // insert (the `D` brand). `extraConfig` is `as any` because `t` was loosened
+  // above.
   //
   // The cast now RE-STATES what the builders already produced, for every column
   // in every entity — there is no arm left that asserts:
@@ -180,7 +207,7 @@ export function defineEntity<
   // dial that tier seemed to need is the schema itself.
   const table = pgTable(
     name,
-    builders as unknown as EntityColumns<F, DefaultedKeys<F, M>>,
+    builders as unknown as EntityColumns<FieldsRecord>,
     extraConfig,
   );
 
@@ -217,16 +244,80 @@ export function defineEntity<
     wireKeys.map((k) => [k, (table as Record<string, unknown>)[k]]),
   );
 
-  // `as unknown as` (like the `EntityColumns` cast above): inside this generic
-  // body `wireSchema`/`wireColumns` are typed against the widened
-  // `keyof F & string` server-only set, not the caller's literal `serverOnly`.
-  // The declared return type `ServerOnlyKeys<F, M>` is the contract consumers
-  // see — at a concrete call site it resolves to the exact server-only keys, so
-  // `entity.schema` / `entity.wireColumns` carry the precise omitted types.
+  // The implementation returns `unknown`: inside this body `wireSchema` /
+  // `wireColumns` are typed against the widened server-only set, not the
+  // caller's literal `serverOnly`. The overloads' return type
+  // `ServerOnlyKeys<F, M>` is the contract consumers see — at a concrete call
+  // site it resolves to the exact server-only keys, so `entity.schema` /
+  // `entity.wireColumns` carry the precise omitted types.
+  const derivedUpdatedAt = compileEntityUpdatedAt(
+    name,
+    fields,
+    meta,
+    table as unknown as Record<string, unknown>,
+  );
+  if (derivedUpdatedAt) registerDerivedUpdatedAt(derivedUpdatedAt);
+
   return Object.freeze({
     name,
     table,
     schema,
     wireColumns,
-  }) as unknown as Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
+    derivedUpdatedAt,
+  });
+}
+
+// The derived-`updatedAt` spec for this entity, or `undefined` when it has none
+// (no `updatedAt` field, or `"app-managed"`). The types make the declaration
+// required and total; these runtime checks back them for callers typed against
+// the widened `FieldsRecord` (entity-extensions), which the types cannot see.
+function compileEntityUpdatedAt(
+  name: string,
+  fields: FieldsRecord,
+  meta: { updatedAt?: UpdatedAtMeta<FieldsRecord> },
+  table: Record<string, unknown>,
+): DerivedUpdatedAtSpec | undefined {
+  const decl = meta.updatedAt;
+  if (!("updatedAt" in fields)) {
+    if (decl !== undefined) {
+      throw new Error(
+        `defineEntity("${name}"): meta.updatedAt is declared but the entity ` +
+          `has no updatedAt field.`,
+      );
+    }
+    return undefined;
+  }
+  if (decl === undefined) {
+    throw new Error(
+      `defineEntity("${name}"): the entity has an updatedAt field, so ` +
+        `meta.updatedAt must declare how it moves ({ touchedBy } or "app-managed").`,
+    );
+  }
+  if (decl === "app-managed") return undefined;
+
+  const touchedBy = decl.touchedBy as Record<string, TouchRule<unknown>>;
+  const expected = Object.keys(fields).filter((k) => k !== "updatedAt");
+  const missing = expected.filter((k) => !(k in touchedBy));
+  const extra = Object.keys(touchedBy).filter((k) => !expected.includes(k));
+  if (missing.length > 0 || extra.length > 0) {
+    throw new Error(
+      `defineEntity("${name}"): meta.updatedAt.touchedBy must classify every ` +
+        `column but updatedAt exactly once` +
+        (missing.length > 0 ? `; missing: ${missing.join(", ")}` : "") +
+        (extra.length > 0 ? `; not a column: ${extra.join(", ")}` : "") +
+        `.`,
+    );
+  }
+  const column = (key: string) =>
+    table[key] as { name: string; getSQLType(): string };
+  return compileDerivedUpdatedAt({
+    table: name,
+    updatedAtColumn: column("updatedAt").name,
+    columns: expected.map((key) => ({
+      key,
+      name: column(key).name,
+      sqlType: column(key).getSQLType(),
+      rule: touchedBy[key] as TouchRule<unknown>,
+    })),
+  });
 }

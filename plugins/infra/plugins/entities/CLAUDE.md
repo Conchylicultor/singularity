@@ -160,12 +160,45 @@ export const mailThreads = defineEntity("mail_threads", { … }, {
 FKs touch only the DDL — never the select/insert row shape — so they are
 deliberately absent from the `EntityColumns` cast (like `.primaryKey()`).
 
+## Derived `updatedAt`
+
+A record with an `updatedAt` field MUST declare how it moves — `meta.updatedAt`
+is required by the types exactly when the field exists (and `meta` itself may
+then not be omitted):
+
+```ts
+updatedAt: {
+  touchedBy: {                       // TOTAL over every other column: a new column is a tsc error
+    title:        true,              // any change of value counts
+    status:       { into: ["working", "done"], outOf: ["working"] }, // only these transitions
+    lastViewedAt: false,             // never counts
+    // …every other column
+  },
+},
+// or, the legacy opt-out (the app stamps it by hand): updatedAt: "app-managed"
+```
+
+Transition values are typed against the column's own value type, so a
+misspelled one is a tsc error. `defineEntity` compiles `touchedBy` against the
+PHYSICAL column names into a BEFORE UPDATE trigger that bumps `updated_at` to
+`now()` only when a counted column really changed (a no-op write never bumps)
+and RAISEs on any app write to `updated_at`, then registers it; the database
+plugin installs every registered trigger at boot, right after migrations. The
+compiler, registry and installer live in
+[`database/derived-updated-at`](../../../database/plugins/derived-updated-at/CLAUDE.md)
+(the database plugin cannot import entities without a cycle). The compiled
+spec is also on `entity.derivedUpdatedAt`. Runtime backstops mirror the types
+for callers typed against the widened `FieldsRecord` (entity-extensions, which
+declares `"app-managed"` for every side-table).
+
 ## Boundary casts
 
-Exactly two casts cross the runtime/type boundary (the rest is precisely typed):
-the per-builder `as any` for the modifier chain (`PgColumnBuilderBase` doesn't
-surface chain methods), and `builders as unknown as EntityColumns<F>` so
-`pgTable` infers the select type. The pgTable stays in `internal/`; only the
+Casts cross the runtime/type boundary in two places (the rest is precisely
+typed): the per-builder `as any` for the modifier chain (`PgColumnBuilderBase`
+doesn't surface chain methods), and the loosely-typed implementation behind
+`defineEntity`'s two overloads — `builders as unknown as EntityColumns` fed to
+`pgTable`, restated by the overload return types so `pgTable` infers the select
+type. The pgTable stays in `internal/`; only the
 `defineEntity` factory + types leave via the barrel (cross-plugin imports of the
 table are blocked by the boundary checker, like entity-extensions).
 
@@ -184,6 +217,10 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 - Description: Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
 - Server:
   - Uses:
+    - `database/derived-updated-at.compileDerivedUpdatedAt`
+    - `database/derived-updated-at.DerivedUpdatedAtSpec`
+    - `database/derived-updated-at.registerDerivedUpdatedAt`
+    - `database/derived-updated-at.TouchRule`
     - `fields/server-capabilities-loader`
     - `fields/server-capabilities.resolveFieldStorage`
   - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
@@ -195,9 +232,12 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `EntityColumnMeta`
     - `EntityColumns`
     - `EntityMeta`
+    - `EntityMetaBase`
     - `EntityReference`
     - `EntityRow`
     - `ServerOnlyKeys`
+    - `TouchedBy`
+    - `UpdatedAtMeta`
   - Exports (values):
     - `defaultNow`
     - `defaultRandom`

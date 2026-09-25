@@ -166,6 +166,7 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
     - `infra/entities.Entity`
     - `infra/entities.EntityColumns`
     - `infra/entities.EntityMeta`
+    - `infra/entities.EntityMetaBase`
   - Exports (types):
     - `EntityExtension`
     - `ExtensionIndexBuilders`

@@ -75,7 +75,6 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
       .set({
         folderId: body.folderId,
         rank: rank.toJSON(),
-        updatedAt: new Date(),
       })
       .where(eq(_tasks.id, params.id));
   });

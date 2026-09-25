@@ -29,6 +29,25 @@ import {
 
 const tasksEntity = defineEntity("tasks", taskFields, {
   primaryKey: "id",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). `clusterId` is a cluster relabel — bookkeeping, not a fact about
+  // the task; `rank` counts so a drag reorder bumps the moved task.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      title: true,
+      description: true,
+      droppedAt: true,
+      heldAt: true,
+      folderId: true,
+      rank: true,
+      groupId: false,
+      clusterId: false,
+      titleAuto: false,
+      author: false,
+      createdAt: false,
+    },
+  },
   columns: {
     folderId: {
       references: {
@@ -59,6 +78,14 @@ export const _tasks = tasksEntity.table;
 
 const attemptsEntity = defineEntity("attempts", attemptFields, {
   primaryKey: "id",
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      taskId: true,
+      worktreePath: true,
+      createdAt: false,
+    },
+  },
   columns: {
     taskId: {
       references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
@@ -118,6 +145,30 @@ export const pushes = pushesEntity.table;
 
 const conversationsEntity = defineEntity("conversations", conversationFields, {
   primaryKey: "id",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). New messages are tracked by the status proxy: a turn enters
+  // `working` and the reply leaves it; closing (`done`) counts. Resume
+  // (waiting <-> starting), a pane dying (-> gone), viewing and hibernation
+  // do not.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      attemptId: false,
+      title: true,
+      model: true,
+      status: { into: ["working", "done"], outOf: ["working"] },
+      runtime: false,
+      kind: false,
+      claudeSessionId: false,
+      waitingFor: false,
+      spawnedBy: false,
+      createdAt: false,
+      endedAt: false,
+      closeRequested: false,
+      hibernatedAt: false,
+      lastViewedAt: false,
+    },
+  },
   columns: {
     attemptId: {
       references: {
@@ -146,3 +197,13 @@ const conversationsEntity = defineEntity("conversations", conversationFields, {
   ],
 });
 export const _conversations = conversationsEntity.table;
+
+// The compiled derived-`updatedAt` specs of this cluster's entities, for the
+// suite that installs exactly these into a throwaway DB (the registry is
+// process-wide and also holds other suites' stand-in tables). Production
+// installs them from the registry at boot.
+export const tasksCoreDerivedUpdatedAt = {
+  tasks: tasksEntity.derivedUpdatedAt,
+  attempts: attemptsEntity.derivedUpdatedAt,
+  conversations: conversationsEntity.derivedUpdatedAt,
+};

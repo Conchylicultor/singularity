@@ -16,6 +16,7 @@ import { trackViewFields, TRACK_VIEW_SERVER_ONLY } from "../../core/schemas";
  */
 export const trackView = defineEntity("sonata_track_view", trackViewFields, {
   primaryKey: ["songId", "trackId"],
+  updatedAt: "app-managed",
   serverOnly: TRACK_VIEW_SERVER_ONLY,
   columns: {
     songId: {

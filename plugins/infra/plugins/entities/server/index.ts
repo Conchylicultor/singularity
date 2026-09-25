@@ -13,6 +13,7 @@ export { defaultNow, defaultRandom, sqlDefault } from "./internal/types";
 export type {
   Entity,
   EntityMeta,
+  EntityMetaBase,
   EntityColumnMeta,
   EntityColumns,
   EntityReference,
@@ -21,6 +22,8 @@ export type {
   ServerOnlyKeys,
   ColumnDefault,
   DbDefault,
+  TouchedBy,
+  UpdatedAtMeta,
 } from "./internal/types";
 
 export default {

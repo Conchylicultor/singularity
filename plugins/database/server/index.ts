@@ -15,6 +15,7 @@ import {
   View,
 } from "@plugins/database/plugins/derived-views/server";
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
+import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 
 export {
   db,
@@ -42,6 +43,16 @@ export default {
     await withQueryDeadline(
       { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: migrations" },
       () => runMigrations(db),
+    );
+    // Derived `updatedAt`: the BEFORE UPDATE trigger each entity whose
+    // `meta.updatedAt` declares `touchedBy` compiles to. Right after migrations
+    // (the column must exist); the registry is complete because every
+    // `tables.ts` ran `defineEntity` during plugin load. Catalog-only no-op when
+    // already installed; throws if a trigger is missing after install. See
+    // plugins/database/plugins/derived-updated-at/CLAUDE.md.
+    await withQueryDeadline(
+      { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: derived updatedAt" },
+      () => installDerivedUpdatedAt(db),
     );
     // Trigger-maintained materialized rollups (derived-tables) are rebuilt BEFORE
     // the derived views — a derived view may reference a rollup table (e.g.

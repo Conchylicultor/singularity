@@ -234,8 +234,8 @@ export async function listConversationIdsForAttempt(
 
 // Transient conversation columns the aggregate resources (attempts / tasks /
 // agent-launches) never read. The poller rewrites these at up to ~1/s on active
-// conversations: `waitingFor` (interactive-prompt hint), `updatedAt` (bumped on
-// every write), and `lastViewedAt` (selection / turn-sent). The aggregates
+// conversations: `waitingFor` (interactive-prompt hint), `updatedAt` (derived
+// per `touchedBy` in `tables.ts`, it moves only alongside a counted column), and `lastViewedAt` (selection / turn-sent). The aggregates
 // derive only coarse facts — liveness (status), title, kind, ownership, ended/
 // created timestamps — so a write touching ONLY these columns would otherwise
 // cascade into attempts → tasks → agent-launches and recompute-then-diff-to-

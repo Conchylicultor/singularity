@@ -33,6 +33,7 @@ import {
 
 const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
@@ -41,6 +42,7 @@ const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
 
 const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
   primaryKey: "accountId",
+  updatedAt: "app-managed",
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -54,6 +56,7 @@ const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
 
 const mailLabels = defineEntity("mail_labels", mailLabelFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -72,6 +75,7 @@ const mailLabels = defineEntity("mail_labels", mailLabelFields, {
 
 const mailThreads = defineEntity("mail_threads", mailThreadFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -104,6 +108,7 @@ const mailThreads = defineEntity("mail_threads", mailThreadFields, {
 
 const mailMessages = defineEntity("mail_messages", mailMessageFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     threadId: {
       references: { column: () => mailThreads.table.id, onDelete: "cascade" },
@@ -154,6 +159,7 @@ const mailMessageLabels = defineEntity(
 
 const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     messageId: {
       references: { column: () => mailMessages.table.id, onDelete: "cascade" },
@@ -171,6 +177,7 @@ const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
 
 const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -191,6 +198,7 @@ const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
 
 const mailOutbox = defineEntity("mail_outbox", mailOutboxFields, {
   primaryKey: "id",
+  updatedAt: "app-managed",
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },

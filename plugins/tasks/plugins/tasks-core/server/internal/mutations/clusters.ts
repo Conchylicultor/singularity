@@ -76,9 +76,9 @@ export async function clusterLabelOf(
  * (`min(min(A,B),C) = min(A,B,C)`), a repair pass is a no-op on already-correct
  * rows, and the label is stable under replay.
  *
- * `updatedAt` is deliberately untouched: the label is bookkeeping about the
- * cluster, not a fact about the task, and `updatedAt` is a visible sortable
- * column on the task list.
+ * The relabel does not move `updatedAt`: `clusterId` is declared as not
+ * counting in the tasks entity's `touchedBy` (`tables.ts`), and the database
+ * derives `updatedAt` from that declaration.
  *
  * **Handed the pool, this opens its own transaction.** A `FOR UPDATE` taken in
  * autocommit releases at statement end, so on the pool the lock-then-relabel

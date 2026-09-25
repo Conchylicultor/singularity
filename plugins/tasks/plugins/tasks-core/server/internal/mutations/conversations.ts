@@ -26,7 +26,6 @@ export interface UpdateConversationPatch {
   claudeSessionId?: string | null;
   waitingFor?: string | null;
   endedAt?: Date | null;
-  updatedAt?: Date;
   closeRequested?: boolean;
 }
 
@@ -157,9 +156,10 @@ export async function updateConversation(
   // `status` is a DECODED column now, so its encoder runs on this `.set(...)`.
   // A widened value would otherwise be a runtime throw from inside drizzle;
   // here it is a tsc error at the assignment that wrote it.
-  const dbPatch: Partial<(typeof _conversations)["$inferInsert"]> = {
-    updatedAt: patch.updatedAt ?? new Date(),
-  };
+  // No `updatedAt` here: it is derived by the database from the columns the
+  // entity declares as counting (`touchedBy` in `tables.ts`), and a write to
+  // it raises.
+  const dbPatch: Partial<(typeof _conversations)["$inferInsert"]> = {};
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.title !== undefined) dbPatch.title = patch.title;
   if (patch.claudeSessionId !== undefined)
@@ -168,6 +168,8 @@ export async function updateConversation(
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
   if (patch.closeRequested !== undefined)
     dbPatch.closeRequested = patch.closeRequested;
+  // An empty patch writes nothing (drizzle rejects an empty SET).
+  if (Object.keys(dbPatch).length === 0) return;
 
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db
@@ -193,7 +195,7 @@ export async function updateConversationsTitleForTask(
 
   await db
     .update(_conversations)
-    .set({ title, updatedAt: new Date() })
+    .set({ title })
     .where(
       inArray(
         _conversations.id,
@@ -223,7 +225,7 @@ export async function markConversationGone(id: string): Promise<boolean> {
   const result = await withTaskStatusChange(taskId ?? [], db, async () =>
     db
       .update(_conversations)
-      .set({ status: "gone", endedAt: now, waitingFor: null, updatedAt: now })
+      .set({ status: "gone", endedAt: now, waitingFor: null })
       .where(
         and(
           eq(_conversations.id, id),
@@ -248,17 +250,18 @@ export async function setConversationHibernated(
 ): Promise<void> {
   await db
     .update(_conversations)
-    .set({ hibernatedAt, updatedAt: new Date() })
+    .set({ hibernatedAt })
     .where(eq(_conversations.id, id));
 }
 
 // Reset the idle timer: stamp lastViewedAt = now() when the user opens the
-// conversation (and on every turn sent).
+// conversation (and on every turn sent). Whether this moves `updatedAt` is
+// decided by the conversations entity's `touchedBy` declaration in `tables.ts`
+// (it does not: viewing is not a change to the record).
 export async function touchConversationViewed(id: string): Promise<void> {
-  const now = new Date();
   await db
     .update(_conversations)
-    .set({ lastViewedAt: now, updatedAt: now })
+    .set({ lastViewedAt: new Date() })
     .where(eq(_conversations.id, id));
 }
 
@@ -270,7 +273,7 @@ export async function markConversationClosed(
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db
       .update(_conversations)
-      .set({ status: "done", endedAt, updatedAt: new Date() })
+      .set({ status: "done", endedAt })
       .where(eq(_conversations.id, id));
   });
   await emitConversationStatusChange(id, taskId, prevStatus, "done");

@@ -1918,6 +1918,10 @@
       "name": "@singularity/plugin-database-derived-tables",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/derived-updated-at": {
+      "name": "@singularity/plugin-database-derived-updated-at",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/derived-views": {
       "name": "@singularity/plugin-database-derived-views",
       "version": "0.0.1",
@@ -6828,6 +6832,8 @@
     "@singularity/plugin-database-db-test-fixture-worktree-db": ["@singularity/plugin-database-db-test-fixture-worktree-db@workspace:plugins/database/plugins/db-test-fixture/plugins/worktree-db"],
 
     "@singularity/plugin-database-derived-tables": ["@singularity/plugin-database-derived-tables@workspace:plugins/database/plugins/derived-tables"],
+
+    "@singularity/plugin-database-derived-updated-at": ["@singularity/plugin-database-derived-updated-at@workspace:plugins/database/plugins/derived-updated-at"],
 
     "@singularity/plugin-database-derived-views": ["@singularity/plugin-database-derived-views@workspace:plugins/database/plugins/derived-views"],
 
