@@ -41,6 +41,9 @@ still running is never dropped out from under it.
 
 - Description: Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
 - Server:
+  - Contributes:
+    - `report-kind` "db-fork-failed"
+    - `report-kind` "fork-undeclared-schema"
   - Uses:
     - `database/admin.countActiveConnections`
     - `database/admin.describeUndeclaredSchema`
@@ -55,7 +58,8 @@ still running is never dropped out from under it.
     - `infra/jobs.NonRetryableError`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `primitives/log-channels.defineLogSink`
-    - `shell/notifications.recordNotification`
+    - `reports.ReportKind`
+    - `reports.ReportRow`
   - Exports (values): `databaseForkJob`
   - Register:
     - `defineSupervisedJob('database.fork')`

@@ -4,7 +4,11 @@ import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import type { NotificationVariant } from "../../shared/schema";
 
-export interface RecordNotificationInput {
+// Every column a notification write can set, with no rule tying `variant` to
+// `linkTo`. Internal: only this plugin writes through it directly — the browser
+// toast endpoint (click feedback) and the DB-backed suite. Everything else goes
+// through `recordNotification`, whose input adds that rule.
+export interface NotificationWrite {
   type: string;
   title: string;
   description: string;
@@ -57,12 +61,40 @@ export interface RecordNotificationInput {
   id?: string;
 }
 
+/**
+ * A server-side notification. An `error` or `warning` must say where the user
+ * can act on it — `linkTo` is required on those arms — so background work can
+ * no longer drop a failure into the bell that nobody can click through. A
+ * failure with no page of its own is a report: `recordReport` files it, and the
+ * notification it writes links to the report's detail pane (Investigate). A
+ * failed run that already owns a page (a build) links there.
+ *
+ * Browser click feedback ("Close failed") is not bound by this: it answers an
+ * action the user is watching, and arrives over `POST /api/notifications`,
+ * whose handler writes through the internal `writeNotification`.
+ */
+export type RecordNotificationInput = Omit<
+  NotificationWrite,
+  "variant" | "linkTo"
+> &
+  (
+    | { variant: "info" | "success"; linkTo?: string | null }
+    | { variant: "error" | "warning"; linkTo: string }
+  );
+
+export async function recordNotification(
+  input: RecordNotificationInput,
+  conn: NodePgDatabase = db,
+): Promise<string> {
+  return writeNotification(input, conn);
+}
+
 // db-parametrized for the same reason upsertReport is: the re-surface semantics
 // live in the ON CONFLICT SQL, so the DB-backed suite drives THIS function
 // against a throwaway Postgres rather than restating its CASE expressions.
 // Production callers pass nothing and get the app pool.
-export async function recordNotification(
-  input: RecordNotificationInput,
+export async function writeNotification(
+  input: NotificationWrite,
   conn: NodePgDatabase = db,
 ): Promise<string> {
   const id =

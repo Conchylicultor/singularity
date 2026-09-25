@@ -28,6 +28,10 @@ import {
 } from "./internal/auto-start-jobs";
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { spawnConversationJob } from "./internal/spawn-job";
+import {
+  claudeCodeUnavailableAtSpawnKind,
+  conversationSpawnFailedKind,
+} from "./internal/spawn-report-kinds";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
@@ -106,6 +110,8 @@ export default {
     }),
     TaskCategory({ id: "conversations", label: "Conversations", order: 0 }),
     TaskCategory({ id: "system", label: "System", order: 1 }),
+    conversationSpawnFailedKind,
+    claudeCodeUnavailableAtSpawnKind,
   ],
   register: [
     maybeLaunchTaskJob,

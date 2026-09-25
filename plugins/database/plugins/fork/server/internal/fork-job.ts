@@ -2,7 +2,7 @@ import { z } from "zod";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import {
   describeUndeclaredSchema,
   forkDatabase,
@@ -10,6 +10,10 @@ import {
   forkExclusions,
 } from "@plugins/database/plugins/admin/server";
 import type { ForkOutcome } from "@plugins/database/plugins/admin/server";
+import {
+  DB_FORK_FAILED_KIND,
+  FORK_UNDECLARED_SCHEMA_KIND,
+} from "./report-kinds";
 
 // The fork's transcript, at `logs/database-fork.jsonl` of the backend that
 // supervises it. Its only writer is that backend, tailing the child's output;
@@ -55,13 +59,22 @@ export const databaseForkJob = defineSupervisedJob({
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       log(`fork ${source} → ${target} failed: ${message}`, "stderr");
-      await recordNotification({
-        type: "db",
-        title: "DB fork failed",
-        description: `${target}: ${message}`,
-        variant: "error",
-        dedupeKey: `fork-error:${target}`,
-      });
+      // Through the OUTBOX, not `recordReport`: this body runs in the
+      // supervised child, whose per-process report-engine memory (velocity,
+      // fan-out, shed buffer) would die with it. Main's drain records it.
+      await fileReport(
+        {
+          kind: DB_FORK_FAILED_KIND,
+          message: `DB fork ${source} → ${target} failed: ${message}`,
+          data: {
+            source,
+            target,
+            planError: err instanceof ForkPlanError,
+            error: err instanceof Error && err.stack ? err.stack : message,
+          },
+        },
+        log,
+      );
       // A refusal from the fork PLAN is deterministic — the same declarations
       // against the same catalog fail identically every time — so it
       // dead-letters after this one attempt instead of re-running a 2 GB dump
@@ -83,13 +96,33 @@ export const databaseForkJob = defineSupervisedJob({
     if (outcome.kind !== "forked") return;
     for (const s of outcome.plan.undeclaredSchemas) {
       log(`undeclared schema: ${describeUndeclaredSchema(s)}`, "stderr");
-      await recordNotification({
-        type: "db",
-        title: "Schema not covered by any fork exclusion",
-        description: `${describeUndeclaredSchema(s)}. Declare it with ExcludeSchemaDataFromFork in the plugin that owns it.`,
-        variant: "warning",
-        dedupeKey: `fork-undeclared-schema:${s.schema}`,
-      });
+      await fileReport(
+        {
+          kind: FORK_UNDECLARED_SCHEMA_KIND,
+          message: `Schema not covered by any fork exclusion: ${describeUndeclaredSchema(s)}`,
+          data: {
+            schema: s.schema,
+            description: describeUndeclaredSchema(s),
+            target,
+          },
+        },
+        log,
+      );
     }
   },
 });
+
+// `fileReportFromProcess` never throws and has already printed why when it did
+// not write; say the consequence into the fork's own transcript too.
+async function fileReport(
+  report: Parameters<typeof fileReportFromProcess>[0],
+  log: (line: string, stream?: "stderr") => void,
+): Promise<void> {
+  const result = await fileReportFromProcess(report);
+  if (result.outcome !== "written") {
+    log(
+      `${report.kind} report could not be filed (${result.outcome})`,
+      "stderr",
+    );
+  }
+}

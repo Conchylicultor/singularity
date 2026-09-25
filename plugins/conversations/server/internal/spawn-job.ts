@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { recordReport } from "@plugins/reports/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
@@ -61,6 +61,9 @@ export const spawnConversationJob = defineJob({
     },
     ctx: { signal },
   }) => {
+    // Which step threw, for the report: the checkout and the session start fail
+    // for different reasons and are fixed in different places.
+    let step: "worktree" | "runtime" = "worktree";
     try {
       // `setupWorktree` (git worktree add) MUST precede `runtime.create`: tmux's
       // `-c <worktreePath>` needs the dir to exist. Both are idempotent, so a
@@ -85,6 +88,7 @@ export const spawnConversationJob = defineJob({
           signal,
         );
       }
+      step = "runtime";
       await Runtime.get(runtimeId).create(conversationId, worktreePath, create);
     } catch (err) {
       // Claude Code went missing between the launch's check and this spawn.
@@ -93,22 +97,29 @@ export const spawnConversationJob = defineJob({
       // starting timeout moves it to `gone`, from where Resume works once
       // Claude Code is back.
       if (err instanceof ClaudeCodeUnavailableError) {
-        await recordNotification({
-          type: "conversation",
-          title: "Claude Code is not available",
-          description: `${conversationId}: ${err.message}`,
-          variant: "error",
-          dedupeKey: `spawn-error:${conversationId}`,
+        await recordReport({
+          kind: "claude-code-unavailable-at-spawn",
+          source: "server-caught",
+          message: `${conversationId}: ${err.message}`,
+          data: { conversationId, error: err.message },
         });
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
-      await recordNotification({
-        type: "conversation",
-        title: "Conversation spawn failed",
-        description: `${conversationId}: ${message}`,
-        variant: "error",
-        dedupeKey: `spawn-error:${conversationId}`,
+      await recordReport({
+        kind: "conversation-spawn-failed",
+        source: "server-caught",
+        message: `${conversationId}: ${message}`,
+        data: {
+          conversationId,
+          attemptId,
+          worktreePath,
+          runtimeId,
+          step,
+          deadlineAborted: signal.aborted,
+          errorType: err instanceof Error ? err.name : typeof err,
+          error: err instanceof Error && err.stack ? err.stack : message,
+        },
       });
       // Rethrow so graphile retries (and dead-letters after maxAttempts —
       // observable at /api/jobs + queue-health). On exhaustion the row is left

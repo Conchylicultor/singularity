@@ -1,6 +1,6 @@
 /**
  * Suite for the bell's re-surface semantics — the half of the reports engine's
- * re-alert floor that lives in SQL. `recordNotification`'s ON CONFLICT set
+ * re-alert floor that lives in SQL. `writeNotification`'s ON CONFLICT set
  * decides, per dedup hit, whether the row comes back as a fresh unread alert
  * (`createdAt < now - resurfaceAfterMs`) or only coalesces. That CASE is the
  * thing `RENOTIFY_FLOOR_MS` steers, so it is driven here against a throwaway
@@ -25,8 +25,8 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import {
-  recordNotification,
-  type RecordNotificationInput,
+  writeNotification,
+  type NotificationWrite,
 } from "./record-notification";
 import { _notifications } from "./tables";
 
@@ -37,8 +37,8 @@ const WINDOW_MS = 10 * 60 * 1000;
 const DEDUP_KEY = "report-crash-1";
 
 const notification = (
-  over: Partial<RecordNotificationInput> = {},
-): RecordNotificationInput => ({
+  over: Partial<NotificationWrite> = {},
+): NotificationWrite => ({
   type: "report",
   title: "Crash report",
   description: "ResizeObserver loop completed with undelivered notifications.",
@@ -48,7 +48,7 @@ const notification = (
   ...over,
 });
 
-describe("recordNotification re-surface window (real DB)", () => {
+describe("writeNotification re-surface window (real DB)", () => {
   let t: TestDb;
 
   beforeAll(async () => {
@@ -68,7 +68,7 @@ describe("recordNotification re-surface window (real DB)", () => {
   // problem last surfaced longer ago than the window. `createdAt` is the "last
   // surfaced at" marker, so backdating it IS "this has been quiet for an hour".
   const seedDismissed = async (surfacedAgoMs: number): Promise<void> => {
-    await recordNotification(notification(), t.db);
+    await writeNotification(notification(), t.db);
     await t.db
       .update(_notifications)
       .set({
@@ -97,7 +97,7 @@ describe("recordNotification re-surface window (real DB)", () => {
     await seedDismissed(60 * 60 * 1000);
     const before = await only();
 
-    await recordNotification(notification(), t.db);
+    await writeNotification(notification(), t.db);
 
     const row = await only();
     // Back in the bell, unread, at the top — the whole point of the floor.
@@ -114,7 +114,7 @@ describe("recordNotification re-surface window (real DB)", () => {
     await seedDismissed(60 * 1000);
     const before = await only();
 
-    await recordNotification(notification(), t.db);
+    await writeNotification(notification(), t.db);
 
     const row = await only();
     expect(row.dismissed).toBe(true);
@@ -136,7 +136,7 @@ describe("recordNotification re-surface window (real DB)", () => {
   test("no window at all never re-alerts, however old the row", async () => {
     await seedDismissed(60 * 60 * 1000);
 
-    await recordNotification(
+    await writeNotification(
       notification({ resurfaceAfterMs: undefined }),
       t.db,
     );

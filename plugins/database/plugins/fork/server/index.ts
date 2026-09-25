@@ -3,6 +3,10 @@ import { databaseForkJob } from "./internal/fork-job";
 import { forkTempSweepJob } from "./internal/fork-temp-sweep";
 import { handleGetForkExclusions } from "./internal/handle-exclusions";
 import { getForkExclusions } from "../core/endpoints";
+import {
+  dbForkFailedKind,
+  forkUndeclaredSchemaKind,
+} from "./internal/report-kinds";
 
 export { databaseForkJob } from "./internal/fork-job";
 
@@ -12,5 +16,6 @@ export default {
   httpRoutes: {
     [getForkExclusions.route]: handleGetForkExclusions,
   },
+  contributions: [dbForkFailedKind, forkUndeclaredSchemaKind],
   register: [databaseForkJob, forkTempSweepJob],
 } satisfies ServerPluginDefinition;

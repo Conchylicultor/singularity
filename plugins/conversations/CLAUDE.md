@@ -31,6 +31,8 @@
     - `trigger` "conversations.notify-created"
     - `taskCategory` "conversations"
     - `taskCategory` "system"
+    - `report-kind` "conversation-spawn-failed"
+    - `report-kind` "claude-code-unavailable-at-spawn"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.forkConfig`
@@ -60,6 +62,8 @@
     - `infra/worktree.setupWorktree`
     - `infra/worktree.worktreePathFor`
     - `reports.recordReport`
+    - `reports.ReportKind`
+    - `reports.ReportRow`
     - `shell/notifications.recordNotification`
     - `tasks/auto-start.claimAutoStart`
     - `tasks/auto-start.getTaskAutoStart`

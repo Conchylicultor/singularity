@@ -1,9 +1,9 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { createNotification } from "../../shared/endpoints";
-import { recordNotification } from "./record-notification";
+import { writeNotification } from "./record-notification";
 
 export const handleCreate = implement(createNotification, async ({ body }) => {
-  const id = await recordNotification({
+  const id = await writeNotification({
     id: body.id,
     type: body.type,
     title: body.title,

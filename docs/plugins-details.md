@@ -8813,6 +8813,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `trigger` "conversations.notify-created"
       - `taskCategory` "conversations"
       - `taskCategory` "system"
+      - `report-kind` "conversation-spawn-failed"
+      - `report-kind` "claude-code-unavailable-at-spawn"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.forkConfig`
@@ -8842,6 +8844,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/worktree.setupWorktree`
       - `infra/worktree.worktreePathFor`
       - `reports.recordReport`
+      - `reports.ReportKind`
+      - `reports.ReportRow`
       - `shell/notifications.recordNotification`
       - `tasks/auto-start.claimAutoStart`
       - `tasks/auto-start.getTaskAutoStart`
@@ -12897,6 +12901,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pgPostmasterPidFile`
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
+        - Contributes:
+          - `report-kind` "db-fork-failed"
+          - `report-kind` "fork-undeclared-schema"
         - Uses:
           - `database/admin.countActiveConnections`
           - `database/admin.describeUndeclaredSchema`
@@ -12911,7 +12918,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.NonRetryableError`
           - `infra/jobs/supervised-job.defineSupervisedJob`
           - `primitives/log-channels.defineLogSink`
-          - `shell/notifications.recordNotification`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
         - Exports (values): `databaseForkJob`
         - Register:
           - `defineSupervisedJob('database.fork')`
@@ -32598,6 +32606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-tmux`
       - `conversations/transcript-watcher`
       - `database/db-test-fixture/sweep`
+      - `database/fork`
       - `database/query-deadline`
       - `debug/boot-budget`
       - `debug/boot-watchdog`
@@ -33582,7 +33591,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/rewind`
           - `conversations/summary`
-          - `database/fork`
           - `debug/boot-profile`
           - `debug/queue`
           - `history/dialog`

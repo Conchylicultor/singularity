@@ -88,7 +88,6 @@
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/rewind`
     - `conversations/summary`
-    - `database/fork`
     - `debug/boot-profile`
     - `debug/queue`
     - `history/dialog`

@@ -178,6 +178,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
     - `database/db-test-fixture/sweep`
+    - `database/fork`
     - `database/query-deadline`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
