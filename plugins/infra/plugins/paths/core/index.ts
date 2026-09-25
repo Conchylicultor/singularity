@@ -19,6 +19,9 @@ export {
   checkoutWorktreeName,
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
+// The toolchain a process belongs to: its own checkout's locked mise tools,
+// whatever cwd a shim runs in. Applied by each backend and central at boot.
+export { toolchainPin } from "./internal/toolchain-pin";
 
 // The registry's own directory listing, and the two questions a CHECKOUT asks
 // of it. All three sit in `core` rather than `server` because their readers are

@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import {
   getWorktreeRoot,
@@ -8,6 +9,7 @@ import {
   runtimePath,
   runtimeShimsDir,
 } from "@plugins/infra/plugins/launcher/core";
+import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 import type {
   Check,
   CheckResult,
@@ -34,7 +36,7 @@ const check: Check = {
   id: "toolchain:resolved",
   cacheSignature: () => null,
   description:
-    "mise.toml requests every tool at latest, mise.lock records one exact release per tool within its floor and holds, and the runtime resolves each tool to that release",
+    "mise.toml requests every tool at latest, mise.lock records one exact release per tool within its floor and holds, and the runtime resolves each tool to that release — inside the checkout, and from outside any checkout under the toolchain pin",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     const requests = parseMiseToolRequests(
@@ -68,39 +70,8 @@ const check: Check = {
     // whether or not this shell activated mise. Probing the raw PATH would ask a
     // developer's shell, where Homebrew may come first or mise be absent.
     const env = { ...process.env, PATH: runtimePath(process.env) };
-    const mismatches: string[] = [];
-    for (const spec of TOOLS) {
-      const want = locked.get(spec.name)?.[0];
-      let probe: Awaited<ReturnType<typeof spawnCaptured>>;
-      try {
-        probe = await spawnCaptured([...spec.versionArgv], {
-          cwd: root,
-          env,
-          timeoutMs: PROBE_TIMEOUT_MS,
-        });
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        // Collected, not thrown: every missing tool is named in ONE run.
-        mismatches.push(
-          `${spec.name}: \`${spec.versionArgv[0]}\` is not on the runtime PATH (mise.lock records ${want}).`,
-        );
-        continue;
-      }
-      const said = `${probe.stdout}\n${probe.stderr}`.trim();
-      const got =
-        probe.exitCode === 0
-          ? (spec.versionPattern.exec(probe.stdout.trim())?.[1] ?? null)
-          : null;
-      if (got === null) {
-        mismatches.push(
-          `\`${spec.versionArgv.join(" ")}\` did not report a version (exit ${probe.exitCode}${probe.timedOut ? ", timed out" : ""}): ${said.split("\n")[0]}`,
-        );
-      } else if (got !== want) {
-        mismatches.push(
-          `${spec.name}: mise.lock records ${want}, but the runtime resolves \`${spec.versionArgv[0]}\` to ${got}.`,
-        );
-      }
-    }
+    const mismatches = await probeTools(locked, root, env, "");
+
     if (mismatches.length > 0) {
       return {
         ok: false,
@@ -108,9 +79,83 @@ const check: Check = {
         hint: missingToolchainHint(),
       };
     }
+
+    // And from OUTSIDE any checkout, with the pin every backend applies to
+    // itself (`toolchainPin`): a shim with no `mise.toml` above its cwd would
+    // otherwise run an unlocked system copy or fail outright. The pin rests on
+    // mise's semantics (global config + the lock beside it), not ours, so it is
+    // re-measured here rather than trusted. Asked only once the tools resolve
+    // inside the checkout, so a missing tool is named once, with its fix.
+    const outside = mkdtempSync(join(tmpdir(), "toolchain-outside-"));
+    let unpinned: string[];
+    try {
+      unpinned = await probeTools(
+        locked,
+        outside,
+        { ...env, ...toolchainPin() },
+        " outside a checkout",
+      );
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+    if (unpinned.length > 0) {
+      return {
+        ok: false,
+        message: unpinned.join("\n"),
+        hint:
+          "The runtime pins its toolchain with MISE_GLOBAL_CONFIG_FILE=<checkout>/mise.toml (paths/core `toolchainPin`), " +
+          "and this mise no longer resolves the locked release through it. Check what changed in mise's handling of the global config or its lock.",
+      };
+    }
     return { ok: true };
   },
 };
+
+/**
+ * Asks every tool for its version from `cwd` under `env`, and names each one
+ * that does not report the release `mise.lock` records. Collected, not thrown:
+ * every missing tool is named in ONE run. `where` qualifies each message.
+ */
+async function probeTools(
+  locked: ReturnType<typeof parseMiseLock>,
+  cwd: string,
+  env: Record<string, string | undefined>,
+  where: string,
+): Promise<string[]> {
+  const mismatches: string[] = [];
+  for (const spec of TOOLS) {
+    const want = locked.get(spec.name)?.[0];
+    let probe: Awaited<ReturnType<typeof spawnCaptured>>;
+    try {
+      probe = await spawnCaptured([...spec.versionArgv], {
+        cwd,
+        env,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      mismatches.push(
+        `${spec.name}: \`${spec.versionArgv[0]}\` is not on the runtime PATH (mise.lock records ${want}).`,
+      );
+      continue;
+    }
+    const said = `${probe.stdout}\n${probe.stderr}`.trim();
+    const got =
+      probe.exitCode === 0
+        ? (spec.versionPattern.exec(probe.stdout.trim())?.[1] ?? null)
+        : null;
+    if (got === null) {
+      mismatches.push(
+        `\`${spec.versionArgv.join(" ")}\`${where} did not report a version (exit ${probe.exitCode}${probe.timedOut ? ", timed out" : ""}): ${said.split("\n")[0]}`,
+      );
+    } else if (got !== want) {
+      mismatches.push(
+        `${spec.name}: mise.lock records ${want}, but the runtime resolves \`${spec.versionArgv[0]}\`${where} to ${got}.`,
+      );
+    }
+  }
+  return mismatches;
+}
 
 /**
  * No shims directory means mise has never installed anything for this user (or

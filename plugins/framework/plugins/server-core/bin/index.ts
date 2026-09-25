@@ -4,6 +4,7 @@
 // (`plugins-active.ts`, `config_v2`'s config dir), so an import above this line
 // boots the process without an identity. See `./declare-namespace`.
 import "./declare-namespace";
+import "./pin-toolchain";
 import {
   profilerStart,
   recordMemoryCheckpoint,

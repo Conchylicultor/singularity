@@ -303,6 +303,7 @@ run everywhere.
     - `resolveCheckoutDeploy`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
+    - `toolchainPin`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
     - `worktreeDataDir`

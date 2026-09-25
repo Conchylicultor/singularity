@@ -273,3 +273,17 @@ describe("pickHostEnv normalizes PATH", () => {
     expect(pickHostEnv({ HOME: "/fixture/home", PATH: path }).PATH).toBe(path);
   });
 });
+
+describe("the starter's mise config", () => {
+  test("a starter's own MISE_GLOBAL_CONFIG_FILE never reaches the runtime", () => {
+    const source = {
+      HOME: "/home/u",
+      PATH: "/usr/bin",
+      MISE_GLOBAL_CONFIG_FILE: "/home/u/elsewhere.toml",
+    };
+    expect(pickRuntimeEnv(source)).not.toHaveProperty(
+      "MISE_GLOBAL_CONFIG_FILE",
+    );
+    expect(pickHostEnv(source)).not.toHaveProperty("MISE_GLOBAL_CONFIG_FILE");
+  });
+});

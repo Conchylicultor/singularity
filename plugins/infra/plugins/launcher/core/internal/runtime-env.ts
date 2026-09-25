@@ -42,6 +42,9 @@
 // - Toolchain variables (GOROOT, CARGO_HOME, RUSTUP_*, HOMEBREW_*, __MISE_SHIM):
 //   PATH is forwarded, and each tool either defaults these or recomputes them
 //   from its own install location.
+// - MISE_* (MISE_GLOBAL_CONFIG_FILE above all): a starter's value describes its
+//   own shell. The runtime SETS the one it needs, per process, from the checkout
+//   that process belongs to — see `toolchainPin` (paths/core).
 //
 // PATH is the one forwarded name that is not passed through verbatim: mise's
 // resolved per-version tool directories are stripped from it and mise's shims

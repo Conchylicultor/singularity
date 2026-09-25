@@ -134,6 +134,20 @@ Postgres sockets out from under live queries. Backends pick up a `mise.lock` cha
 their next restart; a change to this PATH rule itself needs `./singularity start`
 to reach the already-running gateway.
 
+A shim resolves from its **cwd**, so the shims alone are not enough. With no
+`mise.toml` above the directory a tool runs in, mise runs the next non-mise copy
+on PATH (Homebrew's tmux, unlocked) or, with none, fails:
+`mise ERROR No version is set for shim: bun`. So each backend and central pins
+its own checkout at boot — `toolchainPin()` (paths/core), i.e.
+`MISE_GLOBAL_CONFIG_FILE=<checkout>/mise.toml` on its own `process.env`
+(`server-core/bin/pin-toolchain.ts`, `central-core/bin/index.ts`). mise reads
+the global config and the `mise.lock` beside it only when the walk finds no
+local config, so inside a checkout nothing changes, and anything the backend
+spawns from `/tmp` or `~/.singularity/…` gets that checkout's locked release. The
+starter's own `MISE_*` never travels. A release has no checkout and pins nothing
+(it spawns no mise tool). `toolchain:resolved` re-measures the pin from a temp
+dir on every build, since it rests on mise's semantics rather than ours.
+
 **Adding a variable:** write the reader, then run `./singularity check`.
 `launcher:runtime-env-declared` fails on any `SINGULARITY_*` name that code
 reads or sets (TypeScript under `plugins/`, gateway Go, git hooks, desktop

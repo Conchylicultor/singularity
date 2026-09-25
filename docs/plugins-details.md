@@ -19674,6 +19674,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveCheckoutDeploy`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
+          - `toolchainPin`
           - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
           - `worktreeDataDir`
