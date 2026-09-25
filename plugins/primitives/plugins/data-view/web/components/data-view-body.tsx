@@ -27,6 +27,17 @@ import {
 import { useGroupingRegistry } from "../grouping-slot";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
+import { useRowFilter } from "../internal/use-row-filter";
+import {
+  serverFilterFields,
+  UnavailableFilterRuleError,
+  useServerFilter,
+} from "../internal/server-filter";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import {
+  FilterError,
+  type Filterable,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
 import {
@@ -70,29 +81,59 @@ export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // The fold runs in `unknown` row space (the global slot spans disjoint consumer
   // row types), so `props.fields`/`rowKey` and the merged result cross a safe
   // `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
-  const sources = props.fieldExtensions
-    ? [
-        DataViewSlots.FieldExtension,
-        props.fieldExtensions as FieldExtensionsDescriptor<unknown>,
-      ]
-    : [DataViewSlots.FieldExtension];
+  //
+  // The global slot is folded in its OWN pass so the body knows which fields it
+  // contributed: those are served server-side by the slot's server twin
+  // (`DataViewServer.QueryAugmentor`), so a server-delegated source may filter
+  // on them without declaring them (see `serverFilterFields`).
   return (
     <CollectFieldExtensions
-      sources={sources}
+      sources={[DataViewSlots.FieldExtension]}
       base={props.fields as FieldDef<unknown>[]}
       storageKey={props.storageKey}
       rowKey={props.rowKey as (row: unknown, index: number) => string}
     >
-      {(fields) => (
-        <DataViewBodyInner {...props} fields={fields as FieldDef<TRow>[]} />
+      {(withGlobal) => (
+        <CollectFieldExtensions
+          sources={
+            props.fieldExtensions
+              ? [props.fieldExtensions as FieldExtensionsDescriptor<unknown>]
+              : []
+          }
+          base={withGlobal}
+          storageKey={props.storageKey}
+          rowKey={props.rowKey as (row: unknown, index: number) => string}
+        >
+          {(fields) => (
+            <DataViewBodyInner
+              {...props}
+              fields={fields as FieldDef<TRow>[]}
+              globalExtensionIds={globalExtensionIds(
+                props.fields as FieldDef<unknown>[],
+                withGlobal,
+              )}
+            />
+          )}
+        </CollectFieldExtensions>
       )}
     </CollectFieldExtensions>
   );
 }
 
+/** The ids the global field-extension slot added on top of the base schema. */
+function globalExtensionIds(
+  base: FieldDef<unknown>[],
+  withGlobal: FieldDef<unknown>[],
+): ReadonlySet<string> {
+  const baseIds = new Set(base.map((f) => f.id));
+  return new Set(withGlobal.filter((f) => !baseIds.has(f.id)).map((f) => f.id));
+}
+
 /** All body hooks, unconditional — the only gate is the shell's placeholder
  *  early-return, which unmounts the whole body (a separate component). */
-function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
+function DataViewBodyInner<TRow>(
+  props: DataViewBodyProps<TRow> & { globalExtensionIds: ReadonlySet<string> },
+): ReactNode {
   const {
     rows,
     rowKey,
@@ -210,6 +251,40 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // The operator-set resolver, read here (not off the filter controller below)
   // because the server source's paging hold needs it before that exists.
   const resolveOperatorSet = useResolveOperatorSet();
+  // The fold rule's `keep` tree as a row predicate (null ⇒ keeps every row).
+  const matchesFoldKeep = useRowFilter(
+    fold?.keep ?? null,
+    fields,
+    resolveOperatorSet,
+  );
+
+  // A server-delegated source filters only what it DECLARES: the schema narrowed
+  // to its declared (+ globally-augmented) fields, which is all the Filter
+  // control offers and all the lowering reads. In memory: the whole schema.
+  const dataSource = props.dataSource;
+  const globalExtensionIds = props.globalExtensionIds;
+  const serverFields = useMemo(
+    () =>
+      dataSource
+        ? serverFilterFields(
+            fields,
+            dataSource.filterable,
+            globalExtensionIds,
+            resolveOperatorSet,
+          )
+        : null,
+    [dataSource, fields, globalExtensionIds, resolveOperatorSet],
+  );
+  // The view's filter + search lowered into the ONE canonical `Filter` the
+  // server receives (unused on the in-memory path, where it lowers nothing).
+  const serverFilter = useServerFilter({
+    group: serverFields ? activeState.filter : null,
+    query: serverFields ? activeState.query : "",
+    fields: serverFields?.fields ?? (NO_FIELDS as FieldDef<TRow>[]),
+    resolveOperatorSet,
+    filterable: serverFields?.filterable ?? NO_FILTERABLE,
+    searchable: dataSource?.searchable ?? NO_SEARCHABLE,
+  });
 
   // Optional server-delegated data source. Called unconditionally (the hook
   // no-ops and returns `null` when `props.dataSource` is absent — the in-memory
@@ -217,8 +292,8 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // live `activeState`, so the accumulated pages replace `rows` and the client
   // pipeline (`useFlatRows`) is neutralized into a pass-through below.
   const server = useServerDataSource(
-    activeState,
-    props.dataSource,
+    { sort: activeState.sort, filter: serverFilter },
+    dataSource,
     storageKey,
     sourceScope,
     {
@@ -230,7 +305,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           fold,
           openCount: openFolds.size,
           isKept: fold
-            ? makeFoldKeep(fold, fields, resolveOperatorSet, {
+            ? makeFoldKeep(matchesFoldKeep, {
                 selectedRowId,
                 rowKey: (row) => rowKey(row, 0),
               })
@@ -247,7 +322,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     [viewModel, activeViewId],
   );
   const filterController = useFilterController(
-    fields,
+    (serverFields?.fields as FieldDef<TRow>[] | undefined) ?? fields,
     activeState.filter,
     setActiveFilter,
   );
@@ -508,18 +583,28 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                 caches, inline editors, and local tree expand state are per-instance
                 and must not leak between two instances of the same view type. */}
             <ControlSizeProvider key={activeViewId} size="xs">
-              {effectiveLoading
-                ? (loadingState ?? (
-                    <Loading
-                      variant={activeInstance.viewType.loadingVariant ?? "rows"}
-                      count={activeInstance.viewType.loadingCount}
-                    />
-                  ))
-                : renderIsolated(
-                    DataViewSlots.View,
-                    activeInstance.viewType as unknown as Contribution,
-                    renderProps,
-                  )}
+              {server?.error ? (
+                <Placeholder tone="error">
+                  {server.error instanceof FilterError
+                    ? `This filter is too large to run: ${server.error.message}`
+                    : server.error instanceof UnavailableFilterRuleError
+                      ? server.error.message
+                      : `Couldn't load: ${server.error.message}`}
+                </Placeholder>
+              ) : effectiveLoading ? (
+                (loadingState ?? (
+                  <Loading
+                    variant={activeInstance.viewType.loadingVariant ?? "rows"}
+                    count={activeInstance.viewType.loadingCount}
+                  />
+                ))
+              ) : (
+                renderIsolated(
+                  DataViewSlots.View,
+                  activeInstance.viewType as unknown as Contribution,
+                  renderProps,
+                )
+              )}
             </ControlSizeProvider>
             {/* Server-delegated infinite scroll: the error-gated footer (loading-more
                 spinner, Retry on a failed page fetch, and the IntersectionObserver
@@ -585,6 +670,10 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     </CollectRowOrder>
   );
 }
+
+const NO_FIELDS: FieldDef<unknown>[] = [];
+const NO_FILTERABLE: Filterable = {};
+const NO_SEARCHABLE: readonly string[] = [];
 
 /** The shared "no fold open" set — one identity, so an idle view's `openFolds`
  *  never changes between renders. */

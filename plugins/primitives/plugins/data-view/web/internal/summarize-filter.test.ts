@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   FieldDef,
   FilterGroup,
@@ -22,47 +23,61 @@ const fields: FieldDef<unknown>[] = [
   { id: "starred", label: "Starred", type: "bool", value: () => false },
 ];
 
+/** A value-taking stand-in: complete iff the operand is present. */
+const needsOperand = (operand: unknown, { column }: { column: string }) =>
+  operand === undefined ||
+  operand === null ||
+  operand === "" ||
+  (Array.isArray(operand) && operand.length === 0)
+    ? undefined
+    : clause(column, "isNotEmpty");
+const always = (_operand: unknown, { column }: { column: string }) =>
+  clause(column, "isEmpty");
+
 const sets: Record<string, FilterOperatorSet> = {
   enum: {
     match: "enum",
+    domain: "text",
     operators: [
-      { id: "is", label: "Is", hasValue: true, predicate: () => true },
+      { id: "is", label: "Is", hasValue: true, lower: needsOperand },
       {
         id: "none-of",
         label: "Is none of",
         hasValue: true,
-        predicate: () => true,
+        lower: needsOperand,
       },
     ],
   },
   text: {
     match: "text",
+    domain: "text",
     operators: [
       {
         id: "contains",
         label: "Contains",
         hasValue: true,
-        predicate: () => true,
+        lower: needsOperand,
       },
       {
         id: "empty",
         label: "Is empty",
         hasValue: false,
-        predicate: () => true,
+        lower: always,
       },
     ],
   },
   bool: {
     match: "bool",
+    domain: "boolean",
     operators: [
       {
         id: "is",
         label: "Is",
         hasValue: true,
         // The `bool` shape that made the count and the evaluator disagree: an
-        // absent operand still means something ("Unchecked"), so the rule filters.
-        isComplete: () => true,
-        predicate: () => true,
+        // absent operand still means something ("Unchecked"), so the rule
+        // lowers (is complete) and filters.
+        lower: always,
         summarize: (operand) => (operand === true ? "checked" : "unchecked"),
       },
     ],

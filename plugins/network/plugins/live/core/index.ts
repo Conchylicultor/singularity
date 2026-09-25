@@ -10,21 +10,22 @@ export type {
   LiveWindowDescriptor,
 } from "./internal/live-collection";
 export type {
-  LiveClause,
   LiveColumnFilter,
   LiveDecodedGroupQuery,
   LiveDecodedQuery,
   LiveFilterable,
+  LiveFilterableOf,
   LiveGroup,
+  LiveGroupableColumn,
+  LiveGroupableDomain,
   LiveGroupParams,
   LiveGroupQuery,
   LiveGroupValue,
   LiveOrderBy,
   LiveQuery,
+  LiveReservedColumn,
   LiveSortDirection,
   LiveWhere,
+  LiveWhereObject,
   LiveWindowParams,
 } from "./internal/query";
-export { liveOps, compareScalars, LIVE_LIST_MAX } from "./internal/ops";
-export type { LiveOpId, LiveOperands, LiveScalar } from "./internal/ops";
-export { matchesLiveWhere, testLiveClause } from "./internal/matches";

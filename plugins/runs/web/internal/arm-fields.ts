@@ -15,7 +15,7 @@ import type { RunArmFieldSpecs, UnionRun } from "../../core";
  *
  * ```ts
  * export const buildRunFields = defineRunArmFields("build", {
- *   "build.targets": { type: "tags", sqlType: "text[]" },
+ *   "build.targets": { type: "tags", sqlType: "jsonb" },
  * });                                   // ← in the arm's core/
  *
  * runArmFields(buildRunFields, [

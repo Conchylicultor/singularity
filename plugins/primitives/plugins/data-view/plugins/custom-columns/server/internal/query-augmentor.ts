@@ -1,38 +1,14 @@
 import { and, eq, sql } from "drizzle-orm";
-import { alias, type PgColumn } from "drizzle-orm/pg-core";
+import { alias } from "drizzle-orm/pg-core";
 import { resolveFieldValueTextCast } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   DataViewServer,
+  type AugmentedColumn,
   type QueryAugmentor,
   type QueryAugmentorContext,
-  type ServerQueryAugmentation,
-  type FieldColumnMap,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
-import type {
-  SortRule,
-  FilterGroup,
-  FilterNode,
-} from "@plugins/primitives/plugins/data-view/core";
 import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
 import { _dataViewCustomValues } from "./tables";
-
-/** Every fieldId referenced by a sort rule ∪ every leaf `fieldId` in the filter tree. */
-function referencedFieldIds(
-  sort: SortRule[],
-  filter: FilterGroup | null,
-): Set<string> {
-  const ids = new Set<string>();
-  for (const rule of sort) ids.add(rule.fieldId);
-  const walk = (node: FilterNode) => {
-    if (node.kind === "group") {
-      for (const child of node.children) walk(child);
-    } else {
-      ids.add(node.fieldId);
-    }
-  };
-  if (filter) walk(filter);
-  return ids;
-}
 
 /** `cc-…` ids carry a hyphen — sanitize to a SQL-safe alias name. */
 function sanitizeAlias(id: string): string {
@@ -40,28 +16,20 @@ function sanitizeAlias(id: string): string {
 }
 
 /**
- * Custom-columns' server field-extension augmentor. For each custom column the
- * active `sort`/`filter` references, `LEFT JOIN` the generic
- * `data_view_custom_values` side-table (aliased per column) on
- * `(dataViewId, columnId, rowKey = rowKeyCol::text)` and bind its `value` column
- * into the `FieldColumnMap` under the `cc-*` id — so the existing `server-query`
- * compiler sorts/filters/seeks it as a normal `nullable` column. Sort-key columns
- * are also projected so the keyset cursor can read them. Only referenced columns
- * are joined; unused custom columns cost nothing.
+ * Custom-columns' server field-extension augmentor. Offers every custom column
+ * of the surface: a `LEFT JOIN` of the generic `data_view_custom_values`
+ * side-table (aliased per column) on `(dataViewId, columnId, rowKey =
+ * rowKeyCol::text)`, and a binding of its `value` column under the `cc-*` id —
+ * presented through the def type's text cast, in the domain that cast reads in
+ * (`resolveFieldValueTextCast`; a string type reads raw TEXT, domain `text`).
+ * `augmentServerQuery` joins only the columns the request's sort or filter
+ * names, so unused custom columns cost nothing.
  */
 const customColumnsAugmentor: QueryAugmentor = (ctx: QueryAugmentorContext) => {
   const defs = readCustomColumnDefs(ctx.config.customColumns);
-  const referenced = referencedFieldIds(ctx.sort, ctx.filter);
-  const sortIds = new Set(ctx.sort.map((r) => r.fieldId));
-
-  const columnMap: FieldColumnMap = {};
-  const joins: ServerQueryAugmentation["joins"] = [];
-  const projection: ServerQueryAugmentation["projection"] = {};
-
+  const offered: Record<string, AugmentedColumn> = {};
   const usedAliases = new Set<string>();
   for (const def of defs) {
-    if (!referenced.has(def.id)) continue;
-
     // Ensure a unique alias if two ids collapse to the same sanitized name.
     let name = sanitizeAlias(def.id);
     if (usedAliases.has(name)) {
@@ -72,34 +40,29 @@ const customColumnsAugmentor: QueryAugmentor = (ctx: QueryAugmentorContext) => {
     usedAliases.add(name);
 
     const t = alias(_dataViewCustomValues, name);
-    joins.push({
-      apply: (q) =>
-        q.leftJoin(
-          t,
-          and(
-            eq(t.dataViewId, ctx.dataViewId),
-            eq(t.columnId, def.id),
-            eq(t.rowKey, sql`${ctx.rowKeyCol}::text`),
+    const read = resolveFieldValueTextCast(def.type);
+    offered[def.id] = {
+      join: {
+        apply: (q) =>
+          q.leftJoin(
+            t,
+            and(
+              eq(t.dataViewId, ctx.dataViewId),
+              eq(t.columnId, def.id),
+              eq(t.rowKey, sql`${ctx.rowKeyCol}::text`),
+            ),
           ),
-        ),
-    });
-    // Present the generic `TEXT` value column as the def's Postgres type for
-    // filter/sort SQL. Text/enum resolve no cast → raw `t.value` (identical to
-    // before). The binding takes it as-is: `ColumnBinding.col` is a `ColumnExpr`,
-    // which says out loud that a cast SQL stands in for a column here.
-    const cast = resolveFieldValueTextCast(def.type);
-    const colExpr = cast ? cast(t.value) : t.value;
-    columnMap[def.id] = { col: colExpr, type: def.type, nullable: true };
-    // The projection keeps its cast: `ServerQueryAugmentation.projection` is
-    // `Record<string, PgColumn>` so consumers can spread it into a drizzle
-    // `.select({...})`, whose row type is inferred per value — widening it to
-    // admit an `SQL` is a change to that inference, not a doc fix. Runtime-safe
-    // either way: the value is only ever selected.
-    if (sortIds.has(def.id))
-      projection[def.id] = colExpr as unknown as PgColumn;
+      },
+      // `ColumnBinding.col` is a `ColumnExpr`, which says out loud that a cast
+      // SQL stands in for a column here.
+      binding: {
+        col: read.cast ? read.cast(t.value) : t.value,
+        domain: read.domain,
+        nullable: true,
+      },
+    };
   }
-
-  return { columnMap, joins, projection };
+  return offered;
 };
 
 /** The self-registering contribution wired into the plugin's `contributions`. */

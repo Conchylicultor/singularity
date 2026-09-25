@@ -18,7 +18,11 @@ import {
   type EventRecord,
   type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import { queryEvents } from "../core";
+import {
+  EVENT_LIST_FILTERABLE,
+  EVENT_LIST_SEARCHABLE,
+  queryEvents,
+} from "../core";
 import { eventFieldDefs } from "./internal/fields";
 import { useOpenEvent } from "./internal/use-open-event";
 import { EventRow } from "./components/event-row";
@@ -88,6 +92,8 @@ function EventListPaneView(): ReactElement {
         }}
         dataSource={{
           changeTick,
+          filterable: EVENT_LIST_FILTERABLE,
+          searchable: EVENT_LIST_SEARCHABLE,
           fetchPage: (args) => fetchEndpoint(queryEvents, {}, { body: args }),
         }}
       />

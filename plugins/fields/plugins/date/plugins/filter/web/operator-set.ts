@@ -4,21 +4,11 @@ import {
   DateRangeInput,
   RelativeRangeInput,
 } from "./components/date-filter";
-import {
-  is,
-  isBefore,
-  isAfter,
-  isOnOrBefore,
-  isOnOrAfter,
-  isBetween,
-  isWithinPast,
-  isWithinNext,
-  isEmpty,
-  isNotEmpty,
-} from "./internal/date-filter-logic";
+import { dateLower } from "./internal/date-lower";
 
 export const dateOperatorSet: FilterOperatorSet = {
   match: "date",
+  domain: "instant",
   defaultOperator: "is",
   operators: [
     {
@@ -27,7 +17,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
-      predicate: is,
+      lower: dateLower.is,
     },
     {
       id: "is-before",
@@ -35,7 +25,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
-      predicate: isBefore,
+      lower: dateLower["is-before"],
     },
     {
       id: "is-after",
@@ -43,7 +33,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
-      predicate: isAfter,
+      lower: dateLower["is-after"],
     },
     // NOT `hidden`, and do not make them so again. The inclusive pair is the
     // ONLY way to state an open-ended bound that includes the boundary day —
@@ -57,7 +47,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
-      predicate: isOnOrBefore,
+      lower: dateLower["is-on-or-before"],
     },
     {
       id: "is-on-or-after",
@@ -65,7 +55,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateValueInput,
-      predicate: isOnOrAfter,
+      lower: dateLower["is-on-or-after"],
     },
     {
       id: "is-between",
@@ -73,7 +63,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Comparison",
       hasValue: true,
       ValueInput: DateRangeInput,
-      predicate: isBetween,
+      lower: dateLower["is-between"],
     },
     {
       id: "is-within-past",
@@ -81,7 +71,7 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Relative",
       hasValue: true,
       ValueInput: RelativeRangeInput,
-      predicate: isWithinPast,
+      lower: dateLower["is-within-past"],
     },
     {
       id: "is-within-next",
@@ -89,21 +79,21 @@ export const dateOperatorSet: FilterOperatorSet = {
       group: "Relative",
       hasValue: true,
       ValueInput: RelativeRangeInput,
-      predicate: isWithinNext,
+      lower: dateLower["is-within-next"],
     },
     {
       id: "is-empty",
       label: "Is empty",
       group: "Presence",
       hasValue: false,
-      predicate: isEmpty,
+      lower: dateLower["is-empty"],
     },
     {
       id: "is-not-empty",
       label: "Is not empty",
       group: "Presence",
       hasValue: false,
-      predicate: isNotEmpty,
+      lower: dateLower["is-not-empty"],
     },
   ],
 };

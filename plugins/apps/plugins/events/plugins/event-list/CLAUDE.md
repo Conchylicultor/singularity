@@ -9,37 +9,43 @@ the `mail/inbox` shape, file for file.
 core/internal/fields.ts     the shared field-id vocabulary (browser-safe data)
   ↓                              ↓
 web/internal/fields.tsx     server/internal/column-map.ts
-  (FieldDef[] + value/cell)   (FieldColumnMap: id → drizzle column + type token)
+  (FieldDef[] + value/cell)   (FieldColumnMap: id → drizzle column + domain)
                                  ↓
                             server/internal/handle-query.ts
                               (compileWhere + null-aware keyset seek)
 ```
 
-One vocabulary, two runtimes: the web `FieldDef[]` and the server
-`FieldColumnMap` are both derived from `EVENT_LIST_FIELDS`, so they cannot drift
-on which dimensions exist or what type they are.
+One vocabulary, two runtimes: the web `FieldDef[]` derives from
+`EVENT_LIST_FIELDS`, and the server `FieldColumnMap` binds
+`EVENT_LIST_FILTERABLE` (the same file), so they cannot drift on which
+dimensions exist or what domain they filter in.
 
 ## Every typed field is a filter AND a sort dimension
 
 That is the whole reason this is a DataView. Adding a dimension means adding a
-`FieldDef` + a `COLUMN_MAP` binding — **never** a bespoke toggle chip on the
+`FieldDef` + an `EVENT_LIST_FILTERABLE` entry (whose `COLUMN_MAP` binding `tsc`
+then demands) — **never** a bespoke toggle chip on the
 toolbar, and never a hand-rolled `.map()` of `<Row>` (`no-adhoc-row-list`).
 
-Two ids are deliberately asymmetric between the two sides:
+The server side is the `EVENT_LIST_FILTERABLE` declaration (`core/`), bound by
+`COLUMN_MAP` (`bindColumns`) and read by the web `dataSource.filterable` too — so
+the Filter control offers exactly the fields the server can filter, and the
+server strict-decodes (400) anything else. A few ids differ between the two
+sides on purpose:
 
-- **`sourceId` is bound server-side with no web field here.** The `source`
-  dimension arrives as a *contributed* field extension through the exported
+- **`sourceId` is declared with no web field here.** The `source` dimension
+  arrives as a *contributed* field extension through the exported
   `EventList.Fields` descriptor — only the `sources` plugin holds the live
-  `event_sources` rows its option list is built from. Because the physical
-  column is already in `COLUMN_MAP` under the same id, that contributed field
-  filters and sorts server-side the moment it lands, with zero edits here. This
-  plugin names no source type, ever.
-- **`tags` is a web field with no server binding.** There is no
-  `fields/tags/plugins/filter-sql` capability, so a binding would resolve no
-  operator and every tag rule would be silently dropped. The field is therefore
-  display-only (`sortable: false`), and the quick search covers tags through a
-  `::text ILIKE` cast instead. When a tags filter-sql capability lands, delete
-  the `sortable: false` and add the binding — nothing else changes.
+  `event_sources` rows its option list is built from. Because the column is
+  already declared under the same id, that contributed field filters and sorts
+  server-side the moment it lands, with zero edits here. This plugin names no
+  source type, ever.
+- **`tags` is the jsonb string array**, filtered in the `stringArray` domain
+  (has all / any / none of). It stays `sortable: false`: a jsonb array has no
+  keyset order.
+- **`description` and `tagsText` are searched only** (no field): the search box
+  lowers to `contains` over `EVENT_LIST_SEARCHABLE`, and `tagsText` is the tags
+  array rendered as text (`tags::text`) so a typed tag is still found.
 
 ## Disappeared events are hidden by DEFAULT, not by fixed scope
 
@@ -156,12 +162,13 @@ part of the query key.
     - `apps/events/events-core._eventSources`
     - `apps/events/events-core.eventsTable`
     - `database.db`
-    - `fields/server-capabilities-loader`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/data-view/server-query.decodeFilterBody`
+    - `primitives/data-view/server-query.FieldColumnMap`
+    - `primitives/data-view/server-query.filterableOf`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -173,7 +180,11 @@ part of the query key.
     - `apps/events/events-core.EVENT_CATEGORIES`
     - `apps/events/events-core.SourcedEventSchema`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveBoolean`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveStringArray`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
   - Exports (types):
     - `EventFieldSpec`
     - `EventFieldType`
@@ -181,6 +192,8 @@ part of the query key.
   - Exports (values):
     - `EVENT_CATEGORY_OPTIONS`
     - `EVENT_LIST_FIELDS`
+    - `EVENT_LIST_FILTERABLE`
+    - `EVENT_LIST_SEARCHABLE`
     - `queryEvents`
     - `QueryEventsBodySchema`
     - `QueryEventsResponseSchema`

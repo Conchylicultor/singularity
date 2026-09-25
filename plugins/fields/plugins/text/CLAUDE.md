@@ -38,7 +38,6 @@ reuse these capabilities via the `extends`-chain fallback.
 - Sub-plugins:
   - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
   - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
-  - **`filter-sql`** — Text field type: server filter-sql capability — operator→SQL fragments mirroring the data-view text filter predicates.
   - **`inline`** — Text field type: data-view inline cell editor (compact text input editor).
   - **`storage`** — Text field type: DB storage capability — a Postgres text column, decoded by the field's own schema so a narrowed text column (enumTextField) is derived rather than asserted.
   - **`table`** — Text field type: data-view table cell (read-only text cell).

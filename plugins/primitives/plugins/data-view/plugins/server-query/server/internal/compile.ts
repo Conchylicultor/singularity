@@ -1,98 +1,112 @@
-import { and, or, sql, type SQL } from "drizzle-orm";
-import type {
-  FilterGroup,
-  FilterNode,
-} from "@plugins/primitives/plugins/data-view/core";
+import { sql, type SQL } from "drizzle-orm";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  decodeFilter,
+  FilterError,
+  type Filter,
+  type Filterable,
+  type FilterColumn,
+  type FilterDomainId,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import type { KeysetColumnBinding } from "@plugins/primitives/plugins/keyset/server";
 
 /**
- * Binds one filterable/sortable field to its column — a physical column, or a
- * SQL expression standing in for one (`ColumnExpr`, from the keyset binding).
- * `type` is the field-type id (e.g. `"text"`, `"enum"`, `"date"`, `"bool"`,
- * `"number"`) used to resolve an operator's SQL builder; `nullable` (also from
- * the keyset binding) drives null-aware keyset seek terms (default `false`).
+ * Binds one filterable/sortable column to its SQL — a physical column, or an
+ * expression standing in for one (`ColumnExpr`, from the keyset binding).
+ * `domain` is the filter-language domain the column is filtered in; `nullable`
+ * (also from the keyset binding) drives null-aware keyset seek terms (default
+ * `false`).
  */
 export interface ColumnBinding extends KeysetColumnBinding {
-  type: string;
+  domain: FilterDomainId;
 }
 
-/** fieldId → column binding. Unmapped fields are silently dropped (fail-soft). */
+/**
+ * Column id → binding. The ids a filter may name are exactly this map's keys:
+ * a filter naming anything else throws — nothing is dropped.
+ */
 export type FieldColumnMap = Record<string, ColumnBinding>;
 
 /**
- * Builds the SQL fragment for one (field-type, operator) pair. Returns
- * `undefined` when the rule is *incomplete* (e.g. a value-taking operator with
- * no operand) — that fragment is dropped, never emitted, never a 400.
- *
- * `target` is the field's column as a plain SQL expression, never the column
- * object: a comparison operand is not a stored value, and a column is a drizzle
- * encoder that would run its WRITE-side schema over every bound operand (see
- * `comparisonTarget` below, and `fields/server-capabilities`' structurally
- * identical `FilterSqlBuilder`).
+ * Bind a source's declared `filterable` columns (its `core/` declaration, the
+ * same object its web `ServerDataSourceSpec.filterable` carries) to their SQL.
+ * Each binding's `domain` is COPIED from the declaration, so the two cannot
+ * disagree, and a declared column with no binding is a `tsc` error.
  */
-export type OperatorSqlBuilder = (
-  target: SQL,
-  operand: unknown,
-) => SQL | undefined;
-
-/**
- * Injected resolver: `(typeId, operatorId) → builder | null`. Returns `null`
- * when the type/operator is unknown (rule dropped). The compiler is field-type
- * agnostic — the consumer supplies a resolver (e.g. backed by a `Fields.FilterSql`
- * registry); nothing here imports `fields`.
- */
-export type OperatorSqlResolver = (
-  typeId: string,
-  operatorId: string,
-) => OperatorSqlBuilder | null;
-
-function compileNode(
-  node: FilterNode,
-  map: FieldColumnMap,
-  resolve: OperatorSqlResolver,
-): SQL | undefined {
-  if (node.kind === "group") {
-    const parts: SQL[] = [];
-    for (const child of node.children) {
-      const compiled = compileNode(child, map, resolve);
-      if (compiled !== undefined) parts.push(compiled);
-    }
-    if (parts.length === 0) return undefined;
-    if (parts.length === 1) return parts[0];
-    return node.conjunction === "or" ? or(...parts) : and(...parts);
+export function bindColumns<F extends Filterable>(
+  filterable: F,
+  columns: { readonly [K in keyof F & string]: KeysetColumnBinding },
+): { [K in keyof F & string]: ColumnBinding } {
+  const out = {} as { [K in keyof F & string]: ColumnBinding };
+  for (const id of Object.keys(filterable) as (keyof F & string)[]) {
+    const binding = columns[id];
+    out[id] = { ...binding, domain: filterable[id]!.domain };
   }
-  // Rule: drop fail-soft when the field is unmapped, the operator is unknown,
-  // or the builder reports the rule incomplete.
-  const binding = map[node.fieldId];
-  if (!binding) return undefined;
-  const builder = resolve(binding.type, node.operatorId);
-  if (!builder) return undefined;
-  return builder(comparisonTarget(binding), node.value);
+  return out;
+}
+
+/** The declaration a column map implies: every bound column, in its domain. */
+export function filterableOf(map: FieldColumnMap): Filterable {
+  const out: Record<string, FilterColumn> = {};
+  for (const [id, binding] of Object.entries(map)) {
+    out[id] = { domain: binding.domain };
+  }
+  return out;
 }
 
 /**
- * The field's column as a plain expression — what a builder compares an operand
- * against. A `SQL` chunk flattens inside a `sql` template before drizzle's
- * parenthesising `isSQLWrapper` branch is reached, so this renders TEXTUALLY
- * identically to interpolating the column itself: same qualified
- * `"table"."column"`, same `$n` placeholders, same params, same plan. Only the
- * param *encoder* differs — and that is the whole point, since an operand is not
- * a stored value (see `OperatorSqlBuilder`).
+ * The column as the plain expression a filter op compares against — never the
+ * column object: a comparison operand is not a stored value, and a drizzle
+ * column is an encoder that would run its WRITE-side schema over every bound
+ * operand (see this plugin's CLAUDE.md).
+ *
+ * A `text`-domain target is relabelled `::text`, so a text op reads the same
+ * over a `uuid`, `varchar` or Postgres-enum column as over a `text` one (the
+ * language binds its operands `::text`, and `uuid = text` has no operator). On a
+ * `text` column the cast is a no-op relabel the planner sees through.
  */
 function comparisonTarget(binding: ColumnBinding): SQL {
-  return sql`${binding.col}`;
+  return binding.domain === "text"
+    ? sql`(${binding.col})::text`
+    : sql`${binding.col}`;
 }
 
 /**
- * Compile an AND/OR `FilterGroup` tree → a single SQL predicate, or `undefined`
- * when the tree is null / empty / fully dropped (the caller then omits the
- * `WHERE` fragment).
+ * Compile a (decoded) filter-language `Filter` → one SQL predicate, or
+ * `undefined` for the absent filter (the caller omits the `WHERE` fragment).
+ * A column the map does not bind THROWS: the handler decodes the body strictly
+ * against the same map first (`decodeFilterBody`), so reaching here with an
+ * unknown column is a bug, never a request to ignore.
  */
 export function compileWhere(
-  node: FilterGroup | null,
+  filter: Filter | undefined,
   map: FieldColumnMap,
-  resolve: OperatorSqlResolver,
 ): SQL | undefined {
-  if (!node) return undefined;
-  return compileNode(node, map, resolve);
+  if (filter === undefined) return undefined;
+  const targets: Record<string, SQL> = {};
+  for (const [id, binding] of Object.entries(map)) {
+    targets[id] = comparisonTarget(binding);
+  }
+  return filterSql(filter, targets, filterableOf(map));
+}
+
+/**
+ * The wire `filter` of a server-delegated query body → its decoded `Filter`
+ * (`undefined` when the body carries none). STRICT: the body must hold the
+ * canonical tree of a filter over `filterable` exactly — an unknown column, a
+ * wrong-domain op, a bad operand, a bound exceeded or a non-canonical spelling
+ * is a 400 naming the problem, never a rule quietly dropped.
+ */
+export function decodeFilterBody(
+  raw: unknown,
+  filterable: Filterable,
+): Filter | undefined {
+  if (raw === undefined) return undefined;
+  try {
+    return decodeFilter(JSON.stringify(raw), filterable);
+  } catch (err) {
+    if (err instanceof FilterError) throw new HttpError(400, err.message);
+    throw err;
+  }
 }

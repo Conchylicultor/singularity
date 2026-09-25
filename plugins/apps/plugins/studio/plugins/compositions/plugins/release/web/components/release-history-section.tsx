@@ -2,7 +2,10 @@ import { type ReactElement, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
@@ -14,6 +17,8 @@ import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
 import {
   RELEASE_TARGETS,
   queryReleaseHistory,
+  RELEASE_HISTORY_FILTERABLE,
+  RELEASE_HISTORY_SEARCHABLE,
   releaseRunsRevisionResource,
   type ReleaseRun,
 } from "@plugins/release/core";
@@ -33,7 +38,10 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 function statusBadge(run: ReleaseRun): ReactNode {
   if (run.status === "running") {
     return (
-      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning animate-pulse" />}>
+      <Badge
+        variant="warning"
+        icon={<StatusDot colorClass="bg-warning animate-pulse" />}
+      >
         Running
       </Badge>
     );
@@ -46,7 +54,10 @@ function statusBadge(run: ReleaseRun): ReactNode {
     );
   }
   return (
-    <Badge variant="destructive" icon={<StatusDot colorClass="bg-destructive" />}>
+    <Badge
+      variant="destructive"
+      icon={<StatusDot colorClass="bg-destructive" />}
+    >
       Failed
     </Badge>
   );
@@ -145,7 +156,9 @@ export function ReleaseHistorySection({ id }: { id: string }): ReactElement {
       views={["list", "table"]}
       defaultView="list"
       selectedRowId={selectedRunId}
-      onRowActivate={(r) => openPane(releaseDetailPane, { runId: r.id }, { mode: "push" })}
+      onRowActivate={(r) =>
+        openPane(releaseDetailPane, { runId: r.id }, { mode: "push" })
+      }
       emptyState={<>No releases yet.</>}
       // Until the manifest resolves the composition name we have nothing to
       // scope the query to; DataView renders its empty state until it settles.
@@ -153,8 +166,14 @@ export function ReleaseHistorySection({ id }: { id: string }): ReactElement {
         name
           ? {
               changeTick,
+              filterable: RELEASE_HISTORY_FILTERABLE,
+              searchable: RELEASE_HISTORY_SEARCHABLE,
               fetchPage: (args) =>
-                fetchEndpoint(queryReleaseHistory, {}, { body: { ...args, composition: name } }),
+                fetchEndpoint(
+                  queryReleaseHistory,
+                  {},
+                  { body: { ...args, composition: name } },
+                ),
             }
           : undefined
       }

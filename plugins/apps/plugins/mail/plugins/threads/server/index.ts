@@ -2,11 +2,6 @@ import {
   Resource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-// Force the fields filter-sql capability barrels to evaluate (self-registering
-// their operator maps into the `server-capabilities` eager index) so
-// `resolveFieldFilterSql` in the where-builder resolves, and so the composition
-// closure includes those barrels in any release bundle shipping threads.
-import "@plugins/fields/plugins/server-capabilities-loader/server";
 import { queryThreads } from "../core";
 import { handleQuery } from "./internal/handle-query";
 import { mailThreadsRevisionServerResource } from "./internal/revision-resource";

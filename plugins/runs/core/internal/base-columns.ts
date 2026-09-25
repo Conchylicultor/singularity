@@ -17,27 +17,27 @@ import type { UnionColumnSpecs } from "@plugins/primitives/plugins/data-view/plu
  */
 export const RUN_BASE_COLUMNS = {
   /** The row's identity within its own ledger. The keyset's total-order tail. */
-  id: { type: "text", sqlType: "text", nullable: false },
+  id: { domain: "text", sqlType: "text", nullable: false },
   /** What this run was *of*, in the kind's own words — the row's title. */
-  label: { type: "text", sqlType: "text", nullable: false },
+  label: { domain: "text", sqlType: "text", nullable: false },
   /** The shared status axis. See `run-outcome`. */
-  outcome: { type: "enum", sqlType: "text", nullable: false },
+  outcome: { domain: "text", sqlType: "text", nullable: false },
   /** What set it off (a person, a schedule, another run). Null when unrecorded. */
-  trigger: { type: "text", sqlType: "text", nullable: true },
-  startedAt: { type: "date", sqlType: "timestamptz", nullable: false },
+  trigger: { domain: "text", sqlType: "text", nullable: true },
+  startedAt: { domain: "instant", sqlType: "timestamptz", nullable: false },
   /** Null exactly while the run is in flight. */
-  finishedAt: { type: "date", sqlType: "timestamptz", nullable: true },
+  finishedAt: { domain: "instant", sqlType: "timestamptz", nullable: true },
   /**
    * Wall-clock milliseconds, DERIVED by `defineRunKind` from `startedAt` /
    * `finishedAt` — never supplied by an arm. Two arms cannot then disagree about
    * what a duration is, and a run still in flight measures against `now()`
    * rather than reading as nothing.
    */
-  duration: { type: "number", sqlType: "double precision", nullable: false },
+  duration: { domain: "number", sqlType: "double precision", nullable: false },
   /** The worktree this run belongs to, where the kind has such a notion. */
-  namespace: { type: "text", sqlType: "text", nullable: true },
+  namespace: { domain: "text", sqlType: "text", nullable: true },
   /** The failure's own words, kept verbatim. Null on a run with nothing to say. */
-  message: { type: "text", sqlType: "text", nullable: true },
+  message: { domain: "text", sqlType: "text", nullable: true },
 } as const satisfies UnionColumnSpecs;
 
 export type RunBaseColumnId = keyof typeof RUN_BASE_COLUMNS;
@@ -64,9 +64,10 @@ export type RunBaseColumnNullable = {
 /**
  * Columns the free-text search box reaches. Everything a person types into it
  * is a name or an error — never an id, which would make the box a lookup rather
- * than a search.
+ * than a search. The DataView host lowers the box into `contains` over these,
+ * so an arm with none of them (all NULL) matches no search.
  */
-export const RUN_SEARCH_COLUMNS: RunBaseColumnId[] = [
+export const RUN_SEARCH_COLUMNS: readonly RunBaseColumnId[] = [
   "label",
   "message",
   "namespace",

@@ -1,16 +1,10 @@
 import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/web";
 import { TagSingleInput, TagMultiInput } from "./components/tags-filter";
-import {
-  contains,
-  doesNotContain,
-  containsAnyOf,
-  containsAllOf,
-  isEmpty,
-  isNotEmpty,
-} from "./internal/tags-filter-logic";
+import { tagsLower } from "./internal/tags-lower";
 
 export const tagsOperatorSet: FilterOperatorSet = {
   match: "tags",
+  domain: "stringArray",
   defaultOperator: "contains",
   operators: [
     {
@@ -18,35 +12,40 @@ export const tagsOperatorSet: FilterOperatorSet = {
       label: "Contains",
       hasValue: true,
       ValueInput: TagSingleInput,
-      predicate: contains,
+      lower: tagsLower.contains,
     },
     {
       id: "does-not-contain",
       label: "Does not contain",
       hasValue: true,
       ValueInput: TagSingleInput,
-      predicate: doesNotContain,
+      lower: tagsLower["does-not-contain"],
     },
     {
       id: "contains-any-of",
       label: "Contains any of",
       hasValue: true,
       ValueInput: TagMultiInput,
-      predicate: containsAnyOf,
+      lower: tagsLower["contains-any-of"],
     },
     {
       id: "contains-all-of",
       label: "Contains all of",
       hasValue: true,
       ValueInput: TagMultiInput,
-      predicate: containsAllOf,
+      lower: tagsLower["contains-all-of"],
     },
-    { id: "is-empty", label: "Is empty", hasValue: false, predicate: isEmpty },
+    {
+      id: "is-empty",
+      label: "Is empty",
+      hasValue: false,
+      lower: tagsLower["is-empty"],
+    },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
-      predicate: isNotEmpty,
+      lower: tagsLower["is-not-empty"],
     },
   ],
 };

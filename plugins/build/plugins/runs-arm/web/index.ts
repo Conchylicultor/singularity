@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Runs } from "@plugins/runs/web";
 import { buildDetailPane } from "@plugins/build/web";
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
+import { buildRunArmFields } from "../core";
 import { BuildRunFields } from "./components/build-run-fields";
 import { BuildRunLeading } from "./components/build-run-leading";
 
@@ -12,6 +13,7 @@ export default {
     Runs.Kind({
       kind: BUILD_RUN_KIND,
       label: "Build",
+      fields: buildRunArmFields,
       // The run-detail pane already exists and is already reached by run id
       // alone — the merged row carries everything it needs, so a build row
       // activates from the merged list exactly as it does from the build pane.

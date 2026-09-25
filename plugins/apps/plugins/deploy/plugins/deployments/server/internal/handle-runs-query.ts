@@ -1,14 +1,13 @@
-import { and, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 import type { PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
 import {
   augmentServerQuery,
+  bindColumns,
   compileWhere,
   type FieldColumnMap,
-  type OperatorSqlResolver,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import {
   buildSortKeys,
@@ -21,7 +20,7 @@ import {
   encodeCursor,
   sortSignature,
 } from "@plugins/primitives/plugins/keyset/core";
-import { queryDeployRuns } from "../../core/endpoints";
+import { DEPLOY_RUN_FILTERABLE, queryDeployRuns } from "../../core/endpoints";
 import type { DeployRunRecord } from "../../core/runs";
 import { _deployRuns } from "./tables";
 
@@ -51,46 +50,22 @@ const DEPLOY_RUN_WIRE_COLUMNS = {
   message: _deployRuns.message,
 };
 
-// Binds each filterable/sortable fieldId → its physical `deploy_runs` column, with
-// the field-type token (resolving the operator→SQL builder) and `nullable` for the
-// null-aware keyset seek. Unmapped filter/sort fields are dropped fail-soft by the
-// compiler — never a 400.
-const COLUMN_MAP: FieldColumnMap = {
-  verb: { col: _deployRuns.verb, type: "enum" },
-  status: { col: _deployRuns.status, type: "enum" },
-  releaseRunId: { col: _deployRuns.releaseRunId, type: "text", nullable: true },
-  commitSha: { col: _deployRuns.commitSha, type: "text", nullable: true },
-  startedAt: { col: _deployRuns.startedAt, type: "date" },
-  finishedAt: { col: _deployRuns.finishedAt, type: "date", nullable: true },
-};
+// Binds every DEPLOY_RUN_FILTERABLE column → its `deploy_runs` column (domain
+// copied from the declaration; a declared column with no binding is a tsc
+// error), with `nullable` for the null-aware keyset seek. A filter naming
+// anything else is refused with a 400 — never dropped.
+const COLUMN_MAP: FieldColumnMap = bindColumns(DEPLOY_RUN_FILTERABLE, {
+  verb: { col: _deployRuns.verb },
+  status: { col: _deployRuns.status },
+  releaseRunId: { col: _deployRuns.releaseRunId, nullable: true },
+  commitSha: { col: _deployRuns.commitSha, nullable: true },
+  message: { col: _deployRuns.message, nullable: true },
+  startedAt: { col: _deployRuns.startedAt },
+  finishedAt: { col: _deployRuns.finishedAt, nullable: true },
+});
 
 // Default order when the client sends no sort: newest run first.
 const DEFAULT_SORT: SortRule[] = [{ fieldId: "startedAt", direction: "desc" }];
-
-// Escape LIKE wildcards so a user search term is matched literally (backslash is
-// Postgres ILIKE's default escape char).
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-// Quick search: ILIKE over the release run id, the commit and the failure message
-// — "which deploy shipped a1b2c3d" and "which one printed that error" are the two
-// things anyone reaches for. Blank query → undefined (no fragment).
-function searchWhere(query: string): SQL | undefined {
-  const trimmed = query.trim();
-  if (!trimmed) return undefined;
-  const needle = `%${escapeLike(trimmed)}%`;
-  return or(
-    ilike(_deployRuns.releaseRunId, needle),
-    ilike(_deployRuns.commitSha, needle),
-    ilike(_deployRuns.message, needle),
-  );
-}
-
-// Field-type-agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;
 
 /**
  * One window of a deployment's run ledger, newest first — the `queryReleaseHistory`
@@ -103,23 +78,26 @@ const resolver: OperatorSqlResolver = (typeId, operatorId) =>
 export const handleRunsQuery = implement(
   queryDeployRuns,
   async ({ params, body }) => {
-    const { filter, query, cursor, limit } = body;
+    const { cursor, limit } = body;
     // Substitute the default order when the client sends no sort, and use the same
     // effective sort everywhere (keys, signature, augmentors) so cursors stay
     // consistent across pages.
     const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
 
-    // Fold in the generic server-side augmentors (custom columns, …). Each binds its
-    // aliased columns into `columnMap` (so sort/filter/seek reach them), a `LEFT JOIN`
-    // thunk, and a projection (so `keyValuesOf` can mint the cursor). `rowKeyCol` must
-    // be the column whose value == the web `rowKey(row)` (here `_deployRuns.id`).
+    // Decode the filter strictly (400 on anything undeclared) and fold in the
+    // generic server-side augmentors (custom columns, …): the referenced ones bind
+    // their aliased columns into `columnMap` (so sort/filter/seek reach them), a
+    // `LEFT JOIN` thunk, and a projection (so `keyValuesOf` can mint the cursor).
+    // `rowKeyCol` must be the column whose value == the web `rowKey(row)` (here
+    // `_deployRuns.id`).
     const aug = await augmentServerQuery({
       dataViewId: body.dataViewId,
       rowKeyCol: _deployRuns.id,
       sort,
-      filter,
+      filter: body.filter,
+      columnMap: COLUMN_MAP,
     });
-    const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+    const columnMap = aug.columnMap;
 
     // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
     // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
@@ -141,8 +119,7 @@ export const handleRunsQuery = implement(
 
     const where = and(
       eq(_deployRuns.deploymentId, params.id),
-      searchWhere(query),
-      compileWhere(filter, columnMap, resolver),
+      compileWhere(aug.filter, columnMap),
       seek,
     );
 

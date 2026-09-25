@@ -2,12 +2,9 @@ import {
   UNGROUPED_FOLD_KEY,
   type DataViewRowEntry,
   type DataViewSection,
-  type FieldDef,
-  type FilterOperatorSet,
   type FoldRule,
   type ViewState,
 } from "../../core";
-import { evaluateNode } from "./evaluate-filter";
 
 /** The fold-line key of a section: its group key, or the ungrouped sentinel. */
 export function foldKeyOf(section: { key: string | null }): string {
@@ -25,17 +22,16 @@ export function effectiveFold(state: ViewState): FoldRule | undefined {
 
 /**
  * Build the "is this entry kept?" predicate the fold step and the host's
- * sentinel gate share. A row is kept when it matches `keep` (the shared
- * `evaluateNode`, so an incomplete rule keeps everything exactly as it filters
- * nothing), or when it is the selected row — the row the user has open is never
+ * sentinel gate share. A row is kept when it matches the fold rule's `keep`
+ * (`matchesKeep`: the tree lowered by `useRowFilter`, the same evaluator the
+ * filter uses — `null` when `keep` constrains nothing, so an incomplete rule
+ * keeps everything exactly as it filters nothing), or when it is the selected row — the row the user has open is never
  * folded away. An aggregate entry is kept when its representative or any of its
  * members is the selected row; otherwise its representative decides, because
  * that is the row the user sees.
  */
 export function makeFoldKeep<TRow>(
-  fold: FoldRule,
-  fields: FieldDef<TRow>[],
-  resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
+  matchesKeep: ((row: TRow) => boolean) | null,
   selected: { selectedRowId?: string; rowKey: (row: TRow) => string },
 ): (entry: DataViewRowEntry<TRow>) => boolean {
   const { selectedRowId, rowKey } = selected;
@@ -44,7 +40,7 @@ export function makeFoldKeep<TRow>(
       if (entry.key === selectedRowId) return true;
       if (entry.members?.some((m) => rowKey(m) === selectedRowId)) return true;
     }
-    return evaluateNode(fold.keep, entry.row, fields, resolveOperatorSet);
+    return matchesKeep === null || matchesKeep(entry.row);
   };
 }
 

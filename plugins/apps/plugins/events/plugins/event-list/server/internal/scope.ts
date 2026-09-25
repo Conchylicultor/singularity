@@ -1,24 +1,22 @@
-import type {
-  FilterGroup,
-  FilterNode,
-} from "@plugins/primitives/plugins/data-view/core";
+import {
+  filterColumns,
+  type Filter,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 
 /** The soft-deletion stamp's field id — see `EVENT_LIST_FIELDS`. */
 export const DISAPPEARED_FIELD_ID = "disappearedAt";
 
 /**
- * Does the filter tree carry any rule on `fieldId`?
+ * Does the (decoded) filter carry any clause on `column`, anywhere in the tree?
  *
- * Drives the default scope below. Pure and total (a group with no children is
- * `false`), so it is unit-tested next to this file.
+ * Drives the default scopes below. Pure and total (no filter is `false`), so it
+ * is unit-tested next to this file.
  */
 export function filterMentionsField(
-  node: FilterGroup | FilterNode | null,
-  fieldId: string,
+  filter: Filter | undefined,
+  column: string,
 ): boolean {
-  if (!node) return false;
-  if (node.kind === "rule") return node.fieldId === fieldId;
-  return node.children.some((child) => filterMentionsField(child, fieldId));
+  return filterColumns(filter).has(column);
 }
 
 /**
@@ -33,15 +31,15 @@ export function filterMentionsField(
  * predicate) because `disappearedAt` is a real, filterable field: a view that
  * names it is explicitly asking about disappearance, and a hard predicate would
  * make its own answer unreachable. The rule is therefore: hide them unless the
- * caller's filter mentions the field at all — with any operator, since
- * `is-not-empty` (show only disappeared) and `is-empty` (the default, stated
- * explicitly) are both legitimate and both must win over the default.
+ * caller's filter mentions the field at all — with any op, since `isNotEmpty`
+ * (show only disappeared) and `isEmpty` (the default, stated explicitly) are
+ * both legitimate and both must win over the default.
  */
-export function shouldHideDisappeared(filter: FilterGroup | null): boolean {
+export function shouldHideDisappeared(filter: Filter | undefined): boolean {
   return !filterMentionsField(filter, DISAPPEARED_FIELD_ID);
 }
 
-/** The contributed `source` dimension's field id — see `COLUMN_MAP`. */
+/** The contributed `source` dimension's field id — see `EVENT_LIST_FILTERABLE`. */
 export const SOURCE_FIELD_ID = "sourceId";
 
 /**
@@ -55,7 +53,7 @@ export const SOURCE_FIELD_ID = "sourceId";
  * Same shape as {@link shouldHideDisappeared}, and for the same reason: a
  * DEFAULT, never a fixed predicate. `sourceId` is a real filterable dimension
  * (contributed by the `sources` plugin), so a view that names it AT ALL — with
- * any operator, "source is X" as much as "source is-not-empty" — is explicitly
+ * any op, "source is X" as much as "source is not empty" — is explicitly
  * asking about sources and must get exactly what it asked for, a disabled
  * source's events included. A hard predicate would instead make a disabled
  * source's whole history unreachable.
@@ -64,6 +62,6 @@ export const SOURCE_FIELD_ID = "sourceId";
  * write: the events are not stamped, not moved and not deleted, so re-enabling
  * the source brings every one of them straight back with nothing to undo.
  */
-export function shouldHideInactiveSources(filter: FilterGroup | null): boolean {
+export function shouldHideInactiveSources(filter: Filter | undefined): boolean {
   return !filterMentionsField(filter, SOURCE_FIELD_ID);
 }

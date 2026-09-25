@@ -21,6 +21,11 @@ import {
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  liveBoolean,
+  liveText,
+  or,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 
 const Row = z.object({ id: z.string(), n: z.number(), on: z.boolean() });
@@ -31,7 +36,7 @@ function collection() {
   return liveCollection(`test.use-live.${seq++}`, {
     row: Row,
     id: "id",
-    filterable: { on: z.boolean() },
+    filterable: { on: liveBoolean(), id: liveText() },
     sortable: ["n"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 5,
@@ -88,10 +93,43 @@ describe("useLive — window", () => {
         queryKeyFor(c.key, {
           limit: "3",
           order: '[["n","desc"]]',
-          where: '{"on":true}',
+          where: '{"column":"on","op":"eq","operand":true}',
         }),
       ),
     ).toBeDefined();
+  });
+
+  it("an or tree subscribes on its canonical tuple — the same one for any spelling", () => {
+    const c = collection();
+    const client = makeClient();
+    mount(client, () =>
+      useLive(c, {
+        where: or(
+          { column: "id", op: "gt", operand: "r3" },
+          { column: "on", op: "eq", operand: false },
+        ),
+      }),
+    );
+    mount(client, () =>
+      useLive(c, {
+        where: or(
+          { column: "on", op: "eq", operand: false },
+          or({ column: "id", op: "gt", operand: "r3" }),
+        ),
+      }),
+    );
+    const key = queryKeyFor(c.key, {
+      limit: "2",
+      where:
+        '{"or":[{"column":"id","op":"gt","operand":"r3"},{"column":"on","op":"eq","operand":false}]}',
+    });
+    expect(client.getQueryState(key)).toBeDefined();
+    expect(
+      client
+        .getQueryCache()
+        .findAll()
+        .filter((q) => (q.queryKey as unknown[])[0] === c.key),
+    ).toHaveLength(1);
   });
 
   it("loadMore stays settled on the previous rows while the grown window loads, then settles on it; canGrow ends at maxLimit", async () => {
@@ -191,7 +229,7 @@ describe("useLive — groupBy", () => {
         queryKeyFor(`${c.key}:groups`, {
           groupBy: "on",
           limit: "50",
-          where: '{"on":true}',
+          where: '{"column":"on","op":"eq","operand":true}',
         }),
       ),
     ).toBeDefined();
@@ -239,13 +277,13 @@ describe("useLive — groupBy", () => {
     const c = collection();
     const client = makeClient();
     const ordered = { groupBy: "on", orderBy: [["n", "asc"]] } as const;
-    const ungroupable = { groupBy: "n" } as const;
+    const unfilterable = { groupBy: "n" } as const;
     // @ts-expect-error — a grouping has a fixed order
     const useOrdered = () => useLive(c, ordered);
     // @ts-expect-error — `n` is sortable but not filterable
-    const useUngroupable = () => useLive(c, ungroupable);
+    const useUnfilterable = () => useLive(c, unfilterable);
     expect(() => mount(client, useOrdered)).toThrow(/fixed order/);
-    expect(() => mount(client, useUngroupable)).toThrow(
+    expect(() => mount(client, useUnfilterable)).toThrow(
       /not a filterable column/,
     );
   });

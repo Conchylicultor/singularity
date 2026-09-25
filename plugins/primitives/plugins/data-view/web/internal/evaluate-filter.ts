@@ -1,11 +1,126 @@
+import {
+  and,
+  filterColumns,
+  matchesFilter,
+  or,
+  type Filter,
+  type Filterable,
+  type FilterDomainId,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   FieldDef,
   FilterFieldValue,
   FilterGroup,
+  FilterLowerContext,
   FilterNode,
   FilterOperatorSet,
 } from "../../core";
-import { isOperatorComplete, resolveRuleOperator } from "./rule-resolution";
+import { resolveRuleOperator } from "./rule-resolution";
+
+type ResolveOperatorSet = (typeId: string) => FilterOperatorSet | undefined;
+
+/** A DataView filter tree lowered into the one filter language. */
+export interface LoweredFilter {
+  /** The lowered tree; `undefined` is the absent filter (keeps every row). */
+  filter: Filter | undefined;
+  /**
+   * Whether any rule's lowering read the clock (a relative date anchor such as
+   * "Today" or "within the past week"). Only such a filter needs re-lowering
+   * when the day rolls over — see `useFilterClock`.
+   */
+  readsClock: boolean;
+}
+
+/**
+ * Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule
+ * through its operator's `lower` with `ctx.column` = the field id.
+ *
+ * - An unresolvable rule (dangling field/operator) or an incomplete one
+ *   (`lower` answers `undefined`) is TRUE: it keeps every row.
+ * - `and` drops TRUE children; `or` with any TRUE child is itself TRUE (the
+ *   in-memory `some` over a no-op child always held).
+ * - An empty group is TRUE; a one-child group is its child.
+ *
+ * `readsClock` is recorded generically: `ctx.now` is a getter that notes the
+ * read, so no operator type is named here.
+ */
+export function lowerFilterGroup<TRow>(
+  group: FilterGroup | null,
+  fields: FieldDef<TRow>[],
+  resolveOperatorSet: ResolveOperatorSet,
+  now: number,
+): LoweredFilter {
+  let readsClock = false;
+  const lowerNode = (node: FilterNode): Filter | undefined => {
+    if (node.kind === "group") {
+      const children: Filter[] = [];
+      for (const child of node.children) {
+        const lowered = lowerNode(child);
+        if (lowered === undefined) {
+          if (node.conjunction === "or") return undefined;
+          continue;
+        }
+        children.push(lowered);
+      }
+      if (children.length === 0) return undefined;
+      if (children.length === 1) return children[0];
+      return node.conjunction === "and" ? and(...children) : or(...children);
+    }
+    const resolved = resolveRuleOperator(node, fields, resolveOperatorSet);
+    if (!resolved) return undefined;
+    const ctx: FilterLowerContext = {
+      column: resolved.field.id,
+      get now() {
+        readsClock = true;
+        return now;
+      },
+    };
+    return resolved.op.lower(node.value, ctx);
+  };
+  const filter = group ? lowerNode(group) : undefined;
+  return { filter, readsClock };
+}
+
+/**
+ * The ONE DataView-side adapter from a field's projected value to the row value
+ * the filter language reads for `domain`. The language stays strict (a value of
+ * the wrong type throws there); a DataView's projections are looser, so they are
+ * coerced HERE, once:
+ *
+ * - text: an array joins with " ", a `Date` is its ISO string, anything else is
+ *   `String(v)`;
+ * - number: a finite number, else NULL;
+ * - boolean: `Boolean(v)` (a projection is truthy-ish), NULL when absent;
+ * - instant: a `Date`, epoch ms or a parseable string → `Date`, else NULL;
+ * - stringArray: the array, else NULL.
+ *
+ * `undefined` / `null` are NULL in every domain.
+ */
+export function coerceToDomain(
+  value: FilterFieldValue,
+  domain: FilterDomainId,
+): unknown {
+  if (value === null || value === undefined) return null;
+  switch (domain) {
+    case "text":
+      if (Array.isArray(value)) return value.join(" ");
+      if (value instanceof Date) return value.toISOString();
+      return String(value);
+    case "number":
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    case "boolean":
+      return Boolean(value);
+    case "instant": {
+      let t = Number.NaN;
+      if (value instanceof Date) t = value.getTime();
+      else if (typeof value === "number") t = value;
+      else if (typeof value === "string" && value !== "") t = Date.parse(value);
+      return Number.isFinite(t) ? new Date(t) : null;
+    }
+    case "stringArray":
+      return Array.isArray(value) ? value : null;
+  }
+}
 
 /**
  * Project a field's filter value off a row: the multi-value `values` accessor
@@ -21,49 +136,58 @@ function projectFieldValue<TRow>(
 }
 
 /**
- * Recursively evaluate a filter node against a row. Pure — `resolveOperatorSet`
- * is injected so this is testable without React.
- *
- * A rule that is unresolvable (missing field/operator) OR incomplete is a no-op
- * → evaluates to `true` (keeps the row). Completeness is decided by the shared
- * `isOperatorComplete`, the SAME authority the chip's rule counter uses — so a
- * rule never silently filters while the chip reports "0 rules" (the bug a
- * value-less `bool` rule produced). An empty group is `true`; `and` → every
- * child; `or` → some child.
+ * Compile a lowered filter into a row predicate: the filter language's
+ * `matchesFilter` over a row record of just the columns the filter reads, each
+ * projected (`projectFieldValue`) and coerced to its set's domain
+ * (`coerceToDomain`). `undefined` keeps every row.
  */
-export function evaluateNode<TRow>(
-  node: FilterNode,
-  row: TRow,
+export function makeRowMatcher<TRow>(
+  filter: Filter | undefined,
   fields: FieldDef<TRow>[],
-  resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
-): boolean {
-  if (node.kind === "group") {
-    if (node.children.length === 0) return true;
-    const evalChild = (child: FilterNode) =>
-      evaluateNode(child, row, fields, resolveOperatorSet);
-    return node.conjunction === "and"
-      ? node.children.every(evalChild)
-      : node.children.some(evalChild);
+  resolveOperatorSet: ResolveOperatorSet,
+): (row: TRow) => boolean {
+  if (filter === undefined) return () => true;
+  const columns: {
+    id: string;
+    field: FieldDef<TRow>;
+    domain: FilterDomainId;
+  }[] = [];
+  const filterable: Record<string, { domain: FilterDomainId }> = {};
+  for (const id of filterColumns(filter)) {
+    // Every column was minted by `lowerFilterGroup` from a resolved rule, so a
+    // miss here is a lowering that invented a column — a bug, not a no-op.
+    const field = fields.find((f) => f.id === id);
+    const set = field && resolveOperatorSet(field.type ?? "text");
+    if (!field || !set) {
+      throw new Error(`data-view filter: no filterable field "${id}"`);
+    }
+    columns.push({ id, field, domain: set.domain });
+    filterable[id] = { domain: set.domain };
   }
-
-  const resolved = resolveRuleOperator(node, fields, resolveOperatorSet);
-  if (!resolved) return true;
-  const { field, op } = resolved;
-  if (!isOperatorComplete(op, node.value)) return true;
-  return op.predicate(node.value, projectFieldValue(field, row));
+  const declared: Filterable = filterable;
+  return (row) => {
+    const record: Record<string, unknown> = {};
+    for (const c of columns) {
+      record[c.id] = coerceToDomain(projectFieldValue(c.field, row), c.domain);
+    }
+    return matchesFilter(record, filter, declared);
+  };
 }
 
 /**
- * Filter rows through a filter group. A null group keeps every row.
+ * Filter rows through a DataView filter tree: lower it once (at `now`), then
+ * match every row. A null group keeps every row.
  */
 export function applyFilter<TRow>(
   rows: readonly TRow[],
   filter: FilterGroup | null,
   fields: FieldDef<TRow>[],
-  resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
+  resolveOperatorSet: ResolveOperatorSet,
+  now: number,
 ): readonly TRow[] {
-  if (!filter) return rows;
-  return rows.filter((row) =>
-    evaluateNode(filter, row, fields, resolveOperatorSet),
+  const lowered = lowerFilterGroup(filter, fields, resolveOperatorSet, now);
+  if (lowered.filter === undefined) return rows;
+  return rows.filter(
+    makeRowMatcher(lowered.filter, fields, resolveOperatorSet),
   );
 }

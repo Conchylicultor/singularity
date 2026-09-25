@@ -1556,7 +1556,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
               - `database.db`
-              - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/jobs.isSuspendSignal`
@@ -1568,9 +1567,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
               - `primitives/data-view/server-query.augmentServerQuery`
+              - `primitives/data-view/server-query.bindColumns`
               - `primitives/data-view/server-query.compileWhere`
               - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/data-view/server-query.OperatorSqlResolver`
               - `primitives/keyset.buildSortKeys`
               - `primitives/keyset.keyValuesOf`
               - `primitives/keyset.orderByClauses`
@@ -1604,7 +1603,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/deploy/servers.serverDetailRoute`
               - `infra/endpoints.defineEndpoint`
-              - `primitives/data-view.FilterGroupSchema`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveText`
+              - `primitives/data-view.ServerFilterWireSchema`
               - `primitives/live-state.resourceDescriptor`
               - `primitives/pane.defineRoute`
             - Exports (types):
@@ -1626,6 +1627,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DEFAULT_LOOPBACK_PORT`
               - `deleteDeployment`
               - `DEPLOY_LOG_CHANNEL`
+              - `DEPLOY_RUN_FILTERABLE`
+              - `DEPLOY_RUN_SEARCHABLE`
               - `deploymentDetailRoute`
               - `DeploymentSchema`
               - `deploymentsResource`
@@ -2073,12 +2076,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/events-core._eventSources`
               - `apps/events/events-core.eventsTable`
               - `database.db`
-              - `fields/server-capabilities-loader`
-              - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `primitives/data-view/server-query.bindColumns`
               - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/data-view/server-query.decodeFilterBody`
+              - `primitives/data-view/server-query.FieldColumnMap`
+              - `primitives/data-view/server-query.filterableOf`
               - `primitives/keyset.buildSortKeys`
               - `primitives/keyset.keyValuesOf`
               - `primitives/keyset.orderByClauses`
@@ -2090,7 +2094,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/events-core.EVENT_CATEGORIES`
               - `apps/events/events-core.SourcedEventSchema`
               - `infra/endpoints.defineEndpoint`
-              - `primitives/data-view.FilterGroupSchema`
+              - `network/live/filter.liveBoolean`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveStringArray`
+              - `network/live/filter.liveText`
+              - `primitives/data-view.ServerFilterWireSchema`
             - Exports (types):
               - `EventFieldSpec`
               - `EventFieldType`
@@ -2098,6 +2106,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `EVENT_CATEGORY_OPTIONS`
               - `EVENT_LIST_FIELDS`
+              - `EVENT_LIST_FILTERABLE`
+              - `EVENT_LIST_SEARCHABLE`
               - `queryEvents`
               - `QueryEventsBodySchema`
               - `QueryEventsResponseSchema`
@@ -2211,6 +2221,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/text/config.textField`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
+              - `network/live/filter.liveBoolean`
+              - `network/live/filter.liveText`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `CreateEventSourceBody`
@@ -3216,12 +3228,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/mail-core._mailThreads`
               - `apps/mail/mail-core.resolveMailAccountId`
               - `database.db`
-              - `fields/server-capabilities-loader`
-              - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `primitives/data-view/server-query.bindColumns`
               - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/data-view/server-query.decodeFilterBody`
+              - `primitives/data-view/server-query.FieldColumnMap`
               - `primitives/keyset.buildSortKeys`
               - `primitives/keyset.keyValuesOf`
               - `primitives/keyset.orderByClauses`
@@ -3236,7 +3248,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/mail/mail-core.MailThreadSchema`
               - `infra/endpoints.defineEndpoint`
-              - `primitives/data-view.FilterGroupSchema`
+              - `network/live/filter.liveBoolean`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveNumber`
+              - `network/live/filter.liveStringArray`
+              - `network/live/filter.liveText`
+              - `primitives/data-view.ServerFilterWireSchema`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `MailThreadFieldSpec`
@@ -3244,6 +3261,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `QueryThreadsBody`
             - Exports (values):
               - `MAIL_THREAD_FIELDS`
+              - `MAIL_THREAD_FILTERABLE`
+              - `MAIL_THREAD_SEARCHABLE`
               - `mailThreadsRevisionResource`
               - `queryThreads`
               - `QueryThreadsBodySchema`
@@ -9257,13 +9276,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `resource.declare` "conversations-revision"
         - Uses:
           - `database.db`
-          - `fields/server-capabilities-loader`
-          - `fields/server-capabilities.resolveFieldFilterSql`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `primitives/data-view/server-query.augmentServerQuery`
+          - `primitives/data-view/server-query.bindColumns`
           - `primitives/data-view/server-query.compileWhere`
-          - `primitives/data-view/server-query.OperatorSqlResolver`
+          - `primitives/data-view/server-query.FieldColumnMap`
           - `primitives/keyset.buildSortKeys`
           - `primitives/keyset.keyValuesOf`
           - `primitives/keyset.orderByClauses`
@@ -9279,7 +9297,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider.modelDisplayLabel`
           - `conversations/model-provider.SELECTABLE_CHOICES`
           - `infra/endpoints.defineEndpoint`
-          - `primitives/data-view.FilterGroupSchema`
+          - `network/live/filter.liveInstant`
+          - `network/live/filter.liveText`
+          - `primitives/data-view.ServerFilterWireSchema`
           - `primitives/live-state.resourceDescriptor`
           - `tasks/tasks-core.ConversationKindSchema`
           - `tasks/tasks-core.ConversationSchema`
@@ -9290,6 +9310,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueryConversationsBody`
         - Exports (values):
           - `CONVERSATION_FIELDS`
+          - `CONVERSATION_FILTERABLE`
+          - `CONVERSATION_SEARCHABLE`
           - `conversationsRevisionResource`
           - `queryConversations`
           - `QueryConversationsBodySchema`
@@ -15547,12 +15569,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/spacing.Stack`
               - `primitives/data-view.DataViewSlots`
-        - **`filter-sql`** — Boolean field type: server filter-sql capability — operator→SQL fragments mirroring the data-view bool filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "bool"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
+          - Test helpers:
+            - Web: `@plugins/fields/plugins/bool/plugins/filter/web/testing`
+              - `boolOperatorSet`
         - **`inline`** — Boolean field type: data-view inline cell editor (immediate-commit toggle).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "bool" → `BoolEditor`
@@ -15694,12 +15713,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resolveAnchorDay`
               - `TODAY`
               - `withinRange`
-        - **`filter-sql`** — Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "date"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
@@ -15864,12 +15877,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ChipSelectFilterInput`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInputProps`
-        - **`filter-sql`** — Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "enum"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Enum (select) field type: data-view inline cell editor (single-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "enum" → `EnumEditor`
@@ -16155,12 +16162,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInput`
               - `primitives/data-view.FilterValueInputProps`
-        - **`filter-sql`** — Number field type: server filter-sql capability — operator→SQL fragments mirroring the data-view number filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "number"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Number field type: data-view inline cell editor (compact numeric input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "number" → `NumberEditor`
@@ -16349,75 +16350,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `auth/google`
               - `auth/notion`
-    - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
+    - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's cast AND the filter-language domain it reads in), and the storage eager self-registering index. A graph sink — never imports a capability barrel.
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
-          - `apps/events/event-list`
-          - `apps/mail/threads`
-          - `conversations/all-conversations`
-          - `fields/bool/filter-sql`
           - `fields/bool/storage`
           - `fields/bool/text-cast`
-          - `fields/date/filter-sql`
           - `fields/date/storage`
           - `fields/date/text-cast`
-          - `fields/enum/filter-sql`
           - `fields/float/storage`
           - `fields/int/storage`
           - `fields/json/storage`
-          - `fields/number/filter-sql`
           - `fields/number/text-cast`
           - `fields/rank/storage`
-          - `fields/tags/filter-sql`
           - `fields/tags/storage`
-          - `fields/text/filter-sql`
           - `fields/text/storage`
           - `fields/uuid/storage`
           - `infra/entities`
           - `primitives/data-view/custom-columns`
-          - `release`
-          - `reports`
-          - `runs`
       - Server:
         - Exports (types):
-          - `FieldFilterSqlContribution`
           - `FieldStorageContribution`
           - `FieldValueTextCastContribution`
-          - `FilterSqlBuilder`
+          - `FieldValueTextRead`
           - `StorageColumnBuilder`
           - `StorageColumnFor`
           - `ValueTextCast`
         - Exports (values):
           - `Fields`
-          - `resolveFieldFilterSql`
           - `resolveFieldStorage`
           - `resolveFieldValueTextCast`
-    - **`server-capabilities-loader`** — Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
+    - **`server-capabilities-loader`** — Eagerly evaluates every fields storage capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
       - Server:
         - Uses:
-          - `fields/bool/filter-sql`
           - `fields/bool/storage`
-          - `fields/date/filter-sql`
           - `fields/date/storage`
-          - `fields/enum/filter-sql`
           - `fields/float/storage`
           - `fields/int/storage`
           - `fields/json/storage`
-          - `fields/number/filter-sql`
           - `fields/rank/storage`
-          - `fields/tags/filter-sql`
           - `fields/tags/storage`
-          - `fields/text/filter-sql`
           - `fields/text/storage`
           - `fields/uuid/storage`
       - Cross-plugin:
-        - Imported by:
-          - `apps/events/event-list`
-          - `apps/mail/threads`
-          - `conversations/all-conversations`
-          - `infra/entities`
-          - `release`
+        - Imported by: `infra/entities`
     - **`string-list`** — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "string-list"
@@ -16490,12 +16465,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ChipSelectFilterInput`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInputProps`
-        - **`filter-sql`** — Tags field type: server filter-sql capability — operator→SQL fragments mirroring the data-view tags filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "tags"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
+          - Test helpers:
+            - Web: `@plugins/fields/plugins/tags/plugins/filter/web/testing`
+              - `tagsOperatorSet`
         - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "tags" → `TagsEditor`
@@ -16589,12 +16561,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInput`
               - `primitives/data-view.FilterValueInputProps`
-        - **`filter-sql`** — Text field type: server filter-sql capability — operator→SQL fragments mirroring the data-view text filter predicates.
-          - Server:
-            - Contributes: `fields.filter-sql` "text"
-            - Uses: `fields/server-capabilities.Fields`
-          - Cross-plugin:
-            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Text field type: data-view inline cell editor (compact text input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "text" → `TextEditor`
@@ -18617,6 +18583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/file-tree`
           - `primitives/data-view/custom-columns`
+          - `primitives/data-view/server-query`
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
           - `primitives/folder-picker`
@@ -20767,7 +20734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value) and the filter op table's SQL side (liveOpSql / liveClauseSql), paired with core's op ids by type.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
@@ -20791,6 +20758,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.WindowOrderKey`
           - `infra/query-resource.windowQueryResource`
           - `infra/query-resource.WindowQueryResourceSpec`
+          - `network/live/filter.filterSql`
         - Exports (types):
           - `CollectionSource`
           - `CollectionSpecs`
@@ -20798,8 +20766,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ServedCollection`
         - Exports (values):
           - `compileCollection`
-          - `liveClauseSql`
-          - `liveOpSql`
           - `serveCollection`
       - Core:
         - Uses:
@@ -20807,46 +20773,114 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.pointQueryResourceDescriptor`
           - `infra/query-resource.WindowQueryResourceContract`
           - `infra/query-resource.windowQueryResourceDescriptor`
+          - `network/live/filter.decodeFilter`
+          - `network/live/filter.encodeFilter`
+          - `network/live/filter.Filter`
+          - `network/live/filter.Filterable`
+          - `network/live/filter.FilterScalar`
+          - `network/live/filter.LIST_MAX`
           - `primitives/live-state.resourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
         - Exports (types):
-          - `LiveClause`
           - `LiveCollection`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
           - `LiveDecodedGroupQuery`
           - `LiveDecodedQuery`
           - `LiveFilterable`
+          - `LiveFilterableOf`
           - `LiveGroup`
+          - `LiveGroupableColumn`
+          - `LiveGroupableDomain`
           - `LiveGroupCodec`
           - `LiveGroupParams`
           - `LiveGroupQuery`
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
-          - `LiveOperands`
-          - `LiveOpId`
           - `LiveOrderBy`
           - `LivePreload`
           - `LiveQuery`
+          - `LiveReservedColumn`
           - `LiveRowSchema`
-          - `LiveScalar`
           - `LiveSortDirection`
           - `LiveWhere`
+          - `LiveWhereObject`
           - `LiveWindowCodec`
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
-        - Exports (values):
-          - `compareScalars`
-          - `LIVE_LIST_MAX`
-          - `liveCollection`
-          - `liveOps`
-          - `matchesLiveWhere`
-          - `testLiveClause`
+        - Exports (values): `liveCollection`
       - Cross-plugin:
         - Imported by:
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
           - `shell/notifications`
+      - Plugins:
+        - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `apps/events/event-list`
+              - `apps/events/events-core`
+              - `apps/mail/threads`
+              - `conversations/all-conversations`
+              - `network/live`
+              - `primitives/data-view/server-query`
+              - `release`
+              - `reports`
+          - Server:
+            - Exports (values):
+              - `filterSql`
+              - `renderOpSql`
+          - Core:
+            - Exports (types):
+              - `AnyFilterOp`
+              - `Filter`
+              - `Filterable`
+              - `FilterClause`
+              - `FilterColumn`
+              - `FilterDomainId`
+              - `FilterGroup`
+              - `FilterOperand`
+              - `FilterOpId`
+              - `FilterScalar`
+              - `FilterValue`
+              - `NormalizedOperand`
+              - `OperandKind`
+              - `OperandKindOf`
+              - `OpsFor`
+              - `OpSql`
+              - `OrEachHole`
+              - `Tpl`
+              - `TplHole`
+            - Exports (values):
+              - `and`
+              - `asciiLower`
+              - `canonicalizeFilter`
+              - `clause`
+              - `compareScalars`
+              - `decodeFilter`
+              - `encodeFilter`
+              - `FILTER_DOMAIN_IDS`
+              - `FILTER_MAX_CLAUSES`
+              - `FILTER_MAX_DEPTH`
+              - `filterColumns`
+              - `filterDomains`
+              - `FilterError`
+              - `filterOps`
+              - `getFilterOp`
+              - `isFilterGroup`
+              - `isFilterOpId`
+              - `LIST_MAX`
+              - `liveBoolean`
+              - `liveInstant`
+              - `liveNumber`
+              - `liveStringArray`
+              - `liveText`
+              - `matchesFilter`
+              - `opAllowsDomain`
+              - `opTemplate`
+              - `or`
+              - `testClause`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -27884,6 +27918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterController`
           - `FilterFieldValue`
           - `FilterGroup`
+          - `FilterLowerContext`
           - `FilterNode`
           - `FilterOperator`
           - `FilterOperatorSet`
@@ -27907,6 +27942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionsDescriptor`
           - `ItemActionZone`
           - `LeadingSlotProps`
+          - `LoweredFilter`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
           - `PartitionOptions`
@@ -27932,7 +27968,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineFieldExtensions`
           - `defineItemActions`
           - `EditableCell`
-          - `evaluateNode`
           - `FieldCell`
           - `FilterValueInput`
           - `FoldLine`
@@ -27957,6 +27992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useDataViewControls`
           - `useDataViewSections`
           - `useFieldIdentities`
+          - `useFilterClock`
           - `useFilterController`
           - `useFlatRows`
           - `useGroupByController`
@@ -27971,6 +28007,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useResolveGroupings`
           - `useResolveOperatorSet`
           - `useResolveValueCodec`
+          - `useRowFilter`
           - `useServerDataSource`
           - `useSortController`
       - Server:
@@ -28086,6 +28123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterConjunction`
           - `FilterFieldValue`
           - `FilterGroup`
+          - `FilterLowerContext`
           - `FilterNode`
           - `FilterOperator`
           - `FilterOperatorSet`
@@ -28126,9 +28164,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `IDENTITY_CODEC`
           - `isHostedToolbar`
           - `orderFieldsBySection`
+          - `ServerFilterWireSchema`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/data-view/web/testing`
+          - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
+          - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
       - Plugins:
         - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
           - Web:
@@ -28183,11 +28226,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `fields/server-capabilities.resolveFieldValueTextCast`
               - `infra/endpoints.implement`
+              - `primitives/data-view/server-query.AugmentedColumn`
               - `primitives/data-view/server-query.DataViewServer`
-              - `primitives/data-view/server-query.FieldColumnMap`
               - `primitives/data-view/server-query.QueryAugmentor`
               - `primitives/data-view/server-query.QueryAugmentorContext`
-              - `primitives/data-view/server-query.ServerQueryAugmentation`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
             - Exports (values):
               - `_dataViewCustomValues`
@@ -28333,22 +28375,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `ListViewOptions`
           - Core:
             - Exports (types): `ListViewOptions`
-        - **`server-query`** — Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the filter compilation, not any field type. The field-agnostic keyset seek + cursor codec now live in primitives/keyset.
+        - **`server-query`** — Server half of a server-delegated DataView over the one filter language: bindColumns binds a source's core `filterable` declaration to its SQL (domain copied, every column bound), decodeFilterBody strictly decodes the wire filter (400 on anything undeclared), compileWhere compiles it through the language's filterSql, and the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) lets sub-plugins offer extra joined sort/filter columns. Names no field type; the keyset seek + cursor codec live in primitives/keyset.
           - Server:
-            - Uses: `primitives/data-view.readDataViewConfigDoc`
+            - Uses:
+              - `infra/endpoints.HttpError`
+              - `network/live/filter.filterSql`
+              - `primitives/data-view.readDataViewConfigDoc`
             - Exports (types):
+              - `AugmentedColumn`
               - `ColumnBinding`
               - `DataViewJoin`
               - `FieldColumnMap`
-              - `OperatorSqlBuilder`
-              - `OperatorSqlResolver`
               - `QueryAugmentor`
               - `QueryAugmentorContext`
               - `ServerQueryAugmentation`
             - Exports (values):
               - `augmentServerQuery`
+              - `bindColumns`
               - `compileWhere`
               - `DataViewServer`
+              - `decodeFilterBody`
+              - `filterableOf`
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
@@ -28359,6 +28406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/union-query`
               - `release`
               - `reports`
+              - `runs`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
@@ -28410,7 +28458,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/data-view.DataViewRenderProps`
               - `primitives/data-view.DataViewSlots`
-              - `primitives/data-view.evaluateNode`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.GroupedSections`
@@ -28431,6 +28478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
+              - `primitives/data-view.useRowFilter`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -28444,12 +28492,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.useTreeListContext`
               - `primitives/tree.useTreeRow`
             - Exports (types): `TreeViewOptions`
-        - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
+        - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
           - Server:
             - Uses:
               - `primitives/data-view/server-query.compileWhere`
               - `primitives/data-view/server-query.FieldColumnMap`
-              - `primitives/data-view/server-query.OperatorSqlResolver`
               - `primitives/keyset.buildSortKeys`
               - `primitives/keyset.ColumnExpr`
               - `primitives/keyset.orderByClauses`
@@ -28466,7 +28513,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `UnionColumnSpec`
               - `UnionColumnSpecs`
-            - Exports (values): `UnionCursorMismatchError`
+              - `UnionDiscriminator`
+            - Exports (values):
+              - `DEFAULT_UNION_DISCRIMINATOR`
+              - `UnionCursorMismatchError`
+              - `unionFilterable`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Uses:
@@ -32177,8 +32228,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `database.db`
       - `database/sql-column.parsedText`
-      - `fields/server-capabilities-loader`
-      - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/jobs/supervised-job.defineSupervisedJob`
@@ -32190,9 +32239,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.REPO_ROOT`
       - `infra/paths.worktreeArtifacts`
       - `primitives/data-view/server-query.augmentServerQuery`
+      - `primitives/data-view/server-query.bindColumns`
       - `primitives/data-view/server-query.compileWhere`
       - `primitives/data-view/server-query.FieldColumnMap`
-      - `primitives/data-view/server-query.OperatorSqlResolver`
       - `primitives/keyset.buildSortKeys`
       - `primitives/keyset.keyValuesOf`
       - `primitives/keyset.orderByClauses`
@@ -32228,7 +32277,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
-      - `primitives/data-view.FilterGroupSchema`
+      - `network/live/filter.liveInstant`
+      - `network/live/filter.liveText`
+      - `primitives/data-view.ServerFilterWireSchema`
       - `primitives/live-state.resourceDescriptor`
       - `release/bundles.ReleaseManifestSchema`
     - Exports (types):
@@ -32260,6 +32311,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `queryReleaseHistory`
       - `QueryReleaseHistoryBodySchema`
       - `QueryReleaseHistoryResponseSchema`
+      - `RELEASE_HISTORY_FILTERABLE`
+      - `RELEASE_HISTORY_SEARCHABLE`
       - `RELEASE_LOG_CHANNEL`
       - `RELEASE_TARGETS`
       - `releaseCandidateEndpoint`
@@ -32523,7 +32576,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
       - `database/sql-column.parsedJson`
-      - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/host/duress.createShedBuffer`
@@ -32531,9 +32583,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
       - `primitives/data-view/server-query.augmentServerQuery`
+      - `primitives/data-view/server-query.bindColumns`
       - `primitives/data-view/server-query.compileWhere`
       - `primitives/data-view/server-query.FieldColumnMap`
-      - `primitives/data-view/server-query.OperatorSqlResolver`
       - `primitives/keyset.buildSortKeys`
       - `primitives/keyset.keyValuesOf`
       - `primitives/keyset.orderByClauses`
@@ -32575,7 +32627,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.defineConfig`
       - `fields/int/config.intField`
       - `infra/endpoints.defineEndpoint`
-      - `primitives/data-view.FilterGroupSchema`
+      - `network/live/filter.liveBoolean`
+      - `network/live/filter.liveInstant`
+      - `network/live/filter.liveNumber`
+      - `network/live/filter.liveText`
+      - `primitives/data-view.ServerFilterWireSchema`
       - `primitives/live-state.resourceDescriptor`
       - `primitives/pane.defineRoute`
     - Exports (types):
@@ -32596,6 +32652,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reportDetailRoute`
       - `reportFacets`
       - `ReportFacetsSchema`
+      - `REPORTS_FILTERABLE`
+      - `REPORTS_SEARCHABLE`
       - `ReportSchema`
       - `reportsConfig`
       - `reportsRevisionResource`
@@ -33172,9 +33230,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `resource.declare` "runs.revision"
     - Uses:
       - `database.db`
-      - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `primitives/data-view/server-query.decodeFilterBody`
       - `primitives/data-view/union-query.compileUnionPage`
       - `primitives/keyset.keyValuesOf`
     - Exports (types):
@@ -33192,7 +33250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
-      - `primitives/data-view.FilterGroupSchema`
+      - `primitives/data-view.ServerFilterWireSchema`
       - `primitives/live-state.resourceDescriptor`
       - `runs/run-outcome.RunOutcomeSchema`
     - Exports (types):
@@ -33204,6 +33262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `RunBaseColumnNullable`
       - `RunByIdResponse`
       - `RunColumnSpec`
+      - `RunColumnType`
       - `RunDerivedColumnId`
       - `UnionRun`
     - Exports (values):
@@ -33213,7 +33272,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `QueryRunsBodySchema`
       - `QueryRunsResponseSchema`
       - `RUN_BASE_COLUMNS`
+      - `RUN_COLUMN_DOMAINS`
       - `RUN_SEARCH_COLUMNS`
+      - `runArmUnionSpecs`
       - `RunByIdResponseSchema`
       - `runRowKey`
       - `runsRevisionResource`

@@ -50,10 +50,19 @@ Both maps in `defineRunKind` are typed, and that is the point of the plugin:
 - `base` is derived from `RUN_BASE_COLUMNS`, so a missing column is a `tsc`
   error, and `namespace: null` is spellable while `startedAt: null` is not.
 - `extra` is keyed against the arm's own `defineRunArmFields` declaration, and
-  `runArmFields` binds the web `FieldDef.id`s to that same declaration. A field
-  id that does not match a server column key does not *fail* — it silently
-  degrades to client-side-only filtering over the loaded window. Here it will not
-  compile.
+  `runArmFields` binds the web `FieldDef.id`s to that same declaration, so a web
+  id off every server column will not compile.
+- **Filterable = declared.** Each arm column's `type` maps to its filter-language
+  domain through the closed `RUN_COLUMN_DOMAINS` (`json` → `null`: read-only,
+  never filtered or sorted). `unionFilterable(RUN_BASE_COLUMNS,
+  runArmUnionSpecs(<every arm's fields>))` is the ONE declaration: the handler
+  strict-decodes against it (a 400 on anything else) and the web surface passes
+  it as `dataSource.filterable` — built from `Runs.Kind`'s `fields` (each arm
+  hands in its own core declaration there), so the Filter control offers an
+  arm's field exactly when the server can filter it. The search box lowers to
+  `contains` over `RUN_SEARCH_COLUMNS`. A `tags` column is a jsonb string array
+  (the `stringArray` domain's ops are jsonb): `build.targets` is projected as
+  `to_jsonb(targets)`.
 - `duration` is derived from `startedAt` / `finishedAt` and is absent from what
   an arm declares, so two arms cannot disagree about what a duration is. It
   measures against `now()` while in flight, which makes it one sortable dimension
@@ -85,7 +94,8 @@ in-window change, and old runs are finished, so that tail is stable by nature.
 
 Its own `{core,server,web}` under the owning domain plugin — never here; `runs`
 names no kind. `core`: `defineRunArmFields`. `server`: `defineRunKind` in
-`register: [...]`. `web`: `Runs.Kind` (label, optional `open`), plus
+`register: [...]`. `web`: `Runs.Kind` (label, the arm's `fields` declaration,
+optional `open`), plus
 `Runs.Fields` / `Runs.Leading` as wanted.
 
 `Runs.Fields` also declares the arm's **`section`** — the heading its columns are
@@ -175,9 +185,9 @@ pair is the address: a run id is unique only within its own ledger.
   - Contributes: `resource.declare` "runs.revision"
   - Uses:
     - `database.db`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.decodeFilterBody`
     - `primitives/data-view/union-query.compileUnionPage`
     - `primitives/keyset.keyValuesOf`
   - Exports (types):
@@ -195,7 +205,7 @@ pair is the address: a run id is unique only within its own ledger.
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `runs/run-outcome.RunOutcomeSchema`
   - Exports (types):
@@ -207,6 +217,7 @@ pair is the address: a run id is unique only within its own ledger.
     - `RunBaseColumnNullable`
     - `RunByIdResponse`
     - `RunColumnSpec`
+    - `RunColumnType`
     - `RunDerivedColumnId`
     - `UnionRun`
   - Exports (values):
@@ -216,7 +227,9 @@ pair is the address: a run id is unique only within its own ledger.
     - `QueryRunsBodySchema`
     - `QueryRunsResponseSchema`
     - `RUN_BASE_COLUMNS`
+    - `RUN_COLUMN_DOMAINS`
     - `RUN_SEARCH_COLUMNS`
+    - `runArmUnionSpecs`
     - `RunByIdResponseSchema`
     - `runRowKey`
     - `runsRevisionResource`

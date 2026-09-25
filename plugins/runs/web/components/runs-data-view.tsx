@@ -9,7 +9,15 @@ import {
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { queryRuns, runRowKey, runsRevisionResource } from "../../core";
+import { unionFilterable } from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
+import {
+  queryRuns,
+  RUN_BASE_COLUMNS,
+  RUN_SEARCH_COLUMNS,
+  runArmUnionSpecs,
+  runRowKey,
+  runsRevisionResource,
+} from "../../core";
 import type { UnionRun } from "../../core";
 import { useRunFields } from "../internal/fields";
 import { Runs } from "../internal/slots";
@@ -105,6 +113,17 @@ export function RunsDataView({
   const openPane = useOpenPane();
   const kinds = Runs.Kind.useContributions();
   const fields = useRunFields(kinds);
+  // What the server can filter: the base columns, the discriminator and every
+  // registered arm's own columns — the same declarations the server's union is
+  // compiled (and its filter decoded) from.
+  const filterable = useMemo(
+    () =>
+      unionFilterable(
+        RUN_BASE_COLUMNS,
+        runArmUnionSpecs(kinds.map((k) => k.fields)),
+      ),
+    [kinds],
+  );
 
   const openers = useMemo(
     () =>
@@ -172,6 +191,8 @@ export function RunsDataView({
       rowActivation={resolveActivation}
       dataSource={{
         changeTick,
+        filterable,
+        searchable: RUN_SEARCH_COLUMNS,
         fetchPage: (args) => fetchEndpoint(queryRuns, {}, { body: args }),
       }}
     />

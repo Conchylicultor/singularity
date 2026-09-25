@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-// Side-effect imports of every fields storage/filter-sql capability barrel, so
-// each self-registers its Drizzle column / filter-SQL builder into the
+// Side-effect imports of every fields storage capability barrel, so each
+// self-registers its Drizzle column builder into the
 // `server-capabilities` eager index at module-eval — before any `defineEntity`
 // body runs — with NO filesystem scan. Kept OUT of the token-owning
 // `server-capabilities` library so that library stays a graph sink (importing the
@@ -13,5 +13,5 @@ import "./internal/eager.generated";
 
 export default {
   description:
-    "Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.",
+    "Eagerly evaluates every fields storage capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.",
 } satisfies ServerPluginDefinition;

@@ -48,7 +48,10 @@ export const buildRunKind = defineRunKind({
   },
   extra: {
     "build.status": statusExpr,
-    "build.targets": _buildRuns.targets,
+    // The ledger's `text[]` presented as a jsonb string array: the `tags`
+    // field filters in the `stringArray` domain, whose containment ops are jsonb
+    // ops. pg decodes both to the same JS string array.
+    "build.targets": sql`to_jsonb(${_buildRuns.targets})`,
     "build.commitHash": _buildRuns.commitHash,
     "build.exitCode": _buildRuns.exitCode,
   },

@@ -31,8 +31,19 @@ function localMidnight(): number {
  * mounted DataView for a whole day.
  */
 export function useGroupingClock(): number {
+  return useDayClock(true);
+}
+
+/**
+ * The day clock both `useGroupingClock` and `useFilterClock` read: local
+ * midnight as epoch ms, re-armed at the next local midnight while `armed`.
+ * Disarmed, it holds its value and schedules nothing; re-armed with a stale
+ * value, the timer's target is already past, so it fires at once and catches up.
+ */
+export function useDayClock(armed: boolean): number {
   const [now, setNow] = useState(localMidnight);
   useEffect(() => {
+    if (!armed) return;
     // Next local midnight, computed through the calendar (`addDays` + setters)
     // rather than `now + 86_400_000`, so a DST transition still lands on the
     // real boundary. The extra second keeps a timer that fires a hair early
@@ -43,6 +54,6 @@ export function useGroupingClock(): number {
       Math.max(0, next - Date.now()),
     );
     return () => clearTimeout(timer);
-  }, [now]);
+  }, [armed, now]);
   return now;
 }

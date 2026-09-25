@@ -2,6 +2,12 @@ import { and, count, getTableColumns, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db as realDb } from "@plugins/database/server";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type {
+  Filter,
+  Filterable,
+  FilterScalar,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import {
   defineResource,
   Resource as ResourceContribution,
@@ -23,10 +29,8 @@ import type {
   LiveCollection,
   LiveGroup,
   LiveGroupParams,
-  LiveScalar,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
-import { liveClauseSql } from "./op-sql";
 
 // `serveCollection` — the server half of a `liveCollection`. One call binds the
 // declaration's row fields to the table's columns and compiles all THREE minted
@@ -80,7 +84,7 @@ export interface CollectionSpecs {
   window: WindowQueryResourceSpec<LiveWindowParams>;
   rows: WindowQueryResourceSpec<PointParams>;
   /** The `:groups` server half — the two-arg `defineResource` opts. */
-  groups: ServerResourceOptions<LiveGroup<LiveScalar>[], LiveGroupParams> & {
+  groups: ServerResourceOptions<LiveGroup<FilterScalar>[], LiveGroupParams> & {
     mode: "push";
   };
   /** The derived projection: exactly the row schema's keys. */
@@ -93,7 +97,7 @@ export interface ServedCollection<Row> {
   /** The point sibling (`${key}:rows`). */
   rows: Resource<Row[], PointParams>;
   /** The groups sibling (`${key}:groups`). */
-  groups: Resource<LiveGroup<LiveScalar>[], LiveGroupParams>;
+  groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>;
   /** Every minted key — `[key, key:rows, key:groups]`. */
   keys: string[];
   /** Spread into the plugin's `contributions`: one `Resource.Declare` per minted resource. */
@@ -155,10 +159,15 @@ export function compileCollection<
     if (!bound.has(name)) fail(`"${name}" is not a field of the row schema.`);
   }
   const select: SelectMap = Object.fromEntries(bound);
-  // The comparison target is the column RENDERED as SQL, never the column
-  // object: an operand is not a stored value, and a column would run its
-  // write-side encoder over it (see `op-sql.ts`).
-  const target = (name: string): SQL => sql`${bound.get(name)!}`;
+  // The filter language's declaration, and each filterable column's target:
+  // the column RENDERED as SQL, never the column object — an operand is not a
+  // stored value, and a column would run its write-side encoder over it.
+  const filterDecl = collection.filterable as unknown as Filterable;
+  const targets: Record<string, SQL> = Object.fromEntries(
+    filterable.map((name) => [name, sql`${bound.get(name)!}`]),
+  );
+  const filterWhere = (filter: Filter | undefined): SQL | undefined =>
+    filterSql(filter, targets, filterDecl);
 
   const base = opts.where;
   const allOf = (parts: (SQL | undefined)[]): SQL | undefined => {
@@ -168,12 +177,7 @@ export function compileCollection<
 
   const codec = collection.window.window;
   const where = (params: LiveWindowParams): SQL | undefined =>
-    allOf([
-      base,
-      ...codec
-        .decode(params)
-        .where.map((c) => liveClauseSql(target(c.column), c)),
-    ]);
+    allOf([base, filterWhere(codec.decode(params).where)]);
   const orderBy = (params: LiveWindowParams): WindowOrderKey[] =>
     codec.decode(params).orderBy.map(([name, dir]) => {
       const col = bound.get(name)!;
@@ -183,26 +187,32 @@ export function compileCollection<
   // One boundary cast — the `compileWindowQuery` precedent.
   const db: QueryDb = opts.db ?? (realDb as unknown as QueryDb);
   const groupCodec = collection.groups.groups;
-  const filterSchemas = collection.filterable as Readonly<
-    Record<string, ZodParser<LiveScalar>>
-  >;
+  // A group value is a STORED value, so it is checked against the row schema's
+  // field — never against the filterable declaration, whose operand narrowing
+  // (`liveText(Enum)`) is tsc-only and says nothing about what a column holds.
+  const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
+  const fieldSchema = (name: string): ZodParser<unknown> => {
+    const schema = rowShape[name] as Partial<ZodParser<unknown>> | undefined;
+    if (typeof schema?.safeParse !== "function") {
+      return fail(`row schema field "${name}" is not a zod schema.`);
+    }
+    return schema as ZodParser<unknown>;
+  };
+  const groupSchemas = new Map(filterable.map((n) => [n, fieldSchema(n)]));
   // `SELECT col AS value, count(*) … GROUP BY col ORDER BY count DESC, col`.
   // NULL is its own group (sorted last among equal counts); `C` collation makes
-  // the value tiebreak code-point order, matching core's `compareScalars`.
-  // Each value is checked against its column's own filterable schema: the wire
-  // schema is shared by every column, so this is where a value the column's
-  // operand could never name (an enum drifted past its schema) fails loudly.
+  // the value tiebreak code-point order, matching the filter language's
+  // `compareScalars`. The wire schema is shared by every column, so this is
+  // where a value the row type could never hold (an enum drifted past its
+  // schema) fails loudly.
   const groupsLoader = async (
     params: LiveGroupParams,
-  ): Promise<LiveGroup<LiveScalar>[]> => {
+  ): Promise<LiveGroup<FilterScalar>[]> => {
     const q = groupCodec.decode(params);
     const col = bound.get(q.groupBy)!;
-    const predicate = allOf([
-      base,
-      ...q.where.map((c) => liveClauseSql(target(c.column), c)),
-    ]);
+    const predicate = allOf([base, filterWhere(q.where)]);
     let query = db
-      .select<LiveGroup<LiveScalar>>({
+      .select<LiveGroup<FilterScalar>>({
         value: col,
         count: count().as("count"),
       })
@@ -212,13 +222,13 @@ export function compileCollection<
       .groupBy(col)
       .orderBy(sql`count(*) DESC`, sql`${col} ASC NULLS LAST`)
       .limit(q.limit);
-    const schema = filterSchemas[q.groupBy]!;
+    const schema = groupSchemas.get(q.groupBy)!;
     for (const row of rows) {
       if (row.value === null) continue;
       if (!schema.safeParse(row.value).success) {
         fail(
           `group value ${JSON.stringify(row.value)} of "${q.groupBy}" does not parse ` +
-            `as its filterable schema — the column holds a value no filter could name.`,
+            `as the row schema's field — the column holds a value the row type cannot.`,
         );
       }
     }

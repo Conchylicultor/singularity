@@ -55,7 +55,7 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   `TreeList` (ancestors retained). Pass a `searchAccessor` that folds in ancestor
   names / secondary fields to match on more than the label.
 - **Filter** — the view's `state.filter` is applied through the same
-  `evaluateNode` evaluator the flat views use, so filter semantics are identical
+  `useRowFilter` lowering (into the filter language) the flat views use, so filter semantics are identical
   across every view. Filtering is subtree-preserving (mirrors search): a node
   survives if it matches or has a matching descendant — matches plus the ancestor
   chain of each match — so filtered rows keep their hierarchical context instead
@@ -218,7 +218,6 @@ CLAUDE.md ("Row tone").
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataViewRenderProps`
     - `primitives/data-view.DataViewSlots`
-    - `primitives/data-view.evaluateNode`
     - `primitives/data-view.FieldCell`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.GroupedSections`
@@ -239,6 +238,7 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
+    - `primitives/data-view.useRowFilter`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

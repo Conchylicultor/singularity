@@ -17,6 +17,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
+  DEPLOY_RUN_FILTERABLE,
+  DEPLOY_RUN_SEARCHABLE,
   deployRunsRevisionResource,
   queryDeployRuns,
   type DeployRunRecord,
@@ -234,6 +236,8 @@ export function DeployHistorySection({
       emptyState={<>Nothing has been deployed from here yet.</>}
       dataSource={{
         changeTick,
+        filterable: DEPLOY_RUN_FILTERABLE,
+        searchable: DEPLOY_RUN_SEARCHABLE,
         fetchPage: (args) =>
           fetchEndpoint(queryDeployRuns, { id: deploymentId }, { body: args }),
       }}

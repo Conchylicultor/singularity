@@ -4,10 +4,11 @@
  * into a start-of-(local)-day epoch ms against an injectable `now`.
  *
  * This module is the **browser-safe core** for the date filter: it holds the
- * pure anchor math (no DOM, no drizzle) so BOTH the web filter predicates
- * (`../../filter/web/internal/date-filter-logic.ts`) and the server SQL
- * contributor (`../../filter-sql/server`) resolve operands through the exact
- * same code — the day-granular truth table lives in ONE place.
+ * pure anchor math (no DOM, no drizzle) the web operator set lowers through
+ * (`../../web/operator-set.ts`, into filter-language instant ranges). The
+ * lowering runs in the browser, in the viewer's own timezone, for in-memory AND
+ * server-delegated DataViews alike — the server only ever sees absolute
+ * instants, so the day-granular truth table lives in ONE place.
  *
  * Backward compat: a legacy operand is a bare ISO `yyyy-mm-dd` string and keeps
  * resolving as an absolute date.
@@ -77,10 +78,14 @@ function isDateAnchor(
 /**
  * Resolve an anchor (or a legacy bare ISO string) to a start-of-(local)-day
  * epoch ms, or `null` for an empty/invalid operand (an incomplete rule).
+ *
+ * `now` may be a thunk: it is then called ONLY for a relative anchor, so a
+ * caller that records clock reads (the DataView filter's `ctx.now` getter) sees
+ * none for an absolute date.
  */
 export function resolveAnchorDay(
   operand: unknown,
-  now: number = Date.now(),
+  now: number | (() => number) = Date.now,
 ): number | null {
   if (operand === null || operand === undefined || operand === "") return null;
 
@@ -99,7 +104,8 @@ export function resolveAnchorDay(
     if (typeof operand.amount !== "number" || Number.isNaN(operand.amount)) {
       return null;
     }
-    return addUnits(startOfDay(now), operand.unit, operand.amount);
+    const t = typeof now === "function" ? now() : now;
+    return addUnits(startOfDay(t), operand.unit, operand.amount);
   }
 
   return null;
@@ -164,7 +170,10 @@ export interface RelativeRange {
   amount: number;
 }
 
-export const DEFAULT_RELATIVE_RANGE: RelativeRange = { unit: "week", amount: 1 };
+export const DEFAULT_RELATIVE_RANGE: RelativeRange = {
+  unit: "week",
+  amount: 1,
+};
 
 /**
  * Resolve a within-operator operand to an inclusive `[lo, hi]` start-of-day
@@ -174,13 +183,18 @@ export const DEFAULT_RELATIVE_RANGE: RelativeRange = { unit: "week", amount: 1 }
 export function withinRange(
   operand: unknown,
   direction: "past" | "next",
-  now: number = Date.now(),
+  now: number | (() => number) = Date.now,
 ): [number, number] | null {
   const raw = (operand ?? {}) as Partial<RelativeRange>;
   const amount = typeof raw.amount === "number" ? raw.amount : NaN;
   const unit = raw.unit ?? DEFAULT_RELATIVE_RANGE.unit;
   if (Number.isNaN(amount) || amount <= 0) return null;
-  const today = startOfDay(now);
-  const shifted = addUnits(today, unit, direction === "past" ? -amount : amount);
+  // A thunk is called only for a complete operand (see `resolveAnchorDay`).
+  const today = startOfDay(typeof now === "function" ? now() : now);
+  const shifted = addUnits(
+    today,
+    unit,
+    direction === "past" ? -amount : amount,
+  );
   return direction === "past" ? [shifted, today] : [today, shifted];
 }

@@ -12,6 +12,8 @@ import type {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
+  CONVERSATION_FILTERABLE,
+  CONVERSATION_SEARCHABLE,
   conversationsRevisionResource,
   queryConversations,
 } from "@plugins/conversations/plugins/all-conversations/core";
@@ -94,6 +96,8 @@ export function HistorySource({
         itemActions: HistoryItemActions,
         dataSource: {
           changeTick,
+          filterable: CONVERSATION_FILTERABLE,
+          searchable: CONVERSATION_SEARCHABLE,
           fetchPage: (args) =>
             fetchEndpoint(
               queryConversations,

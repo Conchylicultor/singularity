@@ -1,4 +1,8 @@
-export { RELEASE_LOG_CHANNEL, RELEASE_TARGETS, releaseTargetById } from "./targets";
+export {
+  RELEASE_LOG_CHANNEL,
+  RELEASE_TARGETS,
+  releaseTargetById,
+} from "./targets";
 export type { ReleaseTarget } from "./targets";
 export {
   PLATFORM_TAGS,
@@ -25,6 +29,8 @@ export {
   ReleaseLogsResponseSchema,
   SortRuleSchema,
   queryReleaseHistory,
+  RELEASE_HISTORY_FILTERABLE,
+  RELEASE_HISTORY_SEARCHABLE,
   QueryReleaseHistoryBodySchema,
   QueryReleaseHistoryResponseSchema,
 } from "./endpoints";

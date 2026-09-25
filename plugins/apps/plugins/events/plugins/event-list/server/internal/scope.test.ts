@@ -1,163 +1,79 @@
 import { describe, expect, test } from "bun:test";
-import type { FilterGroup } from "@plugins/primitives/plugins/data-view/core";
+import {
+  and,
+  clause,
+  or,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   filterMentionsField,
   shouldHideDisappeared,
   shouldHideInactiveSources,
 } from "./scope";
 
-function group(children: FilterGroup["children"]): FilterGroup {
-  return { kind: "group", id: "g", conjunction: "and", children };
-}
-
 describe("filterMentionsField", () => {
-  test("null tree mentions nothing", () => {
-    expect(filterMentionsField(null, "disappearedAt")).toBe(false);
+  test("no filter mentions nothing", () => {
+    expect(filterMentionsField(undefined, "disappearedAt")).toBe(false);
   });
 
-  test("empty group mentions nothing", () => {
-    expect(filterMentionsField(group([]), "disappearedAt")).toBe(false);
+  test("a top-level clause on the column", () => {
+    expect(
+      filterMentionsField(clause("disappearedAt", "isEmpty"), "disappearedAt"),
+    ).toBe(true);
   });
 
-  test("a top-level rule on the field", () => {
-    const f = group([
-      {
-        kind: "rule",
-        id: "r1",
-        fieldId: "disappearedAt",
-        operatorId: "is-empty",
-      },
-    ]);
-    expect(filterMentionsField(f, "disappearedAt")).toBe(true);
+  test("a clause on another column does not count", () => {
+    expect(
+      filterMentionsField(clause("city", "eqCi", "Paris"), "disappearedAt"),
+    ).toBe(false);
   });
 
-  test("a rule on another field does not count", () => {
-    const f = group([
-      {
-        kind: "rule",
-        id: "r1",
-        fieldId: "city",
-        operatorId: "is",
-        value: "Paris",
-      },
-    ]);
-    expect(filterMentionsField(f, "disappearedAt")).toBe(false);
-  });
-
-  test("finds the rule nested in a sub-group", () => {
-    const f = group([
-      {
-        kind: "rule",
-        id: "r1",
-        fieldId: "city",
-        operatorId: "is",
-        value: "Paris",
-      },
-      {
-        kind: "group",
-        id: "g2",
-        conjunction: "or",
-        children: [
-          {
-            kind: "rule",
-            id: "r2",
-            fieldId: "category",
-            operatorId: "is",
-            value: "club",
-          },
-          {
-            kind: "rule",
-            id: "r3",
-            fieldId: "disappearedAt",
-            operatorId: "is-not-empty",
-          },
-        ],
-      },
-    ]);
+  test("finds the clause nested in a sub-group", () => {
+    const f = and(
+      clause("city", "eqCi", "Paris"),
+      or(
+        clause("category", "eq", "club"),
+        clause("disappearedAt", "isNotEmpty"),
+      ),
+    );
     expect(filterMentionsField(f, "disappearedAt")).toBe(true);
   });
 });
 
 describe("shouldHideDisappeared", () => {
   test("hides by default", () => {
-    expect(shouldHideDisappeared(null)).toBe(true);
-    expect(shouldHideDisappeared(group([]))).toBe(true);
-    expect(
-      shouldHideDisappeared(
-        group([
-          {
-            kind: "rule",
-            id: "r",
-            fieldId: "city",
-            operatorId: "is",
-            value: "Lyon",
-          },
-        ]),
-      ),
-    ).toBe(true);
+    expect(shouldHideDisappeared(undefined)).toBe(true);
+    expect(shouldHideDisappeared(clause("city", "eqCi", "Lyon"))).toBe(true);
   });
 
-  test("any rule on disappearedAt yields the default — both directions", () => {
-    for (const operatorId of ["is-empty", "is-not-empty"]) {
-      expect(
-        shouldHideDisappeared(
-          group([
-            { kind: "rule", id: "r", fieldId: "disappearedAt", operatorId },
-          ]),
-        ),
-      ).toBe(false);
+  test("any clause on disappearedAt yields the default — both directions", () => {
+    for (const op of ["isEmpty", "isNotEmpty"] as const) {
+      expect(shouldHideDisappeared(clause("disappearedAt", op))).toBe(false);
     }
   });
 });
 
 describe("shouldHideInactiveSources", () => {
   test("hides by default", () => {
-    expect(shouldHideInactiveSources(null)).toBe(true);
-    expect(shouldHideInactiveSources(group([]))).toBe(true);
-    expect(
-      shouldHideInactiveSources(
-        group([
-          {
-            kind: "rule",
-            id: "r",
-            fieldId: "city",
-            operatorId: "is",
-            value: "Lyon",
-          },
-        ]),
-      ),
-    ).toBe(true);
+    expect(shouldHideInactiveSources(undefined)).toBe(true);
+    expect(shouldHideInactiveSources(clause("city", "eqCi", "Lyon"))).toBe(
+      true,
+    );
   });
 
-  test("any rule on sourceId yields the default — whichever operator", () => {
-    for (const operatorId of ["is", "is-not", "is-not-empty"]) {
-      expect(
-        shouldHideInactiveSources(
-          group([
-            {
-              kind: "rule",
-              id: "r",
-              fieldId: "sourceId",
-              operatorId,
-              value: "s1",
-            },
-          ]),
-        ),
-      ).toBe(false);
+  test("any clause on sourceId yields the default — whichever op", () => {
+    for (const f of [
+      clause("sourceId", "eq", "s1"),
+      clause("sourceId", "ne", "s1"),
+      clause("sourceId", "isNotEmpty"),
+    ]) {
+      expect(shouldHideInactiveSources(f)).toBe(false);
     }
   });
 
   // The two defaults are independent: naming one dimension must not disarm the
   // other's.
-  test("a disappearedAt rule does not disarm this default", () => {
-    const f = group([
-      {
-        kind: "rule",
-        id: "r",
-        fieldId: "disappearedAt",
-        operatorId: "is-not-empty",
-      },
-    ]);
+  test("a disappearedAt clause does not disarm this default", () => {
+    const f = clause("disappearedAt", "isNotEmpty");
     expect(shouldHideInactiveSources(f)).toBe(true);
     expect(shouldHideDisappeared(f)).toBe(false);
   });

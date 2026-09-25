@@ -253,6 +253,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
+    - `network/live/filter.liveBoolean`
+    - `network/live/filter.liveText`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CreateEventSourceBody`

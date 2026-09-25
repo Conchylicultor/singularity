@@ -91,11 +91,10 @@ how the caller obtained it.
     - `database.db`
     - `fields/server-capabilities.resolveFieldValueTextCast`
     - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.AugmentedColumn`
     - `primitives/data-view/server-query.DataViewServer`
-    - `primitives/data-view/server-query.FieldColumnMap`
     - `primitives/data-view/server-query.QueryAugmentor`
     - `primitives/data-view/server-query.QueryAugmentorContext`
-    - `primitives/data-view/server-query.ServerQueryAugmentation`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
   - Exports (values):
     - `_dataViewCustomValues`

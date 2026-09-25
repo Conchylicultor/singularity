@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 import { createElement } from "react";
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { defineDataView } from "../../core";
+import {
+  clause,
+  FilterError,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import type { ServerDataSourceSpec, ServerPage } from "../../core";
 
 const TEST_VIEW = defineDataView("test-view");
@@ -25,7 +30,23 @@ function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client }, children);
 }
 
-const emptyView = { sort: [], filter: null, query: "" };
+const emptyView = {
+  sort: [],
+  filter: { kind: "ok" as const, filter: undefined },
+};
+
+/** A spec over one declared text column, searchable. */
+function specOf(
+  fetchPage: ServerDataSourceSpec<string>["fetchPage"],
+  changeTick: unknown = 0,
+): ServerDataSourceSpec<string> {
+  return {
+    fetchPage,
+    changeTick,
+    filterable: { title: liveText() },
+    searchable: ["title"],
+  };
+}
 
 function pageOf(
   items: string[],
@@ -45,7 +66,7 @@ describe("useServerDataSource", () => {
 
   it("fetches page 0 and accumulates rows", async () => {
     const fetchPage = vi.fn(async () => pageOf(["a", "b"], "cur-1"));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
     const { result } = renderHook(
       () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
       { wrapper },
@@ -63,7 +84,7 @@ describe("useServerDataSource", () => {
       .fn<ServerDataSourceSpec<string>["fetchPage"]>()
       .mockResolvedValueOnce(pageOf(["a"], "cur-1"))
       .mockResolvedValueOnce(pageOf(["b"], null));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
     const { result } = renderHook(
       () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
       { wrapper },
@@ -84,7 +105,7 @@ describe("useServerDataSource", () => {
       ({ tick }: { tick: number }) =>
         useServerDataSource<string>(
           emptyView,
-          { fetchPage, changeTick: tick },
+          specOf(fetchPage, tick),
           TEST_VIEW,
         ),
       { wrapper, initialProps: { tick: 0 } },
@@ -109,7 +130,7 @@ describe("useServerDataSource", () => {
     const scopedWrapper = ({ children }: { children: ReactNode }) =>
       createElement(QueryClientProvider, { client }, children);
     const fetchPage = vi.fn(async () => pageOf(["a"], null));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
     const { result } = renderHook(
       () => useServerDataSource<string>(emptyView, spec, TEST_VIEW, "queue"),
       { wrapper: scopedWrapper },
@@ -136,7 +157,7 @@ describe("useServerDataSource", () => {
     const scopedWrapper = ({ children }: { children: ReactNode }) =>
       createElement(QueryClientProvider, { client }, children);
     const fetchPage = vi.fn(async () => pageOf(["a"], null));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
     const { result } = renderHook(
       () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
       { wrapper: scopedWrapper },
@@ -149,31 +170,67 @@ describe("useServerDataSource", () => {
     expect(keys[0]!.slice(0, 3)).toEqual(["data-view-server", "test-view", ""]);
   });
 
-  it("restarts pagination from page 0 when the view changes", async () => {
+  it("restarts pagination from page 0 when the filter changes", async () => {
     const fetchPage = vi.fn(async () => pageOf(["a"], "cur-1"));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
+    const hello = clause("title", "contains", "hello");
     const { result, rerender } = renderHook(
-      ({ q }: { q: string }) =>
+      ({ on }: { on: boolean }) =>
         useServerDataSource<string>(
-          { ...emptyView, query: q },
+          {
+            sort: [],
+            filter: { kind: "ok", filter: on ? hello : undefined },
+          },
           spec,
           TEST_VIEW,
         ),
-      { wrapper, initialProps: { q: "" } },
+      { wrapper, initialProps: { on: false } },
     );
     await waitFor(() => expect(result.current?.rows.length).toBe(1));
-    rerender({ q: "hello" });
+    rerender({ on: true });
     await waitFor(() =>
       expect(fetchPage).toHaveBeenLastCalledWith(
-        expect.objectContaining({ query: "hello", cursor: null }),
+        expect.objectContaining({ filter: hello, cursor: null }),
       ),
     );
+  });
+
+  it("an unsendable filter fetches nothing and reports the error", async () => {
+    const fetchPage = vi.fn(async () => pageOf(["a"], null));
+    const error = new FilterError("filter: 51 clauses (max 50)");
+    const { result } = renderHook(
+      () =>
+        useServerDataSource<string>(
+          { sort: [], filter: { kind: "error", error } },
+          specOf(fetchPage),
+          TEST_VIEW,
+        ),
+      { wrapper },
+    );
+    expect(result.current?.error).toBe(error);
+    expect(result.current?.loading).toBe(false);
+    expect(result.current?.rows).toEqual([]);
+    expect(fetchPage).not.toHaveBeenCalled();
+  });
+
+  it("a failed first page is an error, never an empty list", async () => {
+    const fetchPage = vi.fn(async (): Promise<ServerPage<string>> => {
+      throw new Error('400 filter: "nope" is not a filterable column');
+    });
+    const { result } = renderHook(
+      () =>
+        useServerDataSource<string>(emptyView, specOf(fetchPage), TEST_VIEW),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current?.error).not.toBeNull());
+    expect(result.current?.error?.message).toContain("nope");
+    expect(result.current?.rows).toEqual([]);
   });
   // The DataView host holds paging while the loaded tail is folded (see
   // `isTailFolded`): the sentinel goes away, and comes back when a fold opens.
   it("holdPaging withholds the next page (no sentinel) until it lifts", async () => {
     const fetchPage = vi.fn(async () => pageOf(["a", "old"], "cur-1"));
-    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const spec = specOf(fetchPage);
     const { result, rerender } = renderHook(
       ({ folded }: { folded: boolean }) =>
         useServerDataSource<string>(emptyView, spec, TEST_VIEW, "", {

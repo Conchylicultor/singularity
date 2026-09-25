@@ -1,16 +1,10 @@
 import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/web";
 import { EnumSingleInput, EnumMultiInput } from "./components/enum-filter";
-import {
-  is,
-  isNot,
-  isAnyOf,
-  isNoneOf,
-  isEmpty,
-  isNotEmpty,
-} from "./internal/enum-filter-logic";
+import { enumLower } from "./internal/enum-lower";
 
 export const enumOperatorSet: FilterOperatorSet = {
   match: "enum",
+  domain: "text",
   defaultOperator: "is",
   operators: [
     {
@@ -18,35 +12,40 @@ export const enumOperatorSet: FilterOperatorSet = {
       label: "Is",
       hasValue: true,
       ValueInput: EnumSingleInput,
-      predicate: is,
+      lower: enumLower.is,
     },
     {
       id: "is-not",
       label: "Is not",
       hasValue: true,
       ValueInput: EnumSingleInput,
-      predicate: isNot,
+      lower: enumLower["is-not"],
     },
     {
       id: "is-any-of",
       label: "Is any of",
       hasValue: true,
       ValueInput: EnumMultiInput,
-      predicate: isAnyOf,
+      lower: enumLower["is-any-of"],
     },
     {
       id: "is-none-of",
       label: "Is none of",
       hasValue: true,
       ValueInput: EnumMultiInput,
-      predicate: isNoneOf,
+      lower: enumLower["is-none-of"],
     },
-    { id: "is-empty", label: "Is empty", hasValue: false, predicate: isEmpty },
+    {
+      id: "is-empty",
+      label: "Is empty",
+      hasValue: false,
+      lower: enumLower["is-empty"],
+    },
     {
       id: "is-not-empty",
       label: "Is not empty",
       hasValue: false,
-      predicate: isNotEmpty,
+      lower: enumLower["is-not-empty"],
     },
   ],
 };

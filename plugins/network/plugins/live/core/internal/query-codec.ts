@@ -1,55 +1,80 @@
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
-  compareScalars,
-  isLiveOpId,
-  LIVE_LIST_MAX,
-  liveOps,
-  type LiveScalar,
-} from "./ops";
+  decodeFilter,
+  encodeFilter,
+  LIST_MAX,
+  type Filter,
+  type Filterable,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   LIVE_GROUP_DEFAULT_LIMIT,
-  type LiveClause,
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
+  type LiveGroupableDomain,
   type LiveGroupParams,
   type LiveOrderBy,
-  type LiveQuery,
   type LiveSortDirection,
   type LiveWindowParams,
 } from "./query";
 
 // The window query codec. A subscription is just a params tuple, so the SAME
 // logical query must always produce the SAME params: encode fills the defaults,
-// canonicalizes (sorted columns, sorted + deduped lists, `{ eq: x }` → `x`) and
-// drops every part equal to its default. Decode is strict: it validates against
-// the declaration, re-encodes, and throws unless the input already was that
-// canonical encoding — a non-canonical spelling can never open a second
-// subscription for the same query, and the filterable whitelist is a security
-// boundary, so nothing unknown is ever defaulted or dropped.
+// canonicalizes (the filter through the filter language's `encodeFilter` —
+// object sugar and trees alike) and drops every part equal to its default.
+// Decode is strict: the filter through `decodeFilter` (throws unless exactly
+// canonical), the rest by re-encoding and comparing — a non-canonical spelling
+// can never open a second subscription for the same query, and the filterable
+// whitelist is a security boundary, so nothing unknown is ever defaulted or
+// dropped.
 
 export interface LiveQueryCodecSpec {
   key: string;
-  filterable: Readonly<Record<string, ZodParser<LiveScalar> | undefined>>;
+  filterable: Filterable;
   sortable: readonly string[];
   defaultOrderBy: LiveOrderBy<string>;
   defaultLimit: number;
   maxLimit: number;
 }
 
+/** A window query with its column vocabulary erased — the codec validates it at runtime. */
+type AnyWindowQuery = {
+  where?: object;
+  orderBy?: LiveOrderBy<string>;
+  limit?: number;
+};
+
+/** A grouping query with its column vocabulary erased — the codec validates it at runtime. */
+type AnyGroupQuery = { groupBy: string; where?: object; limit?: number };
+
 export interface LiveQueryCodec<C extends string, S extends string> {
-  encode: (query?: LiveQuery<unknown, S>) => LiveWindowParams;
-  decode: (params: Record<string, string>) => LiveDecodedQuery<C, S>;
+  encode: (query?: AnyWindowQuery) => LiveWindowParams;
+  decode: (params: Record<string, string>) => LiveDecodedQuery<S>;
   /** Canonical encode of a grouping query — the same `where` canonicalisation as a window. */
   encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
   /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
   decodeGroups: (params: Record<string, string>) => LiveDecodedGroupQuery<C>;
 }
 
-/** A grouping query with its column vocabulary erased — the codec validates it at runtime. */
-type AnyGroupQuery = { groupBy: string; where?: object; limit?: number };
-
 const PARAM_KEYS = new Set(["limit", "where", "order"]);
 const GROUP_PARAM_KEYS = new Set(["groupBy", "limit", "where"]);
+
+/** Keys a `where` object spells a `Filter` tree with — never filterable column names. */
+export const RESERVED_COLUMNS: ReadonlySet<string> = new Set([
+  "and",
+  "or",
+  "column",
+  "op",
+  "operand",
+]);
+
+const GROUPABLE_DOMAINS: ReadonlySet<string> = new Set<LiveGroupableDomain>([
+  "text",
+  "number",
+  "boolean",
+]);
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
 export function createLiveQueryCodec<C extends string, S extends string>(
   spec: LiveQueryCodecSpec,
@@ -57,6 +82,14 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   const fail = (message: string): never => {
     throw new Error(`liveCollection("${spec.key}"): ${message}`);
   };
+
+  for (const column of Object.keys(spec.filterable)) {
+    if (RESERVED_COLUMNS.has(column)) {
+      fail(
+        `"${column}" cannot be a filterable column — a where object uses it to spell a filter tree`,
+      );
+    }
+  }
 
   const checkLimit = (limit: number, what: string): number => {
     if (!Number.isSafeInteger(limit) || limit <= 0) {
@@ -68,80 +101,70 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     return limit;
   };
 
-  const parseOperand = (column: string, raw: unknown): LiveScalar => {
-    if (raw === null || raw === undefined) {
+  // The object sugar → a Filter tree (an AND of clauses). A plain value is
+  // `eq`; an object is exactly one `{ op: operand }`, a no-operand op spelled
+  // `{ isEmpty: true }`. Every column / op / operand check is the filter
+  // language's — this only reshapes.
+  const sugarClause = (column: string, filter: unknown): Filter => {
+    if (filter === null) {
       fail(
-        `"${column}": an operand is never null — use { isNull: true } to match NULL`,
+        `"${column}": an operand is never null — use { isEmpty: true } to match NULL`,
       );
     }
-    if (typeof raw === "number" && !Number.isFinite(raw)) {
-      fail(`"${column}": operand must be a finite number, got ${raw}`);
-    }
-    const parsed = spec.filterable[column]!.safeParse(raw);
-    if (!parsed.success) {
-      fail(
-        `"${column}": invalid operand ${JSON.stringify(raw)} — ${parsed.error.message}`,
-      );
-    }
-    return parsed.data!;
-  };
-
-  const toClause = (column: string, filter: unknown): LiveClause<C> => {
-    if (spec.filterable[column] === undefined) {
-      fail(`"${column}" is not a filterable column`);
-    }
-    const isOpObject =
-      typeof filter === "object" && filter !== null && !Array.isArray(filter);
-    if (!isOpObject) {
-      return {
-        column: column as C,
-        op: "eq",
-        operand: parseOperand(column, filter),
-      };
-    }
+    if (!isPlainObject(filter)) return { column, op: "eq", operand: filter };
     const entries = Object.entries(filter);
     if (entries.length !== 1) {
       fail(
         `"${column}": a filter takes exactly one operator, got ${JSON.stringify(filter)}`,
       );
     }
-    const [op, raw] = entries[0]!;
-    if (!isLiveOpId(op)) fail(`"${column}": unknown operator "${op}"`);
-    switch (liveOps[op as keyof typeof liveOps].operand) {
-      case "value":
-        return {
-          column: column as C,
-          op: op as "eq",
-          operand: parseOperand(column, raw),
-        };
-      case "list": {
-        if (!Array.isArray(raw)) fail(`"${column}": ${op} takes a list`);
-        const list = raw as unknown[];
-        if (list.length > LIVE_LIST_MAX) {
-          fail(
-            `"${column}": ${op} list exceeds ${LIVE_LIST_MAX} values (${list.length})`,
-          );
-        }
-        const values = list.map((v) => parseOperand(column, v));
-        return {
-          column: column as C,
-          op: op as "in",
-          operand: canonicalList(values),
-        };
+    const [op, operand] = entries[0]!;
+    if (op === "isEmpty" || op === "isNotEmpty") {
+      if (operand !== true) {
+        fail(`"${column}": ${op} is spelled { ${op}: true }`);
       }
-      case "flag":
-        if (typeof raw !== "boolean")
-          fail(`"${column}": ${op} takes a boolean`);
-        return { column: column as C, op: "isNull", operand: raw as boolean };
+      return { column, op } as Filter;
+    }
+    return { column, op, operand } as Filter;
+  };
+
+  /** Any `where` spelling → a (not yet canonical) Filter, or `undefined`. */
+  const toFilter = (where: object | undefined): Filter | undefined => {
+    if (where === undefined) return undefined;
+    if (!isPlainObject(where)) {
+      return fail(
+        `where must be an object (per-column sugar) or a filter tree, got ${JSON.stringify(where)}`,
+      );
+    }
+    const keys = Object.keys(where);
+    if (keys.some((k) => RESERVED_COLUMNS.has(k))) return where as Filter;
+    return {
+      and: keys
+        // An absent optional key: TS lets `{ status: maybeStatus }` through as undefined.
+        .filter((column) => where[column] !== undefined)
+        .map((column) => sugarClause(column, where[column])),
+    };
+  };
+
+  const encodeWhere = (where: object | undefined): string | undefined => {
+    const filter = toFilter(where);
+    try {
+      return encodeFilter(filter, spec.filterable);
+    } catch (err) {
+      if (err instanceof Error) fail(err.message);
+      throw err;
     }
   };
 
-  const toClauses = (where: object): LiveClause<C>[] =>
-    Object.entries(where)
-      // An absent optional key: TS lets `{ status: maybeStatus }` through as undefined.
-      .filter(([, filter]) => filter !== undefined)
-      .sort(([a], [b]) => compareScalars(a, b))
-      .map(([column, filter]) => toClause(column, filter));
+  const decodeWhere = (json: string | undefined): Filter | undefined => {
+    if (json === undefined) return undefined;
+    try {
+      return decodeFilter(json, spec.filterable);
+    } catch (err) {
+      if (err instanceof Error) fail(`decode: ${err.message}`);
+      throw err;
+    }
+  };
 
   const toOrderBy = (raw: unknown): LiveOrderBy<S> => {
     if (!Array.isArray(raw) || raw.length === 0) {
@@ -173,22 +196,26 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   const defaultOrderJson = JSON.stringify(toOrderBy(spec.defaultOrderBy));
   checkLimit(spec.defaultLimit, "default.limit");
 
-  const encodeDecoded = (q: LiveDecodedQuery<C, S>): LiveWindowParams => {
-    const params: LiveWindowParams = { limit: String(q.limit) };
-    if (q.where.length > 0) params.where = whereJson(q.where);
-    const order = JSON.stringify(q.orderBy);
+  const windowParams = (
+    limit: number,
+    where: string | undefined,
+    orderBy: LiveOrderBy<S>,
+  ): LiveWindowParams => {
+    const params: LiveWindowParams = { limit: String(limit) };
+    if (where !== undefined) params.where = where;
+    const order = JSON.stringify(orderBy);
     if (order !== defaultOrderJson) params.order = order;
     return params;
   };
 
-  const encode = (query?: LiveQuery<unknown, S>): LiveWindowParams =>
-    encodeDecoded({
-      limit: checkLimit(query?.limit ?? spec.defaultLimit, "limit"),
-      where: toClauses(query?.where ?? {}),
-      orderBy: toOrderBy(query?.orderBy ?? spec.defaultOrderBy),
-    });
+  const encode = (query?: AnyWindowQuery): LiveWindowParams =>
+    windowParams(
+      checkLimit(query?.limit ?? spec.defaultLimit, "limit"),
+      encodeWhere(query?.where),
+      toOrderBy(query?.orderBy ?? spec.defaultOrderBy),
+    );
 
-  const decode = (params: Record<string, string>): LiveDecodedQuery<C, S> => {
+  const decode = (params: Record<string, string>): LiveDecodedQuery<S> => {
     for (const k of Object.keys(params)) {
       if (!PARAM_KEYS.has(k)) fail(`decode: unknown param "${k}"`);
     }
@@ -198,15 +225,16 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         `decode: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
       );
     }
-    const decoded: LiveDecodedQuery<C, S> = {
+    const decoded: LiveDecodedQuery<S> = {
       limit: checkLimit(Number(limit), "limit"),
-      where: where === undefined ? [] : toClauses(parseJsonObject(where, fail)),
+      where: decodeWhere(where),
       orderBy:
         order === undefined
           ? toOrderBy(spec.defaultOrderBy)
           : toOrderBy(parseJson(order, fail)),
     };
-    const canonical = encodeDecoded(decoded);
+    // The filter is already strictly canonical; this pins limit / order.
+    const canonical = windowParams(decoded.limit, where, decoded.orderBy);
     if (!sameParams(canonical, params)) {
       fail(
         `decode: params are not canonical — got ${JSON.stringify(params)}, ` +
@@ -218,34 +246,39 @@ export function createLiveQueryCodec<C extends string, S extends string>(
 
   // ── Grouping queries ───────────────────────────────────────────────
   // Same discipline as the window: canonical encode, strict decode. The group
-  // limit is bounded by `LIVE_LIST_MAX` rather than the collection's
-  // `maxLimit` — a picked set of groups must still fit one `in` filter.
+  // limit is bounded by `LIST_MAX` rather than the collection's `maxLimit` — a
+  // picked set of groups must still fit one `in` filter.
 
   const checkGroupLimit = (limit: number): number => {
     if (!Number.isSafeInteger(limit) || limit <= 0) {
       fail(`group limit must be a positive integer, got ${limit}`);
     }
-    if (limit > LIVE_LIST_MAX) {
-      fail(`group limit ${limit} exceeds ${LIVE_LIST_MAX}`);
+    if (limit > LIST_MAX) {
+      fail(`group limit ${limit} exceeds ${LIST_MAX}`);
     }
     return limit;
   };
   const checkGroupBy = (column: unknown): C => {
-    if (typeof column !== "string" || spec.filterable[column] === undefined) {
+    if (typeof column !== "string" || !Object.hasOwn(spec.filterable, column)) {
       fail(
         `groupBy ${JSON.stringify(column)} is not a filterable column — only a declared filterable column can be grouped on`,
       );
     }
+    const domain = spec.filterable[column as string]!.domain;
+    if (!GROUPABLE_DOMAINS.has(domain)) {
+      fail(
+        `groupBy "${column as string}" is a ${domain} column — only text / number / boolean columns can be grouped on`,
+      );
+    }
     return column as C;
   };
-  const encodeDecodedGroups = (
-    q: LiveDecodedGroupQuery<C>,
+  const groupParams = (
+    groupBy: C,
+    limit: number,
+    where: string | undefined,
   ): LiveGroupParams => {
-    const params: LiveGroupParams = {
-      groupBy: q.groupBy,
-      limit: String(q.limit),
-    };
-    if (q.where.length > 0) params.where = whereJson(q.where);
+    const params: LiveGroupParams = { groupBy, limit: String(limit) };
+    if (where !== undefined) params.where = where;
     return params;
   };
 
@@ -257,11 +290,11 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         "a grouping query has a fixed order (count desc, then value) — it takes no orderBy",
       );
     }
-    return encodeDecodedGroups({
-      groupBy: checkGroupBy(query.groupBy),
-      limit: checkGroupLimit(query.limit ?? LIVE_GROUP_DEFAULT_LIMIT),
-      where: toClauses(query.where ?? {}),
-    });
+    return groupParams(
+      checkGroupBy(query.groupBy),
+      checkGroupLimit(query.limit ?? LIVE_GROUP_DEFAULT_LIMIT),
+      encodeWhere(query.where),
+    );
   };
 
   const decodeGroups = (
@@ -279,9 +312,9 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     const decoded: LiveDecodedGroupQuery<C> = {
       groupBy: checkGroupBy(groupBy),
       limit: checkGroupLimit(Number(limit)),
-      where: where === undefined ? [] : toClauses(parseJsonObject(where, fail)),
+      where: decodeWhere(where),
     };
-    const canonical = encodeDecodedGroups(decoded);
+    const canonical = groupParams(decoded.groupBy, decoded.limit, where);
     if (!sameParams(canonical, params)) {
       fail(
         `decodeGroups: params are not canonical — got ${JSON.stringify(params)}, ` +
@@ -294,23 +327,6 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   return { encode, decode, encodeGroups, decodeGroups };
 }
 
-function canonicalList(values: LiveScalar[]): LiveScalar[] {
-  const sorted = [...values].sort(compareScalars);
-  return sorted.filter(
-    (v, i) => i === 0 || compareScalars(sorted[i - 1]!, v) !== 0,
-  );
-}
-
-// Hand-built so key order is exactly the (sorted) clause order — a JS object
-// would hoist integer-like keys ahead of the rest.
-function whereJson(where: readonly LiveClause[]): string {
-  const parts = where.map(
-    (c) =>
-      `${JSON.stringify(c.column)}:${JSON.stringify(c.op === "eq" ? c.operand : { [c.op]: c.operand })}`,
-  );
-  return `{${parts.join(",")}}`;
-}
-
 function parseJson(raw: string, fail: (m: string) => never): unknown {
   try {
     return JSON.parse(raw) as unknown;
@@ -318,16 +334,6 @@ function parseJson(raw: string, fail: (m: string) => never): unknown {
     if (!(err instanceof SyntaxError)) throw err;
     return fail(`decode: invalid JSON ${JSON.stringify(raw)}`);
   }
-}
-
-function parseJsonObject(raw: string, fail: (m: string) => never): object {
-  const v = parseJson(raw, fail);
-  if (typeof v !== "object" || v === null || Array.isArray(v)) {
-    fail(
-      `decode: params.where must be a JSON object, got ${JSON.stringify(raw)}`,
-    );
-  }
-  return v as object;
 }
 
 function sameParams(

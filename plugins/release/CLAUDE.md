@@ -390,8 +390,6 @@ remote is built here.
   - Uses:
     - `database.db`
     - `database/sql-column.parsedText`
-    - `fields/server-capabilities-loader`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs/supervised-job.defineSupervisedJob`
@@ -403,9 +401,9 @@ remote is built here.
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
     - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
     - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -441,7 +439,9 @@ remote is built here.
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `release/bundles.ReleaseManifestSchema`
   - Exports (types):
@@ -473,6 +473,8 @@ remote is built here.
     - `queryReleaseHistory`
     - `QueryReleaseHistoryBodySchema`
     - `QueryReleaseHistoryResponseSchema`
+    - `RELEASE_HISTORY_FILTERABLE`
+    - `RELEASE_HISTORY_SEARCHABLE`
     - `RELEASE_LOG_CHANNEL`
     - `RELEASE_TARGETS`
     - `releaseCandidateEndpoint`

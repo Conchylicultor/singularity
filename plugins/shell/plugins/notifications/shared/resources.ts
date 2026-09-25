@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { NotificationSchema, NotificationVariantSchema } from "./schema";
 
 // The undismissed notifications, as a live collection: a bounded window (newest
@@ -16,7 +16,10 @@ import { NotificationSchema, NotificationVariantSchema } from "./schema";
 export const notifications = liveCollection("notifications", {
   row: NotificationSchema,
   id: "id",
-  filterable: { type: z.string(), variant: NotificationVariantSchema },
+  filterable: {
+    type: liveText(),
+    variant: liveText(NotificationVariantSchema),
+  },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 200 },
   maxLimit: 500,

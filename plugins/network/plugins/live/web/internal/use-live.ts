@@ -8,6 +8,7 @@ import {
 import type {
   LiveCollection,
   LiveGroup,
+  LiveGroupableColumn,
   LiveGroupQuery,
   LiveGroupValue,
   LiveQuery,
@@ -106,29 +107,34 @@ function listShape<Row, F, S extends string>(
  *   window loads, the hook STAYS settled on the previous rows (`growing: true`)
  *   — those rows are server-vouched and still subscribed — so `if (pending)`
  *   never flashes a spinner over a list that already rendered.
- * - `useLive(c, { groupBy, where?, limit? })` — the values a filterable column
- *   takes (with counts), ordered by count desc then value. The same list result
+ * - `useLive(c, { groupBy, where?, limit? })` — the values a text / number /
+ *   boolean filterable column takes (with counts), ordered by count desc then
+ *   value; each value typed as the row field. The same list result
  *   as a window: `loadMore()` pages through groups.
  * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
  *   No paging fields: an id set is not a window.
  */
-export function useLive<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S>,
-  query: LiveIdsQuery,
-): ResourceResult<Row[]>;
-export function useLive<
-  Row,
-  F,
-  S extends string,
-  const G extends keyof F & string,
->(
-  collection: LiveCollection<Row, F, S>,
-  query: LiveGroupQuery<F, G>,
-): LiveListResult<LiveGroup<LiveGroupValue<F, G>>>;
+// The window overload comes FIRST: an argument like `where: or(...)` is a
+// generic call TypeScript checks once, against the first overload's contextual
+// type — so that type must be the collection's own `LiveWhere` for the tree's
+// columns and operands to be checked against the declaration.
 export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query?: LiveQuery<F, S>,
 ): LiveListResult<Row>;
+export function useLive<
+  Row,
+  F,
+  S extends string,
+  const G extends LiveGroupableColumn<F>,
+>(
+  collection: LiveCollection<Row, F, S>,
+  query: LiveGroupQuery<F, G>,
+): LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>;
+export function useLive<Row, F, S extends string>(
+  collection: LiveCollection<Row, F, S>,
+  query: LiveIdsQuery,
+): ResourceResult<Row[]>;
 export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query?: LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery,

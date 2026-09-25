@@ -31,3 +31,12 @@ export const FilterGroupSchema: ZodParser<FilterGroup> = z.lazy(() =>
     children: z.array(FilterNodeSchema),
   }),
 );
+
+/**
+ * The wire form of a server-delegated query's `filter`: the host's lowered,
+ * canonical filter-language `Filter` tree (see `ServerDataSourceSpec`), carried
+ * as JSON. Opaque HERE on purpose — the handler decodes it STRICTLY against its
+ * source's declared `filterable` (`server-query`'s `decodeFilterBody`), which is
+ * the only place that knows which columns and domains are legal.
+ */
+export const ServerFilterWireSchema = z.unknown();

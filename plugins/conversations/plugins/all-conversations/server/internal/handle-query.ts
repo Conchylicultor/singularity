@@ -1,13 +1,11 @@
-import { and, ilike, ne, or, type SQL } from "drizzle-orm";
+import { and, ne, type SQL } from "drizzle-orm";
 import type { PgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   augmentServerQuery,
   compileWhere,
-  type OperatorSqlResolver,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import {
   buildSortKeys,
@@ -23,30 +21,6 @@ import {
 import { conversationsView as conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { queryConversations } from "../../core";
 import { COLUMN_MAP } from "./column-map";
-
-// Escape LIKE wildcards so a user search term is matched literally (backslash is
-// Postgres ILIKE's default escape char).
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-// Full-text-ish quick search: ILIKE over title / model / worktreePath. Blank
-// query → undefined (no fragment).
-function searchWhere(query: string): SQL | undefined {
-  const trimmed = query.trim();
-  if (!trimmed) return undefined;
-  const needle = `%${escapeLike(trimmed)}%`;
-  return or(
-    ilike(conversations.title, needle),
-    ilike(conversations.model, needle),
-    ilike(conversations.worktreePath, needle),
-  );
-}
-
-// Field-type-agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;
 
 // drizzle has no public "columns of a view" getter (`getTableColumns` accepts a
 // `Table` only). A `pgView` stores its aliased column bag under the stable global
@@ -67,10 +41,11 @@ function viewColumns(view: unknown): Record<string, PgColumn> {
 }
 
 export const handleQuery = implement(queryConversations, async ({ body }) => {
-  const { sort, filter, query, cursor, limit } = body;
+  const { sort, cursor, limit } = body;
 
-  // Fold in the generic server-side augmentors (custom columns, …). Each binds
-  // its aliased columns into `columnMap` (so sort/filter/seek reach them), a
+  // Decode the filter strictly (400 on anything undeclared) and fold in the
+  // generic server-side augmentors (custom columns, …): the referenced ones bind
+  // their aliased columns into `columnMap` (so sort/filter/seek reach them), a
   // `LEFT JOIN` thunk, and a projection (so `keyValuesOf` can mint the cursor).
   // The consumer names no contributor — this is the server twin of the web
   // global `FieldExtension` slot. `rowKeyCol` must be the column whose value ==
@@ -79,13 +54,17 @@ export const handleQuery = implement(queryConversations, async ({ body }) => {
     dataViewId: body.dataViewId,
     rowKeyCol: conversations.id,
     sort,
-    filter,
+    filter: body.filter,
+    columnMap: COLUMN_MAP,
   });
-  const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+  const columnMap = aug.columnMap;
 
   // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
   // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
-  const keys = buildSortKeys(sort, columnMap, { col: conversations.id, fieldId: "id" });
+  const keys = buildSortKeys(sort, columnMap, {
+    col: conversations.id,
+    fieldId: "id",
+  });
 
   let seek: SQL | undefined;
   if (cursor) {
@@ -100,8 +79,7 @@ export const handleQuery = implement(queryConversations, async ({ body }) => {
 
   const where = and(
     body.includeSystem ? undefined : ne(conversations.kind, "system"),
-    searchWhere(query),
-    compileWhere(filter, columnMap, resolver),
+    compileWhere(aug.filter, columnMap),
     seek,
   );
 

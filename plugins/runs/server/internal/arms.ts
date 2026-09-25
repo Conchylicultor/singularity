@@ -1,7 +1,8 @@
 import { and, sql, type SQL } from "drizzle-orm";
 import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
 import type { UnionArm } from "@plugins/primitives/plugins/data-view/plugins/union-query/server";
-import type { RunArmFieldSpecs } from "../../core";
+import type { UnionColumnSpecs } from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
+import { runArmUnionSpecs } from "../../core";
 import type { RunKind } from "./registry";
 
 /**
@@ -71,24 +72,7 @@ export function runArmForRow(
   }));
 }
 
-/**
- * Every arm's extra columns, merged into the one spec map the compiler projects.
- *
- * Ids are namespaced by kind, so a collision means two arms claimed the same
- * `kind` prefix — a registration bug, and loud rather than a column one arm
- * silently loses.
- */
-export function armFieldSpecs(kinds: RunKind[]): RunArmFieldSpecs {
-  const merged: RunArmFieldSpecs = {};
-  for (const k of kinds) {
-    for (const [id, spec] of Object.entries(k.fields)) {
-      if (id in merged) {
-        throw new Error(
-          `[runs] arm field "${id}" is declared by more than one run kind.`,
-        );
-      }
-      merged[id] = spec;
-    }
-  }
-  return merged;
+/** Every registered arm's extra columns, as the one union spec map. */
+export function armFieldSpecs(kinds: RunKind[]): UnionColumnSpecs {
+  return runArmUnionSpecs(kinds.map((k) => k.fields));
 }

@@ -25,8 +25,8 @@ view independently sorted / searched / filtered.
   chrome (search input → `state.query`, view switcher), and renders the active
   view via `renderIsolated`. It passes **raw rows** — each view applies the
   processing matching its own semantics. Flat views call the exported `useFlatRows`
-  hook (search → filter → sort); the tree view applies the shared `evaluateNode`
-  filter (subtree-preserving, mirroring search) then feeds the result to the tree
+  hook (search → filter → sort); the tree view applies the shared `useRowFilter`
+  predicate (subtree-preserving, mirroring search) then feeds the result to the tree
   primitive's subtree-preserving search + rank ordering — so filter/search/sort
   behave identically across every view.
 
@@ -930,8 +930,8 @@ are plain functions over state, unit-tested next to their source.
 independent functions over the same state can disagree — precisely the bug
 `rule-resolution.ts` exists to close (the summary reading "0 rules" while a
 value-less `bool` rule silently filtered). The summarizers import `isRuleActive`
-and the dangling-rule filter rather than re-deriving them, so the summary, the
-count and the evaluator ask one question.
+(resolves AND `lower(...) !== undefined`) rather than re-deriving it, so the
+summary, the count and the evaluator read the operator's one answer.
 
 Value formatting tries the operator's own optional
 `FilterOperator.summarize(operand, field)` first — the operand's shape is the
@@ -1496,10 +1496,91 @@ new child plugin with zero consumer changes.
 
 Per-field filtering is driven by `FieldDef.type`: the Filter control's panel
 writes a `FilterGroup` tree to `state.filter`, and every view evaluates it through
-the shared `evaluateNode` / `applyFilter` evaluator (resolved per field type via
-`useResolveOperatorSet`). Flat views apply it inside `useFlatRows` (search → filter
-→ sort); the tree view applies it subtree-preserving before handing rows to the tree
-primitive. Filter semantics are therefore identical across all views.
+the ONE filter language (`network/live/plugins/filter`, design in
+`research/2026-09-25-global-unified-filter-language.md`):
+
+- **Operators lower, they do not predicate.** Each field type's
+  `FilterOperatorSet` (resolved via `useResolveOperatorSet`, honouring `extends`)
+  declares its language `domain` (`text` / `number` / `boolean` / `instant` /
+  `stringArray`), and each `FilterOperator.lower(operand, { column, now })`
+  returns the rule as a language `Filter` over `column` (the field id) — or
+  `undefined` for an INCOMPLETE rule (empty operand, open range). That one answer
+  is both the evaluator's no-op gate and the chip counter's `isRuleActive`, so the
+  two cannot disagree. Negative operators lower to the language's complement ops
+  (`ne`, `notIn`, `neCi`, `notContains`, `hasNone`, `isNotEmpty`), so they KEEP a
+  row with no value.
+- **`lowerFilterGroup(group, fields, resolveOperatorSet, now)`** walks the tree:
+  a dangling or incomplete rule is TRUE (dropped from an `and`; it makes an `or`
+  TRUE), an empty group is TRUE, a one-child group is its child. It returns
+  `{ filter, readsClock }`; `readsClock` is recorded generically (`ctx.now` is a
+  getter), so a relative date anchor ("Today", "within the past week") marks the
+  filter clock-dependent without data-view naming the date type. Relative time is
+  lowered HERE, on the client, to absolute ISO instants — the language has no
+  clock.
+- **In memory** (`applyFilter`, `useRowFilter`): lower once, then
+  `matchesFilter` per row over a record of just the columns the filter reads. The
+  row value is `projectFieldValue` coerced to the set's domain by ONE adapter,
+  `coerceToDomain` (text: arrays join with " ", `Date` → ISO, else `String`;
+  number: finite or NULL; boolean: truthiness; instant: `Date` / epoch ms /
+  parseable string → `Date`, else NULL; stringArray: the array or NULL) — the
+  language itself stays strict.
+- **Day rollover**: `useRowFilter` lowers against `useFilterClock(readsClock)` —
+  local midnight, re-armed with one timer at the next local midnight ONLY while
+  the filter reads the clock (the same day clock as `useGroupingClock`).
+
+Flat views apply it inside `useFlatRows` (search → filter → sort); the tree view
+applies it subtree-preserving before handing rows to the tree primitive; the fold
+rule's `keep` tree goes through the same `useRowFilter`. Filter semantics are
+therefore identical across all views.
+
+### Server-delegated sources (`dataSource`): nothing falls back to the client
+
+A `dataSource` (`ServerDataSourceSpec`) runs filter / sort / search / paging on
+the server, so the host must never offer a filter the server cannot run, nor
+drop one on the way. The source therefore DECLARES, once in its owning plugin's
+`core/`, what its server can filter:
+
+```ts
+dataSource={{
+  filterable: THINGS_FILTERABLE,   // column → filter-language domain (liveText(), liveInstant(), …)
+  searchable: THINGS_SEARCHABLE,   // text-domain columns the search box matches
+  changeTick,
+  fetchPage: (args) => fetchEndpoint(queryThings, {}, { body: args }),
+}}
+```
+
+— the same object the server binds (`server-query`'s `bindColumns`) and strictly
+decodes against (`decodeFilterBody` / `augmentServerQuery`: a 400 on anything
+else). The host (`web/internal/server-filter.ts`, generic — any source that
+declares `filterable`):
+
+- **offers only declared fields** in the Filter control (`serverFilterFields`),
+  and only when the field's operator set lowers over the DECLARED domain — a
+  mismatch is a declaration bug and throws. A field from the global
+  `DataViewSlots.FieldExtension` slot (custom columns) is offered too: its server
+  twin, `DataViewServer.QueryAugmentor`, binds it in the domain its set lowers
+  over. Any other field (a display field the server has no column for) is not
+  offered. A SAVED rule the source cannot run — its field undeclared or gone,
+  its operator gone — is refused (`UnavailableFilterRuleError`) and the surface
+  says which rule, instead of silently running the rest of the filter and
+  showing rows the view claims to hide. (An incomplete rule is not an error: it
+  constrains nothing, as authored.)
+- **lowers** the view's `FilterGroup` (against `useFilterClock`, armed only
+  while a rule reads the clock, so "Today" re-queries at local midnight) AND the
+  search box — `or(contains(col, q) …)` over `searchable` — into ONE canonical
+  `Filter`, `fetchPage`'s `filter` argument. The wire carries that tree as JSON
+  (`ServerFilterWireSchema`); there is no separate `query` and no server-side
+  `searchWhere`.
+- **refuses a tree over the language's bounds** (depth 4, 50 clauses, 100
+  list values): `canonicalizeFilter` throws `FilterError`, the query is not
+  sent, and the surface renders the error in place of the view — never a
+  silently-trimmed filter. A first-page failure (e.g. the server's 400) renders
+  the same way (`ServerDataSourceResult.error`) rather than as an empty list.
+
+Operator-set tests pin a lowering by its effect on values with
+`lowersToMatch(op, domain, operand, value, now?)` from
+`@plugins/primitives/plugins/data-view/web/testing` — the evaluator's exact path
+for one rule.
 
 **Filter presets** are the twin of the sort presets: a named, reusable
 `FilterGroup` saved in the sibling `filterPresets` key of the same per-surface
@@ -1522,7 +1603,7 @@ stored opaquely as a `jsonField<FilterGroup>` (validated whole through
 To make a data-view filterable on a new dimension, **add a typed `FieldDef`** —
 do **not** bolt a bespoke toggle chip onto the toolbar. A field whose `type`
 resolves a `FilterOperatorSet` (`bool`, `enum`, `number`, `date`, `tags`, `text` —
-all already registered) automatically appears in the "Filter" pill; `enum` fields
+all already registered; each declares its filter-language `domain`) automatically appears in the "Filter" pill; `enum` fields
 read their choices from `FieldDef.options`. This is also the generic substrate for
 future configurability (saved filters, sort, grouping): they operate on the same
 field schema, so a new typed field unlocks all of them at once with zero chrome code.
@@ -1842,6 +1923,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterController`
     - `FilterFieldValue`
     - `FilterGroup`
+    - `FilterLowerContext`
     - `FilterNode`
     - `FilterOperator`
     - `FilterOperatorSet`
@@ -1865,6 +1947,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionsDescriptor`
     - `ItemActionZone`
     - `LeadingSlotProps`
+    - `LoweredFilter`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
     - `PartitionOptions`
@@ -1890,7 +1973,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `defineFieldExtensions`
     - `defineItemActions`
     - `EditableCell`
-    - `evaluateNode`
     - `FieldCell`
     - `FilterValueInput`
     - `FoldLine`
@@ -1915,6 +1997,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useDataViewControls`
     - `useDataViewSections`
     - `useFieldIdentities`
+    - `useFilterClock`
     - `useFilterController`
     - `useFlatRows`
     - `useGroupByController`
@@ -1929,6 +2012,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useResolveGroupings`
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
+    - `useRowFilter`
     - `useServerDataSource`
     - `useSortController`
 - Server:
@@ -2044,6 +2128,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterConjunction`
     - `FilterFieldValue`
     - `FilterGroup`
+    - `FilterLowerContext`
     - `FilterNode`
     - `FilterOperator`
     - `FilterOperatorSet`
@@ -2084,19 +2169,24 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `IDENTITY_CODEC`
     - `isHostedToolbar`
     - `orderFieldsBySection`
+    - `ServerFilterWireSchema`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
+- Test helpers:
+  - Web: `@plugins/primitives/plugins/data-view/web/testing`
+    - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
+    - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
-  - **`server-query`** — Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the filter compilation, not any field type. The field-agnostic keyset seek + cursor codec now live in primitives/keyset.
+  - **`server-query`** — Server half of a server-delegated DataView over the one filter language: bindColumns binds a source's core `filterable` declaration to its SQL (domain copied, every column bound), decodeFilterBody strictly decodes the wire filter (400 on anything undeclared), compileWhere compiles it through the language's filterSql, and the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) lets sub-plugins offer extra joined sort/filter columns. Names no field type; the keyset seek + cursor codec live in primitives/keyset.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
-  - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
+  - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
   - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
 

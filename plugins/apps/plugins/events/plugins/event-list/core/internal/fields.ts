@@ -1,3 +1,9 @@
+import {
+  liveBoolean,
+  liveInstant,
+  liveStringArray,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { EVENT_CATEGORIES } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // The single shared field vocabulary driving BOTH the web `FieldDef[]` (added
@@ -17,7 +23,7 @@ import { EVENT_CATEGORIES } from "@plugins/apps/plugins/events/plugins/events-co
 // `sourceId` is deliberately absent too: the `source` dimension arrives later as
 // a CONTRIBUTED field extension (its label and its option list are the sources
 // plugin's to own, since only that plugin holds the live source rows). The
-// physical column is bound in the server `COLUMN_MAP` under the same id, so the
+// column is declared in `EVENT_LIST_FILTERABLE` under the same id, so the
 // contributed field filters and sorts server-side with no edit here — this
 // plugin names no source type, ever.
 export type EventFieldType = "text" | "date" | "enum" | "bool" | "tags";
@@ -66,10 +72,8 @@ export const EVENT_LIST_FIELDS: EventFieldSpec[] = [
   // number, so this is a text dimension, never a `number` one.
   { id: "price", label: "Price", type: "text", nullable: true },
   { id: "recurring", label: "Recurring", type: "bool" },
-  // `tags` has no server-side filter/sort binding (there is no
-  // `fields/tags/filter-sql` capability yet), so it is display + search only:
-  // `sortable: false` keeps a dead sort out of the pill, and the server search
-  // covers tags via a text cast. See this plugin's CLAUDE.md.
+  // `tags` is the jsonb string array, filtered in the `stringArray` domain
+  // (has all / any / none of). Not sortable: a jsonb array has no keyset order.
   { id: "tags", label: "Tags", type: "tags", sortable: false },
   { id: "url", label: "Link", type: "text", nullable: true, sortable: false },
   // The soft-deletion stamp. A real, filterable dimension on purpose: the query
@@ -83,3 +87,44 @@ export const EVENT_LIST_FIELDS: EventFieldSpec[] = [
     sortable: false,
   },
 ];
+
+/**
+ * What the server can filter on, by filter-language domain — the ONE
+ * declaration both runtimes read: the web `dataSource.filterable` (so the
+ * Filter control offers exactly these) and the server column map
+ * (`bindColumns`) the handler strict-decodes against.
+ *
+ * Three ids have no field in `EVENT_LIST_FIELDS`, on purpose:
+ *
+ * - `sourceId` — the contributed `source` dimension (see above).
+ * - `description` / `tagsText` — searched only: `tagsText` is the tags array
+ *   rendered as text (`tags::text`), so the search box still finds a tag.
+ */
+export const EVENT_LIST_FILTERABLE = {
+  title: liveText(),
+  description: liveText(),
+  startsAt: liveInstant(),
+  category: liveText<(typeof EVENT_CATEGORIES)[number]>(),
+  venue: liveText(),
+  city: liveText(),
+  price: liveText(),
+  recurring: liveBoolean(),
+  tags: liveStringArray(),
+  tagsText: liveText(),
+  url: liveText(),
+  disappearedAt: liveInstant(),
+  sourceId: liveText(),
+};
+
+/**
+ * The text columns the search box matches (any of, case-insensitively): what an
+ * event is (title / description), where it is (venue / city), and how it is
+ * labelled (its tags, as text).
+ */
+export const EVENT_LIST_SEARCHABLE = [
+  "title",
+  "description",
+  "venue",
+  "city",
+  "tagsText",
+] as const;

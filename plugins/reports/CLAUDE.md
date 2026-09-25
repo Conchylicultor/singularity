@@ -90,7 +90,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/host/duress.createShedBuffer`
@@ -98,9 +97,9 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
     - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -142,7 +141,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveBoolean`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `primitives/pane.defineRoute`
   - Exports (types):
@@ -163,6 +166,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportDetailRoute`
     - `reportFacets`
     - `ReportFacetsSchema`
+    - `REPORTS_FILTERABLE`
+    - `REPORTS_SEARCHABLE`
     - `ReportSchema`
     - `reportsConfig`
     - `reportsRevisionResource`

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { FilterGroupSchema } from "@plugins/primitives/plugins/data-view/core";
+import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/core";
+import {
+  liveBoolean,
+  liveInstant,
+  liveNumber,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { ReportSchema } from "./resources";
 
 // Wire mirror of the data-view `SortRule`. data-view/core exports the TYPE but
@@ -12,13 +18,34 @@ const SortRuleSchema = z.object({
 });
 
 /**
+ * What the Reports server can filter on, by filter-language domain — the ONE
+ * declaration both runtimes read: the web `dataSource.filterable` (so the
+ * Filter control offers exactly these) and the server column map
+ * (`bindColumns`) the handler strict-decodes against. `message` and
+ * `fingerprint` have no field: they are searched only.
+ */
+export const REPORTS_FILTERABLE = {
+  kind: liveText(),
+  source: liveText(),
+  noise: liveBoolean(),
+  rateLimited: liveBoolean(),
+  count: liveNumber(),
+  lastSeenAt: liveInstant(),
+  message: liveText(),
+  fingerprint: liveText(),
+};
+
+/** The text columns the search box matches (any of, case-insensitively). */
+export const REPORTS_SEARCHABLE = ["message", "kind", "fingerprint"] as const;
+
+/**
  * Exactly `ServerDataSourceSpec.fetchPage`'s argument object: the DataView host
- * owns the live sort / filter / query state and hands it over verbatim.
+ * owns the live sort / filter state and hands it over verbatim — the filter
+ * lowered (search folded in), decoded strictly against REPORTS_FILTERABLE.
  */
 export const QueryReportsBodySchema = z.object({
   sort: z.array(SortRuleSchema),
-  filter: FilterGroupSchema.nullable(),
-  query: z.string(),
+  filter: ServerFilterWireSchema.optional(),
   cursor: z.string().nullable(),
   limit: z.number().int().positive().max(200),
   /** The DataView surface id (its `storageKey`), injected by the host. */
@@ -37,7 +64,7 @@ export type QueryReportsResponse = z.infer<typeof QueryReportsResponseSchema>;
 /**
  * One window of the Reports DataView, newest first by default.
  *
- * POST so the structured `FilterGroup` tree rides in the body. Filter / sort /
+ * POST so the structured filter tree rides in the body. Filter / sort /
  * search compile to SQL and pagination is keyset (cursor), never OFFSET. The
  * list refreshes in place when `reports.revision` moves.
  */

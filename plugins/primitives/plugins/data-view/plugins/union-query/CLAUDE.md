@@ -2,9 +2,9 @@
 
 One keyset page over **N tables at once**.
 
-`server-query` compiles a `FilterGroup` to SQL and `primitives/keyset` compiles a
-null-aware seek. Both are already field-type agnostic; both assume exactly one
-table. This adds the arms, and nothing else.
+`server-query` compiles a filter-language `Filter` to SQL and `primitives/keyset`
+compiles a null-aware seek. Both are already field-type agnostic; both assume
+exactly one table. This adds the arms, and nothing else.
 
 Design: [`research/2026-08-28-global-unified-runs-dataview.md`](../../../../../../research/2026-08-28-global-unified-runs-dataview.md).
 
@@ -16,28 +16,40 @@ SELECT * FROM (
 ) AS "u" ORDER BY … LIMIT $n
 ```
 
-The compiled filter, the search, the seek and the limit are pushed **into** each
-arm, so each reads at most `n` rows off its own `(sort key, id)` index and
+The compiled filter (the DataView host folds the search box into it), the seek
+and the limit are pushed **into** each arm, so each reads at most `n` rows off its own `(sort key, id)` index and
 Postgres merges sorted prefixes. The outer `ORDER BY` makes the merge correct;
 leaving work for it would only make it slow. Every projected alias IS its column
 id, so `keyValuesOf(row, keys)` mints the next cursor off a raw row.
 
 ## The rules, and why they are these
 
-**Arm pruning** — a filter rule on an arm column removes every arm that lacks it.
-Only **conjunctive** rules (reachable from the root through AND groups) prune: a
-rule inside an OR is one alternative, and pruning on it would delete rows the
-filter admits. Pruning is an optimisation, not the semantics — an unpruned arm
-compiles the same rule against its typed `NULL`, which three-valued logic already
-excludes. The two agree, which is what makes it safe.
+**Arm pruning** — an arm's value for a column is a CONSTANT when it projects a
+typed NULL (it has no such notion) or the column is the discriminator (its
+`kind`). A **conjunctive** clause (reachable from the root through AND groups)
+over such a constant is answered once, in memory, by the op's own `test` —
+`testClause`, the one the op's SQL is pinned to by the filter language's
+Postgres parity suite — and a `false` removes the arm. A clause inside an OR is
+one alternative, and pruning on it would delete rows the filter admits.
 
-Pruning applies to **arm** columns only. A base column an arm binds to `null` is
-still a column that arm has (`namespace is empty` legitimately matches a backup),
-so the NULL projection stands and the operator decides.
+This is right under the language's **complement semantics** by construction: a
+negative op (`ne`, `notIn`, `hasNone`, `neCi`, `notContains`) — like `isEmpty`
+— is TRUE on NULL, so `build.targets hasNone [sonata]` keeps every backup row — and
+the in-memory test says so, so the arm stays. `namespace eq main` prunes a backup
+(NULL equals nothing); `namespace isEmpty` keeps it. Pruning is an optimisation,
+not the semantics — an unpruned arm compiles the same clause against its typed
+`NULL` and gets the same answer.
 
-**Two types per column** — `type` is the field-type id resolving a filter
-operator; `sqlType` is the Postgres type an *other* arm casts its NULL to.
-Different questions; conflating them breaks one of the two.
+A search box over columns an arm lacks is the same rule: `contains` over NULL is
+false, so an arm owning none of the searched columns leaves the union rather than
+ignoring the box.
+
+**Two types per column** — `domain` is the filter-language domain the column is
+filtered and sorted in (`null` = read-only: projected, never bound, so no filter
+names it and a sort on it is dropped); `sqlType` is the Postgres type an *other*
+arm casts its NULL to. Different questions; conflating them breaks one of the
+two. `unionFilterable(base, extra, discriminator)` (core) is the declaration both
+runtimes read: the web `dataSource.filterable` and the handler's strict decode.
 
 **Symmetric nullability** — a column is nullable *everywhere* as soon as one
 surviving arm nulls it. `NULLS LAST` and the seek's `OR col IS NULL` terms must
@@ -65,12 +77,11 @@ than a second return shape.
 
 ## Plugin reference
 
-- Description: Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
+- Description: Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
 - Server:
   - Uses:
     - `primitives/data-view/server-query.compileWhere`
     - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.ColumnExpr`
     - `primitives/keyset.orderByClauses`
@@ -87,6 +98,10 @@ than a second return shape.
   - Exports (types):
     - `UnionColumnSpec`
     - `UnionColumnSpecs`
-  - Exports (values): `UnionCursorMismatchError`
+    - `UnionDiscriminator`
+  - Exports (values):
+    - `DEFAULT_UNION_DISCRIMINATOR`
+    - `UnionCursorMismatchError`
+    - `unionFilterable`
 
 <!-- AUTOGENERATED:END -->

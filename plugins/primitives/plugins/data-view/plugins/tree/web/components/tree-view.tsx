@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { MdAdd, MdLink, MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import {
-  evaluateNode,
+  useRowFilter,
   FieldCell,
   GroupedSections,
   leadingSlot,
@@ -347,18 +347,22 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     });
   }, [rows, rowKey, hierarchy, expanded, options.defaultExpanded]);
 
-  // Apply the view's filter through the same `evaluateNode` evaluator the flat
-  // views use, so filter semantics are identical across all views. Filtering is
+  // The view's filter as a row predicate — the same `useRowFilter` lowering the
+  // flat views use, so filter semantics are identical across all views. Filtering is
   // *subtree-preserving* (mirrors the tree's search): a node survives if it
   // matches the filter or has a matching descendant — i.e. matches plus the
   // ancestor chain of every match — so filtered rows keep their hierarchical
   // context instead of being orphaned to the root.
+  const matchesFilter = useRowFilter(
+    props.state.filter,
+    fields,
+    resolveOperatorSet,
+  );
   const visibleProjected = useMemo(() => {
-    const filter = props.state.filter;
-    if (!filter) return projected;
+    if (!matchesFilter) return projected;
     const matched = new Set<string>();
     for (const p of projected) {
-      if (evaluateNode(filter, p.__row, fields, resolveOperatorSet)) {
+      if (matchesFilter(p.__row)) {
         matched.add(p.id);
       }
     }
@@ -373,7 +377,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       }
     }
     return projected.filter((p) => keep.has(p.id));
-  }, [projected, props.state.filter, fields, resolveOperatorSet]);
+  }, [projected, matchesFilter]);
 
   // Field sort (default: manual/rank order). Empty rules → `null` comparator →
   // the projected rows keep their incoming (rank) order, i.e. the manual sort the

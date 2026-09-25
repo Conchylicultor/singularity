@@ -61,8 +61,8 @@ function describeOperand(
  * name, and as the compact fold's row text: the first ACTIVE rule in words, plus
  * how many further active rules there are.
  *
- * "Active" is `isRuleActive` — the same predicate the evaluator and
- * `FilterController.ruleCount` use, imported rather than re-derived. That is the
+ * "Active" is `isRuleActive` — the operator's `lower(...) !== undefined`, the
+ * same answer the evaluator (`lowerFilterGroup`) and `FilterController.ruleCount` use, imported rather than re-derived. That is the
  * whole point: a summary reading "1 rule" beside an evaluator honouring two is
  * exactly the class of bug `rule-resolution.ts` was written to close, and it can
  * only come back if someone writes a second notion of "counts".

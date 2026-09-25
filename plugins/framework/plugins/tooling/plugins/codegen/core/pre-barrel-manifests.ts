@@ -77,7 +77,7 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     render: renderSpaceRamp,
   },
   {
-    // Side-effect imports of the fields storage/filter-sql server barrels. The
+    // Side-effect imports of the fields storage server barrels. The
     // fields/server-capabilities-loader barrel imports it at module-load; its
     // renderer is a barrel-free `skipBarrelImport` tree scan, so regenerating it
     // pre-barrel is sound.

@@ -9,7 +9,7 @@ export type ColumnExpr = AnyColumn | SQL;
 /**
  * Binds one keyset-orderable field to its column. `nullable` drives the
  * null-aware seek terms (default `false`). Consumers that also compile filters
- * extend this with their own field-type token (e.g. server-query's
+ * extend this with their own filter domain (e.g. server-query's
  * `ColumnBinding`) — the keyset seek reads only `col` + `nullable`.
  */
 export interface KeysetColumnBinding {

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   UNGROUPED_FOLD_KEY,
   type DataViewRowEntry,
   type DataViewSection,
   type FieldDef,
-  type FilterFieldValue,
   type FilterOperatorSet,
   type FoldRule,
   type ViewState,
@@ -16,6 +16,7 @@ import {
   makeFoldKeep,
 } from "./fold-sections";
 import { aggregateSections } from "./use-data-view-sections";
+import { lowerFilterGroup, makeRowMatcher } from "./evaluate-filter";
 
 interface Conv {
   id: string;
@@ -32,16 +33,18 @@ const ageField: FieldDef<Conv> = {
 /** A one-operator stand-in for the number type's operator set, so this suite
  *  proves the mechanism without importing any field type. */
 const numberOps: FilterOperatorSet = {
+  match: "number",
+  domain: "number",
   operators: [
     {
       id: "lt",
       label: "Is less than",
       hasValue: true,
-      predicate: (operand: unknown, value: FilterFieldValue) =>
-        typeof value === "number" && value < (operand as number),
+      lower: (operand, { column }) =>
+        typeof operand === "number" ? clause(column, "lt", operand) : undefined,
     },
   ],
-} as unknown as FilterOperatorSet;
+};
 const resolveOps = (typeId: string) =>
   typeId === "number" ? numberOps : undefined;
 
@@ -70,7 +73,11 @@ function section(key: string | null, rows: Conv[]): DataViewSection<Conv> {
 }
 
 function keepFor(selectedRowId?: string) {
-  return makeFoldKeep(RECENT, [ageField], resolveOps, {
+  const { filter } = lowerFilterGroup(RECENT.keep, [ageField], resolveOps, 0);
+  const matchesKeep = filter
+    ? makeRowMatcher(filter, [ageField], resolveOps)
+    : null;
+  return makeFoldKeep(matchesKeep, {
     selectedRowId,
     rowKey,
   });

@@ -1,5 +1,12 @@
-export { MAIL_THREAD_FIELDS } from "./internal/fields";
-export type { MailThreadFieldSpec, MailThreadFieldType } from "./internal/fields";
+export {
+  MAIL_THREAD_FIELDS,
+  MAIL_THREAD_FILTERABLE,
+  MAIL_THREAD_SEARCHABLE,
+} from "./internal/fields";
+export type {
+  MailThreadFieldSpec,
+  MailThreadFieldType,
+} from "./internal/fields";
 export {
   queryThreads,
   SortRuleSchema,

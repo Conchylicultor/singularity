@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Column, is, SQL, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -7,17 +7,29 @@ import {
   pgTable,
   text,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
-import type { FilterGroup } from "@plugins/primitives/plugins/data-view/core";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
+  and,
+  clause,
+  liveBoolean,
+  liveInstant,
+  liveNumber,
+  liveText,
+  or,
+  type Filter,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import {
+  bindColumns,
   compileWhere,
-  type FieldColumnMap,
-  type OperatorSqlResolver,
+  decodeFilterBody,
+  filterableOf,
 } from "./compile";
 
 // Throwaway physical schema purely for SQL rendering in tests.
 const t = pgTable("things", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey(),
   title: text("title").notNull(),
   status: text("status").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
@@ -29,174 +41,143 @@ const t = pgTable("things", {
 const dialect = new PgDialect();
 const render = (s: SQL) => dialect.sqlToQuery(s);
 
-const map: FieldColumnMap = {
-  title: { col: t.title, type: "text" },
-  status: { col: t.status, type: "enum" },
-  createdAt: { col: t.createdAt, type: "date" },
-  endedAt: { col: t.endedAt, type: "date", nullable: true },
-  active: { col: t.active, type: "bool" },
-  score: { col: t.score, type: "number" },
+const FILTERABLE = {
+  id: liveText(),
+  title: liveText(),
+  status: liveText(),
+  createdAt: liveInstant(),
+  endedAt: liveInstant(),
+  active: liveBoolean(),
+  score: liveNumber(),
 };
 
-// A tiny resolver covering just the operators the tests exercise.
-const resolve: OperatorSqlResolver = (typeId, operatorId) => {
-  if (typeId === "text" && operatorId === "contains") {
-    return (col, operand) => {
-      if (typeof operand !== "string" || operand === "") return undefined; // incomplete → dropped
-      return sql`${col} ILIKE ${"%" + operand + "%"}`;
-    };
-  }
-  if (typeId === "enum" && operatorId === "is") {
-    return (col, operand) =>
-      operand == null ? undefined : sql`${col} = ${operand}`;
-  }
-  if (typeId === "bool" && operatorId === "is") {
-    return (col, operand) => sql`${col} = ${operand === true}`;
-  }
-  if (typeId === "number" && operatorId === "gt") {
-    return (col, operand) =>
-      typeof operand === "number" ? sql`${col} > ${operand}` : undefined;
-  }
-  return null; // unknown type/operator → rule dropped
-};
+const map = bindColumns(FILTERABLE, {
+  id: { col: t.id },
+  title: { col: t.title },
+  status: { col: t.status },
+  createdAt: { col: t.createdAt },
+  endedAt: { col: t.endedAt, nullable: true },
+  active: { col: t.active },
+  score: { col: t.score },
+});
 
-const group = (
-  conjunction: "and" | "or",
-  ...children: FilterGroup["children"]
-): FilterGroup => ({ kind: "group", id: "g", conjunction, children });
+describe("bindColumns / filterableOf", () => {
+  it("copies each column's domain from the declaration", () => {
+    expect(map.score.domain).toBe("number");
+    expect(map.endedAt).toEqual({
+      col: t.endedAt,
+      nullable: true,
+      domain: "instant",
+    });
+    expect(filterableOf(map)).toEqual({
+      id: { domain: "text" },
+      title: { domain: "text" },
+      status: { domain: "text" },
+      createdAt: { domain: "instant" },
+      endedAt: { domain: "instant" },
+      active: { domain: "boolean" },
+      score: { domain: "number" },
+    });
+  });
+});
 
 describe("compileWhere", () => {
-  it("hands the builder the column as an expression, never the column", () => {
-    let received: unknown;
-    const capture: OperatorSqlResolver = () => (target) => {
-      received = target;
-      return sql`${target} IS NOT NULL`;
-    };
-    const f = group("and", {
-      kind: "rule",
-      id: "r",
-      fieldId: "status",
-      operatorId: "is",
-      value: "open",
-    });
-    // Renders textually identically to interpolating the column itself…
-    expect(render(compileWhere(f, map, capture)!).sql).toBe(
-      `"things"."status" IS NOT NULL`,
-    );
-    // …but it is not the column, so an operand bound against it can never reach
-    // the column's write-side encoder (see `OperatorSqlBuilder`).
-    expect(is(received, SQL)).toBe(true);
-    expect(is(received, Column)).toBe(false);
+  it("returns undefined for the absent filter", () => {
+    expect(compileWhere(undefined, map)).toBeUndefined();
   });
 
-  it("returns undefined for a null filter", () => {
-    expect(compileWhere(null, map, resolve)).toBeUndefined();
+  it("compiles a contains clause with an escaped, bound pattern", () => {
+    const q = render(compileWhere(clause("title", "contains", "10%_x"), map)!);
+    expect(q.sql).toBe(`("things"."title")::text ILIKE $1::text`);
+    expect(q.params).toEqual(["%10\\%\\_x%"]);
   });
 
-  it("returns undefined for an empty group", () => {
-    expect(compileWhere(group("and"), map, resolve)).toBeUndefined();
+  it("relabels every text target ::text, so a uuid column takes a text op", () => {
+    const q = render(compileWhere(clause("id", "eq", "abc"), map)!);
+    expect(q.sql).toBe(`("things"."id")::text = $1::text`);
   });
 
-  it("compiles a single text-contains rule (escaped param)", () => {
-    const f = group("and", {
-      kind: "rule",
-      id: "r",
-      fieldId: "title",
-      operatorId: "contains",
-      value: "hi",
-    });
-    const q = render(compileWhere(f, map, resolve)!);
-    expect(q.sql).toBe(`"things"."title" ILIKE $1`);
-    expect(q.params).toEqual(["%hi%"]);
-  });
-
-  it("drops an incomplete rule (empty operand) → undefined", () => {
-    const f = group("and", {
-      kind: "rule",
-      id: "r",
-      fieldId: "title",
-      operatorId: "contains",
-      value: "",
-    });
-    expect(compileWhere(f, map, resolve)).toBeUndefined();
-  });
-
-  it("drops an unmapped field rule", () => {
-    const f = group("and", {
-      kind: "rule",
-      id: "r",
-      fieldId: "nope",
-      operatorId: "contains",
-      value: "x",
-    });
-    expect(compileWhere(f, map, resolve)).toBeUndefined();
-  });
-
-  it("drops a rule whose operator the resolver doesn't know", () => {
-    const f = group("and", {
-      kind: "rule",
-      id: "r",
-      fieldId: "title",
-      operatorId: "unknown-op",
-      value: "x",
-    });
-    expect(compileWhere(f, map, resolve)).toBeUndefined();
-  });
-
-  it("collapses a single surviving child (no AND/OR wrapper)", () => {
-    const f = group(
-      "and",
-      {
-        kind: "rule",
-        id: "r1",
-        fieldId: "title",
-        operatorId: "contains",
-        value: "hi",
-      },
-      {
-        kind: "rule",
-        id: "r2",
-        fieldId: "title",
-        operatorId: "contains",
-        value: "", // dropped
-      },
-    );
-    const q = render(compileWhere(f, map, resolve)!);
-    expect(q.sql).toBe(`"things"."title" ILIKE $1`);
+  it("binds operands cast to the domain type, never through the column encoder", () => {
+    const q = render(compileWhere(clause("score", "gt", 5), map)!);
+    expect(q.sql).toBe(`"things"."score" > $1::float8`);
+    expect(q.params).toEqual([5]);
   });
 
   it("compiles nested AND-of-OR", () => {
-    const f = group(
-      "and",
-      group(
-        "or",
-        {
-          kind: "rule",
-          id: "r1",
-          fieldId: "status",
-          operatorId: "is",
-          value: "open",
-        },
-        {
-          kind: "rule",
-          id: "r2",
-          fieldId: "status",
-          operatorId: "is",
-          value: "closed",
-        },
-      ),
-      {
-        kind: "rule",
-        id: "r3",
-        fieldId: "score",
-        operatorId: "gt",
-        value: 5,
-      },
+    const f: Filter = and(
+      or(clause("status", "eq", "open"), clause("status", "eq", "closed")),
+      clause("score", "gt", 5),
     );
-    const q = render(compileWhere(f, map, resolve)!);
+    const q = render(compileWhere(f, map)!);
     expect(q.sql).toBe(
-      `(("things"."status" = $1 or "things"."status" = $2) and "things"."score" > $3)`,
+      `((("things"."status")::text = $1::text OR ("things"."status")::text = $2::text) AND "things"."score" > $3::float8)`,
     );
     expect(q.params).toEqual(["open", "closed", 5]);
+  });
+
+  it("a negative op keeps the NULL rows (complement semantics)", () => {
+    const q = render(compileWhere(clause("endedAt", "isNotEmpty"), map)!);
+    expect(q.sql).toContain("IS NOT TRUE");
+  });
+
+  it("an unknown column THROWS — nothing is dropped", () => {
+    const f = clause("nope", "contains", "x") as Filter;
+    expect(() => compileWhere(f, map)).toThrow(/"nope"/);
+  });
+
+  it("the search box's lowering — an OR of contains — compiles per column", () => {
+    const f: Filter = or(
+      clause("title", "contains", "hi"),
+      clause("status", "contains", "hi"),
+    );
+    const q = render(compileWhere(f, map)!);
+    expect(q.sql).toBe(
+      `(("things"."title")::text ILIKE $1::text OR ("things"."status")::text ILIKE $2::text)`,
+    );
+    expect(q.params).toEqual(["%hi%", "%hi%"]);
+  });
+});
+
+describe("decodeFilterBody", () => {
+  const filterable = filterableOf(map);
+
+  it("no filter in the body is the absent filter", () => {
+    expect(decodeFilterBody(undefined, filterable)).toBeUndefined();
+  });
+
+  it("decodes the canonical tree the host sends", () => {
+    const f = clause("title", "contains", "hi");
+    expect(decodeFilterBody(f, filterable)).toEqual(f);
+  });
+
+  it("an unknown column is a 400, never a dropped rule", () => {
+    let thrown: unknown;
+    try {
+      decodeFilterBody({ column: "nope", op: "eq", operand: "x" }, filterable);
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(HttpError);
+    expect((thrown as HttpError).status).toBe(400);
+    expect((thrown as Error).message).toContain('"nope"');
+  });
+
+  it("a wrong-domain op is a 400", () => {
+    expect(() =>
+      decodeFilterBody(
+        { column: "score", op: "contains", operand: "1" },
+        filterable,
+      ),
+    ).toThrow(HttpError);
+  });
+
+  it("a non-canonical spelling is a 400", () => {
+    // A singleton group is not canonical — the host always sends the canonical tree.
+    expect(() =>
+      decodeFilterBody(
+        { and: [{ column: "title", op: "contains", operand: "hi" }] },
+        filterable,
+      ),
+    ).toThrow(HttpError);
   });
 });

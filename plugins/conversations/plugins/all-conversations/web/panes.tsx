@@ -17,7 +17,12 @@ import {
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { conversationsRevisionResource, queryConversations } from "../core";
+import {
+  CONVERSATION_FILTERABLE,
+  CONVERSATION_SEARCHABLE,
+  conversationsRevisionResource,
+  queryConversations,
+} from "../core";
 import { conversationFieldDefs } from "./internal/fields";
 
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
@@ -53,6 +58,8 @@ function AllConversationsView(): ReactElement {
         views={["table", "list"]}
         dataSource={{
           changeTick,
+          filterable: CONVERSATION_FILTERABLE,
+          searchable: CONVERSATION_SEARCHABLE,
           fetchPage: (args) =>
             fetchEndpoint(queryConversations, {}, { body: args }),
         }}

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  liveBoolean,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { EventSourceSchema } from "./schema";
 import { SOURCE_STATUSES } from "./vocab";
 
@@ -17,7 +21,10 @@ import { SOURCE_STATUSES } from "./vocab";
 export const eventSources = liveCollection("events.sources", {
   row: EventSourceSchema,
   id: "id",
-  filterable: { status: z.enum(SOURCE_STATUSES), enabled: z.boolean() },
+  filterable: {
+    status: liveText(z.enum(SOURCE_STATUSES)),
+    enabled: liveBoolean(),
+  },
   sortable: ["createdAt", "name"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,

@@ -37,6 +37,12 @@ import {
   type QueryDb,
 } from "@plugins/infra/plugins/query-resource/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  and,
+  liveBoolean,
+  liveText,
+  or,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 
 const TABLE = "live_src";
@@ -68,7 +74,7 @@ function collection() {
   return liveCollection(`test.live.src-${seq++}`, {
     row: SrcSchema,
     id: "id",
-    filterable: { enabled: z.boolean(), kind: z.string() },
+    filterable: { enabled: liveBoolean(), kind: liveText() },
     sortable: ["n", "name"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 50,
@@ -226,7 +232,10 @@ describe("serveCollection — compiled window + point, real Postgres", () => {
     const h = serve(c);
     await put(row("a", 1), row("b", 2), row("off", 3, false), row("c", 4));
     const enabled = c.window.window.encode({ where: { enabled: true } });
-    expect(enabled).toEqual({ limit: "2", where: '{"enabled":true}' });
+    expect(enabled).toEqual({
+      limit: "2",
+      where: '{"column":"enabled","op":"eq","operand":true}',
+    });
     expect(ids(await h.subscribe(c.key, enabled))).toEqual(["a", "b"]);
 
     await put(row("b", 2, false));
@@ -297,6 +306,61 @@ describe("serveCollection — compiled window + point, real Postgres", () => {
     expect(v40).toHaveLength(40);
     expect(v40.slice(0, 20)).toEqual(v20);
     expect(() => c.window.window.encode({ limit: 60 })).toThrow(/maxLimit/);
+  });
+
+  test("an or tree window reads exactly the rows either branch matches", async () => {
+    const c = collection();
+    const h = serve(c);
+    await put(
+      row("a", 1, true, "a", "build"),
+      row("b", 2, false, "b", "alert"),
+      row("c", 3, false, "c", null),
+      row("d", 4, true, "d", "alert"),
+      row("e", 5, false, "e", "build"),
+    );
+    const params = c.window.window.encode({
+      where: or(
+        { column: "kind", op: "eq", operand: "build" },
+        and(
+          { column: "enabled", op: "eq", operand: false },
+          { column: "kind", op: "isEmpty" },
+        ),
+      ),
+      limit: 10,
+    });
+    expect(ids(await h.subscribe(c.key, params))).toEqual(["a", "c", "e"]);
+  });
+
+  test("ne is the complement of eq: it keeps NULL rows", async () => {
+    const c = collection();
+    const h = serve(c);
+    await put(
+      row("a", 1, true, "a", "build"),
+      row("b", 2, true, "b", "alert"),
+      row("c", 3, true, "c", null),
+    );
+    const ne = c.window.window.encode({
+      where: { kind: { ne: "build" } },
+      limit: 10,
+    });
+    const eq = c.window.window.encode({ where: { kind: "build" }, limit: 10 });
+    expect(ids(await h.subscribe(c.key, ne))).toEqual(["b", "c"]);
+    expect(ids(await h.subscribe(c.key, eq))).toEqual(["a"]);
+  });
+
+  test("a non-canonical where is refused, never served", () => {
+    const c = collection();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    const where = specs.window.where as (p: Record<string, string>) => unknown;
+    expect(() =>
+      where({
+        limit: "2",
+        where: '{"and":[{"column":"enabled","op":"eq","operand":true}]}',
+      }),
+    ).toThrow(/not canonical/);
   });
 
   test("the :rows point sibling reports found rows and omits missing ids, ignoring any filter", async () => {
@@ -408,7 +472,7 @@ describe("serveCollection — :groups", () => {
     expect(
       await loader(c)({
         groupBy: "enabled",
-        where: { kind: { isNull: true } },
+        where: { kind: { isEmpty: true } },
       }),
     ).toEqual([{ value: true, count: 1 }]);
   });
@@ -442,11 +506,13 @@ describe("serveCollection — :groups", () => {
     ]);
   });
 
-  test("a value its column's filterable schema cannot name fails loudly", async () => {
+  test("a value the row schema's field cannot hold fails loudly", async () => {
     const c = liveCollection(`test.live.enum-${seq++}`, {
-      row: SrcSchema,
+      row: SrcSchema.extend({
+        kind: z.enum(["build", "alert"]).nullable(),
+      }),
       id: "id",
-      filterable: { kind: z.enum(["build", "alert"]) },
+      filterable: { kind: liveText() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 1 },
       maxLimit: 1,
@@ -456,15 +522,14 @@ describe("serveCollection — :groups", () => {
       from: srcT,
       db: db as unknown as QueryDb,
     });
-    // The row schema allows any string; the grouped column holds "zeta" and
-    // "Alpha", which the declared operand schema could never name.
+    // The grouped column holds "zeta" and "Alpha", which the row type cannot.
     const failure = await Promise.resolve(
       specs.groups.loader(c.groups.groups.encode({ groupBy: "kind" })),
     ).then(
       () => null,
       (err: unknown) => err,
     );
-    expect(String(failure)).toMatch(/does not parse as its filterable schema/);
+    expect(String(failure)).toMatch(/does not parse as the row schema's field/);
   });
 
   test("a subscribed grouping is re-run and re-pushed on a table change (read-set routing)", async () => {

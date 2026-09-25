@@ -22,7 +22,7 @@ import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 // string, so a rename cannot leave the columns behind.
 export const buildRunArmFields = defineRunArmFields(BUILD_RUN_KIND, {
   "build.status": { type: "enum", sqlType: "text" },
-  "build.targets": { type: "tags", sqlType: "text[]" },
+  "build.targets": { type: "tags", sqlType: "jsonb" },
   "build.commitHash": { type: "text", sqlType: "text", nullable: true },
   "build.exitCode": { type: "number", sqlType: "integer", nullable: true },
 });

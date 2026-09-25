@@ -17,7 +17,8 @@ The scope therefore travels the completely standard DataView path and nothing
 else:
 
 ```
-active view's `filter`  →  request body `FilterGroup`  →  compileWhere  →  SQL
+active view's `filter`  →  lowered in the browser (operator sets → the filter
+language)  →  request body `Filter`  →  strict decode  →  compileWhere  →  SQL
 ```
 
 There is no `view` field on the request, no server-side scope derivation, no
@@ -26,18 +27,23 @@ an ordinary removable chip; editing it rewrites the config row and persists. The
 old "a user must not pull Spam into Inbox" invariant is retired by decision —
 that is the user's call if they set up the filters (v2 design doc).
 
-**The failure mode to know about:** an unresolvable `fieldId`/`operatorId` is
-dropped *fail-soft* by `compileWhere`, so a typo in the config makes a tab
-silently show every thread rather than error. `server/internal/where.test.ts`
-reads the real config file, compiles every authored filter to SQL and asserts
-each rule survives — that test is the guard, keep it green.
+**The failure mode to know about:** an unresolvable `fieldId`/`operatorId` is a
+*dangling* rule — it lowers to nothing in the browser — so a typo in the config
+makes a tab silently show every thread rather than error. (The server can no
+longer drop a rule: it strict-decodes the lowered filter against
+`MAIL_THREAD_FILTERABLE` and 400s on anything else.)
+`web/__tests__/authored-views.test.ts` reads the real config file, lowers every
+authored filter through the real tags / bool operator sets and asserts each
+tab's scope survives — that test is the guard, keep it green.
 
 ## Server
 
 - **`queryThreads`** (`POST /api/mail/threads/query`) — one keyset page.
-  `buildThreadsWhere` ANDs `[account, ilike search over subject/snippet, the
-  compiled `FilterGroup`, the null-aware keyset seek]`. The account predicate is
-  identity, not scope — it is the only server-owned conjunct.
+  `buildThreadsWhere` ANDs `[account, the compiled filter (the search box
+  arrives folded into it as `contains` over `MAIL_THREAD_SEARCHABLE`: subject /
+  snippet), the null-aware keyset seek]`. The account predicate is identity, not
+  scope — it is the only server-owned conjunct, and `accountId` is not a
+  filterable column.
 - **`mailThreadsRevisionResource`** — a coarse `${count}:${maxUpdatedMs}` tick
   over `mail_threads` (`mode:"push"`). Tab-independent on purpose: a thread can
   move between mailboxes, so any thread write refetches the loaded window in
@@ -55,8 +61,8 @@ each rule survives — that test is the guard, keep it green.
   `tags`) is the axis every mailbox tab lives on**: not sortable (a jsonb array
   has no order); its `options` map label id → friendly name (system ids locally,
   user labels from `mailLabelsResource`), which is what keeps "Label_12" off the
-  screen. `sender`/`snippet` are display-only, not fields — server search covers
-  them.
+  screen. `sender`/`snippet` are display-only, not fields — the search box
+  covers `snippet` (declared filterable for that alone).
 
 ## Boundaries
 
@@ -97,12 +103,12 @@ landing repoint is the route STRING `/mail/threads`.
     - `apps/mail/mail-core._mailThreads`
     - `apps/mail/mail-core.resolveMailAccountId`
     - `database.db`
-    - `fields/server-capabilities-loader`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/data-view/server-query.decodeFilterBody`
+    - `primitives/data-view/server-query.FieldColumnMap`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -117,7 +123,12 @@ landing repoint is the route STRING `/mail/threads`.
   - Uses:
     - `apps/mail/mail-core.MailThreadSchema`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveBoolean`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveStringArray`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `MailThreadFieldSpec`
@@ -125,6 +136,8 @@ landing repoint is the route STRING `/mail/threads`.
     - `QueryThreadsBody`
   - Exports (values):
     - `MAIL_THREAD_FIELDS`
+    - `MAIL_THREAD_FILTERABLE`
+    - `MAIL_THREAD_SEARCHABLE`
     - `mailThreadsRevisionResource`
     - `queryThreads`
     - `QueryThreadsBodySchema`

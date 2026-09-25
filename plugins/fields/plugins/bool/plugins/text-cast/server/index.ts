@@ -6,5 +6,7 @@ import { cast } from "./internal/text-cast";
 export default {
   description:
     "Boolean field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::boolean for server-delegated DataView filter/sort.",
-  contributions: [Fields.ValueTextCast({ type: boolFieldType, cast })],
+  contributions: [
+    Fields.ValueTextCast({ type: boolFieldType, cast, domain: "boolean" }),
+  ],
 } satisfies ServerPluginDefinition;

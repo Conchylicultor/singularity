@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Runs } from "@plugins/runs/web";
-import { DEPLOY_RUN_KIND } from "../core";
+import { DEPLOY_RUN_KIND, deployRunFields } from "../core";
 import { DeployRunFields } from "./components/deploy-run-fields";
 import { openDeployRun } from "./internal/open-run";
 
@@ -11,6 +11,7 @@ export default {
     Runs.Kind({
       kind: DEPLOY_RUN_KIND,
       label: "Deploy",
+      fields: deployRunFields,
       open: (run, { openPane }) => openDeployRun(run, openPane),
     }),
     Runs.Fields({

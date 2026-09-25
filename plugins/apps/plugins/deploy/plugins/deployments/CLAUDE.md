@@ -426,7 +426,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
     - `database.db`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.isSuspendSignal`
@@ -438,9 +437,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
     - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
     - `primitives/data-view/server-query.FieldColumnMap`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -474,7 +473,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Uses:
     - `apps/deploy/servers.serverDetailRoute`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `primitives/pane.defineRoute`
   - Exports (types):
@@ -496,6 +497,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DEFAULT_LOOPBACK_PORT`
     - `deleteDeployment`
     - `DEPLOY_LOG_CHANNEL`
+    - `DEPLOY_RUN_FILTERABLE`
+    - `DEPLOY_RUN_SEARCHABLE`
     - `deploymentDetailRoute`
     - `DeploymentSchema`
     - `deploymentsResource`

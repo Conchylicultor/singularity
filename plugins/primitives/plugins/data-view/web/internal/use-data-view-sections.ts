@@ -15,6 +15,7 @@ import { useGroupingRegistry } from "../grouping-slot";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useFlatRows } from "./use-flat-rows";
 import { foldSections, makeFoldKeep } from "./fold-sections";
+import { useRowFilter } from "./use-row-filter";
 
 /** Sentinel bucket key for rows whose group-by value is null/undefined. Holds a
  *  control char so it can never collide with a real stringified field value. */
@@ -320,6 +321,12 @@ export function useDataViewSections<TRow>(
   const aggregate = opts.aggregate;
   const { now, groupOrder, openFolds, selectedRowId } = opts;
   const fold = state.fold;
+  // The fold rule's `keep` tree, lowered once per (tree, clock) like the filter.
+  const matchesKeep = useRowFilter(
+    fold?.keep ?? null,
+    fields,
+    resolveOperatorSet,
+  );
   const resolveGrouping = useGroupingRegistry().resolve;
   // Depend on the rule's two PRIMITIVE fields, never on the rule object:
   // `stateFor` mints a fresh `ViewState` (and thus a fresh `groupBy`) on every
@@ -354,7 +361,7 @@ export function useDataViewSections<TRow>(
     if (fold) {
       const key = rowKey ?? ((_row: TRow, i: number) => String(i));
       sections = foldSections(sections, {
-        isKept: makeFoldKeep(fold, fields, resolveOperatorSet, {
+        isKept: makeFoldKeep(matchesKeep, {
           selectedRowId,
           // A member carries no index of its own; keys that depend on the index
           // cannot identify it, and such a surface has no stable selection anyway.
@@ -377,7 +384,7 @@ export function useDataViewSections<TRow>(
     fold,
     openFolds,
     selectedRowId,
-    resolveOperatorSet,
+    matchesKeep,
   ]);
 }
 

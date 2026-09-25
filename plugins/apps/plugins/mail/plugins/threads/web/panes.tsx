@@ -18,7 +18,12 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { mailThreadsRevisionResource, queryThreads } from "../core";
+import {
+  MAIL_THREAD_FILTERABLE,
+  MAIL_THREAD_SEARCHABLE,
+  mailThreadsRevisionResource,
+  queryThreads,
+} from "../core";
 import { useMailThreadFieldDefs } from "./internal/fields";
 import { ThreadRow } from "./components/thread-row";
 
@@ -81,13 +86,15 @@ function MailThreadsPaneView(): ReactElement {
         }}
         dataSource={{
           changeTick,
+          filterable: MAIL_THREAD_FILTERABLE,
+          searchable: MAIL_THREAD_SEARCHABLE,
           // Only the declared body fields — `args` also carries `dataViewId`,
           // which this endpoint has no use for.
-          fetchPage: ({ sort, filter, query, cursor, limit }) =>
+          fetchPage: ({ sort, filter, cursor, limit }) =>
             fetchEndpoint(
               queryThreads,
               {},
-              { body: { sort, filter, query, cursor, limit } },
+              { body: { sort, filter, cursor, limit } },
             ),
         }}
         onRowActivate={(t) =>

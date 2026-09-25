@@ -6,7 +6,8 @@ import { useFieldIdentities } from "./internal/use-field-identities";
 
 /**
  * Per-type filter slot. A plain slot carrying one `FilterOperatorSet` per field
- * type: the set of named operators (predicate + optional value editor) the
+ * type: the set of named operators (a `lower` into the filter language + an
+ * optional value editor) over one filter-language `domain`, which the
  * filter builder offers for that type.
  */
 const Filter = defineSlot<FilterOperatorSet>({

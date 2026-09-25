@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { FilterGroupSchema } from "@plugins/primitives/plugins/data-view/core";
+import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/core";
+import {
+  liveInstant,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { DeploymentSchema } from "./schemas";
 import { DeployRunRecordSchema, DeployRunSchema } from "./runs";
 
@@ -17,7 +21,10 @@ const HOSTNAME_RE =
 const HostnameSchema = z
   .string()
   .max(253)
-  .regex(HOSTNAME_RE, "must be a lowercase DNS hostname (optionally `*.`-prefixed)");
+  .regex(
+    HOSTNAME_RE,
+    "must be a lowercase DNS hostname (optionally `*.`-prefixed)",
+  );
 
 const HostnamesSchema = z.array(HostnameSchema);
 
@@ -165,17 +172,44 @@ const SortRuleSchema = z.object({
 });
 
 /**
+ * What the run-history server can filter on, by filter-language domain — the
+ * ONE declaration both runtimes read: the web `dataSource.filterable` (so the
+ * Filter control offers exactly these) and the server column map
+ * (`bindColumns`) the handler strict-decodes against.
+ */
+export const DEPLOY_RUN_FILTERABLE = {
+  verb: liveText(),
+  status: liveText(),
+  releaseRunId: liveText(),
+  commitSha: liveText(),
+  message: liveText(),
+  startedAt: liveInstant(),
+  finishedAt: liveInstant(),
+};
+
+/**
+ * The text columns the search box matches: "which deploy shipped a1b2c3d" and
+ * "which one printed that error" are the two things anyone reaches for.
+ */
+export const DEPLOY_RUN_SEARCHABLE = [
+  "releaseRunId",
+  "commitSha",
+  "message",
+] as const;
+
+/**
  * The history query body. The deployment is the route param, not a field here —
  * a ledger window is always *of* one deployment, so there is no way to ask for
  * an unscoped one.
  */
 export const QueryDeployRunsBodySchema = z.object({
   sort: z.array(SortRuleSchema),
-  filter: FilterGroupSchema.nullable(),
-  query: z.string(),
+  // The DataView host's lowered, canonical filter (search folded in); decoded
+  // strictly against DEPLOY_RUN_FILTERABLE (+ custom columns).
+  filter: ServerFilterWireSchema.optional(),
   cursor: z.string().nullable(),
   limit: z.number().int().positive().max(200),
-  // The DataView surface id (its `storageKey`), injected by `useServerDataSource`
+  // The DataView surface id (its `storageKey`), injected by the DataView host
   // and handed to `augmentServerQuery` so per-surface augmentations (custom
   // columns) can bind their values into the query.
   dataViewId: z.string(),
@@ -192,7 +226,7 @@ export const QueryDeployRunsResponseSchema = z.object({
  * This deployment's run ledger, newest first — *what has been put on this box,
  * and what happened*, across backend restarts.
  *
- * POST so the structured `FilterGroup` tree rides in the body. Filter / sort /
+ * POST so the structured filter tree rides in the body. Filter / sort /
  * search compile to SQL server-side and pagination is keyset (cursor), never
  * OFFSET, so the full history is browsable by infinite scroll with no cap — the
  * `queryReleaseHistory` shape, for the same reason: a deploy ledger only grows.

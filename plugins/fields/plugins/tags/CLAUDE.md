@@ -56,8 +56,7 @@ server.
   - Imported by: `fields/tags/config`
 - Sub-plugins:
   - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
-  - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
-  - **`filter-sql`** — Tags field type: server filter-sql capability — operator→SQL fragments mirroring the data-view tags filter predicates.
+  - **`filter`** [test helpers] — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
   - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
   - **`storage`** — Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.
   - **`table`** — Tags (multi-value) field type: data-view table cell (read-only tag chips).

@@ -1,34 +1,33 @@
-import type { FieldColumnMap } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
+import { sql } from "drizzle-orm";
+import {
+  bindColumns,
+  type FieldColumnMap,
+} from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import { eventsTable } from "@plugins/apps/plugins/events/plugins/events-core/server";
+import { EVENT_LIST_FILTERABLE } from "../../core";
 
-// Binds each mapped EVENT_LIST_FIELDS id → its physical `events` column, with
-// the field-type token (resolving the operator→SQL builder) and `nullable` for
-// the null-aware keyset seek. Unmapped filter/sort fields are dropped fail-soft
-// by the compiler — never a 400.
+// Binds every EVENT_LIST_FILTERABLE column → its `events` column (domain copied
+// from the declaration; a declared column with no binding is a tsc error), with
+// `nullable` for the null-aware keyset seek. A filter naming anything else is
+// refused with a 400 — never dropped.
 //
 // `eventsTable` is a READ handle (the `events/no-raw-events-write` rule fails any
 // write on it outside the repo funnel); a query map is exactly its intended use.
 //
-// Two ids here have no web `FieldDef` in this plugin, on purpose:
-//
-//  - `sourceId` — the `source` dimension is a CONTRIBUTED field extension owned
-//    by the sources plugin (only it holds the live source rows the option list
-//    needs). Binding the physical column here means that contributed field
-//    filters and sorts server-side the moment it lands, with zero edits to this
-//    file and without this plugin naming any source type.
-//  - `tags` is deliberately ABSENT: there is no `fields/tags` filter-sql
-//    capability, so a binding would resolve no operator and every tag rule would
-//    be dropped silently. The field declares `sortable: false` and the search
-//    covers tags via a text cast instead.
-export const COLUMN_MAP: FieldColumnMap = {
-  title: { col: eventsTable.title, type: "text" },
-  startsAt: { col: eventsTable.startsAt, type: "date" },
-  category: { col: eventsTable.category, type: "enum" },
-  venue: { col: eventsTable.venue, type: "text", nullable: true },
-  city: { col: eventsTable.city, type: "text", nullable: true },
-  price: { col: eventsTable.price, type: "text", nullable: true },
-  recurring: { col: eventsTable.recurring, type: "bool" },
-  url: { col: eventsTable.url, type: "text", nullable: true },
-  disappearedAt: { col: eventsTable.disappearedAt, type: "date", nullable: true },
-  sourceId: { col: eventsTable.sourceId, type: "enum" },
-};
+// `tags` binds the jsonb string array itself (the `stringArray` domain's
+// containment ops); `tagsText` is the same array rendered as text, for search.
+export const COLUMN_MAP: FieldColumnMap = bindColumns(EVENT_LIST_FILTERABLE, {
+  title: { col: eventsTable.title },
+  description: { col: eventsTable.description, nullable: true },
+  startsAt: { col: eventsTable.startsAt },
+  category: { col: eventsTable.category },
+  venue: { col: eventsTable.venue, nullable: true },
+  city: { col: eventsTable.city, nullable: true },
+  price: { col: eventsTable.price, nullable: true },
+  recurring: { col: eventsTable.recurring },
+  tags: { col: eventsTable.tags },
+  tagsText: { col: sql`${eventsTable.tags}::text` },
+  url: { col: eventsTable.url, nullable: true },
+  disappearedAt: { col: eventsTable.disappearedAt, nullable: true },
+  sourceId: { col: eventsTable.sourceId },
+});

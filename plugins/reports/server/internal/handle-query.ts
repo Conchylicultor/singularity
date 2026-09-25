@@ -1,15 +1,14 @@
-import { ilike, or, and, type SQL } from "drizzle-orm";
+import { and, type SQL } from "drizzle-orm";
 import type { PgSelect } from "drizzle-orm/pg-core";
 import { getTableColumns } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
 import {
   augmentServerQuery,
+  bindColumns,
   compileWhere,
   type FieldColumnMap,
-  type OperatorSqlResolver,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import {
   buildSortKeys,
@@ -22,67 +21,47 @@ import {
   encodeCursor,
   sortSignature,
 } from "@plugins/primitives/plugins/keyset/core";
-import { queryReports, type Report } from "../../core";
+import { queryReports, REPORTS_FILTERABLE, type Report } from "../../core";
 import { _reports } from "./tables";
 
-// Binds each filterable/sortable fieldId of the Reports DataView
-// (plugins/debug/plugins/reports/web/components/reports-view.tsx) to its
-// physical `reports` column, with the field-type token (resolving the
-// operator→SQL builder). The keys MUST equal the web field ids — an unmapped
-// filter/sort field is dropped fail-soft by the compiler, never a 400, so a
-// mismatch silently stops that field from sorting or filtering.
-const COLUMN_MAP: FieldColumnMap = {
-  kind: { col: _reports.kind, type: "enum" },
-  source: { col: _reports.source, type: "enum" },
-  noise: { col: _reports.noise, type: "bool" },
-  rateLimited: { col: _reports.rateLimited, type: "bool" },
-  count: { col: _reports.count, type: "int" },
-  lastSeenAt: { col: _reports.lastSeenAt, type: "date" },
-};
+// Binds every REPORTS_FILTERABLE column → its `reports` column (domain copied
+// from the declaration; a declared column with no binding is a tsc error). The
+// Reports DataView (plugins/debug/plugins/reports/web/components/reports-view.tsx)
+// offers exactly the declared fields its schema has, and a filter naming
+// anything else is refused with a 400 — never dropped.
+const COLUMN_MAP: FieldColumnMap = bindColumns(REPORTS_FILTERABLE, {
+  kind: { col: _reports.kind },
+  source: { col: _reports.source },
+  noise: { col: _reports.noise },
+  rateLimited: { col: _reports.rateLimited },
+  count: { col: _reports.count },
+  lastSeenAt: { col: _reports.lastSeenAt },
+  message: { col: _reports.message },
+  fingerprint: { col: _reports.fingerprint },
+});
 
 // Default order when the client sends no sort: most recently seen first — the
 // `reports_last_seen_idx` (last_seen_at, id) index covers it.
 const DEFAULT_SORT: SortRule[] = [{ fieldId: "lastSeenAt", direction: "desc" }];
 
-// Escape LIKE wildcards so a user search term is matched literally (backslash is
-// Postgres ILIKE's default escape char).
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-// Quick search: ILIKE over message / kind / fingerprint. Blank query → undefined.
-function searchWhere(query: string): SQL | undefined {
-  const trimmed = query.trim();
-  if (!trimmed) return undefined;
-  const needle = `%${escapeLike(trimmed)}%`;
-  return or(
-    ilike(_reports.message, needle),
-    ilike(_reports.kind, needle),
-    ilike(_reports.fingerprint, needle),
-  );
-}
-
-// Field-type-agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;
-
 export const handleQueryReports = implement(queryReports, async ({ body }) => {
-  const { filter, query, cursor, limit } = body;
+  const { cursor, limit } = body;
   // One effective sort everywhere (keys, signature, augmentors) so cursors stay
   // consistent across pages.
   const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
 
-  // Generic server-side augmentors (custom columns, …): aliased columns into
-  // `columnMap`, a LEFT JOIN thunk, and a projection `keyValuesOf` reads to mint
-  // the cursor. `rowKeyCol` is the column whose value == the web `rowKey(row)`.
+  // Strict filter decode (400 on anything undeclared) + the generic server-side
+  // augmentors (custom columns, …): referenced aliased columns into `columnMap`,
+  // a LEFT JOIN thunk, and a projection `keyValuesOf` reads to mint the cursor.
+  // `rowKeyCol` is the column whose value == the web `rowKey(row)`.
   const aug = await augmentServerQuery({
     dataViewId: body.dataViewId,
     rowKeyCol: _reports.id,
     sort,
-    filter,
+    filter: body.filter,
+    columnMap: COLUMN_MAP,
   });
-  const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+  const columnMap = aug.columnMap;
 
   // PK `id` as a total-order tiebreaker so the keyset seek is strict.
   const keys = buildSortKeys(sort, columnMap, {
@@ -101,11 +80,7 @@ export const handleQueryReports = implement(queryReports, async ({ body }) => {
     seek = seekPredicate(keys, payload.v);
   }
 
-  const where = and(
-    searchWhere(query),
-    compileWhere(filter, columnMap, resolver),
-    seek,
-  );
+  const where = and(compileWhere(aug.filter, columnMap), seek);
 
   let q: PgSelect = db
     .select({ ...getTableColumns(_reports), ...aug.projection })

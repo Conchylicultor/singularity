@@ -6,5 +6,7 @@ import { cast } from "./internal/text-cast";
 export default {
   description:
     "Date field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::timestamptz for server-delegated DataView filter/sort.",
-  contributions: [Fields.ValueTextCast({ type: dateFieldType, cast })],
+  contributions: [
+    Fields.ValueTextCast({ type: dateFieldType, cast, domain: "instant" }),
+  ],
 } satisfies ServerPluginDefinition;

@@ -16,19 +16,25 @@ import {
   _mailThreads,
   resolveMailAccountId,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import { queryThreads } from "../../core";
+import { decodeFilterBody } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
+import { MAIL_THREAD_FILTERABLE, queryThreads } from "../../core";
 import { COLUMN_MAP } from "./column-map";
 import { buildThreadsWhere } from "./where";
 
 export const handleQuery = implement(queryThreads, async ({ body }) => {
-  const { sort, filter, query, cursor, limit } = body;
+  const { sort, cursor, limit } = body;
+  // Strict: a column the source does not declare is a 400, never dropped.
+  const filter = decodeFilterBody(body.filter, MAIL_THREAD_FILTERABLE);
 
   const accountId = await resolveMailAccountId();
   if (!accountId) return { items: [], nextCursor: null, hasMore: false };
 
   // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
   // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
-  const keys = buildSortKeys(sort, COLUMN_MAP, { col: _mailThreads.id, fieldId: "id" });
+  const keys = buildSortKeys(sort, COLUMN_MAP, {
+    col: _mailThreads.id,
+    fieldId: "id",
+  });
 
   let seek: SQL | undefined;
   if (cursor) {
@@ -42,8 +48,8 @@ export const handleQuery = implement(queryThreads, async ({ body }) => {
   }
 
   // `filter` is the active tab's whole tree — the mailbox scope is one of its
-  // ordinary rules, not a separate server-derived conjunct.
-  const where = buildThreadsWhere({ accountId, filter, query, seek });
+  // ordinary clauses, not a separate server-derived conjunct.
+  const where = buildThreadsWhere({ accountId, filter, seek });
 
   const rows = await db
     .select()

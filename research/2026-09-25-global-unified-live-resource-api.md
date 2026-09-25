@@ -118,6 +118,12 @@ export const eventSourcesServed = serveCollection(eventSources, { from: eventSou
 
 ## Filter language (`LiveWhere`)
 
+> **Superseded** by `research/2026-09-25-global-unified-filter-language.md`: the
+> filter is now the shared filter language (`network/live/plugins/filter`) —
+> `filterable` declares domains, `where` may also be an and/or tree, negative ops
+> keep NULL, `isNull` became `isEmpty` / `isNotEmpty`, and the wire `where` is
+> `encodeFilter` output. This section is kept as the original design record.
+
 ```ts
 where: { enabled: true, status: { in: ["running", "error"] }, createdAt: { gte: iso } }
 ```

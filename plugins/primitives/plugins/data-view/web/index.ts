@@ -89,7 +89,10 @@ export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
 export { useServerDataSource } from "./internal/use-server-data-source";
 export type { ServerDataSourceResult } from "./internal/use-server-data-source";
-export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
+export { applyFilter } from "./internal/evaluate-filter";
+export type { LoweredFilter } from "./internal/evaluate-filter";
+export { useRowFilter } from "./internal/use-row-filter";
+export { useFilterClock } from "./internal/use-filter-clock";
 export { isFilterGroup } from "./internal/filter-shape";
 export { useFilterController } from "./internal/use-filter-controller";
 export type { FilterController } from "./internal/use-filter-controller";
@@ -139,6 +142,7 @@ export type {
   CellEditorProps,
   FilterValueInputProps,
   FilterOperator,
+  FilterLowerContext,
   FilterOperatorSet,
   FilterConjunction,
   FilterRule,

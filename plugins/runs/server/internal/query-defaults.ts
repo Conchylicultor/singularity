@@ -1,6 +1,4 @@
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
-import type { OperatorSqlResolver } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 
 /**
  * What both reads of the merged run space compile with.
@@ -18,8 +16,3 @@ import type { OperatorSqlResolver } from "@plugins/primitives/plugins/data-view/
 export const DEFAULT_SORT: SortRule[] = [
   { fieldId: "startedAt", direction: "desc" },
 ];
-
-// Field-type agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-export const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;

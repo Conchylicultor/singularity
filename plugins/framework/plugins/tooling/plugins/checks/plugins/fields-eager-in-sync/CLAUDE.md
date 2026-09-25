@@ -2,10 +2,10 @@
 
 Fails if
 `plugins/fields/plugins/server-capabilities-loader/server/internal/eager.generated.ts`
-drifts from the current set of fields storage/filter-sql `server` capability
-barrels (`fields/plugins/<type>/plugins/{storage,filter-sql}/server`). That
-manifest's static side-effect imports both self-register each type's Drizzle
-column / filter-SQL builder into the `fields/server-capabilities` eager index at
+drifts from the current set of fields storage `server` capability barrels
+(`fields/plugins/<type>/plugins/storage/server`). That manifest's static
+side-effect imports both self-register each type's Drizzle column builder into
+the `fields/server-capabilities` eager index at
 module-eval AND pull the barrels into the composition closure — so a stale
 manifest silently drops a field type's storage from release bundles. Fix by
 running `./singularity build` and committing the regenerated file.

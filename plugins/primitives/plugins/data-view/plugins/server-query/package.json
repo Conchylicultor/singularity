@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-data-view-server-query",
-  "description": "Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry. Field-type-agnostic via an injected operator resolver. Composes the field-agnostic keyset seek + cursor codec from primitives/keyset.",
+  "description": "Server half of a server-delegated DataView over the one filter language: bind a source's declared filterable columns, strictly decode the wire filter, compile it with filterSql, plus the DataViewServer.QueryAugmentor registry. Composes the field-agnostic keyset seek + cursor codec from primitives/keyset.",
   "private": true,
   "version": "0.0.1"
 }

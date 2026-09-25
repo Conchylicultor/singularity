@@ -2,18 +2,21 @@ import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { compileUnionPage } from "@plugins/primitives/plugins/data-view/plugins/union-query/server";
-import { UnionCursorMismatchError } from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
+import {
+  unionFilterable,
+  UnionCursorMismatchError,
+} from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
+import { decodeFilterBody } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import { encodeCursor } from "@plugins/primitives/plugins/keyset/core";
 import { keyValuesOf } from "@plugins/primitives/plugins/keyset/server";
 import {
   queryRuns,
   RUN_BASE_COLUMNS,
-  RUN_SEARCH_COLUMNS,
   UnionRunSchema,
   type UnionRun,
 } from "../../core";
 import { armFieldSpecs, runArms } from "./arms";
-import { DEFAULT_SORT, resolver } from "./query-defaults";
+import { DEFAULT_SORT } from "./query-defaults";
 import { getRunKinds } from "./registry";
 
 /**
@@ -33,19 +36,22 @@ export const handleRunsQuery = implement(queryRuns, async ({ body }) => {
   // Use the same effective sort everywhere (keys, signature, seek) so cursors
   // stay consistent across pages.
   const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
+  const extra = armFieldSpecs(kinds);
+  // Strict: a column no registered arm (nor the base) declares is a 400.
+  const filter = decodeFilterBody(
+    body.filter,
+    unionFilterable(RUN_BASE_COLUMNS, extra),
+  );
 
   let compiled;
   try {
     compiled = compileUnionPage({
       arms: runArms(kinds),
       base: RUN_BASE_COLUMNS,
-      extra: armFieldSpecs(kinds),
+      extra,
       tiebreaker: { fieldId: "id" },
-      resolveOperator: resolver,
       sort,
-      filter: body.filter,
-      query: body.query,
-      searchFields: RUN_SEARCH_COLUMNS,
+      filter,
       cursor: body.cursor,
       // One extra row is how `hasMore` is known without a second count query.
       limit: body.limit + 1,

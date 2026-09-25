@@ -16,6 +16,7 @@ export { isHostedToolbar } from "./internal/toolbar-arrangement";
 
 export {
   FilterGroupSchema,
+  ServerFilterWireSchema,
   FilterNodeSchema,
   FilterRuleSchema,
 } from "./internal/filter-schema";
@@ -70,6 +71,7 @@ export type {
   CellEditorProps,
   FilterValueInputProps,
   FilterOperator,
+  FilterLowerContext,
   FilterOperatorSet,
   FilterConjunction,
   FilterRule,

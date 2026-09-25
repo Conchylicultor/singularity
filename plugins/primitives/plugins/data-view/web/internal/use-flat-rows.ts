@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { FieldDef, FilterOperatorSet, ViewState } from "../../core";
-import { applyFilter } from "./evaluate-filter";
+import { useRowFilter } from "./use-row-filter";
 import { makeSortComparator } from "./sort-rows";
 
 function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
@@ -17,6 +17,9 @@ export function useFlatRows<TRow>(
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
   searchAccessor?: (row: TRow) => string,
 ): readonly TRow[] {
+  // The filter tree lowered into the filter language once per (tree, clock),
+  // never per row; null ⇒ nothing constrains.
+  const matchesFilter = useRowFilter(state.filter, fields, resolveOperatorSet);
   return useMemo(() => {
     let result = [...rows];
 
@@ -36,13 +39,13 @@ export function useFlatRows<TRow>(
       result = result.filter((row) => accessor(row).toLowerCase().includes(lc));
     }
 
-    // --- Filter (recursive AND/OR tree via the data-view.filter operator sets) ---
-    result = [...applyFilter(result, state.filter, fields, resolveOperatorSet)];
+    // --- Filter (the tree lowered through the data-view.filter operator sets) ---
+    if (matchesFilter) result = result.filter(matchesFilter);
 
     // --- Sort (multi-level, stable; null when no rule resolves) ---
     const comparator = makeSortComparator(state.sort, fields);
     if (comparator) result.sort(comparator);
 
     return result;
-  }, [rows, fields, state, resolveOperatorSet, searchAccessor]);
+  }, [rows, fields, state, matchesFilter, searchAccessor]);
 }

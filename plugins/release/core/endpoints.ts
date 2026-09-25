@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { FilterGroupSchema } from "@plugins/primitives/plugins/data-view/core";
+import { ServerFilterWireSchema } from "@plugins/primitives/plugins/data-view/core";
+import {
+  liveInstant,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { PlatformTagSchema } from "./platforms";
 import { ReleaseCandidateResponseSchema } from "./candidate";
 import { ReleaseRunSchema } from "./resources";
@@ -128,7 +132,9 @@ export const releaseLogsEndpoint = defineEndpoint({
 export const ReleaseLatestRunResponseSchema = z.object({
   run: ReleaseRunSchema.nullable(),
 });
-export type ReleaseLatestRunResponse = z.infer<typeof ReleaseLatestRunResponseSchema>;
+export type ReleaseLatestRunResponse = z.infer<
+  typeof ReleaseLatestRunResponseSchema
+>;
 
 /**
  * The newest run of `composition` in this namespace, **whatever its state** —
@@ -156,21 +162,47 @@ export const releaseLatestRunEndpoint = defineEndpoint({
   dedupe: true,
 });
 
+/**
+ * What the release-history server can filter on, by filter-language domain —
+ * the ONE declaration both runtimes read: the web `dataSource.filterable` (so
+ * the Filter control offers exactly these) and the server column map
+ * (`bindColumns`) the handler strict-decodes against. `composition` has no
+ * field (the window is already scoped to one): it is searched only.
+ */
+export const RELEASE_HISTORY_FILTERABLE = {
+  composition: liveText(),
+  target: liveText(),
+  status: liveText(),
+  platform: liveText(),
+  startedAt: liveInstant(),
+  finishedAt: liveInstant(),
+};
+
+/** The text columns the search box matches (any of, case-insensitively). */
+export const RELEASE_HISTORY_SEARCHABLE = [
+  "composition",
+  "target",
+  "platform",
+] as const;
+
 export const QueryReleaseHistoryBodySchema = z.object({
   // The composition this history window is scoped to (the one extra field over
   // the all-conversations query body — a composition's runs, not the worktree's).
   composition: z.string(),
   sort: z.array(SortRuleSchema),
-  filter: FilterGroupSchema.nullable(),
-  query: z.string(),
+  // The DataView host's lowered, canonical filter (search folded in); decoded
+  // strictly against RELEASE_HISTORY_FILTERABLE (+ custom columns).
+  filter: ServerFilterWireSchema.optional(),
   cursor: z.string().nullable(),
   limit: z.number().int().positive().max(200),
-  // The DataView surface id (its `storageKey`), injected by `useServerDataSource`.
+  // The DataView surface id (its `storageKey`), injected by the DataView host.
   // The handler passes it to `augmentServerQuery` so per-surface augmentations
   // (custom columns) can bind their values into the query.
   dataViewId: z.string(),
 });
-export type QueryReleaseHistoryBody = z.infer<typeof QueryReleaseHistoryBodySchema>;
+export type QueryReleaseHistoryBody = z.infer<
+  typeof QueryReleaseHistoryBodySchema
+>;
 
 export const QueryReleaseHistoryResponseSchema = z.object({
   items: z.array(ReleaseRunSchema),
@@ -178,7 +210,7 @@ export const QueryReleaseHistoryResponseSchema = z.object({
   hasMore: z.boolean(),
 });
 
-// POST so the structured FilterGroup tree rides in the body. Filter/sort/search
+// POST so the structured filter tree rides in the body. Filter/sort/search
 // compile to SQL server-side; pagination is keyset (cursor), not OFFSET. Scoped
 // to one composition so a composition's full run history is browsable, no cap.
 export const queryReleaseHistory = defineEndpoint({

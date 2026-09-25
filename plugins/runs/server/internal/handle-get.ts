@@ -2,14 +2,9 @@ import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { compileUnionPage } from "@plugins/primitives/plugins/data-view/plugins/union-query/server";
-import {
-  getRun,
-  RUN_BASE_COLUMNS,
-  RUN_SEARCH_COLUMNS,
-  UnionRunSchema,
-} from "../../core";
+import { getRun, RUN_BASE_COLUMNS, UnionRunSchema } from "../../core";
 import { armFieldSpecs, runArmForRow } from "./arms";
-import { DEFAULT_SORT, resolver } from "./query-defaults";
+import { DEFAULT_SORT } from "./query-defaults";
 import { getRunKinds } from "./registry";
 
 /**
@@ -40,11 +35,8 @@ export const handleRunGet = implement(getRun, async ({ params }) => {
     base: RUN_BASE_COLUMNS,
     extra: armFieldSpecs(kinds),
     tiebreaker: { fieldId: "id" },
-    resolveOperator: resolver,
     sort: DEFAULT_SORT,
-    filter: null,
-    query: "",
-    searchFields: RUN_SEARCH_COLUMNS,
+    filter: undefined,
     cursor: null,
     limit: 1,
   });

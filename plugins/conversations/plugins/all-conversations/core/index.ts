@@ -1,5 +1,12 @@
-export { CONVERSATION_FIELDS } from "./internal/fields";
-export type { ConversationFieldSpec, ConversationFieldType } from "./internal/fields";
+export {
+  CONVERSATION_FIELDS,
+  CONVERSATION_FILTERABLE,
+  CONVERSATION_SEARCHABLE,
+} from "./internal/fields";
+export type {
+  ConversationFieldSpec,
+  ConversationFieldType,
+} from "./internal/fields";
 export {
   queryConversations,
   SortRuleSchema,

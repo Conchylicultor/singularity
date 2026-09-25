@@ -1,15 +1,13 @@
 import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/web";
 import { BoolValueInput } from "./components/bool-filter";
-import { is, isNot } from "./internal/bool-filter-logic";
+import { boolLower } from "./internal/bool-lower";
 
 // A bool rule constrains rows even with no stored operand: an absent value reads
-// as "Unchecked" (`asBool(undefined) === false`), a real constraint. So these
-// operators are always complete — which keeps the chip's rule count in step with
-// what actually filters (an absent value would otherwise count as 0 yet filter).
-const alwaysComplete = () => true;
-
+// as "Unchecked", a real constraint. So `lower` never answers `undefined` here —
+// which keeps the chip's rule count in step with what actually filters.
 export const boolOperatorSet: FilterOperatorSet = {
   match: "bool",
+  domain: "boolean",
   defaultOperator: "is",
   operators: [
     {
@@ -17,16 +15,14 @@ export const boolOperatorSet: FilterOperatorSet = {
       label: "Is",
       hasValue: true,
       ValueInput: BoolValueInput,
-      predicate: is,
-      isComplete: alwaysComplete,
+      lower: boolLower.is,
     },
     {
       id: "is-not",
       label: "Is not",
       hasValue: true,
       ValueInput: BoolValueInput,
-      predicate: isNot,
-      isComplete: alwaysComplete,
+      lower: boolLower["is-not"],
     },
   ],
 };

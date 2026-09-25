@@ -1,12 +1,19 @@
+import type {
+  Filterable,
+  FilterColumn,
+  FilterDomainId,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+
 /**
  * One projected column of a union row space.
  *
  * Two type systems meet on every column and they are NOT the same thing, so
  * both are named:
  *
- * - `type` is the **field-type id** (`"text"`, `"enum"`, `"date"`, `"number"`,
- *   `"bool"`, …). It is what resolves a filter operator to a SQL builder, and it
- *   is the id the web `FieldDef.type` carries.
+ * - `domain` is the **filter-language domain** the column is filtered (and
+ *   sorted) in (`text`, `number`, `boolean`, `instant`, `stringArray`), or
+ *   `null` for a column that is only ever READ — a jsonb blob the row renders —
+ *   which is then neither filterable nor sortable.
  * - `sqlType` is the **Postgres type**. It exists because a `UNION ALL` type-checks
  *   column by column: an arm that does not own a column projects `NULL`, and a
  *   bare `NULL` is `unknown` to Postgres. `NULL::text` is not.
@@ -17,8 +24,8 @@
  * whole union or a page boundary drops rows.
  */
 export interface UnionColumnSpec {
-  /** Field-type id, for operator resolution. */
-  type: string;
+  /** Filter-language domain the column is filtered in; `null` = read-only (projected, never filtered or sorted). */
+  domain: FilterDomainId | null;
   /** Postgres type an arm that does not own this column casts its NULL to. */
   sqlType: string;
   /** May this column be NULL even on an arm that owns it? Default `false`. */
@@ -27,6 +34,36 @@ export interface UnionColumnSpec {
 
 /** Projected column id → its spec. Iteration order IS the projection order. */
 export type UnionColumnSpecs = Record<string, UnionColumnSpec>;
+
+/** The discriminator column the compiler projects from each arm's `kind`. */
+export interface UnionDiscriminator {
+  fieldId: string;
+  domain: FilterDomainId;
+}
+
+export const DEFAULT_UNION_DISCRIMINATOR: UnionDiscriminator = {
+  fieldId: "kind",
+  domain: "text",
+};
+
+/**
+ * What a filter over the union may name: every base and arm column with a
+ * domain, plus the discriminator, each in its domain. The ONE declaration both runtimes read — the
+ * web `ServerDataSourceSpec.filterable` and the handler's strict decode.
+ */
+export function unionFilterable(
+  base: UnionColumnSpecs,
+  extra: UnionColumnSpecs,
+  discriminator: UnionDiscriminator = DEFAULT_UNION_DISCRIMINATOR,
+): Filterable {
+  const out: Record<string, FilterColumn> = {
+    [discriminator.fieldId]: { domain: discriminator.domain },
+  };
+  for (const [id, spec] of Object.entries({ ...base, ...extra })) {
+    if (spec.domain !== null) out[id] = { domain: spec.domain };
+  }
+  return out;
+}
 
 /**
  * A cursor minted under a different sort was replayed against this request's

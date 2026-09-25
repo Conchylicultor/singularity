@@ -9,8 +9,16 @@ export type {
 export { UnionRunSchema, runRowKey } from "./internal/wire";
 export type { UnionRun } from "./internal/wire";
 
-export { defineRunArmFields } from "./internal/arm-fields";
-export type { RunColumnSpec, RunArmFieldSpecs } from "./internal/arm-fields";
+export {
+  defineRunArmFields,
+  RUN_COLUMN_DOMAINS,
+  runArmUnionSpecs,
+} from "./internal/arm-fields";
+export type {
+  RunColumnSpec,
+  RunColumnType,
+  RunArmFieldSpecs,
+} from "./internal/arm-fields";
 
 export {
   queryRuns,

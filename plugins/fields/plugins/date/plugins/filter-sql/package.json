@@ -1,9 +1,0 @@
-{
-  "name": "@singularity/plugin-fields-date-filter-sql",
-  "version": "0.0.1",
-  "private": true,
-  "description": "Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.",
-  "singularity": {
-    "collapsed": true
-  }
-}

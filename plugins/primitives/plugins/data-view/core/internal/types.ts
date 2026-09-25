@@ -1,6 +1,11 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { type ComponentType, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  Filter,
+  Filterable,
+  FilterDomainId,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
@@ -62,10 +67,11 @@ export type ColumnConfigDerive = (
 ) => Partial<FieldDef<unknown>>;
 
 /**
- * The value a filter predicate receives: a scalar `FieldValue` for normal
- * fields, or a `readonly string[]` for multi-value `tags`-style fields (which
- * project via `FieldDef.values`). Scalar predicates accept this union and narrow
- * internally; only the `tags` predicate inspects the array branch.
+ * A row's projected filter value: a scalar `FieldValue` for normal fields, or a
+ * `readonly string[]` for multi-value `tags`-style fields (which project via
+ * `FieldDef.values`). The in-memory evaluator coerces it to the operator set's
+ * `domain` (one DataView-side adapter) before the filter language — which is
+ * strict about its row values — sees it.
  */
 export type FilterFieldValue = FieldValue | readonly string[];
 
@@ -272,8 +278,8 @@ export interface FieldDef<TRow> {
   /** Comparable projection used for sort/search/filter. */
   value?: (row: TRow) => FieldValue;
   /**
-   * Multi-value projection for tags-style fields. Folded into search and passed
-   * to the array-aware filter predicate. Mutually exclusive with `value`.
+   * Multi-value projection for tags-style fields. Folded into search and read by
+   * the filter as a `stringArray` row value. Mutually exclusive with `value`.
    */
   values?: (row: TRow) => string[];
   /**
@@ -795,11 +801,25 @@ export interface FilterValueInputProps {
 }
 
 /**
- * One operator within a field type's operator set. The pure `predicate` is
- * applied in the row pipeline; `ValueInput` is the (optional) operand editor —
- * present iff `hasValue` is true. Living on the operator (not the type) lets
- * `date · is between` (two pickers) and `date · is` (one picker) differ, and
- * value-less operators (`is empty`) render no input.
+ * What `FilterOperator.lower` is handed: the column the clause reads (the
+ * field's id) and the clock. `now` is epoch ms; READ IT ONLY WHEN THE OPERAND
+ * NEEDS IT (a relative date anchor) — the host records the read and re-renders
+ * at the next local midnight only for a filter that made one. Whether `lower`
+ * answers `undefined` must never depend on `now`.
+ */
+export interface FilterLowerContext {
+  readonly column: string;
+  readonly now: number;
+}
+
+/**
+ * One operator within a field type's operator set. `lower` translates a rule
+ * into the one filter language (`network/live/plugins/filter`) — the in-memory
+ * evaluator and a server source run the SAME lowered `Filter`. `ValueInput` is
+ * the (optional) operand editor — present iff `hasValue` is true. Living on the
+ * operator (not the type) lets `date · is between` (two pickers) and
+ * `date · is` (one picker) differ, and value-less operators (`is empty`) render
+ * no input.
  */
 export interface FilterOperator {
   /** Unique within the set, e.g. "contains", "is-empty". */
@@ -824,19 +844,17 @@ export interface FilterOperator {
   /** Present iff `hasValue`. The operand editor for a single rule. */
   ValueInput?: ComponentType<FilterValueInputProps>;
   /**
-   * Pure predicate. `operand` is the rule's stored value (JSON-safe);
-   * `fieldValue` is the row's projected value (FieldValue | readonly string[]).
+   * The rule as a filter-language `Filter` over `ctx.column` (whose domain is
+   * the set's `domain`), or `undefined` when the rule is INCOMPLETE — it
+   * constrains nothing (an empty operand, an open range with no bound).
+   *
+   * One answer serves both the evaluator (an incomplete rule keeps every row)
+   * and the chip's rule counter, so the two cannot disagree. `operand` is the
+   * rule's stored value (JSON-safe, possibly stale or malformed — read it
+   * defensively). A negative operator lowers to a negative op, which is the
+   * exact complement of its positive — a row with no value matches it.
    */
-  predicate: (operand: unknown, fieldValue: FilterFieldValue) => boolean;
-  /**
-   * Whether a rule with this `operand` is *complete* — i.e. actually constrains
-   * rows. Governs BOTH the chip's rule count and the evaluator's no-op gate, so
-   * the two can never disagree. Default: a value-taking operator (`hasValue`)
-   * needs a present operand; a value-less one is always complete. Override when
-   * an absent operand still means something — e.g. `bool` reads it as
-   * "Unchecked", a real constraint, so it stays complete even for `undefined`.
-   */
-  isComplete?: (operand: unknown) => boolean;
+  lower: (operand: unknown, ctx: FilterLowerContext) => Filter | undefined;
   /**
    * How this operand reads in the closed Filter control's summary
    * ("Status is none of 2"), or `undefined` to fall back to the generic
@@ -844,12 +862,12 @@ export interface FilterOperator {
    * array → that option's label, a longer one → its count, anything else →
    * omitted).
    *
-   * It lives on the OPERATOR beside `isComplete` for the same reason that one
-   * does: the operand's shape is the operator's own. Only `date · is between`
-   * knows its operand is a pair of instants; only `bool · is` knows an absent
-   * operand means "Unchecked". No operator implements it today — the generic
-   * fallback covers every current type — and each one that adopts it improves
-   * its own summary with no edit to the summarizer.
+   * It lives on the OPERATOR beside `lower` for the same reason that one does:
+   * the operand's shape is the operator's own. Only `date · is between` knows
+   * its operand is a pair of instants; only `bool · is` knows an absent operand
+   * means "Unchecked". No operator implements it today — the generic fallback
+   * covers every current type — and each one that adopts it improves its own
+   * summary with no edit to the summarizer.
    */
   summarize?: (
     operand: unknown,
@@ -864,6 +882,12 @@ export interface FilterOperator {
 export interface FilterOperatorSet {
   /** Field type id, e.g. "text". */
   match: string;
+  /**
+   * The filter-language domain every operator lowers over: the field's column
+   * is declared with it, and the in-memory evaluator coerces the row's
+   * projected value to it.
+   */
+  domain: FilterDomainId;
   operators: FilterOperator[];
   /** Op id used when a rule is first created (default: operators[0]). */
   defaultOperator?: string;
@@ -908,21 +932,45 @@ export interface ServerPage<TRow> {
  * DataView stays 100% in-memory over `rows` (the default for every consumer).
  *
  * `fetchPage` is a factory (not pre-resolved rows): `DataViewInner` invokes it
- * with the live `activeState` (sort/filter/query) it already owns plus the
- * keyset `cursor` + `limit`, so `ViewState` stays the single source of truth and
- * the consumer never touches it. `dataViewId` is the surface's `storageKey`,
- * injected by the host so the server can key per-surface augmentations (e.g.
- * custom columns) off it — the consumer's closure carries it with no extra work.
+ * with the live `activeState` it already owns plus the keyset `cursor` +
+ * `limit`, so `ViewState` stays the single source of truth and the consumer
+ * never touches it. `dataViewId` is the surface's `storageKey`, injected by the
+ * host so the server can key per-surface augmentations (e.g. custom columns)
+ * off it — the consumer's closure carries it with no extra work.
+ *
+ * **Nothing silently falls back to the client.** The source DECLARES what its
+ * server can filter (`filterable`, column → filter-language domain) and search
+ * (`searchable`, text-domain columns), once, in the owning plugin's `core/` —
+ * the same object its server binds (`server-query`'s `bindColumns`) and decodes
+ * against. The host then:
+ *
+ * - offers in the Filter control only fields that are declared, and only when
+ *   the field's operator set lowers over the DECLARED domain (a mismatch is a
+ *   declaration bug and throws); fields contributed through the global
+ *   `DataViewSlots.FieldExtension` slot (custom columns) are served by their
+ *   server twin (`DataViewServer.QueryAugmentor`) and are offered too;
+ * - lowers the view's `FilterGroup` (relative dates resolved against the local
+ *   clock) AND the search box — `or(contains(col, q) …)` over `searchable` —
+ *   into ONE canonical `Filter`, the `filter` argument below (`undefined` = no
+ *   filter). A tree over the language's bounds (depth, clause count, list
+ *   length) never reaches `fetchPage`: the surface shows the error instead.
+ *
+ * The server strict-decodes `filter` against the declaration (a 400 on anything
+ * else), so a rule can never be dropped on the way.
  */
 export interface ServerDataSourceSpec<TRow> {
   fetchPage: (args: {
     sort: SortRule[];
-    filter: FilterGroup | null;
-    query: string;
+    /** The lowered, CANONICAL filter (search folded in); `undefined` = none. */
+    filter: Filter | undefined;
     cursor: string | null;
     limit: number;
     dataViewId: string;
   }) => Promise<ServerPage<TRow>>;
+  /** Column → domain the server can filter on. See above. */
+  filterable: Filterable;
+  /** `text`-domain columns of `filterable` the search box matches (`contains`, any of). */
+  searchable: readonly string[];
   /** Changes when server truth changes — drives an in-place refetch of loaded pages. */
   changeTick: unknown;
   pageSize?: number;

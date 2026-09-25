@@ -7,7 +7,12 @@ import {
   fetchEndpoint,
   useEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { queryReports, reportFacets } from "@plugins/reports/core";
+import {
+  queryReports,
+  REPORTS_FILTERABLE,
+  REPORTS_SEARCHABLE,
+  reportFacets,
+} from "@plugins/reports/core";
 import type { Report, ReportFacets } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import {
@@ -56,6 +61,8 @@ export function ReportsView({
       emptyState={<>No reports recorded yet.</>}
       dataSource={{
         changeTick,
+        filterable: REPORTS_FILTERABLE,
+        searchable: REPORTS_SEARCHABLE,
         fetchPage: (args) => fetchEndpoint(queryReports, {}, { body: args }),
       }}
     />

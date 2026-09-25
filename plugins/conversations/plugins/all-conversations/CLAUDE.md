@@ -34,13 +34,12 @@
   - Contributes: `resource.declare` "conversations-revision"
   - Uses:
     - `database.db`
-    - `fields/server-capabilities-loader`
-    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
-    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/data-view/server-query.FieldColumnMap`
     - `primitives/keyset.buildSortKeys`
     - `primitives/keyset.keyValuesOf`
     - `primitives/keyset.orderByClauses`
@@ -56,7 +55,9 @@
     - `conversations/model-provider.modelDisplayLabel`
     - `conversations/model-provider.SELECTABLE_CHOICES`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/data-view.FilterGroupSchema`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveText`
+    - `primitives/data-view.ServerFilterWireSchema`
     - `primitives/live-state.resourceDescriptor`
     - `tasks/tasks-core.ConversationKindSchema`
     - `tasks/tasks-core.ConversationSchema`
@@ -67,6 +68,8 @@
     - `QueryConversationsBody`
   - Exports (values):
     - `CONVERSATION_FIELDS`
+    - `CONVERSATION_FILTERABLE`
+    - `CONVERSATION_SEARCHABLE`
     - `conversationsRevisionResource`
     - `queryConversations`
     - `QueryConversationsBodySchema`

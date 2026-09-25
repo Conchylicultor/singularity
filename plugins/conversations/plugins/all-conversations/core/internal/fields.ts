@@ -3,6 +3,10 @@ import {
   ConversationKindSchema,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  liveInstant,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import {
   SELECTABLE_CHOICES,
   isModelFamily,
   modelDisplayLabel,
@@ -69,3 +73,29 @@ export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
   { id: "endedAt", label: "Ended", type: "date", nullable: true },
   { id: "worktreePath", label: "Worktree", type: "text" },
 ];
+
+/**
+ * What the server can filter on, by filter-language domain — the ONE
+ * declaration both runtimes read: the web `dataSource.filterable` (so the
+ * Filter control offers exactly these fields) and the server column map
+ * (`bindColumns`) the handler strict-decodes against. A field missing here is
+ * not filterable server-side, and so is not offered.
+ */
+export const CONVERSATION_FILTERABLE = {
+  title: liveText(),
+  status: liveText(ConversationStatusSchema),
+  model: liveText(),
+  kind: liveText(ConversationKindSchema),
+  runtime: liveText(),
+  createdAt: liveInstant(),
+  updatedAt: liveInstant(),
+  endedAt: liveInstant(),
+  worktreePath: liveText(),
+};
+
+/** The text columns the search box matches (any of, case-insensitively). */
+export const CONVERSATION_SEARCHABLE = [
+  "title",
+  "model",
+  "worktreePath",
+] as const;

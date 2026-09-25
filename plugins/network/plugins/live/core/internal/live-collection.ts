@@ -10,7 +10,11 @@ import {
   type PointQueryResourceContract,
   type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
-import { LIVE_LIST_MAX, type LiveScalar } from "./ops";
+import {
+  LIST_MAX,
+  type Filterable,
+  type FilterScalar,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   LIVE_GROUP_DEFAULT_LIMIT,
   type LiveDecodedGroupQuery,
@@ -20,6 +24,7 @@ import {
   type LiveGroupParams,
   type LiveGroupQuery,
   type LiveOrderBy,
+  type LiveReservedColumn,
   type LiveQuery,
   type LiveWindowParams,
 } from "./query";
@@ -32,12 +37,10 @@ export interface LiveWindowCodec<F, S extends string> {
   /** No encoded or decoded window exceeds this (encode/decode throw, never clamp). */
   maxLimit: number;
   defaultOrderBy: LiveOrderBy<S>;
-  /** Canonical encode. Throws on an undeclared column, bad operand, or limit above `maxLimit`. */
+  /** Canonical encode. Throws on an undeclared column, an op its domain does not take, a bad operand, or a limit above `maxLimit`. */
   encode: (query?: LiveQuery<F, S>) => LiveWindowParams;
   /** STRICT decode with every default filled in. Throws unless `params` is exactly a canonical encoding. */
-  decode: (
-    params: Record<string, string>,
-  ) => LiveDecodedQuery<keyof F & string, S>;
+  decode: (params: Record<string, string>) => LiveDecodedQuery<S>;
 }
 
 /**
@@ -59,9 +62,9 @@ export type LiveWindowDescriptor<Row, F, S extends string> = Omit<
 export interface LiveGroupCodec<F> {
   /** Groups a grouping query returns when it names no `limit`. */
   defaultLimit: number;
-  /** No grouping query returns more groups than this (`LIVE_LIST_MAX`). */
+  /** No grouping query returns more groups than this (the filter language's `LIST_MAX`). */
   maxLimit: number;
-  /** Canonical encode. Throws on a non-filterable `groupBy`, a bad `where`, a limit above max, or an `orderBy`. */
+  /** Canonical encode. Throws on a non-groupable `groupBy`, a bad `where`, a limit above max, or an `orderBy`. */
   encode: (query: LiveGroupQuery<F>) => LiveGroupParams;
   /** STRICT decode. Throws unless `params` is exactly a canonical encoding. */
   decode: (
@@ -71,11 +74,11 @@ export interface LiveGroupCodec<F> {
 
 /**
  * `${key}:groups` — a plain (non-keyed) push value per grouping query. Every
- * filterable column's values share the wire schema (any scalar or NULL); the
- * server validates each value against its column's own filterable schema.
+ * groupable column's values share the wire schema (any scalar or NULL); the
+ * server validates each value against the row schema's field.
  */
 export type LiveGroupsDescriptor<F> = ResourceDescriptor<
-  LiveGroup<LiveScalar>[],
+  LiveGroup<FilterScalar>[],
   LiveGroupParams
 > & { keyed?: never; groups: LiveGroupCodec<F> };
 
@@ -105,8 +108,11 @@ export interface LiveCollection<Row, F, S extends string> {
   /** `${key}:groups` — the values a filterable column takes, with counts. */
   groups: LiveGroupsDescriptor<F>;
   id: keyof Row & string;
+  /** The row schema — its keys are exactly the fields the server projects. */
+  row: LiveRowSchema<Row>;
   /** The row schema's keys — exactly the fields the server projects. */
   rowKeys: readonly (keyof Row & string)[];
+  /** The filterable columns' domains — the filter language's declaration. */
   filterable: F;
   sortable: readonly S[];
 }
@@ -115,6 +121,7 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   row: LiveRowSchema<Row>;
   /** The row field that identifies a row (the point sibling's id set, the window's tiebreaker). */
   id: keyof Row & string;
+  /** Row field → domain constructor (`liveText(Schema)`, `liveBoolean()` …). */
   filterable: F;
   sortable: readonly S[];
   default: { orderBy: LiveOrderBy<S>; limit: number };
@@ -129,7 +136,7 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
  * (window membership: filtered, ordered, limited), `${key}:rows` (point
  * membership: explicit ids) and `${key}:groups` (a filterable column's values
  * with counts). Bounded by construction: a default limit and a `maxLimit` are
- * required, and a grouping query is capped at `LIVE_LIST_MAX` groups.
+ * required, and a grouping query is capped at `LIST_MAX` groups.
  *
  * `key` stays a positional string literal: the build scanners read it statically.
  */
@@ -140,14 +147,17 @@ export function liveCollection<
 >(
   key: string,
   spec: LiveCollectionSpec<Row, F, S> & {
-    filterable: { [K in Exclude<keyof F, keyof Row>]: never };
+    filterable: {
+      [
+        K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
+      ]: never;
+    };
   },
 ): LiveCollection<Row, F, S> {
   const codec = createLiveQueryCodec<keyof F & string, S>({
     key,
-    filterable: spec.filterable as Readonly<
-      Record<string, ZodParser<LiveScalar> | undefined>
-    >,
+    // `LiveFilterable`'s keys are optional; a declared one always holds a column.
+    filterable: spec.filterable as unknown as Filterable,
     sortable: spec.sortable,
     defaultOrderBy: spec.default.orderBy,
     defaultLimit: spec.default.limit,
@@ -177,12 +187,12 @@ export function liveCollection<
   const rows = pointQueryResourceDescriptor(`${key}:rows`, spec.row, spec.id);
   const groupCodec: LiveGroupCodec<F> = {
     defaultLimit: LIVE_GROUP_DEFAULT_LIMIT,
-    maxLimit: LIVE_LIST_MAX,
+    maxLimit: LIST_MAX,
     encode: codec.encodeGroups,
     decode: codec.decodeGroups,
   };
   const groups = Object.assign(
-    resourceDescriptor<LiveGroup<LiveScalar>[], LiveGroupParams>(
+    resourceDescriptor<LiveGroup<FilterScalar>[], LiveGroupParams>(
       `${key}:groups`,
       z.array(
         z.object({
@@ -200,6 +210,7 @@ export function liveCollection<
     rows,
     groups,
     id: spec.id,
+    row: spec.row,
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
     filterable: spec.filterable,
     sortable: spec.sortable,

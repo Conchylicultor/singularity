@@ -1,19 +1,10 @@
-import {
-  and,
-  eq,
-  getTableColumns,
-  ilike,
-  isNull,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, eq, getTableColumns, isNull, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   compileWhere,
-  type OperatorSqlResolver,
+  decodeFilterBody,
+  filterableOf,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import {
   buildSortKeys,
@@ -34,38 +25,10 @@ import { queryEvents } from "../../core";
 import { COLUMN_MAP } from "./column-map";
 import { shouldHideDisappeared, shouldHideInactiveSources } from "./scope";
 
-// Escape LIKE wildcards so a user search term is matched literally (backslash is
-// Postgres ILIKE's default escape char).
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-// Full-text-ish quick search over the fields a person actually types into a
-// search box: what it is (title/description), where it is (venue/city), and how
-// it is labelled (tags). `tags` is jsonb, so it is matched through a text cast —
-// the ONLY tag predicate available until a `fields/tags` filter-sql capability
-// exists (the `tags` field is otherwise display-only; see column-map.ts).
-// Blank query → undefined (no fragment).
-function searchWhere(query: string): SQL | undefined {
-  const trimmed = query.trim();
-  if (!trimmed) return undefined;
-  const needle = `%${escapeLike(trimmed)}%`;
-  return or(
-    ilike(eventsTable.title, needle),
-    ilike(eventsTable.description, needle),
-    ilike(eventsTable.venue, needle),
-    ilike(eventsTable.city, needle),
-    sql`${eventsTable.tags}::text ILIKE ${needle}`,
-  );
-}
-
-// Field-type-agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;
-
 export const handleQuery = implement(queryEvents, async ({ body }) => {
-  const { sort, filter, query, cursor, limit } = body;
+  const { sort, cursor, limit } = body;
+  // Strict: a column the source does not declare is a 400, never dropped.
+  const filter = decodeFilterBody(body.filter, filterableOf(COLUMN_MAP));
 
   // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
   // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
@@ -102,8 +65,7 @@ export const handleQuery = implement(queryEvents, async ({ body }) => {
     shouldHideInactiveSources(filter)
       ? eq(_eventSources.enabled, true)
       : undefined,
-    searchWhere(query),
-    compileWhere(filter, COLUMN_MAP, resolver),
+    compileWhere(filter, COLUMN_MAP),
     seek,
   );
 

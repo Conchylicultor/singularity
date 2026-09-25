@@ -4,33 +4,38 @@ import {
   useInfiniteScroll,
   type InfiniteScrollHandle,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
-import type {
-  DataViewId,
-  FilterGroup,
-  ServerDataSourceSpec,
-  SortRule,
-} from "../../core";
+import type { DataViewId, ServerDataSourceSpec, SortRule } from "../../core";
+import type { ServerFilterResult } from "./server-filter";
 
 const DEFAULT_PAGE_SIZE = 40;
 
-/** The view state that drives a server query — the user-authored sort/filter/query. */
+/**
+ * What drives a server query: the view's sort, and its filter ALREADY lowered
+ * (search folded in) by `useServerFilter` — or the reason it cannot be sent.
+ */
 interface ServerQueryView {
   sort: SortRule[];
-  filter: FilterGroup | null;
-  query: string;
+  filter: ServerFilterResult;
 }
 
 export interface ServerDataSourceResult<TRow> {
   rows: readonly TRow[];
   loading: boolean;
+  /**
+   * Why the surface has no rows to show: the filter cannot be sent (over the
+   * filter language's bounds), or the FIRST page failed (the server refused or
+   * errored). A later page's failure is the footer's Retry instead, over rows
+   * already shown. `null` otherwise — never an empty list standing in for it.
+   */
+  error: Error | null;
   scroll: InfiniteScrollHandle;
 }
 
 /**
  * Deterministic JSON of the view state — sorts object keys so that two
  * structurally-equal view states always stringify identically (drives the
- * `queryKey`, restarting pagination from page 0 whenever sort/filter/query
- * change). `FilterGroup`/`SortRule` are plain JSON trees, so a key-sorted
+ * `queryKey`, restarting pagination from page 0 whenever sort/filter change).
+ * The filter is canonical and `SortRule` a plain JSON tree, so a key-sorted
  * `JSON.stringify` is total and stable.
  */
 function stableStringify(value: unknown): string {
@@ -59,7 +64,10 @@ function stableStringify(value: unknown): string {
  *   pages fetched by a *different* `fetchPage` (the cache is `staleTime:
  *   Infinity`). Deliberately NO per-instance `viewId`: instances of one surface
  *   share one `fetchPage`, so cross-instance sharing is correct. Changing
- *   sort/filter/query yields a fresh key → pagination restarts from page 0.
+ *   sort/filter (search included) yields a fresh key → pagination restarts
+ *   from page 0.
+ * - A filter that cannot be sent (`view.filter.kind === "error"`) disables the
+ *   query and is reported as `error` — no request, no empty page.
  * - `changeTick` is kept OUT of the queryKey; instead, when it changes, the hook
  *   `refetch()`es ALL currently-loaded pages in place (each re-runs with its
  *   stored keyset `pageParam`, so the window stays gap-free under live inserts).
@@ -85,11 +93,9 @@ export function useServerDataSource<TRow>(
     holdPaging?: (rows: readonly TRow[]) => boolean;
   } = {},
 ): ServerDataSourceResult<TRow> | null {
-  const viewKey = stableStringify({
-    sort: view.sort,
-    filter: view.filter,
-    query: view.query,
-  });
+  const filter = view.filter.kind === "ok" ? view.filter.filter : undefined;
+  const viewKey = stableStringify({ sort: view.sort, filter: filter ?? null });
+  const sendable = !!spec && view.filter.kind === "ok";
 
   const pageSize = spec?.pageSize ?? DEFAULT_PAGE_SIZE;
 
@@ -101,15 +107,14 @@ export function useServerDataSource<TRow>(
       if (!spec) throw new Error("useServerDataSource: queryFn with no spec");
       return spec.fetchPage({
         sort: view.sort,
-        filter: view.filter,
-        query: view.query,
+        filter,
         cursor: pageParam,
         limit: pageSize,
         dataViewId: storageKey,
       });
     },
     getNextPageParam: (last) => (last.hasMore ? last.nextCursor : undefined),
-    enabled: !!spec,
+    enabled: sendable,
     staleTime: Infinity,
   });
 
@@ -120,6 +125,8 @@ export function useServerDataSource<TRow>(
     isFetching,
     isFetchingNextPage,
     isFetchNextPageError,
+    isError,
+    error: queryError,
     refetch,
   } = query;
 
@@ -127,11 +134,11 @@ export function useServerDataSource<TRow>(
   // change) — compare to a ref so the very first render doesn't refetch.
   const lastTickRef = useRef<unknown>(spec?.changeTick);
   useEffect(() => {
-    if (!spec) return;
+    if (!spec || !sendable) return;
     if (lastTickRef.current === spec.changeTick) return;
     lastTickRef.current = spec.changeTick;
     void refetch();
-  }, [spec, spec?.changeTick, refetch]);
+  }, [spec, spec?.changeTick, sendable, refetch]);
 
   const rows = useMemo<readonly TRow[]>(
     () => (data?.pages ?? []).flatMap((p) => p.items),
@@ -151,9 +158,17 @@ export function useServerDataSource<TRow>(
 
   if (!spec) return null;
 
+  const error =
+    view.filter.kind === "error"
+      ? view.filter.error
+      : isError && rows.length === 0
+        ? queryError
+        : null;
+
   return {
     rows,
-    loading: isFetching && rows.length === 0,
+    loading: sendable && isFetching && rows.length === 0,
+    error,
     scroll,
   };
 }

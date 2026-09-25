@@ -13,7 +13,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const check: Check = {
   id: "fields-eager-in-sync",
   description:
-    "plugins/fields/plugins/server-capabilities-loader/server/internal/eager.generated.ts matches the current fields storage/filter-sql server barrels",
+    "plugins/fields/plugins/server-capabilities-loader/server/internal/eager.generated.ts matches the current fields storage server barrels",
   async run() {
     const root = await getWorktreeRoot();
     const file = fieldsEagerManifestPath(root);
@@ -32,7 +32,7 @@ const check: Check = {
     if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,
-        message: `${rel} is out of sync with the fields storage/filter-sql server barrels`,
+        message: `${rel} is out of sync with the fields storage server barrels`,
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }

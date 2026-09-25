@@ -1,18 +1,22 @@
-import type { FieldColumnMap } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
+import {
+  bindColumns,
+  type FieldColumnMap,
+} from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import { conversationsView as conversations } from "@plugins/tasks/plugins/tasks-core/server";
+import { CONVERSATION_FILTERABLE } from "../../core";
 
-// Binds each CONVERSATION_FIELDS id → its physical `conversations_v` column, with
-// the field-type token (resolving the operator→SQL builder) and `nullable` for the
-// null-aware keyset seek. Unmapped filter/sort fields are dropped fail-soft by the
-// compiler — never a 400.
-export const COLUMN_MAP: FieldColumnMap = {
-  title: { col: conversations.title, type: "text", nullable: true },
-  status: { col: conversations.status, type: "enum" },
-  model: { col: conversations.model, type: "enum" },
-  kind: { col: conversations.kind, type: "enum" },
-  runtime: { col: conversations.runtime, type: "text" },
-  createdAt: { col: conversations.createdAt, type: "date" },
-  updatedAt: { col: conversations.updatedAt, type: "date" },
-  endedAt: { col: conversations.endedAt, type: "date", nullable: true },
-  worktreePath: { col: conversations.worktreePath, type: "text" },
-};
+// Binds every CONVERSATION_FILTERABLE column → its `conversations_v` column
+// (domain copied from the declaration; a declared column with no binding is a
+// tsc error), with `nullable` for the null-aware keyset seek. A filter naming
+// anything else is refused with a 400 — never dropped.
+export const COLUMN_MAP: FieldColumnMap = bindColumns(CONVERSATION_FILTERABLE, {
+  title: { col: conversations.title, nullable: true },
+  status: { col: conversations.status },
+  model: { col: conversations.model },
+  kind: { col: conversations.kind },
+  runtime: { col: conversations.runtime },
+  createdAt: { col: conversations.createdAt },
+  updatedAt: { col: conversations.updatedAt },
+  endedAt: { col: conversations.endedAt, nullable: true },
+  worktreePath: { col: conversations.worktreePath },
+});

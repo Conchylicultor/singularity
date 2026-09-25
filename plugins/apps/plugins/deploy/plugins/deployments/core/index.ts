@@ -9,6 +9,8 @@ export {
   deleteDeployment,
   runDeployment,
   queryDeployRuns,
+  DEPLOY_RUN_FILTERABLE,
+  DEPLOY_RUN_SEARCHABLE,
   CreateDeploymentBodySchema,
   UpdateDeploymentBodySchema,
   RunDeploymentBodySchema,

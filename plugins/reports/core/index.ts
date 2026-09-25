@@ -2,6 +2,8 @@ export { reportsRevisionResource, ReportSchema } from "./resources";
 export type { Report } from "./resources";
 export {
   queryReports,
+  REPORTS_FILTERABLE,
+  REPORTS_SEARCHABLE,
   QueryReportsBodySchema,
   QueryReportsResponseSchema,
   reportFacets,

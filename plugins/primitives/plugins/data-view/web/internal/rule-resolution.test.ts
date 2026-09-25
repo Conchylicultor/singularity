@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { hasOperand, isOperatorComplete, isRuleActive } from "./rule-resolution";
-import { evaluateNode } from "./evaluate-filter";
-import type { FieldDef, FilterOperatorSet, FilterRule } from "../../core";
+import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
+import { isRuleActive } from "./rule-resolution";
+import { applyFilter } from "./evaluate-filter";
+import type {
+  FieldDef,
+  FilterGroup,
+  FilterOperatorSet,
+  FilterRule,
+} from "../../core";
 
 interface Row {
   name: string;
@@ -13,40 +19,46 @@ const fields: FieldDef<Row>[] = [
   { id: "modified", label: "Modified", type: "bool", value: (r) => r.modified },
 ];
 
-// text "contains" → generic completeness (needs a present operand).
-// bool "is" → operator-owned completeness: an absent value reads as "Unchecked",
-// so the rule is complete (and filters) even with no stored value.
+// text "contains" → incomplete without an operand (`lower` answers undefined).
+// bool "is" → always complete: an absent value reads as "Unchecked", so the rule
+// lowers (and filters) even with no stored value.
 const sets: Record<string, FilterOperatorSet> = {
   text: {
     match: "text",
+    domain: "text",
     operators: [
       {
         id: "contains",
         label: "Contains",
         hasValue: true,
-        predicate: (op, fv) =>
-          String(fv ?? "")
-            .toLowerCase()
-            .includes(String(op ?? "").toLowerCase()),
+        lower: (op, { column }) =>
+          typeof op === "string" && op !== ""
+            ? clause(column, "contains", op)
+            : undefined,
       },
     ],
   },
   bool: {
     match: "bool",
+    domain: "boolean",
     operators: [
       {
         id: "is",
         label: "Is",
         hasValue: true,
-        predicate: (op, fv) => Boolean(fv) === (op === true),
-        isComplete: () => true,
+        lower: (op, { column }) =>
+          op === true ? clause(column, "eq", true) : clause(column, "ne", true),
       },
     ],
   },
 };
 const resolve = (typeId: string) => sets[typeId];
 
-const rule = (fieldId: string, operatorId: string, value?: unknown): FilterRule => ({
+const rule = (
+  fieldId: string,
+  operatorId: string,
+  value?: unknown,
+): FilterRule => ({
   kind: "rule",
   id: `${fieldId}-${operatorId}`,
   fieldId,
@@ -54,37 +66,20 @@ const rule = (fieldId: string, operatorId: string, value?: unknown): FilterRule 
   ...(value === undefined ? {} : { value }),
 });
 
-describe("hasOperand", () => {
-  it("treats null/undefined/empty-string/empty-array as absent", () => {
-    expect(hasOperand(undefined)).toBe(false);
-    expect(hasOperand(null)).toBe(false);
-    expect(hasOperand("")).toBe(false);
-    expect(hasOperand([])).toBe(false);
-  });
-  it("treats false/0/non-empty as present", () => {
-    expect(hasOperand(false)).toBe(true);
-    expect(hasOperand(0)).toBe(true);
-    expect(hasOperand("x")).toBe(true);
-  });
-});
-
-describe("isOperatorComplete — operator owns completeness", () => {
-  const textOp = sets.text!.operators[0]!;
-  const boolOp = sets.bool!.operators[0]!;
-
-  it("value-taking operator with no operand is incomplete by default", () => {
-    expect(isOperatorComplete(textOp, undefined)).toBe(false);
-    expect(isOperatorComplete(textOp, "ann")).toBe(true);
-  });
-
-  it("operator's own isComplete overrides the default (bool stays complete)", () => {
-    expect(isOperatorComplete(boolOp, undefined)).toBe(true);
-    expect(isOperatorComplete(boolOp, false)).toBe(true);
-  });
-});
+/** Does the one-rule filter keep `row`? */
+function keeps(r: FilterRule, row: Row): boolean {
+  const g: FilterGroup = {
+    kind: "group",
+    id: "g",
+    conjunction: "and",
+    children: [r],
+  };
+  return applyFilter([row], g, fields, resolve, 0).length === 1;
+}
 
 // The regression: count and filter must AGREE for every rule. A value-less bool
 // rule both counts and filters; a value-less text rule neither counts nor filters.
+// Both now read ONE answer — `lower(...) !== undefined`.
 describe("count ⇔ filter parity (the chip-vs-filter bug)", () => {
   const modifiedRow: Row = { name: "preprompts", modified: true };
   const cleanRow: Row = { name: "categorical", modified: false };
@@ -92,19 +87,19 @@ describe("count ⇔ filter parity (the chip-vs-filter bug)", () => {
   it("value-less bool rule is active AND filters", () => {
     const r = rule("modified", "is"); // no value → "Unchecked"
     expect(isRuleActive(r, fields, resolve)).toBe(true); // chip counts it
-    expect(evaluateNode(r, modifiedRow, fields, resolve)).toBe(false); // hides modified
-    expect(evaluateNode(r, cleanRow, fields, resolve)).toBe(true); // keeps clean
+    expect(keeps(r, modifiedRow)).toBe(false); // hides modified
+    expect(keeps(r, cleanRow)).toBe(true); // keeps clean
   });
 
   it("value-less text rule is inactive AND no-ops", () => {
     const r = rule("name", "contains"); // no value
     expect(isRuleActive(r, fields, resolve)).toBe(false); // chip ignores it
-    expect(evaluateNode(r, modifiedRow, fields, resolve)).toBe(true); // no-op
+    expect(keeps(r, modifiedRow)).toBe(true); // no-op
   });
 
   it("unresolvable rule is inactive AND no-ops", () => {
     const r = rule("nope", "contains", "x");
     expect(isRuleActive(r, fields, resolve)).toBe(false);
-    expect(evaluateNode(r, modifiedRow, fields, resolve)).toBe(true);
+    expect(keeps(r, modifiedRow)).toBe(true);
   });
 });

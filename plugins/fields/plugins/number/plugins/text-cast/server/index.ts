@@ -6,5 +6,7 @@ import { cast } from "./internal/text-cast";
 export default {
   description:
     "Number field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::numeric for server-delegated DataView filter/sort.",
-  contributions: [Fields.ValueTextCast({ type: numberFieldType, cast })],
+  contributions: [
+    Fields.ValueTextCast({ type: numberFieldType, cast, domain: "number" }),
+  ],
 } satisfies ServerPluginDefinition;

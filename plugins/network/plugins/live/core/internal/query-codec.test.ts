@@ -1,6 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import {
+  and,
+  decodeFilter,
+  liveBoolean,
+  liveText,
+  matchesFilter,
+  or,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { liveCollection } from "./live-collection";
 
 const RowSchema = z.object({
@@ -11,15 +19,16 @@ const RowSchema = z.object({
   count: z.number().nullable(),
   createdAt: z.string(),
 });
+const Status = z.enum(["running", "error", "idle"]);
 type Row = z.infer<typeof RowSchema>;
 
 const sources = liveCollection("live-test.codec", {
   row: RowSchema,
   id: "id",
   filterable: {
-    status: z.enum(["running", "error", "idle"]),
-    enabled: z.boolean(),
-    count: z.number(),
+    status: liveText(Status),
+    enabled: liveBoolean(),
+    name: liveText(),
   },
   sortable: ["createdAt", "name"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
@@ -49,16 +58,37 @@ describe("liveCollection", () => {
     expect(_asContract.window.decode({ limit: "7" }).limit).toBe(7);
   });
 
-  it("rejects undeclared columns at the type level", () => {
+  it("rejects undeclared columns, reserved names and domain mismatches at the type level", () => {
     liveCollection("live-test.bad-filter", {
       row: RowSchema,
       id: "id",
       // @ts-expect-error — "bogus" is not a row field
-      filterable: { bogus: z.string() },
+      filterable: { bogus: liveText() },
       sortable: ["name"],
       default: { orderBy: [["name", "asc"]], limit: 1 },
       maxLimit: 1,
     });
+    liveCollection("live-test.bad-domain", {
+      row: RowSchema,
+      id: "id",
+      // @ts-expect-error — `name` is a string field, not a boolean
+      filterable: { name: liveBoolean() },
+      sortable: ["name"],
+      default: { orderBy: [["name", "asc"]], limit: 1 },
+      maxLimit: 1,
+    });
+    const OrRow = z.object({ id: z.string(), or: z.string() });
+    expect(() =>
+      liveCollection("live-test.reserved", {
+        row: OrRow,
+        id: "id",
+        // @ts-expect-error — "or" spells a filter tree, so it cannot be a filterable column
+        filterable: { or: liveText() },
+        sortable: [],
+        default: { orderBy: [["id", "asc"]], limit: 1 },
+        maxLimit: 1,
+      }),
+    ).toThrow(/cannot be a filterable column/);
     expect(() =>
       // @ts-expect-error — "nope" is not sortable
       encode({ orderBy: [["nope", "asc"]] }),
@@ -66,9 +96,21 @@ describe("liveCollection", () => {
     // @ts-expect-error — enabled takes a boolean
     expect(() => encode({ where: { enabled: "yes" } })).toThrow();
     // @ts-expect-error — exactly one operator
-    expect(() => encode({ where: { count: { gt: 1, lt: 5 } } })).toThrow(
+    expect(() => encode({ where: { name: { gt: "a", lt: "b" } } })).toThrow(
       /exactly one operator/,
     );
+    // @ts-expect-error — a boolean column takes no range op
+    expect(() => encode({ where: { enabled: { gt: true } } })).toThrow(
+      /does not take a boolean column/,
+    );
+    // @ts-expect-error — status operands are narrowed to its enum in tsc
+    expect(encode({ where: { status: "paused" } }).where).toBeDefined();
+    expect(() =>
+      encode({
+        // @ts-expect-error — a tree clause is checked against the declaration too
+        where: or({ column: "enabled", op: "eq", operand: "x" }),
+      }),
+    ).toThrow();
   });
 });
 
@@ -79,13 +121,14 @@ describe("encode", () => {
     expect(JSON.stringify(encode())).toBe('{"limit":"100"}');
   });
 
-  it("explicit defaults encode to the same bytes", () => {
+  it("explicit defaults — and an empty and() — encode to the same bytes", () => {
     const explicit = encode({
       where: {},
       orderBy: [["createdAt", "desc"]],
       limit: 100,
     });
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(encode()));
+    expect(encode({ where: and() })).toEqual({ limit: "100" });
   });
 
   it("canonicalizes key order, in lists and { eq }", () => {
@@ -101,20 +144,72 @@ describe("encode", () => {
     expect(a).toEqual(b);
     expect(a).toEqual({
       limit: "100",
-      where: '{"enabled":true,"status":{"in":["error","running"]}}',
+      where:
+        '{"and":[{"column":"enabled","op":"eq","operand":true},' +
+        '{"column":"status","op":"in","operand":["error","running"]}]}',
     });
   });
 
-  it("sorts number lists numerically", () => {
-    expect(encode({ where: { count: { notIn: [10, 2, 2, -1] } } }).where).toBe(
-      '{"count":{"notIn":[-1,2,10]}}',
+  it("the object sugar and the equivalent tree encode to the same bytes", () => {
+    const sugar = encode({
+      where: { enabled: true, status: { in: ["error", "running"] } },
+    });
+    const tree = encode({
+      where: and(
+        { column: "status", op: "in", operand: ["running", "error"] },
+        and({ column: "enabled", op: "eq", operand: true }),
+      ),
+    });
+    expect(tree).toEqual(sugar);
+  });
+
+  it("an or tree encodes canonically", () => {
+    const a = encode({
+      where: or(
+        { column: "status", op: "eq", operand: "error" },
+        and(
+          { column: "enabled", op: "eq", operand: false },
+          { column: "name", op: "gte", operand: "m" },
+        ),
+      ),
+    });
+    const b = encode({
+      where: or(
+        and(
+          { column: "name", op: "gte", operand: "m" },
+          { column: "enabled", op: "eq", operand: false },
+        ),
+        { column: "status", op: "eq", operand: "error" },
+      ),
+    });
+    expect(a).toEqual(b);
+    expect(a.where).toBe(
+      '{"or":[{"and":[{"column":"enabled","op":"eq","operand":false},' +
+        '{"column":"name","op":"gte","operand":"m"}]},' +
+        '{"column":"status","op":"eq","operand":"error"}]}',
     );
+  });
+
+  it("sorts and dedupes lists", () => {
+    expect(
+      encode({ where: { name: { notIn: ["b", "a", "b", "A"] } } }).where,
+    ).toBe('{"column":"name","op":"notIn","operand":["A","a","b"]}');
+  });
+
+  it("spells a no-operand op { op: true }", () => {
+    expect(encode({ where: { name: { isEmpty: true } } }).where).toBe(
+      '{"column":"name","op":"isEmpty"}',
+    );
+    expect(() =>
+      // @ts-expect-error — only `true` spells a no-operand op
+      encode({ where: { name: { isEmpty: false } } }),
+    ).toThrow(/isEmpty: true/);
   });
 
   it("drops undefined filters (an absent optional key)", () => {
     expect(encode({ where: { status: undefined, enabled: false } })).toEqual({
       limit: "100",
-      where: '{"enabled":false}',
+      where: '{"column":"enabled","op":"eq","operand":false}',
     });
   });
 
@@ -131,49 +226,41 @@ describe("encode", () => {
     expect(() => encode({ limit: 1.5 })).toThrow(/positive integer/);
   });
 
-  it("rejects null operands, over-long lists and non-finite numbers", () => {
+  it("rejects null operands and over-long lists", () => {
     // @ts-expect-error — operands are never null
-    expect(() => encode({ where: { count: null } })).toThrow(/isNull/);
+    expect(() => encode({ where: { name: null } })).toThrow(/isEmpty/);
     expect(() =>
       encode({
-        where: { count: { in: Array.from({ length: 101 }, (_, i) => i) } },
+        where: {
+          name: { in: Array.from({ length: 101 }, (_, i) => `n${i}`) },
+        },
       }),
     ).toThrow(/exceeds 100/);
-    expect(() => encode({ where: { count: { gt: Infinity } } })).toThrow(
-      /finite/,
-    );
   });
 });
 
 type Query = NonNullable<Parameters<typeof encode>[0]>;
 
-function toQuery(decoded: ReturnType<typeof decode>): Query {
-  return {
-    limit: decoded.limit,
-    orderBy: decoded.orderBy,
-    where: Object.fromEntries(
-      decoded.where.map((c) => [
-        c.column,
-        c.op === "eq" ? c.operand : { [c.op]: c.operand },
-      ]),
-    ) as Query["where"],
-  };
-}
-
 describe("decode", () => {
-  const roundTrip = [
+  const roundTrip: Query[] = [
     {},
     { limit: 20 },
     { where: { enabled: true } },
     {
       where: {
-        status: { in: ["error", "running"] as const },
-        count: { gte: 3 },
+        status: { in: ["error", "running"] },
+        name: { gte: "m" },
       },
     },
-    { where: { count: { isNull: true } } },
+    { where: { name: { isEmpty: true } } },
     {
-      where: { status: { ne: "idle" as const } },
+      where: or(
+        { column: "enabled", op: "eq", operand: true },
+        { column: "name", op: "contains", operand: "x" },
+      ),
+    },
+    {
+      where: { status: { ne: "idle" } },
       orderBy: [
         ["name", "asc"],
         ["createdAt", "desc"],
@@ -185,44 +272,78 @@ describe("decode", () => {
   it("decode(encode(q)) round-trips", () => {
     for (const q of roundTrip) {
       const params = encode(q);
-      expect(encode(toQuery(decode(params)))).toEqual(params);
+      const decoded = decode(params);
+      expect(
+        encode({
+          limit: decoded.limit,
+          orderBy: decoded.orderBy,
+          where: decoded.where as Query["where"],
+        }),
+      ).toEqual(params);
     }
   });
 
-  it("fills defaults and folds eq", () => {
-    expect(decode({ limit: "100", where: '{"enabled":true}' })).toEqual({
+  it("fills defaults and yields the canonical tree", () => {
+    expect(
+      decode({
+        limit: "100",
+        where: '{"column":"enabled","op":"eq","operand":true}',
+      }),
+    ).toEqual({
       limit: 100,
-      where: [{ column: "enabled", op: "eq", operand: true }],
+      where: { column: "enabled", op: "eq", operand: true },
       orderBy: [["createdAt", "desc"]],
     });
+    expect(decode({ limit: "100" }).where).toBeUndefined();
   });
 
   it("rejects unknown columns, ops, operands and params", () => {
-    expect(() => decode({ limit: "100", where: '{"name":"x"}' })).toThrow(
+    const w = (where: string) => ({ limit: "100", where });
+    expect(() => decode(w('{"column":"id","op":"eq","operand":"x"}'))).toThrow(
       /not a filterable column/,
     );
     expect(() =>
-      decode({ limit: "100", where: '{"count":{"like":"x"}}' }),
-    ).toThrow(/unknown operator/);
+      decode(w('{"column":"name","op":"like","operand":"x"}')),
+    ).toThrow(/unknown op/);
     expect(() =>
-      decode({ limit: "100", where: '{"status":"paused"}' }),
-    ).toThrow(/invalid operand/);
-    expect(() => decode({ limit: "100", where: '{"count":{"in":5}}' })).toThrow(
-      /takes a list/,
-    );
+      decode(w('{"column":"enabled","op":"gt","operand":true}')),
+    ).toThrow(/does not take a boolean column/);
     expect(() =>
-      decode({ limit: "100", where: '{"count":{"isNull":1}}' }),
-    ).toThrow(/takes a boolean/);
-    expect(() => decode({ limit: "100", where: "not json" })).toThrow(
-      /invalid JSON/,
-    );
-    expect(() => decode({ limit: "100", where: "[]" })).toThrow(/JSON object/);
+      decode(w('{"column":"name","op":"in","operand":"x"}')),
+    ).toThrow(/takes a list/);
+    expect(() =>
+      decode(w('{"column":"name","op":"isEmpty","operand":1}')),
+    ).toThrow(/takes no operand/);
+    expect(() => decode(w("not json"))).toThrow(/invalid JSON/);
+    expect(() => decode(w("[]"))).toThrow(/and\/or group/);
     expect(() => decode({ limit: "100", cursor: "x" })).toThrow(
       /unknown param/,
     );
     expect(() => decode({ limit: "100", order: '[["id","asc"]]' })).toThrow(
       /not a sortable/,
     );
+  });
+
+  it("a stale enum operand decodes (checked against the domain) and matches nothing", () => {
+    const params = {
+      limit: "100",
+      where: '{"column":"status","op":"eq","operand":"paused"}',
+    };
+    const { where } = decode(params);
+    expect(where).toEqual({ column: "status", op: "eq", operand: "paused" });
+    const row = {
+      id: "a",
+      name: "a",
+      status: "running",
+      enabled: true,
+      count: 1,
+      createdAt: "2026-09-01T00:00:00.000Z",
+    };
+    for (const status of Status.options) {
+      expect(
+        matchesFilter({ ...row, status }, where!, sources.filterable),
+      ).toBe(false);
+    }
   });
 
   it("rejects limits above max or malformed", () => {
@@ -233,17 +354,56 @@ describe("decode", () => {
 
   it("rejects every non-canonical spelling", () => {
     const nonCanonical: Record<string, string>[] = [
-      { limit: "100", where: "{}" },
-      { limit: "100", where: '{"status":{"in":["running","error"]}}' },
-      { limit: "100", where: '{"status":{"in":["error","error"]}}' },
-      { limit: "100", where: '{"enabled":{"eq":true}}' },
-      { limit: "100", where: '{"status":"idle","enabled":true}' },
-      { limit: "100", where: '{ "enabled":true}' },
+      // an unsorted / duplicated list
+      {
+        limit: "100",
+        where: '{"column":"status","op":"in","operand":["running","error"]}',
+      },
+      {
+        limit: "100",
+        where: '{"column":"status","op":"in","operand":["error","error"]}',
+      },
+      // a singleton group
+      {
+        limit: "100",
+        where: '{"and":[{"column":"enabled","op":"eq","operand":true}]}',
+      },
+      // unsorted children
+      {
+        limit: "100",
+        where:
+          '{"and":[{"column":"status","op":"eq","operand":"idle"},{"column":"enabled","op":"eq","operand":true}]}',
+      },
+      // key order / whitespace
+      {
+        limit: "100",
+        where: '{"op":"eq","column":"enabled","operand":true}',
+      },
+      {
+        limit: "100",
+        where: '{ "column":"enabled","op":"eq","operand":true}',
+      },
       { limit: "100", order: '[["createdAt","desc"]]' },
     ];
     for (const params of nonCanonical) {
-      expect(() => decode(params)).toThrow(/not canonical/);
+      expect(() => decode(params)).toThrow(/canonical/);
     }
+    // The absent filter has no encoding — its param is omitted.
+    expect(() => decode({ limit: "100", where: '{"and":[]}' })).toThrow(
+      /absent filter/,
+    );
+  });
+
+  it("decode's filter is exactly the filter language's strict decode", () => {
+    const json = encode({
+      where: or(
+        { column: "enabled", op: "eq", operand: true },
+        { column: "name", op: "lt", operand: "m" },
+      ),
+    }).where!;
+    expect(decode({ limit: "100", where: json }).where).toEqual(
+      decodeFilter(json, sources.filterable),
+    );
   });
 });
 
@@ -251,7 +411,7 @@ describe("preload", () => {
   const spec = {
     row: RowSchema,
     id: "id",
-    filterable: { enabled: z.boolean() },
+    filterable: { enabled: liveBoolean() },
     sortable: ["name"],
     default: { orderBy: [["name", "asc"]], limit: 10 },
     maxLimit: 10,
@@ -293,22 +453,29 @@ describe("groups codec", () => {
   it("canonicalises where exactly as a window does", () => {
     const a = groups.encode({
       groupBy: "status",
-      where: { enabled: { eq: true }, count: { in: [3, 1, 3] } },
+      where: { enabled: { eq: true }, name: { in: ["b", "a", "b"] } },
       limit: 20,
     });
     const b = groups.encode({
       groupBy: "status",
-      where: { count: { in: [1, 3] }, enabled: true },
+      where: or(
+        and(
+          { column: "name", op: "in", operand: ["a", "b"] },
+          { column: "enabled", op: "eq", operand: true },
+        ),
+      ),
       limit: 20,
     });
     expect(a).toEqual(b);
     expect(a).toEqual({
       groupBy: "status",
       limit: "20",
-      where: '{"count":{"in":[1,3]},"enabled":true}',
+      where:
+        '{"and":[{"column":"enabled","op":"eq","operand":true},' +
+        '{"column":"name","op":"in","operand":["a","b"]}]}',
     });
     expect(a.where).toBe(
-      encode({ where: { enabled: true, count: { in: [1, 3] } } }).where,
+      encode({ where: { enabled: true, name: { in: ["a", "b"] } } }).where,
     );
   });
 
@@ -320,13 +487,13 @@ describe("groups codec", () => {
     expect(groups.decode(params)).toEqual({
       groupBy: "enabled",
       limit: 50,
-      where: [{ column: "status", op: "ne", operand: "idle" }],
+      where: { column: "status", op: "ne", operand: "idle" },
     });
   });
 
-  it("throws on an undeclared column, a limit above max, and an orderBy", () => {
-    // @ts-expect-error — "name" is not filterable, so it cannot be grouped on
-    expect(() => groups.encode({ groupBy: "name" })).toThrow(
+  it("throws on an undeclared or ungroupable column, a limit above max, and an orderBy", () => {
+    // @ts-expect-error — "id" is not filterable, so it cannot be grouped on
+    expect(() => groups.encode({ groupBy: "id" })).toThrow(
       /not a filterable column/,
     );
     expect(() => groups.encode({ groupBy: "status", limit: 101 })).toThrow(
@@ -345,7 +512,7 @@ describe("groups codec", () => {
   });
 
   it("decode rejects undeclared columns, bad limits, unknown params and non-canonical spellings", () => {
-    expect(() => groups.decode({ groupBy: "name", limit: "50" })).toThrow(
+    expect(() => groups.decode({ groupBy: "id", limit: "50" })).toThrow(
       /not a filterable column/,
     );
     expect(() => groups.decode({ groupBy: "status", limit: "101" })).toThrow(
@@ -363,13 +530,13 @@ describe("groups codec", () => {
       }),
     ).toThrow(/unknown param "order"/);
     expect(() =>
-      groups.decode({ groupBy: "status", limit: "50", where: "{}" }),
-    ).toThrow(/not canonical/);
+      groups.decode({ groupBy: "status", limit: "50", where: '{"and":[]}' }),
+    ).toThrow(/absent filter/);
     expect(() =>
       groups.decode({
         groupBy: "status",
         limit: "50",
-        where: '{"enabled":{"eq":true}}',
+        where: '{"and":[{"column":"enabled","op":"eq","operand":true}]}',
       }),
     ).toThrow(/not canonical/);
   });

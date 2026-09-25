@@ -1,13 +1,13 @@
-import { and, or, sql, type SQL } from "drizzle-orm";
+import { and, sql, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type {
-  FilterGroup,
-  FilterNode,
-} from "@plugins/primitives/plugins/data-view/core";
+import {
+  testClause,
+  type Filter,
+  type FilterClause,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   compileWhere,
   type FieldColumnMap,
-  type OperatorSqlResolver,
 } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import {
   buildSortKeys,
@@ -22,9 +22,12 @@ import {
   type KeysetSortRule,
 } from "@plugins/primitives/plugins/keyset/core";
 import {
+  DEFAULT_UNION_DISCRIMINATOR,
+  unionFilterable,
   UnionCursorMismatchError,
   type UnionColumnSpec,
   type UnionColumnSpecs,
+  type UnionDiscriminator,
 } from "../../core";
 
 /**
@@ -54,17 +57,17 @@ export interface CompileUnionPageArgs {
   base: UnionColumnSpecs;
   /** Columns ONE arm projects; NULL on every other arm. Ids must be globally unique. */
   extra: UnionColumnSpecs;
-  /** The discriminator column. Defaults to `{ fieldId: "kind", type: "enum" }`. */
-  discriminator?: { fieldId: string; type: string };
+  /** The discriminator column. Defaults to {@link DEFAULT_UNION_DISCRIMINATOR} (`kind`, text). */
+  discriminator?: UnionDiscriminator;
   /** The base column that is each arm's own row identity — the keyset's last key. */
   tiebreaker: { fieldId: string };
-  resolveOperator: OperatorSqlResolver;
   sort: KeysetSortRule[];
-  filter: FilterGroup | null;
-  /** Free-text query; ILIKE'd over `searchFields`. Blank → no search fragment. */
-  query: string;
-  /** Which column ids the free-text query searches. Omitted → search is a no-op. */
-  searchFields?: string[];
+  /**
+   * The DECODED filter (the handler ran `decodeFilterBody` against
+   * `unionFilterable(base, extra, discriminator)`), search included — the
+   * DataView host lowers the search box into it. `undefined` = no filter.
+   */
+  filter: Filter | undefined;
   cursor: string | null;
   /** Rows to fetch. Pass `pageSize + 1` — the caller detects `hasMore` from the extra row. */
   limit: number;
@@ -115,34 +118,21 @@ function assertSqlType(id: string, spec: UnionColumnSpec): void {
   }
 }
 
-/** Escape LIKE wildcards so a search term is matched literally. */
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
 /**
- * The field ids named by rules that hold **unconditionally** over the whole
- * result — i.e. reachable from the root through AND groups only.
+ * The clauses that hold **unconditionally** over the whole result — reachable
+ * from the root through AND groups only.
  *
- * Only those may prune an arm. A rule inside an OR is one alternative among
+ * Only those may prune an arm. A clause inside an OR is one alternative among
  * several, so a row that fails it can still be returned; pruning on it would
  * delete rows the filter admits.
  */
-function conjunctiveRuleFieldIds(node: FilterNode | null): Set<string> {
-  const out = new Set<string>();
-  const walk = (n: FilterNode | null): void => {
-    if (!n) return;
-    if (n.kind === "rule") {
-      out.add(n.fieldId);
-      return;
-    }
-    // A single-child group carries its child's conjunction regardless of what
-    // it says its own is — there is nothing to disjoin with.
-    if (n.conjunction === "and" || n.children.length === 1) {
-      for (const child of n.children) walk(child);
-    }
+function conjunctiveClauses(filter: Filter | undefined): FilterClause[] {
+  const out: FilterClause[] = [];
+  const walk = (f: Filter): void => {
+    if ("and" in f) f.and.forEach(walk);
+    else if (!("or" in f)) out.push(f);
   };
-  walk(node);
+  if (filter !== undefined) walk(filter);
   return out;
 }
 
@@ -178,9 +168,13 @@ function bindingFor(
  * Three rules make the merge well-defined; each is a test in the suite beside
  * this file:
  *
- * - **Arm pruning.** A conjunctive filter rule naming an arm column this arm
- *   does not own removes the arm from the union outright. `build.targets contains
- *   sonata` therefore yields builds only, and gets *cheaper*, not more expensive.
+ * - **Arm pruning.** A conjunctive clause over a column that is a CONSTANT in
+ *   an arm — a typed NULL (the arm has no such notion) or the discriminator —
+ *   is evaluated once in memory; if it fails, the arm leaves the union
+ *   outright. `build.targets hasAll [sonata]` therefore yields builds only, and
+ *   gets *cheaper*. A negative op keeps the arm, because NULL satisfies it:
+ *   under the filter language's complement semantics `build.targets hasNone
+ *   [sonata]` is TRUE for every backup row.
  * - **Null projection alignment.** Every arm projects the same ordered column
  *   list; a column it does not own is `NULL::<sqlType>`. The cast is the
  *   compiler's, not the arm's, so `UNION ALL` type-checks by construction.
@@ -199,13 +193,10 @@ export function compileUnionPage(
     arms,
     base,
     extra,
-    discriminator = { fieldId: "kind", type: "enum" },
+    discriminator = DEFAULT_UNION_DISCRIMINATOR,
     tiebreaker,
-    resolveOperator,
     sort,
     filter,
-    query,
-    searchFields = [],
     cursor,
     limit,
   } = args;
@@ -228,10 +219,13 @@ export function compileUnionPage(
         `from each arm's \`kind\`; it must not also be declared as a column.`,
     );
   }
-  if (!(tiebreaker.fieldId in base)) {
+  if (
+    !(tiebreaker.fieldId in base) ||
+    base[tiebreaker.fieldId]!.domain === null
+  ) {
     throw new Error(
-      `[union-query] tiebreaker "${tiebreaker.fieldId}" must be a BASE column — every arm has to ` +
-        `carry a row identity or the keyset seek has no total order.`,
+      `[union-query] tiebreaker "${tiebreaker.fieldId}" must be a BASE column with a domain — every ` +
+        `arm has to carry an orderable row identity or the keyset seek has no total order.`,
     );
   }
   for (const id of extraIds) {
@@ -247,19 +241,32 @@ export function compileUnionPage(
   const columnOrder = [discriminator.fieldId, ...baseIds, ...extraIds];
   const specOf = (id: string): UnionColumnSpec =>
     id === discriminator.fieldId
-      ? { type: discriminator.type, sqlType: "text" }
+      ? { domain: discriminator.domain, sqlType: "text" }
       : (base[id] ?? extra[id]!);
   const isBaseId = (id: string): boolean => id in base;
 
   // ---- arm pruning ------------------------------------------------------
-  const ruled = conjunctiveRuleFieldIds(filter);
+  // An arm's value for a column is a CONSTANT when it projects a typed NULL
+  // (it has no such notion) or the column is the discriminator (its `kind`).
+  // A conjunctive clause over such a constant is answered once, in memory, by
+  // the op's own `test` — the same one its SQL is pinned to — and a `false`
+  // removes the arm. So `build.targets hasAll [sonata]` keeps builds only, while
+  // a NEGATIVE op (`ne`, `notIn`, `hasNone` …), which a NULL
+  // satisfies (as does `isEmpty`), keeps the arm: its rows match it.
+  const filterable = unionFilterable(base, extra, discriminator);
+  const constantOf = (arm: UnionArm, id: string): { value: unknown } | null => {
+    if (id === discriminator.fieldId) return { value: arm.kind };
+    return bindingFor(arm, id, isBaseId(id)) === null ? { value: null } : null;
+  };
+  const clauses = conjunctiveClauses(filter);
   const prunedArms: string[] = [];
   const surviving: UnionArm[] = [];
   for (const arm of arms) {
-    const excludedBy = extraIds.find(
-      (id) => ruled.has(id) && bindingFor(arm, id, false) === null,
-    );
-    if (excludedBy !== undefined) prunedArms.push(arm.kind);
+    const excluded = clauses.some((c) => {
+      const constant = constantOf(arm, c.column);
+      return constant !== null && !testClause(constant.value, c, filterable);
+    });
+    if (excluded) prunedArms.push(arm.kind);
     else surviving.push(arm);
   }
 
@@ -277,11 +284,15 @@ export function compileUnionPage(
   }
 
   // ---- the outer (post-union) column map + ordering keys ----------------
+  // A read-only column (`domain: null`) is projected but never bound, so no
+  // filter can name it and a sort on it is dropped like any unbound field.
   const outerMap: FieldColumnMap = {};
   for (const id of columnOrder) {
+    const domain = specOf(id).domain;
+    if (domain === null) continue;
     outerMap[id] = {
       col: sql`${ident(OUTER_ALIAS)}.${ident(id)}`,
-      type: specOf(id).type,
+      domain,
       nullable: nullableOf.get(id)!,
     };
   }
@@ -312,11 +323,9 @@ export function compileUnionPage(
     for (const id of columnOrder) {
       const expr = armExpr(arm, id, discriminator.fieldId, specOf, isBaseId);
       projection.push(sql`${expr} AS ${ident(id)}`);
-      armMap[id] = {
-        col: expr,
-        type: specOf(id).type,
-        nullable: nullableOf.get(id)!,
-      };
+      const domain = specOf(id).domain;
+      if (domain === null) continue;
+      armMap[id] = { col: expr, domain, nullable: nullableOf.get(id)! };
     }
     const armKeys = appendKindKey(
       buildSortKeys(sort, armMap, {
@@ -329,8 +338,7 @@ export function compileUnionPage(
 
     const where = and(
       arm.where,
-      searchFragment(arm, armMap, query, searchFields, isBaseId),
-      compileWhere(filter, armMap, resolveOperator),
+      compileWhere(filter, armMap),
       seekPredicate(armKeys, cursorValues),
     );
 
@@ -404,29 +412,4 @@ function armExpr(
   const binding = bindingFor(arm, id, isBaseId(id));
   if (binding === null) return nullLiteral(specOf(id));
   return sql`${binding}`;
-}
-
-/**
- * The free-text fragment for one arm: ILIKE over the search columns this arm
- * actually owns, cast to text so the compiler stays field-type agnostic.
- *
- * An arm owning none of them under a non-blank query matches nothing — `false`,
- * stated, rather than the arm quietly ignoring the search box.
- */
-function searchFragment(
-  arm: UnionArm,
-  armMap: FieldColumnMap,
-  query: string,
-  searchFields: string[],
-  isBaseId: (id: string) => boolean,
-): SQL | undefined {
-  const trimmed = query.trim();
-  if (!trimmed || searchFields.length === 0) return undefined;
-  const needle = `%${escapeLike(trimmed)}%`;
-  const terms = searchFields
-    .filter((id) => bindingFor(arm, id, isBaseId(id)) !== null)
-    .map((id) => sql`${armMap[id]!.col}::text ILIKE ${needle}`);
-  if (terms.length === 0) return sql`false`;
-  if (terms.length === 1) return terms[0];
-  return or(...terms)!;
 }

@@ -2,7 +2,7 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
-import type { UnionRun } from "../../core";
+import type { RunArmFieldSpecs, UnionRun } from "../../core";
 import { GenericRunLeading } from "../components/generic-run-leading";
 
 /** The props every per-kind row affordance receives: the merged row itself. */
@@ -27,6 +27,13 @@ export interface RunRowProps {
 export interface RunKindContribution {
   kind: string;
   label: string;
+  /**
+   * The arm's own column declaration (its `defineRunArmFields`, from its
+   * `core/`) — the same object its server arm binds. The merged surface
+   * declares these columns filterable by it, so the Filter control offers an
+   * arm's field exactly when the server can filter on it.
+   */
+  fields: RunArmFieldSpecs;
   open?: (run: UnionRun, ctx: { openPane: OpenPaneFn }) => void;
 }
 

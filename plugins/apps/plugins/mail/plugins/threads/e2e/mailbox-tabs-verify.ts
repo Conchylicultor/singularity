@@ -6,9 +6,9 @@
  *  2. the eight mailboxes render as a TAB STRIP, and switching tab re-scopes the
  *     query (each tab sends its own `filter` in the request body);
  *  3. each tab returns a genuinely DIFFERENT ROW SET — not merely a different
- *     request body. This is the assertion that catches the fail-soft failure
- *     mode: a typo'd fieldId/operatorId is dropped silently by `compileWhere`,
- *     and the only visible symptom is every tab showing the same rows;
+ *     request body. This is the assertion that catches the dangling-rule
+ *     failure mode: a typo'd fieldId/operatorId lowers to nothing on the
+ *     client, and the only visible symptom is every tab showing the same rows;
  *  4. the mailbox scope is an ORDINARY, EDITABLE filter rule — not the locked
  *     chip v1 shipped — and removing it PERSISTS across a reload, landing in the
  *     USER-LAYER config file. That round trip is the whole point of making
@@ -172,13 +172,24 @@ await withBrowser(async (h) => {
    * then shifts by one tab. Waiting for a NEW request is also wrong, because the
    * DataView caches per view: revisiting a tab correctly issues nothing at all.
    *
-   * So key the captured pages by the authored filter's GROUP ID (`"id":"inbox"`,
-   * `"id":"sent"`, …), which is unique per tab and rides in the request body
-   * verbatim. Every tab is visited once below, so each has exactly one page to
-   * find, whenever it happened to arrive.
+   * So key the captured pages by the tab's LOWERED filter — the canonical
+   * filter-language tree the DataView host sends, which is exact and unique
+   * per tab (`labels hasAll ["INBOX"]`, …). Every tab is visited once below,
+   * so each has exactly one page to find, whenever it happened to arrive.
    */
-  const rowsForView = (viewId: string): string[] | undefined =>
-    pages.find((entry) => entry.filter.includes(`"id":"${viewId}"`))?.ids;
+  const LOWERED_SCOPE: Record<string, string> = {
+    inbox: '{"column":"labels","op":"hasAll","operand":["INBOX"]}',
+    sent: '{"column":"labels","op":"hasAll","operand":["SENT"]}',
+    drafts: '{"column":"labels","op":"hasAll","operand":["DRAFT"]}',
+    all: '{"column":"labels","op":"hasNone","operand":["SPAM"]}',
+    spam: '{"column":"labels","op":"hasAll","operand":["SPAM"]}',
+  };
+  const rowsForView = (viewId: string): string[] | undefined => {
+    const scope = LOWERED_SCOPE[viewId];
+    if (scope === undefined)
+      throw new Error(`no lowered scope for "${viewId}"`);
+    return pages.find((entry) => entry.filter.includes(scope))?.ids;
+  };
 
   // ---- 0. precondition: start from the AUTHORED state --------------------
   // This script edits config, and the server's config watcher is slow to notice
