@@ -3,7 +3,7 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { normalizeRuntimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
@@ -17,7 +17,7 @@ import type { GateResult, ToolSpec } from "@plugins/toolchain/core";
  * the Bun this command itself started on.
  */
 function gateEnv(): Record<string, string | undefined> {
-  return { ...process.env, PATH: normalizeRuntimePath(process.env.PATH ?? "") };
+  return { ...process.env, PATH: runtimePath(process.env) };
 }
 
 async function singularity(root: string, args: string[]): Promise<number> {

@@ -70,17 +70,19 @@ if [ -z "$mise_bin" ]; then
     "curl https://mise.run | sh" "$activate" "mise install"
 else
   # Active = either `mise activate` ran in this shell (it exports MISE_SHELL),
-  # or its shims are on PATH (what agent shells and the runtime use). Checking
-  # PATH for tool install dirs would pass under `mise run` whether or not the
-  # user's own shell can find them.
-  shims="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims"
+  # or its shims are on PATH. Checking PATH for tool install dirs would pass
+  # under `mise run` whether or not the user's own shell can find them.
+  # The runtime does not need this — it locates the shims itself (miseShimsDir
+  # in plugins/infra/plugins/launcher/core, same lookup order as here) — but the
+  # shell does: ./singularity finds `bun` through the shell's own PATH.
+  shims="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims"
   case ":$PATH:" in
     *":$shims:"* | *":$shims/:"*) active=1 ;;
     *) if [ -n "$MISE_SHELL" ]; then active=1; else active=0; fi ;;
   esac
   if [ "$active" = "0" ]; then
     miss "mise is installed but not active in your shell" \
-      "Without it \`bun\` (and ./singularity) is not found." \
+      "Your shell finds \`bun\` (and so ./singularity) only through mise." \
       "$activate"
   fi
 

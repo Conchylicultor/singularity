@@ -4,10 +4,10 @@ export {
   RUNTIME_FORWARDED_PREFIXES,
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_WITHHELD_ENV,
-  hasMiseShims,
   isRuntimeEnvName,
-  normalizeRuntimePath,
   pickHostEnv,
   pickRuntimeEnv,
+  runtimePath,
+  runtimeShimsDir,
   runtimeEnvNames,
 } from "./internal/runtime-env";

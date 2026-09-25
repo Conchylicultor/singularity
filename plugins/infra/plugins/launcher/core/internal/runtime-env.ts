@@ -44,10 +44,11 @@
 //   from its own install location.
 //
 // PATH is the one forwarded name that is not passed through verbatim: mise's
-// resolved per-version tool directories are stripped from it, so the runtime
-// tree resolves its tools through mise's shims and obeys the committed
-// `mise.toml` rather than a version frozen into the starter's shell. See
-// `normalizeRuntimePath`.
+// resolved per-version tool directories are stripped from it and mise's shims
+// are put first — located from the environment, so they are there even when the
+// starter's shell never activated mise. The runtime tree therefore resolves its
+// tools through the shims and obeys the committed `mise.toml` rather than a
+// version frozen into (or missing from) the starter's shell. See `runtimePath`.
 //
 // Every SINGULARITY_* name the code reads or sets must appear in
 // RUNTIME_FORWARDED_ENV or RUNTIME_WITHHELD_ENV (or match a forwarded prefix),
@@ -206,16 +207,29 @@ const MISE_INSTALL_DIR = /(^|\/)mise\/installs\//;
 const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
 
 /**
- * Whether `path` has a mise shims directory on it — the one way mise's tools
- * are reachable that `normalizeRuntimePath` can put first. False means the
- * normalised PATH is the raw one, and every tool only mise installed is absent.
+ * Where mise keeps its shims for the user `env` describes, by mise's own lookup
+ * order: `$MISE_DATA_DIR`, else `$XDG_DATA_HOME/mise`, else
+ * `$HOME/.local/share/mise`, then `/shims`. Read from the environment, NOT from
+ * PATH: mise puts the shims there whether or not any shell ever ran
+ * `mise activate`. Undefined only when not even HOME is set.
+ *
+ * Says where they WOULD be; whether mise has created them is the caller's
+ * question (this module does no I/O).
  */
-export function hasMiseShims(path: string): boolean {
-  return path.split(":").some((entry) => MISE_SHIMS_DIR.test(entry));
+export function miseShimsDir(
+  env: Record<string, string | undefined>,
+): string | undefined {
+  const dataDir =
+    env.MISE_DATA_DIR ||
+    (env.XDG_DATA_HOME ? `${env.XDG_DATA_HOME}/mise` : undefined) ||
+    (env.HOME ? `${env.HOME}/.local/share/mise` : undefined);
+  if (dataDir === undefined) return undefined;
+  return `${dataDir.replace(/\/+$/, "")}/shims`;
 }
 
 /**
- * PATH, with mise's resolved tool directories removed and its shims FIRST.
+ * The runtime's PATH for environment `env`: its PATH with mise's resolved tool
+ * directories removed and mise's shims FIRST.
  *
  * A shell with mise activated does not put mise's shims on PATH and leave it
  * there — it puts the RESOLVED directory of each tool version in front of them.
@@ -237,21 +251,50 @@ export function hasMiseShims(path: string): boolean {
  * The shims then go to the FRONT. The same day showed the other half of the
  * hole: the gateway's PATH listed `/opt/homebrew/bin` and `~/.cargo/bin` ahead
  * of the shims, so the runtime ran Homebrew's tmux and rustup's default rust
- * while `mise.toml` declared versions nothing used. First is safe: a shim with
- * no version configured for the directory it runs in falls through to the next
- * PATH entry, so a process outside the repo still finds the system copy.
+ * while `mise.toml` declared versions nothing used.
  *
- * If the stripped entries were the only way mise's tools were reachable, the
- * shims directory is derived from one of them, so this can never hand the
- * runtime a PATH with no toolchain on it.
+ * And the shims are there even when the starter's PATH never mentioned mise —
+ * a shell that installed mise but never activated it, or a service unit. The
+ * 2026-09-18 clean-VM run was that case: the PATH came back unchanged, tmux and
+ * rustc were simply absent, and the toolchain check failed the build. So the
+ * shims directory comes, strongest first, from: an explicit `…/mise/shims`
+ * entry (the one the starter's own mise uses), one derived from a stripped
+ * `…/mise/installs/…` entry, or `miseShimsDir(env)`. A machine with no mise at
+ * all gets one entry that does not exist, which costs nothing.
+ *
+ * It takes the whole environment rather than a PATH string on purpose: where
+ * mise lives is part of the answer, so no caller can compute a runtime PATH
+ * without it. Idempotent — once the shims are on PATH they are rule one, so a
+ * child that does not inherit MISE_DATA_DIR still gets the same PATH back.
  */
-export function normalizeRuntimePath(value: string): string {
-  const entries = value.split(":");
+export function runtimePath(env: Record<string, string | undefined>): string {
+  const { shims, kept } = splitPath(env);
+  if (shims === undefined) return env.PATH ?? "";
+  return [shims, ...kept].join(":");
+}
+
+/**
+ * The mise shims directory `runtimePath(env)` puts first — the one the runtime
+ * resolves its tools through — or undefined when it puts none. Whether it
+ * exists on disk is the caller's question.
+ */
+export function runtimeShimsDir(
+  env: Record<string, string | undefined>,
+): string | undefined {
+  return splitPath(env).shims;
+}
+
+function splitPath(env: Record<string, string | undefined>): {
+  shims: string | undefined;
+  kept: string[];
+} {
+  const value = env.PATH ?? "";
   const kept: string[] = [];
-  const shimsDirs: string[] = [];
-  for (const entry of entries) {
+  let explicit: string | undefined;
+  let derived: string | undefined;
+  for (const entry of value === "" ? [] : value.split(":")) {
     if (MISE_SHIMS_DIR.test(entry)) {
-      shimsDirs.push(entry);
+      explicit ??= entry;
       continue;
     }
     const at = entry.search(MISE_INSTALL_DIR);
@@ -260,14 +303,9 @@ export function normalizeRuntimePath(value: string): string {
       continue;
     }
     const root = entry.slice(0, at);
-    shimsDirs.push(`${root}${root.endsWith("/") ? "" : "/"}mise/shims`);
+    derived ??= `${root}${root.endsWith("/") ? "" : "/"}mise/shims`;
   }
-  if (shimsDirs.length === 0) return value;
-  // An explicit shims entry wins over one derived from an install dir, since
-  // it is the directory the starter's own mise actually uses.
-  const shims =
-    entries.find((entry) => MISE_SHIMS_DIR.test(entry)) ?? shimsDirs[0];
-  return [shims, ...kept].join(":");
+  return { shims: explicit ?? derived ?? miseShimsDir(env), kept };
 }
 
 /**
@@ -276,7 +314,7 @@ export function normalizeRuntimePath(value: string): string {
  * withheld names and names this file has never heard of alike — is dropped.
  *
  * PATH is the one value that is not passed through verbatim: see
- * `normalizeRuntimePath`. It is normalised HERE, at the filter every runtime
+ * `runtimePath`. It is normalised HERE, at the filter every runtime
  * environment goes through, rather than at the one call site — a second caller
  * must not be able to hand the gateway a PATH that pins a tool version.
  *
@@ -291,7 +329,7 @@ export function pickRuntimeEnv(
   for (const [name, value] of Object.entries(source)) {
     if (value === undefined) continue;
     if (!isRuntimeEnvName(name)) continue;
-    picked[name] = name === "PATH" ? normalizeRuntimePath(value) : value;
+    picked[name] = name === "PATH" ? runtimePath(source) : value;
   }
   return picked;
 }
@@ -314,7 +352,7 @@ export function pickHostEnv(
     // Same rule as `pickRuntimeEnv`: a tool the runtime runs must not inherit a
     // PATH that freezes one version of a toolchain. Idempotent, so a PATH the
     // gateway already normalised passes through unchanged.
-    picked[name] = name === "PATH" ? normalizeRuntimePath(value) : value;
+    picked[name] = name === "PATH" ? runtimePath(source) : value;
   }
   return picked;
 }

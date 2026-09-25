@@ -1,12 +1,12 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import {
-  hasMiseShims,
-  normalizeRuntimePath,
+  runtimePath,
+  runtimeShimsDir,
 } from "@plugins/infra/plugins/launcher/core";
 import type {
   Check,
@@ -64,16 +64,10 @@ const check: Check = {
     }
 
     // The runtime's PATH, not this process's: the gateway hands every backend
-    // `normalizeRuntimePath(PATH)`, which puts mise's shims first. Probing the
-    // raw PATH would ask a developer's shell, where Homebrew may come first.
-    const env = {
-      ...process.env,
-      PATH: normalizeRuntimePath(process.env.PATH ?? ""),
-    };
-    // Without mise's shims the runtime PATH is the raw one, and every tool
-    // mise alone installed is simply absent. That is its own diagnosis, with
-    // its own fix — not the "something shadows mise" hint below.
-    const shimsOnPath = hasMiseShims(env.PATH);
+    // `runtimePath(env)` — mise's shims first, located from the environment
+    // whether or not this shell activated mise. Probing the raw PATH would ask a
+    // developer's shell, where Homebrew may come first or mise be absent.
+    const env = { ...process.env, PATH: runtimePath(process.env) };
     const mismatches: string[] = [];
     for (const spec of TOOLS) {
       const want = locked.get(spec.name)?.[0];
@@ -111,15 +105,30 @@ const check: Check = {
       return {
         ok: false,
         message: mismatches.join("\n"),
-        hint: shimsOnPath
-          ? "Run `mise install` in this checkout to install the locked releases. If a tool still resolves elsewhere, " +
-            "something ahead of mise's shims on PATH is shadowing it."
-          : "mise's shims are not on PATH, so nothing mise installed can be found. Activate mise in your shell " +
-            "(`mise activate`, see docs/setup.md), then `mise install`; `mise run doctor` lists anything else missing.",
+        hint: missingToolchainHint(),
       };
     }
     return { ok: true };
   },
 };
+
+/**
+ * No shims directory means mise has never installed anything for this user (or
+ * is not installed at all) — the "something shadows mise" advice would send
+ * them looking for a conflict that is not there.
+ */
+function missingToolchainHint(): string {
+  const shims = runtimeShimsDir(process.env);
+  if (shims === undefined || !existsSync(shims)) {
+    return (
+      `mise's shims directory (${shims ?? "$HOME unset"}) does not exist: mise is not installed, or has installed nothing yet. ` +
+      "Install mise and run `mise install` in this checkout (see docs/setup.md); `mise run doctor` lists anything else missing."
+    );
+  }
+  return (
+    "Run `mise install` in this checkout to install the locked releases. If a tool still resolves elsewhere, " +
+    "something ahead of mise's shims on PATH is shadowing it."
+  );
+}
 
 export default check;

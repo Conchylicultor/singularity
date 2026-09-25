@@ -5,11 +5,12 @@ import {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_HOST_ENV,
   RUNTIME_WITHHELD_ENV,
-  hasMiseShims,
-  normalizeRuntimePath,
+  miseShimsDir,
   pickHostEnv,
   pickRuntimeEnv,
   runtimeEnvNames,
+  runtimePath,
+  runtimeShimsDir,
 } from "./runtime-env";
 
 const forwarded = Object.keys(RUNTIME_FORWARDED_ENV);
@@ -28,7 +29,7 @@ describe("pickRuntimeEnv", () => {
     });
     expect(picked).toEqual({
       HOME: "home-value",
-      PATH: "/usr/bin",
+      PATH: "home-value/.local/share/mise/shims:/usr/bin",
       SINGULARITY_DIR: "/data",
       SINGULARITY_RELEASE_RUN_ID: "run-1",
       PLAYWRIGHT_BROWSERS_PATH: "",
@@ -87,7 +88,7 @@ describe("pickHostEnv", () => {
     });
     expect(picked).toEqual({
       HOME: "home-value",
-      PATH: "/usr/bin",
+      PATH: "home-value/.local/share/mise/shims:/usr/bin",
       LANG: "en_US.UTF-8",
     });
   });
@@ -138,15 +139,17 @@ describe("runtimeEnvNames", () => {
   });
 });
 
-describe("normalizeRuntimePath", () => {
+describe("runtimePath", () => {
   // Fixture roots, deliberately not this machine's: the function transforms a
   // PATH string by shape, and a test that named real system directories would
   // both bake a developer's layout into source and read as a claim about it.
-  const MISE = "/fixture/home/.local/share/mise";
+  const HOME = "/fixture/home";
+  const MISE = `${HOME}/.local/share/mise`;
+  const at = (PATH: string) => runtimePath({ HOME, PATH });
 
   test("drops mise's resolved tool directories and puts its shims first", () => {
     expect(
-      normalizeRuntimePath(
+      at(
         `/fixture/pkg/bin:${MISE}/installs/bun/latest/bin:${MISE}/installs/go/1.24.13/bin:${MISE}/installs/tmux/3.6a:${MISE}/shims:/fixture/bin`,
       ),
     ).toBe(`${MISE}/shims:/fixture/pkg/bin:/fixture/bin`);
@@ -156,50 +159,90 @@ describe("normalizeRuntimePath", () => {
     // The 2026-09-16 shape: Homebrew and rustup ahead of the shims, so the
     // runtime ran their tmux and rust instead of mise's.
     expect(
-      normalizeRuntimePath(
-        `/fixture/homebrew/bin:/fixture/home/.cargo/bin:${MISE}/shims`,
-      ),
+      at(`/fixture/homebrew/bin:/fixture/home/.cargo/bin:${MISE}/shims`),
     ).toBe(`${MISE}/shims:/fixture/homebrew/bin:/fixture/home/.cargo/bin`);
   });
 
   test("the version frozen into PATH is exactly what must not survive", () => {
-    const normalized = normalizeRuntimePath(
-      `${MISE}/installs/bun/1.3.13/bin:${MISE}/shims`,
-    );
+    const normalized = at(`${MISE}/installs/bun/1.3.13/bin:${MISE}/shims`);
     expect(normalized).not.toContain("1.3.13");
     expect(normalized).toBe(`${MISE}/shims`);
   });
 
-  test("derives and prepends the shims dir when stripping would leave none", () => {
-    expect(
-      normalizeRuntimePath(`${MISE}/installs/bun/1.4.2/bin:/fixture/bin`),
-    ).toBe(`${MISE}/shims:/fixture/bin`);
+  test("derives the shims dir from a stripped install dir, over the env default", () => {
+    const other = "/fixture/elsewhere/mise";
+    expect(at(`${other}/installs/bun/1.4.2/bin:/fixture/bin`)).toBe(
+      `${other}/shims:/fixture/bin`,
+    );
   });
 
-  test("leaves a PATH with no mise entry untouched, and is idempotent", () => {
-    const plain = "/fixture/pkg/bin:/fixture/bin";
-    expect(normalizeRuntimePath(plain)).toBe(plain);
-    const normalized = `${MISE}/shims:/fixture/bin`;
-    expect(normalizeRuntimePath(normalized)).toBe(normalized);
+  test("an explicit shims entry wins over every derived one", () => {
+    const explicit = "/fixture/custom/mise/shims";
+    expect(
+      runtimePath({
+        HOME,
+        MISE_DATA_DIR: "/fixture/data/mise",
+        PATH: `/fixture/bin:/fixture/other/mise/installs/go/1/bin:${explicit}`,
+      }),
+    ).toBe(`${explicit}:/fixture/bin`);
+  });
+
+  test("a PATH that never mentions mise still gets mise's shims first", () => {
+    // The 2026-09-18 clean-VM shape: mise installed, never activated, so the
+    // starter's PATH has no mise entry and tmux / rustc were simply absent.
+    expect(at("/fixture/pkg/bin:/fixture/bin")).toBe(
+      `${MISE}/shims:/fixture/pkg/bin:/fixture/bin`,
+    );
+  });
+
+  test("returns PATH unchanged when nothing says where mise would live", () => {
+    expect(runtimePath({ PATH: "/fixture/bin" })).toBe("/fixture/bin");
+  });
+
+  test("is idempotent, even for a child that did not inherit MISE_DATA_DIR", () => {
+    const once = runtimePath({
+      HOME,
+      MISE_DATA_DIR: "/fixture/data/mise",
+      PATH: "/fixture/bin",
+    });
+    expect(once).toBe("/fixture/data/mise/shims:/fixture/bin");
+    expect(runtimePath({ HOME, PATH: once })).toBe(once);
   });
 
   test("a path that merely mentions mise elsewhere is not a tool directory", () => {
-    const plain = "/fixture/mise-tools/bin:/fixture/mise/installs-backup";
-    expect(normalizeRuntimePath(plain)).toBe(plain);
+    expect(at("/fixture/mise-tools/bin:/fixture/mise/installs-backup")).toBe(
+      `${MISE}/shims:/fixture/mise-tools/bin:/fixture/mise/installs-backup`,
+    );
   });
 });
 
-describe("hasMiseShims", () => {
-  test("true for a shims entry, with or without a trailing slash", () => {
-    expect(hasMiseShims("/usr/bin:/opt/data/mise/shims")).toBe(true);
-    expect(hasMiseShims("/opt/data/mise/shims/:/bin")).toBe(true);
+describe("runtimeShimsDir", () => {
+  test("names the directory runtimePath puts first", () => {
+    const env = {
+      HOME: "/fixture/home",
+      PATH: "/fixture/bin:/fixture/custom/mise/shims",
+    };
+    expect(runtimeShimsDir(env)).toBe("/fixture/custom/mise/shims");
+    expect(runtimePath(env).split(":")[0]).toBe(runtimeShimsDir(env));
+    expect(runtimeShimsDir({ PATH: "/fixture/bin" })).toBeUndefined();
   });
+});
 
-  test("false for a PATH without one, install dirs included", () => {
-    expect(hasMiseShims("/usr/bin:/bin")).toBe(false);
-    expect(hasMiseShims("/opt/data/mise/installs/bun/1.4.2/bin:/bin")).toBe(
-      false,
+describe("miseShimsDir", () => {
+  test("follows mise's own lookup order: MISE_DATA_DIR, XDG_DATA_HOME, HOME", () => {
+    const env = {
+      HOME: "/fixture/home",
+      XDG_DATA_HOME: "/fixture/xdg",
+      MISE_DATA_DIR: "/fixture/data/",
+    };
+    expect(miseShimsDir(env)).toBe("/fixture/data/shims");
+    expect(miseShimsDir({ ...env, MISE_DATA_DIR: undefined })).toBe(
+      "/fixture/xdg/mise/shims",
     );
+    expect(miseShimsDir({ HOME: "/fixture/home" })).toBe(
+      "/fixture/home/.local/share/mise/shims",
+    );
+    expect(miseShimsDir({})).toBeUndefined();
   });
 });
 
@@ -227,6 +270,6 @@ describe("pickHostEnv normalizes PATH", () => {
 
   test("an already-normalized PATH passes through unchanged", () => {
     const path = "/fixture/home/.local/share/mise/shims:/fixture/bin";
-    expect(pickHostEnv({ PATH: path }).PATH).toBe(path);
+    expect(pickHostEnv({ HOME: "/fixture/home", PATH: path }).PATH).toBe(path);
   });
 });

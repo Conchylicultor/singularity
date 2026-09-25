@@ -19569,9 +19569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `release`
       - Core:
         - Exports (values):
-          - `hasMiseShims`
           - `isRuntimeEnvName`
-          - `normalizeRuntimePath`
           - `pickHostEnv`
           - `pickRuntimeEnv`
           - `RUNTIME_FORWARDED_ENV`
@@ -19580,6 +19578,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RUNTIME_HOST_ENV`
           - `RUNTIME_WITHHELD_ENV`
           - `runtimeEnvNames`
+          - `runtimePath`
+          - `runtimeShimsDir`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by:
