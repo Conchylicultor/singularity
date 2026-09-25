@@ -33,7 +33,19 @@ import {
 
 const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Profile columns count; identity does not.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      email: true,
+      name: true,
+      avatarUrl: true,
+      signature: true,
+      connectedAt: true,
+      createdAt: false,
+    },
+  },
   columns: {
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
@@ -42,7 +54,23 @@ const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
 
 const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
   primaryKey: "accountId",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). The user-visible sync status counts; the engine's watermarks
+  // (history id, last*SyncAt), error timestamp and resync counter are bookkeeping.
+  updatedAt: {
+    touchedBy: {
+      accountId: false,
+      historyId: false,
+      lastFullSyncAt: false,
+      lastDeltaSyncAt: false,
+      status: true,
+      errorCode: true,
+      lastError: true,
+      lastErrorAt: false,
+      resyncCount: false,
+      createdAt: false,
+    },
+  },
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -56,7 +84,23 @@ const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
 
 const mailLabels = defineEntity("mail_labels", mailLabelFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Every Gmail label attribute counts, so an identical re-upsert
+  // on the delta tick moves nothing.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      accountId: false,
+      name: true,
+      type: true,
+      color: true,
+      textColor: true,
+      parentId: true,
+      messageListVisibility: true,
+      labelListVisibility: true,
+      createdAt: false,
+    },
+  },
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -75,7 +119,28 @@ const mailLabels = defineEntity("mail_labels", mailLabelFields, {
 
 const mailThreads = defineEntity("mail_threads", mailThreadFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Every list-visible column counts — the threads revision tick
+  // reads max(updated_at), so it must move on each; the sync `historyId`
+  // watermark does not, and an identical recompute moves nothing.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      accountId: false,
+      subject: true,
+      snippet: true,
+      participants: true,
+      lastMessageAt: true,
+      messageCount: true,
+      unread: true,
+      starred: true,
+      important: true,
+      hasAttachments: true,
+      labelIds: true,
+      historyId: false,
+      createdAt: false,
+    },
+  },
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -108,7 +173,36 @@ const mailThreads = defineEntity("mail_threads", mailThreadFields, {
 
 const mailMessages = defineEntity("mail_messages", mailMessageFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Content, envelope and flags count; the `bodyFetchedAt` hydration
+  // marker and the sync `historyId` watermark are bookkeeping.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      threadId: true,
+      accountId: false,
+      from: true,
+      to: true,
+      cc: true,
+      bcc: true,
+      replyTo: true,
+      subject: true,
+      snippet: true,
+      headers: true,
+      bodyText: true,
+      bodyHtml: true,
+      bodyFetchedAt: false,
+      internalDate: true,
+      unread: true,
+      starred: true,
+      isDraft: true,
+      isSent: true,
+      hasAttachments: true,
+      sizeEstimate: true,
+      historyId: false,
+      createdAt: false,
+    },
+  },
   columns: {
     threadId: {
       references: { column: () => mailThreads.table.id, onDelete: "cascade" },
@@ -159,7 +253,24 @@ const mailMessageLabels = defineEntity(
 
 const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Every attachment attribute counts, including the local
+  // `storedAttachmentId` a first download sets; identity does not.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      messageId: false,
+      accountId: false,
+      gmailAttachmentId: true,
+      filename: true,
+      mimeType: true,
+      sizeBytes: true,
+      inline: true,
+      contentId: true,
+      storedAttachmentId: true,
+      createdAt: false,
+    },
+  },
   columns: {
     messageId: {
       references: { column: () => mailMessages.table.id, onDelete: "cascade" },
@@ -177,7 +288,24 @@ const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
 
 const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Every draft field counts; identity does not. (No writers yet.)
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      accountId: false,
+      threadId: true,
+      gmailDraftId: true,
+      inReplyToMessageId: true,
+      to: true,
+      cc: true,
+      bcc: true,
+      subject: true,
+      bodyHtml: true,
+      bodyText: true,
+      createdAt: false,
+    },
+  },
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
@@ -198,7 +326,23 @@ const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
 
 const mailOutbox = defineEntity("mail_outbox", mailOutboxFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Every op field counts, retries included (the outbox IS the
+  // retry record); identity does not. (No writers yet.)
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      accountId: false,
+      opType: true,
+      targetType: true,
+      targetId: true,
+      payload: true,
+      status: true,
+      attempts: true,
+      lastError: true,
+      createdAt: false,
+    },
+  },
   columns: {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },

@@ -18726,6 +18726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.EntityColumns`
           - `infra/entities.EntityMeta`
           - `infra/entities.EntityMetaBase`
+          - `infra/entities.TouchedBy`
         - Exports (types):
           - `EntityExtension`
           - `ExtensionIndexBuilders`

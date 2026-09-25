@@ -119,8 +119,8 @@ export const eventSourceFields = {
  * The domain table.
  *
  * Two timestamp pairs on purpose, because they answer different questions:
- * `createdAt`/`updatedAt` are ROW lifecycle (any write, including a future user
- * annotation — the revision tick reads `updatedAt`), while
+ * `createdAt`/`updatedAt` are ROW lifecycle (`updatedAt` moves on any change to
+ * a visible column, derived in the DB — the revision tick reads it), while
  * `firstSeenAt`/`lastSeenAt`/`disappearedAt` are EXTRACTION sighting (when the
  * source last vouched for this event). Disappearance is soft: an event absent
  * from a successful full extraction gets `disappearedAt` stamped, never deleted,

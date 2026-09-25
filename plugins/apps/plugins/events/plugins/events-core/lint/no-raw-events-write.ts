@@ -31,17 +31,17 @@ export default createRule({
     docs: {
       description:
         "Disallow writing to the `events` table outside its repo funnel — " +
-        "every write must stamp `updated_at` or the live revision tick stalls.",
+        "the funnel owns the sighting stamps and soft disappearance.",
     },
     schema: [],
     messages: {
       rawEventsWrite:
-        "Do not write to `events` directly. The `events.revision` live tick is " +
-        "count(*) + max(updated_at), so a write that omits the stamp lands in " +
-        "the DB but never reaches an open DataView — a silent staleness bug. " +
-        "Use upsertEvents() / markEventsDisappeared() from " +
-        "@plugins/apps/plugins/events/plugins/events-core/server, which own the " +
-        "stamp. The exported `eventsTable` handle is for READS only.",
+        "Do not write to `events` directly. The repo funnel owns the sighting " +
+        "stamps (firstSeenAt / lastSeenAt) and soft disappearance, so a second " +
+        "write path would drift from them. Use upsertEvents() / " +
+        "markEventsDisappeared() / reanchorRecurringEvents() from " +
+        "@plugins/apps/plugins/events/plugins/events-core/server. The exported " +
+        "`eventsTable` handle is for READS only.",
     },
   },
   defaultOptions: [],

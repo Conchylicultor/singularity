@@ -9,5 +9,7 @@ import { songMidiShape } from "../../shared/resources";
 // The columns are declared (and commented) in `songMidiShape`.
 export const songMidi = defineExtension(_songs, "midi", songMidiShape, {
   columns: { sourceMissing: { default: false } },
+  // A backfilled derived hash of the same bytes, not a change to the song's MIDI.
+  touchedBy: { contentHash: false },
 });
 export const _songMidiExt = songMidi.table; // drizzle-kit discovery

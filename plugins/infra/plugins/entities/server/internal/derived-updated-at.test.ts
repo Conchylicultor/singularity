@@ -92,13 +92,6 @@ test("defineEntity compiles touchedBy from physical column names and registers i
   ).toThrow(/declared twice with different touchedBy rules/);
 });
 
-test('"app-managed" compiles nothing', () => {
-  const entity = defineEntity("dua_unit_legacy", itemFields(), {
-    updatedAt: "app-managed",
-  });
-  expect(entity.derivedUpdatedAt).toBeUndefined();
-});
-
 test("runtime backstops for callers typed against the widened record", () => {
   // As entity-extensions calls it: `FieldsRecord`-typed, invisible to the types.
   const loose = defineEntity as unknown as (
@@ -118,7 +111,7 @@ test("runtime backstops for callers typed against the widened record", () => {
     loose(
       "dua_no_field",
       { id: field(textType, z.string(), "") },
-      { updatedAt: "app-managed" },
+      { updatedAt: { touchedBy: { id: false } } },
     ),
   ).toThrow(/no updatedAt field/);
 });
@@ -157,8 +150,9 @@ function _typeTests(): void {
 
   // A record WITHOUT updatedAt cannot declare one.
   const noUpdatedAt = { id: field(textType, z.string(), "") };
+  const bogusDecl = { updatedAt: { touchedBy: { id: false } } } as const;
   // @ts-expect-error — no updatedAt field to derive
-  defineEntity("t_no_field", noUpdatedAt, { updatedAt: "app-managed" });
+  defineEntity("t_no_field", noUpdatedAt, bogusDecl);
 
   // The well-formed spellings compile.
   const ok = {
@@ -172,7 +166,8 @@ function _typeTests(): void {
     },
   } as const;
   defineEntity("t_ok", f, ok);
-  defineEntity("t_ok_legacy", f, { updatedAt: "app-managed" });
+  // @ts-expect-error — the hand-stamped "app-managed" opt-out no longer exists
+  defineEntity("t_no_legacy", f, { updatedAt: "app-managed" });
   defineEntity("t_ok_no_field", noUpdatedAt);
 }
 void _typeTests;

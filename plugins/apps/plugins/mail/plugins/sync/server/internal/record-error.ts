@@ -24,7 +24,6 @@ export async function recordSyncError(
     errorCode: c.code,
     lastError: c.message,
     lastErrorAt: now,
-    updatedAt: now,
     ...(c.terminal ? { status: "error" as const } : {}),
   };
   await db
@@ -57,7 +56,6 @@ export async function kickSync(accountId: string): Promise<void> {
     // A manual retry resets the resync-loop counter — otherwise the next 404
     // would immediately re-trip the threshold.
     resyncCount: 0,
-    updatedAt: new Date(),
   };
   if (row.historyId != null) {
     await db

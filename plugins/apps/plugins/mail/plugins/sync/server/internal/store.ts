@@ -17,9 +17,10 @@ import { parseGmailMessage } from "./mime";
 
 // Storage layer for the Gmail sync engine: maps parsed Gmail wire objects into
 // the mail-core tables. Every write is idempotent (UPSERT / reconcile) so a job
-// can re-run a page after a crash without duplicating rows. On every
-// `onConflictDoUpdate` we set `updatedAt` explicitly — the DB `default now()`
-// only fires on INSERT.
+// can re-run a page after a crash without duplicating rows. `updatedAt` is never
+// written here: a DB trigger derives it from the counted columns declared in
+// mail-core's `tables.ts` (and raises on a direct write), so an identical
+// re-upsert moves nothing.
 
 /** Derive the boolean message flags from a Gmail label-id set. */
 export function flagsFromLabels(labelIds: string[]): {
@@ -66,7 +67,6 @@ export async function upsertLabels(
         textColor: sql`excluded.text_color`,
         messageListVisibility: sql`excluded.message_list_visibility`,
         labelListVisibility: sql`excluded.label_list_visibility`,
-        updatedAt: new Date(),
       },
     });
 }
@@ -178,7 +178,7 @@ async function writeMessage(
     .values({ id: msg.id, accountId, ...envelope, ...body, ...attachmentFlag })
     .onConflictDoUpdate({
       target: _mailMessages.id,
-      set: { ...envelope, ...body, ...attachmentFlag, updatedAt: new Date() },
+      set: { ...envelope, ...body, ...attachmentFlag },
     });
 
   // 3. Reconcile the message↔label join to exactly parsed.labelIds (labels are
@@ -195,7 +195,9 @@ async function writeMessage(
       );
     await db
       .insert(_mailMessageLabels)
-      .values(parsed.labelIds.map((labelId) => ({ messageId: msg.id, labelId })))
+      .values(
+        parsed.labelIds.map((labelId) => ({ messageId: msg.id, labelId })),
+      )
       .onConflictDoNothing();
   } else {
     await db
@@ -271,7 +273,7 @@ export async function markMessagesWithAttachments(
   if (ids.length === 0) return;
   const updated = await db
     .update(_mailMessages)
-    .set({ hasAttachments: true, updatedAt: new Date() })
+    .set({ hasAttachments: true })
     .where(
       and(
         eq(_mailMessages.accountId, accountId),
@@ -348,7 +350,6 @@ export async function recomputeThread(
       // derived from the message-level flag (scan- or hydration-populated)
       hasAttachments: messages.some((m) => m.hasAttachments),
       labelIds,
-      updatedAt: new Date(),
     })
     .where(eq(_mailThreads.id, threadId));
 }

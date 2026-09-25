@@ -104,12 +104,20 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 
 **All `events` writes go through the repo funnel**, `upsertEvents()` /
 `markEventsDisappeared()` / `reanchorRecurringEvents()` in
-`server/internal/events-repo.ts`. The
-`events.revision` tick is `count(*) + max(updated_at)`, so a write that omits
-the stamp lands in the DB but never reaches an open DataView. The funnel owns
-the stamp, the barrel exports `events` only as the read handle `eventsTable`,
+`server/internal/events-repo.ts`. The funnel owns the sighting stamps
+(`first_seen_at`/`last_seen_at`) and soft disappearance; the barrel exports
+`events` only as the read handle `eventsTable`,
 and the plugin's own `events/no-raw-events-write` lint rule fails any
 `db.insert/update/delete(eventsTable)` elsewhere. Don't add a second write path.
+
+**`updated_at` is derived, never written.** Both `events` and `event_sources`
+declare `touchedBy` in `server/internal/tables.ts`; a DB trigger bumps
+`updated_at` only on a real change to a counted column and raises on any write
+to it. On `events` every list-visible column counts and the sighting stamps do
+not, so the `events.revision` tick (`count(*) + max(updated_at)`) moves on every
+visible change and stays still on a content-identical re-extraction. On
+`event_sources` only the user's configuration (name, config, refresh, enabled)
+counts, never the run bookkeeping.
 
 That tick means "the events QUERY's result may have moved", so it also folds in
 an md5 of the **enabled source ids** — the query hides events of a disabled

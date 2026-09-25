@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { resetTrackView, upsertTrackView } from "../../shared/endpoints";
@@ -14,8 +14,13 @@ import { _trackView } from "./tables";
 export const handleUpsertTrackView = implement(
   upsertTrackView,
   async ({ params, body }) => {
-    const now = new Date();
-    const set: Record<string, unknown> = { updatedAt: now };
+    // No `updatedAt`: the DB trigger derives it from the counted columns. A
+    // body with no field still needs a non-empty conflict `set` (drizzle rejects
+    // an empty one), so the base is a no-op self-rewrite of the PK column — the
+    // trigger sees no change, so it neither bumps nor raises.
+    const set: Record<string, unknown> = {
+      trackId: sql`excluded.track_id`,
+    };
     if (body.color !== undefined) set.color = body.color;
     if (body.instrument !== undefined) set.instrument = body.instrument;
     if (body.muted !== undefined) set.muted = body.muted;

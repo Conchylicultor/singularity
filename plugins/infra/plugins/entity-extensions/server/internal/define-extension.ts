@@ -16,6 +16,7 @@ import {
   type EntityColumns,
   type EntityMeta,
   type EntityMetaBase,
+  type TouchedBy,
 } from "@plugins/infra/plugins/entities/server";
 import type {
   AnyExtensionShape,
@@ -49,6 +50,12 @@ export interface ExtensionMeta<Sh extends AnyExtensionShape> {
   // fields only. The key column and the timestamps are the primitive's, so
   // they cannot be declared here.
   columns?: EntityMetaBase<OwnFields<Sh>>["columns"];
+  // Overrides of whether a change to one of the plugin's OWN columns moves the
+  // row's derived `updatedAt` (`false`, or `{ into, outOf }` typed against the
+  // column's value type). Every own column not named here counts (`true`); the
+  // key and `createdAt` never do. See "updatedAt" in the entity-extensions
+  // CLAUDE.md.
+  touchedBy?: Partial<TouchedBy<OwnFields<Sh>>>;
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
   // name and covers the key and the timestamps as well as the plugin's fields.
   indexes?: (
@@ -152,6 +159,17 @@ export function defineExtension<
   // Typed against the widened `FieldsRecord`: the precise types are restated
   // once, by the return cast below.
   const fields: FieldsRecord = shape.fields;
+  // The TOTAL rule map `defineEntity` requires: the key and `createdAt` never
+  // count, every own column counts unless `meta.touchedBy` overrides it — so a
+  // new column counts by default and cannot be missed (over-counting is the
+  // only possible error, and it is harmless).
+  const overrides: Partial<TouchedBy<FieldsRecord>> = meta.touchedBy ?? {};
+  const touchedBy: TouchedBy<FieldsRecord> = {};
+  for (const k of Object.keys(fields)) {
+    if (k === "updatedAt") continue;
+    touchedBy[k] =
+      k === key || k === "createdAt" ? false : (overrides[k] ?? true);
+  }
   const entityMeta: EntityMeta<FieldsRecord> = {
     primaryKey: key,
     columns: {
@@ -166,10 +184,9 @@ export function defineExtension<
       createdAt: { default: defaultNow() },
       updatedAt: { default: defaultNow() },
     },
-    // Every side-table carries the primitive's `updatedAt` timestamp, stamped
-    // by `upsert` below — the legacy app-managed arm until extensions declare
-    // their own `touchedBy`.
-    updatedAt: "app-managed",
+    // Every side-table carries the primitive's `updatedAt` timestamp, derived
+    // by the database trigger from `touchedBy` — never written by the app.
+    updatedAt: { touchedBy },
     serverOnly: shape.serverOnly,
     // `as any` at the runtime/type boundary, as in `define-entity.ts`: the
     // precise `t` type rides in `ExtensionMeta`'s own signature.
@@ -205,14 +222,16 @@ export function defineExtension<
       patch: Record<string, unknown>,
       exec: DbExecutor = db,
     ) {
-      const now = new Date();
+      // `updatedAt` is derived by the trigger, so neither side stamps it. An
+      // empty patch would leave `set` empty, which drizzle rejects: rewrite the
+      // key with its own value instead — a no-op the trigger ignores. (drizzle
+      // drops `undefined` values, so a patch of only those is empty too.)
+      const empty = Object.values(patch).every((v) => v === undefined);
+      const set = empty ? { [key]: id } : patch;
       const rows = await exec
         .insert(table)
-        .values({ ...patch, [key]: id, updatedAt: now })
-        .onConflictDoUpdate({
-          target: keyColumn,
-          set: { ...patch, updatedAt: now },
-        })
+        .values({ ...patch, [key]: id })
+        .onConflictDoUpdate({ target: keyColumn, set })
         .returning();
       return rows[0];
     },

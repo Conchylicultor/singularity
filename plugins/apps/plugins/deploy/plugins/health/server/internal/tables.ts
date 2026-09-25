@@ -12,6 +12,8 @@ export const serverHealth = defineExtension(
   _deployServers,
   "health",
   serverHealthShape,
+  // Every probe moves `checkedAt`; a probe whose verdict is unchanged is not a change.
+  { touchedBy: { checkedAt: false } },
 );
 // Re-exported so drizzle-kit discovers the underlying pgTable.
 export const _deployServersHealthExt = serverHealth.table;

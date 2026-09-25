@@ -111,9 +111,8 @@ export async function updateSource(
   // `refresh` is a DECODED column now, so its encoder runs on this `.set(...)`.
   // A widened value would otherwise be a runtime throw from inside drizzle;
   // here it is a tsc error at the assignment that wrote it.
-  const updates: Partial<(typeof _eventSources)["$inferInsert"]> = {
-    updatedAt: new Date(),
-  };
+  // No `updatedAt`: the DB trigger derives it from the counted columns below.
+  const updates: Partial<(typeof _eventSources)["$inferInsert"]> = {};
 
   // Resolved before the name, because an emptied name re-derives from the config
   // this write is landing, not the one it replaces.
@@ -136,6 +135,8 @@ export async function updateSource(
     updates.nextRunAt = body.refresh === "manual" ? null : new Date();
   }
   if (body.enabled !== undefined) updates.enabled = body.enabled;
+  // An empty patch changes nothing, and drizzle rejects an empty `.set(...)`.
+  if (Object.keys(updates).length === 0) return current;
 
   const [row] = await db
     .update(_eventSources)

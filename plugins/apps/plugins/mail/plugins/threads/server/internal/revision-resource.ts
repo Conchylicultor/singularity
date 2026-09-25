@@ -6,8 +6,11 @@ import { mailThreadsRevisionResource } from "../../core";
 
 // The live invalidation tick for the threads DataView. A coarse revision over
 // `mail_threads` — row count + max(updatedAt) as epoch-millis — hashed to a
-// scalar string. On any thread write the change-feed recomputes it; if the value
-// actually changed the client refetches its loaded pages in place. `mode:"push"`
+// scalar string. `updatedAt` is derived by a DB trigger: every change to a
+// counted (list-visible) column moves it, and an identical rewrite does not —
+// see mail-core's `tables.ts`. On any thread write the change-feed recomputes
+// the tick; if the value actually changed the client refetches its loaded pages
+// in place. `mode:"push"`
 // suppresses byte-identical payloads, so it only pulses on a genuine change.
 export const mailThreadsRevisionServerResource = defineResource(
   mailThreadsRevisionResource,
@@ -20,7 +23,9 @@ export const mailThreadsRevisionServerResource = defineResource(
         .select({ total: count(), maxUpdated: max(_mailThreads.updatedAt) })
         .from(_mailThreads);
       const total = agg?.total ?? 0;
-      const maxUpdatedMs = agg?.maxUpdated ? new Date(agg.maxUpdated).getTime() : 0;
+      const maxUpdatedMs = agg?.maxUpdated
+        ? new Date(agg.maxUpdated).getTime()
+        : 0;
       return { rev: `${total}:${maxUpdatedMs}` };
     },
   },

@@ -189,10 +189,11 @@ export type TouchedBy<F extends FieldsRecord> = {
   [K in Exclude<keyof F, "updatedAt">]: TouchRule<InferFieldValue<F[K]>>;
 };
 
-// `"app-managed"` is the explicit legacy opt-out: the app stamps `updatedAt` by
-// hand and nothing is enforced. `{ touchedBy }` derives it in the database.
-export type UpdatedAtMeta<F extends FieldsRecord> =
-  "app-managed" | { readonly touchedBy: TouchedBy<F> };
+// `updatedAt` is always derived in the database from `touchedBy`; there is no
+// hand-stamped opt-out, so no app code ever writes the column.
+export type UpdatedAtMeta<F extends FieldsRecord> = {
+  readonly touchedBy: TouchedBy<F>;
+};
 
 // A record with an `updatedAt` field MUST say how it moves; one without cannot.
 // Conditional on `"updatedAt" extends keyof F`, so a new table with the column
@@ -243,8 +244,8 @@ export interface Entity<
     BuildColumns<string, EntityColumns<F, D>, "pg">,
     Exclude<keyof F, S>
   >;
-  // The compiled derived-`updatedAt` trigger, present iff `meta.updatedAt`
-  // declared `touchedBy`. Also recorded in the module registry that
+  // The compiled derived-`updatedAt` trigger, present iff the record has an
+  // `updatedAt` field. Also recorded in the module registry that
   // `installDerivedUpdatedAt` installs from; exposed here so a DB test can
   // install exactly its own entity's trigger.
   readonly derivedUpdatedAt?: DerivedUpdatedAtSpec;

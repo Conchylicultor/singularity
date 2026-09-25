@@ -347,18 +347,12 @@ export async function upsertRank(
   executor: RankExecutor = db,
   pinned = false,
 ): Promise<void> {
-  const now = new Date();
   await executor
     .insert(_conversationsExtQueue)
-    .values({
-      conversationId,
-      rank: rank.toJSON(),
-      pinned,
-      updatedAt: now,
-    })
+    .values({ conversationId, rank: rank.toJSON(), pinned })
     .onConflictDoUpdate({
       target: _conversationsExtQueue.conversationId,
-      set: { rank: rank.toJSON(), updatedAt: now },
+      set: { rank: rank.toJSON() },
     });
 }
 
@@ -377,7 +371,7 @@ export async function setGroupPinned(
     : [];
   await executor
     .update(_conversationsExtQueue)
-    .set({ pinned, updatedAt: new Date() })
+    .set({ pinned })
     .where(
       inArray(_conversationsExtQueue.conversationId, [
         conversationId,

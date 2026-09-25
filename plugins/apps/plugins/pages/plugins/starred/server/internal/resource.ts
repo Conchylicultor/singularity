@@ -10,8 +10,8 @@ const t = pageBlocksStarred.table;
 //
 // The window's order column is UPDATE-stable by construction: `pageBlocksStarred`
 // is presence-only, so `upsert(pageId, {})` writes `createdAt` once at insert and
-// on conflict only ever touches `updatedAt` — re-starring an already-starred page
-// is an in-place refill with an unchanged order signature and zero ids queries.
+// on conflict only rewrites the key with its own value (a no-op) — re-starring an
+// already-starred page is an in-place refill with an unchanged order signature and zero ids queries.
 //
 // No `select`: the projection is the extension's wire columns, which carry
 // `createdAt` (a `wireTimestamps` entry of the shape) — the compiler derives the

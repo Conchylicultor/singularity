@@ -18,7 +18,7 @@ export const handleForgetHostKey = implement(
   async ({ params }) => {
     const [row] = await db
       .update(_deployServersHealthExt)
-      .set({ hostKeyLine: null, updatedAt: new Date() })
+      .set({ hostKeyLine: null })
       .where(eq(_deployServersHealthExt.serverId, params.id))
       .returning();
     if (!row) throw new HttpError(404, "This server has never been checked.");

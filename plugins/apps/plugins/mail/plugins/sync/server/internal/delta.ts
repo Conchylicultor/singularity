@@ -90,7 +90,6 @@ export const deltaJob = defineJob({
                 `Gmail's history window keeps expiring before backfill completes.`,
               lastErrorAt: now,
               resyncCount: nextResync,
-              updatedAt: now,
             })
             .where(eq(_mailSyncState.accountId, accountId));
           return;
@@ -108,7 +107,6 @@ export const deltaJob = defineJob({
             lastError: null,
             lastErrorAt: null,
             resyncCount: nextResync,
-            updatedAt: new Date(),
           })
           .where(eq(_mailSyncState.accountId, accountId));
         await backfillJob.enqueue({ accountId });
@@ -128,7 +126,6 @@ export const deltaJob = defineJob({
           lastErrorAt: null,
           // A successful delta proves the watermark is fresh — reset the loop.
           resyncCount: 0,
-          updatedAt: new Date(),
         })
         .where(eq(_mailSyncState.accountId, accountId));
 

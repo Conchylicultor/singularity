@@ -16,7 +16,6 @@ export const handleRecordPlay = implement(recordPlay, async ({ params }) => {
       set: {
         playCount: sql`${_songPlaybackExt.playCount} + 1`,
         lastPlayedAt: now,
-        updatedAt: now,
       },
     });
 });

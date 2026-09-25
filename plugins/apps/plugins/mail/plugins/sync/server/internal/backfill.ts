@@ -109,7 +109,7 @@ export const backfillJob = defineJob({
       if (list.nextPageToken && !capReached) {
         await db
           .update(_mailSyncState)
-          .set({ historyId: renewedHistoryId, updatedAt: new Date() })
+          .set({ historyId: renewedHistoryId })
           .where(eq(_mailSyncState.accountId, accountId));
         await backfillJob.enqueue({
           accountId,
@@ -140,7 +140,6 @@ export const backfillJob = defineJob({
           errorCode: null,
           lastError: null,
           lastErrorAt: null,
-          updatedAt: new Date(),
         })
         .where(eq(_mailSyncState.accountId, accountId));
 

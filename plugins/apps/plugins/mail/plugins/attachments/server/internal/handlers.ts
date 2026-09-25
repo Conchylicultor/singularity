@@ -8,10 +8,7 @@ import {
   _mailAttachments,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import {
-  mailAttachmentDownloadEndpoint,
-  mailAttachmentUrl,
-} from "../../core";
+import { mailAttachmentDownloadEndpoint, mailAttachmentUrl } from "../../core";
 
 // Lazy Gmail attachment blob download. The sync engine stores attachment
 // *metadata* at hydration (filename / mime / size / gmailAttachmentId) but never
@@ -57,7 +54,7 @@ export const handleMailAttachmentDownload = implement(
     const stored = await createAttachment(data, row.filename, row.mimeType);
     await db
       .update(_mailAttachments)
-      .set({ storedAttachmentId: stored.id, updatedAt: new Date() })
+      .set({ storedAttachmentId: stored.id })
       .where(eq(_mailAttachments.id, row.id));
 
     return { storedAttachmentId: stored.id, url: mailAttachmentUrl(stored.id) };

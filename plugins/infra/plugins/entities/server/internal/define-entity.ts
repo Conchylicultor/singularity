@@ -268,7 +268,7 @@ export function defineEntity(
 }
 
 // The derived-`updatedAt` spec for this entity, or `undefined` when it has none
-// (no `updatedAt` field, or `"app-managed"`). The types make the declaration
+// (no `updatedAt` field). The types make the declaration
 // required and total; these runtime checks back them for callers typed against
 // the widened `FieldsRecord` (entity-extensions), which the types cannot see.
 function compileEntityUpdatedAt(
@@ -290,11 +290,9 @@ function compileEntityUpdatedAt(
   if (decl === undefined) {
     throw new Error(
       `defineEntity("${name}"): the entity has an updatedAt field, so ` +
-        `meta.updatedAt must declare how it moves ({ touchedBy } or "app-managed").`,
+        `meta.updatedAt must declare how it moves ({ touchedBy }).`,
     );
   }
-  if (decl === "app-managed") return undefined;
-
   const touchedBy = decl.touchedBy as Record<string, TouchRule<unknown>>;
   const expected = Object.keys(fields).filter((k) => k !== "updatedAt");
   const missing = expected.filter((k) => !(k in touchedBy));

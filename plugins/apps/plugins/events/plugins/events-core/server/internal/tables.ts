@@ -25,7 +25,30 @@ import {
 
 const eventSources = defineEntity("event_sources", eventSourceFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises). Only the user's configuration counts; the run bookkeeping the
+  // engine rewrites on every run (status, fingerprint, watermarks, last*) does
+  // not, and `type` is immutable.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      type: false,
+      name: true,
+      config: true,
+      refresh: true,
+      enabled: true,
+      status: false,
+      lastFingerprint: false,
+      lastRunAt: false,
+      nextRunAt: false,
+      lastError: false,
+      lastErrorCode: false,
+      lastFlags: false,
+      lastOutcome: false,
+      lastEventCount: false,
+      createdAt: false,
+    },
+  },
   columns: {
     config: { default: {} },
     refresh: { default: "manual" },
@@ -43,7 +66,36 @@ const eventSources = defineEntity("event_sources", eventSourceFields, {
 
 const events = defineEntity("events", eventFields, {
   primaryKey: "id",
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises) — and so the `events.revision` tick. Every list-visible column
+  // counts; the sighting stamps (`firstSeenAt` / `lastSeenAt`) do not, so a
+  // content-identical re-extraction leaves the row — and open lists — still.
+  updatedAt: {
+    touchedBy: {
+      id: false,
+      sourceId: true,
+      externalId: true,
+      title: true,
+      description: true,
+      date: true,
+      startsAt: true,
+      endsAt: true,
+      allDay: true,
+      venue: true,
+      city: true,
+      url: true,
+      imageUrl: true,
+      price: true,
+      category: true,
+      tags: true,
+      recurring: true,
+      recurrenceLabel: true,
+      firstSeenAt: false,
+      lastSeenAt: false,
+      disappearedAt: true,
+      createdAt: false,
+    },
+  },
   columns: {
     sourceId: {
       references: { column: () => eventSources.table.id, onDelete: "cascade" },

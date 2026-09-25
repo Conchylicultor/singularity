@@ -194,6 +194,84 @@ describe("defineExtension accessors", () => {
   });
 });
 
+// ── Derived updatedAt: default all-true, per-column overrides ───────────────
+// The statement's conflict set, and whether any bound value is a timestamp: an
+// upsert leaves `updated_at` to its column default on insert and to the
+// trigger on conflict, so it binds no Date anywhere.
+function conflictSet(sql: string | undefined): string {
+  const m = sql?.match(/do update set (.*) returning/);
+  if (!m?.[1]) throw new Error(`no conflict set in: ${sql}`);
+  return m[1];
+}
+const bindsADate = (params: unknown[] | undefined) =>
+  (params ?? []).some(
+    (p) => p instanceof Date || /^\d{4}-\d\d-\d\dT/.test(String(p)),
+  );
+
+describe("defineExtension derived updatedAt", () => {
+  test("every own column counts; the key and createdAt never do", () => {
+    const spec = thing.derivedUpdatedAt;
+    if (!spec) throw new Error("expected a derived updatedAt spec");
+    for (const col of ["semitones", "enabled", "label", "source"]) {
+      expect(spec.functionDdl).toContain(
+        `NEW."${col}" IS DISTINCT FROM OLD."${col}"`,
+      );
+    }
+    expect(spec.functionDdl).not.toContain(`NEW."parent_id" IS DISTINCT`);
+    expect(spec.functionDdl).not.toContain(`NEW."created_at" IS DISTINCT`);
+  });
+
+  test("a meta.touchedBy override is honoured", () => {
+    const overridden = defineExtension(parent, "overridden", thingShape, {
+      touchedBy: { enabled: false, source: { into: ["agent"] } },
+    });
+    const spec = overridden.derivedUpdatedAt;
+    if (!spec) throw new Error("expected a derived updatedAt spec");
+    expect(spec.functionDdl).not.toContain(`NEW."enabled" IS DISTINCT`);
+    expect(spec.functionDdl).toContain(
+      `NEW."semitones" IS DISTINCT FROM OLD."semitones"`,
+    );
+    expect(spec.functionDdl).toContain(`'agent'`);
+  });
+
+  test("upsert never writes updated_at", async () => {
+    statements.length = 0;
+    await thing.upsert("s1", { semitones: 2, label: "x" });
+    const [upsert] = statements;
+    expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
+    expect(bindsADate(upsert?.params)).toBe(false);
+  });
+
+  test("an empty patch rewrites the key with its own value", async () => {
+    statements.length = 0;
+    await thing.upsert("s1", {});
+    await thing.upsert("s2", { label: undefined });
+    for (const [i, id] of ["s1", "s2"].entries()) {
+      const upsert = statements[i];
+      expect(conflictSet(upsert?.sql)).toBe(`"parent_id" = $2`);
+      expect(bindsADate(upsert?.params)).toBe(false);
+      expect(upsert?.params.filter((p) => p === id)).toHaveLength(2);
+    }
+  });
+});
+
+// Never run (it would register a table): declarations the types must refuse.
+function _touchedByTypeTests(): void {
+  defineExtension(parent, "types", thingShape, {
+    // @ts-expect-error — "robot" is not a value of `source`.
+    touchedBy: { source: { into: ["robot"] } },
+  });
+  defineExtension(parent, "types", thingShape, {
+    // @ts-expect-error — the key is the primitive's, never overridable.
+    touchedBy: { songId: true },
+  });
+  defineExtension(parent, "types", thingShape, {
+    // @ts-expect-error — nor is createdAt.
+    touchedBy: { createdAt: true },
+  });
+}
+void _touchedByTypeTests;
+
 describe("defineExtension throws", () => {
   test("on a reserved field, at shape definition", () => {
     expect(() =>

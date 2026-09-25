@@ -104,7 +104,6 @@ export async function ensureAccount(): Promise<{
       errorCode: null,
       lastError: null,
       lastErrorAt: null,
-      updatedAt: new Date(),
     };
     await db
       .insert(_mailSyncState)

@@ -16,7 +16,20 @@ import { trackViewFields, TRACK_VIEW_SERVER_ONLY } from "../../core/schemas";
  */
 export const trackView = defineEntity("sonata_track_view", trackViewFields, {
   primaryKey: ["songId", "trackId"],
-  updatedAt: "app-managed",
+  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+  // raises): every user-set override counts, the identity pair does not.
+  updatedAt: {
+    touchedBy: {
+      songId: false,
+      trackId: false,
+      color: true,
+      instrument: true,
+      muted: true,
+      hidden: true,
+      volume: true,
+      createdAt: false,
+    },
+  },
   serverOnly: TRACK_VIEW_SERVER_ONLY,
   columns: {
     songId: {

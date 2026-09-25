@@ -27,8 +27,10 @@ export const eventSourcesServed = serveCollection(eventSources, {
 // sources are currently active. Both are folded into `rev`.
 //
 // The rows half is a coarse revision over `events` — row count + max(updatedAt)
-// as epoch-millis. Every write to `events` MUST set `updatedAt` (the engine's
-// upsert and the `disappearedAt` sweep alike) or the tick will not move.
+// as epoch-millis. `updatedAt` is derived by a DB trigger (see `tables.ts`):
+// every change to a counted — i.e. list-visible — column moves it, so no writer
+// can forget to. The sighting stamps (`lastSeenAt` / `firstSeenAt`) deliberately
+// do not count, so a content-identical re-extraction does not pulse open lists.
 //
 // The active-sources half digests the IDS of the enabled sources and NOTHING
 // else — deliberately never `updated_at`. A run flips a source row's `status`

@@ -42,7 +42,7 @@ export {
   _eventSourceRunEvents,
 } from "./internal/tables";
 // `events` is exported as a READ handle only. Every write goes through the repo
-// funnel below, which owns the `updated_at` stamp the live revision tick reads;
+// funnel below, which owns the sighting stamps and soft disappearance;
 // the `events/no-raw-events-write` lint rule fails any db.insert/update/delete
 // on this handle outside `events-repo.ts`.
 export { _events as eventsTable } from "./internal/tables";

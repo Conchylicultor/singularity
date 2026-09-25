@@ -59,7 +59,7 @@ const NO_COUNTS: RunCounts = {
 export async function markSourceRunning(sourceId: string): Promise<void> {
   await db
     .update(_eventSources)
-    .set({ status: "running", updatedAt: new Date() })
+    .set({ status: "running" })
     .where(eq(_eventSources.id, sourceId));
 }
 
@@ -124,7 +124,6 @@ async function completeRun(
         // Measured from the END of the run, so a slow source cannot accumulate
         // a backlog of overdue ticks.
         nextRunAt: computeNextRunAt(source.refresh, run.finishedAt),
-        updatedAt: run.finishedAt,
         // In the BASE patch, not per-arm: `outcome` is already on the run row
         // being inserted three statements up, so every ending writes it here by
         // construction and no arm can forget to. It is the newest thing the

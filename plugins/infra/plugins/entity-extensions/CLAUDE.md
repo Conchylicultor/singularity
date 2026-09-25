@@ -62,7 +62,7 @@ Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is t
 - `columns` — `default` / `name` / `references` for the plugin's **own** fields (`defineEntity`'s `meta.columns`). The key and the timestamps are the primitive's, so they are not declarable here.
 - `indexes` — see below.
 
-The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s patch is the plugin's own columns only (DB-defaulted ones optional); it always bumps `updatedAt`.
+The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s patch is the plugin's own columns only (DB-defaulted ones optional); it never writes `updatedAt` (see below).
 
 ### The key is named after the parent
 
@@ -121,6 +121,10 @@ export const promptBlock = defineExtension(_tasks, "prompt_block", promptBlockSh
 
 `b.index` / `b.uniqueIndex` return **drizzle's own builders**, so the full surface stays available: `.on()`, `.using("gin", …)`, `.where(sql\`…\`)`, `.desc()`. `t` is keyed by JS property name and covers the key, `createdAt` and `updatedAt` alongside the plugin's own fields.
 
+### `updatedAt`
+
+Derived, never written: every side-table gets the derived-`updatedAt` trigger of [`entities`](../entities/CLAUDE.md) → **Derived updatedAt**, so `updated_at` moves to `now()` only when a counted column really changes, and any app write to it RAISEs. `defineExtension` builds the total `touchedBy` map itself — the key and `createdAt` never count, **every own column counts by default** — so a new column cannot be missed (over-counting is the only possible error, and it is harmless). Override a column with `meta.touchedBy` (`false`, or `{ into, outOf }` typed against the column's value type): e.g. `touchedBy: { checkedAt: false }` for a column a probe rewrites every run. A presence-only extension (no own columns) compiles a trigger that never bumps. A direct `db.update(ext.table)` / `insert … onConflictDoUpdate` must not set `updatedAt` either.
+
 ### Module-eval throws
 
 - **Reserved field names** (`defineExtensionShape`). A plugin field named after the chosen key, `createdAt` or `updatedAt` would collide with the primitive's own field, so the declared shape and the DDL would disagree. It throws, naming the key and the field. A key named `createdAt` / `updatedAt` throws too.
@@ -167,6 +171,7 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
     - `infra/entities.EntityColumns`
     - `infra/entities.EntityMeta`
     - `infra/entities.EntityMetaBase`
+    - `infra/entities.TouchedBy`
   - Exports (types):
     - `EntityExtension`
     - `ExtensionIndexBuilders`

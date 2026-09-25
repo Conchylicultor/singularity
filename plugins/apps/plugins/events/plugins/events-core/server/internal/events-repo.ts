@@ -6,12 +6,11 @@ import { _events } from "./tables";
 
 // THE ONLY sanctioned write path to `events`.
 //
-// Why a funnel rather than "remember to set updatedAt": the `events.revision`
-// live tick is `count(*) + max(updated_at)`, so a write that forgets the stamp
-// lands in the DB and never reaches the open DataView — a silent staleness bug,
-// invisible in tests, that any future writer re-introduces for free. Here the
-// stamp is applied by the only code that can write, so forgetting it is not
-// expressible. The barrel therefore exports the events table as a READ handle
+// `updated_at` (what the `events.revision` tick reads) is derived by a DB
+// trigger from the counted columns, so no writer here or elsewhere stamps it.
+// The funnel owns the rest of the row's lifecycle instead: the sighting stamps
+// (`firstSeenAt` / `lastSeenAt`), soft disappearance, and the three write
+// shapes below. The barrel therefore exports the events table as a READ handle
 // (`eventsTable`) plus the writers below, and the `events/no-raw-events-write`
 // lint rule fails any `db.insert/update/delete(eventsTable)` outside this file.
 //
@@ -24,7 +23,8 @@ import { _events } from "./tables";
 
 /**
  * One event as the engine hands it over: every column except the row-lifecycle
- * and sighting stamps, which this module owns. Derived from the table's insert
+ * and sighting stamps (this module owns the sighting stamps; the DB owns
+ * `createdAt` defaults and derives `updatedAt`). Derived from the table's insert
  * type, so adding a field to `eventFields` updates this by construction.
  */
 export type EventWriteInput = Omit<
@@ -94,7 +94,6 @@ export async function upsertEvents(
           lastSeenAt: now,
           disappearedAt: null,
           createdAt: now,
-          updatedAt: now,
         })
         .onConflictDoUpdate({
           target: [_events.sourceId, _events.externalId],
@@ -103,7 +102,6 @@ export async function upsertEvents(
             lastSeenAt: now,
             // The source listed it again, so it is no longer gone.
             disappearedAt: null,
-            updatedAt: now,
           },
         })
         // `xmax = 0` on the returned tuple is true exactly for a fresh INSERT.
@@ -151,7 +149,7 @@ export async function markEventsDisappeared(
   const stillPresent = isNull(_events.disappearedAt);
   const rows = await db
     .update(_events)
-    .set({ disappearedAt: now, updatedAt: now })
+    .set({ disappearedAt: now })
     .where(
       seenExternalIds.length === 0
         ? // The source successfully listed nothing: everything it had is gone.
@@ -264,7 +262,6 @@ export async function reanchorRecurringEvents(
           startsAt: plan.occurrence.startsAt,
           endsAt: plan.occurrence.endsAt,
           allDay: plan.occurrence.allDay,
-          updatedAt: new Date(),
         })
         .where(eq(_events.id, row.id));
       moved += 1;

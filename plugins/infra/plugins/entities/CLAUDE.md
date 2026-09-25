@@ -175,8 +175,10 @@ updatedAt: {
     // …every other column
   },
 },
-// or, the legacy opt-out (the app stamps it by hand): updatedAt: "app-managed"
 ```
+
+There is no hand-stamped opt-out: every entity with an `updatedAt` field is
+derived, and no app code writes the column.
 
 Transition values are typed against the column's own value type, so a
 misspelled one is a tsc error. `defineEntity` compiles `touchedBy` against the
@@ -189,7 +191,8 @@ compiler, registry and installer live in
 (the database plugin cannot import entities without a cycle). The compiled
 spec is also on `entity.derivedUpdatedAt`. Runtime backstops mirror the types
 for callers typed against the widened `FieldsRecord` (entity-extensions, which
-declares `"app-managed"` for every side-table).
+builds each side-table's total `touchedBy` itself — own columns count unless
+overridden).
 
 ## Boundary casts
 

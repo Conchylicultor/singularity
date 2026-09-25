@@ -167,6 +167,9 @@ File one follow-up task (via `add_task`) to classify them and then delete the
 Tables not built with `defineEntity` are out of scope. The follow-up task notes that they
 should migrate to entities to get the guarantee.
 
+> Done: see `2026-09-25-global-derived-updated-at-remaining-entities.md` — every
+> remaining entity is classified and the `"app-managed"` arm is deleted.
+
 ## Tests
 
 - `plugins/infra/plugins/entities/server/internal/derived-updated-at.test.ts`:
