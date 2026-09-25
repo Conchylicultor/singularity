@@ -17,10 +17,10 @@
     - `defineShortcut`
     - `formatShortcutLabel`
     - `getFocusedSurfaceId`
-    - `isEditableTarget`
     - `setFocusedSurfaceId`
     - `Shortcuts`
     - `subscribeFocusedSurface`
+    - `targetClaimsKey`
     - `useFocusedSurfaceId`
     - `useSurfaceShortcuts`
 - Cross-plugin:

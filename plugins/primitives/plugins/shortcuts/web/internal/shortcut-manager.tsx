@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Shortcuts } from "../slots";
 import { getCachedCombo, matchesEvent } from "./parse-keys";
-import { comboHasModifier, isEditableTarget } from "./editable-target";
+import { comboHasModifier, targetClaimsKey } from "./target-claims-key";
 import { useDynamicShortcuts } from "./dynamic-registry";
 import { getFocusedSurfaceId } from "./focused-surface";
 
@@ -40,7 +40,7 @@ export function ShortcutManager() {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const active = shortcutsRef.current;
-      const editable = isEditableTarget(e.target);
+      const editable = targetClaimsKey(e);
       let winner: (typeof active)[number] | null = null;
       let winnerPriority = -Infinity;
 

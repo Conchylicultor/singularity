@@ -4301,7 +4301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/shortcuts.getFocusedSurfaceId`
-              - `primitives/shortcuts.isEditableTarget`
+              - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
@@ -31083,10 +31083,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineShortcut`
           - `formatShortcutLabel`
           - `getFocusedSurfaceId`
-          - `isEditableTarget`
           - `setFocusedSurfaceId`
           - `Shortcuts`
           - `subscribeFocusedSurface`
+          - `targetClaimsKey`
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:

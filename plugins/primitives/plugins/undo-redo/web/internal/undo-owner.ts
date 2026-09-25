@@ -59,9 +59,9 @@ export const localUndoProps = { [UNDO_OWNER_ATTR]: "local" } as const;
 
 /**
  * Input types the browser keeps an undo stack for. Deliberately NOT
- * `shortcuts`' `isEditableTarget`, which answers a different question ("should
- * the raw keystroke reach this element") and so counts a checkbox, a radio and
- * a file picker as editable. Those have no text history to protect, and
+ * `shortcuts`' `targetClaimsKey`, which answers a different question ("does
+ * this element act on this key") and so lets a checkbox, a radio and
+ * a file picker claim keys. Those have no text history to protect, and
  * treating them as if they did would silence ⌘Z right after ticking a checkbox
  * — the one moment the user most wants to take it back.
  */

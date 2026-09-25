@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   getFocusedSurfaceId,
-  isEditableTarget,
+  targetClaimsKey,
 } from "@plugins/primitives/plugins/shortcuts/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -65,7 +65,7 @@ export function SeekHoldController() {
       // Only the focused surface, and only when a song is open here.
       if (getFocusedSurfaceId() !== surfaceIdRef.current) return;
       if (!hasSongRef.current) return;
-      if (isEditableTarget(e.target)) return; // let the field move its caret
+      if (targetClaimsKey(e)) return; // let the field move its caret / thumb
       e.preventDefault();
 
       if (e.repeat) {

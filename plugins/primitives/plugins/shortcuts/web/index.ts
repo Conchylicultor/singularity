@@ -15,7 +15,7 @@ export {
   subscribeFocusedSurface,
 } from "./internal/focused-surface";
 export { formatShortcutLabel } from "./internal/format-keys";
-export { isEditableTarget } from "./internal/editable-target";
+export { targetClaimsKey } from "./internal/target-claims-key";
 export type { ShortcutDescriptor } from "./internal/types";
 
 export default {
