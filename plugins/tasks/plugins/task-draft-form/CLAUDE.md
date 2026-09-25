@@ -138,6 +138,8 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`
+    - `primitives/overlay/tooltip.TooltipDoc`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`

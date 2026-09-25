@@ -462,6 +462,7 @@ fixed raw size escapes per-site via
     - `primitives/outline/rail`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
+    - `primitives/overlay/tooltip`
     - `primitives/pane`
     - `primitives/rank-reorder`
     - `primitives/setup-steps`

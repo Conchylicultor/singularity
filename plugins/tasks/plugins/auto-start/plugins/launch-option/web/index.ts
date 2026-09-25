@@ -18,6 +18,8 @@ export default {
     TaskLaunch.Option({
       id: autoStartLaunchOption.id,
       label: "Auto-start",
+      description:
+        "Launch an agent on this task with the chosen model as soon as it is created, or once the tasks it runs after are done. Off leaves it for you to launch.",
       def: autoStartLaunchOption,
       component: AutoStartLaunchControl,
       // On a composer bar it fuses with the thinking mode into the one run

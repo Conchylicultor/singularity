@@ -12,6 +12,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Children, cloneElement, Fragment, isValidElement } from "react";
 import type { IconType } from "react-icons";
 import { MdCheck, MdExpandMore } from "react-icons/md";
@@ -32,6 +33,13 @@ export interface PickerPillProps {
   highlight?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  /**
+   * Hover tooltip on the trigger — what this pill configures, for someone who
+   * has not opened it yet (a `TooltipDoc`, typically). Required: a pill reads
+   * as a word like "Preprompt" or "Dependency", which names the setting but
+   * does not explain it to a new user.
+   */
+  tooltip: React.ReactNode;
   /** `PickerPill.Value` and `PickerPill.Group` children, in any order. */
   children?: React.ReactNode;
 }
@@ -92,36 +100,41 @@ export function PickerPill({
   highlight,
   disabled,
   ariaLabel,
+  tooltip,
   children,
 }: PickerPillProps) {
   const { values, groups } = partition(children);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            shape="pill"
-            variant={highlight ? "frame" : "ghost"}
-            disabled={disabled}
-            aria-label={ariaLabel ?? placeholder}
-            className={cn(
-              highlight &&
-                "border-accent/60 bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
-            )}
-          />
-        }
-      >
-        <Icon aria-hidden className="size-3.5" />
-        {values.length > 0 ? (
-          values.map((value, i) => cloneElement(value, { key: value.key ?? i }))
-        ) : (
-          <Text variant="control" tone="muted">
-            {placeholder}
-          </Text>
-        )}
-        <MdExpandMore className="size-3.5 opacity-70" />
-      </DropdownMenuTrigger>
+      <WithTooltip content={tooltip}>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              shape="pill"
+              variant={highlight ? "frame" : "ghost"}
+              disabled={disabled}
+              aria-label={ariaLabel ?? placeholder}
+              className={cn(
+                highlight &&
+                  "border-accent/60 bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
+              )}
+            />
+          }
+        >
+          <Icon aria-hidden className="size-3.5" />
+          {values.length > 0 ? (
+            values.map((value, i) =>
+              cloneElement(value, { key: value.key ?? i }),
+            )
+          ) : (
+            <Text variant="control" tone="muted">
+              {placeholder}
+            </Text>
+          )}
+          <MdExpandMore className="size-3.5 opacity-70" />
+        </DropdownMenuTrigger>
+      </WithTooltip>
       <DropdownMenuContent align="start">
         {groups.map((group, i) => (
           <Fragment key={group.key ?? i}>

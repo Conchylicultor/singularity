@@ -26340,6 +26340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/floating-action`
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
+              - `primitives/overlay/tooltip`
               - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/row-actions`
@@ -26370,6 +26371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/responsiveness`
               - `stats/tasks`
               - `tasks/attempt-view`
+              - `tasks/launch-options`
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
               - `tasks/task-description`
@@ -26845,6 +26847,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/outline/rail`
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
+              - `primitives/overlay/tooltip`
               - `primitives/pane`
               - `primitives/rank-reorder`
               - `primitives/setup-steps`
@@ -30272,19 +30275,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/tab-surface`
               - `apps/prototypes/present`
-        - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
+        - **`tooltip`** — WithTooltip wrapper, <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
           - Web:
             - Uses:
               - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Tooltip`
               - `primitives/css/ui-kit.TooltipContent`
               - `primitives/css/ui-kit.TooltipTrigger`
             - Exports (types):
               - `KbdProps`
+              - `TooltipDocProps`
               - `WithTooltipProps`
             - Exports (values):
               - `Kbd`
+              - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
             - Imported by:
@@ -30321,7 +30328,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `primitives/search`
               - `primitives/sync-status`
+              - `primitives/text-editor/composer`
+              - `primitives/text-editor/composer/picker-pill`
               - `primitives/ui-context/element-picker`
+              - `tasks/launch-options`
+              - `tasks/task-description`
               - `tasks/task-draft-form`
               - `ui/segmented-progress-bar/dots`
               - `ui/segmented-progress-bar/pie`
@@ -31502,6 +31513,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/overlay/tooltip.TooltipDoc`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/text-editor.TextEditor`
               - `primitives/text-editor.TextEditorProps`
             - Exports (types):
@@ -31531,6 +31544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.DropdownMenuSection`
                   - `primitives/css/ui-kit.DropdownMenuSeparator`
                   - `primitives/css/ui-kit.DropdownMenuTrigger`
+                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types):
                   - `PickerPillCheckProps`
                   - `PickerPillGroupProps`
@@ -31852,6 +31866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.Kbd`
+              - `primitives/overlay/tooltip.TooltipDoc`
               - `primitives/slot-render.registerSlotItemAttrs`
               - `primitives/slot-render.registerSlotItemMiddleware`
               - `primitives/text-editor/inline-chip.inlineChip`
@@ -34040,8 +34055,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
         - Uses:
+          - `primitives/css/spacing.Stack`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/overlay/overlay-boundary.OverlayBoundary`
+          - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
@@ -34238,6 +34255,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/overlay/tooltip.TooltipDoc`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `primitives/text-editor/paste-images.AttachmentThumbnail`
@@ -34319,6 +34338,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
+          - `primitives/overlay/tooltip.TooltipDoc`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`

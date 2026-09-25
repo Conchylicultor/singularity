@@ -358,6 +358,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/overlay/floating-action`
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
+    - `primitives/overlay/tooltip`
     - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/row-actions`
@@ -388,6 +389,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `stats/responsiveness`
     - `stats/tasks`
     - `tasks/attempt-view`
+    - `tasks/launch-options`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-description`

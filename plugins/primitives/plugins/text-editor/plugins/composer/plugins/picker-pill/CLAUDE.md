@@ -46,6 +46,7 @@ hand-rolled its own checkmarks.
     - `primitives/css/ui-kit.DropdownMenuSection`
     - `primitives/css/ui-kit.DropdownMenuSeparator`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (types):
     - `PickerPillCheckProps`
     - `PickerPillGroupProps`

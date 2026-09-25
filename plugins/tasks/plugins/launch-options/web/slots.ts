@@ -105,6 +105,12 @@ export interface LaunchOptionPill<V> {
 export interface TaskLaunchOption<V> {
   /** Row label in the detail card; chip label in the draft card. */
   label: string;
+  /**
+   * What this option does, in a sentence — the hover tooltip on its pill and
+   * on its label in the detail card. Required: "Preprompt" or "Auto-start"
+   * names the setting but does not tell a new user what changing it does.
+   */
+  description: string;
   /** The shared value contract (see `defineLaunchOption`). */
   def: LaunchOptionDef<V>;
   /** The control itself. Controlled — see {@link LaunchControlProps}. */

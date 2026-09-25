@@ -5,6 +5,7 @@ import {
   MdTurnRight,
 } from "react-icons/md";
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 /** One row of the menu: where this task goes relative to the current one. */
@@ -107,6 +108,13 @@ export function DependencyPill({
       highlight={value !== undefined}
       disabled={disabled}
       ariaLabel="Relation to current task"
+      tooltip={
+        <TooltipDoc title="Dependency">
+          How this task relates to the one you are looking at. A follow-up waits
+          for it to finish first; a prerequisite must finish before it. A
+          separate task is not linked to it.
+        </TooltipDoc>
+      }
     >
       {chosen && <PickerPill.Value>{chosen.short}</PickerPill.Value>}
       <PickerPill.Group title="Where this task goes">

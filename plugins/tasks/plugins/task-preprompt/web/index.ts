@@ -21,6 +21,8 @@ export default {
     TaskLaunch.Option({
       id: prepromptLaunchOption.id,
       label: "Preprompt",
+      description:
+        "A reusable set of instructions prepended to the agent's first message, such as a working style or a checklist to follow.",
       def: prepromptLaunchOption,
       component: PrepromptLaunchControl,
       // Its own pill on the leading half of a composer bar: a preprompt shapes

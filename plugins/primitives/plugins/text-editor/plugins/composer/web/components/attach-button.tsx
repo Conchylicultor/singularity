@@ -1,4 +1,8 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import {
+  TooltipDoc,
+  WithTooltip,
+} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { IconType } from "react-icons";
 
 export interface ComposerAttachButtonProps {
@@ -10,8 +14,12 @@ export interface ComposerAttachButtonProps {
   label: string;
   active: boolean;
   onToggle: (next: boolean) => void;
-  /** Hover title. Defaults to the label, so it also never changes with state. */
-  title?: string;
+  /**
+   * What attaching does, shown under the label in the hover tooltip. Required:
+   * a label like "Attach page URL" names the button but does not tell a new
+   * user what it does. Like the label, it never changes with state.
+   */
+  description: string;
   disabled?: boolean;
 }
 
@@ -35,20 +43,21 @@ export function ComposerAttachButton({
   label,
   active,
   onToggle,
-  title,
+  description,
   disabled,
 }: ComposerAttachButtonProps) {
   const Icon = active ? (activeIcon ?? icon) : icon;
   return (
-    <ToggleChip
-      active={active}
-      variant="tinted"
-      icon={<Icon aria-hidden />}
-      disabled={disabled}
-      title={title ?? label}
-      onClick={() => onToggle(!active)}
-    >
-      {label}
-    </ToggleChip>
+    <WithTooltip content={<TooltipDoc title={label}>{description}</TooltipDoc>}>
+      <ToggleChip
+        active={active}
+        variant="tinted"
+        icon={<Icon aria-hidden />}
+        disabled={disabled}
+        onClick={() => onToggle(!active)}
+      >
+        {label}
+      </ToggleChip>
+    </WithTooltip>
   );
 }

@@ -96,6 +96,7 @@ export function TaskDraftComposer({
           icon={MdAdd}
           activeIcon={MdLink}
           label="Attach page URL"
+          description="Record the page you are on with the task, so the agent knows which screen it is about."
           active={includeUrl}
           onToggle={onToggleUrl}
           disabled={disabled}

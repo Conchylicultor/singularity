@@ -4,6 +4,8 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TaskLaunch } from "../slots";
 import { launchOptionValue, type LaunchOptionValues } from "../internal/values";
 
@@ -144,6 +146,7 @@ function LaunchOptionGroup({
       placeholder={lead.label}
       highlight={isChanged(members, values)}
       disabled={disabled}
+      tooltip={<PillTooltip members={members} />}
     >
       {shown.map((entry, i) => {
         const option = entry.option;
@@ -188,6 +191,30 @@ function LaunchOptionGroup({
         );
       })}
     </PickerPill>
+  );
+}
+
+/**
+ * The pill's hover documentation, from what each member declared. A solo pill
+ * is its option's label and description; a fused pill names every member and
+ * gives each its own line, since one trigger configures all of them.
+ */
+function PillTooltip({ members }: { members: OptionItem[] }) {
+  if (members.length === 1) {
+    const option = members[0]!;
+    return <TooltipDoc title={option.label}>{option.description}</TooltipDoc>;
+  }
+  return (
+    <TooltipDoc title={members.map((option) => option.label).join(" · ")}>
+      <Stack gap="2xs">
+        {members.map((option) => (
+          <span key={option.id}>
+            <strong className="font-medium">{option.label}:</strong>{" "}
+            {option.description}
+          </span>
+        ))}
+      </Stack>
+    </TooltipDoc>
   );
 }
 

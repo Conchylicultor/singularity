@@ -24,6 +24,8 @@
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.TooltipDoc`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
     - `primitives/text-editor/paste-images.AttachmentThumbnail`

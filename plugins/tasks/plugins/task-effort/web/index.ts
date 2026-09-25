@@ -22,6 +22,8 @@ export default {
     TaskLaunch.Option({
       id: effortLaunchOption.id,
       label: "Thinking mode",
+      description:
+        "How hard the agent thinks before acting. Higher modes are slower but do better on tricky tasks; Auto leaves it to Claude Code.",
       def: effortLaunchOption,
       component: EffortLaunchControl,
       // Shares the `run` cluster with the auto-start model: on a composer bar

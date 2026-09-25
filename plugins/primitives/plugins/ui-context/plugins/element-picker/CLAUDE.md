@@ -121,6 +121,7 @@ every build — including a composition this plugin is not in.
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`
+    - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/slot-render.registerSlotItemAttrs`
     - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/text-editor/inline-chip.inlineChip`

@@ -3,6 +3,7 @@ import {
   IconButton,
   type IconButtonProps,
 } from "@plugins/primitives/plugins/icon-button/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPicker } from "./element-picker";
 
@@ -15,10 +16,13 @@ import { ElementPicker } from "./element-picker";
 export function PickerButton({
   onPick,
   label = "Pick UI element",
+  description = "Click any element on screen to attach it as context: the agent is told which component, plugin and source file drew it.",
   variant,
 }: {
   onPick: (meta: UiContextMeta) => void;
   label?: string;
+  /** What picking does, under the label in the hover tooltip. */
+  description?: string;
   /** The button's look — ghost by default; `frame` as a segment of a split pill. */
   variant?: IconButtonProps["variant"];
 }) {
@@ -35,6 +39,7 @@ export function PickerButton({
         <IconButton
           icon={MdAdsClick}
           label={label}
+          tooltip={<TooltipDoc title={label}>{description}</TooltipDoc>}
           variant={variant}
           disabled={armed}
           onClick={arm}

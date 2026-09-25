@@ -20,7 +20,11 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import {
+  Kbd,
+  TooltipDoc,
+  WithTooltip,
+} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry, DependencyExtras } from "./dependency-pill";
@@ -310,15 +314,24 @@ export function TaskDraftForm({
       </DndContext>
 
       <Line className="gap-sm">
-        <Button
-          variant="ghost"
-          onClick={appendChainCard}
-          loading={submitting}
-          className="text-muted-foreground"
+        <WithTooltip
+          content={
+            <TooltipDoc title="Follow-up task">
+              Draft another task below this one, created together with it. It
+              runs after the task above it; unlink them to run in parallel.
+            </TooltipDoc>
+          }
         >
-          <MdAdd className="size-3.5" />
-          Follow-up task
-        </Button>
+          <Button
+            variant="ghost"
+            onClick={appendChainCard}
+            loading={submitting}
+            className="text-muted-foreground"
+          >
+            <MdAdd className="size-3.5" />
+            Follow-up task
+          </Button>
+        </WithTooltip>
         {/* Empty grow cell: it absorbs the slack so Cancel/Create sit flush-right. */}
         <Fill />
         <Button variant="ghost" onClick={onCancel} loading={submitting}>

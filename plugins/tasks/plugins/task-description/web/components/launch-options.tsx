@@ -2,6 +2,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
+  TooltipDoc,
+  WithTooltip,
+} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import {
   TaskLaunch,
   type LaunchOptionEntry,
 } from "@plugins/tasks/plugins/launch-options/web";
@@ -24,7 +28,13 @@ function BoundOptionRow({
   const Control = option.component;
   return (
     <Stack direction="row" align="center" gap="md">
-      <SectionLabel as="span">{option.label}</SectionLabel>
+      <WithTooltip
+        content={
+          <TooltipDoc title={option.label}>{option.description}</TooltipDoc>
+        }
+      >
+        <SectionLabel as="span">{option.label}</SectionLabel>
+      </WithTooltip>
       {/* Until the task's value is known the control is not mounted at all —
           it would otherwise show (and accept clicks on) a stand-in value. */}
       {binding.pending ? (

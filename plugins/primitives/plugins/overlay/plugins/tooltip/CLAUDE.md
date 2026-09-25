@@ -4,19 +4,23 @@
 
 ## Plugin reference
 
-- Description: WithTooltip wrapper and <Kbd> keyboard shortcut badge.
+- Description: WithTooltip wrapper, <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
 - Web:
   - Uses:
     - `primitives/css/inline.Inline`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Tooltip`
     - `primitives/css/ui-kit.TooltipContent`
     - `primitives/css/ui-kit.TooltipTrigger`
   - Exports (types):
     - `KbdProps`
+    - `TooltipDocProps`
     - `WithTooltipProps`
   - Exports (values):
     - `Kbd`
+    - `TooltipDoc`
     - `WithTooltip`
 - Cross-plugin:
   - Imported by:
@@ -53,7 +57,11 @@
     - `primitives/pane`
     - `primitives/search`
     - `primitives/sync-status`
+    - `primitives/text-editor/composer`
+    - `primitives/text-editor/composer/picker-pill`
     - `primitives/ui-context/element-picker`
+    - `tasks/launch-options`
+    - `tasks/task-description`
     - `tasks/task-draft-form`
     - `ui/segmented-progress-bar/dots`
     - `ui/segmented-progress-bar/pie`

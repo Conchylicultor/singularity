@@ -43,8 +43,10 @@ Ordering for both surfaces lives in
 - Web:
   - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
   - Uses:
+    - `primitives/css/spacing.Stack`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
+    - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
