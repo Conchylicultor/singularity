@@ -45,20 +45,32 @@
 .chord-strip-boxes {
   height: 92px;
 }
+/* A box is a painted frame; its click target is the full-bleed button behind
+ * its content (`.chord-box-hit`), so the frame's hover and focus states read
+ * off that button. */
 .chord-box {
   container-type: inline-size;
   border-radius: 10px;
   border: 1.5px dashed var(--input);
-  cursor: pointer;
   transition:
     background-color 0.12s,
     border-color 0.12s,
     transform 0.12s;
 }
-.chord-box:hover {
+.chord-box-hit {
+  border-radius: inherit;
+  cursor: pointer;
+}
+.chord-box-hit:disabled {
+  cursor: default;
+}
+.chord-box-hit:focus-visible {
+  outline: none;
+}
+.chord-box:has(.chord-box-hit:enabled:hover) {
   border-color: var(--faint-foreground);
 }
-.chord-box:focus-visible {
+.chord-box:has(.chord-box-hit:focus-visible) {
   outline: 2px solid var(--foreground);
   outline-offset: 2px;
 }
@@ -79,7 +91,6 @@
 .chord-box[data-given] {
   border: 1.5px solid color-mix(in srgb, var(--fn, var(--categorical-10)) 22%, transparent);
   background: color-mix(in srgb, var(--fn, var(--categorical-10)) 7%, transparent);
-  cursor: default;
 }
 .chord-box[data-given] .chord-num {
   color: var(--fn, var(--categorical-10));
@@ -87,10 +98,7 @@
 }
 /* After the check a given box replays the song over it like any other, so it
  * takes the hover edge back; before it, there is nothing to click. */
-.chord-box[data-given]:not(:disabled) {
-  cursor: pointer;
-}
-.chord-box[data-given]:not(:disabled):hover {
+.chord-box[data-given]:has(.chord-box-hit:enabled:hover) {
   border-color: var(--faint-foreground);
 }
 /* The chord's name under its numeral, once reveal is on. Muted on an empty or
@@ -157,27 +165,46 @@
   height: 12px;
 }
 
-/* "you: IV" under a wrong box: plays the answer on the piano. */
-.chord-yours {
-  font-size: 11.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--destructive);
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent);
-  border-radius: 99px;
-  padding: 2px 8px 2px 6px;
+/* A wrong box: the answer given, struck through, beside the chord that
+ * played. The pair shrinks a step from a lone numeral so both fit; the struck
+ * one is smaller again and faded in the tile's own ink, with the strike as ONE
+ * slanted line past both edges — a text strike through a lone "I" reads as a
+ * cross. Clicking it plays the answer given. */
+.chord-box-pair {
+  font-size: clamp(20px, 30cqi, 38px);
+  max-width: calc(100% - 6px);
+}
+.chord-box .chord-box-pair .chord-num {
+  font-size: 1em;
+}
+.chord-missed {
+  position: relative;
+  margin: 0 0.12em;
+  font-size: 0.72em;
   cursor: pointer;
 }
-.chord-yours:hover {
-  background: color-mix(in srgb, var(--destructive) 16%, var(--card));
+.chord-box .chord-missed .chord-num {
+  color: color-mix(in srgb, var(--fn-ink) 72%, transparent);
 }
-.chord-yours svg {
-  width: 11px;
-  height: 11px;
+.chord-missed::after {
+  content: "";
+  position: absolute;
+  left: -0.22em;
+  right: -0.22em;
+  top: 50%;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--destructive);
+  transform: rotate(-24deg);
+  pointer-events: none;
 }
-.chord-yours s {
-  text-decoration-thickness: 1.5px;
+.chord-missed:hover {
+  opacity: 0.75;
+}
+.chord-missed:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* The playhead line, over the box that is sounding. */

@@ -115,7 +115,7 @@ pauses, and strikes the box under the playhead again when it resumes. It plays
 before the check too — hearing the bare chords under the record is the point —
 but it writes nothing the keyboard reads, so it gives no answer away.
 
-What the piano channel does NOT gate: a chord button, the "you: IV" tag and a
+What the piano channel does NOT gate: a chord button, a wrong box's struck answer and a
 key of the keyboard always sound on the piano — they are the learner asking
 for that sound, not the piano following the song. The piano's **level** applies
 to all of them (one gain node in `usePiano`).

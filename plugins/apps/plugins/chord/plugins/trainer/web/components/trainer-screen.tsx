@@ -96,7 +96,7 @@ type RoundSession = {
   /** How many times each box was filled (a new fill replays its pop). */
   fills: readonly number[];
   /**
-   * The last chord HEARD — a chord button after the check, the "you: IV" tag,
+   * The last chord HEARD — a chord button after the check, a wrong box's struck answer,
    * a box replaying itself, or the playhead crossing into a box while the
    * checked loop runs. The one chord the piano draws.
    *

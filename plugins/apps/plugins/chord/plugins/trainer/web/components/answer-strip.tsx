@@ -1,4 +1,4 @@
-import { MdCheck, MdClose, MdVolumeUp } from "react-icons/md";
+import { MdCheck, MdClose } from "react-icons/md";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
@@ -12,7 +12,7 @@ import {
   placedClasses,
   placedStyle,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -47,8 +47,8 @@ function beatX(beat: number, beats: number, pxOffset = HALF_GAP): string {
  *
  * Before the check, a click selects an asked box. After it, every box shows the
  * chord that played — the asked ones marked right or wrong, a wrong one
- * carrying a "you: X" tag (the answer given) — and a click replays the song
- * over that box, given boxes included: they are part of the loop.
+ * showing the answer given struck through beside it — and a click replays the
+ * song over that box, given boxes included: they are part of the loop.
  */
 export function AnswerStrip({
   round,
@@ -130,22 +130,9 @@ export function AnswerStrip({
                 nameChord={nameChord}
                 onSelect={onSelect}
                 onReplay={onReplayBox}
+                onHearAnswer={onHearAnswer}
               />
             ))}
-            {sheet.checked &&
-              round.boxes.map((box) => {
-                if (sheet.asked[box.position] !== true) return null;
-                const answer = sheet.answers[box.position] ?? null;
-                return answer === null || answer === box.token ? null : (
-                  <YourAnswer
-                    key={box.position}
-                    box={box}
-                    beats={beats}
-                    answer={answer}
-                    onHear={onHearAnswer}
-                  />
-                );
-              })}
             <PlayheadLine player={player} round={round} />
           </div>
           <div className="chord-ruler relative" aria-hidden="true">
@@ -178,6 +165,7 @@ function AnswerBox({
   nameChord,
   onSelect,
   onReplay,
+  onHearAnswer,
 }: {
   box: Box;
   beats: number;
@@ -193,6 +181,7 @@ function AnswerBox({
   nameChord: (token: ChordToken) => string;
   onSelect: (position: number) => void;
   onReplay: (box: Box) => void;
+  onHearAnswer: (answer: ChordToken) => void;
 }) {
   // Before the check a box shows the answer given; after it, the chord that
   // played, with a mark saying whether the answer was right. A given box shows
@@ -203,10 +192,17 @@ function AnswerBox({
   const name = shown === null ? null : nameChord(shown);
   const mark =
     checked && asked ? (answer === box.token ? "ok" : "bad") : undefined;
+  // A wrong box keeps the answer given, struck through, beside the chord that
+  // played — so the mistake and its correction read as one pair.
+  const missed = mark === "bad" ? answer : null;
   const beatsLabel = `${String(box.gridSpan)} beat${box.gridSpan === 1 ? "" : "s"}`;
+  // The box is a painted frame holding two buttons: the whole box replays its
+  // stretch of the song (or selects it, before the check), and a wrong box's
+  // struck answer plays the answer given. A button cannot hold a button, so
+  // the box's own button is the full-bleed layer BEHIND the content, and the
+  // struck answer opts back into clicks above it.
   return (
-    <button
-      type="button"
+    <div
       className={cn(placedClasses({}), "chord-box chord-tone")}
       style={{
         ...placedStyle(
@@ -224,32 +220,61 @@ function AnswerBox({
       data-mark={mark}
       data-now={checked && sounding ? "" : undefined}
       data-pop={popped && !checked ? "" : undefined}
-      // A given box is nothing to press before the check; after it, it replays
-      // its stretch of the song like any other box.
-      disabled={checked ? !canReplay : !asked}
-      // The numeral first, then the name, then ", given": the order the e2e
-      // script and `ASKED_BOX` read, so the name extends the label instead of
-      // moving anything already in it.
-      aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
-        shown === null
-          ? ""
-          : `: ${chordLabel(shown).text}${name === null ? "" : `, ${name}`}`
-      }${asked ? "" : ", given"}${
-        mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
-      }`}
-      aria-pressed={checked || !asked ? undefined : selected}
-      onClick={() => (checked ? onReplay(box) : onSelect(box.position))}
     >
-      <Stack
-        as="span"
-        gap="xs"
-        align="center"
-        justify="center"
+      <Overlay
+        fill
+        clickThrough
         className="size-full"
+        behind={
+          <button
+            type="button"
+            className="chord-box-hit size-full"
+            // A given box is nothing to press before the check; after it, it
+            // replays its stretch of the song like any other box.
+            disabled={checked ? !canReplay : !asked}
+            // The numeral first, then the name, then ", given": the order the
+            // e2e script and `ASKED_BOX` read, so the name extends the label
+            // instead of moving anything already in it.
+            aria-label={`Chord ${String(box.position + 1)}, ${beatsLabel}${
+              shown === null
+                ? ""
+                : `: ${chordLabel(shown).text}${name === null ? "" : `, ${name}`}`
+            }${asked ? "" : ", given"}${
+              mark === undefined ? "" : mark === "ok" ? ", right" : ", wrong"
+            }`}
+            aria-pressed={checked || !asked ? undefined : selected}
+            onClick={() => (checked ? onReplay(box) : onSelect(box.position))}
+          />
+        }
       >
-        {shown !== null && <ChordNumeral token={shown} />}
-        {name !== null && <span className="chord-box-name">{name}</span>}
-      </Stack>
+        <Stack gap="xs" align="center" justify="center" className="size-full">
+          {missed === null ? (
+            shown !== null && <ChordNumeral token={shown} />
+          ) : (
+            <Stack
+              direction="row"
+              gap="xs"
+              align="baseline"
+              justify="center"
+              className="chord-box-pair"
+            >
+              <Overlay.Interactive>
+                <button
+                  type="button"
+                  className="chord-missed"
+                  title="Hear what you picked"
+                  aria-label={`Hear your answer, ${chordLabel(missed).text}`}
+                  onClick={() => onHearAnswer(missed)}
+                >
+                  <ChordNumeral token={missed} />
+                </button>
+              </Overlay.Interactive>
+              {shown !== null && <ChordNumeral token={shown} />}
+            </Stack>
+          )}
+          {name !== null && <span className="chord-box-name">{name}</span>}
+        </Stack>
+      </Overlay>
       {mark !== undefined && (
         <Center
           as="span"
@@ -261,40 +286,7 @@ function AnswerBox({
           {mark === "ok" ? <MdCheck /> : <MdClose />}
         </Center>
       )}
-    </button>
-  );
-}
-
-/** "you: IV" under a wrong box, straddling its bottom edge: plays the answer given. */
-function YourAnswer({
-  box,
-  beats,
-  answer,
-  onHear,
-}: {
-  box: Box;
-  beats: number;
-  answer: ChordToken;
-  onHear: (answer: ChordToken) => void;
-}) {
-  const label = chordLabel(answer).text;
-  return (
-    <button
-      type="button"
-      className={cn(placedClasses({ layer: "raised" }), "chord-yours")}
-      style={placedStyle(
-        { center: beatX(box.gridStart + box.gridSpan / 2, beats, 0) },
-        { end: 0, shift: "50%" },
-      )}
-      title="Hear what you picked"
-      aria-label={`Hear your answer, ${label}`}
-      onClick={() => onHear(answer)}
-    >
-      <Inline gap="2xs">
-        <MdVolumeUp aria-hidden="true" />
-        you: <s>{label}</s>
-      </Inline>
-    </button>
+    </div>
   );
 }
 

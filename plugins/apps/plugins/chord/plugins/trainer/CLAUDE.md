@@ -103,7 +103,7 @@ prev, next)` between two playhead reads — a forward move finishes every box
   silences the piano when the song stops, and strikes again on resume. It plays
   before the check too, and writes nothing the keyboard reads.
 - **After the check**: a box plays its bars of the song once
-  (`controller.playRange`), heard through whichever channels are on. A chord button, or the "you: IV" tag under a
+  (`controller.playRange`), heard through whichever channels are on. A chord button, or the struck answer inside a
   wrong box, always plays on the piano (`chordSound(token, tonicPc)`), because
   neither chord need be in the loop at all. The button of the chord sounding now
   is lit.
@@ -144,7 +144,7 @@ prev, next)` between two playhead reads — a forward move finishes every box
   answer and leaks nothing.
   **`shownChord` is the one chord on show**, fed to the lit button and the piano
   together, and it is simply `session.lastPlayed` — the last chord HEARD.
-  Everything that sounds a chord writes it: a button, a box, the "you: IV" tag,
+  Everything that sounds a chord writes it: a button, a box, a wrong box's struck answer,
   and a `useEffect` on the sounding position, so the playhead crossing into a
   box is just another writer rather than a special case outranking the others.
   That is what lets a chord clicked DURING playback light the keyboard: the
@@ -226,6 +226,7 @@ piano.
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
+    - `primitives/css/overlay.Overlay`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

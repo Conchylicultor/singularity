@@ -999,6 +999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/grid.Grid`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
+              - `primitives/css/overlay.Overlay`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
@@ -25610,6 +25611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/browser/webview`
+              - `apps/chord/trainer`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`

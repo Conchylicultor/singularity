@@ -83,6 +83,7 @@ header content inside is a `<Frame>`.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/webview`
+    - `apps/chord/trainer`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
