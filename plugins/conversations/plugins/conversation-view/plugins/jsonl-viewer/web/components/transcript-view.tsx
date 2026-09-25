@@ -23,6 +23,7 @@ import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
+import { TranscriptEventsProvider } from "./transcript-events-context";
 import { paneScrollScope } from "./pane-scroll-scope";
 import { SectionExpandProvider } from "./section-sticky-context";
 import { useVisibleEvents } from "../use-visible-events";
@@ -151,7 +152,8 @@ export interface TranscriptViewProps {
   /**
    * Pinned beside the scroller, inside the pane's positioning frame — a
    * `JsonlViewer.Overlay` strip, or a surface's own. It sits inside the scroll
-   * scope, so it can ask `paneScrollScope` for the viewport it annotates.
+   * scope, so it can ask `paneScrollScope` for the viewport it annotates, and
+   * `useTranscriptEvents()` for the transcript it annotates.
    */
   overlay?: ReactNode;
   /** Fade the transcript: its subject is no longer live (a gone run). */
@@ -267,7 +269,7 @@ function TranscriptViewInner({
  */
 export function TranscriptView({
   conversationId,
-  ...rest
+  ...props
 }: TranscriptViewProps) {
   return (
     // Both scopes are declared HERE, not in `TranscriptViewInner`: a component
@@ -278,7 +280,9 @@ export function TranscriptView({
     // the view has nothing left to remember.
     <paneScrollScope.Provider>
       <ConversationIdProvider id={conversationId}>
-        <TranscriptViewInner {...rest} />
+        <TranscriptEventsProvider events={props.events}>
+          <TranscriptViewInner {...props} />
+        </TranscriptEventsProvider>
       </ConversationIdProvider>
     </paneScrollScope.Provider>
   );

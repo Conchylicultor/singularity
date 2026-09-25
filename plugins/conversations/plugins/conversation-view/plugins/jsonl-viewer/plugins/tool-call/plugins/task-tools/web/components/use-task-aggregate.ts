@@ -1,7 +1,5 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 export interface TaskEntry {
@@ -21,7 +19,9 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "stopped"]);
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
-function parseResultContent(event: ToolCallEvent): Record<string, unknown> | null {
+function parseResultContent(
+  event: ToolCallEvent,
+): Record<string, unknown> | null {
   if (!event.result?.content || event.result.isError) return null;
   try {
     return JSON.parse(event.result.content);
@@ -41,8 +41,12 @@ function buildAggregate(events: JsonlEvent[]): TaskAggregate {
 
     if (toolEvent.name === "TaskCreate" && toolEvent.result) {
       const result = parseResultContent(toolEvent);
-      const input = toolEvent.input as { subject?: string; description?: string } | undefined;
-      const taskId = (result?.id as string) ?? (result?.task_id as string) ?? (result?.taskId as string);
+      const input = toolEvent.input as
+        { subject?: string; description?: string } | undefined;
+      const taskId =
+        (result?.id as string) ??
+        (result?.task_id as string) ??
+        (result?.taskId as string);
       if (!taskId) continue;
       if (!taskMap.has(taskId)) {
         ordered.push(taskId);
@@ -52,8 +56,19 @@ function buildAggregate(events: JsonlEvent[]): TaskAggregate {
         description: input?.subject ?? input?.description ?? "Task",
         status: "pending",
       });
-    } else if (toolEvent.name === "TaskUpdate" && toolEvent.result && !toolEvent.result.isError) {
-      const input = toolEvent.input as { taskId?: string; id?: string; status?: string; description?: string } | undefined;
+    } else if (
+      toolEvent.name === "TaskUpdate" &&
+      toolEvent.result &&
+      !toolEvent.result.isError
+    ) {
+      const input = toolEvent.input as
+        | {
+            taskId?: string;
+            id?: string;
+            status?: string;
+            description?: string;
+          }
+        | undefined;
       const taskId = input?.taskId ?? input?.id;
       if (!taskId) continue;
       const existing = taskMap.get(taskId);
@@ -62,7 +77,8 @@ function buildAggregate(events: JsonlEvent[]): TaskAggregate {
         if (input?.description) existing.description = input.description;
       }
     } else if (toolEvent.name === "TaskStop" && toolEvent.result) {
-      const input = toolEvent.input as { taskId?: string; id?: string } | undefined;
+      const input = toolEvent.input as
+        { taskId?: string; id?: string } | undefined;
       const taskId = input?.taskId ?? input?.id;
       if (!taskId) continue;
       const existing = taskMap.get(taskId);
@@ -72,7 +88,8 @@ function buildAggregate(events: JsonlEvent[]): TaskAggregate {
 
   const tasks = ordered.map((id) => taskMap.get(id)!).filter(Boolean);
   const completedCount = tasks.filter((t) => t.status === "completed").length;
-  const allTerminal = tasks.length > 0 && tasks.every((t) => TERMINAL_STATUSES.has(t.status));
+  const allTerminal =
+    tasks.length > 0 && tasks.every((t) => TERMINAL_STATUSES.has(t.status));
 
   return {
     tasks,
@@ -83,11 +100,8 @@ function buildAggregate(events: JsonlEvent[]): TaskAggregate {
 }
 
 export function useTaskAggregate(): TaskAggregate {
-  const { convId } = conversationPane.useParams();
-  const result = useResource(jsonlEventsResource, { id: convId });
-
-  return useMemo(
-    () => (result.pending ? { tasks: [], completedCount: 0, totalCount: 0, shouldShow: false } : buildAggregate(result.data)),
-    [result],
-  );
+  // The transcript the enclosing view draws — a sub-agent pane's own tasks,
+  // not the parent conversation's. Always arrived: the view mounts with data.
+  const events = useTranscriptEvents();
+  return useMemo(() => buildAggregate(events), [events]);
 }

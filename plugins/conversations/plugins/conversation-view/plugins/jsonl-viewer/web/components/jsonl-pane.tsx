@@ -97,8 +97,9 @@ function JsonlPaneInner({
       // The readings pinned at the foot of the pane (context/output usage, the
       // token budget, …) are Overlay contributions — see the
       // `transcript-stats` sub-plugin, which owns the strip AND the reading
-      // position it reports as of. Conversation-scoped, so the conversation
-      // hands them to the view rather than the view knowing about them.
+      // position it reports as of. A surface opts in by handing them to the
+      // view (a sub-agent's pane does too); each folds over the transcript the
+      // view draws via `useTranscriptEvents()`.
       overlay={<JsonlViewer.Overlay.Render />}
     >
       {isWorking && workingStartAt != null && (

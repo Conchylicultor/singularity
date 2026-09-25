@@ -7,7 +7,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import { TranscriptView } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  JsonlViewer,
+  TranscriptView,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -464,6 +467,10 @@ function SubagentTranscript({
       // The surface tab is appended by the view — name only the subject here.
       persistKey={`subagent-scroll:${subagent.by}:${subagent.key}`}
       empty={<span>This sub-agent&apos;s transcript is empty so far.</span>}
+      // The same pinned readings the conversation carries (token usage, the
+      // outline, task progress). Overlays fold over the transcript the view
+      // draws, so here they report the sub-agent's own numbers.
+      overlay={<JsonlViewer.Overlay.Render />}
     />
   );
 }

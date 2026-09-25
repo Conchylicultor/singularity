@@ -8,6 +8,12 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { UnknownEventRow } from "./components/unknown-event-row";
 import { PendingContentIndicator } from "./components/pending-content-indicator";
 
+/**
+ * Pinned beside a transcript's scroller. Takes no props: read the transcript
+ * via `useTranscriptEvents()` and the viewport via `paneScrollScope` — never
+ * by conversation id, since a sub-agent's transcript is drawn under its
+ * parent's id.
+ */
 export interface OverlayContribution {
   id: string;
   component: ComponentType;

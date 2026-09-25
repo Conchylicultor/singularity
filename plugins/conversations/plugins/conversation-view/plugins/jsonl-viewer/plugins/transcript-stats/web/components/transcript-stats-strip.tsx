@@ -1,35 +1,22 @@
 import { useCallback, useMemo } from "react";
 import { MdHistory } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
 import {
-  useJsonlConversationId,
   paneScrollScope,
+  useTranscriptEvents,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { TranscriptStats } from "../slots";
 import { TranscriptReadProvider } from "../read-context";
 import { StatBadge } from "./stat-badge";
 
 export function TranscriptStatsStrip() {
-  const conversationId = useJsonlConversationId();
-  if (!conversationId) return null;
-  return <Strip conversationId={conversationId} />;
-}
-
-function Strip({ conversationId }: { conversationId: string }) {
-  const result = useResource(jsonlEventsResource, { id: conversationId });
-  // Gate here so the strip below never has to represent "loading" as "an empty
-  // transcript" — which every stat would faithfully report as zero.
-  if (result.pending) return null;
-  return <StripWithEvents events={result.data} />;
-}
-
-function StripWithEvents({ events }: { events: JsonlEvent[] }) {
+  // The transcript the enclosing view draws — the conversation's own, or a
+  // sub-agent's — never a re-fetch by conversation id, which inside a
+  // sub-agent pane would name the PARENT and report its numbers instead.
+  const events = useTranscriptEvents();
   // This strip is a sibling of the transcript scroller inside the pane frame,
   // not inside it, so the scroller has to be published rather than walked to.
   const scroller = paneScrollScope.useRoot();

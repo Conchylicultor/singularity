@@ -9622,12 +9622,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/file-path`
-          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/read`
           - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/markdown-extensions`
@@ -10280,6 +10278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useLastAssistantEvent`
               - `useRowMarkdown`
               - `useSectionExpand`
+              - `useTranscriptEvents`
               - `useVisibleEvents`
           - Server:
             - Contributes: `resource.declare` "jsonl-events"
@@ -10779,13 +10778,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "outline" → `ConversationOutline`
                 - Uses:
-                  - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
+                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/dom/auto-scroll.scrollToBottom`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.useResource`
                   - `primitives/outline/rail.OutlineRail`
             - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
               - Web:
@@ -10860,6 +10858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Uses:
                   - `conversations.useConversationById`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.TranscriptView`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/badge.Badge`
@@ -11264,8 +11263,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`
                       - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
                     - Uses:
-                      - `conversations/conversation-view.conversationPane`
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                      - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/badge.Badge`
@@ -11279,7 +11278,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
-                      - `primitives/live-state.useResource`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Slots: `workflow-node.actions` ← `primitives.pane`
@@ -11333,12 +11331,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
-                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/live-state.useResource`
                   - `primitives/outline/scroll-spy.useActiveInView`
                   - `primitives/slot-render.defineRenderSlot`
                 - Exports (types):
@@ -29374,14 +29371,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
-          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-and-exit`

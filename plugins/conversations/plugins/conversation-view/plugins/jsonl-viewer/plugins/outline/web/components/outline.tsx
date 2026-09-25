@@ -1,18 +1,14 @@
 import { useCallback, useMemo } from "react";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { scrollToBottom } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   paneScrollScope,
+  useTranscriptEvents,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import {
-  eventKey,
-  jsonlEventsResource,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 const MAX_PREVIEW = 50;
@@ -47,15 +43,9 @@ function userTurnEntries(events: JsonlEvent[]) {
 }
 
 export function ConversationOutline() {
-  const { convId } = conversationPane.useParams();
-  const result = useResource(jsonlEventsResource, { id: convId });
-  // Gate here so the outline below never has to represent "loading" as "no
-  // messages" — the split exists purely so the events hook runs on real data.
-  if (result.pending) return null;
-  return <ConversationOutlineRail events={result.data} />;
-}
-
-function ConversationOutlineRail({ events }: { events: JsonlEvent[] }) {
+  // The transcript the enclosing view draws, so a sub-agent's pane outlines the
+  // sub-agent rather than the parent conversation it hangs off.
+  const events = useTranscriptEvents();
   // The rendered set, not the raw resource: listing an event the transcript
   // filters out offers an entry with no row behind it.
   const visible = useVisibleEvents(events);

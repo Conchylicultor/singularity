@@ -164,6 +164,7 @@ back.
     - `useLastAssistantEvent`
     - `useRowMarkdown`
     - `useSectionExpand`
+    - `useTranscriptEvents`
     - `useVisibleEvents`
 - Server:
   - Contributes: `resource.declare` "jsonl-events"

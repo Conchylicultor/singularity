@@ -13,6 +13,7 @@ export { useVisibleEvents } from "./use-visible-events";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";
+export { useTranscriptEvents } from "./components/transcript-events-context";
 export { useJsonlConversationId } from "./components/conversation-id-context";
 export { paneScrollScope } from "./components/pane-scroll-scope";
 export { formatTime, formatTokenCount } from "./utils";

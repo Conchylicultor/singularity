@@ -357,6 +357,7 @@ downstream can widen the set, because nothing downstream resolves one.
 - Web:
   - Uses:
     - `conversations.useConversationById`
+    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.TranscriptView`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/badge.Badge`
