@@ -2,10 +2,8 @@ import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { PgDialect, pgTable, text } from "drizzle-orm/pg-core";
 import { sql, type SQL } from "drizzle-orm";
-import {
-  parsedText,
-  SqlColumnError,
-} from "@plugins/database/plugins/sql-column/server";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
 import { enumFilterSql as ops } from "./enum-filter-sql";
 
 const t = pgTable("t", { c: text("c") });

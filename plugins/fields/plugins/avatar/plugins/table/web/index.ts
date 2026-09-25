@@ -3,10 +3,8 @@ import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { AvatarCell } from "./components/avatar-cell";
 
 export {
-  AvatarCell,
   AvatarCellDataError,
   avatarFieldDef,
-  type AvatarFieldData,
   type AvatarFieldDefOptions,
 } from "./components/avatar-cell";
 

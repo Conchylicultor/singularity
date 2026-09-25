@@ -131,7 +131,6 @@ export {
   blockTextTokenExtension,
   getBlockTextExtensions,
   blockTextRenderableExtensions,
-  blockTextTokenExtensions,
   colorCssValue,
 } from "./internal/block-text-extensions";
 export { registerBlockPasteHandler } from "./internal/block-paste-handlers";

@@ -13,7 +13,7 @@ export {
   setErrorReporter,
   setFatalReporter,
 } from "./error-reporter";
-export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
+export type { ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type {
   ProfilerHooks,

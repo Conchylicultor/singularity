@@ -24,7 +24,6 @@
 export type { PitchKeyboardSize, PitchLayout } from "./geometry";
 export { pitchGeometry, pitchKeyboardHeight } from "./geometry";
 export {
-  PITCH_LAYOUT_LABELS,
   PITCH_LAYOUT_DEFAULT,
   pitchLayoutConfig,
   asPitchLayoutId,

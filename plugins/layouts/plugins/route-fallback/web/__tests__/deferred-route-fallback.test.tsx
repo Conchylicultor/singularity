@@ -9,9 +9,9 @@ import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-s
 import {
   createPaneStore,
   PaneLoadScopeContext,
-  PaneStoreContext,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import { TestSurface } from "@plugins/primitives/plugins/pane/web/testing";
 import { DeferredRouteFallback } from "../components/deferred-route-fallback";
 
 // The layout's tri-state fallback surface (pending / not-found / app-load-error)
@@ -30,11 +30,11 @@ const SCOPE = "apps/plugins/pages/";
 /** Render the fallback bound to `store` under an optional load-scope prefix. */
 function renderFallback(store: PaneStore, scope = "") {
   return render(
-    <PaneStoreContext.Provider value={store}>
+    <TestSurface store={store}>
       <PaneLoadScopeContext.Provider value={scope}>
         <DeferredRouteFallback />
       </PaneLoadScopeContext.Provider>
-    </PaneStoreContext.Provider>,
+    </TestSurface>,
   );
 }
 

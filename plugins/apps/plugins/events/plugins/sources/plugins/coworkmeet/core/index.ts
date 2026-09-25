@@ -5,7 +5,6 @@ export {
   COWORKMEET_AMBIANCES,
   COWORKMEET_POWER_OUTLETS,
   COWORKMEET_DISTRICTS,
-  facetLabels,
   facetLabelOf,
 } from "./internal/catalog";
 export {

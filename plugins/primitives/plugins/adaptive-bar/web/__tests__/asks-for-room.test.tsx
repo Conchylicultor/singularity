@@ -3,12 +3,9 @@ import { cleanup, render } from "@testing-library/react";
 import { type ReactElement, type ReactNode } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-} from "../index";
-import type { AdaptiveBarFault } from "../index";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import type { AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * The bar asks its host for room, and the host answers before the bar decides.

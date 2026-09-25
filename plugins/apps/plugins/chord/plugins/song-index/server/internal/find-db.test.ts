@@ -24,15 +24,17 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import type { HookpadMode } from "@plugins/integrations/plugins/hooktheory/core";
 import {
-  FindLoopsBodySchema,
-  NextChordsBodySchema,
   NextChordCountSchema,
-  SkipSummarySchema,
   SkipTally,
   chordTokenFromParts,
   windowsInModes,
   type ChordToken,
 } from "../../core";
+import {
+  FindLoopsBodySchema,
+  NextChordsBodySchema,
+} from "../../core/endpoints";
+import { SkipSummarySchema } from "../../core/skip-tally";
 import { findLoopsWhere, loopsInSetQuery, nextChordsQuery } from "./find";
 import { _chordLoopWindows } from "./tables";
 

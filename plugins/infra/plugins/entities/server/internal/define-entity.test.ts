@@ -15,8 +15,8 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import {
   parsedJson,
   parsedText,
-  SqlColumnError,
 } from "@plugins/database/plugins/sql-column/server";
+import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
 import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineFieldType } from "@plugins/fields/core";

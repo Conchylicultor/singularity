@@ -301,8 +301,6 @@ run everywhere.
     - `REPO_ROOT`
     - `repoConfigDir`
     - `resolveCheckoutDeploy`
-    - `RUN_TERMINAL_SUFFIX`
-    - `RUN_TRANSCRIPT_SUFFIX`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
     - `WORKTREE_SPEC_FILE`
@@ -416,7 +414,6 @@ run everywhere.
     - `TMUX`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
-    - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
     - `worktreeDataDir`
     - `worktreesDir`

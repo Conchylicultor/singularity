@@ -16,7 +16,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { jsonb, pgTable } from "drizzle-orm/pg-core";
-import { SqlColumnError } from "@plugins/database/plugins/sql-column/server";
+import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
 import { asBlockData } from "../../core/schemas";
 import { _blocks } from "./tables";
 

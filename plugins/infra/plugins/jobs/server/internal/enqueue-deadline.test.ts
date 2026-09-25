@@ -26,10 +26,10 @@ import { readDatabaseConfig } from "@plugins/database/core";
 import {
   createDbPool,
   queryDeadlineSink,
-  QueryDeadlineExceededError,
   type QueryDeadlineEvent,
 } from "@plugins/database/plugins/connection/server";
 import {
+  QueryDeadlineExceededError,
   startBlackHoleProxy,
   type BlackHoleProxy,
 } from "@plugins/database/plugins/connection/server/testing";

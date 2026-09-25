@@ -1,5 +1,4 @@
 export {
-  mintTestDbName,
   parseTestDbName,
   TEST_DB_SUFFIX,
   TEST_DB_TTL_MS,

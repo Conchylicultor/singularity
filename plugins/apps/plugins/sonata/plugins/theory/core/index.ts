@@ -22,7 +22,7 @@ export {
 export { chordPitches, invertVoicing, nearestVoicing } from "./voicing";
 export { parseChordSymbol } from "./parse";
 export { parseKeySignature } from "./key";
-export { detectChord, detectChordWeighted, detectChordWindows } from "./detect";
+export { detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";
 export { inferKeys, tonicName, tonicPc } from "./key-detect";
 export { romanNumeral, parseRomanNumeral } from "./roman";

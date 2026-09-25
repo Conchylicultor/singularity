@@ -14,16 +14,17 @@ import {
   type Score,
   type TimeSigEvent,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  detectChord,
-  detectChordWeighted,
-  detectChordWindows,
-} from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { detectChord, detectChordWeighted, detectChordWindows } from "./detect";
 
 // --- fixtures --------------------------------------------------------------
 
 let nid = 0;
-const note = (pitch: number, start: number, duration: number, velocity = 90): Note => ({
+const note = (
+  pitch: number,
+  start: number,
+  duration: number,
+  velocity = 90,
+): Note => ({
   id: `n${nid++}`,
   pitch,
   start,
@@ -124,15 +125,24 @@ test("a single pitch-class is not a chord", () => {
 
 test("sustained arpeggio collapses to a single chord window", () => {
   // Broken C major with pedal: each note holds to the bar end.
-  const s = scoreOf([note(60, 0, 4), note(64, 1, 3), note(67, 2, 2), note(72, 3, 1)]);
+  const s = scoreOf([
+    note(60, 0, 4),
+    note(64, 1, 3),
+    note(67, 2, 2),
+    note(72, 3, 1),
+  ]);
   const w = detectChordWindows(s);
   expect(w.length).toBe(1);
   expect(w[0]!.data.symbol).toBe("C");
 });
 
 test("block and broken voicings of the same chord read identically", () => {
-  const block = detectChordWindows(scoreOf([note(60, 0, 4), note(64, 0, 4), note(67, 0, 4)]));
-  const broken = detectChordWindows(scoreOf([note(60, 0, 4), note(64, 1, 3), note(67, 2, 2)]));
+  const block = detectChordWindows(
+    scoreOf([note(60, 0, 4), note(64, 0, 4), note(67, 0, 4)]),
+  );
+  const broken = detectChordWindows(
+    scoreOf([note(60, 0, 4), note(64, 1, 3), note(67, 2, 2)]),
+  );
   expect(block.map((x) => x.data.symbol)).toEqual(["C"]);
   expect(broken.map((x) => x.data.symbol)).toEqual(["C"]);
 });
@@ -140,11 +150,17 @@ test("block and broken voicings of the same chord read identically", () => {
 test("a one-beat transient flanked by identical chords is smoothed away", () => {
   const s = scoreOf([
     // C major beats 0–1
-    note(60, 0, 2), note(64, 0, 2), note(67, 0, 2),
+    note(60, 0, 2),
+    note(64, 0, 2),
+    note(67, 0, 2),
     // stray D minor on beat 2
-    note(62, 2, 1), note(65, 2, 1), note(69, 2, 1),
+    note(62, 2, 1),
+    note(65, 2, 1),
+    note(69, 2, 1),
     // C major beats 3–4
-    note(60, 3, 2), note(64, 3, 2), note(67, 3, 2),
+    note(60, 3, 2),
+    note(64, 3, 2),
+    note(67, 3, 2),
   ]);
   const w = detectChordWindows(s);
   expect(w.length).toBe(1);
@@ -153,7 +169,9 @@ test("a one-beat transient flanked by identical chords is smoothed away", () => 
 
 test("a passing tone over a held chord does not flicker", () => {
   const s = scoreOf([
-    note(60, 0, 4), note(64, 0, 4), note(67, 0, 4), // held C major
+    note(60, 0, 4),
+    note(64, 0, 4),
+    note(67, 0, 4), // held C major
     note(62, 1, 1), // passing D on beat 2
   ]);
   const w = detectChordWindows(s);
@@ -163,7 +181,9 @@ test("a passing tone over a held chord does not flicker", () => {
 test("an inversion renders a slash symbol end-to-end", () => {
   const s = scoreOf([
     note(40, 0, 4), // low E in the bass
-    note(60, 0, 4), note(64, 0, 4), note(67, 0, 4), // C major above
+    note(60, 0, 4),
+    note(64, 0, 4),
+    note(67, 0, 4), // C major above
   ]);
   const w = detectChordWindows(s);
   expect(w.length).toBe(1);
@@ -189,12 +209,21 @@ test("beatGrid: 4/4 default is a quarter-beat pulse", () => {
 });
 
 test("beatGrid: 6/8 pulses every eighth note (0.5 beats)", () => {
-  const s = scoreOf([note(60, 0, 3)], { beat: 0, numerator: 6, denominator: 8 });
-  expect(beatGrid(s).map((c) => c.startBeat)).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3]);
+  const s = scoreOf([note(60, 0, 3)], {
+    beat: 0,
+    numerator: 6,
+    denominator: 8,
+  });
+  expect(beatGrid(s).map((c) => c.startBeat)).toEqual([
+    0, 0.5, 1, 1.5, 2, 2.5, 3,
+  ]);
 });
 
 test("beatGrid: a pickup is cell 0 (mirrors bars)", () => {
-  const s: Score = { ...scoreOf([note(60, 0.5, 3.5)]), meta: { pickupBeats: 0.5 } };
+  const s: Score = {
+    ...scoreOf([note(60, 0.5, 3.5)]),
+    meta: { pickupBeats: 0.5 },
+  };
   const g = beatGrid(s);
   expect(g[0]!.startBeat).toBe(0);
   expect(g[1]!.startBeat).toBe(0.5);

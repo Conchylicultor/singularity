@@ -2,13 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-  type AdaptiveBarFault,
-} from "../index";
-import { MAX_SURRENDERS } from "../internal/diagnostics";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import { MAX_SURRENDERS, type AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * A fault must cost a report and a cramped row — never a render loop, and never

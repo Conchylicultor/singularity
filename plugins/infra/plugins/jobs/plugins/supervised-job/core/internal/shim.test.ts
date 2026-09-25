@@ -25,22 +25,20 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  RUN_TERMINAL_SUFFIX,
-  RUN_TRANSCRIPT_SUFFIX,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { readRunTerminal, type RunTerminal } from "./terminal";
 import { supervisedArgv } from "./shim";
 
 const dirs: string[] = [];
 
+// The shim takes both paths from its caller and never reads their names, so a
+// scratch pair needs no particular spelling.
 function scratch(): { marker: string; transcript: string } {
   const dir = mkdtempSync(join(tmpdir(), "sg-shim-"));
   dirs.push(dir);
   return {
-    marker: join(dir, `run${RUN_TERMINAL_SUFFIX}`),
-    transcript: join(dir, `run${RUN_TRANSCRIPT_SUFFIX}`),
+    marker: join(dir, "run-marker"),
+    transcript: join(dir, "run-transcript"),
   };
 }
 

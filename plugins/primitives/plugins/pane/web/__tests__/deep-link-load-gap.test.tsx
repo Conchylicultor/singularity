@@ -11,9 +11,9 @@ import {
   createPaneStore,
   Pane,
   type PaneStore,
-  usePaneRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { usePaneRoute } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 

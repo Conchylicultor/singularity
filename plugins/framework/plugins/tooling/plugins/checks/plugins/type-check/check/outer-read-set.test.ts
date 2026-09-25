@@ -18,82 +18,44 @@
  */
 
 import { test, expect, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
-import { tmpdir } from "os";
-import { join, dirname } from "path";
-import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
-  loadTreeSnapshot,
-  validate,
-  type ReadSet,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+  createReadSetRepo,
+  type ReadSetRepo,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core/testing";
 import { readTreeListing } from "./fingerprint";
 import { buildImportGraphs } from "./import-graph";
 import { recordOuterReadSet } from "./outer-read-set";
 
-let root = "";
+let repo: ReadSetRepo;
 
-async function git(...args: string[]): Promise<void> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  await proc.exited;
-}
-
-function write(rel: string, content: string): void {
-  const abs = join(root, rel);
-  mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, content);
-}
+const write = (rel: string, content: string): void => repo.write(rel, content);
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "type-check-outer-read-set-"));
   // a.ts / b.ts: lintable sources. README.md: an unrelated non-.ts file.
   // tsconfig.json + package.json: global-trigger files.
-  write("a.ts", "export const a = 1;\n");
-  write("b.ts", "export const b = 2;\n");
-  write("README.md", "# hello\n");
-  write(
-    "tsconfig.json",
-    JSON.stringify({ compilerOptions: { strict: true } }) + "\n",
-  );
-  write(
-    "package.json",
-    JSON.stringify({ name: "fixture", dependencies: { typescript: "5.0.0" } }) +
-      "\n",
-  );
-  await git("init", "-q");
-  await git("config", "user.email", "t@t.t");
-  await git("config", "user.name", "t");
-  await git("add", "-A");
-  await git("commit", "-q", "-m", "fixture");
+  repo = await createReadSetRepo("type-check-outer-read-set-", {
+    "a.ts": "export const a = 1;\n",
+    "b.ts": "export const b = 2;\n",
+    "README.md": "# hello\n",
+    "tsconfig.json":
+      JSON.stringify({ compilerOptions: { strict: true } }) + "\n",
+    "package.json":
+      JSON.stringify({
+        name: "fixture",
+        dependencies: { typescript: "5.0.0" },
+      }) + "\n",
+  });
 });
 
 afterAll(() => {
-  if (root) rmSync(root, { recursive: true, force: true });
+  repo?.dispose();
 });
 
 /** Record type-check's outer read-set the same way run() does. */
-async function record(): Promise<ReadSet> {
-  const treeHash = await computeTreeHash(root);
-  expect(treeHash).toBeTruthy();
-  const snap = await loadTreeSnapshot(root, treeHash!);
-  expect(snap).not.toBeNull();
-  const view = snap!.createRecordingView();
-  recordOuterReadSet(view, await readTreeListing(root));
-  return view.readSet();
-}
-
-/** Validate a read-set against a FRESH snapshot of the current tree state. */
-async function revalidate(readSet: ReadSet) {
-  const treeHash = await computeTreeHash(root);
-  expect(treeHash).toBeTruthy();
-  const snap = await loadTreeSnapshot(root, treeHash!);
-  expect(snap).not.toBeNull();
-  return validate(readSet, snap!);
-}
+const record = () =>
+  repo.record(async (view) =>
+    recordOuterReadSet(view, await readTreeListing(repo.root)),
+  );
 
 test("records membership globs + a content fact per lintable & global-trigger file", async () => {
   const rs = await record();
@@ -119,7 +81,7 @@ test("every file the check lints has a recorded content fact", async () => {
   // `lintableFiles`, so a linted file can never be missing from the read-set.
   const rs = await record();
   const recorded = new Set(rs.files.map((f) => f.path));
-  const { files } = buildImportGraphs(await readTreeListing(root));
+  const { files } = buildImportGraphs(await readTreeListing(repo.root));
   expect(files.length).toBeGreaterThan(0);
   expect(files.filter((f) => !recorded.has(f))).toEqual([]);
 });
@@ -128,7 +90,7 @@ test("case 1: a non-.ts (docs) change is a HIT — docs-only ⇒ zero workers", 
   const rs = await record();
   write("README.md", "# hello world — edited, unrelated\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(true);
   } finally {
     write("README.md", "# hello\n");
@@ -139,7 +101,7 @@ test("case 2: any .ts content change is a MISS", async () => {
   const rs = await record();
   write("a.ts", "export const a = 42;\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("a.ts");
   } finally {
@@ -154,11 +116,11 @@ test("case 3 (H3 coverage gate): a brand-new .ts file is a MISS via the membersh
   // read-set would HIT here and stale-PASS the coverage gate.
   write("c.ts", "export const c = 3;\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("glob match set changed");
   } finally {
-    rmSync(join(root, "c.ts"), { force: true });
+    repo.remove("c.ts");
   }
 });
 
@@ -169,7 +131,7 @@ test("case 4: a global-trigger (tsconfig) change is a MISS", async () => {
     JSON.stringify({ compilerOptions: { strict: false } }) + "\n",
   );
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("tsconfig.json");
   } finally {
@@ -188,7 +150,7 @@ test("case 4b: a package.json (compiler-version) change is a MISS", async () => 
       "\n",
   );
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("package.json");
   } finally {
@@ -211,11 +173,11 @@ test("a .ts under a gitignored directory is not in the lintable set", async () =
   write(".gitignore", "ignored/\n");
   write("ignored/stray.ts", "export const stray = 1;\n");
   try {
-    const { files } = buildImportGraphs(await readTreeListing(root));
+    const { files } = buildImportGraphs(await readTreeListing(repo.root));
     expect(files).toContain("a.ts");
     expect(files).not.toContain("ignored/stray.ts");
   } finally {
-    rmSync(join(root, "ignored"), { recursive: true, force: true });
-    rmSync(join(root, ".gitignore"), { force: true });
+    repo.remove("ignored");
+    repo.remove(".gitignore");
   }
 });

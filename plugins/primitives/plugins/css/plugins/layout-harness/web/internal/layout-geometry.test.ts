@@ -1,14 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
 import {
-  evaluateInvariant,
-  falsificationDidNotBiteError,
-  fixturePageError,
-  geometryViolationError,
   loadFixtures,
   type LayoutFixture,
   type MeasuredFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
+import {
+  falsificationDidNotBiteError,
+  fixturePageError,
+  geometryViolationError,
+} from "../../core/failure-markers";
+import { evaluateInvariant } from "../../core/oracle";
 import { buildFixturesPage, type BuiltPage } from "./build-fixtures-page";
 import { expandRegionFixtures } from "./expand-region-fixtures";
 import { openMeasurer, type Measurer } from "./measure-page";

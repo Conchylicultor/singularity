@@ -50,6 +50,12 @@ Test code is a second dimension beside the folder, defined once by
   (`primitives/networking/web/testing`), `TestSurface`
   (`primitives/pane/web/testing`), `loadBlockHandles`
   (`page/editor/core/testing`).
+- And a public barrel exports nothing that only tests import
+  (plugin-boundaries R13). R12 judges a name by its spelling; R13 judges it by
+  who imports it. If every importer is test code, the name is not API. Your own
+  plugin's test imports the internal file by relative path; a helper moves to
+  `<runtime>/testing/`; another plugin's test of this plugin's code moves into
+  this plugin. `check/` and `lint/` importers count as shipping code.
 
 ## One table, inside and across plugins
 

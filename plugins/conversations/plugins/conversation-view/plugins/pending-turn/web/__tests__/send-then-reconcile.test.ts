@@ -4,10 +4,9 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import {
   defineTurnDelivery,
   reconcilePendingTurns,
-  retryPendingTurn,
   sendConversationTurn,
-  type PendingTurnRecord,
 } from "../index";
+import { retryPendingTurn, type PendingTurnRecord } from "../internal/store";
 import { CONFIRM_DEADLINE_MS } from "../internal/reconcile";
 import { pendingTurnsKey } from "../internal/persist";
 

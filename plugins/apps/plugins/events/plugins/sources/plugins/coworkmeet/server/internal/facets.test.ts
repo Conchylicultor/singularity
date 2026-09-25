@@ -6,9 +6,9 @@ import {
   COWORKMEET_QUIET_LEVELS,
   COWORKMEET_SESSION_TYPES,
   coworkmeetSourceConfigFields,
-  facetLabels,
   type CoworkmeetFilterKey,
 } from "../../core";
+import { facetLabels } from "../../core/internal/catalog";
 import { facetTags, sessionFacets } from "./facets";
 import { AFTERWORK, BARE, HOXTON, NELSONS, OISE, PANTIN } from "./fixtures";
 

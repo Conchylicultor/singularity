@@ -30,9 +30,7 @@ export {
   usePathname,
   useSyncPaneRegistry,
   paneOwnerFor,
-  usePaneRoute,
   parseUrl,
-  buildRouteUrl,
   peekRoute,
   reorderRoute,
   restoreRoute,
@@ -40,7 +38,6 @@ export {
   openPane,
   useOpenPane,
   createPaneStore,
-  defaultStore,
   setLiveStore,
   PaneStoreContext,
   usePaneStore,
@@ -71,7 +68,7 @@ export type {
   PaneStore,
   PaneHeaderItem,
 } from "./pane";
-export { setHistoryAdapter, defaultHistoryAdapter } from "./history-sink";
+export { setHistoryAdapter } from "./history-sink";
 export { appNavSink, type AppNavigator } from "./app-nav-sink";
 export type {
   HistoryAdapter,

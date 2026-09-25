@@ -25,7 +25,6 @@ export {
   ALL_JOB_TASKS,
   taskFor,
   priorityFor,
-  ceilingMsFor,
   deadlineMsFor,
   pickupTargetMsFor,
   reachableSlots,

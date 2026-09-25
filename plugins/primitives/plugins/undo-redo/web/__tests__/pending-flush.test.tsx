@@ -2,13 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useEffect } from "react";
 
-import {
-  UndoRedoProvider,
-  UndoRedoThunkError,
-  usePendingFlush,
-  useUndoRedo,
-  type UndoRedoApi,
-} from "../index";
+import { UndoRedoProvider } from "../internal/provider";
+import { UndoRedoThunkError } from "../internal/store";
+import { usePendingFlush } from "../internal/use-pending-flush";
+import { useUndoRedo, type UndoRedoApi } from "../internal/use-undo-redo";
 
 // The incident these tests exist for: the page editor coalesces a typing run
 // into ONE entry it records at the run's idle deadline. A ⌘Z 200 ms into the

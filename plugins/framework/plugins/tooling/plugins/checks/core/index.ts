@@ -11,7 +11,6 @@ export { readProgramFileList } from "./buildinfo";
 export type { ProgramFileList } from "./buildinfo";
 export { hashFileBytes, hashFileCached } from "./content-hash";
 export type { ContentHashMemo } from "./content-hash";
-export { computeTreeHash } from "./tree-hash";
 export { listRepoFiles } from "./repo-files";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
@@ -21,16 +20,10 @@ export type {
   OutstandingCheck,
   ProgressRecord,
 } from "./progress-log";
-export {
-  loadTreeSnapshot,
-  validate,
-  fingerprint,
-  computeCheckSourceHash,
-} from "./read-set";
+export { fingerprint, computeCheckSourceHash } from "./read-set";
 export type {
   TreeSnapshot,
   FileSystemView,
-  ReadSet,
   FileFact,
   DirFact,
   GlobFact,

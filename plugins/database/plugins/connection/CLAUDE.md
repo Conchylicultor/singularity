@@ -191,7 +191,6 @@ deadline sees it go silent. That needs a heartbeat.
     - `formatDeadlineLogLine`
     - `onClientLost`
     - `QUERY_DEADLINE_MS`
-    - `QueryDeadlineExceededError`
     - `queryDeadlineSink`
     - `queryText`
     - `withQueryDeadline`
@@ -204,6 +203,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `DB_POOL_NAMES`
 - Test helpers:
   - Server: `@plugins/database/plugins/connection/server/testing`
+    - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
     - `startBlackHoleProxy` — Start a black-hole proxy on 127.0.0.1 forwarding to `upstream` (e.g. the cluster's Unix socket).
     - Types: `BlackHoleProxy`
 

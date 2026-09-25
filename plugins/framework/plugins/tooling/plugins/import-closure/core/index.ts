@@ -1,8 +1,4 @@
-export {
-  importClosure,
-  loadTypescript,
-  scanCommandRuns,
-} from "./import-closure";
+export { importClosure, loadTypescript } from "./import-closure";
 export type {
   CommandRunEdge,
   DynamicImportPolicy,

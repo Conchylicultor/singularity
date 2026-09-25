@@ -5,8 +5,8 @@ import {
   DbAbandonCapPayloadSchema,
   DbQueryDeadlinePayloadSchema,
   QUERY_DEADLINE_RING_CAPACITY,
-  QueryDeadlinesSchema,
 } from "../../core";
+import { QueryDeadlinesSchema } from "../../core/internal/resources";
 import { createQueryDeadlineHandler } from "./handler";
 import { createHitRing } from "./hit-ring";
 import { abandonCapFingerprint, queryDeadlineFingerprint } from "./render";

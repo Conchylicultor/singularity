@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { type ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
 import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-} from "../index";
-import type { AdaptiveBarFault } from "../index";
-import { MAX_SLACK_PROBES, MAX_ZERO_RECOVERIES } from "../internal/diagnostics";
+  MAX_SLACK_PROBES,
+  MAX_ZERO_RECOVERIES,
+  type AdaptiveBarFault,
+} from "../internal/diagnostics";
 
 /**
  * The host contract, as a test.

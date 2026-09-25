@@ -66,7 +66,8 @@ export default function buildRule({ collectTokens, CLASS_ATTRS }: LintToolkit) {
 
 Write `import type { … }`, never `import { type … }` — `verbatimModuleSyntax`
 can keep the latter as a runtime import, which breaks config loading under jiti.
-Tests run under Bun, so they build the rule with the real `lintToolkit`.
+Tests run under Bun, so they build the rule with the real `lintToolkit`,
+imported from `@plugins/framework/plugins/tooling/plugins/lint/core/testing`.
 
 `class-token-walk-single-source` fails if a rule file declares `collectTokens` /
 `baseClass` / `CLASS_ATTRS` / `CLASS_BUILDERS` of its own. It replaced a check
@@ -97,7 +98,9 @@ see a class string parked in a `const` or a style map.
     - `isLintScopeExcluded`
     - `LINT_SCOPE_EXCLUDE_GLOBS`
     - `lintCollectedDir`
-    - `lintToolkit`
+- Test helpers:
+  - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
+    - `lintToolkit` — The single toolkit instance handed to every class-rule factory.
 - Sub-plugins:
   - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
   - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role

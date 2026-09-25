@@ -28,7 +28,7 @@ function isTestSupportSpecifier(specifier: string): boolean {
 }
 
 /** The local names a `{ … }` clause publishes (`a as b` → `b`, `type X` → `X`). */
-function exportedNames(clause: string): string[] {
+export function exportedNames(clause: string): string[] {
   return clause
     .split(",")
     .map((part) => part.trim().replace(/^type\s+/, ""))

@@ -8,7 +8,6 @@ export { useConversationSubagents } from "./internal/use-subagent-statuses";
 export type {
   SubagentStatus,
   SubagentEntry,
-  ConversationSubagents,
 } from "./internal/use-subagent-statuses";
 export { subagentStateDisplay } from "./internal/run-state-display";
 export type { SubagentStateDisplay } from "./internal/run-state-display";

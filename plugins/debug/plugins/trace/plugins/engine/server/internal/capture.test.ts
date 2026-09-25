@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   collectContributions,
   setErrorReporter,
-  type ServerErrorReport,
 } from "@plugins/framework/plugins/server-core/core";
 import type { TraceTrigger, TripContext } from "../../core";
 import { defineTraceEventClass, type TraceEventClassSpec } from "./registry";
@@ -23,6 +22,7 @@ import {
 // Capture the loud server-error reports the engine files on a bad section, so
 // "isolated but loud" is asserted, not assumed. setErrorReporter is global —
 // save/restore around each test.
+type ServerErrorReport = Parameters<Parameters<typeof setErrorReporter>[0]>[0];
 let reports: ServerErrorReport[] = [];
 let prevReporter: ((r: ServerErrorReport) => void) | undefined;
 
@@ -145,9 +145,7 @@ describe("assembleEvents", () => {
   });
 
   test("a class with neither phase-1 output nor a ring contributes no section", async () => {
-    const specs: TraceEventClassSpec[] = [
-      { id: "empty", schema: z.unknown() },
-    ];
+    const specs: TraceEventClassSpec[] = [{ id: "empty", schema: z.unknown() }];
     const events = await assembleEvents(specs, ctx, new Map());
     expect(events).toEqual({});
     expect(reports).toHaveLength(0);
@@ -176,7 +174,12 @@ describe("assembleEvents", () => {
 });
 
 describe("duress shed gate", () => {
-  const cfg = { enabled: true, cooldownMs: 0, maxPerMin: 1_000, windowMs: 10_000 };
+  const cfg = {
+    enabled: true,
+    cooldownMs: 0,
+    maxPerMin: 1_000,
+    windowMs: 10_000,
+  };
   const trigger: TraceTrigger = {
     kind: "loader",
     label: "x",
@@ -219,7 +222,11 @@ describe("duress shed gate", () => {
     expect(probeCalls).toBe(0);
     // The buffered stub carries the accounting fields, nothing more.
     expect(stubs).toHaveLength(1);
-    expect(stubs[0]).toMatchObject({ kind: "loader", label: "x", durationMs: 500 });
+    expect(stubs[0]).toMatchObject({
+      kind: "loader",
+      label: "x",
+      durationMs: 500,
+    });
     expect(typeof stubs[0]?.wallTime).toBe("string");
   });
 
@@ -243,7 +250,9 @@ describe("duress shed gate", () => {
       return { persist: false };
     });
 
-    expect(shouldShedTrace({ ...trigger, kind: "stall", critical: true })).toBe(false);
+    expect(shouldShedTrace({ ...trigger, kind: "stall", critical: true })).toBe(
+      false,
+    );
     expect(stubs).toHaveLength(0);
   });
 

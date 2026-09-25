@@ -369,7 +369,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `ProgramFileList`
     - `ProgressRecord`
     - `QueryFact`
-    - `ReadSet`
     - `RunChecksOptions`
     - `TreeSnapshot`
     - `TscProgram`
@@ -381,7 +380,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - Exports (values):
     - `checkCollectedDir`
     - `computeCheckSourceHash`
-    - `computeTreeHash`
     - `currentScanView`
     - `fingerprint`
     - `gitGrepList`
@@ -394,7 +392,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `listAllChecks`
     - `listCandidateSources`
     - `listRepoFiles`
-    - `loadTreeSnapshot`
     - `markBuildInProgress`
     - `materializeWarmBase`
     - `openCheckCache`
@@ -407,7 +404,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `runChecks`
     - `scopeOf`
     - `tsBuildInfoPath`
-    - `validate`
+- Test helpers:
+  - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
+    - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
+    - Types: `ReadSetRepo`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**

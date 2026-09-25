@@ -25,14 +25,14 @@ import {
   buildSnapshot,
   createIpCountryLookup,
   type IpCountryLookup,
-} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server/testing";
 import {
-  DimensionSchema,
   UNFILTERED_LEVEL,
   type AnalyticsFilter,
-  CollectBodySchema,
   type CollectResponse,
 } from "../../core";
+import { CollectBodySchema } from "../../core/internal/collect-body";
+import { DimensionSchema } from "../../core/internal/dimensions";
 import { rawDailyRows, dailyTotalsRows, type KeyedRow } from "./aggregate-sql";
 import { recordCollect } from "./collect";
 import { runAnalyticsQuery } from "./report";

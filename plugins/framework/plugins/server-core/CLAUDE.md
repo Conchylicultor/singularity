@@ -278,7 +278,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `RuntimeProfileView`
     - `ServerContribution`
     - `ServerContributionToken`
-    - `ServerErrorReport`
     - `ServerFatalReport`
     - `ServerPluginDefinition`
     - `ServerResourceOptions`

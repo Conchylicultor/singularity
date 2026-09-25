@@ -2,13 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { enqueueRefreshIfNeeded } from "./internal/boot";
 import { ipCountryRefreshJob } from "./internal/refresh";
 
-export {
-  createIpCountryLookup,
-  lookupCountry,
-  reloadIpCountry,
-} from "./internal/lookup";
-export type { IpCountryLookup, IpCountryResult } from "./internal/lookup";
-export { buildSnapshot } from "./internal/snapshot";
+export { lookupCountry, reloadIpCountry } from "./internal/lookup";
+export type { IpCountryResult } from "./internal/lookup";
 export { ipCountryRefreshJob } from "./internal/refresh";
 
 export default {

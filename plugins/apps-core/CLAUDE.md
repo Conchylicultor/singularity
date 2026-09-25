@@ -67,7 +67,6 @@ keeps reading the old location until then.
   - Exports (values):
     - `Apps`
     - `defaultApp`
-    - `getFocusedAppId`
     - `matchAppForPath`
     - `resolveAppForPath`
     - `setFocusedApp`
@@ -120,6 +119,9 @@ keeps reading the old location until then.
   - Exports (values):
     - `APP_RAIL_WIDTH`
     - `desktopApp`
+- Test helpers:
+  - Web: `@plugins/apps-core/web/testing`
+    - `getFocusedAppId`
 - Sub-plugins:
   - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.

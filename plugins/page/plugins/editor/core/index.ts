@@ -139,7 +139,6 @@ export {
 export { $spliceRunsInto } from "./runs-splice";
 
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
-export type { RunsXmlTextOptions } from "./runs-yjs";
 
 export { newBlockId } from "./block-id";
 

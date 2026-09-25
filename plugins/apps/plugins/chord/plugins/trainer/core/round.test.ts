@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
   LoopCandidateSchema,
-  type Alignment,
   type LoopCandidate,
 } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { roundFromCandidate, type Round } from "./round";
+
+type Alignment = LoopCandidate["alignment"];
 
 // Tokens used below.
 const I = "0:4-3/0";

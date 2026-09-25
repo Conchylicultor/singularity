@@ -11,7 +11,7 @@ import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
-import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/server";
+import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/server/testing";
 import type { DbChange } from "@plugins/database/plugins/change-feed/server";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {

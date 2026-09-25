@@ -10,7 +10,6 @@ export {
   contributionNodeAttrs,
   LINEAGE_ATTR,
   NODE_ATTR,
-  parseLineage,
   readLineageNode,
   regionNodeAttrs,
 } from "./internal/lineage-attrs";

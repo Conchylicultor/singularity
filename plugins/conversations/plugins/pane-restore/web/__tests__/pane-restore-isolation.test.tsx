@@ -7,11 +7,11 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
-  defaultStore,
   Pane,
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 // Importing the barrel registers the module-load popstate/shell:navigate

@@ -108,7 +108,6 @@ reads the two config files directly, so its reads bypass the recording
 - Description: The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
 - Core:
   - Uses: `plugin-meta/parse-utils.maskSource`
-  - Exports (types): `FakeDomInstall`
   - Exports (values):
     - `BUN_TEST_IGNORE`
     - `DOM_TEST_CLOCK_PIN`
@@ -118,8 +117,6 @@ reads the two config files directly, so its reads bypass the recording
     - `DOM_TEST_POOL`
     - `DOM_TEST_SETUP_FILE`
     - `DOM_TEST_TIME_ZONE`
-    - `FAKE_DOM_GLOBALS`
-    - `fakeDomInstalls`
     - `isBunTestPath`
     - `isDomTestPath`
     - `isTestFilePath`

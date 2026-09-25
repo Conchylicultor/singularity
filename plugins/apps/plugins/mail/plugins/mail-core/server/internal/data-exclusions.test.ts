@@ -3,37 +3,29 @@
  * no table kept in a fork or a backup may have a foreign key to a table whose
  * rows are left out (pg_restore would fail re-adding it — see `database/admin`).
  *
- * The catalog is derived from the drizzle table objects rather than a live
- * database, so the test sees the schema this checkout declares, including a
- * link removed before its migration has run anywhere.
+ * The check itself is database/admin's (`assertExclusionsClosed`): it derives
+ * the catalog from the drizzle table objects rather than a live database.
  *
  * Run: `./singularity test plugins/apps/plugins/mail`
  */
 
 import { describe, test, expect, beforeAll } from "bun:test";
 import { getTableName } from "drizzle-orm";
-import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
-import {
-  ExcludeFromBackup,
-  ExcludeFromFork,
-  planBackupExclusions,
-  planForkExclusions,
-  type CatalogForeignKey,
-  type SchemaCatalog,
-} from "@plugins/database/plugins/admin/server";
+import { ExcludeFromBackup } from "@plugins/database/plugins/admin/server";
+import { assertExclusionsClosed } from "@plugins/database/plugins/admin/server/testing";
 import mailCore, {
   _mailAccounts,
   _mailAttachments,
-  _mailDrafts,
   _mailLabels,
   _mailMessageLabels,
   _mailMessages,
-  _mailOutbox,
   _mailSyncState,
   _mailThreads,
 } from "../index";
 import { _mailDraftAttachmentsTable } from "./schema-attachments";
+import { _mailDrafts, _mailOutbox } from "./tables";
 
 const TABLES: PgTable[] = [
   _mailAccounts,
@@ -48,53 +40,20 @@ const TABLES: PgTable[] = [
   _mailDraftAttachmentsTable,
 ];
 
-function catalogOf(extra: CatalogForeignKey[] = []): SchemaCatalog {
-  const foreignKeys: CatalogForeignKey[] = TABLES.flatMap((t) =>
-    getTableConfig(t).foreignKeys.map((fk) => ({
-      table: getTableName(t),
-      constraint: fk.getName(),
-      references: getTableName(fk.reference().foreignTable),
-    })),
-  );
-  const tables = new Set<string>();
-  for (const fk of [...foreignKeys, ...extra]) {
-    tables.add(fk.table);
-    tables.add(fk.references);
-  }
-  for (const t of TABLES) tables.add(getTableName(t));
-  return {
-    schemas: [
-      {
-        name: "public",
-        tables: [...tables].sort(),
-        partitions: {},
-        foreignKeys: [...foreignKeys, ...extra].filter(
-          (fk) => fk.table !== fk.references,
-        ),
-        bytes: 0,
-        fromExtension: false,
-      },
-    ],
-  };
-}
-
 const tableNames = (c: { table: PgTable | string }[]) =>
   c.map((x) => (typeof x.table === "string" ? x.table : getTableName(x.table)));
-
-let backupTables: string[];
-let forkTables: string[];
 
 beforeAll(() => {
   collectContributions([
     { id: "apps/mail/mail-core", contributions: mailCore.contributions },
   ]);
-  backupTables = tableNames(ExcludeFromBackup.getContributions());
-  forkTables = tableNames(ExcludeFromFork.getContributions());
 });
 
 describe("mail's data exclusions", () => {
   test("leave the corpus and its sync state out of backups, and keep the rest", () => {
-    expect([...backupTables].sort()).toEqual([
+    expect(
+      [...tableNames(ExcludeFromBackup.getContributions())].sort(),
+    ).toEqual([
       "mail_attachments",
       "mail_message_labels",
       "mail_messages",
@@ -104,28 +63,20 @@ describe("mail's data exclusions", () => {
   });
 
   test("no kept table links to a left-out one, in a backup or a fork", () => {
-    const catalog = catalogOf();
-    expect(() =>
-      planBackupExclusions(catalog, { tables: backupTables }, { strict: true }),
-    ).not.toThrow();
-    expect(() =>
-      planForkExclusions(catalog, { tables: forkTables, schemas: [] }),
-    ).not.toThrow();
+    expect(() => assertExclusionsClosed(TABLES)).not.toThrow();
   });
 
   test("the drafts → threads link this guards against would be refused", () => {
-    const catalog = catalogOf([
-      {
-        table: "mail_drafts",
-        constraint: "mail_drafts_thread_id_mail_threads_id_fk",
-        references: "mail_threads",
-      },
-    ]);
     expect(() =>
-      planBackupExclusions(catalog, { tables: backupTables }, { strict: true }),
-    ).toThrow(/"mail_drafts" links to "mail_threads"/);
-    expect(() =>
-      planForkExclusions(catalog, { tables: forkTables, schemas: [] }),
+      assertExclusionsClosed(TABLES, {
+        extraForeignKeys: [
+          {
+            table: "mail_drafts",
+            constraint: "mail_drafts_thread_id_mail_threads_id_fk",
+            references: "mail_threads",
+          },
+        ],
+      }),
     ).toThrow(/"mail_drafts" links to "mail_threads"/);
   });
 });

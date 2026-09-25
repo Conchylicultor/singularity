@@ -11,9 +11,9 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
 import {
   appendLineage,
   collectMeta,
-  parseLineage,
   UiRegion,
 } from "@plugins/primitives/plugins/ui-context/web";
+import { parseLineage } from "@plugins/primitives/plugins/ui-context/web/testing";
 import { PluginMarkerMiddleware } from "../internal/marker-middleware";
 
 afterEach(cleanup);

@@ -41,17 +41,8 @@ export type { BackupInfo, TableStat } from "./internal/backup";
 // (the running namespace's own database): a kept table links to a table whose
 // rows are left out, so the archive could not be restored. Any other database
 // keeps those rows instead and reports them as `keptForLinks`.
-export { BackupPlanError, planBackupExclusions } from "./internal/backup-plan";
-// The pure planners and the catalog shape they read, so a plugin can check its
-// own declarations against its own drizzle schema without a database (mail does:
-// no kept table may link to a left-out one).
-export { planForkExclusions } from "./internal/fork-plan";
-export type { CatalogForeignKey, SchemaCatalog } from "./internal/catalog-plan";
-export type {
-  BackupPlan,
-  BackupPlanOptions,
-  KeptForLink,
-} from "./internal/backup-plan";
+export { BackupPlanError } from "./internal/backup-plan";
+export type { BackupPlan, KeptForLink } from "./internal/backup-plan";
 // A plugin declares "my rows can be left out of the backup" for its own table
 // (see ./internal/backup-exclusion for the two reasons that qualify);
 // `backupExclusions` is the collected set every `backupDatabase` caller passes.

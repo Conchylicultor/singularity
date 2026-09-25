@@ -1,13 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { Avatar } from "../components/avatar";
+import { avatarColorPick, avatarFlatClass } from "../internal/colors";
 import {
-  Avatar,
   AvatarPresentationProvider,
-  avatarColorPick,
-  avatarFlatClass,
   useAvatarPresentation,
-} from "@plugins/primitives/plugins/avatar/web";
+} from "../internal/presentation";
 
 afterEach(cleanup);
 

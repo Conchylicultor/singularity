@@ -1,6 +1,6 @@
 # plugin-boundaries
 
-Implements the cross-plugin boundary rules (R1–R12) enforced by
+Implements the cross-plugin boundary rules (R1–R13) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
 root `CLAUDE.md`.
 
@@ -37,6 +37,22 @@ taking names from a test-support module — a test-code path (`testing/`,
 `__tests__/`, `*.test.ts`) or a file named `test-support`, `fixture(s)` or
 `<x>.fixture(s)`. The fix is to publish it from `<runtime>/testing/index.ts`.
 A reset hook keeps its body next to the state it resets; only the export moves.
+
+R13 (`test-only-public-export`, `check/test-only-exports.ts`) asks who imports
+each name a public barrel publishes. A name whose importers are all test code
+fails: nothing that ships needs it, so it is not API. A name nothing imports is
+left alone (that is dead code, a different question), and `check/` / `lint/`
+importers count as shipping code. The uses are collected in the same per-file
+loop as R4–R10, so the check reads no extra files. A `@plugins/…/<runtime>`
+specifier or a relative path landing on `<runtime>/index` both count; an
+aliased import counts under the barrel's name; `export { x } from` counts as a
+use. A namespace import from shipping code uses every name; one from a test
+(the `vi.mock(importOriginal)` idiom) uses none. There are two fixes. The
+plugin's own test imports the internal file by relative path. When another
+plugin's test needs the name, whether a helper or a real function it checks
+against, the name is published from `<runtime>/testing/` (a testing barrel
+may re-export a real function). A test moves only when it tests nothing of
+its own plugin. There is no allowlist.
 
 ## Cross-plugin re-export (provenance-based)
 

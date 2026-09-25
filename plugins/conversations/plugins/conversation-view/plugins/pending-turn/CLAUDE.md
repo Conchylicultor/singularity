@@ -148,7 +148,6 @@ and all feedback lives inside the message card itself.
     - `primitives/sync-status.useReportSync`
     - `reports.report`
   - Exports (types):
-    - `PendingTurnRecord`
     - `PendingTurnState`
     - `TurnDelivery`
     - `TurnDeliveryResult`
@@ -158,7 +157,6 @@ and all feedback lives inside the message card itself.
     - `dismissPendingTurn`
     - `PendingTurnCard`
     - `reconcilePendingTurns`
-    - `retryPendingTurn`
     - `sendConversationTurn`
     - `usePendingTurns`
 - Cross-plugin:

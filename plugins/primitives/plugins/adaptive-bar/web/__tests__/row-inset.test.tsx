@@ -1,12 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-  type AdaptiveBarFault,
-} from "../index";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import type { AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * The fit's budget is the row's CONTENT box, never its border box:

@@ -81,7 +81,6 @@ Design: [`research/2026-08-07-apps-events-recurrence-format-and-extraction-flags
     - `ExpandWindow`
     - `NextOccurrence`
     - `RecurrenceFreq`
-    - `RecurrenceRule`
     - `Weekday`
   - Exports (values):
     - `describeEventDate`

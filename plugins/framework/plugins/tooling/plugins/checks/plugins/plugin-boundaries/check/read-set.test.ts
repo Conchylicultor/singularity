@@ -21,77 +21,42 @@
  */
 
 import { test, expect, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
-import { tmpdir } from "os";
-import { join, dirname } from "path";
 import {
-  computeTreeHash,
-  loadTreeSnapshot,
-  validate,
-  type ReadSet,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+  createReadSetRepo,
+  type ReadSetRepo,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core/testing";
 import { recordBoundaryReadSet } from "./read-set";
 
-let root = "";
+let repo: ReadSetRepo;
 
 /** Build a repo-relative path under the synthetic plugins/ tree. */
 const pj = (rel: string): string => `plugins/${rel}`;
 
-async function git(...args: string[]): Promise<void> {
-  const proc = Bun.spawn(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
-  await proc.exited;
-}
-
-function write(rel: string, content: string): void {
-  const abs = join(root, rel);
-  mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, content);
-}
+const write = (rel: string, content: string): void => repo.write(rel, content);
 
 const FOO_INDEX = pj("foo/web/index.ts");
 const FOO_PKG = pj("foo/package.json");
 const FOO_README = pj("foo/README.md");
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "plugin-boundaries-read-set-"));
   // A minimal plugins/ tree. foo/web/index.ts is a parsed source; package.json
   // feeds R1 naming + the compositionRoot marker; README.md is an unrelated
   // non-source file whose CONTENT never affects the verdict.
-  write(FOO_INDEX, "export default {} as unknown;\n");
-  write(FOO_PKG, JSON.stringify({ name: "@singularity/plugin-foo" }) + "\n");
-  write(FOO_README, "# foo\n");
-  // A file OUTSIDE plugins/ — must never enter the read-set.
-  write("package.json", JSON.stringify({ name: "root" }) + "\n");
-  await git("init", "-q");
-  await git("config", "user.email", "t@t.t");
-  await git("config", "user.name", "t");
-  await git("add", "-A");
-  await git("commit", "-q", "-m", "fixture");
+  repo = await createReadSetRepo("plugin-boundaries-read-set-", {
+    [FOO_INDEX]: "export default {} as unknown;\n",
+    [FOO_PKG]: JSON.stringify({ name: "@singularity/plugin-foo" }) + "\n",
+    [FOO_README]: "# foo\n",
+    // A file OUTSIDE plugins/ — must never enter the read-set.
+    "package.json": JSON.stringify({ name: "root" }) + "\n",
+  });
 });
 
 afterAll(() => {
-  if (root) rmSync(root, { recursive: true, force: true });
+  repo?.dispose();
 });
 
 /** Record plugin-boundaries' read-set the same way run() does. */
-async function record(): Promise<ReadSet> {
-  const treeHash = await computeTreeHash(root);
-  expect(treeHash).toBeTruthy();
-  const snap = await loadTreeSnapshot(root, treeHash!);
-  expect(snap).not.toBeNull();
-  const view = snap!.createRecordingView();
-  recordBoundaryReadSet(view);
-  return view.readSet();
-}
-
-/** Validate a read-set against a FRESH snapshot of the current tree state. */
-async function revalidate(readSet: ReadSet) {
-  const treeHash = await computeTreeHash(root);
-  expect(treeHash).toBeTruthy();
-  const snap = await loadTreeSnapshot(root, treeHash!);
-  expect(snap).not.toBeNull();
-  return validate(readSet, snap!);
-}
+const record = () => repo.record((view) => recordBoundaryReadSet(view));
 
 test("records the plugins-wide membership glob + a content fact per .ts/.tsx & package.json under plugins/", async () => {
   const rs = await record();
@@ -114,7 +79,7 @@ test("case 1: an unrelated non-source change (docs) is a HIT", async () => {
   const rs = await record();
   write(FOO_README, "# foo — edited, unrelated to the verdict\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(true);
   } finally {
     write(FOO_README, "# foo\n");
@@ -123,9 +88,12 @@ test("case 1: an unrelated non-source change (docs) is a HIT", async () => {
 
 test("case 2: a source file's import edit (blobSha change) is a MISS", async () => {
   const rs = await record();
-  write(FOO_INDEX, 'import { x } from "@plugins/bar/web";\nexport default { x } as unknown;\n');
+  write(
+    FOO_INDEX,
+    'import { x } from "@plugins/bar/web";\nexport default { x } as unknown;\n',
+  );
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain(FOO_INDEX);
   } finally {
@@ -142,11 +110,11 @@ test("case 3 (H3/H9): a brand-new source file is a MISS via the membership glob"
   const naughty = pj("foo/web/naughty.ts");
   write(naughty, 'import x from "@plugins/bar/server/deep/internal";\n');
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("glob match set changed");
   } finally {
-    rmSync(join(root, naughty), { force: true });
+    repo.remove(naughty);
   }
 });
 
@@ -159,11 +127,11 @@ test("case 4 (H3): a new plugin dir holding only a non-.ts file is a MISS via me
   const barDir = pj("bar");
   write(pj("bar/notes.md"), "not a source file\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("glob match set changed");
   } finally {
-    rmSync(join(root, barDir), { recursive: true, force: true });
+    repo.remove(barDir);
   }
 });
 
@@ -171,7 +139,7 @@ test("case 5: a package.json content change (R1 naming) is a MISS", async () => 
   const rs = await record();
   write(FOO_PKG, JSON.stringify({ name: "@singularity/plugin-WRONG" }) + "\n");
   try {
-    const v = await revalidate(rs);
+    const v = await repo.revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain(FOO_PKG);
   } finally {

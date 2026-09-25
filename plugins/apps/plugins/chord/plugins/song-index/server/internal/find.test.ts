@@ -1,12 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { chordTokenFromParts, compactChord, deriveSection } from "../../core";
 import {
   FindLoopsBodySchema,
   NextChordsBodySchema,
-  chordTokenFromParts,
-  compactChord,
-  deriveSection,
-} from "../../core";
+} from "../../core/endpoints";
 import { chord, section, windowsOf } from "../../core/test-sections";
 import {
   chordsInWindow,

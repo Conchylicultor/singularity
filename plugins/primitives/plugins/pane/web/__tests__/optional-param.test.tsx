@@ -6,8 +6,6 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  buildRouteUrl,
-  defaultStore,
   Pane,
   PaneInstanceContext,
   parseUrl,
@@ -15,8 +13,9 @@ import {
   useSyncPaneRegistry,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import { buildRouteUrl } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "../testing";
+import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 
 // A VIEW OF A PANE HAS AN ADDRESS.
 //

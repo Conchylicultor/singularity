@@ -2,16 +2,11 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   sendConversationTurn,
-  retryPendingTurn,
   dismissPendingTurn,
   reconcilePendingTurns,
   usePendingTurns,
 } from "./internal/store";
-export type {
-  PendingTurnRecord,
-  PendingTurnState,
-  TurnSend,
-} from "./internal/store";
+export type { PendingTurnState, TurnSend } from "./internal/store";
 export { defineTurnDelivery } from "./internal/delivery";
 export type { TurnDelivery, TurnDeliveryResult } from "./internal/delivery";
 export { PendingTurnCard } from "./components/pending-turn-card";

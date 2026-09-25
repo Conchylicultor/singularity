@@ -3,12 +3,16 @@ import { cleanup, render } from "@testing-library/react";
 import {
   AVATAR_COLORS,
   avatarColorClass,
-} from "@plugins/primitives/plugins/avatar/web";
+} from "@plugins/primitives/plugins/avatar/web/testing";
 import type {
   FieldDef,
   TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { AvatarCell, avatarFieldDef, type AvatarFieldData } from "../index";
+import {
+  AvatarCell,
+  avatarFieldDef,
+  type AvatarFieldData,
+} from "../components/avatar-cell";
 
 const field: FieldDef<unknown> = {
   id: "avatar",

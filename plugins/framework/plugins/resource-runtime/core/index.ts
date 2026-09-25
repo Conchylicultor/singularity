@@ -8,7 +8,6 @@ export type {
   DefineResourceInput,
   ScopePolicy,
   ResourceContract,
-  KeyedResourceContract,
   ServerResourceOptions,
   ResourceMode,
   ResourceParams,
@@ -18,17 +17,9 @@ export type {
   WsData,
   WsHandler,
 } from "./runtime";
-export {
-  buildSnapshot,
-  diffKeyedFull,
-  diffKeyedScoped,
-  diffKeyedScopedMembership,
-  hashSnapEncoder,
-  retainSnapEncoder,
-} from "./keyed-diff";
+export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
 export type {
   KeyedDiff,
-  KeyedSnapshot,
   KeyedMembershipInput,
   SnapEncoder,
   SnapEntry,

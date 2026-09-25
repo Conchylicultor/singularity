@@ -4,7 +4,7 @@
  * `bun test plugins/primitives/plugins/live-state/web/keyed-diff-roundtrip.test.ts`.
  *
  * The server `diffKeyedFull` / `diffKeyedScoped`
- * (`@plugins/framework/plugins/resource-runtime/core`) emit `(upserts, deletes,
+ * (`@plugins/framework/plugins/resource-runtime/core/testing`) emit `(upserts, deletes,
  * order)` deltas; the client `mergeKeyedDelta` (local) consumes them to rebuild
  * the array. This test proves: for ANY random mutation (add / update / delete /
  * reorder, and scoped partial recomputes), feeding the diff's output into the
@@ -13,7 +13,8 @@
  * order, a stale upsert) breaks reconstruction.
  *
  * Import direction: live-state is DOWNSTREAM of resource-runtime, so it may
- * import the framework-core diff; the reverse would invert the dependency. The
+ * import the framework-core diff (published for this suite from its testing
+ * barrel); the reverse would invert the dependency. The
  * client merge is imported locally. (The diff-only invariants live inside
  * resource-runtime itself — `core/keyed-diff.test.ts`.)
  */
@@ -25,7 +26,7 @@ import {
   diffKeyedScoped,
   hashSnapEncoder,
   type KeyedSnapshot,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/framework/plugins/resource-runtime/core/testing";
 
 // The round-trip only exercises wire frames (upserts/order), never snapshot
 // contents, so one representative encoder suffices; the per-encoder diff
@@ -50,7 +51,11 @@ function rng(seed: number): () => number {
 
 // Apply a server FULL diff to a client base via the client merge, asserting the
 // result reconstructs `next` exactly. Returns the rebuilt rows (the new base).
-function applyFull(clientRows: Row[], prevSnap: KeyedSnapshot | undefined, next: Row[]): Row[] {
+function applyFull(
+  clientRows: Row[],
+  prevSnap: KeyedSnapshot | undefined,
+  next: Row[],
+): Row[] {
   const { diff } = diffKeyedFull(prevSnap, next, keyOf, enc);
   const upsertMap = new Map<string, unknown>(diff.upserts);
   // The client merge consumes `order` + `upserts`. A FULL diff that omits order
@@ -71,23 +76,46 @@ describe("server diff → client merge round-trip (FULL diffs)", () => {
     // add
     {
       const prev: Row[] = [{ id: "A", v: 1 }];
-      const out = applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }, { id: "B", v: 2 }]);
-      expect(out).toEqual([{ id: "A", v: 1 }, { id: "B", v: 2 }]);
+      const out = applyFull(prev, buildSnapshot(prev, keyOf, enc), [
+        { id: "A", v: 1 },
+        { id: "B", v: 2 },
+      ]);
+      expect(out).toEqual([
+        { id: "A", v: 1 },
+        { id: "B", v: 2 },
+      ]);
     }
     // update (in-place; order omitted)
     {
-      const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }];
-      applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }, { id: "B", v: 9 }]);
+      const prev: Row[] = [
+        { id: "A", v: 1 },
+        { id: "B", v: 1 },
+      ];
+      applyFull(prev, buildSnapshot(prev, keyOf, enc), [
+        { id: "A", v: 1 },
+        { id: "B", v: 9 },
+      ]);
     }
     // delete
     {
-      const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }];
+      const prev: Row[] = [
+        { id: "A", v: 1 },
+        { id: "B", v: 1 },
+      ];
       applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }]);
     }
     // reorder
     {
-      const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }, { id: "C", v: 1 }];
-      applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "C", v: 1 }, { id: "A", v: 1 }, { id: "B", v: 1 }]);
+      const prev: Row[] = [
+        { id: "A", v: 1 },
+        { id: "B", v: 1 },
+        { id: "C", v: 1 },
+      ];
+      applyFull(prev, buildSnapshot(prev, keyOf, enc), [
+        { id: "C", v: 1 },
+        { id: "A", v: 1 },
+        { id: "B", v: 1 },
+      ]);
     }
   });
 
@@ -126,7 +154,12 @@ describe("server diff → client merge round-trip (FULL diffs)", () => {
         }
 
         // Server diffs truth against its snapshot, advancing the snapshot.
-        const { diff, nextSnapshot } = diffKeyedFull(snapshot, truth, keyOf, enc);
+        const { diff, nextSnapshot } = diffKeyedFull(
+          snapshot,
+          truth,
+          keyOf,
+          enc,
+        );
         snapshot = nextSnapshot;
 
         // Client merges the delta onto its base.

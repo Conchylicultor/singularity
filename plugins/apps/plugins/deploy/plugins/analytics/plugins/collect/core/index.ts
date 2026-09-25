@@ -1,6 +1,5 @@
 export {
   DIMENSIONS,
-  DimensionSchema,
   HIT_DIMENSIONS,
   VISIT_DIMENSIONS,
   NONE_VALUE,
@@ -37,7 +36,6 @@ export {
 } from "./internal/channel";
 export type { Channel, UtmTags } from "./internal/channel";
 export {
-  CollectBodySchema,
   CollectResponseSchema,
   EngagementBodySchema,
   EventBodySchema,
@@ -100,7 +98,6 @@ export {
   REPORT_SOURCES,
   ReportRowSchema,
   SeriesPointSchema,
-  decodeAnalyticsQueryJson,
   encodeAnalyticsQuery,
   reportSourceFor,
 } from "./internal/query";

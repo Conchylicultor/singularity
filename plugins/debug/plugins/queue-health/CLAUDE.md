@@ -478,7 +478,6 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `queueHealthSummaryEndpoint`
     - `QueueHealthSummarySchema`
     - `queuePulseResource`
-    - `QueuePulseSchema`
     - `QueueRunningJobSchema`
     - `QueueSlotBlockedPayloadSchema`
     - `QueueSlotHogPayloadSchema`

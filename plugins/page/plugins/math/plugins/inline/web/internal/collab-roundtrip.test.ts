@@ -11,23 +11,18 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { blockTextTokenExtensions } from "@plugins/page/plugins/editor/web";
+import { blockTextRunsOptions } from "@plugins/page/plugins/editor/web/testing";
 import {
   coalesce,
   runsToXmlText,
   xmlTextToRuns,
   type RichText,
-  type RunsXmlTextOptions,
 } from "@plugins/page/plugins/editor/core";
 import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
 import { inlineMathToken } from "../../core";
 import "./register";
 
-const extensions = blockTextTokenExtensions();
-const opts: RunsXmlTextOptions = {
-  extensions,
-  nodes: extensions.map((e) => e.node.Node),
-};
+const opts = blockTextRunsOptions();
 
 /** `field` values of materialized decorator nodes of `type` in the doc. */
 function decoratorFields(
@@ -54,7 +49,7 @@ function decoratorFields(
       );
       return out;
     },
-    { nodes: opts.nodes ? [...opts.nodes] : [] },
+    { nodes: opts.nodes },
   );
 }
 

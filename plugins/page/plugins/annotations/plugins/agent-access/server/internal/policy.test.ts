@@ -11,10 +11,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
-import type {
-  MarkdownApplyPlan,
-  MarkdownTextEdit,
-} from "@plugins/page/plugins/markdown-apply/core";
+import type { MarkdownApplyPlan } from "@plugins/page/plugins/markdown-apply/core";
 import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
 import {
   assertAgentAddressable,
@@ -281,7 +278,7 @@ function planOf(patch: {
   creates?: Block[];
   updates?: BlockUpdate[];
   deleteIds?: string[];
-  textEdits?: MarkdownTextEdit[];
+  textEdits?: MarkdownApplyPlan["textEdits"];
 }): MarkdownApplyPlan {
   return {
     patch: {

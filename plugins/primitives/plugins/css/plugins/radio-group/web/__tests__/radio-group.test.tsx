@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { RadioGroup } from "../index";
+import { RadioGroup } from "../internal/radio-group";
 
 /**
  * The invariant under test is the `name` attribute, because that — and nothing

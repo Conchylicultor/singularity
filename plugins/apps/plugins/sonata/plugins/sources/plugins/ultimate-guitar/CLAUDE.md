@@ -242,9 +242,7 @@ surfacing as crash tasks, not just toasts.
     - `PUT /api/sonata/songs/:id/ultimate-guitar`
 - Core:
   - Exports (types):
-    - `ParsedChord`
     - `ParsedLine`
-    - `ParsedSection`
     - `ParsedTab`
     - `UgFetchErrorKind`
     - `UgParseErrorKind`

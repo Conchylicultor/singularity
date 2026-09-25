@@ -5,11 +5,9 @@ export {
   appInstanceKey,
   getAppInstanceId,
   getNavigationType,
-  isFreshAppInstance,
   legacyInstanceKey,
   mayAdoptLegacyPayload,
   readAppInstance,
-  RETAINED_INSTANCES,
   stampAppInstance,
 } from "./internal/app-instance";
 

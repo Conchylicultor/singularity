@@ -36,12 +36,12 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
-import { installQueueSchema } from "@plugins/infra/plugins/jobs/server";
+import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
+import type { DbExecutor } from "@plugins/tasks/plugins/tasks-core/server";
 import {
+  installTaskDerivedSchema,
   runStatusBatchOn,
-  type DbExecutor,
-} from "@plugins/tasks/plugins/tasks-core/server";
-import { installTaskDerivedSchema } from "@plugins/tasks/plugins/tasks-core/server/testing";
+} from "@plugins/tasks/plugins/tasks-core/server/testing";
 import {
   DEFAULT_MODEL_CHOICE,
   resolveModel,

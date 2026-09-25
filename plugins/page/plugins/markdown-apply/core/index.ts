@@ -3,7 +3,6 @@ export type {
   MarkdownApplyArgs,
   MarkdownApplyPlan,
   MarkdownApplyResult,
-  MarkdownTextEdit,
 } from "./plan";
 
 export { documentOrderRows, markdownNodesOfRows } from "./flatten";

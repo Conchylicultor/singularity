@@ -29,8 +29,6 @@
   - Exports (values):
     - `CHORD_TEMPLATES`
     - `chordPitches`
-    - `detectChord`
-    - `detectChordWeighted`
     - `detectChordWindows`
     - `formatChordLabel`
     - `formatChordSymbol`

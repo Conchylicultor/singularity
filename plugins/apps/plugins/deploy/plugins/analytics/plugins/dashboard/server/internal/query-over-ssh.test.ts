@@ -6,7 +6,7 @@ import type {
 import {
   DIMENSIONS,
   ZERO_METRICS,
-  decodeAnalyticsQueryJson,
+  analyticsQueryEndpoint,
   type AnalyticsQuery,
   type AnalyticsQueryResult,
   type AnalyticsReport,
@@ -79,7 +79,10 @@ describe("analyticsCurlArgv", () => {
     const q = url.searchParams.get("q")!;
     // Nothing the remote shell would need quoted.
     expect(q).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(JSON.parse(decodeAnalyticsQueryJson(q))).toEqual(QUERY);
+    // Decoded exactly as the collect endpoint reads its `?q=`.
+    expect(analyticsQueryEndpoint.querySchema!.parse({ q })).toEqual({
+      q: QUERY,
+    });
   });
 });
 

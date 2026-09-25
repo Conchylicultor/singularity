@@ -532,7 +532,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
-    - `installQueueSchema`
     - `isJobDeadlineExceededError`
     - `isNonRetryableError`
     - `isSuspendSignal`
@@ -590,7 +589,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Exports (values):
     - `ALL_JOB_TASKS`
     - `cancelJob`
-    - `ceilingMsFor`
     - `DeadJobRowSchema`
     - `DeadJobsPayloadSchema`
     - `deadJobsResource`
@@ -669,6 +667,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `tasks/task-title`
     - `toolchain`
     - `upstream`
+- Test helpers:
+  - Server: `@plugins/infra/plugins/jobs/server/testing`
+    - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
 - Sub-plugins:
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
   - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.

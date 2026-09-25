@@ -13,7 +13,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
 
 import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
@@ -21,10 +23,12 @@ import { useEffect, type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
-  noteResourceTxAcks,
-  noteResourceWatermark,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  noteResourceTxAcks,
+  noteResourceWatermark,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -32,7 +36,10 @@ import {
   SyncStatusProvider,
 } from "@plugins/primitives/plugins/sync-status/web";
 import { useOptimisticResource } from "../internal/use-optimistic-resource";
-import { activeSendLaneCount, enqueueResourceWrite } from "../internal/send-lane";
+import {
+  activeSendLaneCount,
+  enqueueResourceWrite,
+} from "../internal/send-lane";
 import { optimisticDivergenceReportSink } from "../reporter";
 import type { OptimisticDivergenceReport } from "../reporter";
 
@@ -53,7 +60,8 @@ const denialResource = resourceDescriptor<number[]>(
 const denialKey = queryKeyFor(denialResource.key, undefined);
 
 const apply = (current: number[], n: number): number[] => [...current, n];
-const isConfirmedBy = (serverData: number[], n: number): boolean => serverData.includes(n);
+const isConfirmedBy = (serverData: number[], n: number): boolean =>
+  serverData.includes(n);
 const sameTarget = (a: number, b: number): boolean => a === b;
 
 type MutateResult = void | { watermark?: string };
@@ -95,7 +103,9 @@ async function settleQueues(): Promise<void> {
 
 function makeClient(): QueryClient {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, refetchOnMount: false, staleTime: Infinity } },
+    defaultOptions: {
+      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
+    },
   });
 }
 
@@ -122,7 +132,9 @@ function mountHook(
   resource: typeof rowsResource = rowsResource,
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+    <NotificationsProvider queryClient={client}>
+      {children}
+    </NotificationsProvider>
   );
   return renderHook(() => useRows(mutate, contentBased, resource), { wrapper });
 }
@@ -224,7 +236,10 @@ describe("useOptimisticResource", () => {
     await act(async () => {
       // `refetchType: "none"` keeps this a pure `invalidate` action — no queryFn,
       // no value, but it DOES notify the cache.
-      await client.invalidateQueries({ queryKey: rowsKey, refetchType: "none" });
+      await client.invalidateQueries({
+        queryKey: rowsKey,
+        refetchType: "none",
+      });
     });
     expect(result.current.pendingOps).toHaveLength(1); // still unconfirmed
 
@@ -282,7 +297,9 @@ describe("useOptimisticResource", () => {
     // Never-revert: a durable server rejection is a sync-status state (cloud
     // `error` + Retry), not an undo — the prediction stays in the overlay.
     const client = makeClient();
-    const mutate = vi.fn(() => Promise.reject(new EndpointError(422, { message: "nope" })));
+    const mutate = vi.fn(() =>
+      Promise.reject(new EndpointError(422, { message: "nope" })),
+    );
     const { result } = mountHook(client, mutate);
 
     await act(async () => {
@@ -540,11 +557,18 @@ describe("useOptimisticResource", () => {
     const client = makeClient();
     const { mutate, release } = deferredMutate();
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+      <NotificationsProvider queryClient={client}>
+        {children}
+      </NotificationsProvider>
     );
     const { result, rerender } = renderHook(
       ({ p }: { p: Record<string, string> }) =>
-        useOptimisticResource<number[], number>({ resource, params: p, apply, mutate }),
+        useOptimisticResource<number[], number>({
+          resource,
+          params: p,
+          apply,
+          mutate,
+        }),
       { wrapper, initialProps: { p: { v: "1" } } },
     );
 
@@ -682,10 +706,15 @@ describe("useOptimisticResource", () => {
     const client = makeClient();
     const { mutate, calls, sent } = queuedMutate();
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+      <NotificationsProvider queryClient={client}>
+        {children}
+      </NotificationsProvider>
     );
     const { result } = renderHook(
-      () => ({ a: useRows(mutate, false, resource), b: useRows(mutate, false, resource) }),
+      () => ({
+        a: useRows(mutate, false, resource),
+        b: useRows(mutate, false, resource),
+      }),
       { wrapper },
     );
 

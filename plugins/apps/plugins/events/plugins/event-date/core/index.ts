@@ -4,7 +4,6 @@ export {
   RECURRENCE_FREQS,
   type RecurrenceFreq,
   RecurrenceRuleSchema,
-  type RecurrenceRule,
   EventDateSchema,
   type EventDate,
   type EventOccurrence,

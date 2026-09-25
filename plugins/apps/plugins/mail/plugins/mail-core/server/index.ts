@@ -27,8 +27,6 @@ export {
   _mailMessages,
   _mailMessageLabels,
   _mailAttachments,
-  _mailDrafts,
-  _mailOutbox,
 } from "./internal/tables";
 export { mailDraftAttachments } from "./internal/schema-attachments";
 export { resolveMailAccountId } from "./internal/account";

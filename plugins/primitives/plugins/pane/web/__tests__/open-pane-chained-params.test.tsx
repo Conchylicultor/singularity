@@ -6,7 +6,6 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  defaultStore,
   Pane,
   PaneInstanceContext,
   setLiveStore,
@@ -16,7 +15,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
-import { createTestSurfaceStore, TestSurface } from "../testing";
+import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 
 // AN OPEN NEVER DISCARDS A PARAM THE CALLER SUPPLIED.
 //

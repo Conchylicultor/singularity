@@ -7,13 +7,13 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
-  defaultStore,
   Pane,
   setLiveStore,
   usePaneStore,
   useOpenPane,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defaultStore } from "../testing";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Opening a pane from GLOBAL CHROME — anything mounted at `Core.Root` or in the

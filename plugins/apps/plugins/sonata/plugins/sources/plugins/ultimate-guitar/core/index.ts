@@ -16,10 +16,4 @@ export { UgFetchError } from "./errors";
 export type { UgFetchErrorKind } from "./errors";
 
 export { parseUgTab, parseUgContent, UgParseError } from "./parse";
-export type {
-  UgParseErrorKind,
-  ParsedTab,
-  ParsedSection,
-  ParsedLine,
-  ParsedChord,
-} from "./parse";
+export type { UgParseErrorKind, ParsedTab, ParsedLine } from "./parse";

@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  EventDate,
-  RecurrenceRule,
-} from "@plugins/apps/plugins/events/plugins/event-date/core";
+import type { EventDate } from "@plugins/apps/plugins/events/plugins/event-date/core";
 import type { ExtractedEvent } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import {
   deriveEventRowId,
@@ -10,6 +7,8 @@ import {
   normalizeTitle,
   resolveExternalId,
 } from "./external-id";
+
+type RecurrenceRule = Extract<EventDate, { kind: "recurring" }>["rule"];
 
 // Identity is what makes re-extraction idempotent, so these assert the two
 // properties the upsert depends on: the SAME event re-extracted keeps its id,

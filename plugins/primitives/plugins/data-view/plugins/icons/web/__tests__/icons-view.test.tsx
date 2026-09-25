@@ -10,7 +10,7 @@ import {
   type FieldDef,
   type TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { useAvatarPresentation } from "@plugins/primitives/plugins/avatar/web";
+import { useAvatarPresentation } from "@plugins/primitives/plugins/avatar/web/testing";
 import { IconsView } from "../components/icons-view";
 
 /**

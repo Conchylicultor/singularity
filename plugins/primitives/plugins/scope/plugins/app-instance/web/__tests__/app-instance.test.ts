@@ -12,7 +12,7 @@ import {
   RETAINED_INSTANCES,
   stampAppInstance,
   type NavigationType,
-} from "../index";
+} from "../internal/app-instance";
 import { resetAppInstanceForTests } from "../testing";
 
 /** Minimal in-memory Storage — jsdom's sessionStorage under vitest is inert. */

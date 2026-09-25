@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, it, expect } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Pool, PoolClient } from "pg";
 import {
-  QueryDeadlineExceededError,
   createDbClient,
   queryDeadlineSink,
   type DbClient,
 } from "@plugins/database/plugins/connection/server";
+import { QueryDeadlineExceededError } from "@plugins/database/plugins/connection/server/testing";
 import {
   getReadSetIndex,
   installBackgroundLaneRuntime,

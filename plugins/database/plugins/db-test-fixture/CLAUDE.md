@@ -39,7 +39,6 @@ The `page/editor-collab` suite (`server/internal/doc-store.test.ts`) is the
 - Core:
   - Exports (types): `TestDbName`
   - Exports (values):
-    - `mintTestDbName`
     - `parseTestDbName`
     - `TEST_DB_SUFFIX`
     - `TEST_DB_TTL_MS`

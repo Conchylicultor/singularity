@@ -226,7 +226,6 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `nearestOwner`
     - `nearestSource`
     - `NODE_ATTR`
-    - `parseLineage`
     - `readLineageNode`
     - `regionNodeAttrs`
     - `UiRegion`
@@ -260,6 +259,9 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `UI_CONTEXT_FIELDS`
     - `UI_CONTEXT_RE`
     - `UiContextMetaSchema`
+- Test helpers:
+  - Web: `@plugins/primitives/plugins/ui-context/web/testing`
+    - `parseLineage` — Parse a serialized lineage back into nodes (outer→inner).
 - Sub-plugins:
   - **`element-picker`** — Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
 

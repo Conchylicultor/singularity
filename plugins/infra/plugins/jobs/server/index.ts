@@ -34,10 +34,7 @@ export {
   getJobSlowThresholdMs,
   getJobHold,
 } from "./internal/registry";
-export {
-  installQueueSchema,
-  QueueSchemaMissingError,
-} from "./internal/queue-schema";
+export { QueueSchemaMissingError } from "./internal/queue-schema";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export { singletonJobKey } from "./internal/run-identity";
 export type {

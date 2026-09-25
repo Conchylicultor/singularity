@@ -61,7 +61,7 @@ export type {
 export type { PageForestTx } from "./internal/page-forest";
 // The delete chokepoint and its inverse: every block delete is a trash, and a
 // consumer that trashed through the chokepoint restores through this.
-export { deleteBlocksSubtree, untrashBlocks } from "./internal/trash-blocks";
+export { deleteBlocksSubtree } from "./internal/trash-blocks";
 export {
   BlockSchema,
   PageDataSchema,

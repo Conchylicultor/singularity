@@ -10,7 +10,6 @@ export {
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
-  WORKTREE_SPEC_FILE,
   RUN_TRANSCRIPT_SUFFIX,
   RUN_TERMINAL_SUFFIX,
   CLAUDE_DIR,

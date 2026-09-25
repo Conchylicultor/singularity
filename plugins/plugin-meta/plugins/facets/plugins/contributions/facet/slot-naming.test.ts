@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  SlotHandle,
-  SlotMeta,
-} from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ExtractContext } from "@plugins/plugin-meta/plugins/facets/core";
@@ -39,7 +36,7 @@ const ctx = (imported: ExtractContext["imported"]): ExtractContext => ({
 const makeSlot = (): SlotHandle =>
   Object.assign(function slot() {}, {
     useContributions: () => [],
-    meta: { kind: "render", reorderable: true } satisfies SlotMeta,
+    meta: { kind: "render", reorderable: true } satisfies SlotHandle["meta"],
   }) as unknown as SlotHandle;
 
 const OWNER = "owner.plugin" as PluginId;

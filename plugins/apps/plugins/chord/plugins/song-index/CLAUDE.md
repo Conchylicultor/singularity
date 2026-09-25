@@ -289,7 +289,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `integrations/hooktheory.TheorytabSectionIdSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
-    - `Alignment`
     - `BeatTimesAlignment`
     - `ChordFeature`
     - `ChordToken`
@@ -346,7 +345,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `ensureChordIndexEndpoint`
     - `expandChord`
     - `FIND_LOOPS_MAX_LIMIT`
-    - `FindLoopsBodySchema`
     - `findLoopsEndpoint`
     - `fnv1a32`
     - `INDEX_DERIVATION_VERSION`
@@ -364,7 +362,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `LoopWindowFieldsSchema`
     - `NEXT_CHORDS_MAX_LIMIT`
     - `NextChordCountSchema`
-    - `NextChordsBodySchema`
     - `nextChordsEndpoint`
     - `parseChordToken`
     - `resolveLoadScope`
@@ -376,7 +373,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `SheetSageBeatTimesSchema`
     - `SKIP_EXAMPLES_PER_REASON`
     - `SkipSummaryEntrySchema`
-    - `SkipSummarySchema`
     - `SkipTally`
     - `SNAPSHOT_FORMAT_VERSION`
     - `SNAPSHOT_SKIP_REASONS`

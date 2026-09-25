@@ -25,11 +25,7 @@ export {
   beatToSeconds,
   resolveVideoFraction,
 } from "./beat-time";
-export type {
-  Alignment,
-  BeatTimesAlignment,
-  VideoFractionAlignment,
-} from "./beat-time";
+export type { BeatTimesAlignment, VideoFractionAlignment } from "./beat-time";
 export {
   SAMPLE_BUCKETS,
   SAMPLE_PINNED_SECTIONS,
@@ -75,7 +71,6 @@ export type { IndexScopeSetting, LoadScope } from "./scope";
 export {
   SKIP_EXAMPLES_PER_REASON,
   SkipSummaryEntrySchema,
-  SkipSummarySchema,
   SkipTally,
 } from "./skip-tally";
 export type { SkipSummary, SkipSummaryEntry } from "./skip-tally";
@@ -97,11 +92,9 @@ export type { IndexLoadPhase, IndexPhase, IndexStatus } from "./index-status";
 export {
   CountLoopsInSetBodySchema,
   FIND_LOOPS_MAX_LIMIT,
-  FindLoopsBodySchema,
   LoopCandidateSchema,
   LoopWindowFieldsSchema,
   NEXT_CHORDS_MAX_LIMIT,
-  NextChordsBodySchema,
   countLoopsInSetEndpoint,
   ensureChordIndexEndpoint,
   findLoopsEndpoint,

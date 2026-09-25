@@ -43,15 +43,8 @@ export {
   liveStateSocketKind,
   ResourceStaleReadError,
 } from "./notifications-client";
-export {
-  noteResourceWatermark,
-  getResourceWatermark,
-} from "./watermark-registry";
-export {
-  noteResourceTxAcks,
-  hasResourceTxAck,
-  subscribeResourceTxAcks,
-} from "./tx-ack-registry";
+export { getResourceWatermark } from "./watermark-registry";
+export { hasResourceTxAck, subscribeResourceTxAcks } from "./tx-ack-registry";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
 export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type {

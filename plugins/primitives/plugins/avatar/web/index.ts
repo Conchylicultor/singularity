@@ -7,17 +7,12 @@ export {
   type AvatarSpec,
 } from "./components/avatar-picker";
 export {
-  AVATAR_COLORS,
   AVATAR_COLOR_KEYS,
-  avatarColorClass,
-  avatarColorPick,
-  avatarFlatClass,
   avatarSoftClass,
   type AvatarColorPick,
 } from "./internal/colors";
 export {
   AvatarPresentationProvider,
-  useAvatarPresentation,
   type AvatarPresentation,
 } from "./internal/presentation";
 export { DEFAULT_AGENT_AVATAR } from "./internal/default-avatar";

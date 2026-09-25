@@ -5,13 +5,8 @@ import type {
   LyricAnnotation,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type {
-  ParsedChord,
-  ParsedLine,
-  ParsedSection,
-  ParsedTab,
-  UgTab,
-} from "../core";
+import type { ParsedLine, ParsedTab, UgTab } from "../core";
+import type { ParsedChord, ParsedSection } from "../core/parse";
 import {
   collectUnrecognisedChords,
   compile,
@@ -40,8 +35,10 @@ function tab(sections: ParsedSection[], key: string | null = null): ParsedTab {
   return { sections, key, capo: 0 };
 }
 
-const byType = <T extends string>(score: { annotations: Annotation[] }, type: T) =>
-  score.annotations.filter((a) => a.type === type);
+const byType = <T extends string>(
+  score: { annotations: Annotation[] },
+  type: T,
+) => score.annotations.filter((a) => a.type === type);
 
 const duration = (a: { start: number; end: number }) => a.end - a.start;
 
@@ -93,9 +90,7 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     const lyric = "twenty four characters!!";
     const score = synthesizeScore(
       tab([
-        section("Verse", [
-          line(lyric, ch("C", 0), ch("Am", 4), ch("G", 20)),
-        ]),
+        section("Verse", [line(lyric, ch("C", 0), ch("Am", 4), ch("G", 20))]),
       ]),
     );
 
@@ -119,8 +114,7 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
       tab([section("V", [line("short", ch("C", 0))])]),
     );
     // ~48 chars → round(48/12) = 4 bars.
-    const longText =
-      "a much much longer line of lyrics that keeps going on!!!";
+    const longText = "a much much longer line of lyrics that keeps going on!!!";
     const long = synthesizeScore(
       tab([section("V", [line(longText, ch("C", 0))])]),
     );
@@ -255,7 +249,9 @@ describe("collectUnrecognisedChords — dropped-chord surfacing", () => {
   });
 
   it("agrees with synthesizeScore about what is dropped", () => {
-    const parsed = tab([section("Verse", [line("", ch("N.C.", 0), ch("G", 8))])]);
+    const parsed = tab([
+      section("Verse", [line("", ch("N.C.", 0), ch("G", 8))]),
+    ]);
 
     const dropped = collectUnrecognisedChords(parsed);
     const kept = (
@@ -293,10 +289,9 @@ describe("compile — UgTab round-trip", () => {
 
     expect(score.meta.title).toBe("Hey Jude");
     expect(score.meta.key).toEqual({ tonic: "F", mode: "major" });
-    expect((byType(score, "chord") as ChordAnnotation[]).map((c) => c.data.symbol)).toEqual([
-      "C",
-      "G",
-    ]);
+    expect(
+      (byType(score, "chord") as ChordAnnotation[]).map((c) => c.data.symbol),
+    ).toEqual(["C", "G"]);
     expect((byType(score, "lyric") as LyricAnnotation[])[0]!.data.text).toBe(
       "hello there friend",
     );

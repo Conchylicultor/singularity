@@ -5,11 +5,10 @@ import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps, getFocusedAppId, setFocusedApp } from "@plugins/apps-core/web";
-import {
-  defaultStore,
-  setLiveStore,
-} from "@plugins/primitives/plugins/pane/web";
+import { Apps, setFocusedApp } from "@plugins/apps-core/web";
+import { getFocusedAppId } from "@plugins/apps-core/web/testing";
+import { setLiveStore } from "@plugins/primitives/plugins/pane/web";
+import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider, useTabs, type TabsApi } from "../internal/use-tabs";
 
 // End-to-end proof of the shell-history-snapshot model at the TabsProvider

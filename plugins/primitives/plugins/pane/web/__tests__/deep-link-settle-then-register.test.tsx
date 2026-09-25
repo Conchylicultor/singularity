@@ -7,11 +7,8 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
-import {
-  type PaneStore,
-  Pane,
-  usePaneRoute,
-} from "@plugins/primitives/plugins/pane/web";
+import { type PaneStore, Pane } from "@plugins/primitives/plugins/pane/web";
+import { usePaneRoute } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 

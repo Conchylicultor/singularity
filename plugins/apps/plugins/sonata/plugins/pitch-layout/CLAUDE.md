@@ -85,7 +85,6 @@ which puts the C row (C D E F♯ G♯ A♯) nearest the player, as on a real Jan
   - Exports (values):
     - `asPitchLayoutId`
     - `PITCH_LAYOUT_DEFAULT`
-    - `PITCH_LAYOUT_LABELS`
     - `pitchGeometry`
     - `pitchKeyboardHeight`
     - `pitchLayoutConfig`

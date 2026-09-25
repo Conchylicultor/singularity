@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import type { ReorderNodeData, TopLevelEntry } from "@plugins/reorder/web";
+import type { TopLevelEntry } from "@plugins/reorder/web";
 import type { BlockHandle } from "../../core";
 import { entriesToSections, flattenSections } from "../internal/block-sections";
 
 // --- Fixture builders (shape-only; the transform reads `.block`, `.type`,
 // `.payload.label`, `.members`, and the `_node` discriminant). ----------------
+
+// The node arm of a top-level entry (a header or spacer, not a contribution).
+type ReorderNodeData = Extract<TopLevelEntry, { _node: true }>;
 
 function handle(type: string, label?: string): BlockHandle<unknown> {
   return { type, label } as unknown as BlockHandle<unknown>;

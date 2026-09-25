@@ -13,7 +13,6 @@ export {
   collectTokens,
   collectTokenNodes,
   baseClass,
-  lintToolkit,
   CLASS_ATTRS,
   CLASS_BUILDERS,
 } from "./class-token-walk";

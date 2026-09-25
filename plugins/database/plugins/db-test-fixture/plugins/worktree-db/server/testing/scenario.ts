@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { installQueueSchema } from "@plugins/infra/plugins/jobs/server";
+import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
 
 /**
  * db-or-tx executor — the SAME union every mutation in this repo takes (see

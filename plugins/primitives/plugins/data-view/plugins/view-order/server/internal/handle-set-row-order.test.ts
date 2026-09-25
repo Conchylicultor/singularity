@@ -29,7 +29,7 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { RowOrderWrite } from "../../core";
+import type { RowOrderWrite } from "../../core/internal/order-ops";
 import { _dataViewRowOrder } from "./tables";
 import { applyRowOrder } from "./handle-set-row-order";
 

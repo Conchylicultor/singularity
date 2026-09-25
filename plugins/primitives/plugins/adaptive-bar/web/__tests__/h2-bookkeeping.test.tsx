@@ -5,12 +5,9 @@ import {
   useActionForm,
   type YieldEagerness,
 } from "@plugins/primitives/plugins/action-presentation/web";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-  type AdaptiveBarFault,
-} from "../index";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import type { AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * H2's evidence is a statement about ONE row at ONE width, and it has to stop

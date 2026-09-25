@@ -377,7 +377,6 @@ downstream can widen the set, because nothing downstream resolves one.
     - `primitives/relative-time.formatElapsed`
     - `primitives/relative-time.useNow`
   - Exports (types):
-    - `ConversationSubagents`
     - `SubagentEntry`
     - `SubagentStateDisplay`
     - `SubagentStatus`

@@ -17,10 +17,7 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { PitchLayoutId } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  PITCH_LAYOUT_LABELS,
-  pitchGeometry,
-} from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
+import { pitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import {
   authoredSecondsOf,
   buildNoteVisuals,
@@ -29,8 +26,15 @@ import {
   KEYBOARD_LOW,
 } from "./geometry";
 
-/** Every keyboard layout, so the roll's X contract is proven on all of them. */
-const LAYOUTS = Object.keys(PITCH_LAYOUT_LABELS) as PitchLayoutId[];
+/**
+ * Every keyboard layout, so the roll's X contract is proven on all of them. A
+ * `Record` over the closed id set: a new layout is a tsc error here until it is
+ * listed.
+ */
+const LAYOUTS = Object.keys({
+  piano: true,
+  janko: true,
+} satisfies Record<PitchLayoutId, true>) as PitchLayoutId[];
 const planeFor = (id: PitchLayoutId) =>
   pitchGeometry(id, KEYBOARD_LOW, KEYBOARD_HIGH);
 const PIANO = planeFor("piano");

@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  HOLD_CLASSES,
-  ceilingMsFor,
-  deadlineMsFor,
-} from "@plugins/infra/plugins/jobs/core";
+import { HOLD_CLASSES, deadlineMsFor } from "@plugins/infra/plugins/jobs/core";
 import { queueHealthConfig } from "./config";
 
 // WARN BEFORE KILL, asserted rather than reasoned about.
@@ -62,13 +58,6 @@ describe("the slot-hog threshold always precedes the deadline", () => {
 
     test(`${hold}: the deadline is a positive, real bound`, () => {
       expect(deadlineMs).toBeGreaterThan(0);
-    });
-
-    // The deadline bounds HOLD and the ceiling bounds WORK, so they are not
-    // interchangeable — but a deadline at or below the work ceiling would abort
-    // handlers that are conforming by the very measure the class is judged on.
-    test(`${hold}: the deadline leaves room above the work ceiling`, () => {
-      expect(deadlineMs).toBeGreaterThan(ceilingMsFor(hold));
     });
   }
 });

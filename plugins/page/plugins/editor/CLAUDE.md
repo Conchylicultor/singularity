@@ -3947,7 +3947,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `blockTextRenderableExtensions`
     - `BlockTextRenderer`
     - `blockTextTokenExtension`
-    - `blockTextTokenExtensions`
     - `BlockTypeList`
     - `caretFlightReportSink`
     - `collabHydrationReportSink`
@@ -4049,7 +4048,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `resolveBlockAnnotations`
     - `restorePageContent`
     - `serializePageContent`
-    - `untrashBlocks`
   - Register:
     - `defineTriggerEvent('page.blocksChanged')`
     - `defineTrashSource('pages')`
@@ -4128,7 +4126,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageSource`
     - `RichText`
     - `RowData`
-    - `RunsXmlTextOptions`
     - `SerializedBlock`
     - `SetPageKindBody`
     - `SoftBreaks`
@@ -4330,6 +4327,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
   - Endpoint callers: `editor-collab`
 - Test helpers:
+  - Web: `@plugins/page/plugins/editor/web/testing`
+    - `blockTextRunsOptions` — The registry-bound options for the runs ↔ `Y.XmlText` bridge (`core/runs-yjs.ts`): every registered token extension, plus the decorator node classes those extensions materialize.
+  - Server: `@plugins/page/plugins/editor/server/testing`
+    - `untrashBlocks` — Restore an entry's flagged rows AND consume the entry — the trash sources' `restore` callback and the un-trash prelude of the patch handler.
   - Core: `@plugins/page/plugins/editor/core/testing`
     - `collectBlockHandles` — Every registered block handle, with the plugin id that declared it.
     - `loadBlockHandles` — The real block handles, or a THROW.

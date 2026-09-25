@@ -865,7 +865,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/hooktheory.TheorytabSectionIdSchema`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
-              - `Alignment`
               - `BeatTimesAlignment`
               - `ChordFeature`
               - `ChordToken`
@@ -922,7 +921,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ensureChordIndexEndpoint`
               - `expandChord`
               - `FIND_LOOPS_MAX_LIMIT`
-              - `FindLoopsBodySchema`
               - `findLoopsEndpoint`
               - `fnv1a32`
               - `INDEX_DERIVATION_VERSION`
@@ -940,7 +938,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `LoopWindowFieldsSchema`
               - `NEXT_CHORDS_MAX_LIMIT`
               - `NextChordCountSchema`
-              - `NextChordsBodySchema`
               - `nextChordsEndpoint`
               - `parseChordToken`
               - `resolveLoadScope`
@@ -952,7 +949,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SheetSageBeatTimesSchema`
               - `SKIP_EXAMPLES_PER_REASON`
               - `SkipSummaryEntrySchema`
-              - `SkipSummarySchema`
               - `SkipTally`
               - `SNAPSHOT_FORMAT_VERSION`
               - `SNAPSHOT_SKIP_REASONS`
@@ -1292,18 +1288,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `channelOf`
                   - `CHANNELS`
                   - `ChannelSchema`
-                  - `CollectBodySchema`
                   - `collectEndpoint`
                   - `CollectResponseSchema`
                   - `conversionRate`
                   - `DailyDimensionSchema`
                   - `DAY_PATTERN`
                   - `DaySchema`
-                  - `decodeAnalyticsQueryJson`
                   - `DEVICE_FAMILIES`
                   - `DeviceFamilySchema`
                   - `DIMENSIONS`
-                  - `DimensionSchema`
                   - `encodeAnalyticsQuery`
                   - `EngagementBodySchema`
                   - `EVENT_NAME_PATTERN`
@@ -1429,12 +1422,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`ip-country`** — IP-to-country lookup from a local copy of DB-IP IP-to-Country Lite: lookupCountry(ip) answers found / unlisted / unavailable by binary search over an in-memory snapshot read lazily from the machine-wide cache, and the weekly ip-country.refresh job (also enqueued at boot when the snapshot is missing or stale) downloads the CSV, builds the compact binary snapshot and swaps it in. The IP never leaves the process.
               - Server:
                 - Uses: `infra/jobs.defineJob`
-                - Exports (types):
-                  - `IpCountryLookup`
-                  - `IpCountryResult`
+                - Exports (types): `IpCountryResult`
                 - Exports (values):
-                  - `buildSnapshot`
-                  - `createIpCountryLookup`
                   - `ipCountryRefreshJob`
                   - `lookupCountry`
                   - `reloadIpCountry`
@@ -1443,6 +1432,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by: `apps/deploy/analytics/collect`
               - Core:
                 - Exports (values): `IP_COUNTRY_SOURCE`
+              - Test helpers:
+                - Server: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server/testing`
+                  - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
+                  - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one synchronous ~16 MB read) and then held in memory.
+                  - Types: `IpCountryLookup`
         - **`composition`** — Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -2025,7 +2019,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ExpandWindow`
               - `NextOccurrence`
               - `RecurrenceFreq`
-              - `RecurrenceRule`
               - `Weekday`
             - Exports (values):
               - `describeEventDate`
@@ -2476,7 +2469,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `coworkmeetSessionUrl`
                   - `coworkmeetSourceConfigFields`
                   - `facetLabelOf`
-                  - `facetLabels`
             - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
               - Web:
                 - Contributes: `EventSources.Type` "Des Mots et Des Arts"
@@ -2892,11 +2884,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `_mailAccounts`
               - `_mailAttachments`
-              - `_mailDrafts`
               - `_mailLabels`
               - `_mailMessageLabels`
               - `_mailMessages`
-              - `_mailOutbox`
               - `_mailSyncState`
               - `_mailThreads`
               - `mailDraftAttachments`
@@ -4688,7 +4678,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `asPitchLayoutId`
               - `PITCH_LAYOUT_DEFAULT`
-              - `PITCH_LAYOUT_LABELS`
               - `pitchGeometry`
               - `pitchKeyboardHeight`
               - `pitchLayoutConfig`
@@ -5495,9 +5484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
               - Core:
                 - Exports (types):
-                  - `ParsedChord`
                   - `ParsedLine`
-                  - `ParsedSection`
                   - `ParsedTab`
                   - `UgFetchErrorKind`
                   - `UgParseErrorKind`
@@ -5536,8 +5523,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `CHORD_TEMPLATES`
               - `chordPitches`
-              - `detectChord`
-              - `detectChordWeighted`
               - `detectChordWindows`
               - `formatChordLabel`
               - `formatChordSymbol`
@@ -6528,7 +6513,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `Apps`
       - `defaultApp`
-      - `getFocusedAppId`
       - `matchAppForPath`
       - `resolveAppForPath`
       - `setFocusedApp`
@@ -6581,6 +6565,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `APP_RAIL_WIDTH`
       - `desktopApp`
+  - Test helpers:
+    - Web: `@plugins/apps-core/web/testing`
+      - `getFocusedAppId`
   - Plugins:
     - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
       - Web:
@@ -10891,7 +10878,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.formatElapsed`
                   - `primitives/relative-time.useNow`
                 - Exports (types):
-                  - `ConversationSubagents`
                   - `SubagentEntry`
                   - `SubagentStateDisplay`
                   - `SubagentStatus`
@@ -11578,7 +11564,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/sync-status.useReportSync`
               - `reports.report`
             - Exports (types):
-              - `PendingTurnRecord`
               - `PendingTurnState`
               - `TurnDelivery`
               - `TurnDeliveryResult`
@@ -11588,7 +11573,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `dismissPendingTurn`
               - `PendingTurnCard`
               - `reconcilePendingTurns`
-              - `retryPendingTurn`
               - `sendConversationTurn`
               - `usePendingTurns`
           - Cross-plugin:
@@ -12648,14 +12632,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BackupExclusions`
           - `BackupInfo`
           - `BackupPlan`
-          - `BackupPlanOptions`
-          - `CatalogForeignKey`
           - `ForkExclusions`
           - `ForkOutcome`
           - `ForkPlan`
           - `ForkSchemaExclusion`
           - `KeptForLink`
-          - `SchemaCatalog`
           - `TableStat`
           - `UndeclaredSchema`
         - Exports (values):
@@ -12682,8 +12663,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isForkTempName`
           - `listDatabases`
           - `openShortLivedClient`
-          - `planBackupExclusions`
-          - `planForkExclusions`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/song-index`
@@ -12712,6 +12691,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree/reclaim`
           - `reports`
           - `shell/notifications`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/admin/server/testing`
+          - `assertExclusionsClosed` — Check a plugin's `ExcludeFromBackup` / `ExcludeFromFork` declarations against its own drizzle tables, without a database: no kept table may have a foreign key to a table whose rows are left out (pg_restore would fail re-adding it).
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_changelog"
@@ -12729,7 +12711,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/log-channels.defineLogSink`
         - Exports (types): `DbChange`
         - Exports (values):
-          - `ensureChangelogTable`
           - `ExcludeFromChangeFeed`
           - `getCoveredTables`
           - `parseLiveStatePayload`
@@ -12745,6 +12726,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `reports`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/change-feed/server/testing`
+          - `ensureChangelogTable`
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
         - Imported by: `database/admin`
@@ -12780,7 +12764,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `formatDeadlineLogLine`
           - `onClientLost`
           - `QUERY_DEADLINE_MS`
-          - `QueryDeadlineExceededError`
           - `queryDeadlineSink`
           - `queryText`
           - `withQueryDeadline`
@@ -12793,13 +12776,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DB_POOL_NAMES`
       - Test helpers:
         - Server: `@plugins/database/plugins/connection/server/testing`
+          - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
           - `startBlackHoleProxy` — Start a black-hole proxy on 127.0.0.1 forwarding to `upstream` (e.g. the cluster's Unix socket).
           - Types: `BlackHoleProxy`
     - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
       - Core:
         - Exports (types): `TestDbName`
         - Exports (values):
-          - `mintTestDbName`
           - `parseTestDbName`
           - `TEST_DB_SUFFIX`
           - `TEST_DB_TTL_MS`
@@ -13059,7 +13042,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `dbQueryDeadlinesResource`
           - `QUERY_DEADLINE_RING_CAPACITY`
           - `QueryDeadlineHitSchema`
-          - `QueryDeadlinesSchema`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
@@ -13092,7 +13074,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `formatSqlColumnError`
           - `parsedJson`
           - `parsedText`
-          - `SqlColumnError`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/sql-column/server/testing`
+          - `SqlColumnError` — A column value that disagrees with the schema the column decodes through.
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
       - Cross-plugin:
         - Imported by:
@@ -14373,7 +14357,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queueHealthSummaryEndpoint`
           - `QueueHealthSummarySchema`
           - `queuePulseResource`
-          - `QueuePulseSchema`
           - `QueueRunningJobSchema`
           - `QueueSlotBlockedPayloadSchema`
           - `QueueSlotHogPayloadSchema`
@@ -15474,11 +15457,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/avatar.Avatar`
               - `primitives/data-view.DataViewSlots`
-            - Exports (types):
-              - `AvatarFieldData`
-              - `AvatarFieldDefOptions`
+            - Exports (types): `AvatarFieldDefOptions`
             - Exports (values):
-              - `AvatarCell`
               - `AvatarCellDataError`
               - `avatarFieldDef`
           - Cross-plugin:
@@ -17054,8 +17034,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `KeyedDiff`
           - `KeyedMembership`
           - `KeyedMembershipInput`
-          - `KeyedResourceContract`
-          - `KeyedSnapshot`
           - `RecomputeIntent`
           - `Resource`
           - `ResourceContract`
@@ -17071,17 +17049,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WsData`
           - `WsHandler`
         - Exports (values):
-          - `buildSnapshot`
           - `createResourceRuntime`
-          - `diffKeyedFull`
-          - `diffKeyedScoped`
           - `diffKeyedScopedMembership`
-          - `hashSnapEncoder`
           - `retainSnapEncoder`
       - Cross-plugin:
         - Imported by:
           - `framework/central-core`
           - `framework/server-core`
+      - Test helpers:
+        - Core: `@plugins/framework/plugins/resource-runtime/core/testing`
+          - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
+          - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
+          - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
+          - `hashSnapEncoder`
+          - Types: `KeyedSnapshot`
     - **`server-core`**
       - Core:
         - Uses:
@@ -17113,7 +17094,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RuntimeProfileView`
           - `ServerContribution`
           - `ServerContributionToken`
-          - `ServerErrorReport`
           - `ServerFatalReport`
           - `ServerPluginDefinition`
           - `ServerResourceOptions`
@@ -17175,7 +17155,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SlotDeclaringPlugin`
           - `SlotHandle`
           - `SlotLookup`
-          - `SlotMeta`
           - `SlotNaming`
           - `SlotNamingEntry`
           - `SlotRecord`
@@ -17299,7 +17278,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ProgramFileList`
               - `ProgressRecord`
               - `QueryFact`
-              - `ReadSet`
               - `RunChecksOptions`
               - `TreeSnapshot`
               - `TscProgram`
@@ -17311,7 +17289,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `checkCollectedDir`
               - `computeCheckSourceHash`
-              - `computeTreeHash`
               - `currentScanView`
               - `fingerprint`
               - `gitGrepList`
@@ -17324,7 +17301,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listAllChecks`
               - `listCandidateSources`
               - `listRepoFiles`
-              - `loadTreeSnapshot`
               - `markBuildInProgress`
               - `materializeWarmBase`
               - `openCheckCache`
@@ -17337,7 +17313,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `runChecks`
               - `scopeOf`
               - `tsBuildInfoPath`
-              - `validate`
+          - Test helpers:
+            - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
+              - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
+              - Types: `ReadSetRepo`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
@@ -17797,7 +17776,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `importClosure`
               - `loadTypescript`
-              - `scanCommandRuns`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Exports (types):
@@ -17817,7 +17795,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isLintScopeExcluded`
               - `LINT_SCOPE_EXCLUDE_GLOBS`
               - `lintCollectedDir`
-              - `lintToolkit`
+          - Test helpers:
+            - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
+              - `lintToolkit` — The single toolkit instance handed to every class-rule factory.
           - Plugins:
             - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
@@ -17882,7 +17862,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
           - Core:
             - Uses: `plugin-meta/parse-utils.maskSource`
-            - Exports (types): `FakeDomInstall`
             - Exports (values):
               - `BUN_TEST_IGNORE`
               - `DOM_TEST_CLOCK_PIN`
@@ -17892,8 +17871,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DOM_TEST_POOL`
               - `DOM_TEST_SETUP_FILE`
               - `DOM_TEST_TIME_ZONE`
-              - `FAKE_DOM_GLOBALS`
-              - `fakeDomInstalls`
               - `isBunTestPath`
               - `isDomTestPath`
               - `isTestFilePath`
@@ -19279,7 +19256,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
-          - `installQueueSchema`
           - `isJobDeadlineExceededError`
           - `isNonRetryableError`
           - `isSuspendSignal`
@@ -19337,7 +19313,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ALL_JOB_TASKS`
           - `cancelJob`
-          - `ceilingMsFor`
           - `DeadJobRowSchema`
           - `DeadJobsPayloadSchema`
           - `deadJobsResource`
@@ -19416,6 +19391,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-title`
           - `toolchain`
           - `upstream`
+      - Test helpers:
+        - Server: `@plugins/infra/plugins/jobs/server/testing`
+          - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
       - Plugins:
         - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
           - Server:
@@ -19700,8 +19678,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `REPO_ROOT`
           - `repoConfigDir`
           - `resolveCheckoutDeploy`
-          - `RUN_TERMINAL_SUFFIX`
-          - `RUN_TRANSCRIPT_SUFFIX`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
           - `WORKTREE_SPEC_FILE`
@@ -19815,7 +19791,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TMUX`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
-          - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `worktreesDir`
@@ -21539,7 +21514,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blockTextRenderableExtensions`
           - `BlockTextRenderer`
           - `blockTextTokenExtension`
-          - `blockTextTokenExtensions`
           - `BlockTypeList`
           - `caretFlightReportSink`
           - `collabHydrationReportSink`
@@ -21641,7 +21615,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveBlockAnnotations`
           - `restorePageContent`
           - `serializePageContent`
-          - `untrashBlocks`
         - Register:
           - `defineTriggerEvent('page.blocksChanged')`
           - `defineTrashSource('pages')`
@@ -21720,7 +21693,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageSource`
           - `RichText`
           - `RowData`
-          - `RunsXmlTextOptions`
           - `SerializedBlock`
           - `SetPageKindBody`
           - `SoftBreaks`
@@ -21922,6 +21894,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
         - Endpoint callers: `editor-collab`
       - Test helpers:
+        - Web: `@plugins/page/plugins/editor/web/testing`
+          - `blockTextRunsOptions` — The registry-bound options for the runs ↔ `Y.XmlText` bridge (`core/runs-yjs.ts`): every registered token extension, plus the decorator node classes those extensions materialize.
+        - Server: `@plugins/page/plugins/editor/server/testing`
+          - `untrashBlocks` — Restore an entry's flagged rows AND consume the entry — the trash sources' `restore` callback and the un-trash prelude of the patch handler.
         - Core: `@plugins/page/plugins/editor/core/testing`
           - `collectBlockHandles` — Every registered block handle, with the plugin id that declared it.
           - `loadBlockHandles` — The real block handles, or a THROW.
@@ -22217,10 +22193,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `DateMentionFields`
         - Exports (values):
           - `dateMentionNode`
-          - `dateToken`
           - `MENTION_TOKEN_PATTERN`
           - `REMINDER_TOKEN_PATTERN`
-          - `reminderToken`
           - `scanReminderTokens`
           - `stripInlineTokens`
     - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
@@ -22383,7 +22357,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MarkdownApplyArgs`
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
-          - `MarkdownTextEdit`
           - `PageTitleBannerParse`
           - `StoredRow`
           - `TouchedBlocks`
@@ -23654,13 +23627,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveRelativeRef`
           - `scanAsPluginIdRefs`
           - `scanCompositionManifestRefs`
-          - `scanCssRefs`
-          - `scanMarkdownRefs`
-          - `scanPathRefs`
-          - `scanReorderItemRefs`
           - `scanRuntimeExceptionRefs`
       - Cross-plugin:
         - Imported by: `plugin-meta/relocate`
+      - Test helpers:
+        - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`
+          - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
+          - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
+          - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
+          - `scanReorderItemRefs` — The plugin-id half of every reorder override entry key (`"<pluginId>:<contribution id>"`) found in an `items` array of a config JSONC file.
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
       - Server:
         - Uses:
@@ -23961,13 +23936,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AdaptiveBarOverflow`
           - `AdaptiveBarProps`
           - `AdaptiveBarYieldProps`
-          - `IsRendered`
-          - `MeasureWidth`
         - Exports (values):
           - `AdaptiveBar`
           - `AdaptiveBarCollapsed`
           - `AdaptiveBarItem`
-          - `AdaptiveBarMeasure`
           - `adaptiveBarReportSink`
           - `AdaptiveBarYield`
       - Cross-plugin:
@@ -24026,6 +23998,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `widthKey`
           - `widthKeyItemId`
           - `write`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/adaptive-bar/web/testing`
+          - `AdaptiveBarMeasure` — Test-only.
+          - Types: `IsRendered`, `MeasureWidth`
     - **`announce`** — Screen-reader announcement primitive: a plain announce(message, { assertive }) writing into the page's two Core.Root-mounted live regions (polite status + assertive alert). Re-announcing an identical string re-fires without any timer. Degrades to a silent no-op when no host is mounted.
       - Web:
         - Contributes: `Core.Root` → `AnnouncerHost`
@@ -24113,15 +24089,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `Avatar`
           - `AVATAR_COLOR_KEYS`
-          - `AVATAR_COLORS`
-          - `avatarColorClass`
-          - `avatarColorPick`
-          - `avatarFlatClass`
           - `AvatarPicker`
           - `AvatarPresentationProvider`
           - `avatarSoftClass`
           - `DEFAULT_AGENT_AVATAR`
-          - `useAvatarPresentation`
       - Server:
         - Uses: `primitives/icon-picker.resolveIconSvgNodes`
       - Cross-plugin:
@@ -24139,6 +24110,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AvatarColor`
           - `AvatarShape`
         - Exports (values): `AVATAR_COLOR_NAMES`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/avatar/web/testing`
+          - `AVATAR_COLORS`
+          - `avatarColorClass` — The soft (badge) class for a colour / fallback key — `avatarSoftClass(avatarColorPick(…))`.
+          - `useAvatarPresentation` — Reads the ambient avatar presentation.
     - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
       - Web:
         - Uses:
@@ -25351,15 +25327,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkRigidIntegrity`
               - `checkTruncatesTogether`
               - `checkTruncationOnsetOrder`
-              - `evaluateInvariant`
               - `FALSIFICATION_NOT_BITING_MARKER`
-              - `falsificationDidNotBiteError`
               - `FATAL_MARKERS`
               - `FIXTURE_PAGE_ERROR_MARKER`
-              - `fixturePageError`
               - `fixturesCollectedDir`
               - `GEOMETRY_VIOLATION_MARKER`
-              - `geometryViolationError`
               - `HOST_MARKER_ATTR`
               - `isLayoutFixture`
               - `isRegionFixture`
@@ -29293,8 +29265,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `liveStateSocketKind`
           - `mapResource`
           - `matchResource`
-          - `noteResourceTxAcks`
-          - `noteResourceWatermark`
           - `NotificationsClient`
           - `NotificationsProvider`
           - `pendingMountSnapshot`
@@ -29498,6 +29468,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resourceDescriptorByKey`
           - `tolerantEnum`
           - `unresolved`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/live-state/web/testing`
+          - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
+          - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:
@@ -30428,12 +30402,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TypeMarker`
         - Exports (values):
           - `appNavSink`
-          - `buildRouteUrl`
           - `clearRoute`
           - `createPaneStore`
           - `currentRoutePath`
-          - `defaultHistoryAdapter`
-          - `defaultStore`
           - `definePaneHeaderSlot`
           - `defineRoute`
           - `openPane`
@@ -30468,7 +30439,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useIndexMatch`
           - `useOpenPane`
           - `usePaneMatch`
-          - `usePaneRoute`
           - `usePaneStore`
           - `usePaneTitle`
           - `usePathname`
@@ -30649,6 +30619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Test helpers:
         - Web: `@plugins/primitives/plugins/pane/web/testing`
           - `createTestSurfaceStore` — A surface store, bound as the live store so the imperative free functions and the module-level history listener agree with it.
+          - `defaultStore`
           - `TestSurface` — A pane surface: `PluginProvider` + the real `PaneSurfaceProvider`.
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
       - Core:
@@ -30917,11 +30888,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `appInstanceKey`
               - `getAppInstanceId`
               - `getNavigationType`
-              - `isFreshAppInstance`
               - `legacyInstanceKey`
               - `mayAdoptLegacyPayload`
               - `readAppInstance`
-              - `RETAINED_INSTANCES`
               - `stampAppInstance`
           - Cross-plugin:
             - Imported by:
@@ -31735,7 +31704,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `nearestOwner`
           - `nearestSource`
           - `NODE_ATTR`
-          - `parseLineage`
           - `readLineageNode`
           - `regionNodeAttrs`
           - `UiRegion`
@@ -31769,6 +31737,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UI_CONTEXT_FIELDS`
           - `UI_CONTEXT_RE`
           - `UiContextMetaSchema`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/ui-context/web/testing`
+          - `parseLineage` — Parse a serialized lineage back into nodes (outer→inner).
       - Plugins:
         - **`element-picker`** — Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
           - Web:
@@ -34724,7 +34695,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `removeTaskDependency`
-          - `runStatusBatchOn`
           - `setConversationHibernated`
           - `taskAttachments`
           - `taskDependsOn`
@@ -34904,6 +34874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `installTaskDerivedSchema`
+          - `runStatusBatchOn`
     - **`worktree-identity`** — Which checkout and task this page is served from, as the health report's first (informational) row: the linked task's title or the namespace, the kind of place it names, a copy button, and Open task.
       - Web:
         - Contributes: `HealthReport.Row` "worktree"

@@ -2,12 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { type ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-} from "../index";
-import type { AdaptiveBarFault } from "../index";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import type { AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * "One adaptive bar per row", as a test rather than as a sentence.

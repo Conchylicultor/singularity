@@ -11,7 +11,6 @@ export {
   slotIdFor,
 } from "./declaration";
 export type {
-  SlotMeta,
   SlotScope,
   SlotNaming,
   SlotNamingEntry,

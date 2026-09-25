@@ -8,7 +8,7 @@ import {
   buildConnectionString,
   readDatabaseConfig,
 } from "@plugins/database/core";
-import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core";
+import { mintTestDbName } from "../../core/internal/scratch-name";
 
 // A throwaway, isolated database on the ALREADY-RUNNING gateway-owned cluster,
 // for DB-backed test suites. The whole value of these tests is running the REAL

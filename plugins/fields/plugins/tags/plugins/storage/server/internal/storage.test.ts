@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { is } from "drizzle-orm";
 import { pgTable, PgCustomColumn } from "drizzle-orm/pg-core";
-import { SqlColumnError } from "@plugins/database/plugins/sql-column/server";
+import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
 import { decode } from "./storage";
 
 const t = pgTable("tags_storage_probe", {

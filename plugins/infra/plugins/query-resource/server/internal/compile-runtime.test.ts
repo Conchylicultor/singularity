@@ -13,7 +13,6 @@ import { z } from "zod";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import {
   createResourceRuntime,
-  type KeyedResourceContract,
   type ResourceParams,
   type ScopePolicy,
   type ServerResourceOptions,
@@ -139,12 +138,10 @@ function harness(readSetMap: Record<string, string[]>) {
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const rowSchema = z.array(z.object({ id: z.string(), n: z.number() }));
-const keyed = (
-  key: string,
-): KeyedResourceContract<{ id: string; n: number }[]> => ({
+const keyed = (key: string) => ({
   key,
   schema: rowSchema,
-  keyed: { keyOf: (r) => (r as { id: string }).id },
+  keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
 });
 
 // Register a compiled spec into the runtime under `key`, wrapping the loader so

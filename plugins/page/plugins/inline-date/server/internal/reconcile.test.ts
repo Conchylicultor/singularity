@@ -28,21 +28,21 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
-import { installQueueSchema } from "@plugins/infra/plugins/jobs/server";
+import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import {
   _blocks,
   Editor,
   deleteBlocksSubtree,
-  untrashBlocks,
 } from "@plugins/page/plugins/editor/server";
+import { untrashBlocks } from "@plugins/page/plugins/editor/server/testing";
 import {
   defineBlock,
   pageBlockHandle,
   textBlockSchema,
 } from "@plugins/page/plugins/editor/core";
-import { reminderToken } from "../../core";
+import { reminderToken } from "../../core/tokens";
 import { _pageReminders } from "./tables";
 import { reconcileReminders } from "./reconcile";
 

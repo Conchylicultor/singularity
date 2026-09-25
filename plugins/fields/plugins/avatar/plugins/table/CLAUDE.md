@@ -30,11 +30,8 @@ is the ambient `ControlSize` every DataView body already provides.
   - Uses:
     - `primitives/avatar.Avatar`
     - `primitives/data-view.DataViewSlots`
-  - Exports (types):
-    - `AvatarFieldData`
-    - `AvatarFieldDefOptions`
+  - Exports (types): `AvatarFieldDefOptions`
   - Exports (values):
-    - `AvatarCell`
     - `AvatarCellDataError`
     - `avatarFieldDef`
 - Cross-plugin:

@@ -7,8 +7,8 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import type {
-  ConversationSubagents,
   SubagentEntry,
+  useConversationSubagents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
 import { RunningAgentsBand } from "../components/running-agents-band";
@@ -24,6 +24,8 @@ import { RunningAgentsBand } from "../components/running-agents-band";
  * primitive's own tested behaviour: what is asserted here is the field schema
  * the band projects and the card it draws around them.
  */
+
+type ConversationSubagents = ReturnType<typeof useConversationSubagents>;
 
 /** What the stubbed sub-agent read answers on the next render. */
 let subagents: ConversationSubagents = { kind: "pending" };

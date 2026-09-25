@@ -2,12 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
-import {
-  AdaptiveBar,
-  AdaptiveBarMeasure,
-  adaptiveBarReportSink,
-  type AdaptiveBarFault,
-} from "../index";
+import { AdaptiveBar, adaptiveBarReportSink } from "../index";
+import { AdaptiveBarMeasure } from "../testing";
+import type { AdaptiveBarFault } from "../internal/diagnostics";
 
 /**
  * A round is only evidence against the search if the search was asked the same

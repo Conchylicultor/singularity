@@ -7,11 +7,11 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
-  defaultStore,
   Pane,
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defaultStore } from "../testing";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the per-tab pane-store isolation invariants the multi-tab refactor

@@ -28,6 +28,12 @@ import { selectSourceFiles } from "./source-files";
 import { repoTree } from "./repo-tree";
 import { collectUnknownDirViolations } from "./unknown-dirs";
 import { findTestSupportInBarrel } from "./test-exports";
+import {
+  barrelExportNames,
+  collectBarrelUses,
+  findTestOnlyExports,
+  type BarrelUse,
+} from "./test-only-exports";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
@@ -248,6 +254,24 @@ const check: Check = {
       }
     }
 
+    // R13 inputs: every public runtime barrel (`<runtime>/index.ts`, never
+    // `testing/`) with the names it publishes. Uses are collected in the
+    // per-file loop below.
+    const publicBarrels = new Map<string, string[]>();
+    for (const p of plugins) {
+      for (const runtime of RUNTIME_FOLDERS) {
+        if (runtime === "shared") continue;
+        const barrelRel = `plugins/${p.relPath}/${runtime}/index.ts`;
+        if (!repoFiles.has(barrelRel)) continue;
+        publicBarrels.set(
+          barrelRel,
+          barrelExportNames((await repoFiles.read(barrelRel)) ?? ""),
+        );
+      }
+    }
+    const barrelSet = new Set(publicBarrels.keys());
+    const barrelUses: BarrelUse[] = [];
+
     // R4 + R5 + R6 + R7: read every source file, extract cross-plugin imports.
     // The file set comes from git (see ./source-files) — the check is
     // inputKeyed, so the set it scans must be the set its cache key represents.
@@ -261,6 +285,9 @@ const check: Check = {
 
       const src = await repoFiles.read(relFile);
       if (!src) continue;
+
+      // R13: which public-barrel names this file takes.
+      barrelUses.push(...collectBarrelUses(relFile, src, barrelSet));
 
       // R7: forbid direct workspace-name imports (`@singularity/plugin-*`).
       // Cross-plugin imports must go through `@plugins/...` so R4/R5/R6 can
@@ -431,6 +458,10 @@ const check: Check = {
         fix: "cycles signal misdrawn boundaries. Extract the shared concept into a separate library plugin (contributions: []) that both plugins import.",
       });
     }
+
+    // R13: a public export only tests import belongs in `<runtime>/testing/`
+    // (or nowhere) — see ./test-only-exports.
+    violations.push(...findTestOnlyExports(publicBarrels, barrelUses));
 
     if (violations.length === 0) return { ok: true };
 

@@ -195,15 +195,16 @@ export type { ConversationStatusChangedPayload } from "./internal/tables-events"
 
 // Coalesce a multi-edge dependency mutation to one DB transaction and at most
 // one net tasks.statusChanged per affected task. Consumers thread the provided
-// `tx` (a DbExecutor) to the dependency mutations they call. `runStatusBatchOn`
-// is the same batch joined onto a transaction the caller already owns.
+// `tx` (a DbExecutor) to the dependency mutations they call. (The same batch
+// joined onto a transaction the caller already owns, `runStatusBatchOn`, is
+// published from `server/testing`.)
 //
 // There is deliberately no exported "snapshot the status / emit if it changed"
 // pair any more: naming the affected tasks was the defect (an edge write can
 // only name its own endpoint), so the recording is now internal to
 // `withTaskStatusChange`, which derives the affected set from the graph and
 // brackets the write itself.
-export { withTaskStatusBatch, runStatusBatchOn } from "./internal/status-batch";
+export { withTaskStatusBatch } from "./internal/status-batch";
 
 // Announces an attempt the boot sweep found with no conversation — a broken
 // launch invariant. A higher plugin registers the mapping to a report.

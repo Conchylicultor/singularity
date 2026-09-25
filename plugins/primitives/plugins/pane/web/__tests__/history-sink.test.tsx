@@ -15,14 +15,14 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
-  defaultHistoryAdapter,
-  defaultStore,
   Pane,
   setHistoryAdapter,
   setLiveStore,
   useSyncPaneRegistry,
   type LocationChange,
 } from "@plugins/primitives/plugins/pane/web";
+import { defaultStore } from "../testing";
+import { defaultHistoryAdapter } from "../history-sink";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the `HistoryAdapter` seam the shell-history-snapshot refactor rests on:

@@ -8,8 +8,8 @@ import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-s
 import {
   appInstanceKey,
   getAppInstanceId,
+  getNavigationType,
   legacyInstanceKey,
-  type NavigationType,
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resetAppInstanceForTests } from "@plugins/primitives/plugins/scope/plugins/app-instance/web/testing";
 import { bootTabs } from "../internal/use-tabs";
@@ -84,6 +84,9 @@ function persistLegacy(payload: PersistedTabs): void {
     JSON.stringify(payload),
   );
 }
+
+// The primitive's own reading of the entry's `type`.
+type NavigationType = NonNullable<ReturnType<typeof getNavigationType>>;
 
 /**
  * Stub `PerformanceNavigationTiming.type` — the one signal that decides fresh

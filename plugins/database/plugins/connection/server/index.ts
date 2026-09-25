@@ -16,7 +16,6 @@ export {
 export {
   QUERY_DEADLINE_MS,
   BOOT_DDL_QUERY_DEADLINE_MS,
-  QueryDeadlineExceededError,
   queryDeadlineSink,
   withQueryDeadline,
   currentQueryDeadline,

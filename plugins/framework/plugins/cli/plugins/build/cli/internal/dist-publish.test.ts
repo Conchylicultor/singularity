@@ -12,7 +12,7 @@ import {
 } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/server";
+import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
 import {
   distNames,
   distStagingPath,

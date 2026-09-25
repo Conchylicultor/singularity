@@ -12,7 +12,7 @@ import type {
   PickupStats,
   QueueClassPulse,
 } from "@plugins/infra/plugins/jobs/server";
-import { QueuePulseSchema } from "../../core";
+import { QueuePulseSchema } from "../../core/pulse";
 import { assemblePulse, type PulseReads } from "./assemble-pulse";
 
 // The joins the loader cannot get wrong silently: which runner's slots count

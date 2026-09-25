@@ -496,7 +496,6 @@ annotation in the key would make every status change look like a new block.
     - `MarkdownApplyArgs`
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
-    - `MarkdownTextEdit`
     - `PageTitleBannerParse`
     - `StoredRow`
     - `TouchedBlocks`
