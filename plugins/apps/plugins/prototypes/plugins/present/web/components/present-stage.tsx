@@ -25,7 +25,6 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CanvasFrameView,
-  FrameLetter,
   OptionsPill,
   SizeChip,
   VersionStepper,
@@ -56,7 +55,7 @@ export interface PresentExit {
  * computed for the room the presentation has (so "Phone at Fit" is a phone
  * filling the screen, "Responsive at Fit" the page at the screen's own width).
  *
- * Hovering shows the chrome: the frame's tag (letter, name, version stepper,
+ * Hovering shows the chrome: the frame's tag (name, version stepper,
  * and "i of n · ← →" when there are more frames), Exit, the options pill
  * (bottom centre) and the size & zoom chip (bottom right).
  */
@@ -203,7 +202,7 @@ function PresentedFrame({
 const CHROME = "rounded-md border border-border bg-background shadow-md";
 
 /**
- * The frame's tag: its letter and name, what it shows (the version stepper for
+ * The frame's tag: its name, what it shows (the version stepper for
  * the prototype, the source's tag otherwise), and — with more than one frame —
  * where it sits among them and the keys that flip through them.
  */
@@ -230,14 +229,12 @@ function FrameTag({
         align="center"
         className={cn(CHROME, "h-8 pl-xs pr-2xs")}
       >
-        <FrameLetter index={index} />
         <Text variant="label" className="whitespace-nowrap">
           {names(frame)}
         </Text>
         {frame.kind === "prototype" ? (
           <VersionStepper
             name={meta.name}
-            letter={letterOf(index)}
             shown={frame.version}
             show={(version) =>
               dispatch({ type: "setVersion", id: frame.id, version })

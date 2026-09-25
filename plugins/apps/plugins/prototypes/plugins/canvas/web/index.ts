@@ -64,12 +64,11 @@ export { OptionsPill } from "./components/options-pill";
 export { VersionStepper } from "./components/version-stepper";
 export type { VersionStepperProps } from "./components/version-stepper";
 export { SizeChip } from "./components/size-chip";
-export { FrameLetter } from "./components/frame-letter";
 export { useFrameNames } from "./components/canvas";
 
 export default {
   description:
-    "The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.",
+    "The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.",
   contributions: [
     Pane.Register({ pane: prototypeDetailPane }),
     // The header IS the action bar: every control in it is a contribution.

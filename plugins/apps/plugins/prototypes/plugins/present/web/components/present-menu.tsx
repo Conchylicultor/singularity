@@ -25,7 +25,6 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   FrameSource,
-  letterOf,
   usePrototypeDetail,
   type CanvasFrame,
   type FrameActionRow,
@@ -93,9 +92,7 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
           <MdFullscreen />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuSection
-            label={`Present ${letterOf(canvas.frames.indexOf(frame))}`}
-          >
+          <DropdownMenuSection label="Present">
             <PresentRow
               icon={MdTab}
               label="In this app tab"

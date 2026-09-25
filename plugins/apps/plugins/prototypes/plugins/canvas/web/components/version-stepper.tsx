@@ -33,8 +33,6 @@ import { VersionList, VersionListFrameContext } from "./version-list";
 export interface VersionStepperProps {
   /** The prototype's id (its history is keyed by it). */
   name: string;
-  /** The frame's letter, for the list's heading ("Versions of B"). */
-  letter: string;
   /** The version on screen — `null` for the live folder. */
   shown: PrototypeVersion | null;
   show: (version: PrototypeVersion | null) => void;
@@ -111,7 +109,6 @@ function PendingStepper(): ReactElement {
 function ReadyStepper({
   history,
   name,
-  letter,
   shown,
   show,
   compare,
@@ -163,7 +160,7 @@ function ReadyStepper({
       >
         <Stack gap="xs">
           <Text variant="eyebrow" tone="faint">
-            Versions of {letter}
+            Versions
           </Text>
           <VersionListFrameContext value={listFrame}>
             <VersionList

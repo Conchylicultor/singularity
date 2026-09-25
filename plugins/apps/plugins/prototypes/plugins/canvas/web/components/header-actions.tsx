@@ -5,7 +5,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { usePrototypeDetail } from "../context";
 import { prototypeFrames, type CanvasLayout } from "../internal/canvas-model";
-import { letterOf } from "../internal/frame-name";
 
 // The canvas's header actions, each a zero-prop contribution to
 // `prototypeDetailPane.Actions`: in the header they take no vertical room from
@@ -36,7 +35,6 @@ export function AddFrameActions(): ReactElement {
   const { canvas, sources, dispatch } = usePrototypeDetail();
   const protos = prototypeFrames(canvas.frames);
   const last = protos.at(-1);
-  const lastIndex = last === undefined ? -1 : canvas.frames.indexOf(last);
   return (
     <Stack direction="row" gap="xs" align="center">
       <Button
@@ -44,7 +42,7 @@ export function AddFrameActions(): ReactElement {
         title={
           last === undefined
             ? "Add the prototype"
-            : `Add a copy of ${letterOf(lastIndex)} — then change its variant or version`
+            : "Add a copy of the last frame — then change its variant or version"
         }
         onClick={() => dispatch({ type: "addPrototype" })}
       >

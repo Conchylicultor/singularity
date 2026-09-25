@@ -218,7 +218,6 @@ function FrameCard({
           <Stack gap="none" style={{ gap: FRAME_HEADER_GAP }}>
             <FrameHeader
               frame={frame}
-              index={index}
               meta={meta}
               name={name}
               resolution={resolution}
@@ -339,7 +338,6 @@ function SwipeFrames({
               <Stack direction="row" gap="lg" align="center">
                 <FrameHeader
                   frame={a}
-                  index={0}
                   meta={meta}
                   name={names(a)}
                   resolution={resolutionA}
@@ -353,7 +351,6 @@ function SwipeFrames({
                 </Text>
                 <FrameHeader
                   frame={b}
-                  index={1}
                   meta={meta}
                   name={names(b)}
                   resolution={resolutionB}
@@ -375,7 +372,7 @@ function SwipeFrames({
                   y="fill"
                   role="separator"
                   aria-orientation="vertical"
-                  aria-label="Drag to swipe between A and B"
+                  aria-label="Drag to swipe between the two frames"
                   className={cn(
                     "cursor-ew-resize touch-none",
                     dragging ? "bg-primary" : "bg-foreground",

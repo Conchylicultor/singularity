@@ -48,21 +48,3 @@ function differs(name: string, all: readonly NamedFrame[]): boolean {
 export function letterOf(index: number): string {
   return String.fromCharCode(65 + (index % 26));
 }
-
-/**
- * A frame's colour, as theme classes (the categorical series, never a raw hex):
- * `text` for the letter, `tint` for the badge behind it. Spelled out whole so
- * Tailwind sees every class.
- */
-const FRAME_COLORS = [
-  { text: "text-categorical-1", tint: "bg-categorical-1/20" },
-  { text: "text-categorical-2", tint: "bg-categorical-2/20" },
-  { text: "text-categorical-3", tint: "bg-categorical-3/20" },
-  { text: "text-categorical-4", tint: "bg-categorical-4/20" },
-  { text: "text-categorical-5", tint: "bg-categorical-5/20" },
-  { text: "text-categorical-6", tint: "bg-categorical-6/20" },
-] as const;
-
-export function colorOf(index: number): { text: string; tint: string } {
-  return FRAME_COLORS[index % FRAME_COLORS.length]!;
-}

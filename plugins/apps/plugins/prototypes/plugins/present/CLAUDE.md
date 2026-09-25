@@ -100,7 +100,6 @@ Exit: closing the tab is how you leave.
     - `apps/prototypes/canvas.frameA`
     - `apps/prototypes/canvas.FrameActionRow`
     - `apps/prototypes/canvas.FrameId`
-    - `apps/prototypes/canvas.FrameLetter`
     - `apps/prototypes/canvas.FrameResolution`
     - `apps/prototypes/canvas.FrameSource`
     - `apps/prototypes/canvas.layoutFrames`

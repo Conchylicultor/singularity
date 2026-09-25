@@ -193,14 +193,14 @@ export async function frameAction(
   await card(page, letter).getByRole("button", { name: label }).click();
 }
 
-/** Open a frame's options popover ("Options of B") and return it. */
+/** Open a frame's options popover and return it. */
 export async function openOptions(
   page: Page,
   letter: string,
 ): Promise<Locator> {
   await hoverCard(page, letter);
   await card(page, letter).getByLabel("Prototype options").click();
-  const popover = page.getByRole("group", { name: `Options of ${letter}` });
+  const popover = page.getByRole("group", { name: "Options", exact: true });
   await popover.waitFor({ state: "visible", timeout: 5000 });
   return popover;
 }

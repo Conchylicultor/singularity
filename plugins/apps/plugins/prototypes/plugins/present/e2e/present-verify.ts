@@ -114,9 +114,9 @@ await withBrowser(async (h) => {
   // --- In this app tab ---------------------------------------------------
   await openMenuOfA();
   r.ok(
-    "the menu is headed with the frame's letter",
+    "the menu is headed Present",
     await page
-      .getByText("Present A", { exact: true })
+      .getByText("Present", { exact: true })
       .waitFor({ state: "visible", timeout: 5000 })
       .then(
         () => true,
@@ -276,7 +276,7 @@ await withBrowser(async (h) => {
     .getByRole("group", { name: "Version" })
     .getByRole("button", { name: /^(v\d+|Live|Unknown)/ });
   await versionLabel.click();
-  const list = dialog.getByText("Versions of A", { exact: true });
+  const list = dialog.getByText("Versions", { exact: true });
   const listShown = await list
     .waitFor({ state: "visible", timeout: 5000 })
     .then(

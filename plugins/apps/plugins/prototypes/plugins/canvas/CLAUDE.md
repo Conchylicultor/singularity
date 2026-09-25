@@ -1,7 +1,7 @@
 # canvas
 
 The prototype detail pane (`proto/:name`): one prototype shown as a
-canvas of **lettered frames** — A, B, C… side by side — so a reader can put
+canvas of **frames** side by side — so a reader can put
 two variants, two versions, or the mock and the real app next to each other
 and look. Design: `research/2026-09-23-apps-prototypes-frame-canvas.md`
 (mockup: prototype `proto-1790120832-wtfo`).
@@ -95,9 +95,8 @@ not declare is dropped from its URL.
   **Duplicate** action copies that frame instead.
 - **`+ <addLabel>`** — one button per frame source ("+ Real app"), disabled
   while that source is already on the canvas. The canvas names no source.
-- **The options pill** ("Mist · Home +3") opens on click into "Options of B":
-  one row of value chips per declared option, each value marked with the
-  letters of the OTHER frames showing it. Per row:
+- **The options pill** ("Mist · Home +3") opens on click into "Options":
+  one row of value chips per declared option. Per row:
   - **link** — keep this option the same in every frame; linking copies this
     frame's value everywhere, and later picks go to every frame;
   - **spread** — one frame per value of this option (the frame it was toggled
@@ -122,7 +121,7 @@ over `files`' per-prototype history resource. It moves only its own frame. The
 stops are derived on every render from the history (`version-steps.ts`): the
 recorded versions oldest first, the newest one being the live folder when it
 is clean, plus a last "Live · unsaved" stop when the folder has changes no
-version holds yet. The label opens the version list ("Versions of B", a
+version holds yet. The label opens the version list ("Versions", a
 `DataView` whose row actions are the `PrototypeVersionActions` slot — the
 canvas ships **Compare in a new frame** (a copy of this frame, same picks,
 showing that version; the stepper hands the frame to its row actions through
@@ -258,7 +257,7 @@ navigation, so it starts from nothing remembered.
 
 ## Plugin reference
 
-- Description: The prototype detail pane as a canvas of lettered frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
+- Description: The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
 - Web:
   - Slots:
     - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
@@ -278,7 +277,6 @@ navigation, so it starts from nothing remembered.
     - `apps-core/tabs.navigate`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
-    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/control-panel.ControlPanel`
@@ -356,7 +354,6 @@ navigation, so it starts from nothing remembered.
     - `CanvasFrameView`
     - `documentOptions`
     - `frameA`
-    - `FrameLetter`
     - `FrameSource`
     - `layoutFrames`
     - `letterOf`
