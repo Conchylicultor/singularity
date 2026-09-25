@@ -209,7 +209,10 @@ function EditorShell({
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- stacks Lexical's two sibling children (ContentEditable + placeholder, a third-party Fragment) in one in-flow cell; no primitive stacks siblings in flow
         className={cn(
-          "grid",
+          // Every direct child into cell 1/1: Lexical wraps the placeholder in
+          // its own `<div aria-hidden>`, so the placement cannot sit on our node
+          // — and that wrapper, painted above the editable, must pass clicks.
+          "grid *:col-start-1 *:row-start-1 [&>[aria-hidden]]:pointer-events-none",
           disabled && "opacity-50 pointer-events-none cursor-not-allowed",
         )}
       >
@@ -223,7 +226,7 @@ function EditorShell({
               style={{ minHeight, maxHeight }}
               // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(
-                "[grid-area:1/1] min-w-0 px-sm py-xs text-body outline-none resize-none",
+                "min-w-0 px-sm py-xs text-body outline-none resize-none",
                 "overflow-y-auto",
                 className,
               )}
@@ -232,7 +235,7 @@ function EditorShell({
               placeholder={
                 // Shares the editable's grid cell (see the wrapper above) and so
                 // counts toward the box's height, unlike an absolute overlay.
-                <div className="text-muted-foreground pointer-events-none select-none [grid-area:1/1] px-sm py-xs text-body">
+                <div className="text-muted-foreground pointer-events-none select-none px-sm py-xs text-body">
                   {placeholder ?? ""}
                 </div>
               }
