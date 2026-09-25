@@ -48,6 +48,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `conversations/model-provider.ModelSelect`
     - `fields/avatar/table.avatarFieldDef`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/app-shell.opensPane`
     - `primitives/avatar.Avatar`
     - `primitives/avatar.AVATAR_COLOR_KEYS`
     - `primitives/avatar.AvatarPicker`
@@ -62,6 +63,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
@@ -80,7 +82,6 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/loading.Loading`
     - `primitives/multi-select.useMultiSelect`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneIconAction`

@@ -34,6 +34,21 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   fontSizeControl: { default: "0.875rem", label: "Font size control" },
   lineHeightControl: { default: "1.25rem", label: "Line height control" },
   fontWeightControl: { default: "500", label: "Font weight control" },
+  // The compact chip rung: a `Badge` at `xs` density (a count chip in a dense
+  // row). Defaults are what that chip always wore — the 2xs size and line
+  // height at medium weight — so only a theme that sets them changes it.
+  fontSizeChipCompact: {
+    default: "var(--font-size-2xs)",
+    label: "Font size compact chip",
+  },
+  lineHeightChipCompact: {
+    default: "var(--line-height-2xs)",
+    label: "Line height compact chip",
+  },
+  fontWeightChipCompact: {
+    default: "var(--font-weight-medium)",
+    label: "Font weight compact chip",
+  },
 });
 
 export type TypeScaleTokenValues = {

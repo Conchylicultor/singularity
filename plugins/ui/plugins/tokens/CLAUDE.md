@@ -50,6 +50,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
   - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
   - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
   - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
+  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.
   - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
   - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with its customizer section.
 

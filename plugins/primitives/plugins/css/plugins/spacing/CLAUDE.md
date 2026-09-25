@@ -412,6 +412,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tokens/font-family`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`
+    - `ui/tokens/sidebar-metrics`
     - `ui/tokens/sidebar-palette`
     - `ui/tokens/type-scale`
     - `ui/tree-disclosure/column`

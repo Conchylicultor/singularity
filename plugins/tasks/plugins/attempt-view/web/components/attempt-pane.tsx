@@ -108,7 +108,7 @@ function AttemptSection({
                     "gap-sm px-sm py-xs text-left text-body",
                   )}
                 >
-                  <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
+                  <StatusDot {...CONV_STATUS_DOT[c.status]} />
                   <Fill as="span" className="truncate">
                     {conversationTitle(c)}
                   </Fill>

@@ -35,7 +35,15 @@ export function AgentManagerLayout() {
             className={cn("size-6", rigidClass())}
           />
           <Fill>
-            <Text as="span" variant="subheading" className="tracking-tight">
+            {/* The label rung, bold and tight, in the sidebar's emphasised
+                text: a brand mark in the sidebar chrome, not a heading of
+                the page (the subheading role is also used by the main pane,
+                so resizing it in the theme would resize those too). */}
+            <Text
+              as="span"
+              variant="label"
+              className="font-bold tracking-tight text-sidebar-accent-foreground"
+            >
               Equin
             </Text>
           </Fill>

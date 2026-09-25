@@ -65,11 +65,19 @@ export function Badge({
   const density = useControlSize();
   // Text size tracks ambient control density via the single density→text policy
   // (textStepFor, shared with Button + Text): the compact `xs` density drops one
-  // rung to text-caption-compact; every other density (incl. the no-provider
-  // default "md") reads text-caption.
-  const textClass = textStepFor(density)
-    ? "text-caption-compact"
-    : "text-caption";
+  // rung; every other density (incl. the no-provider default "md") reads
+  // text-caption at medium weight.
+  //
+  // The compact rung is the CHIP's own, not the caption's: size, line height,
+  // weight, padding and radius are all tokens (`text-chip-compact`,
+  // `font-chip-compact`, `p-chip-compact`, `rounded-chip-compact`) whose defaults are exactly the
+  // regular chip's `text-caption-compact font-medium` / `p-chip` / `rounded-md`.
+  // So a theme can give a dense row's count chip its own tighter shape without
+  // touching any other chip or any compact caption.
+  const compact = textStepFor(density) === 1;
+  const sizeClass = compact
+    ? "p-chip-compact text-chip-compact font-chip-compact"
+    : "p-chip text-caption font-medium";
   return (
     <As
       className={cn(
@@ -79,13 +87,13 @@ export function Badge({
         // a long label ellipsizes instead of overflowing. align-baseline puts the chip
         // on the baseline of a sentence holding it — and the label's own `self-baseline`
         // below decides WHICH baseline the chip offers the sentence.
-        "inline-flex region-line max-w-full gap-xs p-chip align-baseline font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
-        shape === "rect" && "rounded-md",
+        "inline-flex region-line max-w-full gap-xs align-baseline tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
+        sizeClass,
+        shape === "rect" && (compact ? "rounded-chip-compact" : "rounded-md"),
         // `pill-ends`: a chip on the control scale (ToggleChip's `px-control-*`)
         // takes the shape group's pill extra on both ends, like a pill Button.
         // Inert on the chip scale (`p-chip`), which does not read it.
         shape === "pill" && "rounded-full pill-ends",
-        textClass,
         colorClass ?? VARIANT_CLASS[variant],
         className,
       )}

@@ -19,7 +19,7 @@ export function AgentStatus({ agentId }: { agentId: string }) {
 
   return (
     <Center as="span" style={{ width: 20, height: 20 }}>
-      {status && <StatusDot colorClass={CONV_STATUS_DOT[status]} />}
+      {status && <StatusDot {...CONV_STATUS_DOT[status]} />}
     </Center>
   );
 }

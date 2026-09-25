@@ -4,11 +4,20 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/core";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { agentLaunchesResource, type AgentLaunchWithStatus } from "../../shared/resources";
+import {
+  agentLaunchesResource,
+  type AgentLaunchWithStatus,
+} from "../../shared/resources";
 
 const AGENT_LAUNCHES_VIEW = defineDataView("agent-launches");
 
@@ -33,7 +42,9 @@ const STATUS_OPTIONS = [
 ];
 
 function launchTitle(launch: AgentLaunchWithStatus): string {
-  return launch.latestConversation?.title ?? `Launch ${formatDate(launch.createdAt)}`;
+  return (
+    launch.latestConversation?.title ?? `Launch ${formatDate(launch.createdAt)}`
+  );
 }
 
 const FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
@@ -94,18 +105,20 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
           if (activeConvId === primary.id && convEntry) {
             conversationPane.close(convEntry.instanceId);
           } else {
-            openPane(conversationPane, { convId: primary.id }, { mode: "push" });
+            openPane(
+              conversationPane,
+              { convId: primary.id },
+              { mode: "push" },
+            );
           }
         }}
         viewOptions={{
           list: {
             leading: (l: AgentLaunchWithStatus) => (
               <StatusDot
-                colorClass={
-                  l.latestConversation
-                    ? CONV_STATUS_DOT[l.latestConversation.status]
-                    : "bg-muted-foreground/40"
-                }
+                {...(l.latestConversation
+                  ? CONV_STATUS_DOT[l.latestConversation.status]
+                  : { colorClass: "bg-muted-foreground/40" })}
               />
             ),
           },

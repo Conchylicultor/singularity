@@ -6,6 +6,28 @@ export const densityGroup = defineTokenGroup("density", {
   padRowX: { default: "0.5rem", label: "Row padding X" },
   padRowY: { default: "0.375rem", label: "Row padding Y" },
   padCard: { default: "0.75rem", label: "Card padding" },
+  // The compact (`xs`) chip rung — a count chip in a dense list row. Defaults
+  // read the chip pad and the `rounded-md` radius, so a theme that leaves them
+  // out paints the compact chip exactly like every other chip; a theme sets
+  // them to give the dense rung its own, tighter shape.
+  padChipCompactX: {
+    default: "var(--pad-chip-x)",
+    label: "Compact chip padding X",
+  },
+  padChipCompactY: {
+    default: "var(--pad-chip-y)",
+    label: "Compact chip padding Y",
+  },
+  radiusChipCompact: {
+    default: "calc(var(--radius) * 0.8)",
+    label: "Compact chip radius",
+  },
+  // A status dot's diameter per density tier (`StatusDot` reads the ambient
+  // `ControlSize`). Defaults are the old `size-1` … `size-2.5`.
+  statusDotXs: { default: "0.25rem", label: "Status dot XS" },
+  statusDotSm: { default: "0.375rem", label: "Status dot SM" },
+  statusDotMd: { default: "0.5rem", label: "Status dot MD" },
+  statusDotLg: { default: "0.625rem", label: "Status dot LG" },
   // One control size = one bundle: its height, its inline padding and the gap
   // between its icon and its label. All three are tokens, so a preset owns a
   // control's width rhythm as well as its height. There is no block padding: a

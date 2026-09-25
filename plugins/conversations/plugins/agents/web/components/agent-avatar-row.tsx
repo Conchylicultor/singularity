@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   Avatar,
   DEFAULT_AGENT_AVATAR,
@@ -12,7 +13,12 @@ import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;
-  try { return JSON.parse(raw) as SvgNode[]; } catch (err) { if (!(err instanceof SyntaxError)) throw err; return null; }
+  try {
+    return JSON.parse(raw) as SvgNode[];
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return null;
+  }
 }
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
@@ -27,8 +33,10 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
-      svgNodes={parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
-      statusDot={CONV_STATUS_DOT[conv.status]}
+      svgNodes={
+        parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes
+      }
+      statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
       title={agent?.name}
       colorless
     />

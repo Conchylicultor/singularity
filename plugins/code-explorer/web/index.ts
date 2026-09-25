@@ -1,7 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdFolderOpen } from "react-icons/md";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
+import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { ConvTreeButton } from "./components/conv-tree-button";
 import { globalFileTreePane, convFileTreePane } from "./panes";
@@ -18,8 +19,7 @@ export default {
       id: "code-explorer",
       title: "Explorer",
       icon: MdFolderOpen,
-      onClick: () =>
-        openPane(globalFileTreePane, { worktree: "main" }, { mode: "root" }),
+      opens: opensPane(globalFileTreePane, { worktree: "main" }),
     }),
     Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),
   ],

@@ -36,6 +36,7 @@ worktrees, which is deliberate: repo paths coincide.
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view/code/file-pane.FilePaneView`
     - `infra/endpoints.useEndpoint`
+    - `primitives/app-shell.opensPane`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/text.Text`
@@ -50,7 +51,6 @@ worktrees, which is deliberate: repo paths coincide.
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneScroll`

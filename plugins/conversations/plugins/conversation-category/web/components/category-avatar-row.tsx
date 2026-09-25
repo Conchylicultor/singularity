@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import {
   CONV_STATUS_DOT,
@@ -26,7 +27,12 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   // title-glyph that means "this conversation has no category icon". With no
   // avatar category chosen there is nothing to wait for.
   if (avatarCategoryId && rows.pending) {
-    return <Avatar statusDot={CONV_STATUS_DOT[conv.status]} colorless />;
+    return (
+      <Avatar
+        statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
+        colorless
+      />
+    );
   }
   const item =
     avatarCategoryId && !rows.pending
@@ -43,7 +49,7 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
     <Avatar
       icon={avatar?.icon ?? null}
       svgNodes={avatar?.svgNodes ?? null}
-      statusDot={CONV_STATUS_DOT[conv.status]}
+      statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
       colorless={hasIcon}
       fallbackGlyph={hasIcon ? undefined : (conv.title?.trim()[0] ?? "?")}
       fallbackKey={hasIcon ? undefined : conv.id}

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
+import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { MdPrecisionManufacturing } from "react-icons/md";
@@ -40,7 +41,7 @@ export default {
       id: "agents",
       title: "Agents",
       icon: MdPrecisionManufacturing,
-      onClick: () => openPane(agentsRootPane, {}, { mode: "root" }),
+      opens: opensPane(agentsRootPane, {}),
     }),
     Item.Avatar({
       match: ({ conv }) => conv.kind === "agent",

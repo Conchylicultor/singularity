@@ -244,6 +244,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps-core/surface`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
+    - `apps/agent-manager/shell`
     - `apps/chord/curriculum`
     - `apps/chord/piano`
     - `apps/chord/song-index`

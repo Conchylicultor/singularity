@@ -13,13 +13,17 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { RelativeTimeFormat } from "@plugins/primitives/plugins/relative-time/web";
 import { Item } from "../slots";
+import { CONV_STATUS_DOT } from "./conv-status-dot";
 
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();
@@ -43,14 +47,6 @@ function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
 function AvatarSlot({ conv }: { conv: ConversationItemConv }) {
   return <Item.Avatar.Dispatch conv={conv} />;
 }
-
-export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
-  starting: "bg-muted-foreground/60",
-  working: "bg-info",
-  waiting: "bg-warning",
-  gone: "bg-warning/40",
-  done: "bg-muted-foreground/40",
-};
 
 // Structural prop type — accepts both the full `Conversation` and the
 // narrower `ConversationSummary` carried by `attemptsResource`. Anything
@@ -82,10 +78,7 @@ export type ConversationItemProps = {
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
   return (
-    <StatusDot
-      colorClass={CONV_STATUS_DOT[conv.status]}
-      className="inline-block"
-    />
+    <StatusDot {...CONV_STATUS_DOT[conv.status]} className="inline-block" />
   );
 }
 
@@ -106,7 +99,13 @@ export function conversationTitle(conv: ConversationItemConv): string {
   return conv.title?.trim() || "Starting…";
 }
 
-export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
+export function ConvTitle({
+  conv,
+  className,
+}: {
+  conv: ConversationItemConv;
+  className?: string;
+}) {
   const muted = conv.status === "gone" || conv.status === "done";
   // The title is an intrinsically single-line atom — it's used both in the
   // block layout's title row (already a line container) and inside a flow
@@ -117,7 +116,7 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
       <Text
         as="span"
         variant="caption"
-        className={cn(muted && "text-muted-foreground")}
+        className={cn(className, muted && "text-muted-foreground")}
       >
         {conversationTitle(conv)}
       </Text>
@@ -163,22 +162,39 @@ export function ConversationItem({
       // pie) centre on that line and may bleed into the row's padding, so a row
       // carrying one is as tall as a row without — the list's height estimate.
       <Line className={cn("h-lh w-full gap-sm", active && "opacity-60")}>
-        {/* Icon-sized lead box: the dot is centred in the same column an icon
-            would occupy, so titles line up whatever the dot's own size. */}
-        <Center className={cn("icon-auto", rigidClass())}>
-          <ConvStatusDot conv={conv} />
-        </Center>
-        <Fill>
-          <ConvTitle conv={conv} />
-        </Fill>
+        {/* The lead and the title sit on the SIDEBAR NAV's columns: the lead
+            box is the nav icon's size and the title follows it by the nav's
+            icon gap (sidebar-metrics), so the dot centres under the nav icons
+            and the titles start on the nav labels' column. This inner line is
+            the row's one flexible cell; the title inside it is what
+            truncates. */}
+        <Line className={cn("gap-sidebar-icon", fillClasses("x"))}>
+          {/* `md`: the dot's own density tier, whatever the list's. */}
+          <Center className={cn("size-sidebar-icon", rigidClass())}>
+            <ControlSizeProvider size="md">
+              <ConvStatusDot conv={conv} />
+            </ControlSizeProvider>
+          </Center>
+          <Fill>
+            {/* `sm`: the title's full caption size even in a compact (`xs`)
+                list, which would otherwise drop it a rung. */}
+            <ControlSizeProvider size="sm">
+              <ConvTitle conv={conv} className="font-medium" />
+            </ControlSizeProvider>
+          </Fill>
+        </Line>
         {/* Chips hug their content (a flex item never shrinks below it), so
             no wrapper — an empty wrapper would still take a gap. */}
         <ConvSysBadge conv={conv} />
-        {/* xs chips: the compact text step, matching the short time beside them. */}
+        {/* xs chips: the compact chip rung, matching the short time beside them. */}
         <ControlSizeProvider size="xs">
           <ChipsSlot conv={conv} />
         </ControlSizeProvider>
-        <ConvRelativeTime conv={conv} format="short" className={rigidClass()} />
+        <ConvRelativeTime
+          conv={conv}
+          format="short"
+          className={cn("text-faint-foreground", rigidClass())}
+        />
       </Line>
     );
   }

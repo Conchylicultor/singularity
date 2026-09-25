@@ -34,7 +34,9 @@ function SidebarFrame({
   return (
     <>
       <Sticky edge="top" mask layer="nav" ref={stickyRef}>
-        <Line className="gap-xs py-2xs rail-follow">
+        {/* No block padding of its own: the switcher row's `p-row` already
+            makes the line one row tall, the same pitch as the rows below. */}
+        <Line className="gap-xs rail-follow">
           <Fill>{switcher}</Fill>
           {creators}
           {options}

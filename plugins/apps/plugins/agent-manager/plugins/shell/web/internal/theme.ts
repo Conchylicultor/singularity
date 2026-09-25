@@ -3,6 +3,9 @@ import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-pale
 import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/core";
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
+import { sidebarMetricsGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-metrics/core";
+import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
+import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 
 /**
  * Mist, the agent manager's look (prototype proto-1789643584-ldt6): cool,
@@ -19,6 +22,9 @@ const DARK = {
   fill: "oklch(0.265 0.015 244)",
   // Soft, not white: the app's usual 0.82 text lightness, tinted to the slate.
   text: "oklch(0.82 0.008 240)",
+  // The emphasised tier, near white: the selected row, the active nav item,
+  // the brand and the model picker.
+  textStrong: "oklch(0.95 0.005 240)",
   // The secondary text tier: nav labels, sidebar text.
   text2: "oklch(0.8 0.012 238)",
   mutedText: "oklch(0.66 0.014 238)",
@@ -39,6 +45,7 @@ const LIGHT = {
   panel: "oklch(0.965 0.005 240)",
   fill: "oklch(0.93 0.008 240)",
   text: "oklch(0.2 0.015 245)",
+  textStrong: "oklch(0.13 0.015 245)",
   text2: "oklch(0.32 0.015 242)",
   mutedText: "oklch(0.48 0.014 240)",
   faintText: "oklch(0.62 0.012 240)",
@@ -65,7 +72,8 @@ const colorPalette = colorPaletteGroup.fragment({
     mutedForeground: DARK.mutedText,
     faintForeground: DARK.faintText,
     accent: DARK.fill,
-    accentForeground: DARK.text,
+    // A selected row's label reads brighter than its neighbours'.
+    accentForeground: DARK.textStrong,
     // Coral, green, amber and periwinkle — Mist's status colours.
     destructive: "oklch(0.74 0.11 28)",
     destructiveForeground: "oklch(0.985 0 0)",
@@ -94,7 +102,7 @@ const colorPalette = colorPaletteGroup.fragment({
     mutedForeground: LIGHT.mutedText,
     faintForeground: LIGHT.faintText,
     accent: LIGHT.fill,
-    accentForeground: LIGHT.text,
+    accentForeground: LIGHT.textStrong,
     destructive: "oklch(0.6 0.16 28)",
     destructiveForeground: "oklch(0.99 0 0)",
     success: "oklch(0.55 0.13 158)",
@@ -110,8 +118,9 @@ const colorPalette = colorPaletteGroup.fragment({
 });
 
 /**
- * The sidebar sits one step above the page. Its selected nav item is the same
- * neutral fill as a hovered or selected row, with ordinary text.
+ * The sidebar sits one step above the page. Its active nav item is the same
+ * neutral fill as a hovered or selected row, with the emphasised text (as are
+ * the brand and the model picker); nav icons at rest are muted.
  */
 const sidebarPalette = sidebarPaletteGroup.fragment({
   dark: {
@@ -121,7 +130,8 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
     sidebarPrimaryForeground: DARK.tealInk,
     sidebarBorder: DARK.border,
     sidebarAccent: DARK.fill,
-    sidebarAccentForeground: DARK.text,
+    sidebarAccentForeground: DARK.textStrong,
+    sidebarIcon: DARK.mutedText,
     sidebarRing: DARK.ring,
   },
   light: {
@@ -131,7 +141,8 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
     sidebarPrimaryForeground: LIGHT.tealInk,
     sidebarBorder: LIGHT.border,
     sidebarAccent: LIGHT.fill,
-    sidebarAccentForeground: LIGHT.text,
+    sidebarAccentForeground: LIGHT.textStrong,
+    sidebarIcon: LIGHT.mutedText,
     sidebarRing: LIGHT.ring,
   },
 });
@@ -151,6 +162,44 @@ const fontFamily = fontFamilyGroup.fragment(
 const shape = shapeGroup.fragment(both({ radius: "0.7rem" }));
 
 /**
+ * The mockup's sidebar geometry: a 246px panel, 28px nav rows padded 9px, 15px
+ * icons with an 11px gap to a medium-weight label.
+ */
+const sidebarMetrics = sidebarMetricsGroup.fragment(
+  both({
+    sidebarPanelWidth: "15.375rem",
+    sidebarRowHeight: "1.75rem",
+    sidebarRowPadX: "0.5625rem",
+    sidebarIconSize: "0.9375rem",
+    sidebarIconGap: "0.6875rem",
+    sidebarLabelWeight: "500",
+  }),
+);
+
+/**
+ * 7px status dots at the `md` tier (the sidebar's conversation rows and model
+ * picker), and a tighter compact chip — 1px × 4px padding, 6px corners — for a
+ * row's count chip.
+ */
+const density = densityGroup.fragment(
+  both({
+    statusDotMd: "0.4375rem",
+    padChipCompactX: "0.25rem",
+    padChipCompactY: "0.0625rem",
+    radiusChipCompact: "0.375rem",
+  }),
+);
+
+/** The compact chip's text: 9.5px semibold on a 15px line (a 17px chip). */
+const typeScale = typeScaleGroup.fragment(
+  both({
+    fontSizeChipCompact: "0.59375rem",
+    lineHeightChipCompact: "0.9375rem",
+    fontWeightChipCompact: "600",
+  }),
+);
+
+/**
  * The agent manager's own theme. Selected for the app in
  * `config/ui/theme-engine/@app/agent-manager/theme.jsonc`; a group it does not
  * mention paints that group's schema defaults, never the desktop's choice.
@@ -158,5 +207,13 @@ const shape = shapeGroup.fragment(both({ radius: "0.7rem" }));
 export const mistTheme = defineTheme({
   id: "mist",
   label: "Mist",
-  fragments: [colorPalette, sidebarPalette, fontFamily, shape],
+  fragments: [
+    colorPalette,
+    sidebarPalette,
+    sidebarMetrics,
+    density,
+    typeScale,
+    fontFamily,
+    shape,
+  ],
 });

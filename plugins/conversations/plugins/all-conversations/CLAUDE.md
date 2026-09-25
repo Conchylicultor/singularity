@@ -14,6 +14,7 @@
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/app-shell.opensPane`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
@@ -21,7 +22,6 @@
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

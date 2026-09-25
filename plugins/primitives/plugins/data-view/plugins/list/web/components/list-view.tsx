@@ -475,8 +475,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         </VirtualRows>
       );
     }
+    // A quiet group header reads as a caption over its rows, so the section body
+    // starts right under it: the header row's own padding is the only gap.
+    const quietGroup = group !== null && props.groupHeaders === "quiet";
     return (
-      <Stack gap="none" className="rail-follow py-sm">
+      <Stack
+        gap="none"
+        className={cn("rail-follow py-sm", quietGroup && "pt-none")}
+      >
         {entries.map((entry) => renderEntry(entry, group))}
       </Stack>
     );

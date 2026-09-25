@@ -17,7 +17,15 @@ before hand-rolling a seventh clickable pill.
   the status dot (no avatar) in an icon-sized lead box so titles share a
   column, the title as the one `Fill` that truncates, the `Item.Chips`, then
   the short relative time. Used by the agent-manager sidebar's Queue and
-  History sources.
+  History sources. The lead box and the title's gap are the sidebar nav's
+  (`size-sidebar-icon` / `gap-sidebar-icon`), so the dot centres under the nav
+  icons and titles start on the nav labels' column; the dot is at `md`
+  density, the title a full-size medium caption, the time faint.
+
+`CONV_STATUS_DOT` is a `Record<ConversationStatus, StatusDotPaint>`: `working`
+filled green, `waiting` filled amber, and hollow rings for `starting` (muted),
+`gone` (amber) and `done` (faint). Spread it onto `<StatusDot>`; an avatar's
+presence overlay reads it through `statusDotPaintClass`.
 
 The atoms (`ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `ConvRelativeTime` — which
 takes `format="ago" | "short"`) plus the `CONV_STATUS_DOT` constant are exported alongside so surfaces with
@@ -40,11 +48,13 @@ directly — it is no longer re-exported here.)
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`

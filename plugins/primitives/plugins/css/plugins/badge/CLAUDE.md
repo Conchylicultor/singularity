@@ -4,11 +4,22 @@
 
 A `Badge`'s text size has **no prop** — it tracks the ambient `ControlSize`
 through `textStepFor(density)`, the single density→text-step policy in
-`…/ui-kit/web/theme/control-size.tsx` that `Button` and `Text` also consume. At
-the compact `xs` density a badge reads `text-caption-compact` (one rung down);
-every other density (incl. the no-provider default `md`) reads `text-caption`.
-This replaced the bespoke `xs → text-3xs` ladder so all three leaves step at the
+`…/ui-kit/web/theme/control-size.tsx` that `Button` and `Text` also consume.
+Every density except `xs` (incl. the no-provider default `md`) reads
+`text-caption font-medium` with `p-chip` and, for a rect, `rounded-md`. This
+replaced the bespoke `xs → text-3xs` ladder so all three leaves step at the
 same threshold and can't desync in a row.
+
+At the compact `xs` density the badge wears the **compact chip rung**:
+`text-chip-compact font-chip-compact p-chip-compact` and (rect)
+`rounded-chip-compact`. Every one of those reads a token — type-scale's
+`fontSizeChipCompact` / `lineHeightChipCompact` / `fontWeightChipCompact`,
+density's `padChipCompactX` / `padChipCompactY` / `radiusChipCompact` — whose
+default is exactly what the chip wore before (`text-caption-compact`,
+medium, `p-chip`, `rounded-md`). So a theme can give a dense row's count chip
+its own shape (the agent manager's Mist: 9.5px / 600, 1px × 4px, 6px radius)
+without touching any other chip or any compact caption. The weight is its own
+utility so a caller that swaps the size (ToggleChip's `text-2xs`) keeps it.
 
 ## `self-baseline` on the label is load-bearing
 

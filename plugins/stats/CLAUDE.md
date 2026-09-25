@@ -13,13 +13,13 @@
     - `Pane.Register` "stats"
     - `Shell.Sidebar` "Stats"
   - Uses:
+    - `primitives/app-shell.opensPane`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`

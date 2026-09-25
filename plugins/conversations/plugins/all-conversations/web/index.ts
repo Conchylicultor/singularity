@@ -1,7 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdForum } from "react-icons/md";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
+import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { allConversationsPane } from "./panes";
 
 export { allConversationsPane } from "./panes";
@@ -16,7 +17,7 @@ export default {
       id: "all-conversations",
       title: "Conversation",
       icon: MdForum,
-      onClick: () => openPane(allConversationsPane, {}, { mode: "root" }),
+      opens: opensPane(allConversationsPane, {}),
     }),
   ],
   slots: { "all-conversations": allConversationsPane },

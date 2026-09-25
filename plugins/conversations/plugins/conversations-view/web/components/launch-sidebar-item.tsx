@@ -23,8 +23,9 @@ import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/w
 
 /**
  * The new-conversation launch control as a sidebar nav row: a model picker —
- * a bordered, filled box led by an accent dot — and, a small gap away, a
- * square launch button in the same fill. Built from `SidebarMenuButton` chrome
+ * a bordered, filled box led by an accent dot, its label in the sidebar's
+ * emphasised text colour — and, a small gap away, a launch button in the same
+ * fill and at the same (sidebar row) height. Built from `SidebarMenuButton` chrome
  * so it keeps the nav links' height, font and icon sizing. (Rendering
  * `LaunchControl` here would import the page-canvas `Button` density and
  * typography into the nav rail, which is why the composition is local; the
@@ -51,7 +52,7 @@ export function LaunchSidebarItem() {
                 <SidebarMenuButton
                   className={cn(
                     fillClasses("x"),
-                    "border border-sidebar-border bg-sidebar-accent font-semibold",
+                    "border border-sidebar-border bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
                   )}
                 />
               }
@@ -70,8 +71,9 @@ export function LaunchSidebarItem() {
             disabled={launching !== null}
             onClick={() => launch(defaultModel)}
             // The nav rows' `rounded-md`, in the picker's fill, with the
-            // accent on the glyph only.
-            className="rounded-md bg-sidebar-accent text-primary"
+            // accent on the glyph only. As tall as the picker beside it (the
+            // sidebar row height); its width stays the md icon button's.
+            className="h-sidebar-row w-(--control-height-md) rounded-md bg-sidebar-accent text-primary"
           />
         </Line>
       </SidebarMenuItem>

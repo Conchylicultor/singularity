@@ -64,6 +64,24 @@ describe("GroupedSections — header style", () => {
     // A sibling of the control, never inside it.
     expect(header.contains(action)).toBe(false);
   });
+
+  it("quiet: the band pays the rail and the header keeps its row pad", () => {
+    renderSections("quiet");
+    const header = screen.getByRole("button", { name: "Queue6" });
+    // The header row itself follows no rail (its own `p-row` stays), so its
+    // label lands on the rows' text column; its sticky band pays the rail.
+    expect(header.className).not.toContain("rail-follow");
+    expect(header.className).toContain("p-row");
+    expect(header.closest(".rail-follow")).not.toBeNull();
+  });
+
+  it("standard: the header row itself pays the rail", () => {
+    renderSections("standard");
+    // The count rides the row's actions, so the control is the split path's
+    // inner button and the rail is on the row BOX around it.
+    const header = screen.getByRole("button", { name: "Queue" });
+    expect(header.parentElement!.className).toContain("rail-follow");
+  });
 });
 
 // "Fold line" = the `… N more` row a fold rule leaves at the end of a section.

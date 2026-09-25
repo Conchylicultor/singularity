@@ -58,11 +58,15 @@ export interface GroupedSectionsProps {
    * through the view's render props. Absent ⇒ `"standard"`, which renders the
    * exact node this chrome has always rendered.
    *
-   * `"quiet"` reads the header as one run — label, then its count right beside
-   * it ("Queue 6") — with the fold chevron trailing that run and shown only on
-   * hover / keyboard focus (`SectionHeaderRow disclosure="trailing"`). The
-   * count moves from the trailing cluster into the label's run; a section's
-   * `headerActions` stay in the trailing cluster, hover-revealed as before.
+   * `"quiet"` reads the header as one run — a semibold label, then its count
+   * right beside it ("Queue 6", faint and semibold) — with the fold chevron
+   * trailing that run and shown only on hover / keyboard focus
+   * (`SectionHeaderRow disclosure="trailing"`). The count moves from the
+   * trailing cluster into the label's run; a section's `headerActions` stay in
+   * the trailing cluster, hover-revealed as before. Its label sits on the
+   * rows' TEXT column rather than on their pill edge: the rail is paid by the
+   * sticky band and the header row keeps its own row padding, exactly like a
+   * body row.
    */
   headerStyle?: DataViewGroupHeaders;
   /**
@@ -132,7 +136,14 @@ export function GroupedSections({
           const key = section.key!;
           const collapsed = collapsedSections?.has(key) ?? false;
           const action = headerActions?.(section);
-          const count = (
+          // A quiet header's count is a faint, semibold tally right after its
+          // label ("Queue 6"); the standard header's is a muted caption in the
+          // trailing cluster.
+          const count = quiet ? (
+            <Text variant="caption" tone="faint" className="font-semibold">
+              {section.count}
+            </Text>
+          ) : (
             <Text variant="caption" tone="muted">
               {section.count}
             </Text>
@@ -143,11 +154,21 @@ export function GroupedSections({
               open={!collapsed}
               onOpenChange={(open) => setSectionCollapsed?.(key, !open)}
             >
-              <StickyStackItem itemKey={key} mask layer="raised">
+              <StickyStackItem
+                itemKey={key}
+                mask
+                layer="raised"
+                // A quiet header pays the rail on its BAND and keeps the row's
+                // own `p-row` inside it, so its label lands on the rows' TEXT
+                // column (rail + row pad) — a caption over the rows. A standard
+                // header pays the rail on the row itself, which replaces the
+                // row's inline pad, so its label sits on the row pills' edge.
+                className={quiet ? "rail-follow" : undefined}
+              >
                 {quiet ? (
                   <SectionHeaderRow
                     variant="value"
-                    className="rail-follow"
+                    className="font-semibold"
                     disclosure="trailing"
                     // The count is part of the label's run here, so the
                     // trailing cluster holds only an action — and, like the

@@ -53,7 +53,10 @@ focused node the day the row splits; that is how a page row ended up drawing its
 own ring around the container while the browser drew one around the button
 inside it. What callers *do* have vocabulary for is **`selected`** — "this is the
 current row" (the editor's caret is here, this list item is the open one). It is
-a background tint, a different question from focus, and the two layer.
+a background tint, a different question from focus, and the two layer. A
+selected `hover="accent"` row also takes `text-accent-foreground`, so its label
+reads brighter than its neighbours' in a theme whose accent text is brighter
+than its body text (Mist); a leaf that sets its own tone keeps it.
 
 `ref` is the ROW ELEMENT — the outermost box — for DnD / scroll-into-view /
 measurement. It is never the thing you focus: on a row with `actions` it is a
@@ -237,6 +240,7 @@ genuine transient-chrome list escapes with
     - `ui/tokens/font-family`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`
+    - `ui/tokens/sidebar-metrics`
     - `ui/tokens/sidebar-palette`
     - `ui/tokens/type-scale`
 

@@ -1,3 +1,4 @@
+import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   Button,
   ControlSizeProvider,
@@ -155,7 +156,11 @@ function AgentDetailInner({
                 icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
                 color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
                 svgNodes={agentSvgNodes}
-                statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
+                statusDot={
+                  latestStatus
+                    ? statusDotPaintClass(CONV_STATUS_DOT[latestStatus])
+                    : null
+                }
                 fallbackKey={agent.id}
               />
             </ControlSizeProvider>

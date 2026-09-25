@@ -5296,6 +5296,10 @@
       "name": "@singularity/plugin-ui-tokens-shape",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/sidebar-metrics": {
+      "name": "@singularity/plugin-ui-tokens-sidebar-metrics",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/sidebar-palette": {
       "name": "@singularity/plugin-ui-tokens-sidebar-palette",
       "version": "0.0.1",
@@ -8408,6 +8412,8 @@
     "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 
     "@singularity/plugin-ui-tokens-shape": ["@singularity/plugin-ui-tokens-shape@workspace:plugins/ui/plugins/tokens/plugins/shape"],
+
+    "@singularity/plugin-ui-tokens-sidebar-metrics": ["@singularity/plugin-ui-tokens-sidebar-metrics@workspace:plugins/ui/plugins/tokens/plugins/sidebar-metrics"],
 
     "@singularity/plugin-ui-tokens-sidebar-palette": ["@singularity/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 

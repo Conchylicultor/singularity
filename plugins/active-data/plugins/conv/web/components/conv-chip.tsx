@@ -25,9 +25,7 @@ export function ConvChip({
         opener.toggle(sideConvId);
       }}
       title={title ? `${title} · ${sideConvId}` : sideConvId}
-      leading={
-        conv ? undefined : <StatusDot colorClass={CONV_STATUS_DOT.gone} />
-      }
+      leading={conv ? undefined : <StatusDot {...CONV_STATUS_DOT.gone} />}
       mono={!conv}
     >
       {conv ? <ConversationItem conv={conv} layout="inline" /> : sideConvId}

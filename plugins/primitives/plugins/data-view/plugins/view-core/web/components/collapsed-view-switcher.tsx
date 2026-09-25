@@ -45,10 +45,12 @@ import { AddViewMenuItems } from "./add-view-menu-items";
  *
  * `appearance` picks the trigger's shape, never the menu:
  * - **`chip`** (default) — a secondary pill: icon, name, chevron.
- * - **`row`** — a full-width `Row`: the view's icon in the row's lead column
- *   (the column a list's rows put their own lead in, so the switcher reads as
- *   the list's heading line), the name, and a chevron that appears only on
- *   hover / keyboard focus and while the menu (or the settings panel) is open.
+ * - **`row`** — a full-width `Row` for a sidebar list: the view's icon in the
+ *   row's lead column, sized and spaced like the sidebar nav icons
+ *   (`size-sidebar-icon` / `gap-sidebar-icon`), so the switcher reads as the
+ *   list's heading line on the nav's columns; the name at medium weight; and a
+ *   chevron that appears only on hover / keyboard focus and while the menu (or
+ *   the settings panel) is open.
  */
 export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   instances,
@@ -94,9 +96,21 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         ref={setAnchor}
         aria-label={label}
         // `sm`: the row form heads a dense list (a sidebar), so it takes the
-        // list rows' caption size — at `md` it would read as a heading.
+        // list rows' caption size — at `md` it would read as a heading. Medium
+        // weight: it names the list below it.
         size="sm"
-        icon={<ActiveIcon className="text-muted-foreground" />}
+        // The row form lives in a sidebar, so its lead sits on the sidebar
+        // NAV's columns (sidebar-metrics): the nav icon's size, and the nav's
+        // icon-to-label gap — the view name starts where the nav labels do.
+        className="gap-sidebar-icon font-medium"
+        icon={
+          <ActiveIcon
+            className={cn(
+              "size-sidebar-icon text-muted-foreground",
+              rigidClass(),
+            )}
+          />
+        }
         {...reveal.groupProps}
       >
         <Fill>{active.instance.name}</Fill>

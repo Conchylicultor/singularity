@@ -36,6 +36,13 @@ export const sidebarPaletteGroup = defineTokenGroup("sidebar-palette", {
     darkDefault: "oklch(0.88 0 0)",
     label: "Sidebar accent text",
   },
+  // The nav icons' colour at rest. `currentColor` (the default) paints them in
+  // the row's text colour, as they always were; a theme can quiet them. A
+  // hovered or active row paints its icon in its own text colour either way.
+  sidebarIcon: {
+    default: "currentColor",
+    label: "Sidebar icon",
+  },
   sidebarRing: {
     default: "oklch(0.708 0 0)",
     darkDefault: "oklch(0.556 0 0)",

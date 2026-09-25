@@ -187,6 +187,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/tokens/font-family`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`
+    - `ui/tokens/sidebar-metrics`
     - `ui/tokens/sidebar-palette`
     - `ui/tokens/type-scale`
 

@@ -7,11 +7,11 @@ export {
   ConvSysBadge,
   ConvTitle,
   ConvRelativeTime,
-  CONV_STATUS_DOT,
   conversationTitle,
   type ConversationItemConv,
   type ConversationItemProps,
 } from "./components/conversation-item";
+export { CONV_STATUS_DOT } from "./components/conv-status-dot";
 export { Item } from "./slots";
 
 export default {

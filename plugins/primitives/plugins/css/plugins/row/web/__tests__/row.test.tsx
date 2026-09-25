@@ -258,3 +258,36 @@ describe("Row — focusRef is a capability, not a node", () => {
     expect(() => focusRef.current!.focus()).toThrow(/focusable control/);
   });
 });
+
+// A selected row reads brighter than its neighbours: the accent's own text
+// colour rides the accent fill, on both paths (the box carries the chrome).
+describe("Row — selected text", () => {
+  it("paints the accent text colour on a selected accent row", () => {
+    const { container } = render(
+      <Row selected onClick={() => {}}>
+        label
+      </Row>,
+    );
+    const box = container.firstElementChild!;
+    expect(box.classList.contains("bg-accent")).toBe(true);
+    expect(box.classList.contains("text-accent-foreground")).toBe(true);
+  });
+
+  it("leaves an unselected row's text colour alone", () => {
+    const { container } = render(<Row onClick={() => {}}>label</Row>);
+    expect(
+      container.firstElementChild!.classList.contains("text-accent-foreground"),
+    ).toBe(false);
+  });
+
+  it("paints it on the split path's box too", () => {
+    const { container } = render(
+      <Row selected onClick={() => {}} actions={<button>x</button>}>
+        label
+      </Row>,
+    );
+    expect(
+      container.firstElementChild!.classList.contains("text-accent-foreground"),
+    ).toBe(true);
+  });
+});

@@ -1,8 +1,9 @@
 import { AppShell } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { AppShellLayout } from "./components/app-shell-layout";
+export { AppShellLayout, opensPane } from "./components/app-shell-layout";
 export type {
+  SidebarNavTarget,
   AppShellSidebarItem,
   AppShellSidebarNav,
   AppShellSidebarComponent,

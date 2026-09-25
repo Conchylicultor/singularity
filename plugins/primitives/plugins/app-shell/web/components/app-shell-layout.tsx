@@ -9,7 +9,10 @@ import {
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
+import {
+  SurfaceChromeContext,
+  type PaneObject,
+} from "@plugins/primitives/plugins/pane/web";
 import { useContext, useMemo, type ReactNode } from "react";
 import {
   PluginRuntimeContext,
@@ -27,19 +30,49 @@ import { SidebarItem } from "./sidebar-nav-item";
 type SidebarIcon = React.ComponentType<{ className?: string }>;
 
 /**
+ * Where a nav entry goes, as DATA: a pane and its params, opened as the root
+ * of the route. Build one with {@link opensPane}, which type-checks `params`
+ * against the pane's own.
+ *
+ * Being data is what lets the shell answer "is this entry the current one?":
+ * the row is active exactly while the route's ROOT pane is this pane. A
+ * callback cannot say where it goes, so an `onClick` entry is never marked.
+ */
+export interface SidebarNavTarget {
+  // Params are checked by `opensPane` at construction; stored erased.
+  pane: PaneObject<any, any, any, any>;
+  params: Record<string, string>;
+}
+
+/** A {@link SidebarNavTarget} for `pane` opened with `params`. */
+export function opensPane<Params>(
+  pane: PaneObject<Params, any, any, any>,
+  params: NoInfer<Params>,
+): SidebarNavTarget {
+  return { pane, params: params as Record<string, string> };
+}
+
+/**
  * A nav entry — the common case. Pure data: the shell draws the row
  * ({@link SidebarItem}), so every nav entry in every app shares one inset,
  * height, icon size and hover by construction. `badge` is an optional
  * attention overlay pinned to the icon's corner; it renders `null` when there
  * is nothing to flag. `component` is forbidden.
+ *
+ * What a click does is one of two arms: `opens` (a pane, as data — the shell
+ * opens it as the route root AND highlights the row while that pane is the
+ * root) xor `onClick` (anything else; never highlighted, because a callback
+ * cannot say where it goes).
  */
 export type AppShellSidebarNav = {
   title: string;
   icon: SidebarIcon;
-  onClick: () => void;
   badge?: React.ComponentType;
   component?: never;
-};
+} & (
+  | { opens: SidebarNavTarget; onClick?: never }
+  | { onClick: () => void; opens?: never }
+);
 
 /**
  * A custom sidebar region — a whole section the shell cannot describe as one
@@ -52,6 +85,7 @@ export type AppShellSidebarComponent = {
   icon: SidebarIcon;
   component: React.ComponentType;
   onClick?: never;
+  opens?: never;
   badge?: never;
 };
 

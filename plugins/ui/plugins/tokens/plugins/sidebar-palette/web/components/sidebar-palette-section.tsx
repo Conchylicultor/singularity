@@ -17,7 +17,7 @@ interface GroupDef {
 }
 
 const GROUPS: GroupDef[] = [
-  { label: "Base", keys: ["sidebar", "sidebarForeground"] },
+  { label: "Base", keys: ["sidebar", "sidebarForeground", "sidebarIcon"] },
   { label: "Primary", keys: ["sidebarPrimary", "sidebarPrimaryForeground"] },
   { label: "Accent", keys: ["sidebarAccent", "sidebarAccentForeground"] },
   { label: "Border", keys: ["sidebarBorder", "sidebarRing"] },

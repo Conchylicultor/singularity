@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
+import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { MdChecklist } from "react-icons/md";
 import { tasksRootPane, taskDetailPane } from "./panes";
 import { TaskDetail as TaskDetailSectionSlots } from "./slots";
@@ -20,7 +21,7 @@ export default {
       id: "tasks",
       title: "Tasks",
       icon: MdChecklist,
-      onClick: () => openPane(tasksRootPane, {}, { mode: "root" }),
+      opens: opensPane(tasksRootPane, {}),
     }),
   ],
   slots: {

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
+import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { MdInsights } from "react-icons/md";
 import { statsPane } from "./panes";
 import { Stats } from "./slots";
@@ -19,7 +20,7 @@ export default {
       id: "stats",
       title: "Stats",
       icon: MdInsights,
-      onClick: () => openPane(statsPane, {}, { mode: "root" }),
+      opens: opensPane(statsPane, {}),
     }),
   ],
   slots: { ...Stats, stats: statsPane },

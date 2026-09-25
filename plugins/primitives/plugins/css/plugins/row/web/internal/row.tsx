@@ -102,7 +102,7 @@ export type RowControlProps = Pick<
  * the row).
  */
 export interface RowProps extends RowControlProps, Passthrough {
-  /** Persistent selection → bg-accent; aria-current on buttons. */
+  /** Persistent selection → bg-accent + text-accent-foreground; aria-current on buttons. */
   selected?: boolean;
   /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
   size?: RowSize;
@@ -307,9 +307,13 @@ export function Row({
     // publishes its composite over the ambient mask, which is why this is a
     // second property and not a `--chrome-mask` re-declaration — a custom
     // property whose value reads itself is a cycle, and CSS drops it.
+    // A selected row also takes the accent's own text colour, so its label
+    // reads brighter than its neighbours' (a theme whose accent text equals its
+    // body text sees no change). Leaves that set their own tone (a muted
+    // subtitle, a finished row's dimmed title) keep it.
     hover === "accent" &&
       (selected
-        ? "bg-accent [--scrim:var(--accent)]"
+        ? "bg-accent text-accent-foreground [--scrim:var(--accent)]"
         : "hover:bg-accent hover:[--scrim:var(--accent)]"),
     hover === "muted" &&
       (selected

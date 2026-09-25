@@ -97,6 +97,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `conversations/conversation-ui/item.Item`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/avatar.Avatar`
+    - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.usePointResources`

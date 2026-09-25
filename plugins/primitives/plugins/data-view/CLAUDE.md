@@ -575,11 +575,19 @@ rides `DataViewShellChrome`, and the body threads it into
   absent value renders the exact node it always did (pinned by
   `web/__tests__/grouped-sections.test.tsx`), so no surface changes unless it
   asks.
-- **`"quiet"`** — one run: the label, then its count right beside it
-  ("Queue 6"), with the fold chevron trailing that run and shown only on hover
-  or keyboard focus (`SectionHeaderRow disclosure="trailing"`). For a narrow
-  list whose headers should read as captions over the rows (the agent-manager
-  conversation sidebar). `headerActions` stay in the trailing cluster.
+- **`"quiet"`** — one run: the semibold label, then its count right beside it
+  ("Queue 6", faint semibold), with the fold chevron trailing that run and
+  shown only on hover or keyboard focus (`SectionHeaderRow
+  disclosure="trailing"`). For a narrow list whose headers should read as
+  captions over the rows (the agent-manager conversation sidebar).
+  `headerActions` stay in the trailing cluster. Its label sits on the rows'
+  **text** column, not their pill edge: the sticky band pays the rail
+  (`rail-follow` on the `StickyStackItem`) and the header row keeps its own
+  `p-row`, like a body row. (A standard header puts `rail-follow` on the row
+  itself, which replaces the row's inline pad, so its label sits on the pill
+  edge — one row pad left of the row text.) The list view also drops the
+  section body's top padding under a quiet header, so the rows start right
+  under their caption.
 
 list, gallery, tree and icons honour it; the **table ignores it** — it composes
 its own `col-span-full` header rows inside `data-table` (see below).

@@ -8224,6 +8224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/action-bar.Conversation`
       - `conversations/conversation-view/code/file-pane.FilePaneView`
       - `infra/endpoints.useEndpoint`
+      - `primitives/app-shell.opensPane`
       - `primitives/css/center.Center`
       - `primitives/css/clip.Clip`
       - `primitives/css/text.Text`
@@ -8238,7 +8239,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/icon-button.IconButton`
       - `primitives/loading.Loading`
       - `primitives/pane.defineRoute`
-      - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
       - `primitives/pane.PaneScroll`
@@ -9075,6 +9075,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider.ModelSelect`
           - `fields/avatar/table.avatarFieldDef`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/app-shell.opensPane`
           - `primitives/avatar.Avatar`
           - `primitives/avatar.AVATAR_COLOR_KEYS`
           - `primitives/avatar.AvatarPicker`
@@ -9089,6 +9090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/status-dot.statusDotPaintClass`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -9107,7 +9109,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/multi-select.useMultiSelect`
           - `primitives/pane.defineRoute`
-          - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.PaneIconAction`
@@ -9232,6 +9233,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/app-shell.opensPane`
           - `primitives/css/inline.Inline`
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
@@ -9239,7 +9241,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
           - `primitives/pane.defineRoute`
-          - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
@@ -9309,6 +9310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.Item`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/avatar.Avatar`
+          - `primitives/css/status-dot.statusDotPaintClass`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.usePointResources`
@@ -9498,11 +9500,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/status-dot.statusDotPaintClass`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
@@ -17620,6 +17624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
+              - `apps/agent-manager/shell`
               - `apps/chord/curriculum`
               - `apps/chord/piano`
               - `apps/chord/song-index`
@@ -24223,7 +24228,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SidebarProvider`
           - `primitives/css/ui-kit.SidebarTrigger`
           - `primitives/css/yield.yieldClass`
+          - `primitives/pane.openPane`
+          - `primitives/pane.PaneObject`
           - `primitives/pane.SurfaceChromeContext`
+          - `primitives/pane.useRoute`
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
         - Exports (types):
@@ -24235,9 +24243,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AppShellToolbarItem`
           - `FramingContribution`
           - `SidebarFramingProps`
+          - `SidebarNavTarget`
         - Exports (values):
           - `AppShell`
           - `AppShellLayout`
+          - `opensPane`
           - `SidebarItem`
           - `SidebarPaneSection`
       - Cross-plugin:
@@ -24253,6 +24263,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/shell`
           - `apps/settings/shell`
           - `apps/studio/shell`
+          - `code-explorer`
+          - `conversations/agents`
+          - `conversations/all-conversations`
+          - `stats`
+          - `tasks/task-detail`
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
@@ -24430,6 +24445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/font-family`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
+          - `ui/tokens/sidebar-metrics`
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
@@ -26041,6 +26057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/font-family`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
+              - `ui/tokens/sidebar-metrics`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
         - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
@@ -26520,6 +26537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/font-family`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
+              - `ui/tokens/sidebar-metrics`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
               - `ui/tree-disclosure/column`
@@ -26545,15 +26563,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/loading`
               - `primitives/sync-status`
-        - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded inline-block span with a caller-supplied Tailwind color class, so an empty dot keeps its size in running text as well as in a flex row. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
+        - **`status-dot`** — Status-indicator dot primitive: a rounded inline-block span painted either FILLED (colorClass) or as a HOLLOW 1px ring (ringClass), so an empty dot keeps its size in running text as well as in a flex row. Its diameter follows the ambient ControlSize through the density group's status-dot tokens (defaults: xs 4px, sm 6px, md 8px, lg 10px).
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.DensityControlled`
               - `primitives/css/ui-kit.useControlSize`
-            - Exports (types): `StatusDotProps`
-            - Exports (values): `StatusDot`
+            - Exports (types):
+              - `StatusDotPaint`
+              - `StatusDotProps`
+            - Exports (values):
+              - `StatusDot`
+              - `statusDotPaintClass`
           - Cross-plugin:
             - Imported by:
               - `active-data/attempt`
@@ -26572,6 +26594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-status`
               - `config_v2/settings`
               - `conversations/agents`
+              - `conversations/conversation-category`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/jsonl-viewer/task-notification`
               - `conversations/conversation-view/running-agents`
@@ -29830,6 +29853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/font-family`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
+          - `ui/tokens/sidebar-metrics`
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
@@ -33622,13 +33646,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Pane.Register` "stats"
       - `Shell.Sidebar` "Stats"
     - Uses:
+      - `primitives/app-shell.opensPane`
       - `primitives/css/spacing.Inset`
       - `primitives/css/spacing.Stack`
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/toggle-chip.ToggleChip`
       - `primitives/pane.defineRoute`
-      - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
       - `primitives/slot-render.defineRenderSlot`
@@ -34419,9 +34443,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Pane.Register` "task-detail"
           - `Shell.Sidebar` "Tasks"
         - Uses:
+          - `primitives/app-shell.opensPane`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/live-state.useResource`
-          - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
@@ -35428,7 +35452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -35550,6 +35574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/rich-text-palette`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
+          - `ui/tokens/sidebar-metrics`
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
           - `ui/tweakcn/community-browser`
@@ -35660,7 +35685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -35719,6 +35744,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/font-family`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
+              - `ui/tokens/sidebar-metrics`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
               - `ui/tweakcn/community-browser`
@@ -35957,6 +35983,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ShapeTokenValues`
             - Exports (values): `shapeGroup`
+        - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Sidebar Metrics"
+              - `ThemeCustomizer.Section` "Sidebar Metrics" → `SidebarMetricsSection`
+            - Uses:
+              - `primitives/collapsible.Collapsible`
+              - `primitives/collapsible.CollapsibleContent`
+              - `primitives/css/row.SectionHeaderRow`
+              - `primitives/css/spacing.Stack`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `SidebarMetricsTokenValues`
+            - Exports (values): `sidebarMetricsGroup`
         - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
           - Web:
             - Contributes:

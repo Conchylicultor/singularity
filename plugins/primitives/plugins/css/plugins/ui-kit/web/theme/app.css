@@ -94,6 +94,7 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
     --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-icon: var(--sidebar-icon);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -459,6 +460,30 @@
 @utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }     /* twmerge: sg-pad */
 @utility p-row    { padding: var(--pad-row-y) var(--pad-row-x); }       /* twmerge: sg-pad */
 @utility p-card    { padding: var(--pad-card); }                         /* twmerge: sg-pad */
+/* The compact (`xs`) chip rung — Badge at `xs` density reads it instead of
+ * `p-chip`, so a theme can give a dense list's count chip its own shape. Its
+ * defaults read `--pad-chip-*`, so untouched it pads exactly like `p-chip`. */
+@utility p-chip-compact { padding: var(--pad-chip-compact-y) var(--pad-chip-compact-x); } /* twmerge: sg-pad */
+@utility rounded-chip-compact { border-radius: var(--radius-chip-compact); } /* twmerge: extend rounded */
+
+/* Status dot diameters, one per density tier — `StatusDot` picks the tier from
+ * the ambient `ControlSize`. Values come from the density token group
+ * (--status-dot-*), whose defaults are the old size-1 … size-2.5. */
+@utility size-status-dot-xs { width: var(--status-dot-xs); height: var(--status-dot-xs); } /* twmerge: extend size */
+@utility size-status-dot-sm { width: var(--status-dot-sm); height: var(--status-dot-sm); } /* twmerge: extend size */
+@utility size-status-dot-md { width: var(--status-dot-md); height: var(--status-dot-md); } /* twmerge: extend size */
+@utility size-status-dot-lg { width: var(--status-dot-lg); height: var(--status-dot-lg); } /* twmerge: extend size */
+
+/* Sidebar chrome geometry — from the sidebar-metrics token group, whose
+ * defaults are the sidebar's old hard-coded h-8 / px-sm / size-4 / gap-sm and
+ * regular label. The ui-kit `SidebarMenuButton` and the app-shell nav row read
+ * them; a sidebar list whose lead should sit on the nav icon column reads
+ * `size-sidebar-icon` + `gap-sidebar-icon` too. */
+@utility h-sidebar-row { height: var(--sidebar-row-height); } /* twmerge: extend h */
+@utility px-sidebar-row { padding-inline: var(--sidebar-row-pad-x); } /* twmerge: extend px */
+@utility size-sidebar-icon { width: var(--sidebar-icon-size); height: var(--sidebar-icon-size); } /* twmerge: extend size */
+@utility gap-sidebar-icon { gap: var(--sidebar-icon-gap); } /* twmerge: extend gap */
+@utility font-sidebar-label { font-weight: var(--sidebar-label-weight); } /* twmerge: extend font-weight */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
@@ -1484,6 +1509,14 @@
 @utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-control-compact    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
+/* The compact CHIP rung: what a `Badge` wears at `xs` density. Its size, line
+ * height and weight are type-scale tokens whose defaults are exactly
+ * `text-caption-compact` + `font-medium`, so a theme can re-set a dense row's
+ * count chip without touching compact captions. The weight is its own utility
+ * (like `font-medium` beside a size role), so a chip that swaps the size
+ * (ToggleChip's `text-2xs`) keeps it. */
+@utility text-chip-compact       { font-size: var(--font-size-chip-compact); line-height: var(--line-height-chip-compact); } /* twmerge: extend font-size */
+@utility font-chip-compact       { font-weight: var(--font-weight-chip-compact); } /* twmerge: extend font-weight */
 @utility text-code-compact       { font-family: var(--font-mono);           font-size: var(--font-size-2xs);            line-height: var(--line-height-caption); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/

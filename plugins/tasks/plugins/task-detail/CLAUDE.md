@@ -15,9 +15,9 @@
     - `Pane.Register` "task-detail"
     - `Shell.Sidebar` "Tasks"
   - Uses:
+    - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.useResource`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
