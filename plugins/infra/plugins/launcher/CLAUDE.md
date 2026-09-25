@@ -3,7 +3,19 @@
 Brings a packaged app's whole runtime up on a bare host: gateway binary,
 `database.json`, the gateway daemon, the app DB, the worktree spec. Consumed by
 the release bundle's `launch` binary (`bin/launch.ts`) and, for the gateway
-half only, by `./singularity start`.
+half only, by `./singularity start` / `stop`.
+
+## One launch spec, two launchers
+
+`gatewayLaunchSpec` is the one derivation of how the gateway runs (argv, cwd,
+declared env, stdio log). `spawnGatewayDaemon` spawns it detached; on macOS
+`./singularity start` instead renders it into a launchd LaunchAgent
+(`server/internal/login-service.ts` + the pure `launchd-plist.ts`), which is what
+makes the dev gateway come back after a reboot. The gateway writes its own
+pidfile (`-pid-file`) because no launcher sees a launchd relaunch; the detached
+spawn writes it too, so a gateway that dies before getting that far still
+leaves its dead pid for a preview's reaper. Design:
+[`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../research/2026-09-25-global-gateway-survives-reboot.md).
 
 ## Boot ordering
 
@@ -37,7 +49,8 @@ the entire stack's startup. It checks `isRunning(pid)` on *every* poll tick and
 throws immediately — with the tail of `gateway-stdio.log` embedded in the
 message — rather than waiting out its deadline.
 
-`gateway-stdio.log` specifically, because `spawnGatewayDaemon` opens it `"w"`:
+`gateway-stdio.log` specifically, because `spawnGatewayDaemon` opens it `"w"` (and
+`start` empties it before loading the launchd job, which only appends):
 it is truncated on every start, so its tail is unambiguously *this* boot's
 output, and the gateway writes its fatal start error to stderr precisely so it
 lands there. The rotating `gateway.log` is the fallback only — it holds prior
@@ -98,8 +111,10 @@ carry is an open set, so a list of bad names only catches the last leak found.
 
 Two boundaries, one declaration:
 
-1. **Starter → gateway.** `spawnGatewayDaemon` spawns with
-   `pickRuntimeEnv(process.env)`. It filters the **live** `process.env`, so the
+1. **Starter → gateway.** `gatewayLaunchSpec` sets
+   `pickRuntimeEnv(process.env)` — for the detached spawn, and baked into the
+   launchd plist on macOS dev hosts (so a change reaches that gateway on the
+   next `start --force`). It filters the **live** `process.env`, so the
    release launcher's mutations (`launch.ts`'s relocation variables, the release
    identity `bootSelfContainedApp` stamps) still arrive — each is a forwarded
    name. Every launch path (`./singularity start`, the release `launch` binary,
@@ -131,7 +146,7 @@ that snapshots PATH once and spawns backends against it for weeks. That is how
 every backend on this host ran Bun 1.3.13 (a symlink resolved in May 2026) long
 after `mise.toml` could have said otherwise, and Bun 1.3.13 closes pooled
 Postgres sockets out from under live queries. Backends pick up a `mise.lock` change on
-their next restart; a change to this PATH rule itself needs `./singularity start`
+their next restart; a change to this PATH rule itself needs `./singularity start --force`
 to reach the already-running gateway.
 
 A shim resolves from its **cwd**, so the shims alone are not enough. With no
@@ -201,15 +216,25 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/paths.setReleaseIdentity`
     - `infra/paths.worktreesDir`
     - `infra/worktree.writeWorktreeSpec`
-  - Exports (types): `ListenAddress`
+  - Exports (types):
+    - `GatewayLaunchOptions`
+    - `GatewayServiceState`
+    - `ListenAddress`
   - Exports (values):
     - `assertSupportedHost`
     - `awaitGatewayReady`
     - `awaitPgReady`
+    - `awaitProcessGone`
+    - `bootoutGatewayService`
     - `bootSelfContainedApp`
+    - `bootstrapGatewayService`
     - `buildOrLocateGateway`
     - `ensureDatabaseConfig`
+    - `GATEWAY_SERVICE_LABEL`
+    - `gatewayLaunchSpec`
     - `gatewayPidFile`
+    - `gatewayServicePlistPath`
+    - `gatewayServiceState`
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
@@ -219,10 +244,14 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `pgbouncerService`
     - `propagateReleaseConfig`
     - `readPid`
+    - `removeGatewayServicePlist`
     - `resolveListenAddress`
     - `seedReleaseAssetMirror`
     - `spawnGatewayDaemon`
+    - `supportsLoginService`
     - `teardownSelfContainedApp`
+    - `terminateProcess`
+    - `writeGatewayServicePlist`
     - `writeReleaseDatabaseConfig`
 - Cross-plugin:
   - Imported by: `release`

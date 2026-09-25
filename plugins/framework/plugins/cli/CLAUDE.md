@@ -63,7 +63,7 @@ build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 | `regen-generated` / `regen-migrations` | The repo-tree codegen and migration-generation pipelines as standalone commands (used by the normalize pass). |
 | `normalize-generated` | Marker-gated repair of generated artifacts a merge driver auto-resolved. Invoked by the `post-rewrite` hook; rarely run by hand. |
 | `serve-app` | Runtime entrypoint a released bundle's launcher invokes. |
-| `db` / `start` | DB fork/list/drop admin, and the one-time gateway bring-up. |
+| `db` / `start` / `stop` | DB fork/list/drop admin; the one-time gateway bring-up (a launchd service on macOS, so it comes back after a reboot) and its stop. |
 
 The **orphan guard** (`plugins/bootstrap/cli/orphan-guard.ts`) is armed by `bin/index.ts` for
 EVERY invocation, before the install: a CLI process exits once its invoking shell
@@ -457,7 +457,8 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
   - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
   - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
-  - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+  - **`start`** — `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
+  - **`stop`** — `./singularity stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
   - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
   - **`upstream`** — `./singularity upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
 

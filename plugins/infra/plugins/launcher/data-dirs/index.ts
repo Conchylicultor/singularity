@@ -8,7 +8,8 @@ import {
 // `-central-routes-file`, `-sockets-dir`) rather than left to a Go-side default
 // derived from the inherited `SINGULARITY_DIR` — a second, silently-drifting
 // derivation of the same layout is exactly what this registry exists to end.
-// The pid file has no flag: the launcher writes it itself.
+// The pid file too (`-pid-file`): the gateway writes its own pid, since under
+// launchd no launcher sees the spawn.
 
 /**
  * The gateway's log directory: its own rotating slog sink (`gateway.log`), the
@@ -47,8 +48,9 @@ export const gatewayState = defineDataDir({
 });
 
 /**
- * The gateway's pid file (`gateway.pid`), written by the launcher after the
- * spawn and read by every "is it already running?" probe.
+ * The gateway's pid file (`gateway.pid`), written by the gateway itself at boot
+ * (and by a detached spawn right after it) and read by every "is it already
+ * running?" probe.
  *
  * `locks` rather than `state`: the file is not durable app state, it is how one
  * process claims host-singleton ownership of port 9000 for another process to

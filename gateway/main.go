@@ -32,6 +32,7 @@ type Config struct {
 	CentralRoutesFile string
 	DbConfigFile      string
 	DefaultNamespace  string
+	PidFile           string
 
 	// ChildEnv is the environment every child process starts from: the names
 	// declared by -child-env, captured from the gateway's own environment once
@@ -97,6 +98,11 @@ func parseFlags() (Config, string) {
 	// web) sets it to the app's name so a bare-localhost webview reaches the
 	// backend. The launcher passes it as this flag; the flag is the contract.
 	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", "", "fallback namespace for requests with no subdomain")
+	// Where the gateway records its own pid. The gateway writes it itself because
+	// under launchd (./singularity start on macOS) no launcher sees the spawn: a
+	// gateway launchd relaunches at login or after a crash would otherwise leave
+	// the file naming a dead generation. Empty ⇒ no pidfile (a hand-run gateway).
+	flag.StringVar(&cfg.PidFile, "pid-file", "", "file to write this process's pid to at boot")
 	// The environment names every child process may receive (see env.go).
 	// Required and deliberately default-less: the declaration lives in
 	// plugins/infra/plugins/launcher/core (runtimeEnvNames), and a default here
@@ -148,6 +154,16 @@ func fatal(stderrMsg string, logMsg string, err error) {
 	os.Exit(1)
 }
 
+// writePidFile records this process's pid, creating the parent directory. It is
+// deliberately never removed on exit: every reader already checks the pid for
+// liveness, and a missing file is how a preview's reaper tells "still booting".
+func writePidFile(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0o644)
+}
+
 func main() {
 	cfg, childEnvFlag := parseFlags()
 	setupLogging(cfg)
@@ -167,6 +183,13 @@ func main() {
 	slog.Info("child environment", "forwarded", childEnv.Names())
 	if len(dropped) > 0 {
 		slog.Warn("child environment: not forwarding undeclared variables from the gateway's own environment", "dropped", dropped)
+	}
+
+	if cfg.PidFile != "" {
+		if err := writePidFile(cfg.PidFile); err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: write pid file %s: %v", cfg.PidFile, err),
+				"write pid file failed", err)
+		}
 	}
 
 	if err := os.MkdirAll(cfg.SocketsDir, 0o755); err != nil {

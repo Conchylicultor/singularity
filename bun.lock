@@ -2680,6 +2680,10 @@
       "name": "@singularity/plugin-framework-cli-start",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/stop": {
+      "name": "@singularity/plugin-framework-cli-stop",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/test": {
       "name": "@singularity/plugin-framework-cli-test",
       "version": "0.0.1",
@@ -7188,6 +7192,8 @@
     "@singularity/plugin-framework-cli-serve-app": ["@singularity/plugin-framework-cli-serve-app@workspace:plugins/framework/plugins/cli/plugins/serve-app"],
 
     "@singularity/plugin-framework-cli-start": ["@singularity/plugin-framework-cli-start@workspace:plugins/framework/plugins/cli/plugins/start"],
+
+    "@singularity/plugin-framework-cli-stop": ["@singularity/plugin-framework-cli-stop@workspace:plugins/framework/plugins/cli/plugins/stop"],
 
     "@singularity/plugin-framework-cli-test": ["@singularity/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
 

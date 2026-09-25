@@ -2,18 +2,20 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
  * The one command that deliberately leaves something running after it exits —
- * the gateway daemon, spawned detached.
+ * the gateway daemon: a launchd service on macOS (so it survives a reboot),
+ * spawned detached elsewhere.
  *
  * It is NOT `detachable`, though: what outlives the shell is the daemon, not
- * this process. `start` itself only builds the gateway, spawns it, and waits for
- * it to answer, so the orphan guard killing it when its invoking shell dies is
- * exactly right — an orphaned readiness wait has nobody left to report to.
+ * this process. `start` itself only builds the gateway, hands it to launchd (or
+ * spawns it), and waits for it to answer, so the orphan guard killing it when
+ * its invoking shell dies is exactly right — an orphaned readiness wait has
+ * nobody left to report to.
  *
  * A system-level, one-time operation: never part of the normal agent workflow.
  */
 export default defineCliCommand<[], { force?: boolean; logLevel: string }>({
   name: "start",
-  description: "Build and start the gateway daemon",
+  description: "Build the gateway, register it to start at login, and start it",
   options: [
     { flags: "--force", description: "Restart even if already running" },
     {

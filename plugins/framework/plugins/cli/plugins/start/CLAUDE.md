@@ -1,30 +1,71 @@
 # start
 
-`./singularity start` — build and start the gateway daemon.
+`./singularity start` — build the gateway and make it the machine's running,
+self-restarting gateway daemon.
 
-A system-level, one-time host operation. It is **not** part of the agent
-workflow: agents run `./singularity build`, never this. Starting a second
-gateway generation over a live one is how backends get orphaned, which is why
-`--force` first SIGTERMs the running daemon and then polls until its pid is
-actually gone (bounded to the gateway's own 15s shutdown budget) instead of
-sleeping a fixed interval and hoping.
+A system-level host operation, run once at install. It is **not** part of the
+agent workflow: agents run `./singularity build`, never this (nor `stop`).
+
+## macOS: a launchd service
+
+The gateway is a per-user LaunchAgent, `dev.singularity.gateway`
+(`~/Library/LaunchAgents/dev.singularity.gateway.plist`, rendered by
+`infra/launcher`'s `login-service.ts`). launchd starts it at every login —
+which is what brings the app back after a reboot; before this the first reboot
+of a fresh install looked exactly like the install had broken — and relaunches
+it when it exits non-zero. Everything else follows from the gateway: its
+supervisor brings Postgres / PgBouncer back up, and backends spawn on demand.
+
+A LaunchAgent (login) rather than a boot-time LaunchDaemon because the secrets
+master key is in the login keychain, locked until the user logs in.
+
+The plist runs the compiled binary directly, with the argv and declared
+environment of `gatewayLaunchSpec` — the same spec a detached spawn uses, so
+the two launch paths cannot drift. Consequences worth knowing:
+
+- **The environment is baked in** when `start` writes the plist. A change to the
+  declared runtime environment (or to the PATH rule) reaches the gateway only
+  on the next `start --force`.
+- **Reloading is `bootout` + `bootstrap`, not `kickstart`**: launchd reads a
+  plist only when it is loaded, so a rewritten job takes effect only through a
+  reload. `start --force` does exactly that, and waits for the old process to be
+  gone first. launchd never runs two instances of a label, so there is no
+  overlapping-generation window (the routine trigger for orphaned backends).
+- **The gateway writes its own pidfile** (`-pid-file`): no launcher sees a
+  launchd relaunch, and `readPid()` has readers.
+- **A gateway started before this existed** (detached, pidfile only) is left
+  running by a plain `start`, which only registers the plist so the next login
+  picks it up; `start --force` stops it and hands over to launchd now.
+- Stopping is `./singularity stop` — a `kill` of a crashing gateway is followed
+  by a relaunch. `stop --disable` also removes the plist.
+- `launchctl bootstrap gui/<uid>` needs a GUI login session for the user; on a
+  Mac nobody is logged into (bare SSH) it fails, loudly, with launchctl's error.
+
+## Other hosts: a detached spawn
+
+Without launchd the gateway is spawned detached, exactly as before, and does
+not survive a reboot — `start` says so. `--force` first SIGTERMs the running
+daemon and waits until its pid is actually gone.
+
+## Both
 
 It always rebuilds the gateway binary — this is the only path that compiles the
 Go gateway, so a source change has to take effect here. The skip-if-exists fast
 path belongs to the release launcher, which ships a vendored prebuilt binary and
 assumes no Go toolchain on the host.
 
-The daemon is spawned detached and deliberately outlives this process; the
-command then waits for the gateway to actually answer before printing success,
-because a gateway exits when a managed service fails to start and an
-unconditional "started" line left the operator to discover that via whatever
-broke next.
+It waits for the gateway to actually answer before printing success, because a
+gateway exits when a managed service fails to start and an unconditional
+"started" line left the operator to discover that via whatever broke next.
+
+Design: [`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../../../research/2026-09-25-global-gateway-survives-reboot.md).
 
 ## Why it is not `detachable`
 
 `detachable: true` disarms the orphan guard for commands meant to outlive their
 shell. `start` is not one: what outlives the shell is the *daemon*, already
-spawned detached and unreferenced. This process only builds, spawns, and waits —
+owned by launchd (or spawned detached and unreferenced). This process only builds,
+hands it over, and waits —
 so if the invoking shell dies, killing the readiness wait is the right outcome.
 There is nobody left for it to report to, and the daemon it spawned is unaffected.
 
@@ -32,7 +73,7 @@ There is nobody left for it to report to, and the daemon it spawned is unaffecte
 
 ## Plugin reference
 
-- Description: `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+- Description: `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
 - Cli:
   - Uses: `framework/cli/doctor.assertPrerequisites`
 

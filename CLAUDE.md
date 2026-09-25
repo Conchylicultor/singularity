@@ -129,7 +129,7 @@ This will:
 
 The gateway serves the app automatically at `http://<worktree>.localhost:9000`.
 
-> **NEVER run `./singularity start`** (compiles and daemonizes the gateway) unless the user explicitly asks — this is a one-time system-level operation, not part of the normal agent workflow.
+> **NEVER run `./singularity start` or `./singularity stop`** (compile and register the gateway as the machine's launchd service / stop it) unless the user explicitly asks — these are system-level operations, not part of the normal agent workflow.
 
 ### Check
 

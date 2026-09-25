@@ -414,29 +414,8 @@ export async function buildOrLocateGateway(
   return { gatewayDir, gatewayBin };
 }
 
-/**
- * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
- * file, and return the handle.
- *
- * The gateway starts from the DECLARED runtime environment, not from ours:
- * `pickRuntimeEnv(process.env)` keeps only the names `launcher/core` declares.
- * Whatever else the starting shell carries — an agent's
- * `SINGULARITY_CONVERSATION_ID`, its `TMUX`, its `CLAUDE_*` — stays here instead
- * of reaching every backend on the host. `-child-env` hands the gateway the same
- * list of names, and the gateway forwards only those to the backends and
- * Postgres / PgBouncer it starts.
- *
- * `env` is still set EXPLICITLY, from the LIVE `process.env`. Bun snapshots the
- * real environment at process start, so runtime mutations to `process.env` (the
- * release launcher's `SINGULARITY_DIR`, PG bin-dir and other relocation
- * overrides, set in launch.ts before any import, and the release identity
- * stamped by `bootSelfContainedApp`) would NOT reach an implicitly inherited
- * env. Filtering the live object keeps them, because each is a forwarded name:
- * the gateway re-roots its registry / sockets / cluster dirs under the release
- * dir and hands the rest to the supervised start binaries and the backend. The
- * `-listen <bindHost>:<port>` flag pins the listen address.
- */
-export function spawnGatewayDaemon(opts: {
+/** What a gateway launch needs, whoever performs it (see {@link gatewayLaunchSpec}). */
+export interface GatewayLaunchOptions {
   gatewayDir: string;
   gatewayBin: string;
   port: number;
@@ -456,16 +435,46 @@ export function spawnGatewayDaemon(opts: {
    * requests 404, today's behavior).
    */
   defaultNamespace?: string;
-}): Bun.Subprocess {
+}
+
+/**
+ * How to run the gateway — argv, working dir, environment, and where its raw
+ * stdio goes — as data. The ONE derivation of a gateway launch: the detached
+ * spawn ({@link spawnGatewayDaemon}) and the launchd job `./singularity start`
+ * registers on macOS (`login-service.ts`) are both rendered from it, so the two
+ * ways the gateway gets started cannot drift apart.
+ *
+ * The gateway starts from the DECLARED runtime environment, not from ours:
+ * `pickRuntimeEnv(process.env)` keeps only the names `launcher/core` declares.
+ * Whatever else the starting shell carries — an agent's
+ * `SINGULARITY_CONVERSATION_ID`, its `TMUX`, its `CLAUDE_*` — stays here instead
+ * of reaching every backend on the host. `-child-env` hands the gateway the same
+ * list of names, and the gateway forwards only those to the backends and
+ * Postgres / PgBouncer it starts.
+ *
+ * `env` is computed from the LIVE `process.env`. Bun snapshots the real
+ * environment at process start, so runtime mutations to `process.env` (the
+ * release launcher's `SINGULARITY_DIR`, PG bin-dir and other relocation
+ * overrides, set in launch.ts before any import, and the release identity
+ * stamped by `bootSelfContainedApp`) would NOT reach an implicitly inherited
+ * env. Filtering the live object keeps them, because each is a forwarded name:
+ * the gateway re-roots its registry / sockets / cluster dirs under the release
+ * dir and hands the rest to the supervised start binaries and the backend. The
+ * `-listen <bindHost>:<port>` flag pins the listen address.
+ */
+export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
+  argv: string[];
+  cwd: string;
+  env: Record<string, string>;
+  /** The raw stdout/stderr capture (Go panics, pre-slog crashes). */
+  stdioLog: string;
+  logsDir: string;
+} {
   const logsDir = gatewayLogs.ensure();
   gatewayState.ensure();
   gatewayLocks.ensure();
-  // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
-  // any panic. The gateway writes its own rotating logs under -log-dir.
-  const logFd = openSync(GATEWAY_STDIO_LOG, "w");
-
-  const gw = Bun.spawn(
-    [
+  return {
+    argv: [
       opts.gatewayBin,
       "-listen",
       listenFlag({ host: opts.bindHost ?? null, port: opts.port }),
@@ -492,6 +501,11 @@ export function spawnGatewayDaemon(opts: {
       gatewayState.file(CENTRAL_ROUTES_FILENAME),
       "-db-config",
       DATABASE_CONFIG_PATH,
+      // The gateway records its own pid: under launchd no launcher sees the
+      // spawn, and a generation launchd relaunched would otherwise leave the
+      // file naming a dead one.
+      "-pid-file",
+      pidFile(),
       ...(opts.defaultNamespace
         ? ["-default-namespace", opts.defaultNamespace]
         : []),
@@ -501,28 +515,80 @@ export function spawnGatewayDaemon(opts: {
       "-child-env",
       runtimeEnvNames().join(","),
     ],
-    {
-      cwd: opts.gatewayDir,
-      stdout: logFd,
-      stderr: logFd,
-      stdin: "ignore",
-      // The declared subset of the LIVE `process.env` — never an implicit
-      // inherit (which would miss the release launcher's mutations) and never
-      // the whole thing (which hands the starter's shell to every backend).
-      // See the docstring.
-      env: pickRuntimeEnv(process.env),
-    },
-  );
+    cwd: opts.gatewayDir,
+    // The declared subset of the LIVE `process.env` — never an implicit
+    // inherit (which would miss the release launcher's mutations) and never
+    // the whole thing (which hands the starter's shell to every backend).
+    env: pickRuntimeEnv(process.env),
+    stdioLog: GATEWAY_STDIO_LOG,
+    logsDir,
+  };
+}
+
+/**
+ * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
+ * file, and return the handle. The launch itself is {@link gatewayLaunchSpec}.
+ */
+export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
+  const spec = gatewayLaunchSpec(opts);
+  // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
+  // any panic. The gateway writes its own rotating logs under -log-dir.
+  const logFd = openSync(spec.stdioLog, "w");
+
+  const gw = Bun.spawn(spec.argv, {
+    cwd: spec.cwd,
+    stdout: logFd,
+    stderr: logFd,
+    stdin: "ignore",
+    env: spec.env,
+  });
 
   closeSync(logFd);
+  // Written here too, not only by the gateway's own -pid-file: a gateway that
+  // dies before it gets that far must still leave its (dead) pid behind, or a
+  // preview's reaper — which reads a missing file as "still booting" — would
+  // wait on it forever. The gateway then rewrites the same value.
   writeFileSync(pidFile(), String(gw.pid) + "\n");
-  // Detached by default: `./singularity start` and the preview/desktop bring-up
-  // paths all outlive their launcher. A caller that means to SUPERVISE the
-  // gateway (the release launcher under systemd) calls `.ref()` on the returned
-  // handle and awaits `.exited`, which is why the handle — not just the pid — is
-  // what this returns.
+  // Detached by default: `./singularity start` on a host without launchd and
+  // the preview/desktop bring-up paths all outlive their launcher. A caller
+  // that means to SUPERVISE the gateway (the release launcher under systemd)
+  // calls `.ref()` on the returned handle and awaits `.exited`, which is why
+  // the handle — not just the pid — is what this returns.
   gw.unref();
   return gw;
+}
+
+/**
+ * Wait for a stopped process to be gone, bounded to the gateway's own 15s
+ * shutdown budget plus launchd's margin (the job's ExitTimeOut is 20s). Throws
+ * if it outlives that.
+ *
+ * A stop must be observed, not assumed: a fixed sleep let an old gateway keep
+ * tearing down its backends while the new one booted and ran its orphan
+ * reconcile — overlapping generations, the routine trigger for orphaned
+ * backends.
+ */
+export async function awaitProcessGone(pid: number): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (isRunning(pid) && Date.now() < deadline) {
+    await Bun.sleep(100);
+  }
+  if (isRunning(pid)) {
+    throw new Error(
+      `Process ${pid} is still running 20s after being stopped; refusing to carry on as if it were gone.`,
+    );
+  }
+}
+
+/** SIGTERM a process and {@link awaitProcessGone | wait for it to be gone}. */
+export async function terminateProcess(pid: number): Promise<void> {
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch (err) {
+    // Exited between the caller's liveness check and the signal.
+    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+  }
+  await awaitProcessGone(pid);
 }
 
 // Generous: the gateway does not bind its listener until its supervisor has

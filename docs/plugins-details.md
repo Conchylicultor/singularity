@@ -16953,9 +16953,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
-        - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+        - **`start`** — `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
           - Cli:
             - Uses: `framework/cli/doctor.assertPrerequisites`
+        - **`stop`** — `./singularity stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
             - Uses:
@@ -19569,15 +19570,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.setReleaseIdentity`
           - `infra/paths.worktreesDir`
           - `infra/worktree.writeWorktreeSpec`
-        - Exports (types): `ListenAddress`
+        - Exports (types):
+          - `GatewayLaunchOptions`
+          - `GatewayServiceState`
+          - `ListenAddress`
         - Exports (values):
           - `assertSupportedHost`
           - `awaitGatewayReady`
           - `awaitPgReady`
+          - `awaitProcessGone`
+          - `bootoutGatewayService`
           - `bootSelfContainedApp`
+          - `bootstrapGatewayService`
           - `buildOrLocateGateway`
           - `ensureDatabaseConfig`
+          - `GATEWAY_SERVICE_LABEL`
+          - `gatewayLaunchSpec`
           - `gatewayPidFile`
+          - `gatewayServicePlistPath`
+          - `gatewayServiceState`
           - `hasPgBouncerPackage`
           - `isGatewayListening`
           - `isRunning`
@@ -19587,10 +19598,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pgbouncerService`
           - `propagateReleaseConfig`
           - `readPid`
+          - `removeGatewayServicePlist`
           - `resolveListenAddress`
           - `seedReleaseAssetMirror`
           - `spawnGatewayDaemon`
+          - `supportsLoginService`
           - `teardownSelfContainedApp`
+          - `terminateProcess`
+          - `writeGatewayServicePlist`
           - `writeReleaseDatabaseConfig`
       - Cross-plugin:
         - Imported by: `release`

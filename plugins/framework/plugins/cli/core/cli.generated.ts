@@ -28,6 +28,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/run", id: "framework.cli.run", loader: () => import("@plugins/framework/plugins/cli/plugins/run/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/serve-app", id: "framework.cli.serve-app", loader: () => import("@plugins/framework/plugins/cli/plugins/serve-app/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/start", id: "framework.cli.start", loader: () => import("@plugins/framework/plugins/cli/plugins/start/cli"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/stop", id: "framework.cli.stop", loader: () => import("@plugins/framework/plugins/cli/plugins/stop/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/upstream", id: "framework.cli.upstream", loader: () => import("@plugins/framework/plugins/cli/plugins/upstream/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs/plugins/supervised-job", id: "infra.jobs.supervised-job", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-job/cli"), dependsOn: [] },
