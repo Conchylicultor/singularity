@@ -22,6 +22,9 @@ export default {
       // their root) and likewise suspends DnD while active — default flags for
       // both.
       supportsSort: true,
+      // No flat section of rows to fold: the tree ignores `ViewState.fold`, so
+      // the host applies none and hides the "Fold rows" setting.
+      supportsFold: false,
       loadingVariant: "rows",
       component: TreeView,
     }),

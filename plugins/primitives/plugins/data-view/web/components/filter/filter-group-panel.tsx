@@ -1,14 +1,12 @@
 import type { ReactNode } from "react";
 import { MdAccountTree } from "react-icons/md";
-import {
-  ControlPanel,
-  usePanelStack,
-} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { countRules, findGroup } from "../../internal/filter-tree-ops";
 import { useFilterEditor } from "../../internal/use-filter-editor";
 import { AddFilterRow } from "./add-filter-affordance";
 import { ConjunctionCell } from "./conjunction-cell";
+import { useFilterPanelStack } from "./filter-scope";
 import { FilterRuleRow } from "./filter-rule-row";
 
 /**
@@ -87,7 +85,7 @@ function NestedGroupRow(props: {
 }): ReactNode {
   const { group } = props;
   const editor = useFilterEditor();
-  const { push } = usePanelStack();
+  const { push } = useFilterPanelStack();
   const count = countRules(group);
 
   return (

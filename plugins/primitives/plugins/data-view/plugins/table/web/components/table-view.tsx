@@ -14,6 +14,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   FieldCell,
+  FoldLine,
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
@@ -90,6 +91,8 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      openFolds: props.foldLines?.open,
+      selectedRowId: props.selectedRowId,
     },
   );
 
@@ -274,6 +277,13 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     ungrouped ? (
       <DataTable
         data={sections[0]!.entries.map((e) => e.row)}
+        // The fold line is a full-span row after the body (the table composes
+        // its own section chrome, so it places the line itself).
+        footer={
+          sections[0]!.fold ? (
+            <FoldLine section={sections[0]!} foldLines={props.foldLines} />
+          ) : undefined
+        }
         // Pin the drag source so it stays mounted when the window scrolls past
         // it — otherwise its draggable unregisters mid-gesture and dnd-kit
         // cancels the drop.
@@ -291,6 +301,10 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
             key,
             collapsed,
             rows: section.entries.map((e) => e.row),
+            // Hidden with the group's rows when collapsed, like GroupedSections.
+            footer: section.fold ? (
+              <FoldLine section={section} foldLines={props.foldLines} />
+            ) : undefined,
             header: (
               <SectionHeaderRow
                 // The grouped column's VALUE — spelled as the data spells it,

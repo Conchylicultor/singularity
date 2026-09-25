@@ -34,6 +34,8 @@ export interface DataViewControlsContextValue {
   viewModel: ReadyViewModel;
   /** Whether the active view supports group-by (false → group-by control hides). */
   activeSupportsGroupBy: boolean;
+  /** Whether the active view draws fold lines (false → the fold setting hides). */
+  activeSupportsFold: boolean;
   /** `(typeId) => boolean` read of the `Grouping` slot — does this field type
    *  declare how it buckets? The group-by setting's `isApplicable` is a pure
    *  function and cannot read a slot itself, so the host resolves it once here.
@@ -72,6 +74,7 @@ export function DataViewControlsProvider({
   activeState,
   viewModel,
   activeSupportsGroupBy,
+  activeSupportsFold,
   hasGrouping,
   activeSupportsSort,
   activeSupportsManualOrder,
@@ -87,6 +90,7 @@ export function DataViewControlsProvider({
       activeState,
       viewModel,
       activeSupportsGroupBy,
+      activeSupportsFold,
       hasGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,
@@ -101,6 +105,7 @@ export function DataViewControlsProvider({
       activeState,
       viewModel,
       activeSupportsGroupBy,
+      activeSupportsFold,
       hasGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,

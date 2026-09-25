@@ -17,6 +17,7 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   FieldCell,
+  FoldLine,
   GroupedSections,
   leadingSlot,
   pickLeadingField,
@@ -158,6 +159,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       manualRank: manualOrder?.getRank,
       now: props.now,
       groupOrder: props.groupOrder,
+      openFolds: props.foldLines?.open,
+      selectedRowId: props.selectedRowId,
     },
   );
   const { probeRef, columns } = useIconColumns();
@@ -274,6 +277,9 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     activeId: string | null,
     group: string | null,
   ): ReactNode => {
+    // A section whose tiles are all folded draws no grid — its header and fold
+    // line say everything.
+    if (entries.length === 0) return null;
     if (entries.length <= VIRTUALIZE_THRESHOLD) {
       return (
         <Grid
@@ -326,13 +332,17 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const renderBody = (activeId: string | null): ReactNode =>
     sections.length === 1 && sections[0]!.key === null ? (
-      renderGrid(sections[0]!.entries, activeId, null)
+      <>
+        {renderGrid(sections[0]!.entries, activeId, null)}
+        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
+      </>
     ) : (
       <GroupedSections
         sections={sections}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
         headerStyle={props.groupHeaders}
+        foldLines={props.foldLines}
       >
         {(section) => renderGrid(section.entries, activeId, section.key)}
       </GroupedSections>

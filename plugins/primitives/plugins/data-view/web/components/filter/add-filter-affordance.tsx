@@ -7,6 +7,7 @@ import {
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useFilterEditor } from "../../internal/use-filter-editor";
 import { FieldSearchList } from "./field-search-list";
+import { useFilterPanelStack } from "./filter-scope";
 
 /**
  * The `Add filter` row at the foot of a group's rule list. Clicking it PUSHES the
@@ -19,7 +20,7 @@ import { FieldSearchList } from "./field-search-list";
  * dismissal.
  */
 export function AddFilterRow({ groupId }: { groupId: string }): ReactNode {
-  const { push } = usePanelStack();
+  const { push } = useFilterPanelStack();
   return (
     <ControlPanel.Row
       icon={<MdAdd />}

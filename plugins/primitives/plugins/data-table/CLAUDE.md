@@ -40,6 +40,14 @@ would be clamped into the last track and paint on top of the first. The track is
 reserved when either is present; with only `rowActions` the row is byte-identical
 to before.
 
+## Footer rows
+
+`DataTableProps.footer` (ungrouped) and `DataTableGroup.footer` (per group,
+hidden with the group's rows when `collapsed`) render one caller-owned
+`col-span-full` row after the body — data-view's fold line lives there. A table
+or group with a footer is content, so `emptyLabel` is not shown for it even when
+it has no rows.
+
 ## Windowing
 
 Above `DATA_TABLE_VIRTUALIZE_THRESHOLD` (100) rows the ungrouped body windows

@@ -27619,6 +27619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister` ×39: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
+          - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
           - `DataViewSlots.Control` "Sort" → `SortControlPanel`
           - `DataViewSlots.Control` "View settings" → `SettingsControlPanel`
@@ -27630,6 +27631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleProvider`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/control-panel.PanelStackApi`
           - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
@@ -27694,6 +27696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewControlsContextValue`
           - `DataViewControlSummary`
           - `DataViewDensity`
+          - `DataViewFoldLines`
           - `DataViewId`
           - `DataViewProps`
           - `DataViewRenderProps`
@@ -27724,6 +27727,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterPreset`
           - `FilterRule`
           - `FilterValueInputProps`
+          - `FoldLineProps`
+          - `FoldRule`
           - `GlobalRowOrderContribution`
           - `GlobalRowOrderProps`
           - `GroupBucket`
@@ -27767,6 +27772,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `evaluateNode`
           - `FieldCell`
           - `FilterValueInput`
+          - `FoldLine`
           - `getDataViewDescriptor`
           - `GroupedSections`
           - `IDENTITY_CODEC`
@@ -27784,6 +27790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readFallback`
           - `resolveBodyFields`
           - `rowToneClass`
+          - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
           - `useDataViewSections`
           - `useFieldIdentities`
@@ -27896,6 +27903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateOption`
           - `DataViewAggregateConfig`
           - `DataViewDensity`
+          - `DataViewFoldLines`
           - `DataViewGroupHeaders`
           - `DataViewId`
           - `DataViewProps`
@@ -27921,6 +27929,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterPreset`
           - `FilterRule`
           - `FilterValueInputProps`
+          - `FoldRule`
           - `GroupBucket`
           - `GroupByRule`
           - `GroupingPlanContext`
@@ -27956,6 +27965,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `orderFieldsBySection`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
+          - `UNGROUPED_FOLD_KEY`
       - Plugins:
         - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
           - Web:
@@ -28060,6 +28070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
+              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.leadingSlot`
@@ -28103,6 +28114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
+              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.leadingSlot`
               - `primitives/data-view.ManualOrderConfig`
@@ -28137,6 +28149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSection`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
+              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.leadingSlot`
@@ -28205,6 +28218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldValue`
+              - `primitives/data-view.FoldLine`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.ManualOrderConfig`
               - `primitives/data-view.pickPrimaryField`

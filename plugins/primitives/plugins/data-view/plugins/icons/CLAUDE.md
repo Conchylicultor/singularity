@@ -65,6 +65,7 @@ drag is in flight the lane holding the drag source is kept mounted.
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.FieldCell`
     - `primitives/data-view.FieldDef`
+    - `primitives/data-view.FoldLine`
     - `primitives/data-view.GroupedSections`
     - `primitives/data-view.leadingSlot`
     - `primitives/data-view.ManualOrderConfig`

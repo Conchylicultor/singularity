@@ -65,6 +65,7 @@ function model(activeId: string): ViewModel {
     setVisibleFields: () => {},
     setFilter: () => {},
     setGroupBy: () => {},
+    setFold: () => {},
     setQuery: () => {},
     setExpanded: () => {},
     collapsedSectionsFor: () => new Set<string>(),

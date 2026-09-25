@@ -27,7 +27,10 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const emptyView = { sort: [], filter: null, query: "" };
 
-function pageOf(items: string[], nextCursor: string | null): ServerPage<string> {
+function pageOf(
+  items: string[],
+  nextCursor: string | null,
+): ServerPage<string> {
   return { items, nextCursor, hasMore: nextCursor !== null };
 }
 
@@ -112,9 +115,16 @@ describe("useServerDataSource", () => {
       { wrapper: scopedWrapper },
     );
     await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
-    const keys = client.getQueryCache().getAll().map((q) => q.queryKey);
+    const keys = client
+      .getQueryCache()
+      .getAll()
+      .map((q) => q.queryKey);
     expect(keys).toHaveLength(1);
-    expect(keys[0]!.slice(0, 3)).toEqual(["data-view-server", "test-view", "queue"]);
+    expect(keys[0]!.slice(0, 3)).toEqual([
+      "data-view-server",
+      "test-view",
+      "queue",
+    ]);
     // Trailing segment is the stable-stringified sort/filter/query view state.
     expect(typeof keys[0]![3]).toBe("string");
   });
@@ -132,7 +142,10 @@ describe("useServerDataSource", () => {
       { wrapper: scopedWrapper },
     );
     await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
-    const keys = client.getQueryCache().getAll().map((q) => q.queryKey);
+    const keys = client
+      .getQueryCache()
+      .getAll()
+      .map((q) => q.queryKey);
     expect(keys[0]!.slice(0, 3)).toEqual(["data-view-server", "test-view", ""]);
   });
 
@@ -141,7 +154,11 @@ describe("useServerDataSource", () => {
     const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
     const { result, rerender } = renderHook(
       ({ q }: { q: string }) =>
-        useServerDataSource<string>({ ...emptyView, query: q }, spec, TEST_VIEW),
+        useServerDataSource<string>(
+          { ...emptyView, query: q },
+          spec,
+          TEST_VIEW,
+        ),
       { wrapper, initialProps: { q: "" } },
     );
     await waitFor(() => expect(result.current?.rows.length).toBe(1));
@@ -151,5 +168,26 @@ describe("useServerDataSource", () => {
         expect.objectContaining({ query: "hello", cursor: null }),
       ),
     );
+  });
+  // The DataView host holds paging while the loaded tail is folded (see
+  // `isTailFolded`): the sentinel goes away, and comes back when a fold opens.
+  it("holdPaging withholds the next page (no sentinel) until it lifts", async () => {
+    const fetchPage = vi.fn(async () => pageOf(["a", "old"], "cur-1"));
+    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const { result, rerender } = renderHook(
+      ({ folded }: { folded: boolean }) =>
+        useServerDataSource<string>(emptyView, spec, TEST_VIEW, "", {
+          holdPaging: (rows) => folded && rows.at(-1) === "old",
+        }),
+      { wrapper, initialProps: { folded: true } },
+    );
+    await waitFor(() => expect(result.current?.rows).toEqual(["a", "old"]));
+    // Tail folded ⇒ the handle says there is nothing to fetch, so the footer
+    // renders no sentinel and the observer never fires.
+    expect(result.current?.scroll.hasNextPage).toBe(false);
+
+    // A fold opens ⇒ the hold lifts and the sentinel is back.
+    rerender({ folded: false });
+    expect(result.current?.scroll.hasNextPage).toBe(true);
   });
 });

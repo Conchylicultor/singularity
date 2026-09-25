@@ -14,6 +14,7 @@ import type {
 import { useGroupingRegistry } from "../grouping-slot";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useFlatRows } from "./use-flat-rows";
+import { foldSections, makeFoldKeep } from "./fold-sections";
 
 /** Sentinel bucket key for rows whose group-by value is null/undefined. Holds a
  *  control char so it can never collide with a real stringified field value. */
@@ -291,6 +292,14 @@ export function useDataViewSections<TRow>(
     now: number;
     /** `DataViewRenderProps.groupOrder` — the section reading direction. */
     groupOrder: "asc" | "desc";
+    /**
+     * `DataViewRenderProps.foldLines?.open` — the section keys whose fold line is
+     * open. The fold rule itself is read off `state.fold` (which the host already
+     * cleared while a search is typed); absent rule ⇒ nothing folds.
+     */
+    openFolds?: ReadonlySet<string>;
+    /** `DataViewRenderProps.selectedRowId` — the selected row is never folded. */
+    selectedRowId?: string;
   },
 ): DataViewSection<TRow>[] {
   const manualRank = opts.manualRank;
@@ -309,7 +318,8 @@ export function useDataViewSections<TRow>(
   );
   const rowKey = opts.rowKey;
   const aggregate = opts.aggregate;
-  const { now, groupOrder } = opts;
+  const { now, groupOrder, openFolds, selectedRowId } = opts;
+  const fold = state.fold;
   const resolveGrouping = useGroupingRegistry().resolve;
   // Depend on the rule's two PRIMITIVE fields, never on the rule object:
   // `stateFor` mints a fresh `ViewState` (and thus a fresh `groupBy`) on every
@@ -339,6 +349,20 @@ export function useDataViewSections<TRow>(
     if (manualRank) sections = orderSectionsByRank(sections, manualRank);
     // Collapse aggregate groups within each (already-ordered) section.
     if (aggregate) sections = aggregateSections(sections, aggregate);
+    // Fold LAST, so it counts the entries the user sees (an aggregate's
+    // representative decides) and pulls folded rows from wherever they sort.
+    if (fold) {
+      const key = rowKey ?? ((_row: TRow, i: number) => String(i));
+      sections = foldSections(sections, {
+        isKept: makeFoldKeep(fold, fields, resolveOperatorSet, {
+          selectedRowId,
+          // A member carries no index of its own; keys that depend on the index
+          // cannot identify it, and such a surface has no stable selection anyway.
+          rowKey: (row) => key(row, 0),
+        }),
+        openKeys: openFolds ?? EMPTY_KEYS,
+      });
+    }
     return sections;
   }, [
     flat,
@@ -350,5 +374,11 @@ export function useDataViewSections<TRow>(
     resolveGrouping,
     now,
     groupOrder,
+    fold,
+    openFolds,
+    selectedRowId,
+    resolveOperatorSet,
   ]);
 }
+
+const EMPTY_KEYS: ReadonlySet<string> = new Set();

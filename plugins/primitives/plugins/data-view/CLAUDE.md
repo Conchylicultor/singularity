@@ -655,6 +655,71 @@ The representative is a real `TRow`, so `onRowActivate`, `itemActions`, and
 reseating every member) is the consumer's job. The primitive owns only the visual
 collapse + representative selection + count badge.
 
+## Fold: "… N more" per section (`ViewState.fold`)
+
+A **softer filter**: a filter removes rows, a fold keeps them counted and one
+click away. A view's fold rule is `{ keep: FilterGroup }` (`FoldRule`, core),
+persisted in the view config row beside `filter`/`groupBy` (`readFold` /
+`setFold` in `use-data-view-model.ts`, merge-written, key omitted when cleared or
+empty). Rows NOT matching `keep` are pulled out of their section and replaced by
+one **fold line** at its end — `… N more`, or `Show less` while open. `keep` is
+the ordinary filter language, so every field type's operators, the filter
+editor, `summarizeFilter` and the persistence format are shared with `filter`.
+
+```jsonc
+"view": { "type": "list", "groupBy": "section", "fold": { "keep": {
+  "kind": "group", "id": "keep", "conjunction": "or", "children": [
+    { "kind": "rule", "id": "recent", "fieldId": "updatedAt", "operatorId": "is-within-past", "value": { "amount": 30, "unit": "day" } }
+  ] } } }
+```
+
+The rules, each enforced in exactly one place:
+
+1. **Search suspends folding** — `effectiveFold(state)` (`web/internal/fold-sections.ts`)
+   drops the rule while `query.trim()` is non-empty; a match never hides behind "…".
+2. **The selected row is never folded** — `makeFoldKeep` keeps `selectedRowId`
+   (or an aggregate entry holding it as a member).
+3. **A group whose rows are all folded still renders** — header, then the fold
+   line only. Partition runs before the fold, so the section exists.
+4. **Folded rows are pulled from wherever they sort**; the line always sits at the
+   end, and opening it re-inserts them in sorted order.
+5. **Open state is ephemeral** — in memory in `DataViewBodyInner`, keyed by the
+   active view id; a view switch or reload re-closes every fold. Never config.
+6. **Server-paged sources stop paging behind a folded tail** — while a fold is in
+   effect, none is open and the LAST loaded row is folded (`isTailFolded`), the
+   host passes `holdPaging` to `useServerDataSource`, which feeds it into the
+   scroll observer's own `hasNextPage` gate. It is a gate, not a hidden footer:
+   unmounting the sentinel behind the observer's back would never re-observe it
+   and paging would stall silently. Opening any fold lifts the hold.
+7. **The fold runs last** — after partition, manual order and aggregation
+   (`foldSections` in `useDataViewSections`), so an aggregate's representative
+   decides. `section.count` stays the total; `section.fold = { hidden, open }` is
+   present only when ≥1 entry fails `keep`.
+
+**Every flat view must draw the fold line.** The host hands views
+`DataViewRenderProps.foldLines` (`{ open, setOpen, summary }`, present exactly
+when a fold is in effect). A view passes `foldLines.open` + `selectedRowId` to
+`useDataViewSections`, and renders `<FoldLine section foldLines/>` (web barrel)
+for each section carrying `section.fold`: `GroupedSections` does it for the
+grouped path when handed `foldLines` (inside the collapsible content, so a
+collapsed group hides it too); each view's ungrouped fast path renders it after
+its body (key `UNGROUPED_FOLD_KEY`); the table puts it in `DataTable`'s
+full-span `footer` / `DataTableGroup.footer` row. A view that skips it makes the
+folded rows vanish silently. The **tree** declares `supportsFold: false`: the
+host applies no fold to it and hides the setting.
+
+**The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`):
+the rule in words plus Clear, and the filter builder pushed as a page and pointed
+at `fold.keep` by `FoldFilterScope` — a nested `DataViewControlsProvider`
+overriding only `filter`. Filter presets are off there (they belong to the view's
+filter). Because a pushed page replaces the root's subtree, the builder pushes
+its own sub-pages through `useFilterPanelStack()` (`filter-scope.tsx`), which
+re-enters the current scope component around the page — otherwise a nested
+group opened from the fold editor would edit the view's filter instead.
+
+"Fold line" / "folded rows" is unrelated to the tree's fold-children header
+action (which collapses subtrees).
+
 ## Create affordances (`creators`)
 
 Pass `creators?: CreateOption[]` to `<DataView>` — typed "make a new row" actions,
@@ -1667,6 +1732,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister` ×39: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "running-agents", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
+    - `DataViewSlots.Setting` "data-view.fold" → `FoldControl`
     - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
     - `DataViewSlots.Control` "Sort" → `SortControlPanel`
     - `DataViewSlots.Control` "View settings" → `SettingsControlPanel`
@@ -1678,6 +1744,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/collapsible.CollapsibleProvider`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/control-panel.PanelStackApi`
     - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
@@ -1742,6 +1809,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewControlsContextValue`
     - `DataViewControlSummary`
     - `DataViewDensity`
+    - `DataViewFoldLines`
     - `DataViewId`
     - `DataViewProps`
     - `DataViewRenderProps`
@@ -1772,6 +1840,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterPreset`
     - `FilterRule`
     - `FilterValueInputProps`
+    - `FoldLineProps`
+    - `FoldRule`
     - `GlobalRowOrderContribution`
     - `GlobalRowOrderProps`
     - `GroupBucket`
@@ -1815,6 +1885,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `evaluateNode`
     - `FieldCell`
     - `FilterValueInput`
+    - `FoldLine`
     - `getDataViewDescriptor`
     - `GroupedSections`
     - `IDENTITY_CODEC`
@@ -1832,6 +1903,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `readFallback`
     - `resolveBodyFields`
     - `rowToneClass`
+    - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
     - `useDataViewSections`
     - `useFieldIdentities`
@@ -1944,6 +2016,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `CreateOption`
     - `DataViewAggregateConfig`
     - `DataViewDensity`
+    - `DataViewFoldLines`
     - `DataViewGroupHeaders`
     - `DataViewId`
     - `DataViewProps`
@@ -1969,6 +2042,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterPreset`
     - `FilterRule`
     - `FilterValueInputProps`
+    - `FoldRule`
     - `GroupBucket`
     - `GroupByRule`
     - `GroupingPlanContext`
@@ -2004,6 +2078,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `orderFieldsBySection`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
+    - `UNGROUPED_FOLD_KEY`
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.

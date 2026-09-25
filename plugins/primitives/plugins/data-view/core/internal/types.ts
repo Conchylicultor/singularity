@@ -414,8 +414,50 @@ export interface ViewState {
    * migrates on read to `{ fieldId, groupingId: "value" }` (see `readGroupBy`).
    */
   groupBy?: GroupByRule;
+  /**
+   * The view's fold rule, or absent = nothing folds. Persisted in the
+   * per-instance config row exactly like `filter`/`groupBy` (host-injected,
+   * merge-written). A *softer filter*: rows failing `fold.keep` stay counted and
+   * one click away behind a "… N more" fold line at the end of their section.
+   * The host suspends it while a search query is typed.
+   */
+  fold?: FoldRule;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
+}
+
+/**
+ * A view's fold rule. Rows NOT matching `keep` fold behind a "… N more" fold
+ * line at the end of their section — a softer filter: a filter removes rows, a
+ * fold keeps them counted (`DataViewSection.count` stays the total) and one click
+ * away. `keep` is the ordinary `FilterGroup` language, so every field type's
+ * operators, the filter editor, the summary text and the persistence format are
+ * shared with `ViewState.filter`.
+ */
+export interface FoldRule {
+  keep: FilterGroup;
+}
+
+/**
+ * The fold-line key of the implicit ungrouped section (`key === null`) — the key
+ * `DataViewFoldLines.open` / `setOpen` use for it. Holds a control char so it can
+ * never collide with a real group key.
+ */
+export const UNGROUPED_FOLD_KEY = "\u0000__dataview_ungrouped__";
+
+/**
+ * The fold-line controls the host hands every flat view
+ * (`DataViewRenderProps.foldLines`). Present exactly when the view's fold is in
+ * effect (a fold rule is set and no search is typed).
+ */
+export interface DataViewFoldLines {
+  /** Section keys whose fold line is open (`UNGROUPED_FOLD_KEY` for the
+   *  implicit section). Ephemeral: in-memory, reset on view switch / reload. */
+  open: ReadonlySet<string>;
+  /** Open or close one section's fold line. */
+  setOpen: (sectionKey: string, open: boolean) => void;
+  /** The fold rule in words — the fold line's tooltip. */
+  summary?: string;
 }
 
 /**
@@ -433,9 +475,18 @@ export interface DataViewSection<TRow> {
   key: string | null;
   /** Header label; absent for the implicit (`key === null`) section. */
   label?: ReactNode;
-  /** Member-row count (pre-aggregation). */
+  /** Member-row count (pre-aggregation, pre-fold) — the header's number stays
+   *  the section's TOTAL while some of its rows are folded. */
   count: number;
   entries: DataViewRowEntry<TRow>[];
+  /**
+   * Present only when the view's fold is in effect AND ≥1 entry of this section
+   * fails `FoldRule.keep`. `hidden` counts those entries; `open` says whether the
+   * section's fold line is open. While closed, `entries` holds only the kept
+   * entries; while open, every entry in sorted order. A renderer MUST draw a
+   * `FoldLine` for a section carrying this — otherwise its folded rows vanish.
+   */
+  fold?: { hidden: number; open: boolean };
 }
 
 /**
@@ -652,6 +703,14 @@ export interface DataViewRenderProps<TRow> {
   collapsedSections?: ReadonlySet<string>;
   /** Toggle a group-by section's device-local collapsed state. */
   setSectionCollapsed?: (key: string, collapsed: boolean) => void;
+  /**
+   * The fold-line controls, present exactly when `state.fold` is in effect. A
+   * flat view passes `foldLines.open` to `useDataViewSections` and draws a
+   * `FoldLine` for every section carrying `section.fold` (`GroupedSections` does
+   * it for the grouped path; the ungrouped fast path draws its own). The tree
+   * view ignores folding — a deliberate no-op.
+   */
+  foldLines?: DataViewFoldLines;
   /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
    *  Views NEVER see a loading state — the host renders the skeleton itself and
    *  skips `renderIsolated` while loading, so empty here always means empty. */

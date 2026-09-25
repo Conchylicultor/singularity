@@ -72,6 +72,18 @@ export function useServerDataSource<TRow>(
   storageKey: DataViewId,
   /** Per-source cache scope on a multi-source surface; `""` = the sole source. */
   sourceScope = "",
+  opts: {
+    /**
+     * While this returns true for the loaded rows, the next page is NOT
+     * auto-fetched: the handle reports `hasNextPage: false`, so the footer
+     * renders no sentinel. It feeds the scroll observer's own gate (and so its
+     * rebuild deps) rather than hiding the sentinel from outside — a sentinel
+     * unmounted and remounted behind the observer's back is never re-observed,
+     * and pagination would stall with no error. The DataView host uses it to
+     * stop paging while the loaded tail is folded (see `isTailFolded`).
+     */
+    holdPaging?: (rows: readonly TRow[]) => boolean;
+  } = {},
 ): ServerDataSourceResult<TRow> | null {
   const viewKey = stableStringify({
     sort: view.sort,
@@ -128,9 +140,10 @@ export function useServerDataSource<TRow>(
 
   // Build the scroll handle unconditionally (before the `!spec` early-return) so
   // the hook order stays stable whether or not a server spec is present.
+  const held = opts.holdPaging?.(rows) ?? false;
   const scroll = useInfiniteScroll({
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
-    hasNextPage: hasNextPage ?? false,
+    hasNextPage: (hasNextPage ?? false) && !held,
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage: () => void fetchNextPage(),

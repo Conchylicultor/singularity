@@ -20,7 +20,7 @@ export {
   FilterRuleSchema,
 } from "./internal/filter-schema";
 
-export { IDENTITY_CODEC } from "./internal/types";
+export { IDENTITY_CODEC, UNGROUPED_FOLD_KEY } from "./internal/types";
 
 export { compareValues } from "./internal/grouping";
 
@@ -56,6 +56,8 @@ export type {
   SortPreset,
   FilterPreset,
   ViewState,
+  FoldRule,
+  DataViewFoldLines,
   DataViewSection,
   DataViewRowEntry,
   DataViewAggregateConfig,

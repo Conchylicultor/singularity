@@ -1,5 +1,5 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -10,6 +10,7 @@ import {
   type FieldExtensionsDescriptor,
   type FilterGroup,
   type ManualOrderConfig,
+  type DataViewFoldLines,
   type SortRule,
 } from "../../core";
 import { DataViewSlots } from "../slots";
@@ -24,9 +25,16 @@ import {
   type SortController,
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
+import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
+import {
+  effectiveFold,
+  isTailFolded,
+  makeFoldKeep,
+} from "../internal/fold-sections";
+import { summarizeFilter } from "../internal/summarize-filter";
 import type { DataViewBodyProps } from "../internal/body-types";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { HostedOptions } from "./toolbar/hosted-options";
@@ -170,6 +178,39 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // so the body reads it off the model itself and stays live on state writes.
   const activeState = viewModel.stateFor(activeViewId);
 
+  // The fold in effect: suspended while a search is typed (a match must never
+  // hide behind "…"). Computed from `activeState` BEFORE the server branch below
+  // zeroes `query`, and carried through that branch like `visibleFields`.
+  // A view that draws no fold lines (the tree) gets no fold at all — applying
+  // one would hold its server paging for rows it never set aside.
+  const activeSupportsFold = activeInstance.viewType.supportsFold !== false;
+  const fold = activeSupportsFold ? effectiveFold(activeState) : undefined;
+  // Which sections' fold lines are open. Ephemeral on purpose — in memory, keyed
+  // by the view it was opened in, so switching views or reloading re-closes
+  // every fold (a fold is a standing narrowing; an open one is a glance).
+  const [openFoldState, setOpenFoldState] = useState<{
+    viewId: string;
+    keys: ReadonlySet<string>;
+  }>({ viewId: activeViewId, keys: NO_OPEN_FOLDS });
+  const openFolds =
+    openFoldState.viewId === activeViewId ? openFoldState.keys : NO_OPEN_FOLDS;
+  const setFoldOpen = useCallback(
+    (sectionKey: string, open: boolean) =>
+      setOpenFoldState((prev) => {
+        const next = new Set(
+          prev.viewId === activeViewId ? prev.keys : NO_OPEN_FOLDS,
+        );
+        if (open) next.add(sectionKey);
+        else next.delete(sectionKey);
+        return { viewId: activeViewId, keys: next };
+      }),
+    [activeViewId],
+  );
+
+  // The operator-set resolver, read here (not off the filter controller below)
+  // because the server source's paging hold needs it before that exists.
+  const resolveOperatorSet = useResolveOperatorSet();
+
   // Optional server-delegated data source. Called unconditionally (the hook
   // no-ops and returns `null` when `props.dataSource` is absent — the in-memory
   // path). When present, filter/sort/search/paginate run server-side over the
@@ -180,6 +221,23 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     props.dataSource,
     storageKey,
     sourceScope,
+    {
+      // While the fold is closed everywhere and the LAST loaded row is folded,
+      // stop auto-fetching: the next page would only land behind "…". Opening
+      // any fold lifts the hold (and brings the sentinel back).
+      holdPaging: (loaded) =>
+        isTailFolded(loaded, {
+          fold,
+          openCount: openFolds.size,
+          isKept: fold
+            ? makeFoldKeep(fold, fields, resolveOperatorSet, {
+                selectedRowId,
+                rowKey: (row) => rowKey(row, 0),
+              })
+            : () => true,
+          rowKey,
+        }),
+    },
   );
 
   // Filter controller — the popover builder consumes the full surface (filter,
@@ -290,9 +348,30 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // `...activeState` spread deliberately PRESERVES it so the views still honor
   // Properties on the server-delegated path.
   const effectiveState = server
-    ? { ...activeState, sort: [], filter: null, query: "" }
-    : activeState;
+    ? { ...activeState, sort: [], filter: null, query: "", fold }
+    : { ...activeState, fold };
   const effectiveLoading = server ? server.loading : loading;
+
+  // The fold line's controls, handed to every view — present exactly when a fold
+  // is in effect, so a view never draws a line for a rule that is suspended.
+  const foldSummary = fold
+    ? summarizeFilter(
+        fold.keep,
+        fields as FieldDef<unknown>[],
+        resolveOperatorSet,
+      )
+    : null;
+  const foldLines: DataViewFoldLines | undefined = fold
+    ? {
+        open: openFolds,
+        setOpen: setFoldOpen,
+        // The same words the filter control's tooltip uses for a filter tree:
+        // "Folding all but: Updated is within past 30 days +1".
+        summary: foldSummary
+          ? `Folding all but: ${foldSummary.label}${foldSummary.more ? ` +${foldSummary.more}` : ""}`
+          : undefined,
+      }
+    : undefined;
 
   // Fold the global `RowOrder` slot around the whole render. The children-callback
   // is a plain function call (invoked in the fold's base case), NOT a component —
@@ -373,6 +452,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),
+          foldLines,
           emptyState,
           itemActions:
             itemActions as DataViewRenderProps<unknown>["itemActions"],
@@ -400,6 +480,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           activeState,
           viewModel,
           activeSupportsGroupBy,
+          activeSupportsFold,
           hasGrouping,
           activeSupportsSort,
           activeSupportsManualOrder,
@@ -504,3 +585,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     </CollectRowOrder>
   );
 }
+
+/** The shared "no fold open" set — one identity, so an idle view's `openFolds`
+ *  never changes between renders. */
+const NO_OPEN_FOLDS: ReadonlySet<string> = new Set();

@@ -8,7 +8,13 @@ import type {
   ViewSourceEntry,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
-import type { FilterGroup, GroupByRule, SortRule, ViewState } from "../../core";
+import type {
+  FilterGroup,
+  FoldRule,
+  GroupByRule,
+  SortRule,
+  ViewState,
+} from "../../core";
 import type { DataViewContribution } from "../slots";
 import { cyclePrimarySort } from "./sort-cycle";
 import { isFilterGroup } from "./filter-shape";
@@ -57,6 +63,9 @@ export interface ReadyViewModel {
   setFilter: (id: string, filter: FilterGroup | null) => void;
   /** Set (or clear with `null`) THIS view's group-by rule (field + grouping). */
   setGroupBy: (id: string, rule: GroupByRule | null) => void;
+  /** Set (or clear with `null`) THIS view's fold rule. An empty `keep` group
+   *  clears it too — a rule that keeps everything folds nothing. */
+  setFold: (id: string, fold: FoldRule | null) => void;
   setQuery: (id: string, q: string) => void;
   /** Apply a whole expand/collapse batch to THIS view (one localStorage write). */
   setExpanded: (id: string, changes: readonly ExpandChange[]) => void;
@@ -137,6 +146,19 @@ function readGroupBy(view: VariantValue | undefined): GroupByRule | undefined {
     };
   }
   return undefined;
+}
+
+/**
+ * Read the host-managed fold rule off a row's raw variant value. Only an object
+ * whose `keep` is a filter GROUP is a rule; anything else (absent / null / a
+ * hand-authored bare rule) reads as "nothing folds". The raw object is returned
+ * as-is, so its identity is the config's and stays stable across renders.
+ */
+function readFold(view: VariantValue | undefined): FoldRule | undefined {
+  const raw = view?.fold;
+  if (!raw || typeof raw !== "object") return undefined;
+  const { keep } = raw as Partial<FoldRule>;
+  return keep && isFilterGroup(keep) ? (raw as FoldRule) : undefined;
 }
 
 /**
@@ -258,6 +280,20 @@ export function useDataViewModel(
     [core],
   );
 
+  const setFold = useCallback(
+    (id: string, fold: FoldRule | null) => {
+      // Clearing omits the key rather than persisting `fold: null`, exactly like
+      // an empty filter/groupBy — and an empty `keep` group is "no fold" too.
+      const isEmpty = fold == null || fold.keep.children.length === 0;
+      core.updateView(
+        id,
+        { fold: isEmpty ? undefined : fold } as unknown as VariantValue,
+        { merge: true },
+      );
+    },
+    [core],
+  );
+
   const collapsedSectionsFor = useCallback(
     (id: string): ReadonlySet<string> =>
       new Set(ephemeral.localFor(id).collapsedSections),
@@ -272,6 +308,7 @@ export function useDataViewModel(
         filter: filterFor(id),
         visibleFields: readVisibleFields(core.viewFor(id)),
         groupBy: readGroupBy(core.viewFor(id)),
+        fold: readFold(core.viewFor(id)),
         query: local.query,
         expanded: local.expanded,
       };
@@ -304,6 +341,7 @@ export function useDataViewModel(
       setVisibleFields,
       setFilter,
       setGroupBy,
+      setFold,
       setQuery: ephemeral.setQuery,
       setExpanded: ephemeral.setExpanded,
       collapsedSectionsFor,
@@ -318,6 +356,7 @@ export function useDataViewModel(
       setVisibleFields,
       setFilter,
       setGroupBy,
+      setFold,
       collapsedSectionsFor,
       ephemeral,
       actions,

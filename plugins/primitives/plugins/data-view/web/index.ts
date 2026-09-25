@@ -5,6 +5,7 @@ import { isGroupableField } from "./internal/use-data-view-sections";
 import { DataViewSlots } from "./slots";
 import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
+import { FoldControl } from "./components/settings/fold-control";
 import { FilterControlPanel } from "./components/filter/filter-control-panel";
 import { SortControlPanel } from "./components/sort/sort-control-panel";
 import { SettingsControlPanel } from "./components/settings/settings-control-panel";
@@ -25,6 +26,7 @@ export {
   defineDataView,
   DATA_VIEW_HEADER_OFFSET_VAR,
   IDENTITY_CODEC,
+  UNGROUPED_FOLD_KEY,
 } from "../core";
 export type { DataViewId } from "../core";
 export type {
@@ -80,6 +82,8 @@ export {
 } from "./internal/identity-grouping";
 export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
+export { FoldLine } from "./components/fold-line";
+export type { FoldLineProps } from "./components/fold-line";
 export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
@@ -123,6 +127,8 @@ export type {
   SortPreset,
   FilterPreset,
   ViewState,
+  FoldRule,
+  DataViewFoldLines,
   DataViewSection,
   DataViewRowEntry,
   DataViewAggregateConfig,
@@ -177,6 +183,17 @@ export default {
         ctx.activeSupportsGroupBy &&
         ctx.fields.some((f) => isGroupableField(f, ctx.hasGrouping)),
       component: GroupByControl,
+    }),
+    // Fold rows: rows not matching a filter rule fold behind "… N more" at the
+    // end of their section. Needs a filterable field to write a rule over, and a
+    // view that draws fold lines (not the tree).
+    DataViewSlots.Setting({
+      id: "data-view.fold",
+      scope: "view",
+      order: 2,
+      isApplicable: (ctx) =>
+        ctx.activeSupportsFold && ctx.filter.filterableFields.length > 0,
+      component: FoldControl,
     }),
     // The three built-in toolbar controls. The toolbar names none of them: it
     // reads this slot, asks each `isApplicable`, and builds one identical trigger

@@ -3,7 +3,10 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ConvStatusDot } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { FieldDef, FieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  FieldDef,
+  FieldValue,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { CONVERSATION_FIELDS } from "../../core";
 
@@ -24,6 +27,8 @@ function fieldValue(c: Conversation, id: string): FieldValue {
       return c.runtime;
     case "createdAt":
       return c.createdAt;
+    case "updatedAt":
+      return c.updatedAt;
     case "endedAt":
       return c.endedAt;
     case "worktreePath":
@@ -44,7 +49,10 @@ function StatusCell({ conv }: { conv: Conversation }): ReactElement {
   );
 }
 
-function cellFor(id: string, type: string): ((c: Conversation) => ReactNode) | undefined {
+function cellFor(
+  id: string,
+  type: string,
+): ((c: Conversation) => ReactNode) | undefined {
   if (type === "date") {
     return (c: Conversation) => {
       const v = fieldValue(c, id);
@@ -57,13 +65,14 @@ function cellFor(id: string, type: string): ((c: Conversation) => ReactNode) | u
 
 // The web `FieldDef[]`, derived from the shared CONVERSATION_FIELDS vocabulary so
 // it can never drift from the server's FieldColumnMap.
-export const conversationFieldDefs: FieldDef<Conversation>[] = CONVERSATION_FIELDS.map((spec) => ({
-  id: spec.id,
-  label: spec.label,
-  type: spec.type,
-  primary: spec.primary,
-  sortable: spec.sortable,
-  options: spec.options,
-  value: (c: Conversation) => fieldValue(c, spec.id),
-  cell: cellFor(spec.id, spec.type),
-}));
+export const conversationFieldDefs: FieldDef<Conversation>[] =
+  CONVERSATION_FIELDS.map((spec) => ({
+    id: spec.id,
+    label: spec.label,
+    type: spec.type,
+    primary: spec.primary,
+    sortable: spec.sortable,
+    options: spec.options,
+    value: (c: Conversation) => fieldValue(c, spec.id),
+    cell: cellFor(spec.id, spec.type),
+  }));

@@ -12,6 +12,7 @@ import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import {
   FieldCell,
+  FoldLine,
   GroupedSections,
   leadingSlot,
   pickLeadingField,
@@ -141,6 +142,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      openFolds: props.foldLines?.open,
+      selectedRowId: props.selectedRowId,
     },
   );
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
@@ -324,6 +327,9 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   // Render one section's cells: plain auto-fill grid below the threshold (exact
   // legacy markup), else the lane-aware windowed grid.
   const renderGrid = (cells: GalleryCell[]): ReactNode => {
+    // A section whose cards are all folded draws no grid — its header and fold
+    // line say everything.
+    if (cells.length === 0) return null;
     if (cells.length <= VIRTUALIZE_THRESHOLD) {
       return (
         <Grid
@@ -382,7 +388,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     if (options.showCreateCard && creators?.length === 1) {
       cells.push({ kind: "create" });
     }
-    return renderGrid(cells);
+    return (
+      <>
+        {renderGrid(cells)}
+        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
+      </>
+    );
   }
 
   // Grouped: the shared pinned/stacking group-header chrome (identical to the
@@ -395,6 +406,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       collapsedSections={props.collapsedSections}
       setSectionCollapsed={props.setSectionCollapsed}
       headerStyle={props.groupHeaders}
+      foldLines={props.foldLines}
     >
       {(section) =>
         renderGrid(

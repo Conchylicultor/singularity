@@ -65,6 +65,7 @@ export function DataTable<TRow>({
   columns,
   groups,
   filter,
+  footer,
   rowKey,
   emptyLabel = "No results found",
   sortState: controlledSort,
@@ -97,7 +98,11 @@ export function DataTable<TRow>({
     ? groups.reduce((n, g) => n + g.rows.length, 0)
     : rows.length;
 
-  if (bodyRowCount === 0) {
+  const hasFooter = groups
+    ? groups.some((g) => g.footer != null)
+    : footer != null;
+
+  if (bodyRowCount === 0 && !hasFooter) {
     return (
       <ControlSizeProvider size={controlSize}>
         <Center axis="both" className="h-32">
@@ -212,6 +217,10 @@ export function DataTable<TRow>({
         ) : (
           rows.map((row, i) => renderRow(row, i))
         )}
+        {!groups && footer != null ? (
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
+          <div className="col-span-full">{footer}</div>
+        ) : null}
       </div>
     </ControlSizeProvider>
   );
@@ -505,6 +514,10 @@ function renderGroupedBody<TRow>(
           {group.collapsed
             ? null
             : group.rows.map((row) => renderRow(row, i++))}
+          {!group.collapsed && group.footer != null ? (
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
+            <div className="col-span-full">{group.footer}</div>
+          ) : null}
         </Fragment>
       ))}
     </StickyStack>

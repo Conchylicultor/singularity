@@ -5,7 +5,56 @@
       "id": "queue",
       "name": "Queue",
       "source": "queue",
-      "view": { "type": "list", "groupBy": "section" }
+      "view": {
+        "type": "list",
+        "groupBy": "section",
+        "fold": {
+          "keep": {
+            "kind": "group",
+            "id": "fold-keep",
+            "conjunction": "or",
+            "children": [
+              {
+                "kind": "rule",
+                "id": "recent",
+                "fieldId": "updatedAt",
+                "operatorId": "is-within-past",
+                "value": { "amount": 30, "unit": "day" }
+              },
+              {
+                "kind": "rule",
+                "id": "always",
+                "fieldId": "section",
+                "operatorId": "is-any-of",
+                "value": ["pinned", "disconnected"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "view-92bbab5a-1225-4b01-b081-3ead3383954b",
+      "name": "Models",
+      "source": "history",
+      "view": {
+        "type": "list",
+        "groupBy": "model",
+        "filter": {
+          "kind": "group",
+          "id": "6df26553-daa4-4ed9-b3ac-7e12280891d0",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "5816c8f3-2a26-40d4-9114-27ef1ecd35d9",
+              "fieldId": "status",
+              "operatorId": "is-any-of",
+              "value": ["starting", "working", "waiting"]
+            }
+          ]
+        }
+      }
     },
     {
       "id": "history",
@@ -28,6 +77,24 @@
             "fieldId": "kind",
             "operatorId": "is-none-of",
             "value": ["system"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "preset-8b3316e9-0347-4069-923d-cc752fcc1980",
+      "label": "Active",
+      "group": {
+        "kind": "group",
+        "id": "6df26553-daa4-4ed9-b3ac-7e12280891d0",
+        "conjunction": "and",
+        "children": [
+          {
+            "kind": "rule",
+            "id": "5816c8f3-2a26-40d4-9114-27ef1ecd35d9",
+            "fieldId": "status",
+            "operatorId": "is-any-of",
+            "value": ["starting", "working", "waiting"]
           }
         ]
       }

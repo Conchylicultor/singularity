@@ -13,9 +13,11 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  type DataViewFoldLines,
   type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
+import { FoldLine } from "../components/fold-line";
 
 export interface GroupedSectionsProps {
   /** The grouped sections — every `key` non-null. The ungrouped single implicit
@@ -63,6 +65,13 @@ export interface GroupedSectionsProps {
    * `headerActions` stay in the trailing cluster, hover-revealed as before.
    */
   headerStyle?: DataViewGroupHeaders;
+  /**
+   * The view's fold-line controls (`DataViewRenderProps.foldLines`). A section
+   * carrying `section.fold` ends in a `FoldLine` after its body, inside the
+   * collapsible content — so collapsing the group hides the line too. Every
+   * grouped view gets the line for free by passing this through.
+   */
+  foldLines?: DataViewFoldLines;
   /** This section's body — rendered inside the collapsible content. */
   children: (section: DataViewSection<unknown>) => ReactNode;
 }
@@ -109,6 +118,7 @@ export function GroupedSections({
   setSectionCollapsed,
   headerActions,
   headerStyle = "standard",
+  foldLines,
   children,
 }: GroupedSectionsProps): ReactNode {
   const quiet = headerStyle === "quiet";
@@ -182,7 +192,10 @@ export function GroupedSections({
                   </SectionHeaderRow>
                 )}
               </StickyStackItem>
-              <CollapsibleContent>{children(section)}</CollapsibleContent>
+              <CollapsibleContent>
+                {children(section)}
+                <FoldLine section={section} foldLines={foldLines} />
+              </CollapsibleContent>
             </CollapsibleProvider>
           );
         })}

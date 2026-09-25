@@ -176,6 +176,7 @@ conditional hook.
     - `primitives/data-view.DataViewSection`
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.FieldCell`
+    - `primitives/data-view.FoldLine`
     - `primitives/data-view.GroupedSections`
     - `primitives/data-view.ItemActionsDescriptor`
     - `primitives/data-view.leadingSlot`

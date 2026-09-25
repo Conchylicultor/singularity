@@ -12,6 +12,7 @@ export const COLUMN_MAP: FieldColumnMap = {
   kind: { col: conversations.kind, type: "enum" },
   runtime: { col: conversations.runtime, type: "text" },
   createdAt: { col: conversations.createdAt, type: "date" },
+  updatedAt: { col: conversations.updatedAt, type: "date" },
   endedAt: { col: conversations.endedAt, type: "date", nullable: true },
   worktreePath: { col: conversations.worktreePath, type: "text" },
 };

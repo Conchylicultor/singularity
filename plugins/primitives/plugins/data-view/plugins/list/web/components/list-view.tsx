@@ -11,6 +11,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   FieldCell,
+  FoldLine,
   GroupedSections,
   leadingSlot,
   pickLeadingField,
@@ -154,6 +155,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       aggregate,
       now: props.now,
       groupOrder: props.groupOrder,
+      openFolds: props.foldLines?.open,
+      selectedRowId: props.selectedRowId,
     },
   );
   // Body fields follow the view's Properties (visible-fields) policy; the section
@@ -456,6 +459,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     activeId: string | null,
     group: string | null,
   ): ReactNode => {
+    // A section whose rows are all folded draws no body — its header and fold
+    // line say everything, and an empty padded stack would only add a gap.
+    if (entries.length === 0) return null;
     if (entries.length > VIRTUALIZE_THRESHOLD) {
       return (
         <VirtualRows<DataViewRowEntry<unknown>>
@@ -478,9 +484,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const renderBody = (activeId: string | null): ReactNode =>
     // Ungrouped: the single implicit section renders headerless — byte-for-byte
-    // the legacy markup.
+    // the legacy markup — ending in its fold line when some rows are folded.
     sections.length === 1 && sections[0]!.key === null ? (
-      renderEntries(sections[0]!.entries, activeId, null)
+      <>
+        {renderEntries(sections[0]!.entries, activeId, null)}
+        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
+      </>
     ) : (
       // Grouped: the shared pinned/stacking group-header chrome. GroupedSections
       // follows the ambient rail too, so header and body sit on one rail.
@@ -489,6 +498,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
         headerStyle={props.groupHeaders}
+        foldLines={props.foldLines}
       >
         {(section) => renderEntries(section.entries, activeId, section.key)}
       </GroupedSections>

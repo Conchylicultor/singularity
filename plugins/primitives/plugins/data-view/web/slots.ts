@@ -44,6 +44,11 @@ export interface DataViewContribution extends ViewTypeMeta {
    *  with no meaningful group axis sets false and the host hides the group-by
    *  control for it. Mirrors `supportsSort`. */
   supportsGroupBy?: boolean;
+  /** Whether this view draws fold lines (`ViewState.fold`). Default true — the
+   *  flat views render against `useDataViewSections`, which folds; the tree has
+   *  no flat section of rows to fold and sets false, so the host neither applies
+   *  a fold for it nor offers the "Fold rows" setting. Mirrors `supportsGroupBy`. */
+  supportsFold?: boolean;
   /** Whether this view supports flat manual-order (rank-based drag reorder).
    *  Default **false** (unlike `supportsSort`/`supportsGroupBy`): the flat views
    *  list/table opt IN (`true`); gallery/tree do not. When false the host never

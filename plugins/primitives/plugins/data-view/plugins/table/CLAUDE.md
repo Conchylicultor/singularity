@@ -55,6 +55,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.FieldCell`
     - `primitives/data-view.FieldValue`
+    - `primitives/data-view.FoldLine`
     - `primitives/data-view.ItemActionsDescriptor`
     - `primitives/data-view.ManualOrderConfig`
     - `primitives/data-view.pickPrimaryField`

@@ -62,6 +62,10 @@ export const CONVERSATION_FIELDS: ConversationFieldSpec[] = [
   { id: "kind", label: "Kind", type: "enum", options: kindOptions },
   { id: "runtime", label: "Runtime", type: "text" },
   { id: "createdAt", label: "Created", type: "date", sortable: true },
+  // Last activity. Deliberately NOT sortable: the poller bumps it up to ~1/s and
+  // the History revision tick ignores it, so a server keyset sort on it would go
+  // stale. Filterable (the Queue's default fold keeps rows updated recently).
+  { id: "updatedAt", label: "Updated", type: "date" },
   { id: "endedAt", label: "Ended", type: "date", nullable: true },
   { id: "worktreePath", label: "Worktree", type: "text" },
 ];

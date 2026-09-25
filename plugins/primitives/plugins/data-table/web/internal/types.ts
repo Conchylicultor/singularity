@@ -35,6 +35,12 @@ export interface DataTableGroup<TRow> {
   /** Hide this group's rows (the header still renders, to allow re-expanding). */
   collapsed: boolean;
   rows: readonly TRow[];
+  /**
+   * Optional full-span row after the group's rows (hidden with them when
+   * `collapsed`). Caller-owned content, like `header` — data-view draws its fold
+   * line here. A group with a footer is not empty even when `rows` is.
+   */
+  footer?: ReactNode;
 }
 
 export interface DataTableProps<TRow> {
@@ -47,6 +53,12 @@ export interface DataTableProps<TRow> {
    */
   groups?: DataTableGroup<TRow>[];
   filter?: string;
+  /**
+   * Optional full-span row after the ungrouped body (the grouped twin is
+   * `DataTableGroup.footer`). A table with a footer never shows `emptyLabel`:
+   * the footer is content, and saying "No results" above it would be false.
+   */
+  footer?: ReactNode;
   rowKey: (row: TRow, index: number) => string;
   emptyLabel?: string;
   /**
