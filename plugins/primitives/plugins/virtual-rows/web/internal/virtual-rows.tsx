@@ -38,6 +38,14 @@ export interface VirtualRowsProps<T> {
    * draggable and cancelling the drop. Keep it pinned for the drag's duration.
    */
   keepMounted?: readonly string[];
+  /**
+   * Item key whose wrapper is lifted onto the raised z-layer. Each wrapper is
+   * transformed, so it is its own stacking context and nothing inside it can
+   * paint over a later sibling wrapper; a row dragged across its neighbours
+   * (sortable reorder) needs its wrapper raised instead. Pass the active drag
+   * id while a drag is in flight, nothing otherwise.
+   */
+  raisedKey?: string;
   children: (item: T, index: number) => ReactNode;
 }
 
@@ -179,6 +187,7 @@ export function VirtualRows<T>({
   itemClassName,
   scrollToIndex,
   keepMounted,
+  raisedKey,
   children,
 }: VirtualRowsProps<T>): ReactNode {
   const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
@@ -212,6 +221,7 @@ export function VirtualRows<T>({
           ref={virtualizer.measureElement}
           x={{ start: 0, end: 0 }}
           y={{ start: 0, shift: vi.start - scrollMargin }}
+          layer={vi.key === raisedKey ? "raised" : undefined}
           className={itemClassName}
         >
           {children(items[vi.index]!, vi.index)}

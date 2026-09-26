@@ -6,7 +6,6 @@ import {
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { useRankReorderDragScope } from "./drag-scope";
 
 export interface RankReorderItemControls {
   /**
@@ -31,31 +30,21 @@ export interface RankReorderItemControls {
 }
 
 /**
- * Per-row draggable + before/after droppables for a flat rank-reorder list. The
+ * Per-row draggable + before/after droppables for the tree's indicator-line
+ * reorder (flat views use `useRankSortableItem` instead, whose rows slide). The
  * droppable data shape (`{ zone, targetId }`) and draggable data (`{ id, rank }`)
- * are the shared contract the `RankReorderDndContext` `onDragEnd` reads — the
- * same shape the tree's sibling zones use, so the tree consumes this hook for
- * its before/after zones while keeping its own `child` droppable.
+ * are the contract the `RankReorderDndContext` `onDragEnd` reads; the tree adds
+ * its own `child` droppable alongside these.
  *
  * `rank` may be `null` for a non-orderable row: a caller that must call this
- * hook unconditionally (hooks-rule compliance, e.g. a per-row decoration hook)
- * passes the null rank through but never attaches the returned refs, so the
- * row's draggable/droppables register no DOM node and it participates in no drag.
- *
- * `group` is the row's section key under group-by. When the host declared no
- * cross-group capability (no `RankReorderProvider.onReseat`), a drag scopes
- * itself to its own group and this row's two droppables go `disabled` for the
- * duration — out of collision detection, so `isOver*` stays false and no
- * indicator paints. That is the point: the refusal is visible while the user
- * drags, not a silent nothing-happened at drop time.
+ * hook unconditionally (hooks-rule compliance) passes the null rank through but
+ * never attaches the returned refs, so the row's draggable/droppables register
+ * no DOM node and it participates in no drag.
  */
 export function useRankReorderItem(
   id: string,
   rank: Rank | null,
-  group?: string | null,
 ): RankReorderItemControls {
-  const scope = useRankReorderDragScope();
-  const outOfScope = scope.scoped && scope.activeGroup !== (group ?? null);
   const {
     attributes,
     listeners,
@@ -68,12 +57,10 @@ export function useRankReorderItem(
   const { isOver: isOverBefore, setNodeRef: setBeforeRef } = useDroppable({
     id: `rr-before:${id}`,
     data: { zone: "before" as const, targetId: id },
-    disabled: outOfScope,
   });
   const { isOver: isOverAfter, setNodeRef: setAfterRef } = useDroppable({
     id: `rr-after:${id}`,
     data: { zone: "after" as const, targetId: id },
-    disabled: outOfScope,
   });
 
   const dragSource = useMemo(

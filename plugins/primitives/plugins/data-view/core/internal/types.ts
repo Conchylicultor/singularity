@@ -559,6 +559,12 @@ export interface ManualOrderConfig<TRow> {
    * There is deliberately **no destination group**: the drop neighbour is always
    * in the dragged row's own section, so the group is unchanged by construction.
    * A drop into another section goes to `onReseat` instead.
+   *
+   * Return a promise when the write is in flight and this config's `getRank`
+   * only moves once it lands: the host then holds the row at `dest.rank` until
+   * `getRank` for it changes (or the promise rejects), so it never snaps back.
+   * Return nothing when the new order is already applied (optimistically) or
+   * the drop was a no-op.
    */
   onMove: (
     id: string,

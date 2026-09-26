@@ -3,7 +3,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -33,21 +32,20 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   RankReorderProvider,
-  useRankReorderItem,
+  useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import type { ListViewOptions } from "../../core";
 
 /**
- * Wraps one list row with rank-reorder drag affordances: the whole row is the
- * drag source (Notion-style, no grip), with hover before/after drop indicators.
- * Mirrors the tree's RowChrome drop-indicator markup. Only mounted in
- * manual-order mode, in both the windowed and the plain branch.
+ * Wraps one list row with its sortable drag wiring: the whole row is the drag
+ * source (Notion-style, no grip), follows the pointer while dragged, and slides
+ * out of the way while another row of its section is dragged past it. Only
+ * mounted in manual-order mode, in both the windowed and the plain branch.
  *
- * `group` is the row's section key: while a drag from another section is in
- * flight and the config declared no `onReseat`, the primitive switches this
- * row's drop zones off, so the indicators below simply never paint.
+ * `group` is the row's section key: unless the config declared `onReseat`, a
+ * drag only slides and lands among its own section's rows.
  */
 function ManualOrderRow({
   id,
@@ -60,50 +58,22 @@ function ManualOrderRow({
   group: string | null;
   children: ReactNode;
 }): ReactNode {
-  const {
-    dragSource,
-    isDragging,
-    beforeRef,
-    afterRef,
-    isOverBefore,
-    isOverAfter,
-  } = useRankReorderItem(id, rank, group);
-  // Destructure-and-rename at the top so render never does inline `dragSource.ref`
-  // member access — react-hooks/refs flags member access on the hook output in
-  // render, but not destructuring (mirrors the tree's RowChrome precedent).
-  const {
-    ref: dragRef,
-    attributes: dragAttributes,
-    listeners: dragListeners,
-  } = dragSource;
+  // Destructured so render never reads a member off the hook output
+  // (react-hooks/refs flags member access on it, not destructuring).
+  const { ref, attributes, listeners, style } = useRankSortableItem(
+    id,
+    rank,
+    group,
+  );
   return (
     <div
-      ref={dragRef}
-      {...dragAttributes}
-      {...dragListeners}
-      className={cn("relative", isDragging && "opacity-40")}
+      ref={ref}
+      style={style}
+      data-row-key={id}
+      {...attributes}
+      {...listeners}
     >
       {children}
-      <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
-        {isOverBefore && (
-          <Pin
-            to="top"
-            spanOffset="xs"
-            decorative
-            className="bg-primary h-[2px] rounded-full"
-          />
-        )}
-      </Pin>
-      <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
-        {isOverAfter && (
-          <Pin
-            to="bottom"
-            spanOffset="xs"
-            decorative
-            className="bg-primary h-[2px] rounded-full"
-          />
-        )}
-      </Pin>
     </div>
   );
 }
@@ -424,7 +394,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // One entry's node, shared by both branches. In manual-order mode the row is
   // wrapped in its drag affordances — except when its rank is null, which marks
-  // the row non-orderable: it renders plain, so the `useRankReorderItem` hook
+  // the row non-orderable: it renders plain, so the `useRankSortableItem` hook
   // (inside ManualOrderRow) is never mounted for it. This is an element-type
   // choice, not a conditional hook.
   const renderEntry = (
@@ -446,7 +416,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // plain `.map`. VirtualRows discovers the scroll ancestor itself. Manual order
   // composes with windowing: `activeId` (from the RankReorderProvider render-prop)
   // pins the drag source so it stays mounted when it scrolls out of the window —
-  // it renders at its true measured offset, so it is invisible and harmless.
+  // it renders at its true measured offset, so it is invisible and harmless —
+  // and raises its wrapper so the dragged row paints over the rows it crosses.
   // Both dimensions of the row's height: its text density, and whether the
   // subtitle is a second line. `VirtualRows` measures every mounted row anyway,
   // so this only has to be close enough that the scrollbar doesn't jump — but a
@@ -470,6 +441,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           getKey={(entry) => entry.key}
           itemClassName={cn("rail-follow")}
           keepMounted={activeId ? [activeId] : undefined}
+          raisedKey={activeId ?? undefined}
         >
           {(entry) => renderEntry(entry, group)}
         </VirtualRows>
@@ -510,11 +482,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       </GroupedSections>
     );
 
-  // Manual order: wrap the rendered sections in a single rank-reorder DnD host
-  // covering every section. In-section drags reorder; a drop into ANOTHER
+  // Manual order: wrap the rendered sections in a single sortable rank-reorder
+  // host covering every section. In-section drags reorder; a drop into ANOTHER
   // section is a group write plus a reorder, so it is offered only when the
-  // config supplies `onReseat` — otherwise the primitive scopes the drag to its
-  // own section and the others paint no drop zone.
+  // config supplies `onReseat` — otherwise the primitive limits the drag to its
+  // own section.
   if (manualOrder) {
     // Any windowed section ⇒ rows mount/unmount mid-drag as autoscroll runs, so
     // the shell must re-measure droppables every frame.
@@ -542,22 +514,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 })
             : undefined
         }
-        dragOverlay={(id) => {
-          const entry = sections
-            .flatMap((s) => s.entries)
-            .find((e) => e.key === id);
-          if (!entry) return null;
-          if (!titleField) return id;
-          return (
-            <FieldCell
-              field={titleField}
-              row={entry.row}
-              resolveCell={resolveCell}
-              resolveEditor={resolveEditor}
-              display="inline"
-            />
-          );
-        }}
       >
         {(activeId) => renderBody(activeId)}
       </RankReorderProvider>

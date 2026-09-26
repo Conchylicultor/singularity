@@ -228,10 +228,10 @@ export function DataTable<TRow>({
 
 /**
  * One table row. A component (not an inline closure) so `useRowDecoration` may be
- * called as a hook per row (e.g. `useRankReorderItem` for drag reorder). The
- * decoration adds a drag-source ref, spreads drag props, extra classes, and an
- * in-row overlay (drop indicators). Markup is byte-for-byte the legacy row when
- * no decoration is returned.
+ * called as a hook per row (e.g. `useRankSortableItem` for drag reorder). The
+ * decoration adds a drag-source ref, spreads drag props, extra classes, inline
+ * style (the sortable slide), and an in-row overlay. Markup is byte-for-byte the
+ * legacy row when no decoration is returned.
  */
 function DataTableRow<TRow>({
   row,
@@ -267,6 +267,7 @@ function DataTableRow<TRow>({
   const decorationRef = decoration?.ref;
   const decorationProps = decoration?.props;
   const decorationClassName = decoration?.className;
+  const decorationStyle = decoration?.style;
   const decorationOverlay = decoration?.overlay;
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
@@ -289,6 +290,7 @@ function DataTableRow<TRow>({
         onRowClick && "cursor-pointer",
         decorationClassName,
       )}
+      style={decorationStyle}
       onClick={onRowClick ? () => onRowClick(row) : undefined}
       role={onRowClick ? "button" : undefined}
       tabIndex={onRowClick ? 0 : undefined}

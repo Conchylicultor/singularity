@@ -38,6 +38,7 @@ import {
   FilterError,
   type Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
 import {
@@ -599,11 +600,22 @@ function DataViewBodyInner<TRow>(
                   />
                 ))
               ) : (
-                renderIsolated(
-                  DataViewSlots.View,
-                  activeInstance.viewType as unknown as Contribution,
-                  renderProps,
-                )
+                // Holds a dropped row at its new slot until the producer's
+                // own order carries the move — no snap-back while the write
+                // is in flight, for every producer (see the hook).
+                <PendingMoveOverlay
+                  config={renderProps.manualOrder}
+                  rows={effectiveRows}
+                  rowKey={renderProps.rowKey}
+                >
+                  {(manualOrder) =>
+                    renderIsolated(
+                      DataViewSlots.View,
+                      activeInstance.viewType as unknown as Contribution,
+                      { ...renderProps, manualOrder },
+                    )
+                  }
+                </PendingMoveOverlay>
               )}
             </ControlSizeProvider>
             {/* Server-delegated infinite scroll: the error-gated footer (loading-more

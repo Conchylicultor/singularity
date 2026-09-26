@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SortState } from "./use-data-table";
 
@@ -97,9 +97,9 @@ export interface DataTableProps<TRow> {
   stickyHeaderOffset?: string;
   /**
    * Per-row decoration HOOK, called once per rendered row INSIDE the row
-   * component (so the consumer may call hooks — e.g. `useRankReorderItem` for
-   * drag reorder). Returns a ref + props spread + classes + in-row overlay for
-   * the row element. Composes with windowing: a decorated row is still measured
+   * component (so the consumer may call hooks — e.g. `useRankSortableItem` for
+   * drag reorder). Returns a ref + props spread + classes + style + in-row
+   * overlay for the row element. Composes with windowing: a decorated row is still measured
    * and windowed. Inert when absent. The name must start with `use` (it is
    * invoked as a hook). Stable per mount.
    */
@@ -121,12 +121,15 @@ export interface DataTableProps<TRow> {
 /**
  * Per-row decoration returned by `DataTableProps.useRowDecoration`. Applied to
  * the row element: a callback `ref` (drag source), arbitrary `props` spread
- * (drag attributes + listeners), extra `className`, and an in-row `overlay`
- * (absolutely-positioned drop indicators — the row becomes `relative`).
+ * (drag attributes + listeners), extra `className`, inline `style` (a sortable
+ * row's slide transform — a transform on a subgrid row leaves the column
+ * tracks alone), and an in-row `overlay` (absolutely-positioned content — the
+ * row is `relative`).
  */
 export interface DataTableRowDecoration {
   ref?: (el: HTMLElement | null) => void;
   props?: Record<string, unknown>;
   className?: string;
+  style?: CSSProperties;
   overlay?: ReactNode;
 }

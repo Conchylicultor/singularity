@@ -9,7 +9,6 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
@@ -33,7 +32,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   RankReorderProvider,
-  useRankReorderItem,
+  useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
@@ -107,70 +106,28 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   // Per-row decoration hook (called once per row inside DataTable's row
-  // component, so it may call hooks): the whole row is the rank-reorder drag
-  // source, with hover before/after drop indicators. Defined unconditionally
-  // (recognized as a hook by name); passed to DataTable only in manual mode.
+  // component, so it may call hooks): the whole row is the sortable drag source,
+  // following the pointer while dragged and sliding while another row of its
+  // section passes. Defined unconditionally (recognized as a hook by name);
+  // passed to DataTable only in manual mode.
   function useRowDecoration(
     row: unknown,
     i: number,
   ): DataTableRowDecoration | undefined {
     const id = props.rowKey(row, i);
     const rank = manualOrder!.getRank(row);
-    const {
-      dragSource,
-      isDragging,
-      beforeRef,
-      afterRef,
-      isOverBefore,
-      isOverAfter,
-    } = useRankReorderItem(id, rank, sectionKeyByRowKey.get(id) ?? null);
+    // Destructured so render never reads a member off the hook output
+    // (react-hooks/refs flags member access on it, not destructuring).
+    const { ref, attributes, listeners, style } = useRankSortableItem(
+      id,
+      rank,
+      sectionKeyByRowKey.get(id) ?? null,
+    );
     // A null rank marks the row non-orderable: the hook still runs (hooks rule),
-    // but we return no decoration so its refs attach to nothing — the row is
+    // but we return no decoration so its ref attaches to nothing — the row is
     // neither a drag source nor a drop target.
     if (rank == null) return undefined;
-    // Destructure-and-rename so we never do inline `dragSource.ref` member access
-    // (react-hooks/refs flags member access on the hook output; destructuring is
-    // fine — mirrors the tree's RowChrome precedent).
-    const {
-      ref: dragRef,
-      attributes: dragAttributes,
-      listeners: dragListeners,
-    } = dragSource;
-    return {
-      ref: dragRef,
-      props: { ...dragAttributes, ...dragListeners },
-      className: isDragging ? "opacity-40" : undefined,
-      overlay: (
-        <>
-          <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
-            {isOverBefore && (
-              <Pin
-                to="top"
-                spanOffset="xs"
-                decorative
-                className="bg-primary h-[2px] rounded-full"
-              />
-            )}
-          </Pin>
-          <Pin
-            ref={afterRef}
-            to="bottom"
-            stretch
-            decorative
-            className="h-[6px]"
-          >
-            {isOverAfter && (
-              <Pin
-                to="bottom"
-                spanOffset="xs"
-                decorative
-                className="bg-primary h-[2px] rounded-full"
-              />
-            )}
-          </Pin>
-        </>
-      ),
-    };
+    return { ref, props: { ...attributes, ...listeners }, style };
   }
 
   // The host owns loading→empty precedence (it skips this view while loading),
@@ -327,11 +284,10 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       />
     );
 
-  // Manual order: wrap the table in one rank-reorder DnD host spanning every
-  // section. In-section drags reorder; a drop into ANOTHER section is a group
-  // write plus a reorder, so it is offered only when the config supplies
-  // `onReseat` — otherwise the primitive scopes the drag to its own section and
-  // the others paint no drop zone.
+  // Manual order: wrap the table in one sortable rank-reorder host spanning
+  // every section. In-section drags reorder; a drop into ANOTHER section is a
+  // group write plus a reorder, so it is offered only when the config supplies
+  // `onReseat` — otherwise the primitive limits the drag to its own section.
   if (manualOrder) {
     // Rows mount/unmount mid-drag only when the body windows; the shell then
     // re-measures droppables every frame so a freshly mounted row (autoscrolled
@@ -361,7 +317,6 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
                 })
             : undefined
         }
-        dragOverlay={(id) => manualOrderOverlay(sections, columns, id)}
       >
         {(activeId) => renderTable(activeId)}
       </RankReorderProvider>
@@ -383,16 +338,4 @@ function manualOrderItems(
       return rank != null ? [{ id: entry.key, rank, group: section.key }] : [];
     }),
   );
-}
-
-/** Drag-chip content: the dragged row's first column cell (host wraps it). */
-function manualOrderOverlay(
-  sections: DataViewSection<unknown>[],
-  columns: ColumnDef<unknown>[],
-  id: string,
-): ReactNode {
-  const entry = sections.flatMap((s) => s.entries).find((e) => e.key === id);
-  const col = columns[0];
-  if (!entry || !col?.cell) return entry ? id : null;
-  return col.cell(entry.row);
 }

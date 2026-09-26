@@ -4,7 +4,6 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   Avatar,
   AvatarPresentationProvider,
@@ -12,7 +11,7 @@ import {
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   RankReorderProvider,
-  useRankReorderItem,
+  useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -63,10 +62,10 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
 }
 
 /**
- * Wraps one tile with rank-reorder drag affordances. A grid renders one linear
- * rank, so the flat before/after model maps onto the two halves of the tile:
- * the left half drops before it, the right half after it, each painted as a
- * vertical insertion bar on that edge. Only mounted in manual-order mode.
+ * Wraps one tile with its sortable drag wiring: the tile follows the pointer
+ * while dragged and the others of its section reflow around it (the grid
+ * strategy moves each tile to the slot it will take). Only mounted in
+ * manual-order mode.
  */
 function ManualOrderTile({
   id,
@@ -79,49 +78,16 @@ function ManualOrderTile({
   group: string | null;
   children: ReactNode;
 }): ReactNode {
-  const {
-    dragSource,
-    isDragging,
-    beforeRef,
-    afterRef,
-    isOverBefore,
-    isOverAfter,
-  } = useRankReorderItem(id, rank, group);
   // Destructured so render never reads a member off the hook output
   // (react-hooks/refs), mirroring the list view.
-  const {
-    ref: dragRef,
-    attributes: dragAttributes,
-    listeners: dragListeners,
-  } = dragSource;
+  const { ref, attributes, listeners, style } = useRankSortableItem(
+    id,
+    rank,
+    group,
+  );
   return (
-    <div
-      ref={dragRef}
-      {...dragAttributes}
-      {...dragListeners}
-      className={cn("relative", isDragging && "opacity-40")}
-    >
+    <div ref={ref} style={style} {...attributes} {...listeners}>
       {children}
-      <Pin ref={beforeRef} to="left" stretch decorative className="w-1/2">
-        {isOverBefore && (
-          <Pin
-            to="left"
-            spanOffset="sm"
-            decorative
-            className="w-[2px] rounded-full bg-primary"
-          />
-        )}
-      </Pin>
-      <Pin ref={afterRef} to="right" stretch decorative className="w-1/2">
-        {isOverAfter && (
-          <Pin
-            to="right"
-            spanOffset="sm"
-            decorative
-            className="w-[2px] rounded-full bg-primary"
-          />
-        )}
-      </Pin>
     </div>
   );
 }
@@ -295,7 +261,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     const laneKey = (lane: DataViewRowEntry<unknown>[]) =>
       lane.map((e) => e.key).join("|");
     // Pin the lane holding the drag source, so scrolling it out of the window
-    // does not unmount its draggable and cancel the drop.
+    // does not unmount its draggable and cancel the drop — and raise it, so the
+    // dragged tile paints over the lanes it crosses.
     const activeLane = activeId
       ? lanes.find((lane) => lane.some((e) => e.key === activeId))
       : undefined;
@@ -314,6 +281,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
             estimateSize={152}
             getKey={laneKey}
             keepMounted={activeLane ? [laneKey(activeLane)] : undefined}
+            raisedKey={activeLane ? laneKey(activeLane) : undefined}
           >
             {(lane) => (
               <Grid
@@ -361,6 +329,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   return (
     <RankReorderProvider
       items={manualOrderItems(sections, manualOrder)}
+      layout="grid"
       measuringAlways={anyWindowed}
       onMove={(id, dest) =>
         manualOrder.onMove(id, {
@@ -379,13 +348,6 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
               })
           : undefined
       }
-      dragOverlay={(id) => {
-        const entry = sections
-          .flatMap((s) => s.entries)
-          .find((e) => e.key === id);
-        if (!entry) return null;
-        return titleField ? renderName(entry.row) : id;
-      }}
     >
       {(activeId) => root(activeId)}
     </RankReorderProvider>

@@ -333,6 +333,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `primitives/css/space-ramp`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
+    - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`

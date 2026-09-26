@@ -54,8 +54,7 @@ export function RowOrderContribution({
   );
 
   const getRank = useCallback(
-    (row: unknown): Rank | null =>
-      rankByKey.get(stableRowKey(row, 0)) ?? null,
+    (row: unknown): Rank | null => rankByKey.get(stableRowKey(row, 0)) ?? null,
     [rankByKey, stableRowKey],
   );
 
@@ -86,7 +85,8 @@ export function RowOrderContribution({
         );
       }
       if (writes.length === 0) return; // legitimate no-op (onto itself / adjacent)
-      setRowOrder({ dataViewId: storageKey, viewId, writes });
+      // Returned so a failed write releases the DataView's pending-move overlay.
+      return setRowOrder({ dataViewId: storageKey, viewId, writes });
     },
     [orderedKeys, persisted, setRowOrder, storageKey, viewId],
   );

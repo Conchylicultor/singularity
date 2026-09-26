@@ -2,7 +2,11 @@ import { useCallback, useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { rowOrderResource, setRowOrder, type SetRowOrderBody } from "../../core";
+import {
+  rowOrderResource,
+  setRowOrder,
+  type SetRowOrderBody,
+} from "../../core";
 
 export interface RowOrderState {
   /** `rowKey → Rank`, rank-ascending (the resource's own order). */
@@ -20,7 +24,8 @@ export interface RowOrderState {
 export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
   const result = useResource(rowOrderResource, { dataViewId, viewId });
   return useMemo(() => {
-    if (result.pending) return { persisted: new Map<string, Rank>(), pending: true };
+    if (result.pending)
+      return { persisted: new Map<string, Rank>(), pending: true };
     return {
       persisted: new Map(result.data.map((row) => [row.rowKey, row.rank])),
       pending: false,
@@ -28,8 +33,17 @@ export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
   }, [result]);
 }
 
-/** Upsert a view instance's bounded row-order write set (the moved row + seeds). */
-export function useSetRowOrder(): (args: SetRowOrderBody) => void {
-  const { mutate } = useEndpointMutation(setRowOrder);
-  return useCallback((args) => mutate({ body: args }), [mutate]);
+/**
+ * Upsert a view instance's bounded row-order write set (the moved row + seeds).
+ * Resolves once the write lands and rejects when it fails (after the mutation's
+ * own error toast), so the DataView's pending-move overlay can release the row.
+ */
+export function useSetRowOrder(): (args: SetRowOrderBody) => Promise<void> {
+  const { mutateAsync } = useEndpointMutation(setRowOrder);
+  return useCallback(
+    async (args) => {
+      await mutateAsync({ body: args });
+    },
+    [mutateAsync],
+  );
 }

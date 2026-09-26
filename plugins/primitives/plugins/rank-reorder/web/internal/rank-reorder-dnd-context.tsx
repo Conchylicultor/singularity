@@ -31,13 +31,13 @@ export interface RankReorderDndContextProps {
 }
 
 /**
- * The lifted DnD shell shared by every flat rank-reorder surface and the tree:
- * owns the `DndContext`, the `PointerSensor` (4px activation), `pointerWithin`
- * collision, the active-id lifecycle, the `MeasuringStrategy.Always` toggle for
- * windowed lists, and the `DragOverlay` chip. The drop *resolution* is injected
- * via `onDragEnd` — flat consumers go through `RankReorderProvider` (which
- * computes the rank via `computeFlatReorder`); the tree passes its own
- * `computeDrop`-based handler so it keeps its `child`-zone reparent logic.
+ * The indicator-line DnD shell the tree mounts: owns the `DndContext`, the
+ * `PointerSensor` (4px activation), `pointerWithin` collision, the active-id
+ * lifecycle, the `MeasuringStrategy.Always` toggle for windowed lists, and the
+ * `DragOverlay` chip. Rows stay put and a line marks the drop point; the drop
+ * *resolution* is injected via `onDragEnd` (the tree's `computeDrop`-based
+ * handler, which keeps its `child`-zone reparent logic). Flat surfaces use the
+ * sortable `RankReorderProvider` instead.
  */
 export function RankReorderDndContext({
   onDragEnd,
@@ -70,7 +70,9 @@ export function RankReorderDndContext({
           : undefined
       }
       onDragStart={(event) =>
-        setActiveId((event.active.data.current?.id as string | undefined) ?? null)
+        setActiveId(
+          (event.active.data.current?.id as string | undefined) ?? null,
+        )
       }
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}

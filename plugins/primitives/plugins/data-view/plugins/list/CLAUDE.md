@@ -120,16 +120,16 @@ that it renders as a plain `.map` inside a `<Stack className="rail-follow py-sm"
 threshold is the *only* windowing decision — manual order does not bypass it.
 
 When the host hands down a `manualOrder`, both branches wrap each row in
-`ManualOrderRow` (drag source + before/after drop indicators), and the whole view
+`ManualOrderRow` (a `useRankSortableItem` sortable row: the row itself follows the pointer and its section's rows slide), and the whole view
 is hosted by one `RankReorderProvider` spanning every section. The provider is
 mounted with `measuringAlways` whenever **any** section windows, and its
 render-prop `activeId` is threaded into each section's `VirtualRows` as
-`keepMounted` — so the drag source survives scrolling out of its own window.
+`keepMounted` (and as `raisedKey`, lifting the dragged row's wrapper above its neighbours) — so the drag source survives scrolling out of its own window.
 `VirtualRows` positions rows absolutely at their measured offsets, so a pinned
 off-screen source is invisible and harmless.
 
 A row whose `getRank` is `null` is non-orderable and renders plain, so
-`useRankReorderItem` is never mounted for it — an element-type choice, not a
+`useRankSortableItem` is never mounted for it — an element-type choice, not a
 conditional hook.
 
 ## Options
@@ -164,7 +164,6 @@ conditional hook.
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
-    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -192,7 +191,7 @@ conditional hook.
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/rank-reorder.RankReorderProvider`
-    - `primitives/rank-reorder.useRankReorderItem`
+    - `primitives/rank-reorder.useRankSortableItem`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types): `ListViewOptions`
 - Core:

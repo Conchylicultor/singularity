@@ -17,8 +17,9 @@ export default {
       "**/*.test.tsx",
       // This primitive is the sanctioned wrapper.
       "plugins/primitives/plugins/sortable-list/web/**",
-      // The other drag primitives: flat rank reorder and the tree both drag a
-      // `DragOverlay` chip (so nothing scales) and resolve drops themselves.
+      // The other drag primitives, which resolve drops to ranks themselves:
+      // flat rank reorder (sortable, `CSS.Translate` only) and the tree (a
+      // `DragOverlay` chip, so nothing scales).
       "plugins/primitives/plugins/rank-reorder/web/**",
       "plugins/primitives/plugins/tree/web/**",
       // The page editor's block drag: droppable gaps between blocks plus a

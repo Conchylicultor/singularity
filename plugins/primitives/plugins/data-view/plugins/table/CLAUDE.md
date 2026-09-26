@@ -39,7 +39,6 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/css/pin.Pin`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/text.Text`
     - `primitives/data-table.ColumnDef`
@@ -67,7 +66,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/rank-reorder.RankReorderProvider`
-    - `primitives/rank-reorder.useRankReorderItem`
+    - `primitives/rank-reorder.useRankSortableItem`
   - Exports (types): `TableViewOptions`
 - Core:
   - Exports (types): `TableViewOptions`

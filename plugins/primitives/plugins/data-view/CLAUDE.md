@@ -341,24 +341,34 @@ When a config is active for the displayed view:
 
 - the section pipeline **skips the field sort** and orders each section's entries
   by `getRank` (search/filter still run) — like the tree ignores `ViewState.sort`;
-- rows render with rank-reorder drag affordances via the **`rank-reorder`**
-  primitive (`RankReorderProvider` + `useRankReorderItem`), the same DnD machinery
-  the tree's sibling zones use — one reorder model, not two;
+- rows are sortable via the **`rank-reorder`** primitive (`RankReorderProvider`
+  + `useRankSortableItem`): the dragged row itself follows the pointer
+  (`CSS.Translate`, no floating chip, no drop-indicator lines) and the rows of
+  its section slide out of its way. `icons` passes `layout="grid"`;
 - reordering is **within a section** (`onMove`). A cross-section drop needs the
   group-by field written, which only the consumer can do, so it is a separate
   capability expressed by **handler presence**: with `onReseat` the drop is
   allowed and reported anchor-only (`{ groupKey, targetId, zone }`); without it
-  the other sections' rows disable their drop zones for the duration of the drag,
-  so the refusal is **visible** rather than a drop-time no-op (see
-  `rank-reorder`'s CLAUDE.md);
-- `list` and `table` **window *and* drag**. `rank-reorder`'s shell re-measures
-  droppables every frame (`measuringAlways`), and `virtual-rows` pins the drag
-  source through `keepMounted`, so an in-flight drag survives its source row
-  scrolling out — the composition `primitives/tree` already used.
+  the provider's collision detection only sees the dragged row's own section, so
+  the drag can neither slide nor land elsewhere — the refusal is **visible**
+  rather than a drop-time no-op (see `rank-reorder`'s CLAUDE.md);
+- **no snap-back on drop.** dnd-kit clears the slide transforms the moment the
+  row is released, so `data-view-body` wraps the effective config through
+  `usePendingMoveOverlay` (`web/internal/use-pending-move-overlay.ts`): `onMove`
+  records the destination rank and `getRank` returns it for that row until the
+  underlying `getRank` changes (the producer's optimistic or server order
+  landed), the row disappears, or a returned `onMove` promise rejects. A
+  producer only needs to return its mutation promise from `onMove`;
+- `list`, `icons` and `table` **window *and* drag**. `rank-reorder` re-measures
+  droppables every frame (`measuringAlways`), `virtual-rows` pins the drag
+  source through `keepMounted`, and `raisedKey` lifts the dragged row's
+  windowed wrapper (its own stacking context) over the rows it crosses — so an
+  in-flight drag survives its source row scrolling out.
 
 The table integration uses `DataTable`'s additive `useRowDecoration` per-row hook
-seam (drag source ref + props + in-row drop indicators), composed with the
-windowing measure ref.
+seam (drag source ref + props + the sortable `style`), composed with the
+windowing measure ref. Windowed table rows use spacers, not transforms, so the
+row's own slide transform leaves the subgrid tracks alone.
 
 ### The global `RowOrder` slot (cross-plugin)
 
@@ -1790,7 +1800,7 @@ it):
 
 | View | Threshold | Notes |
 |---|---|---|
-| **list** | 100 entries | Composes with manual-order drag via `keepMounted`. |
+| **list** | 100 entries | Composes with manual-order drag via `keepMounted` + `raisedKey`. |
 | **gallery** | 60 cards | Lane-aware: each windowed row is one measured row of `columns` cards. |
 | **icons** | 120 tiles | Lane-aware like gallery; the lane count is the probe grid's resolved track count. |
 | **tree** | 100 *visible* (expanded) rows | Inside `primitives/tree`'s `TreeList`; below that the recursive render runs byte-for-byte unchanged. Uses `scrollToIndex` for selection reveal. |
@@ -1873,6 +1883,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`

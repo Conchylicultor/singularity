@@ -1,27 +1,37 @@
-import { useCallback, useMemo, type ReactNode } from "react";
-import type { DragEndEvent } from "@dnd-kit/core";
-import { Rank, computeFlatReorder } from "@plugins/primitives/plugins/rank/core";
-import { RankReorderDndContext } from "./rank-reorder-dnd-context";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
-  NO_DRAG_SCOPE,
-  RankReorderDragScopeContext,
-  type RankReorderDragScope,
-} from "./drag-scope";
-
-/** One reorderable item: a stable id, its sort `Rank`, and an optional
- *  section/group key. A drop onto another group's row is a *reseat*, reported
- *  through `onReseat` — and only offered when the host supplies it. */
-export interface RankReorderItem {
-  id: string;
-  rank: Rank;
-  /** Section key; `null`/omitted = the single implicit group. */
-  group?: string | null;
-}
+  DndContext,
+  MeasuringStrategy,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  verticalListSortingStrategy,
+  type SortingStrategy,
+} from "@dnd-kit/sortable";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import {
+  resolveSortableDrop,
+  sortableOrder,
+  type RankReorderItem,
+  type RankSortableLayout,
+} from "./resolve-sortable-drop";
+import { sortableDataGroup } from "./use-rank-sortable-item";
 
 export interface RankReorderProviderProps {
-  /** All draggable items, in any order. The provider groups by `group` and
-   *  orders each group by rank to compute drop destinations. */
+  /** All draggable items. The provider groups them by `group` (groups in the
+   *  order first listed) and orders each group by rank — the display order the
+   *  rows slide through. */
   items: readonly RankReorderItem[];
+  /** One column (`vertical`, the default) or a wrapping grid (`grid`): picks
+   *  how the neighbours slide out of the dragged item's way. */
+  layout?: RankSortableLayout;
   /**
    * Persist a reorder **within one group**. `dest.group` is that group (the drop
    * target's, which equals the dragged item's on this path). `dest.targetId` /
@@ -43,9 +53,10 @@ export interface RankReorderProviderProps {
    * neighbour. Anchor-only: the primitive does not mint a rank in a group whose
    * membership the host is about to change.
    *
-   * Its **presence is the capability**: absent, a drag scopes itself to its own
-   * group (every other group's rows disable their drop zones, so the refusal is
-   * visible during the gesture rather than a silent no-op at drop time).
+   * Its **presence is the capability**: absent, collision detection only
+   * considers the dragged item's own group, so a drag can neither slide nor
+   * land anywhere else — the refusal is visible during the gesture rather than
+   * a silent no-op at drop time.
    */
   onReseat?: (
     id: string,
@@ -55,8 +66,6 @@ export interface RankReorderProviderProps {
       zone: "before" | "after";
     },
   ) => void | Promise<void>;
-  /** Floating drag-chip content for the active id. */
-  dragOverlay?: (id: string) => ReactNode;
   /** Re-measure droppables every frame (windowed lists). */
   measuringAlways?: boolean;
   /** Children. A render-prop receives the active drag id, which a windowed
@@ -66,113 +75,107 @@ export interface RankReorderProviderProps {
 }
 
 /**
- * High-level flat rank-reorder host: wraps `RankReorderDndContext` and resolves
- * each before/after drop to a destination `Rank` via `computeFlatReorder`,
- * scoped to the drop target's group (so manual order composes with group-by
- * sections — a drag within a section reorders inside it). Per-row drag
- * affordances come from `useRankReorderItem`.
+ * High-level flat rank-reorder host, sortable style: the dragged row itself
+ * follows the pointer (no floating chip) and its group's rows slide out of its
+ * way. One `SortableContext` spans every item in display order; per-row wiring
+ * comes from `useRankSortableItem`. A drop resolves to a destination `Rank` via
+ * `resolveSortableDrop` (`computeFlatReorder` within the group), so manual
+ * order composes with group-by sections.
  *
  * Cross-group drops are a **separate capability**: with `onReseat` they route
  * there (a group write plus a reorder is the host's business, not the
- * primitive's); without it the provider publishes a scoped drag through
- * `RankReorderDragScopeContext` and the other groups' rows switch their drop
- * zones off for the duration of the gesture.
+ * primitive's), and nothing slides while the pointer is over another group;
+ * without it collision is limited to the dragged item's own group.
  */
 export function RankReorderProvider({
   items,
+  layout = "vertical",
   onMove,
   onReseat,
-  dragOverlay,
   measuringAlways,
   children,
 }: RankReorderProviderProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const ordered = useMemo(() => sortableOrder(items), [items]);
+  const ids = useMemo(() => ordered.map((i) => i.id), [ordered]);
+  const crossGroup = onReseat != null;
+
+  const collisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      if (crossGroup) return closestCenter(args);
+      const group = sortableDataGroup(args.active.data.current);
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter(
+          (c) => sortableDataGroup(c.data.current) === group,
+        ),
+      });
+    },
+    [crossGroup],
+  );
+
+  // Rows only slide within the dragged item's group: over another group (a
+  // reseat), nothing moves but the dragged row itself.
+  const strategy = useMemo<SortingStrategy>(() => {
+    const base =
+      layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy;
+    if (!crossGroup) return base;
+    const groups = ordered.map((i) => i.group ?? null);
+    return (args) =>
+      groups[args.activeIndex] === groups[args.overIndex] ? base(args) : null;
+  }, [layout, crossGroup, ordered]);
+
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setActiveId(null);
       const { active, over } = event;
       if (!over) return;
-      const draggedId = active.data.current?.id as string | undefined;
-      const zone = over.data.current?.zone as "before" | "after" | undefined;
-      const targetId = over.data.current?.targetId as string | undefined;
-      if (!draggedId || !zone || !targetId) return;
-      if (draggedId === targetId) return;
-
-      const target = items.find((i) => i.id === targetId);
-      const dragged = items.find((i) => i.id === draggedId);
-      const group = target?.group ?? null;
-
-      if (dragged && (dragged.group ?? null) !== group) {
-        // The destination is another group, so the move is a membership write
-        // plus a reorder — nothing the primitive can mint a rank for.
+      const drop = resolveSortableDrop(
+        ordered,
+        String(active.id),
+        String(over.id),
+        { layout, dragged: active.rect.current.translated, over: over.rect },
+      );
+      if (drop.kind === "none") return;
+      if (drop.kind === "reseat") {
         if (!onReseat) {
-          // Unreachable: without `onReseat` the scope context disables every
-          // other group's droppables, so no cross-group `over` can exist. Loud
-          // rather than silent, because reaching it means a consumer passed
-          // grouped `items` but withheld the group from `useRankReorderItem`.
+          // Unreachable: without `onReseat` collision only sees the dragged
+          // item's group. Loud rather than silent, because reaching it means a
+          // consumer passed grouped `items` but withheld the group from
+          // `useRankSortableItem`.
           throw new Error(
-            `rank-reorder: cross-group drop with no onReseat (${draggedId} → group ${String(group)}). Pass each row's group to useRankReorderItem.`,
+            `rank-reorder: cross-group drop with no onReseat (${String(active.id)} → group ${String(drop.group)}). Pass each row's group to useRankSortableItem.`,
           );
         }
-        void onReseat(draggedId, { group, targetId, zone });
+        const { group, targetId, zone } = drop;
+        void onReseat(String(active.id), { group, targetId, zone });
         return;
       }
-
-      // Resolve the rank WITHIN the target's group (in-section ordering).
-      const scope = items.filter((i) => (i.group ?? null) === group);
-      const rank = computeFlatReorder(scope, draggedId, zone, targetId);
-      if (rank === null) return;
-      // No-op guard: the group is unchanged on this path, so an identical rank
-      // means nothing moved.
-      if (dragged && Rank.equals(dragged.rank, rank)) return;
-      void onMove(draggedId, { rank, group, targetId, zone });
+      const { rank, group, targetId, zone } = drop;
+      void onMove(String(active.id), { rank, group, targetId, zone });
     },
-    [items, onMove, onReseat],
+    [ordered, layout, onMove, onReseat],
   );
 
   return (
-    <RankReorderDndContext
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      measuring={
+        measuringAlways
+          ? { droppable: { strategy: MeasuringStrategy.Always } }
+          : undefined
+      }
+      onDragStart={(event) => setActiveId(String(event.active.id))}
       onDragEnd={onDragEnd}
-      dragOverlay={dragOverlay}
-      measuringAlways={measuringAlways}
+      onDragCancel={() => setActiveId(null)}
     >
-      {(activeId) => (
-        <DragScopeHost
-          items={items}
-          activeId={activeId}
-          crossGroup={onReseat != null}
-        >
-          {typeof children === "function" ? children(activeId) : children}
-        </DragScopeHost>
-      )}
-    </RankReorderDndContext>
-  );
-}
-
-/**
- * Publishes the in-flight drag's group so each row can decide whether it is a
- * legal drop target. A separate component because the active id only exists
- * inside the shell's render-prop, and the context value must be memoized.
- */
-function DragScopeHost({
-  items,
-  activeId,
-  crossGroup,
-  children,
-}: {
-  items: readonly RankReorderItem[];
-  activeId: string | null;
-  crossGroup: boolean;
-  children: ReactNode;
-}) {
-  const value = useMemo<RankReorderDragScope>(() => {
-    if (activeId === null || crossGroup) return NO_DRAG_SCOPE;
-    return {
-      activeGroup: items.find((i) => i.id === activeId)?.group ?? null,
-      scoped: true,
-    };
-  }, [items, activeId, crossGroup]);
-  return (
-    <RankReorderDragScopeContext.Provider value={value}>
-      {children}
-    </RankReorderDragScopeContext.Provider>
+      <SortableContext items={ids} strategy={strategy}>
+        {typeof children === "function" ? children(activeId) : children}
+      </SortableContext>
+    </DndContext>
   );
 }

@@ -134,9 +134,6 @@ offsets expressible on the semantic ramp.
     - `page/video`
     - `primitives/app-shell`
     - `primitives/data-view/gallery`
-    - `primitives/data-view/icons`
-    - `primitives/data-view/list`
-    - `primitives/data-view/table`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/icon-picker`
