@@ -57,6 +57,8 @@ export type {
 export { layoutFrames, roomPerFrame } from "./internal/layout";
 export { useWindowSize } from "./internal/use-window-size";
 export type { FrameLayout, Room } from "./internal/layout";
+export { pageHeightOf, sameExtent } from "./internal/page-extent";
+export type { PageExtent } from "./internal/page-extent";
 export { letterOf } from "./internal/frame-name";
 export { CanvasFrameView } from "./components/canvas-frame-view";
 export type { CanvasFrameViewProps } from "./components/canvas-frame-view";

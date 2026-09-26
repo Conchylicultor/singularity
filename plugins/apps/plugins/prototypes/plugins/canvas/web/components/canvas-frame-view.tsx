@@ -21,6 +21,7 @@ import type {
   SourceFrame,
 } from "../internal/canvas-model";
 import type { FrameLayout } from "../internal/layout";
+import type { PageExtent } from "../internal/page-extent";
 import { FrameSource, type FrameResolution } from "../slots";
 import { useFrameSrc } from "../context";
 import { PrototypeFrame } from "./prototype-frame";
@@ -36,9 +37,10 @@ export interface CanvasFrameViewProps {
   /** The frame's letter, published for drivers (`data-canvas-frame`). */
   letter: string;
   wholePage?: boolean;
-  /** This frame's measured page height, when Whole page is on. */
+  /** This document's measured full height, when Whole page is on. */
   pageHeight?: number | null;
-  onPageHeight?: (height: number) => void;
+  /** This frame's extent, when Whole page is on (see `PageExtent`). */
+  onPageExtent?: (extent: PageExtent) => void;
   /**
    * Wrap the screen in chrome that needs what a source frame resolved to (its
    * tag): the canvas's frame header, Present's hover tag. Defaults to the
@@ -71,7 +73,7 @@ function PrototypeFrameView({
   letter,
   wholePage = false,
   pageHeight = null,
-  onPageHeight = ignoreHeight,
+  onPageExtent = ignoreExtent,
   children = justScreen,
 }: CanvasFrameViewProps & { frame: PrototypeFrameModel }): ReactElement {
   const src = useFrameSrc(frame, meta, cacheBust);
@@ -96,7 +98,7 @@ function PrototypeFrameView({
             scale={layout.scale}
             wholePage={wholePage}
             pageHeight={pageHeight}
-            onPageHeight={onPageHeight}
+            onPageExtent={onPageExtent}
           />
         ),
       })}
@@ -225,4 +227,4 @@ function justScreen(screen: ReactNode): ReactNode {
   return screen;
 }
 
-function ignoreHeight(): void {}
+function ignoreExtent(): void {}

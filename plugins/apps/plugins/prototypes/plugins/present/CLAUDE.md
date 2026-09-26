@@ -105,9 +105,12 @@ Exit: closing the tab is how you leave.
     - `apps/prototypes/canvas.layoutFrames`
     - `apps/prototypes/canvas.letterOf`
     - `apps/prototypes/canvas.OptionsPill`
+    - `apps/prototypes/canvas.PageExtent`
+    - `apps/prototypes/canvas.pageHeightOf`
     - `apps/prototypes/canvas.PrototypeDetailProvider`
     - `apps/prototypes/canvas.PrototypeFrame`
     - `apps/prototypes/canvas.PrototypeFrameActions`
+    - `apps/prototypes/canvas.sameExtent`
     - `apps/prototypes/canvas.SizeChip`
     - `apps/prototypes/canvas.useFrameNames`
     - `apps/prototypes/canvas.usePrototypeDetail`

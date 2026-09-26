@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import { usePageHeight } from "../internal/use-page-height";
+import {
+  probePageExtent,
+  publishScreenHeight,
+  type PageExtent,
+} from "../internal/page-extent";
 
 /**
  * A prototype document in a sandboxed iframe, laid out at the canvas's LOGICAL
@@ -17,10 +26,16 @@ import { usePageHeight } from "../internal/use-page-height";
  * predecessor — React never moves the loaded frame's DOM node, which would
  * reload it.
  *
- * With `wholePage`, the frame is as tall as its own document (measured at the
- * logical `height`, see `usePageHeight`, and reported through `onPageHeight` so
- * the canvas can fit every frame to the tallest page); otherwise it is one
- * screen tall and the page scrolls inside it.
+ * With `wholePage`, the document is first probed (`PageProbe`) for whether it
+ * HAS a whole-page height. If it does, the frame is as tall as its own document
+ * (measured at the logical `height`, see `usePageHeight`); if the page sizes
+ * itself to its window, the frame stays one screen tall. Either answer is
+ * reported through `onPageExtent`, so the canvas can fit every frame to the
+ * tallest page, and say when there is none. Otherwise the frame is one screen
+ * tall and the page scrolls inside it.
+ *
+ * Whatever the mode, the document is told the height of one screen
+ * (`SCREEN_HEIGHT_VAR`).
  */
 export function PrototypeFrame({
   src,
@@ -30,7 +45,7 @@ export function PrototypeFrame({
   scale,
   wholePage,
   pageHeight,
-  onPageHeight,
+  onPageExtent,
 }: {
   /** The document's URL, from `useFrameSrc` — never built here. */
   src: string;
@@ -42,7 +57,7 @@ export function PrototypeFrame({
   wholePage: boolean;
   /** This document's measured full height, when Whole page is on. */
   pageHeight: number | null;
-  onPageHeight: (height: number) => void;
+  onPageExtent: (extent: PageExtent) => void;
 }) {
   // The document on screen. `src` differing from it means a new one is loading.
   const [shownSrc, setShownSrc] = useState(src);
@@ -52,8 +67,22 @@ export function PrototypeFrame({
     frame: HTMLIFrameElement;
     doc: Document;
   } | null>(null);
-  usePageHeight(ready, height, wholePage, onPageHeight);
-  const docHeight = wholePage && pageHeight !== null ? pageHeight : height;
+  // The probe's answer, for the document it probed. Whether a page follows
+  // its window is a property of the document, so a new size never re-probes.
+  const [probed, setProbed] = useState<{
+    src: string;
+    extent: PageExtent;
+  } | null>(null);
+  const extent = probed?.src === shownSrc ? probed.extent : null;
+  const hasPage = wholePage && extent?.kind === "page";
+  usePageHeight(ready, height, hasPage, (h) =>
+    onPageExtent({ kind: "page", height: h }),
+  );
+  const docHeight = hasPage && pageHeight !== null ? pageHeight : height;
+
+  useEffect(() => {
+    if (ready) publishScreenHeight(ready.doc, height);
+  }, [ready, height]);
 
   return (
     <div
@@ -107,6 +136,82 @@ export function PrototypeFrame({
           />
         );
       })}
+      {wholePage && extent === null ? (
+        <PageProbe
+          key={shownSrc}
+          src={shownSrc}
+          width={width}
+          height={height}
+          onExtent={(e) => {
+            setProbed({ src: shownSrc, extent: e });
+            onPageExtent(e);
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * A hidden twin of the document on screen, probed once for its extent
+ * (`probePageExtent`), then unmounted. Laid over the frame at opacity 0, never
+ * a hit target, rather than parked off-screen, so the browser keeps rendering
+ * it.
+ */
+function PageProbe({
+  src,
+  width,
+  height,
+  onExtent,
+}: {
+  src: string;
+  width: number;
+  height: number;
+  onExtent: (extent: PageExtent) => void;
+}) {
+  const [loaded, setLoaded] = useState<{
+    frame: HTMLIFrameElement;
+    doc: Document;
+  } | null>(null);
+  const report = useEventCallback(onExtent);
+  // Read once the document has loaded: a later size does not restart the probe.
+  const heightRef = useLatestRef(height);
+
+  useEffect(() => {
+    if (!loaded) return;
+    let cancelled = false;
+    void probePageExtent(
+      loaded.frame,
+      loaded.doc,
+      heightRef.current,
+      () => cancelled,
+    ).then((extent) => {
+      if (extent) report(extent);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, heightRef, report]);
+
+  return (
+    <iframe
+      src={src}
+      title="Whole page probe"
+      sandbox="allow-scripts allow-same-origin"
+      width={width}
+      height={height}
+      aria-hidden
+      tabIndex={-1}
+      onLoad={(e) => {
+        const frame = e.currentTarget;
+        const doc = frame.contentDocument;
+        if (!doc) throw new Error("prototype probe frame is not same-origin");
+        setLoaded({ frame, doc });
+      }}
+      // Its own width and height win over the layer's inset: it lays out at
+      // the logical size, like the frame on screen.
+      className={layerClasses({ decorative: true })}
+      style={{ border: "0", opacity: 0 }}
+    />
   );
 }

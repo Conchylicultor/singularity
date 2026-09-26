@@ -37,6 +37,9 @@ import {
   type CanvasFrame,
   type FrameId,
   type FrameResolution,
+  pageHeightOf,
+  sameExtent,
+  type PageExtent,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 
 /** The Exit button, and which top corner it takes. */
@@ -111,9 +114,11 @@ function PresentedFrame({
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
-  // The shown frame's measured page height, for Whole page. Keyed by frame so
-  // flipping to another frame never fits it to the previous one's page.
-  const [page, setPage] = useState<{ id: FrameId; h: number } | null>(null);
+  // The shown frame's extent, for Whole page. Keyed by frame so flipping to
+  // another frame never fits it to the previous one's page.
+  const [page, setPage] = useState<{ id: FrameId; extent: PageExtent } | null>(
+    null,
+  );
   const frame: CanvasFrame | null =
     canvas.frames.find((f) => f.id === frameId) ?? frameA(canvas.frames);
   if (frame === null) {
@@ -124,7 +129,9 @@ function PresentedFrame({
     );
   }
   const index = canvas.frames.indexOf(frame);
-  const pageHeight = page?.id === frame.id ? page.h : null;
+  const extent = page?.id === frame.id ? page.extent : null;
+  const pageHeight = pageHeightOf(extent);
+  const noWholePage = canvas.wholePage && extent?.kind === "window-sized";
   const layout = layoutFrames({
     room: { w: Math.max(1, room.width), h: Math.max(1, room.height) },
     size: canvas.size,
@@ -143,9 +150,11 @@ function PresentedFrame({
       letter={letterOf(index)}
       wholePage={canvas.wholePage}
       pageHeight={pageHeight}
-      onPageHeight={(h) =>
+      onPageExtent={(next) =>
         setPage((prev) =>
-          prev?.id === frame.id && prev.h === h ? prev : { id: frame.id, h },
+          prev?.id === frame.id && sameExtent(prev.extent, next)
+            ? prev
+            : { id: frame.id, extent: next },
         )
       }
     >
@@ -190,7 +199,7 @@ function PresentedFrame({
             </Pin>
           ) : null}
           <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
-            <SizeChip layout={layout} />
+            <SizeChip layout={layout} noWholePage={noWholePage} />
           </Pin>
         </>
       )}

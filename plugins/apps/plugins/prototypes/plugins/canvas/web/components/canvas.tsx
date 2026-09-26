@@ -30,6 +30,11 @@ import {
   type FrameLayout,
 } from "../internal/layout";
 import { useWindowSize } from "../internal/use-window-size";
+import {
+  pageHeightOf,
+  sameExtent,
+  type PageExtent,
+} from "../internal/page-extent";
 import { frameName, letterOf, type NamedFrame } from "../internal/frame-name";
 import { CanvasFrameView } from "./canvas-frame-view";
 import { FrameHeader, FRAME_HEADER_GAP } from "./frame-header";
@@ -53,14 +58,14 @@ export function Canvas({
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
-  // Each prototype frame's measured page height, for Whole page: the frames
-  // are fitted to the tallest.
-  const [pageHeights, setPageHeights] = useState<ReadonlyMap<FrameId, number>>(
+  // Each prototype frame's extent, for Whole page: the frames are fitted to
+  // the tallest page.
+  const [extents, setExtents] = useState<ReadonlyMap<FrameId, PageExtent>>(
     () => new Map(),
   );
-  const reportHeight = (id: FrameId) => (h: number) =>
-    setPageHeights((prev) =>
-      prev.get(id) === h ? prev : new Map(prev).set(id, h),
+  const reportExtent = (id: FrameId) => (extent: PageExtent) =>
+    setExtents((prev) =>
+      sameExtent(prev.get(id), extent) ? prev : new Map(prev).set(id, extent),
     );
 
   const swipe = canvas.layout === "swipe" && canvas.frames.length === 2;
@@ -70,10 +75,17 @@ export function Canvas({
   );
   const tallest = canvas.wholePage
     ? canvas.frames.reduce<number | null>((max, f) => {
-        const h = pageHeights.get(f.id);
-        return h === undefined ? max : Math.max(max ?? 0, h);
+        const e = extents.get(f.id);
+        return e?.kind === "page" ? Math.max(max ?? 0, e.height) : max;
       }, null)
     : null;
+  // Whole page is unavailable when no prototype frame on the canvas has a
+  // page to show: every one sizes itself to its window.
+  const protoFrames = prototypeFrames(canvas.frames);
+  const noWholePage =
+    canvas.wholePage &&
+    protoFrames.length > 0 &&
+    protoFrames.every((f) => extents.get(f.id)?.kind === "window-sized");
   const layout = layoutFrames({
     room: per,
     size: canvas.size,
@@ -120,8 +132,8 @@ export function Canvas({
                   cacheBust={cacheBust}
                   layout={layout}
                   name={names(frame)}
-                  pageHeight={pageHeights.get(frame.id) ?? null}
-                  onPageHeight={reportHeight(frame.id)}
+                  pageHeight={pageHeightOf(extents.get(frame.id))}
+                  onPageExtent={reportExtent(frame.id)}
                 />
               ))
             )}
@@ -129,7 +141,7 @@ export function Canvas({
         ) : null}
       </Scroll>
       <Pin to="bottom-right" offset="md">
-        <SizeChip layout={layout} />
+        <SizeChip layout={layout} noWholePage={noWholePage} />
       </Pin>
     </div>
   );
@@ -177,7 +189,7 @@ function FrameCard({
   layout,
   name,
   pageHeight,
-  onPageHeight,
+  onPageExtent,
 }: {
   frame: CanvasFrame;
   index: number;
@@ -188,7 +200,7 @@ function FrameCard({
   layout: FrameLayout;
   name: string;
   pageHeight: number | null;
-  onPageHeight: (h: number) => void;
+  onPageExtent: (extent: PageExtent) => void;
 }): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
   const selected = canvas.selected === frame.id;
@@ -212,7 +224,7 @@ function FrameCard({
         letter={letterOf(index)}
         wholePage={canvas.wholePage}
         pageHeight={pageHeight}
-        onPageHeight={onPageHeight}
+        onPageExtent={onPageExtent}
       >
         {(screen, resolution) => (
           <Stack gap="none" style={{ gap: FRAME_HEADER_GAP }}>

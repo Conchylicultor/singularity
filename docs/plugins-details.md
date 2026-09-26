@@ -3722,6 +3722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
@@ -3754,6 +3755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FrameResolution`
               - `FrameSourceMeta`
               - `FrameSourceProps`
+              - `PageExtent`
               - `PicksRead`
               - `PrototypeDetailContextValue`
               - `PrototypeFrame`
@@ -3768,6 +3770,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layoutFrames`
               - `letterOf`
               - `OptionsPill`
+              - `pageHeightOf`
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
               - `prototypeDocumentSrc`
@@ -3775,6 +3778,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeFrames`
               - `PrototypeVersionActions`
               - `roomPerFrame`
+              - `sameExtent`
               - `SizeChip`
               - `useFrameNames`
               - `useFramePicks`
@@ -4056,9 +4060,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas.layoutFrames`
               - `apps/prototypes/canvas.letterOf`
               - `apps/prototypes/canvas.OptionsPill`
+              - `apps/prototypes/canvas.PageExtent`
+              - `apps/prototypes/canvas.pageHeightOf`
               - `apps/prototypes/canvas.PrototypeDetailProvider`
               - `apps/prototypes/canvas.PrototypeFrame`
               - `apps/prototypes/canvas.PrototypeFrameActions`
+              - `apps/prototypes/canvas.sameExtent`
               - `apps/prototypes/canvas.SizeChip`
               - `apps/prototypes/canvas.useFrameNames`
               - `apps/prototypes/canvas.usePrototypeDetail`

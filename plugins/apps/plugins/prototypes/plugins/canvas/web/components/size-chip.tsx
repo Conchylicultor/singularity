@@ -41,11 +41,20 @@ import { useWindowSize } from "../internal/use-window-size";
  *
  * `layout` is what the canvas computed — the logical size and scale the chip
  * reports; it is handed in rather than recomputed so the chip and the frames
- * can never disagree.
+ * can never disagree. `noWholePage` says Whole page is on but no frame has a
+ * page to show — each sizes itself to its window — so the switch reads off,
+ * disabled, with the reason in its label (a disabled row shows no tooltip).
  */
-export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
+export function SizeChip({
+  layout,
+  noWholePage,
+}: {
+  layout: FrameLayout;
+  noWholePage: boolean;
+}): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
-  const { size, zoom, wholePage } = canvas;
+  const { size, zoom } = canvas;
+  const wholePage = canvas.wholePage && !noWholePage;
   const browserWindow = useWindowSize();
   const percent = Math.round(layout.scale * 100);
   const zoomLabel =
@@ -188,11 +197,18 @@ export function SizeChip({ layout }: { layout: FrameLayout }): ReactElement {
           <ControlPanel.Row
             select="switch"
             checked={wholePage}
+            disabled={noWholePage}
             icon={<MdOutlineDescription />}
             hint="Show the entire page content, not just one screen."
             onSelect={() => dispatch({ type: "setWholePage", on: !wholePage })}
           >
             Whole page
+            {noWholePage ? (
+              <span className="text-muted-foreground">
+                {" "}
+                · sized to its window
+              </span>
+            ) : null}
           </ControlPanel.Row>
         </ControlPanel.Section>
       </ControlPanel>

@@ -173,6 +173,21 @@ One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit 
   `use-page-height.ts`), all frames as tall as the tallest, and Fit then fits
   that whole height.
 
+  Not every page HAS a whole height. A page that sizes something from its
+  window in script (a `resize` handler reading `innerHeight`) grows with its
+  frame, without end. So before a frame is fitted to its page, a hidden twin
+  of the document is probed once (`internal/page-extent.ts`): measured at one
+  screen, doubled so its scripts react, then read again at one screen before
+  any script runs. A taller second read means the page follows its window: the
+  frame stays one screen tall, and with no frame left to show whole, the switch
+  reads off, disabled, "sized to its window". CSS `vh` alone never trips it —
+  it re-lays out synchronously.
+
+  Every prototype frame tells its document the height of one screen, as
+  `--prototype-screen-height` on `<html>` (firing `resize` when it changes). A
+  prototype that sizes to that instead of `innerHeight` keeps a whole page; see
+  `prototypes/CLAUDE.md`.
+
 The layout is computed once by the canvas (`layoutFrames`) and handed to the
 chip, so the chip and the frames can never disagree. Layout uses inline styles
 only for this dynamic scaling geometry.
@@ -312,6 +327,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
@@ -344,6 +360,7 @@ navigation, so it starts from nothing remembered.
     - `FrameResolution`
     - `FrameSourceMeta`
     - `FrameSourceProps`
+    - `PageExtent`
     - `PicksRead`
     - `PrototypeDetailContextValue`
     - `PrototypeFrame`
@@ -358,6 +375,7 @@ navigation, so it starts from nothing remembered.
     - `layoutFrames`
     - `letterOf`
     - `OptionsPill`
+    - `pageHeightOf`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
     - `prototypeDocumentSrc`
@@ -365,6 +383,7 @@ navigation, so it starts from nothing remembered.
     - `prototypeFrames`
     - `PrototypeVersionActions`
     - `roomPerFrame`
+    - `sameExtent`
     - `SizeChip`
     - `useFrameNames`
     - `useFramePicks`

@@ -153,6 +153,27 @@ Why: with a `mocks` tag, Compare frames your mock at the widths the reader picks
 queries run. A fixed-width mock gets cropped there while the real screen
 reflows beside it. So a mock of a screen needs breakpoints for those widths.
 
+## Sizing something to the screen
+
+With **Whole page** on, the canvas makes the frame as tall as your page, so
+`100vh` and `window.innerHeight` are the whole page, not one screen. A page
+that sizes itself from them in script grows with its frame, without end — the
+canvas detects that and disables Whole page for it ("sized to its window").
+
+To fill one screen, read the screen height the app gives every frame instead,
+falling back to the window off disk:
+
+```css
+.hero { height: var(--prototype-screen-height, 100vh); }
+```
+
+```js
+const screenHeight = () =>
+  parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue("--prototype-screen-height")) || window.innerHeight;
+window.addEventListener("resize", layout); // fired when it changes, too
+```
+
 ## One request, one prototype
 
 **Only ever create a single prototype.** Run `./singularity prototype new` at
