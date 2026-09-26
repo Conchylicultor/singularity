@@ -2,11 +2,11 @@
 
 Fails if `plugins/framework/plugins/web-sdk/core/web-tiers.generated.ts` drifts
 from the load tiers derived by `codegen/core/eager-tier-gen.ts` (structural rule
-+ watched boot slots + bootCritical descriptors + `dependsOn` closure). That
++ watched boot slots + preloaded descriptors + `dependsOn` closure). That
 generated `DEFERRED_PLUGIN_PATHS` set is what `load-tiers.ts` consumes to split
 the web registry into the eager substrate (loaded before first paint) and
 deferred app content — so a stale manifest silently mis-tiers plugins. The check
-also surfaces the reachability guard (a bootCritical descriptor whose owning
+also surfaces the reachability guard (a preloaded descriptor whose owning
 plugin has no web entry) as a failure with the fix. Fix drift by running
 `./singularity build` and committing the regenerated file.
 

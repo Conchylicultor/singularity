@@ -14,14 +14,14 @@
 // `codegen/core/eager-tier-gen.ts`) is the committed source of truth: a plugin
 // is EAGER iff it is non-app-content / a shell subtree (structural), calls a
 // watched boot slot (Core.Root / Core.Boot / Apps.App / ActionBar.Item), owns a
-// bootCritical resource descriptor, or is pulled in by the transitive dependsOn
+// preloaded resource descriptor, or is pulled in by the transitive dependsOn
 // closure of any of those. Every app is deferrable by default; the historical
 // hand-maintained allowlists (DEFERRABLE_APPS / EAGER_EXCEPTIONS) are gone.
 //
 // Fail-safe direction: the generated artifact is the DEFERRED set, so an unknown
 // path is treated as EAGER — a modeling gap only makes a plugin needlessly eager
 // (slower boot), never wrongly deferred. The `eager-tier-in-sync` check fails on
-// drift, and a bootCritical descriptor whose owner has no web entry fails
+// drift, and a preloaded descriptor whose owner has no web entry fails
 // generation outright (the reachability guard). The rule stays a pure function of
 // `pluginPath` — trivially unit-testable (see load-tiers.test.ts) and leaving the
 // concatenated `webEntries` as the single source of truth (the partition is

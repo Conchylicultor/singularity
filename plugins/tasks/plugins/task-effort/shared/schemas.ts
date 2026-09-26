@@ -30,7 +30,7 @@ export type TaskEffort = z.infer<typeof TaskEffortSchema>;
 // change feed routes a write to a tuple iff the changed ids intersect its set,
 // so setting one task's mode never sweeps the table.
 //
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// NOT preloaded: point resources hydrate post-mount (the recorded decision of
 // the bounded working-set contract).
 //
 // The server half is compiled from the extension handle in

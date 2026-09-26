@@ -16,6 +16,17 @@ export interface ResourceDef {
    * `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
    */
   membership?: ResourceMembership;
+  /**
+   * Where a `serveValue`'s truth lives — `"db"` (change-feed driven) or
+   * `"external"` (hand-notified). Absent for every other register call.
+   */
+  source?: "db" | "external";
+  /**
+   * The recorded reason a Postgres-backed, collection-shaped `serveValue` is not
+   * a `liveCollection` (`unbounded: { reason }`) — the one unbounded spelling,
+   * listed so it stays visible.
+   */
+  unbounded?: string;
 }
 
 export interface ResourceFacetData {

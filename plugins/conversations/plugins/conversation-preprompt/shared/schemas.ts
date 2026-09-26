@@ -62,7 +62,7 @@ export type ConversationPreprompt = z.infer<typeof ConversationPrepromptSchema>;
 // read costs O(1) instead of an O(n) lookup over the whole `{convId → row}`
 // record. Rows key on `conversationId` — the extension's key, whose column is
 // the side-table's `parent_id` PK (which IS the point identity).
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision),
+// NOT preloaded: point resources hydrate post-mount (the recorded decision),
 // and the chip/sidebar icons stay unrendered for the one round-trip.
 export const conversationPrepromptsResource =
   pointQueryResourceDescriptor<ConversationPreprompt>(

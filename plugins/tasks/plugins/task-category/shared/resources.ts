@@ -25,5 +25,5 @@ export const taskCategoriesResource = queryResourceDescriptor<TaskCategoryRow>(
   "task-categories",
   TaskCategoryRowSchema,
   "taskId",
-  { bootCritical: true },
+  { preload: "boot" },
 );

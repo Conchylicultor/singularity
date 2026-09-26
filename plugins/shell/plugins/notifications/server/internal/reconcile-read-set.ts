@@ -1,7 +1,7 @@
 import { db } from "@plugins/database/server";
 import { reconcileReadSetTable } from "@plugins/database/plugins/live-state-snapshot/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { notificationsServed } from "./resources";
+import { notificationsServed, notificationsUnreadServed } from "./resources";
 
 const log = defineLogSink({
   id: "notifications",
@@ -10,8 +10,9 @@ const log = defineLogSink({
 });
 
 // The `notifications` table's only live-state readers are the resources the
-// `notifications` collection mints (its window, `:rows` and `:groups`) — read
-// from the served collection's `keys`, so adding a sibling can never evict it.
+// `notifications` collection mints (its window, `:rows` and `:groups`) and the
+// bell's `notifications.unread` value — read from each served object's `keys`,
+// so adding a sibling can never evict it.
 // Assert that invariant on boot: evict any stale `notifications` edge that a
 // past mis-attribution baked into another resource's read-set. The read-set
 // index is append-only + persisted + re-seeded, so a historical
@@ -26,11 +27,10 @@ const log = defineLogSink({
 // boot, mirroring live-state-snapshot's own graceful-degradation hooks.
 export async function reconcileNotificationsReadSet(): Promise<void> {
   try {
-    const changed = await reconcileReadSetTable(
-      db,
-      "notifications",
-      notificationsServed.keys,
-    );
+    const changed = await reconcileReadSetTable(db, "notifications", [
+      ...notificationsServed.keys,
+      ...notificationsUnreadServed.keys,
+    ]);
     if (changed > 0) {
       log.publish(
         `evicted stale 'notifications' read-set edge from ${changed} persisted resource read-set(s)`,

@@ -36,7 +36,7 @@ export type QueueData = z.infer<typeof QueueDataSchema>;
 // already tracks (`conversations-active`), so ranks cost O(live) — ~26 rows — not
 // O(2726). Rows key on `conversationId` (the extension's key, whose column is
 // the side-table's `parent_id` PK, which IS the point identity). Not
-// bootCritical: point resources hydrate post-mount (the recorded decision) — the
+// preloaded: point resources hydrate post-mount (the recorded decision) — the
 // existing all-or-nothing gate shows the loading skeleton for the one round-trip.
 export const queueRanksResource = pointQueryResourceDescriptor<QueueRankRow>(
   "queue-ranks",

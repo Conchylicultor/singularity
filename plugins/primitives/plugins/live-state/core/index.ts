@@ -3,8 +3,14 @@ export {
   keyedResourceDescriptor,
   centralResourceDescriptor,
   resourceDescriptorByKey,
+  registerResourceDescriptor,
 } from "./resource";
-export type { ResourceDescriptor, ResourceOrigin } from "./resource";
+export type {
+  ResourceDescriptor,
+  ResourceDescriptorOptions,
+  ResourceOrigin,
+  ResourcePreload,
+} from "./resource";
 export type {
   WindowResourceDescriptor,
   PointResourceDescriptor,

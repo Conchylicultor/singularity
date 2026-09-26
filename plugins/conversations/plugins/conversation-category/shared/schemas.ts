@@ -39,7 +39,7 @@ export type ConversationCategoriesPayload = z.infer<
 // category was deleted from config is therefore structurally invisible — no
 // subscribed id set can contain it — which is why nothing sweeps orphans.
 //
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision),
+// NOT preloaded: point resources hydrate post-mount (the recorded decision),
 // and CategoryAvatarRow keeps its title-glyph fallback for the one round-trip.
 export const conversationCategoriesResource =
   pointQueryResourceDescriptor<ConversationCategory>(

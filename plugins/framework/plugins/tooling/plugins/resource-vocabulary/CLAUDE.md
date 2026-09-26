@@ -11,20 +11,22 @@ module types, filtered by return type:
 - `core/` — `resourceDescriptorFactories satisfies Record<MintingFactoryName,
   DescriptorFactory>`, where `MintingFactoryName` is every export of
   `live-state/core`, `query-resource/core` and `network/live/core` returning a
-  resource descriptor — or a collection (`{ window, rows }` of descriptors,
+  resource descriptor (matched on `key` + `schema`, so a `liveValue`, which has no
+  `initialData`, counts) — or a collection (`{ window, rows }` of descriptors,
   i.e. `liveCollection`).
   Add a factory to either barrel and omit it here → `tsc` fails with the missing
   key named. Delete a factory → the stale entry fails as an excess property.
 - `check/` — the same derivation for the register markers, over `server-core/core`,
-  `query-resource/server` and `network/live/server` (a served resource, or a served
-  collection `{ window, rows }` — `serveCollection`). It lives there rather than in `core/` because
+  `query-resource/server` and `network/live/server` (a served resource — including
+  `serveValue`'s `ServedValue` — or a served collection `{ window, rows }` —
+  `serveCollection`). It lives there rather than in `core/` because
   runtime isolation grants `core -> core` only. Its `run()` half checks the one
   thing types cannot see: that each entry's `barrel` really exports it (that field
   is read only by scanner error messages, so nothing else would notice it rot).
 
 Do not replace this with a hand-written list. Two scanners each kept one, they
 disagreed, and neither learned about the bounded-membership factories — so ~10
-plugins' resources vanished from `docs/plugins-details.md` and a `bootCritical`
+plugins' resources vanished from `docs/plugins-details.md` and a preloaded
 bounded descriptor could not pin its plugin eager. An unrecognised factory
 produces no match and therefore no data, which reads exactly like a plugin that
 declares nothing, so nothing failed.
@@ -32,7 +34,15 @@ declares nothing, so nothing failed.
 ## Consumers
 
 - `plugin-meta/facets/plugins/resources` — the docs facet.
-- `framework/tooling/codegen/core/eager-tier-gen.ts` — `bootCritical: true` pins.
+- `framework/tooling/codegen/core/eager-tier-gen.ts` — preload pins.
+
+## One preload spelling
+
+Every factory spells "hydrate before first paint" the same way: a `preload:`
+field whose literal is `"boot"` or `"boot-and-keep"` (both preload; the second
+only adds a client-side resident cache) or `"none"`. `PreloadFlag` records the
+field and the two value sets; a scanner throws on a non-literal or any other
+value.
 
 ## One call, several keys
 

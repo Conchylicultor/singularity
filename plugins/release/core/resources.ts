@@ -48,7 +48,7 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
 // Per-id detail resource: one release run resolved by id, regardless of age.
 // Exact shape of `taskDetailResource` — parameterized (not keyed), NOT
-// bootCritical (the run-detail pane lives deep in Studio, not first paint). The
+// preloaded (the run-detail pane lives deep in Studio, not first paint). The
 // server half (`server/internal/release-run-resource.ts`) is `mode:"push"` with
 // no `identityTable`, so a status flip on that run re-pushes automatically. It
 // replaces scanning the old ambient 50-row window to resolve a run by id.
@@ -61,7 +61,7 @@ export const releaseRunResource = resourceDescriptor<
 // real change lands (new run / status flip). The composition-scoped release-history
 // DataView keeps it OUT of its query key and instead refetches the loaded window in
 // place when `rev` changes. Browser-safe descriptor; the server half (loader + push
-// mode) is built from it via `defineResource`. Not bootCritical (mirrors
+// mode) is built from it via `defineResource`. Not preloaded (mirrors
 // `conversationsRevisionResource` — the section lives deep in a detail pane).
 export const releaseRunsRevisionResource = resourceDescriptor<{ rev: string }>(
   "release.history-revision",
@@ -85,5 +85,5 @@ export const previewStateResource = resourceDescriptor<Record<string, Preview>>(
   "release.previews",
   z.record(z.string(), PreviewSchema),
   {},
-  { bootCritical: true },
+  { preload: "boot" },
 );

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "notifications_unread_badge_idx" ON "notifications" USING btree ("variant") WHERE "notifications"."dismissed" = false AND "notifications"."read" = false AND "notifications"."muted" = false;

@@ -32,13 +32,15 @@ import type * as LiveServerBarrel from "@plugins/network/plugins/live/server";
 // to …") and is otherwise read by nothing, so it rots silently.
 
 /**
- * The minimal structural shape every SERVED resource has — `Resource<T, P>` and
- * its `ExternalResource` extension both carry `key`, `mode` and `load`. As in
+ * The minimal structural shape every SERVED resource has — `Resource<T, P>`,
+ * its `ExternalResource` extension and `serveValue`'s `ServedValue` (a
+ * `Resource` plus `keys` / `declare`) all carry `key`, `mode` and `load`. As in
  * `../core`, the shape is a widening rather than the real type: matching
  * structurally keeps this file out of the runtime's generic-variance business,
  * and over-inclusion is the safe direction (it demands a classification entry,
- * which is a compile error, not silence). Disjoint from the descriptor shape in
- * `../core` by construction: a descriptor has `initialData` and no `load`.
+ * which is a compile error, not silence). A descriptor has no `load`, so a
+ * factory never reads as a marker; a served resource does match the descriptor
+ * shape (`key` + `schema`), but that filter runs over the `core` barrels only.
  */
 interface ServedResource {
   key: string;

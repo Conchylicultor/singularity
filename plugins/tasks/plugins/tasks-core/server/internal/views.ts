@@ -37,7 +37,7 @@ import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
 // The two per-attempt aggregates are now read from trigger-maintained rollup
 // tables (attempt_conv_agg / attempt_push_agg — see rollup-spec.ts) instead of
 // the two inline CTEs that grouped over ALL conversations + ALL pushes. attempts_v
-// is `bootCritical` (persisted), and the live-state runtime forces a persisted
+// is preloaded (persisted), and the live-state runtime forces a persisted
 // resource to ALWAYS FULL-recompute (no scoping), so the view re-ran on every
 // fire — the full grouped scans ballooned to 8-10s under contention. The rollups
 // hold the SAME aggregated columns the CTEs produced, kept current incrementally

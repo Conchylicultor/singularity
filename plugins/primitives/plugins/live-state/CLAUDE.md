@@ -11,13 +11,28 @@ params, value)` (canonical use: config_v2's `Core.Boot` task).
 
 **Hydration expires unless the resource says otherwise.** React Query garbage-collects a
 query with no mounted observer after `gcTime` (5 min), so a boot-hydrated value for a
-surface the user has not opened yet is dropped, and the next mount reads `initialData` at
+surface the user has not opened yet is dropped, and the next mount reads
 `dataUpdatedAt === 0` — `pending` again, long after boot said the value was known. That is
 not a theoretical window: it is why a `<DataView>` opened mid-session could claim
-"No views configured" for the seconds until its sub-ack landed. A descriptor that is
-hydrated at boot and read by late-mounting surfaces declares **`resident: true`**
-(`gcTime: Infinity`) — config's values + scopes resources do. Only for values small and
-universally-read enough to hold for the tab's lifetime; never for large collections.
+"No views configured" for the seconds until its sub-ack landed.
+
+**One flag: `preload`** (`ResourcePreload = "boot" | "boot-and-keep"`, absent ⇒ on
+first mount), declared on the shared descriptor (`liveValue` / `liveCollection` spec, or
+the old factories' trailing options) and read by every runtime reader: the boot snapshot
+keys and the L2 persist set (`preload !== undefined`, via `Resource.Declare`), the
+eager-tier generator (through the resource vocabulary), and the client's `gcTime`.
+`"boot-and-keep"` is `"boot"` plus a resident cache (`gcTime: Infinity`) — only for
+values small and universally read enough to hold for the tab's lifetime; never for
+large collections. The one legacy flag left is **`resident: true`**, config only (its
+values + scopes resources, which hydrate N tuples through config's own boot task, so
+they cannot honestly be `"boot-and-keep"`) — deleted when config hydration folds into
+the boot snapshot.
+
+**`initialData` is optional.** It was only ever a typed placeholder seeded at
+`dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`) seeds
+nothing and is still `pending` until the first value; its query stays disabled until a
+value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it).
+`useOptimisticResource` requires a descriptor WITH one (its pending overlay base).
 
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
@@ -386,7 +401,7 @@ record — there is no second, unservable way to mint one.
 
 - A window descriptor is an ordered window; params are `{ limit: "100" }`.
 - A point descriptor is an explicit id set; params are `{ ids: "a,b" }` (sorted,
-  deduped, comma-joined). Never `bootCritical` (post-mount hydration is the
+  deduped, comma-joined). Never preloaded (post-mount hydration is the
   recorded decision).
 
 The descriptor **carries the selector codec** (`.window.encode/decode`,
@@ -401,7 +416,7 @@ keep their paramsKey.
 
 `defaultParams` (a generic optional `ResourceDescriptor` field, set by the window
 factory to the encoded default window) is how boot-snapshot serves a windowed
-`bootCritical` resource: the server's fallback loader runs at
+preloaded resource: the server's fallback loader runs at
 `resourceDescriptorByKey(key)?.defaultParams` and the client hydrates at
 `d.defaultParams` — the identical tuple a bare `useWindowResource(r)` subscribes
 to.
@@ -863,7 +878,9 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `PointResourceDescriptor`
     - `Resolvable`
     - `ResourceDescriptor`
+    - `ResourceDescriptorOptions`
     - `ResourceOrigin`
+    - `ResourcePreload`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`
@@ -871,6 +888,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `centralResourceDescriptor`
     - `compareTxWatermark`
     - `keyedResourceDescriptor`
+    - `registerResourceDescriptor`
     - `resolvableSchema`
     - `resolved`
     - `resourceDescriptor`

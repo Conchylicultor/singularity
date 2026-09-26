@@ -93,6 +93,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `primitives/data-view/server-query`
     - `release`
     - `reports`
+    - `shell/notifications`
 - Server:
   - Exports (values):
     - `filterSql`

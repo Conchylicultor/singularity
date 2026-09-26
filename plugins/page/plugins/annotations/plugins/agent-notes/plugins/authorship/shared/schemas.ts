@@ -21,7 +21,7 @@ export type AgentNotesAuthor = z.infer<typeof AgentNotesAuthorSchema>;
 // bounded-working-set contract in the root CLAUDE.md); `page-block-doc` is the
 // precedent it copies.
 //
-// NOT bootCritical: the anchor mounts route-scoped with the page, so it hydrates
+// NOT preloaded: the anchor mounts route-scoped with the page, so it hydrates
 // post-mount via its sub-ack — same call `prompt-block-tasks` makes.
 //
 // Rows key on `conversationId`, which is unique within one block by the

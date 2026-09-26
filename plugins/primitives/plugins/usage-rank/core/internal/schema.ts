@@ -24,7 +24,7 @@ export type UsageStat = z.infer<typeof UsageStatSchema>;
  * set contains the touched key — never the whole table. Rows key on `usageKey`,
  * which IS the table's single-column pk (`point.by`).
  *
- * NOT bootCritical: point resources hydrate post-mount by construction (the
+ * NOT preloaded: point resources hydrate post-mount by construction (the
  * server cannot know a client's id set at snapshot time). `useUsageOrder`
  * covers that one round-trip with its persistent-draft order cache.
  */

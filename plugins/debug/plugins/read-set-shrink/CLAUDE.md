@@ -2,7 +2,7 @@
 
 Surfaces the ambiguous **read-set shed** for human confirmation.
 
-The L2 self-heal (replace-not-union) persists the tables a `bootCritical` resource
+The L2 self-heal (replace-not-union) persists the tables a preloaded resource
 read on its last FULL run, so a dropped dependency is shed from
 `live_state_snapshot.tables_read`. A shed is safe if a **code change** removed the
 dependency, but unsafe if a **data-dependent conditional query** simply didn't fire

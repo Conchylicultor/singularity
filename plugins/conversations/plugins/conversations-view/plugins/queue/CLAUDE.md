@@ -106,7 +106,7 @@ The queue's live state is one bounded resource, not a push struct:
   frame, so the optimistic overlay confirms via **exact-ack** — the reorder
   endpoint's returned `{ watermark }` is matched against the frame's `ackTx`
   (scoped/point deltas carry no snapshot watermark, so this is what replaces the
-  watermark compare). Not bootCritical (point resources hydrate post-mount).
+  watermark compare). Not preloaded (point resources hydrate post-mount).
   Each row carries `{ conversationId, rank, pinned }`. The pin rides the rank row
   rather than a resource of its own because it is plain user-set state: nothing
   recomputes it as conversations change status. `queue-ranks` deliberately has NO

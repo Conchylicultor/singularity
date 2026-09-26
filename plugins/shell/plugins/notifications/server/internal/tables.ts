@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 
 export const _notifications = pgTable(
@@ -49,5 +50,13 @@ export const _notifications = pgTable(
     index("notifications_created_at_idx").on(t.createdAt),
     index("notifications_last_seen_at_idx").on(t.lastSeenAt),
     uniqueIndex("notifications_dedup_key_idx").on(t.dedupKey),
+    // The bell's badge (`notifications.unread`) recounts on every write to this
+    // table; this partial index holds exactly the rows it counts
+    // (`countedUnread` minus its variant test, plus the base membership).
+    index("notifications_unread_badge_idx")
+      .on(t.variant)
+      .where(
+        sql`${t.dismissed} = false AND ${t.read} = false AND ${t.muted} = false`,
+      ),
   ],
 );

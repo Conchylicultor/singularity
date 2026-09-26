@@ -5,7 +5,7 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 
 // Trigger-maintained materialized rollups for `attempts_v`'s two per-attempt
-// aggregates. `attempts_v` is declared `bootCritical` (persisted), and the
+// aggregates. `attempts_v` is declared preloaded (persisted), and the
 // live-state runtime forces a persisted resource to ALWAYS FULL-recompute (no
 // scoping) — so on every fire it re-ran the full view, whose two inline CTEs
 // aggregated ALL `conversations` + ALL `pushes` from scratch. These rollups hold

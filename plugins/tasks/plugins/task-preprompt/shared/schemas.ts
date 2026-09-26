@@ -24,7 +24,7 @@ export type TaskPreprompt = z.infer<typeof TaskPrepromptSchema>;
 // "None". The change feed routes a write to a tuple iff the changed ids
 // intersect its set, so selecting one task's preprompt never sweeps the table.
 //
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// NOT preloaded: point resources hydrate post-mount (the recorded decision of
 // the bounded working-set contract).
 //
 // The server half is compiled from the extension handle in

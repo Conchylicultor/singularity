@@ -28,7 +28,7 @@ export type PromptTaskLink = z.infer<typeof PromptTaskLinkSchema>;
 // instead the hand-written keyed `defineResource` shape copied from
 // `pushesByAttemptResource`. Bounded by the block: a FULL load is one block's
 // launched tasks, and the row set never grows with the collection. NOT
-// bootCritical — the block renderer mounts route-scoped, so it hydrates
+// preloaded — the block renderer mounts route-scoped, so it hydrates
 // post-mount via its sub-ack (the page-block-doc precedent).
 export const blockPromptTasksResource = keyedResourceDescriptor<
   PromptTaskLink[],

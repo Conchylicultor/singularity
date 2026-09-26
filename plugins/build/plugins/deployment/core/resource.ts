@@ -8,7 +8,7 @@ import type { DeploymentState } from "./model";
  * the auto-build decision read it, so a wrong badge and a missed rebuild are the
  * same bug.
  *
- * `bootCritical` because it replaces two resources that were
+ * preloaded because it replaces two resources that were
  * (`build.mainAheadCount` and `build.frontendHash`): the Build button's chain
  * and the stale-tab reload dot are both first-paint chrome.
  *
@@ -28,5 +28,5 @@ export const deploymentResource = resourceDescriptor<DeploymentState>(
   "build.deployment",
   DeploymentStateSchema,
   { kind: "unknown", reason: "not loaded", deployable: [] },
-  { bootCritical: true },
+  { preload: "boot" },
 );

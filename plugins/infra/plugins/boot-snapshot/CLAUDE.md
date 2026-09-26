@@ -5,12 +5,15 @@ WS round-trips for **boot-critical** resources — they ship in one snapshot
 request. See
 [the cold-load plan](../../../../research/2026-06-14-global-cold-load-instant-boot.md).
 
-A resource opts in **one-sidedly** — a single server declaration in the
-resource's own plugin:
+A resource opts in **one-sidedly** — a single declaration in the resource's own
+plugin:
 
-- **Server (the single source)** — flag the declaration boot-critical:
-  `Resource.Declare(myResource, { bootCritical: true })`. The server reads the
-  set generically (`Resource.Declare.getContributions().filter(c => c.bootCritical)`),
+- **The shared descriptor (the single source)** — declare it preloaded:
+  `liveValue("k", { schema, preload: "boot" })` (or `"boot-and-keep"`), a
+  collection's `preload: "boot"`, or `preload: "boot"` in an old descriptor
+  factory's options. `Resource.Declare(resource)` derives the flag from the
+  served resource, and the server reads the set generically
+  (`preloadedKeys()`: `Resource.Declare.getContributions().filter(c => c.preload !== undefined)`),
   never by name. This drives the snapshot endpoint and (in the
   `live-state-snapshot` plugin) the L2 persisted-materialization set.
 - **Client (auto-derived — no second list)** — the boot task no longer maintains
@@ -74,7 +77,7 @@ How it works:
     - `infra/endpoints.implement`
   - Exports (values):
     - `assembleBootSnapshot`
-    - `bootCriticalKeys`
+    - `preloadedKeys`
   - Routes: `GET /api/resources/boot-snapshot`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

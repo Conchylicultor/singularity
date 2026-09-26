@@ -32,7 +32,7 @@ Consumers read only the generic aggregate:
   categorized task, FK CASCADE on task delete). `setTaskCategory(taskId,
   category | null)` upserts / deletes.
 - `taskCategoriesResource` is the keyed query-resource over the side-table
-  (`{taskId, category}` rows, keyed on `taskId`), declared **bootCritical**
+  (`{taskId, category}` rows, keyed on `taskId`), declared **`preload: "boot"`**
   so the default category-grouped tasks view never flashes "None" on first
   paint.
 

@@ -43,6 +43,8 @@ export interface WindowResourceDescriptor<
   S extends WindowSelector = WindowSelector,
 > extends ResourceDescriptor<El[], P> {
   keyed: { keyOf: (row: unknown) => string };
+  /** Always `[]` — a window's placeholder (an optimistic overlay base). */
+  initialData: El[];
   /** The canonical default-window params — `window.encode({})`. */
   defaultParams: P;
   window: {
@@ -77,6 +79,8 @@ export interface PointResourceDescriptor<El> extends ResourceDescriptor<
   PointParams
 > {
   keyed: { keyOf: (row: unknown) => string };
+  /** Always `[]` — a point set's placeholder (an optimistic overlay base). */
+  initialData: El[];
   point: {
     /** Canonical encode: sorted, deduped, comma-joined. Throws on an empty or comma-carrying id. */
     encode: (ids: readonly string[]) => PointParams;

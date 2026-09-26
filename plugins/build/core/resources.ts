@@ -26,5 +26,5 @@ export const buildHistoryResource = queryResourceDescriptor<BuildRun>(
   "build.history",
   BuildRunSchema,
   "id",
-  { bootCritical: true },
+  { preload: "boot" },
 );

@@ -80,7 +80,7 @@ export const _buildRuns = pgTable(
     // Supports every NAMESPACE-SCOPED ordered read of this table — four of
     // them, not one:
     //
-    //   - `buildHistoryResource` (build/server) — the bootCritical
+    //   - `buildHistoryResource` (build/server) — the preloaded
     //     `WHERE namespace = ? ORDER BY started_at DESC LIMIT 50` the build
     //     BUTTON's own state derives from, on every page load. Without this it
     //     is a scan plus a sort on the boot path.

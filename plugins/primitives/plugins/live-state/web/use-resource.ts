@@ -271,9 +271,24 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
       notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
+    // A typed placeholder, never a value: seeded at epoch 0 so
+    // `dataUpdatedAt === 0` means only the placeholder has been seen. A
+    // descriptor without one (a `liveValue`) seeds nothing — the query simply
+    // has no data, still `dataUpdatedAt === 0`, still `pending`.
     initialData: resource.initialData as NonUndefinedGuard<T>,
-    // Seeded at epoch 0 so `dataUpdatedAt === 0` means only initialData has been seen.
     initialDataUpdatedAt: 0,
+    // With no placeholder, React Query would fetch on mount (a query with no
+    // data always loads). The WS sub-ack is what fills the cache — the HTTP
+    // `queryFn` is only the fallback — so such a query stays disabled until a
+    // value lands (then `invalidate` refetches behave as for any other). That is
+    // exactly a placeholder query's behavior under `staleTime: Infinity`. A
+    // manual `refetch()` ignores `enabled`.
+    ...(resource.initialData === undefined
+      ? {
+          enabled: (query: { state: { data: unknown } }) =>
+            query.state.data !== undefined,
+        }
+      : {}),
     // Date-aware structural sharing for EVERY resource (with or without
     // `select`): RQ applies the query's `structuralSharing` to both the
     // query-data merge AND the select-result memoization. The default
@@ -282,11 +297,13 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // on every push), defeating the documented slice-selector dedup. This is
     // strictly stronger dedup, never weaker.
     structuralSharing: dateAwareReplaceEqualDeep,
-    // A `resident` resource is never garbage-collected (see the descriptor
-    // field): its boot-hydrated value must survive the windows where nothing
-    // observes it, otherwise the next mount reads `initialData` at
+    // A `"boot-and-keep"` resource (and config's legacy `resident` pair) is
+    // never garbage-collected: its boot-hydrated value must survive the windows
+    // where nothing observes it, otherwise the next mount reads
     // `dataUpdatedAt === 0` — pending again, long after boot said it was known.
-    ...(resource.resident ? { gcTime: Infinity } : {}),
+    ...(resource.preload === "boot-and-keep" || resource.resident
+      ? { gcTime: Infinity }
+      : {}),
     // With a selector, narrow re-renders to the selected slice: structural
     // sharing keeps a deeply-equal slice's reference, and limiting
     // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`

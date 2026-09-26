@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
@@ -20,6 +21,7 @@ import {
   useInfiniteScroll,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { notifications } from "../../shared/resources";
+import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
 import {
   dismissNotification,
   dismissAllNotifications,
@@ -161,7 +163,7 @@ type Filter =
   { kind: "all" } | { kind: "errors" } | { kind: "type"; type: string };
 
 const isCountedUnread = (n: Notification) =>
-  !n.read && !n.muted && (n.variant === "error" || n.variant === "warning");
+  matchesFilter(n, countedUnread, countedUnreadFilterable);
 
 const chipLabel = (type: string) =>
   type.charAt(0).toUpperCase() + type.slice(1);

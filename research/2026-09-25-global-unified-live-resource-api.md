@@ -268,7 +268,9 @@ existing plugins move under it later with `./singularity plugin move`.
    rows, so older notifications of that type never showed. The fix is
    `useLive(notifications, { where: { type } })`. This also proves `preload: "boot"`
    on the default window before bulk migration.
-2. **Values.**
+2. **Values.** ✅ **Done (2026-09-25)** — see `research/2026-09-25-global-live-values.md`
+   (`liveValue` / `serveValue` / `useLive(value)`, `preload` replacing `bootCritical`, proven on
+   the bell's whole-table unread badge `notifications.unread`; `resident` retires with item 3).
    - `liveValue` / `serveValue`, with a `source: "db" | "external"` arm; only `external`
      returns `notify()`.
    - Push is the default. `load: "on-demand"` replaces `mode: "invalidate"`.

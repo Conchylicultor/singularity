@@ -129,7 +129,7 @@ export const conversationsGoneStatsResource = defineResource(
 // invalidation edge below (`rel(pushesResource, …)`) maps changed push ids to
 // their attempt ids, which needs a loader that reads the whole table. No web
 // subscriber — attempt-scoped surfaces read `pushesByAttemptResource`. Not
-// bootCritical (descriptor) ⇒ no L2 persist and no boot payload.
+// preloaded (descriptor) ⇒ no L2 persist and no boot payload.
 //
 // commits-graph used to be the other downstream, and the reason this stayed
 // param-less: its `map` was value-aware. It no longer subscribes — its landed set

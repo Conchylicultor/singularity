@@ -71,7 +71,6 @@
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/parse-utils.parseBarrelExports`
-    - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStaticCallId`
     - `plugin-meta/parse-utils.parseStringField`
     - `plugin-meta/parse-utils.readIfExists`
@@ -83,7 +82,6 @@
     - `plugin-meta/plugin-tree.PluginTree`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
-    - `BootCriticalOwner`
     - `CodegenStep`
     - `CollectedRawEntry`
     - `DiscoveredCollectedDir`
@@ -95,6 +93,7 @@
     - `OriginDefaultsPreparer`
     - `OriginDefaultsProvider`
     - `PreBarrelManifest`
+    - `PreloadOwner`
     - `RampDecl`
     - `RegenCodegenOptions`
     - `RegistryCodegenResult`

@@ -3,6 +3,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   keyedResourceDescriptor,
   type ResourceDescriptor,
+  type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
 
 // The web-safe half of a query-resource declaration. It is exactly a keyed
@@ -20,6 +21,8 @@ export type QueryResourceContract<
   P extends Record<string, string> = Record<string, never>,
 > = ResourceDescriptor<Row[], P> & {
   keyed: { keyOf: (row: unknown) => string };
+  /** Always `[]` — the placeholder an optimistic overlay starts from. */
+  initialData: Row[];
   /** The row field the client `keyOf` reads — matched against the server keyField. */
   queryPk: string;
 };
@@ -43,7 +46,7 @@ export function queryResourceDescriptor<
   key: string,
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
-  opts?: { bootCritical?: true },
+  opts?: { preload?: ResourcePreload },
 ): QueryResourceContract<Row, P> {
   const descriptor = keyedResourceDescriptor<Row[], P>(
     key,

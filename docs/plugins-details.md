@@ -14049,7 +14049,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `database/live-state-snapshot.clearPersistedSnapshots`
               - `infra/boot-snapshot.assembleBootSnapshot`
-              - `infra/boot-snapshot.bootCriticalKeys`
+              - `infra/boot-snapshot.preloadedKeys`
               - `infra/endpoints.implement`
               - `infra/host/host-admission.defineHostPool`
               - `infra/host/host-read-pool.heavyReadSlotCount`
@@ -17469,7 +17469,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.markerCallSpans`
               - `plugin-meta/parse-utils.maskSource`
               - `plugin-meta/parse-utils.parseBarrelExports`
-              - `plugin-meta/parse-utils.parseBoolField`
               - `plugin-meta/parse-utils.parseStaticCallId`
               - `plugin-meta/parse-utils.parseStringField`
               - `plugin-meta/parse-utils.readIfExists`
@@ -17481,7 +17480,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-tree.PluginTree`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
-              - `BootCriticalOwner`
               - `CodegenStep`
               - `CollectedRawEntry`
               - `DiscoveredCollectedDir`
@@ -17493,6 +17491,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `OriginDefaultsPreparer`
               - `OriginDefaultsProvider`
               - `PreBarrelManifest`
+              - `PreloadOwner`
               - `RampDecl`
               - `RegenCodegenOptions`
               - `RegistryCodegenResult`
@@ -18248,7 +18247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
         - Exports (values):
           - `assembleBootSnapshot`
-          - `bootCriticalKeys`
+          - `preloadedKeys`
         - Routes: `GET /api/resources/boot-snapshot`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -19944,6 +19943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.PointParams`
           - `primitives/live-state.PointResourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
+          - `primitives/live-state.ResourcePreload`
           - `primitives/live-state.WindowParams`
           - `primitives/live-state.WindowResourceDescriptor`
           - `primitives/live-state.WindowSelector`
@@ -20759,7 +20759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
@@ -20787,11 +20787,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CollectionSource`
           - `CollectionSpecs`
+          - `CompiledValue`
+          - `LiveValueSource`
           - `ServeCollectionOptions`
           - `ServedCollection`
+          - `ServedExternalValue`
+          - `ServedValue`
+          - `ServeValueOptions`
         - Exports (values):
           - `compileCollection`
+          - `compileValue`
           - `serveCollection`
+          - `serveValue`
       - Core:
         - Uses:
           - `infra/query-resource.PointQueryResourceContract`
@@ -20804,8 +20811,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live/filter.Filterable`
           - `network/live/filter.FilterScalar`
           - `network/live/filter.LIST_MAX`
+          - `primitives/live-state.registerResourceDescriptor`
           - `primitives/live-state.resourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
+          - `primitives/live-state.ResourcePreload`
         - Exports (types):
           - `LiveCollection`
           - `LiveCollectionSpec`
@@ -20823,17 +20832,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
           - `LiveOrderBy`
+          - `LiveParamValueSpec`
           - `LivePreload`
           - `LiveQuery`
           - `LiveReservedColumn`
           - `LiveRowSchema`
           - `LiveSortDirection`
+          - `LiveValue`
+          - `LiveValueParams`
+          - `LiveValueSpec`
           - `LiveWhere`
           - `LiveWhereObject`
           - `LiveWindowCodec`
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
-        - Exports (values): `liveCollection`
+        - Exports (values):
+          - `liveCollection`
+          - `liveValue`
       - Cross-plugin:
         - Imported by:
           - `apps/events/events-core`
@@ -20852,6 +20867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/server-query`
               - `release`
               - `reports`
+              - `shell/notifications`
           - Server:
             - Exports (values):
               - `filterSql`
@@ -29785,7 +29801,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PointResourceDescriptor`
           - `Resolvable`
           - `ResourceDescriptor`
+          - `ResourceDescriptorOptions`
           - `ResourceOrigin`
+          - `ResourcePreload`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -29793,6 +29811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `centralResourceDescriptor`
           - `compareTxWatermark`
           - `keyedResourceDescriptor`
+          - `registerResourceDescriptor`
           - `resolvableSchema`
           - `resolved`
           - `resourceDescriptor`
@@ -33639,6 +33658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "notifications"
           - `resource.declare` "notifications:rows"
           - `resource.declare` "notifications:groups"
+          - `resource.declare` "notifications.unread"
           - `fork-data-exclusion` "notifications"
         - Uses:
           - `database.db`
@@ -33649,6 +33669,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `network/live.serveCollection`
+          - `network/live.serveValue`
+          - `network/live/filter.filterSql`
           - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports (types): `RecordNotificationInput`
@@ -33661,6 +33683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `notifications` (keyed, window)
           - `notifications:groups` (push)
           - `notifications:rows` (keyed, point)
+          - `notifications.unread` (push)
         - Routes:
           - `POST /api/notifications`
           - `POST /api/notifications/dismiss-all`

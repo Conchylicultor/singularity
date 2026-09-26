@@ -208,7 +208,7 @@ describe("clearPersistedSnapshots", () => {
 
 describe("clearSnapshotsExceptKeys (non-persistable boot sweep)", () => {
   test("deletes rows for keys NOT in the persistable set (ANY params_key), keeps the rest", async () => {
-    // `pushes` — bootCritical dropped: a stale '{}' row from the prior boot must go.
+    // `pushes` — preload dropped: a stale '{}' row from the prior boot must go.
     await persistSnapshot(t.db, "pushes", "{}", {}, "1", []);
     // Belt-and-suspenders: a leftover non-'{}' row for a swept key must go too.
     await persistSnapshot(t.db, "pushes", '{"limit":"100"}', {}, "1", []);
@@ -216,7 +216,7 @@ describe("clearSnapshotsExceptKeys (non-persistable boot sweep)", () => {
     await persistSnapshot(t.db, "conversation-categories", "{}", {}, "1", []);
     // A key that no longer exists at all — swept as harmless cleanup.
     await persistSnapshot(t.db, "removed-resource", "{}", {}, "1", []);
-    // Still-persistable resources (bootCritical, not bounded) must be left intact.
+    // Still-persistable resources (preloaded, not bounded) must be left intact.
     await persistSnapshot(t.db, "attempts", "{}", {}, "1", []);
     await persistSnapshot(t.db, "tasks", "{}", {}, "1", []);
 

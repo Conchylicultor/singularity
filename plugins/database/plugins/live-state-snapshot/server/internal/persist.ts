@@ -10,27 +10,27 @@ import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-vie
 import { removeReadSetTable } from "@plugins/infra/plugins/runtime-profiler/core";
 import { emitReadSetShrink } from "./read-set-shrink-hook";
 
-// The set of resource keys L2 persists: boot-critical AND DB-backed. `bootCritical`
-// is read GENERICALLY from the shared Resource.Declare collection (never by naming
-// a resource — collection-consumer separation), exactly like
-// boot-snapshot's `bootCriticalKeys`. The `!externalSource` half is enforced in
-// the runtime's `drainEntry` (it has the live `entry.externalSource`); the
-// injected `shouldPersist` only needs the boot-critical membership test. The
-// contribution set is fixed at module load, so caching it once is correct.
-let bootCriticalSet: Set<string> | null = null;
-export function bootCriticalKeys(): Set<string> {
-  if (!bootCriticalSet) {
-    bootCriticalSet = new Set(
+// The set of resource keys L2 persists: preloaded AND DB-backed. `preload` is read
+// GENERICALLY from the shared Resource.Declare collection (never by naming a
+// resource — collection-consumer separation), exactly like boot-snapshot's
+// `preloadedKeys`. The `!externalSource` half is enforced in the runtime's
+// `drainEntry` (it has the live `entry.externalSource`); the injected
+// `shouldPersist` only needs the preload membership test. The contribution set is
+// fixed at module load, so caching it once is correct.
+let preloadedSet: Set<string> | null = null;
+export function preloadedKeys(): Set<string> {
+  if (!preloadedSet) {
+    preloadedSet = new Set(
       Resource.Declare.getContributions()
-        .filter((c) => c.bootCritical)
+        .filter((c) => c.preload !== undefined)
         .map((c) => c.key),
     );
   }
-  return bootCriticalSet;
+  return preloadedSet;
 }
 
 export function shouldPersist(key: string): boolean {
-  return bootCriticalKeys().has(key);
+  return preloadedKeys().has(key);
 }
 
 // The query's `::text` cast is what makes this a plain `text` column, so the
@@ -265,7 +265,7 @@ export async function readPersistedSnapshots(
 // currently-PERSISTABLE set, returning the number of rows removed. This evicts
 // stale snapshots that a prior boot wrote for a key that is no longer persisted —
 // a resource migrated to the bounded working-set contract (window / point, which
-// the runtime NEVER persists) or one whose `bootCritical` flag was dropped. Served
+// the runtime NEVER persists) or one whose `preload` flag was dropped. Served
 // via the L2 boot fast path (`readPersistedSnapshots`), such a leftover would
 // hydrate the client with a stale, possibly-unbounded value under a key whose
 // loader now returns something else. Rows for keys that don't exist at all are

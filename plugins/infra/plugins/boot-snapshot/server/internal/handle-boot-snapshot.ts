@@ -3,9 +3,9 @@ import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
 import { readPersistedSnapshots } from "@plugins/database/plugins/live-state-snapshot/server";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import { bootSnapshot } from "../../core";
-import { bootCriticalKeys } from "./boot-keys";
+import { preloadedKeys } from "./boot-keys";
 
-// Serves every boot-critical resource in one request so the client hydrates them
+// Serves every preloaded resource in one request so the client hydrates them
 // all before first paint.
 //
 // L2 fast path: read the persisted `live_state_snapshot` values in ONE query
@@ -22,7 +22,7 @@ export async function assembleBootSnapshot(): Promise<{
   /** Wall time of the single batched persisted-snapshot read (the L2 fast path). */
   persistedReadMs: number;
 }> {
-  const keys = bootCriticalKeys();
+  const keys = preloadedKeys();
 
   const t0 = performance.now();
   const persisted = await readPersistedSnapshots(keys);
@@ -38,19 +38,26 @@ export async function assembleBootSnapshot(): Promise<{
       // tuple the client hydrates and later subscribes to. Read generically
       // off the shared descriptor registry, never by resource name; a plain
       // global resource has no defaultParams and keeps the `{}` tuple.
-      const v = await loadResourceByKey(k, resourceDescriptorByKey(k)?.defaultParams);
+      const v = await loadResourceByKey(
+        k,
+        resourceDescriptorByKey(k)?.defaultParams,
+      );
       return [k, v, performance.now() - s];
     }),
   );
 
   const resources: Record<string, unknown> = {};
-  const timings: Record<string, { source: "persisted" | "loader"; workMs: number }> = {};
+  const timings: Record<
+    string,
+    { source: "persisted" | "loader"; workMs: number }
+  > = {};
 
   // The persisted keys all share the single batched read, so there's no per-key
   // server work to attribute — amortize that one read across them for a directional
   // work number (the read is one query, not per-key).
   const persistedKeys = keys.filter((k) => persisted.has(k));
-  const perPersisted = persistedKeys.length > 0 ? persistedReadMs / persistedKeys.length : 0;
+  const perPersisted =
+    persistedKeys.length > 0 ? persistedReadMs / persistedKeys.length : 0;
   for (const k of persistedKeys) {
     resources[k] = persisted.get(k);
     timings[k] = { source: "persisted", workMs: perPersisted };
@@ -67,4 +74,6 @@ export async function assembleBootSnapshot(): Promise<{
   return { resources, timings, persistedReadMs };
 }
 
-export const handleBootSnapshot = implement(bootSnapshot, () => assembleBootSnapshot());
+export const handleBootSnapshot = implement(bootSnapshot, () =>
+  assembleBootSnapshot(),
+);

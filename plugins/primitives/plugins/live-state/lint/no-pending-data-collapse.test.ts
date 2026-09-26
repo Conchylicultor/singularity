@@ -274,6 +274,14 @@ ruleTester.run(
         `,
         errors: [{ messageId: "pendingCollapse" }],
       },
+      // A live VALUE read collapsed to a zero count.
+      {
+        code: `
+          const unread = useLive(notificationsUnread);
+          const count = unread.pending ? 0 : unread.data.errors;
+        `,
+        errors: [{ messageId: "pendingCollapse" }],
+      },
       // The canonical collapse.
       {
         code: `

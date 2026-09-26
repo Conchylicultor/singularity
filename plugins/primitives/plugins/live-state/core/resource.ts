@@ -5,6 +5,19 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 // serves resources tagged "central" via /ws/central-notifications.
 export type ResourceOrigin = "central";
 
+/**
+ * How a descriptor preloads — see `ResourceDescriptor.preload`. Absent means
+ * "on first mount"; the unified API spells that `"none"` (`LivePreload`).
+ */
+export type ResourcePreload = "boot" | "boot-and-keep";
+
+/** The trailing options of the old descriptor factories. */
+export interface ResourceDescriptorOptions {
+  preload?: ResourcePreload;
+  /** Config only — see `ResourceDescriptor.resident`. */
+  resident?: true;
+}
+
 export interface ResourceDescriptor<
   T,
   P extends Record<string, string> = Record<string, string>,
@@ -21,14 +34,17 @@ export interface ResourceDescriptor<
    */
   schema: ZodParser<T>;
   /**
-   * Default value used as TanStack Query's `initialData` so `useResource`
-   * always returns `DefinedUseQueryResult<T>` (i.e. `data: T`, never
-   * `T | undefined`). Consumers no longer need `?? []` or loading guards.
+   * Optional typed placeholder used as TanStack Query's `initialData`. It is
+   * NEVER a value: it is seeded with `initialDataUpdatedAt: 0`, and
+   * `useResource` reports `pending` while `dataUpdatedAt === 0`, so a consumer
+   * never reads it as data. Its one real reader is `useOptimisticResource`'s
+   * pending overlay base (which requires a descriptor that has one).
    *
-   * The initial data is seeded with `initialDataUpdatedAt: 0` so consumers
-   * that need a loading distinction can check `dataUpdatedAt === 0`.
+   * Absent (a `liveValue`) ⇒ no placeholder at all: the query simply has no
+   * data until the first authoritative value, still `pending` at
+   * `dataUpdatedAt === 0`. Not known yet is a state, not a stand-in value.
    */
-  initialData: T;
+  initialData?: T;
   /**
    * Marks a row-keyed delta-sync resource (server `mode: "keyed"`). The server
    * ships only changed rows + the id order; the client merges by id. `keyOf`
@@ -38,26 +54,29 @@ export interface ResourceDescriptor<
    */
   keyed?: { keyOf: (row: unknown) => string };
   /**
-   * Marks a resource hydrated by boot-snapshot before first paint. Declared here
-   * — on the shared descriptor — so build-time codegen can statically see which
-   * plugin owns a boot-critical descriptor (the eager-tier generator scans for
-   * it), and the server derives its `Resource.Declare` payload from it. Single
-   * source of truth: the server no longer restates it in `Declare` opts.
+   * When the resource is loaded ahead of any mount. Absent ⇒ on first mount.
+   *
+   * - `"boot"`: the boot snapshot hydrates its default tuple (`defaultParams`,
+   *   else `{}`) before first paint, the owning plugin is pinned to the eager
+   *   load tier, and a DB-backed one is L2-persisted for instant cold boot.
+   * - `"boot-and-keep"`: `"boot"`, and the client also keeps the cached value
+   *   resident for the tab's lifetime (`gcTime: Infinity`), so a surface that
+   *   mounts late never re-enters a loading window boot already closed. Only for
+   *   values small and universally read enough to hold that long.
+   *
+   * Declared here — on the shared descriptor — so build-time codegen can
+   * statically see which plugin owns a preloaded descriptor (the eager-tier
+   * generator scans for it through the resource vocabulary), and the server
+   * derives its `Resource.Declare` payload from it. Single source of truth.
    */
-  bootCritical?: true;
+  preload?: ResourcePreload;
   /**
-   * Keep this resource's cached value RESIDENT: never garbage-collected while
-   * the tab lives, even with zero mounted observers (`gcTime: Infinity`).
-   *
-   * Declare it on any resource whose value is **hydrated once at boot and read
-   * by surfaces that mount late** — config is the canonical case. Without it,
-   * React Query evicts an observer-less query after `gcTime` (5 min) and the
-   * NEXT mount reads `initialData` at `dataUpdatedAt === 0`, i.e. `pending`
-   * again: the boot hydration silently expires and a surface opened later in
-   * the session re-enters a loading window it was designed never to have.
-   *
-   * Only for values small and universally-read enough that holding them for the
-   * tab's lifetime is cheaper than the re-fetch — never for large collections.
+   * Config only — deleted by Resources page item 9 (config hydration folds into
+   * the boot snapshot). Keeps the cached value resident (`gcTime: Infinity`)
+   * like `preload: "boot-and-keep"`, for config's two resources, which hydrate
+   * N param tuples through config's own boot task rather than the boot
+   * snapshot's single default tuple — so they cannot honestly say
+   * `"boot-and-keep"` yet. Every other resource spells it through `preload`.
    */
   resident?: true;
   /**
@@ -80,7 +99,17 @@ export interface ResourceDescriptor<
 // instead of a hand-maintained client list. Keys are unique per resource by construction.
 const byKey = new Map<string, ResourceDescriptor<unknown>>();
 
-function registerDescriptor(d: ResourceDescriptor<unknown>): void {
+/**
+ * Register a descriptor in the key→descriptor map boot hydration resolves
+ * against. Every factory here calls it; exported for the descriptor factories
+ * other plugins own (`network/live`'s `liveValue`), which build a descriptor
+ * shape these factories do not (no `initialData`). A plugin DECLARING a
+ * resource never calls it — it goes through a factory of the resource
+ * vocabulary, which is what the build scanners can see.
+ */
+export function registerResourceDescriptor(
+  d: ResourceDescriptor<unknown>,
+): void {
   const existing = byKey.get(d.key);
   // Dev guard: a genuine key collision (two distinct descriptors, same key) would
   // silently shadow one resource. HMR re-eval (same logical descriptor, new object)
@@ -110,10 +139,10 @@ export function resourceDescriptor<
   key: string,
   schema: ZodParser<T>,
   initialData: T,
-  opts?: { bootCritical?: true; resident?: true },
-): ResourceDescriptor<T, P> & { keyed?: never } {
+  opts?: ResourceDescriptorOptions,
+): ResourceDescriptor<T, P> & { keyed?: never; initialData: T } {
   const d = { key, schema, initialData, ...opts };
-  registerDescriptor(d as ResourceDescriptor<unknown>);
+  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
 
@@ -133,10 +162,13 @@ export function keyedResourceDescriptor<
   schema: ZodParser<T>,
   initialData: T,
   keyOf: (row: unknown) => string,
-  opts?: { bootCritical?: true; resident?: true },
-): ResourceDescriptor<T, P> & { keyed: { keyOf: (row: unknown) => string } } {
+  opts?: ResourceDescriptorOptions,
+): ResourceDescriptor<T, P> & {
+  keyed: { keyOf: (row: unknown) => string };
+  initialData: T;
+} {
   const d = { key, schema, initialData, keyed: { keyOf }, ...opts };
-  registerDescriptor(d as ResourceDescriptor<unknown>);
+  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
 
@@ -152,9 +184,9 @@ export function centralResourceDescriptor<
   key: string,
   schema: ZodParser<T>,
   initialData: T,
-  opts?: { bootCritical?: true; resident?: true },
-): ResourceDescriptor<T, P> & { keyed?: never } {
+  opts?: ResourceDescriptorOptions,
+): ResourceDescriptor<T, P> & { keyed?: never; initialData: T } {
   const d = { key, origin: "central" as const, schema, initialData, ...opts };
-  registerDescriptor(d as ResourceDescriptor<unknown>);
+  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }

@@ -4,6 +4,7 @@ import {
   keyedResourceDescriptor,
   type PointParams,
   type PointResourceDescriptor,
+  type ResourcePreload,
   type WindowParams,
   type WindowResourceDescriptor,
   type WindowSelector,
@@ -68,7 +69,7 @@ export function windowQueryResourceDescriptor<Row>(
   key: string,
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
-  opts: { defaultLimit: number; bootCritical?: true },
+  opts: { defaultLimit: number; preload?: ResourcePreload },
 ): WindowQueryResourceContract<Row> {
   const { defaultLimit, ...rest } = opts;
   assertWindowLimit(defaultLimit, `windowQueryResourceDescriptor("${key}")`);
@@ -108,7 +109,7 @@ export function windowQueryResourceDescriptor<Row>(
  * result — the `windowQueryResourceDescriptor` twin for `point: { by }` specs.
  * The id-set codec lives on the descriptor so the client hooks and the server
  * compiler share one encoding; `decode` doubles as the server membership
- * `idsOf`. Point resources are never `bootCritical` (post-mount hydration is the
+ * `idsOf`. Point resources are never preloaded (post-mount hydration is the
  * recorded decision — the server cannot know a client's id set at snapshot time).
  */
 export function pointQueryResourceDescriptor<Row>(

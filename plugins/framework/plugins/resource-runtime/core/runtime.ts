@@ -314,7 +314,7 @@ export interface ResourceDefinition<
    * drain difference IS why both declarations exist.
    *
    * Requires `mode: "keyed"` + `identityTable`; mutually exclusive with
-   * `membership` and `scopedMembership`; incompatible with `bootCritical` (the L2
+   * `membership` and `scopedMembership`; incompatible with `preload` (the L2
    * boot init and `recomputeResource` schedule the `{}` tuple, for which
    * `rowIdentity({})` is meaningless) — all enforced with a loud throw in
    * `createResource`. It MUST be pure, total, synchronous and cheap: it runs per
@@ -389,12 +389,14 @@ export interface ResourceDefinition<
    */
   authorize?: (params: P) => boolean | Promise<boolean>;
   /**
-   * Boot-critical marker, threaded from the shared client descriptor through the
-   * two-arg `defineResource`/`defineExternalResource` form onto the returned
-   * `Resource`. Pure metadata: it does not affect loader/registry behavior — it
-   * only lets `Resource.Declare` derive the flag instead of restating it.
+   * Preload marker (`"boot"` / `"boot-and-keep"`), threaded from the shared
+   * client descriptor through the two-arg `defineResource`/`defineExternalResource`
+   * form onto the returned `Resource`. Pure metadata: it does not affect
+   * loader/registry behavior — it only lets `Resource.Declare` derive the flag
+   * instead of restating it. Any value preloads server-side; `"boot-and-keep"`
+   * differs only on the client (resident cache).
    */
-  bootCritical?: true;
+  preload?: "boot" | "boot-and-keep";
   /**
    * Opt into STANDALONE mutation-ack frames (`{ kind: "ack" }`). Every
    * feed-driven value frame (`update` / `delta`) carries `ackTx` — the source
@@ -522,7 +524,7 @@ export type DefineResourceInput<
   | "scopedMembership"
   | "membership"
   | "rowIdentity"
-  | "bootCritical"
+  | "preload"
 > & {
   mode?: "push" | "invalidate";
   identityTable?: string;
@@ -551,12 +553,12 @@ export interface ResourceContract<
   schema: ZodParser<T>;
   keyed?: { keyOf: (row: unknown) => string };
   /**
-   * Boot-critical marker, declared once on the shared client descriptor. Threaded
+   * Preload marker, declared once on the shared client descriptor. Threaded
    * through onto the returned `Resource` so `Resource.Declare` derives its payload
    * from it instead of restating it in server-side opts. See the descriptor in
    * `@plugins/primitives/plugins/live-state/core`.
    */
-  bootCritical?: true;
+  preload?: "boot" | "boot-and-keep";
   /** Phantom — carries `P` for inference, mirroring the client descriptor. */
   readonly __params?: P;
 }
@@ -640,7 +642,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     schema: contract.schema,
     mode: contract.keyed ? "keyed" : (opts.mode ?? "invalidate"),
     keyOf: contract.keyed?.keyOf,
-    bootCritical: contract.bootCritical,
+    preload: contract.preload,
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     identityTable: opts.identityTable,
@@ -662,11 +664,11 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
   mode: ResourceMode;
   schema: ZodParser<T>;
   /**
-   * Boot-critical marker, derived from the shared client descriptor (via the
+   * Preload marker, derived from the shared client descriptor (via the
    * two-arg `defineResource`/`defineExternalResource` form). `Resource.Declare`
    * reads it to build its contribution payload — the single source of truth.
    */
-  bootCritical?: true;
+  preload?: "boot" | "boot-and-keep";
   load(params: P): Promise<T>;
 }
 
@@ -1116,7 +1118,7 @@ export interface ResourceRuntimeOptions {
   /**
    * L2 persisted materialization — true when this resource key should be
    * persisted to `live_state_snapshot` for instant cold boot. Backed by
-   * `bootCritical && !externalSource` (the boot-critical, DB-backed set). When it
+   * `preload && !externalSource` (the preloaded, DB-backed set). When it
    * returns true, `drainEntry` forces a FULL recompute even with zero subscribers
    * and persists the value on loader success, floored by the xmin watermark the
    * recompute's own flight captured before its first read. server: injected by
@@ -1209,7 +1211,7 @@ export interface ResourceRuntime {
    * - Flat `(def)` — the loose `ResourceDefinition` (external resources are not
    *   held to the `ScopePolicy` invariant — they have no DB feed to scope against).
    * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness AND
-   *   `bootCritical` from the shared client descriptor so server and client can't
+   *   `preload` from the shared client descriptor so server and client can't
    *   drift, exactly like `defineResource`'s two-arg form.
    */
   defineExternalResource: {
@@ -2146,7 +2148,7 @@ export function createResourceRuntime(
     // declaration, where membership is a diffing one. Same own-identity
     // preconditions, plus two exclusions of its own — a membership entry already
     // routes by id and would then ALSO be filtered here (two arbiters, one
-    // decision), and a `bootCritical` entry is recomputed at the `{}` tuple by
+    // decision), and a preloaded entry is recomputed at the `{}` tuple by
     // the L2 boot init and `recomputeResource`, for which `rowIdentity({})` is
     // meaningless. Fail loudly at registration.
     if (def.rowIdentity) {
@@ -2165,9 +2167,9 @@ export function createResourceRuntime(
           `defineResource: rowIdentity and ${membershipField} are mutually exclusive for key "${def.key}" — rowIdentity narrows WHO is scheduled and leaves the drain untouched, ${membershipField} reroutes the drain`,
         );
       }
-      if (def.bootCritical) {
+      if (def.preload !== undefined) {
         throw new Error(
-          `defineResource: rowIdentity is incompatible with bootCritical for key "${def.key}" — a persisted entry is recomputed at the {} tuple (L2 boot init / recomputeResource), for which rowIdentity({}) is meaningless`,
+          `defineResource: rowIdentity is incompatible with preload for key "${def.key}" — a persisted entry is recomputed at the {} tuple (L2 boot init / recomputeResource), for which rowIdentity({}) is meaningless`,
         );
       }
     }
@@ -2292,7 +2294,7 @@ export function createResourceRuntime(
       key: def.key,
       mode,
       schema: def.schema,
-      bootCritical: def.bootCritical,
+      preload: def.preload,
       async load(params: P): Promise<T> {
         // Parse here too: this handle method is the one load path that bypasses
         // `timedLoad`, so it must validate to keep the guarantee total.
@@ -2345,7 +2347,7 @@ export function createResourceRuntime(
   // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.
   // Two shapes mirroring `defineResource`: the flat loose `ResourceDefinition`,
   // and the `(contract, serverOpts)` form that reads key/schema/keyed-ness AND
-  // `bootCritical` off a shared client descriptor. External resources are NOT
+  // `preload` off a shared client descriptor. External resources are NOT
   // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
   // the two-arg overload takes plain `ServerResourceOptions`.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(

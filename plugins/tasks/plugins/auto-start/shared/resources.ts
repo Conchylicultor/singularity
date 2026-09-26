@@ -42,7 +42,7 @@ export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 // arm/disarm to a tuple iff the changed ids intersect its set, so arming one task
 // never sweeps the table.
 //
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// NOT preloaded: point resources hydrate post-mount (the recorded decision of
 // the bounded working-set contract), which is what this resource already did.
 //
 // The server half is compiled from the extension handle in

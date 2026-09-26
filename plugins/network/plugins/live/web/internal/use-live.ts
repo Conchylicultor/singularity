@@ -12,6 +12,7 @@ import type {
   LiveGroupQuery,
   LiveGroupValue,
   LiveQuery,
+  LiveValue,
 } from "@plugins/network/plugins/live/core";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
@@ -21,6 +22,8 @@ import type {
 // encoding is the declaration's own codec. A grouping is a window over the
 // grouped relation, so it shares the window's result and grow logic; only a
 // read whose result has different STATES (`useLiveRow`) gets its own hook.
+// A `liveValue` is read by the same hook: its result is `ResourceResult<T>`,
+// the states every read already has, so it gets no hook of its own.
 
 /** What a window read adds to its settled arm. */
 export interface LivePaging {
@@ -114,6 +117,17 @@ function listShape<Row, F, S extends string>(
  * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
  *   No paging fields: an id set is not a window.
  */
+/**
+ * A value's params argument: absent for a param-less value (`P` is
+ * `Record<string, never>` — no declared name), required (the declared names,
+ * each a string) otherwise.
+ */
+type LiveValueArgs<P> = string extends keyof P
+  ? []
+  : [keyof P] extends [never]
+    ? []
+    : [params: P];
+
 // The window overload comes FIRST: an argument like `where: or(...)` is a
 // generic call TypeScript checks once, against the first overload's contextual
 // type — so that type must be the collection's own `LiveWhere` for the tree's
@@ -135,7 +149,36 @@ export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query: LiveIdsQuery,
 ): ResourceResult<Row[]>;
+/**
+ * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
+ *   `ResourceResult<T>` (pending, then settled; settled on its first render
+ *   when the boot snapshot preloaded it). `params` is required exactly when the
+ *   value declares params.
+ */
+export function useLive<T, P extends Record<string, string>>(
+  value: LiveValue<T, P>,
+  ...params: LiveValueArgs<P>
+): ResourceResult<T>;
 export function useLive<Row, F, S extends string>(
+  source:
+    LiveCollection<Row, F, S> | LiveValue<unknown, Record<string, string>>,
+  query?:
+    LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | Record<string, string>,
+): LiveListResult<unknown> | ResourceResult<unknown> {
+  // A declaration never changes kind between renders (it is a module-level
+  // const), so the branch below keeps the hook order stable.
+  if ("live" in source) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- the declaration's kind is fixed for a call site: a module-level const never switches between a value and a collection
+    return useResource(source, query as Record<string, string> | undefined);
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
+  return useCollection(
+    source,
+    query as LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
+  );
+}
+
+function useCollection<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query?: LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery,
 ): LiveListResult<unknown> | ResourceResult<Row[]> {

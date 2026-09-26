@@ -1,4 +1,11 @@
 export { liveCollection } from "./internal/live-collection";
+export { liveValue } from "./internal/live-value";
+export type {
+  LiveParamValueSpec,
+  LiveValue,
+  LiveValueParams,
+  LiveValueSpec,
+} from "./internal/live-value";
 export type {
   LiveCollection,
   LiveCollectionSpec,

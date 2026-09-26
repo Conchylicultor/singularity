@@ -13,7 +13,6 @@ import {
   lineAt,
   markerCallSpans,
   maskSource,
-  parseBoolField,
   parseStringField,
   parseStaticCallId,
   unresolvableCallIdMessage,
@@ -49,8 +48,9 @@ import { readListed, timeSlicer } from "./scan-pacing";
  *   2. Watched boot slot — its `web`/`core`/`shared` files call a slot factory
  *      whose contributions always-eager global chrome reads at boot
  *      (`Core.Root`, `Core.Boot`, `Apps.App`, `ActionBar.Item`).
- *   3. Boot-critical resource descriptor — its `core`/`shared`/`web` files
- *      declare a live-state descriptor with `bootCritical: true`. Also enforces
+ *   3. Preloaded resource descriptor — its `core`/`shared`/`web` files
+ *      declare a live-state descriptor with `preload: "boot"` or
+ *      `"boot-and-keep"`. Also enforces
  *      reachability: generation throws if the owning plugin has no web entry.
  *   4. Transitive `dependsOn` closure — anything an eager plugin (transitively)
  *      imports is eager (the `web.generated.ts` dependency graph).
@@ -70,7 +70,7 @@ const MANIFEST_HEADER = [
   "// The DEFERRED web plugin-path set consumed by load-tiers.ts. A plugin is EAGER",
   "// (absent from this set, loaded before first paint) iff it is non-app-content /",
   "// a shell subtree (structural), calls a watched boot slot (Core.Root / Core.Boot",
-  "// / Apps.App / ActionBar.Item), owns a bootCritical resource descriptor, or is",
+  "// / Apps.App / ActionBar.Item), owns a preloaded resource descriptor, or is",
   "// pulled in by the transitive dependsOn closure of any of those. Everything else",
   "// — app content that no eager surface needs at boot — defers.",
   "//",
@@ -102,8 +102,8 @@ export function isAppContent(pluginPath: string): boolean {
 
 // ── Pure core (seed computation + closure) ─────────────────────────
 
-/** A plugin declaring one or more `bootCritical: true` descriptors. */
-export interface BootCriticalOwner {
+/** A plugin declaring one or more preloaded descriptors. */
+export interface PreloadOwner {
   /** Plugin path (may or may not have a web entry — reachability is enforced). */
   path: string;
   /** Descriptor keys found (for the reachability error + debug annotations). */
@@ -130,26 +130,26 @@ const CLOSURE_REASON = "dependency closure (imported by an eager plugin)";
  * Compute the deferred set from injected, already-scanned inputs. Pure and
  * synchronous so it is unit-testable with synthetic data.
  *
- * Throws the reachability error if a `bootCritical` descriptor's owning plugin
+ * Throws the reachability error if a preloaded descriptor's owning plugin
  * has no web entry — the exact 146da4a80 bug class, made unrepresentable.
  */
 export function computeEagerTier(input: {
   webEntryPaths: string[];
   /** Forward edges: `pluginPath` → the web-entry pluginPaths it imports. */
   deps: Map<string, string[]>;
-  bootCriticalOwners: BootCriticalOwner[];
+  preloadOwners: PreloadOwner[];
   watchedSlotHits: WatchedSlotHit[];
 }): EagerTierResult {
   const webSet = new Set(input.webEntryPaths);
 
-  // Reachability guard: a bootCritical descriptor is registered client-side only
+  // Reachability guard: a preloaded descriptor is registered client-side only
   // as a side effect of its owning plugin's web barrel being loaded. If that
   // plugin has no web entry (or is deferred), boot-snapshot can never hydrate the
   // descriptor. Fail generation loudly with the fix.
-  for (const owner of input.bootCriticalOwners) {
+  for (const owner of input.preloadOwners) {
     if (!webSet.has(owner.path)) {
       throw new Error(
-        `Boot-critical resource descriptor(s) [${owner.keys.join(", ")}] declared in ` +
+        `Preloaded resource descriptor(s) [${owner.keys.join(", ")}] declared in ` +
           `plugins/${owner.path} have no web entry, so nothing pulls them into the web ` +
           `import graph and boot-snapshot cannot hydrate them before first paint.\n` +
           `Fix: add a registration-only web barrel (plugins/${owner.path}/web/index.ts) ` +
@@ -175,9 +175,9 @@ export function computeEagerTier(input: {
     if (webSet.has(hit.path))
       addSeed(hit.path, `watched boot slot ${hit.slot}`);
   }
-  // (3) Boot-critical descriptors (all reachable after the guard above).
-  for (const owner of input.bootCriticalOwners) {
-    addSeed(owner.path, `boot-critical descriptor (${owner.keys.join(", ")})`);
+  // (3) Preloaded descriptors (all reachable after the guard above).
+  for (const owner of input.preloadOwners) {
+    addSeed(owner.path, `preloaded descriptor (${owner.keys.join(", ")})`);
   }
 
   // (4) Forward transitive closure over `deps`, restricted to web entries.
@@ -222,14 +222,14 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
   { marker: "ActionBar.Item", head: "ActionBar" },
 ];
 
-// The descriptor factories that can carry `bootCritical: true` in a trailing
-// options object come from the shared vocabulary
+// The descriptor factories that can carry a `preload:` field (in a trailing
+// options object, or a declaration's spec) come from the shared vocabulary
 // (`tooling/resource-vocabulary/core`), whose key set `tsc` derives from the
 // live-state and query-resource barrels themselves.
 //
 // This file used to keep its own four-name list, and the docs facet kept a
 // different three-name one. Neither knew the five bounded-membership factories,
-// so a `windowQueryResourceDescriptor(…, { bootCritical: true })` under
+// so a `windowQueryResourceDescriptor(…, { preload: "boot" })` under
 // `apps/plugins/**` was invisible here: the plugin stayed deferred, its
 // descriptor was not registered before the boot snapshot hydrated, and the
 // surface painted the pending state it was designed never to show. Every miss
@@ -314,32 +314,34 @@ async function watchedSlotIn(
 }
 
 /**
- * Every boot-critical descriptor key in ONE source file, in source order.
+ * Every preloaded descriptor key in ONE source file, in source order.
  *
- * Each factory spells its preload flag its own way — read from the shared
- * vocabulary (`bootCritical: true` on a descriptor factory, `preload: "boot"`
- * on a collection) — and only the mints the flag reaches (`preloadable`) are
- * boot-critical: a collection's preload hydrates its default window, never
- * its `:rows` / `:groups` siblings.
+ * Every factory spells its preload flag the same way — a `preload:` field,
+ * read through the shared vocabulary — where `"boot"` and `"boot-and-keep"`
+ * both preload (the second only adds a client-side resident cache) and
+ * `"none"` does not. Only the mints the flag reaches (`preloadable`) are
+ * preloaded: a collection's preload hydrates its default window, never its
+ * `:rows` / `:groups` siblings.
  *
  * The file is FULL-masked (so a factory written inside a comment, string or
  * template literal is never matched) and each key is read back from the
  * ORIGINAL by offset. THROWS — naming `displayPath`, the line and the offending
- * expression — on a boot-critical declaration whose key is not a static string
- * literal, and on a `preload:` whose value is not a literal. The key used to
- * fall back to `"(unknown)"`, which pins the plugin eager (right) but names it
- * in the manifest as a key that matches nothing (wrong, and silent). A
- * boot-critical resource is one whose absence before first paint is a visible
- * loading flash, so the one thing this scan must not do is guess.
+ * expression — on a preloaded declaration whose key is not a static string
+ * literal, and on a `preload:` whose value is not a literal (or not one of the
+ * three spellings). The key used to fall back to `"(unknown)"`, which pins the
+ * plugin eager (right) but names it in the manifest as a key that matches
+ * nothing (wrong, and silent). A preloaded resource is one whose absence before
+ * first paint is a visible loading flash, so the one thing this scan must not do
+ * is guess.
  *
  * `ownerPlugin` skips the file entirely: inside the plugins that OWN the
  * factories (`isResourceVocabularyOwner`), a factory call is the wrapper
- * IMPLEMENTING one — `liveCollection` calling `windowQueryResourceDescriptor(key,
- * …, { bootCritical: true })` for a caller's `preload: "boot"` — with a computed
- * key, not a plugin declaring a resource. The declaration site is the caller's.
+ * IMPLEMENTING one — `liveCollection` forwarding a caller's `preload` to
+ * `windowQueryResourceDescriptor(key, …, { preload })` — with a computed key,
+ * not a plugin declaring a resource. The declaration site is the caller's.
  * The docs facet's index exempts the same plugins through the same predicate.
  */
-export function bootCriticalKeysIn(
+export function preloadedKeysIn(
   src: string,
   displayPath: string,
   opts: { ownerPlugin: boolean },
@@ -362,7 +364,7 @@ export function bootCriticalKeysIn(
             ...where,
             expr: id.kind === "dynamic" ? id.expr : "",
             hint:
-              "A boot-critical descriptor pins its plugin into the eager " +
+              "A preloaded descriptor pins its plugin into the eager " +
               "load tier, and this manifest is built from source text — so the key " +
               "must be a literal at the declaration site. Inline the literal " +
               "instead of hoisting or interpolating it.",
@@ -377,16 +379,16 @@ export function bootCriticalKeysIn(
   return keys;
 }
 
-/** Whether one factory call's args set its preload flag. Throws on a non-literal `preload:`. */
+/**
+ * Whether one factory call's args preload. Throws on a non-literal `preload:`
+ * and on a literal that is not one of the vocabulary's spellings.
+ */
 function preloadsBoot(
   factory: string,
   flag: PreloadFlag,
   argsText: string,
   where: { file: string; line: number },
 ): boolean {
-  if (flag.field === "bootCritical") {
-    return parseBoolField(argsText, "bootCritical");
-  }
   const field = parseStringField(argsText, flag.field);
   if (field.kind === "absent") return false;
   if (field.kind === "dynamic") {
@@ -397,7 +399,13 @@ function preloadsBoot(
         "is built from source text — write the literal at the declaration site.",
     );
   }
-  return field.value === flag.value;
+  if (flag.preloads.includes(field.value)) return true;
+  if (flag.none.includes(field.value)) return false;
+  throw new Error(
+    `${where.file}:${where.line}: ${factory}(…) \`${flag.field}: ${JSON.stringify(field.value)}\` ` +
+      `is not a preload spelling — expected one of ` +
+      `${[...flag.none, ...flag.preloads].map((v) => JSON.stringify(v)).join(", ")}.`,
+  );
 }
 
 // ── Render + public API ────────────────────────────────────────────
@@ -445,7 +453,7 @@ async function scanEagerTierInputs(
   const repo = await ctx.repo();
 
   const watchedSlotHits: WatchedSlotHit[] = [];
-  const bootCriticalOwners: BootCriticalOwner[] = [];
+  const preloadOwners: PreloadOwner[] = [];
   const tick = timeSlicer();
   const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
   await Promise.all(
@@ -473,26 +481,26 @@ async function scanEagerTierInputs(
           if (slot) watchedSlotHits.push({ path: node.path, slot });
         }
 
-        // bootCritical scan: EVERY plugin node (reachability is checked
+        // preload scan: EVERY plugin node (reachability is checked
         // against web entries in the pure core, so a descriptor in a
         // web-entryless plugin throws).
         const keys: string[] = [];
         const ownerPlugin = isResourceVocabularyOwner(`plugins/${node.path}`);
         for (const { rel, text } of sources) {
           keys.push(
-            ...bootCriticalKeysIn(text, join(ctx.root, rel), { ownerPlugin }),
+            ...preloadedKeysIn(text, join(ctx.root, rel), { ownerPlugin }),
           );
           await tick();
         }
         if (keys.length > 0)
-          bootCriticalOwners.push({ path: node.path, keys: keys.sort() });
+          preloadOwners.push({ path: node.path, keys: keys.sort() });
       }),
     ),
   );
   // The scan finishes plugins in whatever order their reads land; the pure core
   // gets them sorted, as the sequential scan used to hand them over.
   watchedSlotHits.sort((a, b) => a.path.localeCompare(b.path));
-  bootCriticalOwners.sort((a, b) => a.path.localeCompare(b.path));
+  preloadOwners.sort((a, b) => a.path.localeCompare(b.path));
 
   // Restrict deps to web entries defensively (collectEntriesWithDeps already prunes).
   const prunedDeps = new Map<string, string[]>();
@@ -504,7 +512,7 @@ async function scanEagerTierInputs(
   return {
     webEntryPaths,
     deps: prunedDeps,
-    bootCriticalOwners,
+    preloadOwners,
     watchedSlotHits,
   };
 }

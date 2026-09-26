@@ -20,7 +20,8 @@ import {
   getNotificationsClient,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import {
   liveBoolean,
   liveText,
@@ -333,5 +334,140 @@ describe("useLiveRow", () => {
     });
     await waitFor(() => expect(result.current.pending).toBe(false));
     expect(result.current).toEqual({ pending: false, found: false });
+  });
+});
+
+const Unread = z.object({ errors: z.number(), warnings: z.number() });
+
+describe("useLive — value", () => {
+  it("goes pending → settled on the param-less tuple", async () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
+    const client = makeClient();
+    const { result } = mount(client, () => useLive(v));
+    expect(result.current.pending).toBe(true);
+    act(() => {
+      client.setQueryData(queryKeyFor(v.key, {}), { errors: 1, warnings: 2 });
+    });
+    await waitFor(() => expect(result.current.pending).toBe(false));
+    const r = result.current;
+    if (r.pending) throw new Error("unreachable");
+    expect(r.data).toEqual({ errors: 1, warnings: 2 });
+  });
+
+  it("a parameterized value subscribes on its params tuple", async () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: ["scope"],
+    });
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(v.key, { scope: "a" }), {
+      errors: 0,
+      warnings: 5,
+    });
+    const { result } = mount(client, () => useLive(v, { scope: "a" }));
+    await waitFor(() => expect(result.current.pending).toBe(false));
+  });
+
+  it("a hydrated (boot-snapshot) value is settled on its first render", () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      preload: "boot",
+    });
+    expect(v.defaultParams).toEqual({});
+    const client = makeClient();
+    // What the boot task does before first paint: seed the default tuple.
+    client.setQueryData(queryKeyFor(v.key, v.defaultParams!), {
+      errors: 3,
+      warnings: 0,
+    });
+    const seen: boolean[] = [];
+    mount(client, () => {
+      const r = useLive(v);
+      seen.push(r.pending);
+      return r;
+    });
+    expect(seen[0]).toBe(false);
+  });
+
+  it("no placeholder: a never-loaded value makes no HTTP fetch on mount (the WS fills it)", () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
+    const client = makeClient();
+    mount(client, () => useLive(v));
+    const state = client.getQueryState(queryKeyFor(v.key, {}));
+    expect(state?.data).toBeUndefined();
+    expect(state?.dataUpdatedAt).toBe(0);
+    expect(state?.fetchStatus).toBe("idle");
+  });
+
+  it('"boot-and-keep" survives past gcTime after unmount; "boot" does not', async () => {
+    const kept = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      preload: "boot-and-keep",
+    });
+    const plain = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      preload: "boot",
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, staleTime: Infinity, gcTime: 5 },
+      },
+    });
+    for (const v of [kept, plain]) {
+      client.setQueryData(queryKeyFor(v.key, {}), { errors: 0, warnings: 0 });
+    }
+    const a = mount(client, () => useLive(kept));
+    const b = mount(client, () => useLive(plain));
+    a.unmount();
+    b.unmount();
+    await waitFor(() =>
+      expect(client.getQueryState(queryKeyFor(plain.key, {}))).toBeUndefined(),
+    );
+    expect(client.getQueryState(queryKeyFor(kept.key, {}))?.data).toEqual({
+      errors: 0,
+      warnings: 0,
+    });
+  });
+
+  it("types: params are required iff declared; preload is never beside params; a value is not an optimistic base", () => {
+    const bare = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
+    const keyed = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: ["id"],
+    });
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const useTypeOnly = () => {
+      useLive(bare);
+      // @ts-expect-error — a param-less value takes no params
+      useLive(bare, { id: "x" });
+      useLive(keyed, { id: "x" });
+      // @ts-expect-error — a parameterized value's params are required
+      useLive(keyed);
+      // @ts-expect-error — only the declared names
+      useLive(keyed, { other: "x" });
+      // @ts-expect-error — a parameterized value cannot be preloaded
+      liveValue("test.use-live.never", {
+        schema: Unread,
+        params: ["id"],
+        preload: "boot",
+      });
+      useOptimisticResource({
+        // @ts-expect-error — a liveValue has no placeholder to be the overlay base
+        resource: bare,
+        apply: (current) => current,
+        mutate: async () => {},
+      });
+    };
+    expect(typeof useTypeOnly).toBe("function");
+  });
+
+  it("a parameterized value refuses a preload at runtime too (untyped callers)", () => {
+    expect(() =>
+      liveValue("test.use-live.bad", {
+        schema: Unread,
+        params: ["id"],
+        preload: "boot" as never,
+      }),
+    ).toThrow(/cannot be preloaded/);
   });
 });

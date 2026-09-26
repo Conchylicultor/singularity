@@ -4,7 +4,7 @@ The unified live-resource API — design in
 `research/2026-09-25-global-unified-live-resource-api.md` (grouping, preload and
 the base `where`: `research/2026-09-25-global-live-bell-filter-groupby-preload.md`;
 the filter language: `research/2026-09-25-global-unified-filter-language.md`).
-**The default for a new DB-backed collection.**
+**The default for a new DB-backed collection, and for a new value.**
 
 ## Usage
 
@@ -48,11 +48,12 @@ useLiveRow(eventSources, sourceId);                                   // one row
   `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
   type (tsc), and `and` / `or` / `column` / `op` / `operand` cannot be column
   names (they spell a filter tree).
-- **Preload.** `preload: "boot"` marks the WINDOW descriptor `bootCritical`: the
-  boot snapshot hydrates its default tuple (`defaultParams`) before first paint
-  and the owning plugin is pinned to the eager tier. `:rows` and `:groups` are
-  never preloaded — the server cannot know a tab's id sets or grouping queries
-  at boot. Default `"none"`. The scanners read the flag through the resource
+- **Preload.** `preload: "boot"` (or `"boot-and-keep"`) is forwarded as is to
+  the WINDOW descriptor: the boot snapshot hydrates its default tuple
+  (`defaultParams`) before first paint and the owning plugin is pinned to the
+  eager tier; `"boot-and-keep"` also keeps the window's cache resident. `:rows`
+  and `:groups` are never preloaded — the server cannot know a tab's id sets or
+  grouping queries at boot. Default `"none"`. The scanners read the flag through the resource
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).
 - **Serve.** `serveCollection(c, { from, where?, columns? })` binds every ROW
@@ -123,6 +124,74 @@ useLiveRow(eventSources, sourceId);                                   // one row
 - `useLive` is on `live-state/no-pending-data-collapse`'s watched list;
   `useLiveRow` has no `data` to collapse.
 
+## Values — `liveValue` / `serveValue` / `useLive(value)`
+
+Design: `research/2026-09-25-global-live-values.md`. A value is ONE payload per
+params tuple, pushed whole whenever it changes (a count, a status, a detail
+object). Anything row-shaped that grows is a collection.
+
+```ts
+// core/ — declare
+export const notificationsUnread = liveValue("notifications.unread", {
+  schema: NotificationsUnreadSchema,     // z.object({ errors, warnings })
+  preload: "boot",                       // "none" (default) | "boot" | "boot-and-keep"
+});
+export const taskDetail = liveValue("task-detail", {
+  schema: TaskDetailSchema,
+  params: ["id"],                        // → P = { id: string }; preload is `never` here
+});
+
+// server/ — serve
+export const unreadServed = serveValue(notificationsUnread, {
+  source: "db",                          // or "external" (then .notify(params?))
+  loader: countUnread,                   // (params: P) => Promise<T> | T
+  // load: "on-demand",                  — opt out of push (slow loader; tabs refetch over HTTP)
+});
+// contributions: [...unreadServed.declare]
+
+// web/ — read
+useLive(notificationsUnread);            // ResourceResult<T>
+useLive(taskDetail, { id });             // params required iff declared
+```
+
+- **Declare.** The key is a positional string literal (the scanners read it).
+  `params` is a const tuple of names; `P` is derived from it (no phantom
+  generic to restate). There is **no `initial`**: not known yet is `pending`,
+  never a stand-in — the descriptor has no `initialData`, so a `liveValue` can
+  not be an `useOptimisticResource` base (tsc error). `preload` is typed `never`
+  beside `params`: only a param-less value has a default tuple the server can
+  load before a tab names one. A preloaded value sets `defaultParams: {}`, the
+  tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
+  discriminant `useLive` dispatches on.
+- **Preload.** `"boot"`: hydrated by the boot snapshot before first paint
+  (settled on the first render), the owning plugin pinned eager, and a
+  DB-backed one L2-persisted. `"boot-and-keep"`: the same, plus the client
+  cache is never garbage-collected (`gcTime: Infinity`) — for small values read
+  by surfaces that mount late.
+- **Serve.** `source` is required and says where the truth lives:
+  - `"db"`: the loader's read-set is captured at the DB pool chokepoint; a change
+    to any table it read recomputes every subscribed tuple (full recompute, no
+    scope policy — a keyed payload is a collection). No `notify`, at runtime
+    too.
+  - `"external"`: truth outside Postgres; the served value has `notify(params?)`.
+  - `load` defaults to `"push"` (the value is recomputed and pushed);
+    `"on-demand"` is the runtime's `invalidate` (each tab refetches over HTTP).
+  - **The bound rule is a type:** a `"db"` value whose type is an array or a
+    string-indexed record must pass `unbounded: { reason }` (recorded on the
+    served value and shown in the docs), and nothing else may. An external
+    array is bounded by the process holding it.
+  - Returns `ServedValue` = the runtime `Resource` + `source` + `unbounded?` +
+    `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a collection's);
+    the external arm adds `notify`. `compileValue` is the same derivation
+    without registering (tests register it on their own runtime).
+  - Deliberately not yet: `debounceMs`, `dependsOn`, `revalidate`,
+    `ackChannel`, a read-side `select` — each arrives with the first migrated
+    call site that needs it.
+- **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
+  `useResource`; the params object is the canonical tuple). A value with no
+  placeholder makes no HTTP fetch on mount — the WS sub-ack fills it (the
+  query stays disabled until a value lands; `refetch()` still works).
+
 ## Internals
 
 - `core/` (browser-safe): `liveCollection(key, { row, id, filterable, sortable, default, maxLimit, preload? })`
@@ -171,7 +240,7 @@ useLiveRow(eventSources, sourceId);                                   // one row
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
 - Web:
   - Uses:
     - `primitives/live-state.ResourceDescriptor`
@@ -199,11 +268,18 @@ useLiveRow(eventSources, sourceId);                                   // one row
   - Exports (types):
     - `CollectionSource`
     - `CollectionSpecs`
+    - `CompiledValue`
+    - `LiveValueSource`
     - `ServeCollectionOptions`
     - `ServedCollection`
+    - `ServedExternalValue`
+    - `ServedValue`
+    - `ServeValueOptions`
   - Exports (values):
     - `compileCollection`
+    - `compileValue`
     - `serveCollection`
+    - `serveValue`
 - Core:
   - Uses:
     - `infra/query-resource.PointQueryResourceContract`
@@ -216,8 +292,10 @@ useLiveRow(eventSources, sourceId);                                   // one row
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
+    - `primitives/live-state.registerResourceDescriptor`
     - `primitives/live-state.resourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
+    - `primitives/live-state.ResourcePreload`
   - Exports (types):
     - `LiveCollection`
     - `LiveCollectionSpec`
@@ -235,17 +313,23 @@ useLiveRow(eventSources, sourceId);                                   // one row
     - `LiveGroupsDescriptor`
     - `LiveGroupValue`
     - `LiveOrderBy`
+    - `LiveParamValueSpec`
     - `LivePreload`
     - `LiveQuery`
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveSortDirection`
+    - `LiveValue`
+    - `LiveValueParams`
+    - `LiveValueSpec`
     - `LiveWhere`
     - `LiveWhereObject`
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
-  - Exports (values): `liveCollection`
+  - Exports (values):
+    - `liveCollection`
+    - `liveValue`
 - Cross-plugin:
   - Imported by:
     - `apps/events/events-core`

@@ -43,7 +43,12 @@ interface OptimisticBaseArgs<
   Vars,
   P extends Record<string, string> = Record<string, string>,
 > {
-  resource: ResourceDescriptor<Data, P>;
+  /**
+   * A descriptor WITH a placeholder (`initialData`): it is the overlay's base
+   * before the first push. A `liveValue` has none, so passing one is a tsc error
+   * until optimistic values get a base of their own.
+   */
+  resource: ResourceDescriptor<Data, P> & { initialData: Data };
   params?: P;
   /** Pure predicted next state. Must not mutate `current`. */
   apply: (current: Data, vars: Vars) => Data;

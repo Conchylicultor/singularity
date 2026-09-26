@@ -54,7 +54,7 @@ export {
   generateEagerTier,
   isAppContent,
   renderEagerTierManifest,
-  type BootCriticalOwner,
+  type PreloadOwner,
   type EagerTierResult,
   type WatchedSlotHit,
 } from "./eager-tier-gen";

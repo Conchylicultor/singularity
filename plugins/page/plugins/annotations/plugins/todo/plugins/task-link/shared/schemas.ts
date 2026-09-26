@@ -38,7 +38,7 @@ export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 // every mounted card to seek its own row and diff to empty (see
 // `server/internal/resource.ts`).
 //
-// NOT bootCritical: the card mounts route-scoped with its page, so it hydrates
+// NOT preloaded: the card mounts route-scoped with its page, so it hydrates
 // post-mount via its sub-ack — the same call `prompt-block-tasks` makes.
 //
 // **Rows key on `blockId`, and that has to match the table's primary key.** The

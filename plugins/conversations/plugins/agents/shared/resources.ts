@@ -30,15 +30,17 @@ export const agentsResource = resourceDescriptor<Agent[]>(
   "agents",
   z.array(AgentSchema),
   [],
-  { bootCritical: true },
+  { preload: "boot" },
 );
 // Keyed delta-sync: mirrors the server resource's `mode: "keyed"` + `keyOf`.
 // Must stay in lockstep — a plain `resourceDescriptor` here crashes the client
 // the moment the server ships a row-level delta (no keyOf to merge by).
-export const agentLaunchesResource = keyedResourceDescriptor<AgentLaunchWithStatus[]>(
+export const agentLaunchesResource = keyedResourceDescriptor<
+  AgentLaunchWithStatus[]
+>(
   "agent-launches",
   z.array(AgentLaunchWithStatusSchema),
   [],
   (row) => (row as AgentLaunchWithStatus).id,
-  { bootCritical: true },
+  { preload: "boot" },
 );

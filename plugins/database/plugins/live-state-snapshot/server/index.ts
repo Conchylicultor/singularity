@@ -11,7 +11,7 @@ import { initSnapshotSubsystem } from "./internal/boot-init";
 import {
   readPersistedReadSets,
   readPersistedSnapshots,
-  bootCriticalKeys,
+  preloadedKeys,
 } from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
 import { liveStateChangelogPruneJob } from "./internal/prune";
@@ -97,7 +97,7 @@ export default {
     const usable = await readPersistedReadSets(db);
     const aliasKeys = new Set(unboundedWindowKeys());
     const seedKeys: string[] = [];
-    for (const key of bootCriticalKeys()) {
+    for (const key of preloadedKeys()) {
       if (!usable.get(key)?.length) {
         recomputeResource(key);
         continue;

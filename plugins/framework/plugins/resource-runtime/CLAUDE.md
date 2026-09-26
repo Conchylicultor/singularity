@@ -166,7 +166,7 @@ was supplied.
 shouldPersist(key)` — a bounded window or point entry is never L2-persisted
 (read off the definition, never by resource name), never keeps its snapshot
 across N→0, and uses the hash snapshot encoder. Only the **alias** keeps the M5
-persisted behavior: persisted (`bootCritical`) scopedMembership entries
+persisted behavior: persisted (`preload`) scopedMembership entries
 reconstruct the FULL value from the post-diff snapshot (`JSON.parse` of each
 stored canonical-JSON entry → byte-identical jsonb to a FULL persist), persist it
 with a watermark captured **before** the refill/`orderOf` reads, and keep their
@@ -238,7 +238,7 @@ that has neither membership nor order. It is also a persistence decision
 (`membershipBounded` excludes the entry from L2). **The drain difference is the
 entire reason both declarations exist.** Accordingly `rowIdentity` is mutually
 exclusive with `membership` / `scopedMembership`, requires `mode: "keyed"` +
-`identityTable`, and is incompatible with `bootCritical` (the L2 boot init and
+`identityTable`, and is incompatible with `preload` (the L2 boot init and
 `recomputeResource` schedule the `{}` tuple, for which `rowIdentity({})` names
 no row) — all four are loud registration throws.
 

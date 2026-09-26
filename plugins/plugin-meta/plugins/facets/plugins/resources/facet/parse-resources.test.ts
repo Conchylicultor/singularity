@@ -26,7 +26,7 @@ describe("buildDescriptorIndex", () => {
   it("indexes each descriptor factory with its key, keyed-ness and membership", () => {
     const src = `
       export const tasksResource = keyedResourceDescriptor<TaskListItem[]>(
-        "tasks", z.array(TaskListItemSchema), [], (r) => r.id, { bootCritical: true },
+        "tasks", z.array(TaskListItemSchema), [], (r) => r.id, { preload: "boot" },
       );
       export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
         "task-detail", TaskSchema.nullable(), null,
@@ -74,7 +74,7 @@ describe("buildDescriptorIndex", () => {
   it("indexes the bounded-membership factories that used to be invisible", () => {
     const src = `
       export const notificationsResource = windowQueryResourceDescriptor<Notification>(
-        "notifications", NotificationSchema, "id", { defaultLimit: 200, bootCritical: true },
+        "notifications", NotificationSchema, "id", { defaultLimit: 200, preload: "boot" },
       );
       export const taskAutoStartResource = pointQueryResourceDescriptor<TaskAutoStartRow>(
         "tasks-auto-start", TaskAutoStartRowSchema, "taskId",
@@ -102,6 +102,23 @@ describe("buildDescriptorIndex", () => {
       { key: "events.sources", keyed: true, membership: "window" },
       { key: "events.sources:rows", keyed: true, membership: "point" },
       { key: "events.sources:groups", keyed: false, membership: null },
+    ]);
+  });
+
+  it("indexes a liveValue as one plain (non-keyed, unbounded-membership) key", () => {
+    const src = `
+      export const notificationsUnread = liveValue("notifications.unread", {
+        schema: UnreadSchema,
+        preload: "boot",
+      });
+      export const taskDetail = liveValue("task-detail", { schema: S, params: ["id"] });
+    `;
+    const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
+    expect(index.get("notificationsUnread")).toEqual([
+      { key: "notifications.unread", keyed: false, membership: null },
+    ]);
+    expect(index.get("taskDetail")).toEqual([
+      { key: "task-detail", keyed: false, membership: null },
     ]);
   });
 
@@ -294,6 +311,75 @@ describe("resolveRegisterCall", () => {
       // A grouping is a plain push value: no row identity, no membership.
       { key: "sources:groups", mode: "push" },
     ]);
+  });
+
+  it("reads a serveValue as push by default, recording its source", () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      [
+        "unread",
+        [{ key: "notifications.unread", keyed: false, membership: null }],
+      ],
+    ]);
+    expect(
+      resolveRegisterCall(
+        "serveValue",
+        // The inline loader's own `source:` / `load:` never count — only the
+        // options object's.
+        `unread, {
+          source: "db",
+          loader: async () => ({ source: "x", load: "on-demand", reason: "no" }),
+        }`,
+        bound("unread", "unread", "../../shared/resources"),
+        valueIndex,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toEqual([{ key: "notifications.unread", mode: "push", source: "db" }]);
+  });
+
+  it('reads a serveValue\'s literal load: "on-demand" as invalidate, and its unbounded reason', () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      ["hosts", [{ key: "hosts", keyed: false, membership: null }]],
+    ]);
+    expect(
+      resolveRegisterCall(
+        "serveValue",
+        `hosts, {
+          source: "db",
+          load: "on-demand",
+          loader: readHosts,
+          unbounded: { reason: "one row per configured host — a handful" },
+        }`,
+        bound("hosts"),
+        valueIndex,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toEqual([
+      {
+        key: "hosts",
+        mode: "invalidate",
+        source: "db",
+        unbounded: "one row per configured host — a handful",
+      },
+    ]);
+  });
+
+  it("throws on a serveValue whose load is not a literal", () => {
+    expect(() =>
+      resolveRegisterCall(
+        "serveValue",
+        `hosts, { source: "external", load: mode, loader }`,
+        bound("hosts"),
+        new Map([
+          ["hosts", [{ key: "hosts", keyed: false, membership: null }]],
+        ]),
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toThrow(
+      /serveValue\(…\) `load:` is not a static string literal — got `mode`/,
+    );
   });
 
   it("honours an explicit serverOpts mode over the non-keyed default", () => {

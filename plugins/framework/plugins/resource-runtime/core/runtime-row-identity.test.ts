@@ -27,7 +27,7 @@
  *   - a change arriving via a SECONDARY view is still dropped;
  *   - zero subscribers ⇒ no `{}` pending (contrast: the fan-out twin bumps it);
  *   - registration guards: keyed + identityTable required, mutually exclusive
- *     with membership / scopedMembership, incompatible with bootCritical;
+ *     with membership / scopedMembership, incompatible with preload;
  *   - a throwing `rowIdentity` fails OPEN (delivered anyway) and is reported;
  *   - an `ackChannel` entry still acks a writer whose change missed its tuple;
  *   - the registration guards double as the proof that `ScopePolicy` rejects
@@ -510,7 +510,7 @@ describe("rowIdentity — registration guards", () => {
     ).toThrow(/rowIdentity and scopedMembership are mutually exclusive/);
   });
 
-  test("rowIdentity is incompatible with bootCritical", () => {
+  test("rowIdentity is incompatible with preload", () => {
     // A persisted entry is recomputed at the `{}` tuple by the L2 boot init and
     // `recomputeResource`, for which `rowIdentity({})` names no row.
     const h = createHarness();
@@ -520,7 +520,7 @@ describe("rowIdentity — registration guards", () => {
           key: "bad5",
           schema: rowsSchema,
           keyed: { keyOf },
-          bootCritical: true,
+          preload: "boot",
         },
         {
           identityTable: "t",
@@ -528,7 +528,7 @@ describe("rowIdentity — registration guards", () => {
           loader: async () => [],
         },
       ),
-    ).toThrow(/rowIdentity is incompatible with bootCritical/);
+    ).toThrow(/rowIdentity is incompatible with preload/);
   });
 });
 

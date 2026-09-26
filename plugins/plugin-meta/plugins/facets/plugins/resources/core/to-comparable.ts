@@ -3,7 +3,8 @@ import type { ResourceDef, ResourceFacetData } from "./types";
 /**
  * How a resource's mode reads wherever it is shown — `"push"`, `"keyed"`, or
  * `"keyed, window"` / `"keyed, point"` when the descriptor declares a bounded
- * membership.
+ * membership, and `", unbounded: <reason>"` appended for a collection-shaped
+ * Postgres value that declared why it is not a collection.
  *
  * One function rather than four spellings, because the four surfaces (doc,
  * detail pane, contributions table, PR diff) each render the same fact and a
@@ -13,7 +14,10 @@ import type { ResourceDef, ResourceFacetData } from "./types";
  * unbounded keyed form the working-set contract is migrating away from.
  */
 export function resourceModeLabel(r: ResourceDef): string {
-  return r.membership ? `${r.mode}, ${r.membership}` : r.mode;
+  const base = r.membership ? `${r.mode}, ${r.membership}` : r.mode;
+  return r.unbounded !== undefined
+    ? `${base}, unbounded: ${r.unbounded}`
+    : base;
 }
 
 /** Diff projection: one "key (mode)" string per resource, server before central. */

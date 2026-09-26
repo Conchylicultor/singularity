@@ -13,7 +13,7 @@ edited or deleted.
 The header chip (`Conversation.Header` slot) reads that snapshot from a bounded
 **point** live-state resource (`conversation-preprompts`), subscribed by the one
 conversation id (`usePointResource` → one row-or-null) so a read costs O(1)
-rather than an O(n) lookup over the whole collection. It is not bootCritical:
+rather than an O(n) lookup over the whole collection. It is not preloaded:
 the row hydrates one round-trip post-mount, so the chip and sidebar icon stay
 unrendered until it lands. The chip renders the preprompt title; clicking it
 opens a popover with the full instruction text.

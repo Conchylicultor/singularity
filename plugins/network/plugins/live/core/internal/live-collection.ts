@@ -3,6 +3,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   resourceDescriptor,
   type ResourceDescriptor,
+  type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
 import {
   pointQueryResourceDescriptor,
@@ -92,12 +93,21 @@ export type LiveRowSchema<Row> = ZodParser<Row> & {
 };
 
 /**
- * When a collection's default window is loaded: `"none"` (on first mount) or
- * `"boot"` (hydrated by the boot snapshot before first paint; pins the owning
- * plugin to the eager tier). Only the window is ever preloaded — the server
- * cannot know a tab's id sets or grouping queries at boot.
+ * When a declaration is loaded ahead of any mount — one type for `liveValue`
+ * and `liveCollection`:
+ *
+ * - `"none"` (the default): on first mount.
+ * - `"boot"`: hydrated by the boot snapshot before first paint (at the
+ *   declaration's default tuple), which pins the owning plugin to the eager
+ *   tier; a DB-backed one is also L2-persisted for instant cold boot.
+ * - `"boot-and-keep"`: `"boot"`, and the client keeps the cached value resident
+ *   for the tab's lifetime, so a surface that mounts late never re-enters a
+ *   loading window boot already closed.
+ *
+ * A collection preloads its default WINDOW only — the server cannot know a
+ * tab's id sets or grouping queries at boot.
  */
-export type LivePreload = "none" | "boot";
+export type LivePreload = "none" | ResourcePreload;
 
 export interface LiveCollection<Row, F, S extends string> {
   key: string;
@@ -127,7 +137,7 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   default: { orderBy: LiveOrderBy<S>; limit: number };
   /** Hard cap on any window's limit. There is no unbounded spelling. */
   maxLimit: number;
-  /** Default `"none"`. `"boot"` preloads the DEFAULT WINDOW only (see {@link LivePreload}). */
+  /** Default `"none"`. A preload reaches the DEFAULT WINDOW only (see {@link LivePreload}). */
   preload?: LivePreload;
 }
 
@@ -173,10 +183,13 @@ export function liveCollection<
   // Built on the existing factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The
   // default window encodes to the same `{ limit }` bytes either way.
-  // Only the window is ever boot-critical: `:rows` and `:groups` have no
-  // default tuple the server could load before a tab names one.
-  const preloadOpts: { bootCritical?: true } =
-    spec.preload === "boot" ? { bootCritical: true } : {};
+  // Only the window is ever preloaded: `:rows` and `:groups` have no default
+  // tuple the server could load before a tab names one. The flag is forwarded
+  // as is — `"none"` is the absence of the descriptor field.
+  const preloadOpts: { preload?: ResourcePreload } =
+    spec.preload === undefined || spec.preload === "none"
+      ? {}
+      : { preload: spec.preload };
   const window = Object.assign(
     windowQueryResourceDescriptor(key, spec.row, spec.id, {
       defaultLimit: spec.default.limit,

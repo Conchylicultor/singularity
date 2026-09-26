@@ -32,7 +32,7 @@ export type TurnSummary = z.infer<typeof TurnSummarySchema>;
 // intersect its set, so a turn completing in one conversation never re-ships
 // every conversation's summary to every tab.
 //
-// NOT bootCritical: point resources hydrate post-mount (the recorded decision of
+// NOT preloaded: point resources hydrate post-mount (the recorded decision of
 // the bounded working-set contract); the card renders nothing while pending.
 //
 // The server half is compiled from the extension handle in

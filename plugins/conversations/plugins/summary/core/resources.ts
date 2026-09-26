@@ -58,7 +58,7 @@ export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 // conversation's summaries (bounded by how often that conversation was
 // summarised), never the whole table. A point resource does not fit: its
 // identity must be the pk, and the pk is the summary `id` — many rows per
-// conversation. NOT bootCritical — route-scoped, hydrates post-mount via its
+// conversation. NOT preloaded — route-scoped, hydrates post-mount via its
 // sub-ack. The server half is a hand-written keyed `defineResource` with
 // `identityTable: "conversation_summaries"` (the `pushes-by-attempt` precedent).
 //

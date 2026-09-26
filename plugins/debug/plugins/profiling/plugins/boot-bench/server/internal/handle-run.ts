@@ -5,7 +5,7 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import {
   assembleBootSnapshot,
-  bootCriticalKeys,
+  preloadedKeys,
 } from "@plugins/infra/plugins/boot-snapshot/server";
 import { clearPersistedSnapshots } from "@plugins/database/plugins/live-state-snapshot/server";
 import {
@@ -66,7 +66,8 @@ function peakGateWait(loaders: Aggregate[]): number {
   let peak = 0;
   for (const agg of loaders) {
     const { waits } = waitSplit(agg);
-    const local = (waits["heavy-read-acquire"] ?? 0) + (waits["heavy-read-local"] ?? 0);
+    const local =
+      (waits["heavy-read-acquire"] ?? 0) + (waits["heavy-read-local"] ?? 0);
     if (local > peak) peak = local;
   }
   return peak;
@@ -83,9 +84,18 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   // Fixed first-subscribe target set. A null fixture id means the target is
   // skipped (reported null in the result) rather than crashing the run.
   const targetSpecs: [key: string, params: ResourceParams | null][] = [
-    ["edited-files", fixtures.conversationId ? { id: fixtures.conversationId } : null],
-    ["commits-graph.delta", fixtures.attemptId ? { attemptId: fixtures.attemptId } : null],
-    ["commits-graph.graph", fixtures.attemptId ? { attemptId: fixtures.attemptId } : null],
+    [
+      "edited-files",
+      fixtures.conversationId ? { id: fixtures.conversationId } : null,
+    ],
+    [
+      "commits-graph.delta",
+      fixtures.attemptId ? { attemptId: fixtures.attemptId } : null,
+    ],
+    [
+      "commits-graph.graph",
+      fixtures.attemptId ? { attemptId: fixtures.attemptId } : null,
+    ],
   ];
   const liveTargets = targetSpecs.filter(
     (t): t is [string, ResourceParams] => t[1] !== null,
@@ -93,12 +103,13 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   const skippedKeys = targetSpecs.filter((t) => t[1] === null).map((t) => t[0]);
 
   async function runIteration(cold: boolean): Promise<IterResult> {
-    if (cold) await clearPersistedSnapshots(bootCriticalKeys());
+    if (cold) await clearPersistedSnapshots(preloadedKeys());
 
     // Saturate the host-wide heavy-read gate BEFORE opening the measurement window
     // so the burst is forced onto the real broker wait path. Occupants emit no
     // spans (runWithoutProfiling) and release on stop().
-    const load = loadConcurrency > 0 ? await startHostGateLoad(loadConcurrency) : null;
+    const load =
+      loadConcurrency > 0 ? await startHostGateLoad(loadConcurrency) : null;
 
     // Open clean measurement windows immediately before the burst.
     resetEldProbe();
@@ -119,7 +130,10 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
       })(),
       ...liveTargets.map(([key, params]) =>
         measureSubscribeCycle(key, params).then(
-          (v): [string, { onFirstSubscribeMs: number; loaderMs: number }] => [key, v],
+          (v): [string, { onFirstSubscribeMs: number; loaderMs: number }] => [
+            key,
+            v,
+          ],
         ),
       ),
     ]);

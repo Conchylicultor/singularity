@@ -4,7 +4,7 @@
 // The DEFERRED web plugin-path set consumed by load-tiers.ts. A plugin is EAGER
 // (absent from this set, loaded before first paint) iff it is non-app-content /
 // a shell subtree (structural), calls a watched boot slot (Core.Root / Core.Boot
-// / Apps.App / ActionBar.Item), owns a bootCritical resource descriptor, or is
+// / Apps.App / ActionBar.Item), owns a preloaded resource descriptor, or is
 // pulled in by the transitive dependsOn closure of any of those. Everything else
 // — app content that no eager surface needs at boot — defers.
 //

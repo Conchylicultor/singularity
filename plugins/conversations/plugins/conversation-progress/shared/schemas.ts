@@ -65,7 +65,7 @@ export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;
 // read costs O(1) instead of an O(n) `.find()` over the whole collection. Rows
 // key on `conversationId` — the extension's key, whose column is the
 // side-table's `parent_id` PK (which IS the point identity). NOT
-// bootCritical: point resources hydrate post-mount (the recorded decision), and
+// preloaded: point resources hydrate post-mount (the recorded decision), and
 // the progress bar simply renders nothing for the one round-trip.
 export const conversationProgressResource =
   pointQueryResourceDescriptor<ConversationProgress>(

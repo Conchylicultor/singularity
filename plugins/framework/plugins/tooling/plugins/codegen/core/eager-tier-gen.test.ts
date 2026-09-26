@@ -1,7 +1,7 @@
 /**
  * Unit tests for the PURE core of the eager-tier generator (`computeEagerTier`),
- * the structural predicate (`isAppContent`), and the per-file boot-critical key
- * scan (`bootCriticalKeysIn`), driven by synthetic inputs — no filesystem. Covers: the structural rule, watched-slot pins, bootCritical pins,
+ * the structural predicate (`isAppContent`), and the per-file preloaded key
+ * scan (`preloadedKeysIn`), driven by synthetic inputs — no filesystem. Covers: the structural rule, watched-slot pins, preload pins,
  * the reachability throw, the dependsOn closure pulling a dep of an eager shell
  * out of deferral, and deterministic sorted output — and the scan over a file
  * set (which files it reads). Run with `bun test`.
@@ -13,7 +13,7 @@ import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
-  bootCriticalKeysIn,
+  preloadedKeysIn,
   computeEagerTier,
   isAppContent,
   renderEagerTierManifest,
@@ -53,7 +53,7 @@ describe("computeEagerTier", () => {
         "apps/plugins/sonata/plugins/notation",
       ],
       deps: noDeps,
-      bootCriticalOwners: [],
+      preloadOwners: [],
       watchedSlotHits: [],
     });
     expect(deferred).toEqual(["apps/plugins/sonata/plugins/notation"]);
@@ -66,7 +66,7 @@ describe("computeEagerTier", () => {
         "apps/plugins/agent-manager/plugins/worktree-switcher",
       ],
       deps: noDeps,
-      bootCriticalOwners: [],
+      preloadOwners: [],
       watchedSlotHits: [
         {
           path: "apps/plugins/agent-manager/plugins/worktree-switcher",
@@ -83,13 +83,13 @@ describe("computeEagerTier", () => {
     ]);
   });
 
-  test("bootCritical descriptor pins its owning plugin eager", () => {
+  test("a preloaded descriptor pins its owning plugin eager", () => {
     const { deferred, appContentPins } = computeEagerTier({
       // A top-level (non-app-content) owner — eager anyway, but annotated nowhere
       // (only app-content pins are listed). Use an app-content owner to see a pin.
       webEntryPaths: ["apps/plugins/mail/plugins/sync"],
       deps: noDeps,
-      bootCriticalOwners: [
+      preloadOwners: [
         { path: "apps/plugins/mail/plugins/sync", keys: ["mailSync"] },
       ],
       watchedSlotHits: [],
@@ -98,17 +98,17 @@ describe("computeEagerTier", () => {
     expect(appContentPins).toEqual([
       {
         path: "apps/plugins/mail/plugins/sync",
-        reason: "boot-critical descriptor (mailSync)",
+        reason: "preloaded descriptor (mailSync)",
       },
     ]);
   });
 
-  test("reachability: a bootCritical owner with no web entry throws with the fix", () => {
+  test("reachability: a preloaded owner with no web entry throws with the fix", () => {
     expect(() =>
       computeEagerTier({
         webEntryPaths: ["conversations"],
         deps: noDeps,
-        bootCriticalOwners: [
+        preloadOwners: [
           { path: "tasks/plugins/tasks-core", keys: ["tasks", "attempts"] },
         ],
         watchedSlotHits: [],
@@ -130,7 +130,7 @@ describe("computeEagerTier", () => {
           ["apps/plugins/sonata/plugins/voicing"],
         ],
       ]),
-      bootCriticalOwners: [],
+      preloadOwners: [],
       watchedSlotHits: [],
     });
     expect(deferred).toEqual(["apps/plugins/sonata/plugins/notation"]);
@@ -150,7 +150,7 @@ describe("computeEagerTier", () => {
         "apps/plugins/a/plugins/x",
       ],
       deps: noDeps,
-      bootCriticalOwners: [{ path: "apps/plugins/a/plugins/x", keys: ["k"] }],
+      preloadOwners: [{ path: "apps/plugins/a/plugins/x", keys: ["k"] }],
       watchedSlotHits: [
         { path: "apps/plugins/a/plugins/y", slot: "Core.Root" },
       ],
@@ -159,7 +159,7 @@ describe("computeEagerTier", () => {
     expect(appContentPins).toEqual([
       {
         path: "apps/plugins/a/plugins/x",
-        reason: "boot-critical descriptor (k)",
+        reason: "preloaded descriptor (k)",
       },
       {
         path: "apps/plugins/a/plugins/y",
@@ -171,37 +171,36 @@ describe("computeEagerTier", () => {
 
 const NOT_OWNER = { ownerPlugin: false };
 
-describe("bootCriticalKeysIn", () => {
+describe("preloadedKeysIn", () => {
   test("a vocabulary owner's wrapper call is not a declaration site; the same call elsewhere throws", () => {
     // `liveCollection` forwarding a caller's `preload: "boot"` to the window
     // factory it wraps: a literal flag, a computed key.
     const src = `
       const window = windowQueryResourceDescriptor(key, spec.row, spec.id, {
-        defaultLimit: spec.default.limit, bootCritical: true,
+        defaultLimit: spec.default.limit, preload: "boot",
       });
     `;
-    expect(bootCriticalKeysIn(src, "live.ts", { ownerPlugin: true })).toEqual(
-      [],
-    );
-    expect(() => bootCriticalKeysIn(src, "live.ts", NOT_OWNER)).toThrow(
+    expect(preloadedKeysIn(src, "live.ts", { ownerPlugin: true })).toEqual([]);
+    expect(() => preloadedKeysIn(src, "live.ts", NOT_OWNER)).toThrow(
       /live\.ts:2: windowQueryResourceDescriptor/,
     );
   });
 
-  test("reads a bootCritical key from every descriptor factory, bounded ones included", () => {
+  test("reads a preloaded key from every descriptor factory, bounded ones included", () => {
     // `windowQueryResourceDescriptor` is the case this scanner was blind to: it
     // kept its own four-name list and the bounded factories were never added, so
-    // a boot-critical resource under `apps/plugins/**` silently stayed deferred.
+    // a preloaded resource under `apps/plugins/**` silently stayed deferred.
     const src = `
       export const tasksResource = keyedResourceDescriptor<T[]>(
-        "tasks", S, [], k, { bootCritical: true },
+        "tasks", S, [], k, { preload: "boot" },
       );
       export const notificationsResource = windowQueryResourceDescriptor<N>(
-        "notifications", S, "id", { defaultLimit: 200, bootCritical: true },
+        "notifications", S, "id", { defaultLimit: 200, preload: "boot-and-keep" },
       );
       export const quietResource = resourceDescriptor<Q>("quiet", S, null);
+      export const offResource = resourceDescriptor<Q>("off", S, null, { preload: "none" });
     `;
-    expect(bootCriticalKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
+    expect(preloadedKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
       "tasks",
       "notifications",
     ]);
@@ -224,46 +223,78 @@ describe("bootCriticalKeysIn", () => {
         preload: "none",
       });
     `;
-    expect(bootCriticalKeysIn(src, "c.ts", NOT_OWNER)).toEqual([
-      "notifications",
+    expect(preloadedKeysIn(src, "c.ts", NOT_OWNER)).toEqual(["notifications"]);
+  });
+
+  test('a liveValue\'s preload marks its one key; "none" and a parameterized value do not', () => {
+    const src = `
+      export const unread = liveValue("notifications.unread", {
+        schema: UnreadSchema,
+        preload: "boot",
+      });
+      export const kept = liveValue("sentinel.status", { schema: S, preload: "boot-and-keep" });
+      export const lazy = liveValue("lazy", { schema: S, preload: "none" });
+      export const detail = liveValue("task-detail", { schema: S, params: ["id"] });
+    `;
+    expect(preloadedKeysIn(src, "v.ts", NOT_OWNER)).toEqual([
+      "notifications.unread",
+      "sentinel.status",
     ]);
+  });
+
+  test("throws on a preload literal that is not a spelling", () => {
+    const src = `export const v = liveValue("v", { schema: S, preload: "eager" });`;
+    expect(() => preloadedKeysIn(src, "v.ts", NOT_OWNER)).toThrow(
+      /v\.ts:1: liveValue\(…\) `preload: "eager"` is not a preload spelling/,
+    );
+  });
+
+  test("throws on a liveValue or old factory whose preload is not a literal", () => {
+    const value = `export const v = liveValue("v", { schema: S, preload: mode });`;
+    expect(() => preloadedKeysIn(value, "v.ts", NOT_OWNER)).toThrow(
+      /v\.ts:1: liveValue\(…\) `preload:` is not a static string literal — got `mode`/,
+    );
+    const old = `export const r = resourceDescriptor("r", S, null, { preload: mode });`;
+    expect(() => preloadedKeysIn(old, "r.ts", NOT_OWNER)).toThrow(
+      /r\.ts:1: resourceDescriptor\(…\) `preload:` is not a static string literal/,
+    );
   });
 
   test("throws on a collection whose preload is not a literal", () => {
     const src = `export const c = liveCollection("c", { row: S, id: "id", preload: mode });`;
-    expect(() => bootCriticalKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
+    expect(() => preloadedKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
       /c\.ts:1: liveCollection\(…\) `preload:` is not a static string literal — got `mode`/,
     );
   });
 
-  test("a factory's own declaration is not a bootCritical call", () => {
-    // `opts: { defaultLimit: number; bootCritical?: true }` is a type position —
-    // `bootCritical?:` is not the `bootCritical: true` field the scan reads.
+  test("a factory's own declaration is not a preloaded call", () => {
+    // `opts: { defaultLimit: number; preload?: ResourcePreload }` is a type
+    // position — `preload?:` is not the `preload:` field the scan reads.
     const src = `
       export function windowQueryResourceDescriptor<Row>(
         key: string, rowSchema: ZodParser<Row>, pkField: keyof Row & string,
-        opts: { defaultLimit: number; bootCritical?: true },
+        opts: { defaultLimit: number; preload?: ResourcePreload },
       ): WindowQueryResourceContract<Row> { return d; }
     `;
-    expect(bootCriticalKeysIn(src, "window.ts", NOT_OWNER)).toEqual([]);
+    expect(preloadedKeysIn(src, "window.ts", NOT_OWNER)).toEqual([]);
   });
 
-  test("throws on a bootCritical declaration whose key is not a literal", () => {
-    const src = `export const r = resourceDescriptor(RESOURCE_KEY, S, null, { bootCritical: true });`;
-    expect(() => bootCriticalKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
+  test("throws on a preloaded declaration whose key is not a literal", () => {
+    const src = `export const r = resourceDescriptor(RESOURCE_KEY, S, null, { preload: "boot" });`;
+    expect(() => preloadedKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
       /r\.ts:1: resourceDescriptor/,
     );
-    expect(() => bootCriticalKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
+    expect(() => preloadedKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
       /RESOURCE_KEY/,
     );
   });
 
   test("ignores a factory call written inside a string or comment", () => {
     const src = `
-      // export const x = resourceDescriptor("commented", S, null, { bootCritical: true });
-      const label = "resourceDescriptor(\\"fake\\", S, null, { bootCritical: true })";
+      // export const x = resourceDescriptor("commented", S, null, { preload: "boot" });
+      const label = "resourceDescriptor(\\"fake\\", S, null, { preload: \\"boot\\" })";
     `;
-    expect(bootCriticalKeysIn(src, "s.ts", NOT_OWNER)).toEqual([]);
+    expect(preloadedKeysIn(src, "s.ts", NOT_OWNER)).toEqual([]);
   });
 });
 
@@ -350,16 +381,16 @@ describe("the scan over a file set", () => {
     expect(manifest).not.toContain(`  "${APP}/badge",`);
   });
 
-  test("a bootCritical descriptor in core pins its plugin", async () => {
+  test("a preloaded descriptor in core pins its plugin", async () => {
     const manifest = await render(
       {
         [`plugins/${APP}/sync/web/index.ts`]: WEB_ENTRY,
         [`plugins/${APP}/sync/core/resource.ts`]:
-          'export const d = resourceDescriptor("mailSync", S, null, { bootCritical: true });\n',
+          'export const d = resourceDescriptor("mailSync", S, null, { preload: "boot" });\n',
       },
       [`${APP}/sync`],
     );
-    expect(manifest).toContain("boot-critical descriptor (mailSync)");
+    expect(manifest).toContain("preloaded descriptor (mailSync)");
     expect(manifest).not.toContain(`  "${APP}/sync",`);
   });
 });

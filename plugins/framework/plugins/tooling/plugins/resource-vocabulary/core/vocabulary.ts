@@ -14,7 +14,7 @@ import type * as LiveBarrel from "@plugins/network/plugins/live/core";
 // the `resources` docgen facet knew three descriptor factories, the eager-tier
 // generator knew four (a different four). Neither knew the five bounded-membership
 // factories the working-set contract added, so ~10 plugins served a resource the
-// docs said they didn't, and a `bootCritical: true` bounded descriptor under
+// docs said they didn't, and a preloaded bounded descriptor under
 // `apps/plugins/**` would silently fail to pin its plugin eager. An unrecognised
 // factory produced no match and therefore no data — indistinguishable from a
 // plugin that genuinely declares nothing, which is why nothing noticed.
@@ -84,11 +84,17 @@ export interface MintedResource {
 
 /**
  * How a factory call spells "hydrate before first paint", as the scanners read
- * it from source text: a `bootCritical: true` field on the old descriptor
- * factories, `preload: "boot"` on a collection.
+ * it from source text: ONE spelling for every factory — a `preload:` field
+ * (in the old factories' trailing options object, or a declaration's spec),
+ * whose literal value is one of `preloads` (hydrated at boot — `"boot-and-keep"`
+ * only adds a client-side resident cache) or `none` (not preloaded). Any other
+ * literal, or a non-literal, makes the scanner throw.
  */
-export type PreloadFlag =
-  { field: "bootCritical" } | { field: "preload"; value: "boot" };
+export interface PreloadFlag {
+  field: "preload";
+  preloads: readonly string[];
+  none: readonly string[];
+}
 
 export interface DescriptorFactory {
   /** Barrel the factory is exported from — quoted in scanner error messages. */
@@ -121,18 +127,19 @@ export interface RegisterMarker {
  * `ZodParser<T>`, which is invariant in `T` (zod surfaces `T` in both parameter
  * and return positions), so a `ResourceDescriptor<Row[]>` is not assignable to
  * `ResourceDescriptor<unknown>` and the filter would silently match nothing —
- * the exact failure mode this file exists to end. Widening the three fields
- * instead keeps the filter total.
+ * the exact failure mode this file exists to end. Widening the fields
+ * instead keeps the filter total. It matches on `key` + `schema` only — not
+ * `initialData`, which a `liveValue` (no placeholder) does not have, so it
+ * would slip past the filter.
  *
  * Over-inclusion is the safe direction: a future non-factory export that happens
  * to match demands a classification entry, which is a loud compile error.
- * Under-inclusion is the dangerous one, and no real descriptor can miss all
- * three fields.
+ * Under-inclusion is the dangerous one, and no real descriptor can miss
+ * either field.
  */
 interface MintedDescriptor {
   key: string;
   schema: unknown;
-  initialData: unknown;
 }
 
 /** Every export of `M` that is a function returning a resource descriptor. */
@@ -183,46 +190,55 @@ type MintingFactoryName =
  * the missing key named, and an entry for a factory that no longer exists fails
  * as an excess property.
  */
-const BOOT_CRITICAL: PreloadFlag = { field: "bootCritical" };
+const PRELOAD: PreloadFlag = {
+  field: "preload",
+  preloads: ["boot", "boot-and-keep"],
+  none: ["none"],
+};
 
 export const resourceDescriptorFactories = {
   resourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
   },
   keyedResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
   centralResourceDescriptor: {
     barrel: LIVE_STATE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
   },
   queryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
   windowQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [
       { suffix: "", keyed: true, membership: "window", preloadable: true },
     ],
   },
   pointQueryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
-    preload: BOOT_CRITICAL,
+    preload: PRELOAD,
     mints: [
       { suffix: "", keyed: true, membership: "point", preloadable: true },
     ],
   },
+  liveValue: {
+    barrel: LIVE_CORE,
+    preload: PRELOAD,
+    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
+  },
   liveCollection: {
     barrel: LIVE_CORE,
-    preload: { field: "preload", value: "boot" },
+    preload: PRELOAD,
     mints: [
       { suffix: "", keyed: true, membership: "window", preloadable: true },
       { suffix: ":rows", keyed: true, membership: "point", preloadable: false },
@@ -243,8 +259,9 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
  * `defineExternalResource` are the resource runtime's own two primitives,
  * re-presented identically by `server-core/core` and `central-core/core`;
  * `queryResource` / `windowQueryResource` are the query compiler's wrappers
- * around the first, and `serveCollection` serves every resource a
- * `liveCollection` mints (its first argument resolves to every minted key).
+ * around the first, `serveCollection` serves every resource a
+ * `liveCollection` mints (its first argument resolves to every minted key),
+ * and `serveValue` serves a `liveValue`.
  *
  * Completeness is asserted in this plugin's `check/` — see the header note.
  */
@@ -254,6 +271,7 @@ export const resourceRegisterMarkers = {
   queryResource: { barrel: QUERY_RESOURCE_SERVER },
   windowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   serveCollection: { barrel: LIVE_SERVER },
+  serveValue: { barrel: LIVE_SERVER },
 } satisfies Record<string, RegisterMarker>;
 
 export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;

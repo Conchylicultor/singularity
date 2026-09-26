@@ -417,9 +417,14 @@ describe("preload", () => {
     maxLimit: 10,
   } as const;
 
-  it("is off by default", () => {
+  it('is off by default, and "none" sets nothing', () => {
     const c = liveCollection("live-test.preload-none", spec);
-    expect(c.window.bootCritical).toBeUndefined();
+    expect(c.window.preload).toBeUndefined();
+    const n = liveCollection("live-test.preload-none-explicit", {
+      ...spec,
+      preload: "none",
+    });
+    expect(n.window.preload).toBeUndefined();
   });
 
   it('"boot" marks the window only — never :rows or :groups', () => {
@@ -427,10 +432,19 @@ describe("preload", () => {
       ...spec,
       preload: "boot",
     });
-    expect(c.window.bootCritical).toBe(true);
+    expect(c.window.preload).toBe("boot");
     expect(c.window.defaultParams).toEqual({ limit: "10" });
-    expect(c.rows.bootCritical).toBeUndefined();
-    expect(c.groups.bootCritical).toBeUndefined();
+    expect(c.rows.preload).toBeUndefined();
+    expect(c.groups.preload).toBeUndefined();
+  });
+
+  it('"boot-and-keep" is forwarded as is, to the window only', () => {
+    const c = liveCollection("live-test.preload-keep", {
+      ...spec,
+      preload: "boot-and-keep",
+    });
+    expect(c.window.preload).toBe("boot-and-keep");
+    expect(c.rows.preload).toBeUndefined();
   });
 });
 

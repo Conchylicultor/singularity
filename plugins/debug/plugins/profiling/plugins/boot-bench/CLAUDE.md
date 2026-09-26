@@ -41,7 +41,7 @@ Uses (hand-written, beyond the autogen list below): `infra/host/host-read-pool`
     - `database.db`
     - `database/live-state-snapshot.clearPersistedSnapshots`
     - `infra/boot-snapshot.assembleBootSnapshot`
-    - `infra/boot-snapshot.bootCriticalKeys`
+    - `infra/boot-snapshot.preloadedKeys`
     - `infra/endpoints.implement`
     - `infra/host/host-admission.defineHostPool`
     - `infra/host/host-read-pool.heavyReadSlotCount`

@@ -6,6 +6,7 @@ import {
   findMarkerCalls,
   markerCallSpans,
   maskSource,
+  matchBracket,
   lineAt,
   parseStringField,
   parseStaticCallId,
@@ -300,6 +301,11 @@ export function resolveRegisterCall(
     where,
     resolveImported,
   );
+  if (marker === "serveValue") {
+    return (infos ?? []).map((info) =>
+      servedValueDef(info.key, argsText, where),
+    );
+  }
   // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
   // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
   // non-literal `mode:` is the runtime-value case the descriptor already resolves,
@@ -315,6 +321,77 @@ export function resolveRegisterCall(
       ? { key: info.key, mode, membership: info.membership }
       : { key: info.key, mode };
   });
+}
+
+/**
+ * A `serveValue(value, { source, loader, load?, unbounded? })` call: a value is
+ * pushed (`push`) unless it opts into `load: "on-demand"` (the runtime's
+ * `invalidate`), is never keyed and has no membership. `source` and the
+ * `unbounded.reason` are recorded as written. Every field is read at the
+ * options object's own depth, so an inline loader's object literal (which may
+ * well have a `source` or a `reason` of its own) is never mistaken for one.
+ * THROWS on a non-literal `load:` / `source:` / `reason:` — each decides what
+ * the docs say the resource is.
+ */
+function servedValueDef(
+  key: string,
+  argsText: string,
+  where: { file: string; line: number },
+): ResourceDef {
+  const def: ResourceDef = { key, mode: "push" };
+  const masked = maskSource(argsText);
+  // The first argument is an identifier, so the first `{` opens the options.
+  const optsBody = objectBodyAt(argsText, masked, masked.indexOf("{"));
+  if (optsBody === null) return def;
+  const literal = (text: string, field: string): string | undefined => {
+    const f = parseStringField(text, field, { depth0: true });
+    if (f.kind === "absent") return undefined;
+    if (f.kind === "dynamic") {
+      throw new Error(
+        `${where.file}:${where.line}: serveValue(…) \`${field}:\` is not a static ` +
+          `string literal — got \`${f.expr}\`. The docs facet reads it from source ` +
+          "text; write the literal at the call site.",
+      );
+    }
+    return f.value;
+  };
+  if (literal(optsBody, "load") === "on-demand") def.mode = "invalidate";
+  const source = literal(optsBody, "source");
+  if (source === "db" || source === "external") def.source = source;
+  const bodyMasked = maskSource(optsBody);
+  const unbounded = /\bunbounded\s*:\s*\{/g;
+  let m: RegExpExecArray | null;
+  while ((m = unbounded.exec(bodyMasked))) {
+    // Only the options object's own `unbounded:` (depth 0 of its body).
+    if (depthAt(bodyMasked, m.index) !== 0) continue;
+    const inner = objectBodyAt(optsBody, bodyMasked, m.index + m[0].length - 1);
+    const reason = inner === null ? undefined : literal(inner, "reason");
+    if (reason !== undefined) def.unbounded = reason;
+    break;
+  }
+  return def;
+}
+
+/** The text strictly inside the `{ … }` opening at `open` (from the ORIGINAL), or null. */
+function objectBodyAt(
+  src: string,
+  masked: string,
+  open: number,
+): string | null {
+  if (open < 0 || masked[open] !== "{") return null;
+  const close = matchBracket(masked, open, "{", "}");
+  return close < 0 ? null : src.slice(open + 1, close);
+}
+
+/** Bracket depth of `masked` at offset `at` (strings/comments already masked). */
+function depthAt(masked: string, at: number): number {
+  let depth = 0;
+  for (let i = 0; i < at; i++) {
+    const c = masked[i];
+    if (c === "{" || c === "[" || c === "(") depth++;
+    else if (c === "}" || c === "]" || c === ")") depth--;
+  }
+  return depth;
 }
 
 /**

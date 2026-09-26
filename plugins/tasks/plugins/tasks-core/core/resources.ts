@@ -14,7 +14,10 @@ import {
   type Push,
   type Conversation,
 } from "./internal/schema";
-import { AttemptWithConversationsSchema, type AttemptWithConversations } from "./schemas";
+import {
+  AttemptWithConversationsSchema,
+  type AttemptWithConversations,
+} from "./schemas";
 
 // Recent-gone window size (rows shown before "show more"). Lives in core so the
 // web can derive `hasMoreGone = totalGoneCount > RECENT_GONE_LIMIT`; the server
@@ -42,26 +45,27 @@ export const tasksResource = queryResourceDescriptor<TaskListItem>(
   "tasks",
   TaskListItemSchema,
   "id",
-  { bootCritical: true },
+  { preload: "boot" },
 );
-export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
-  "task-detail",
-  TaskSchema.nullable(),
-  null,
-);
-export const attemptsResource = keyedResourceDescriptor<AttemptWithConversations[]>(
+export const taskDetailResource = resourceDescriptor<
+  Task | null,
+  { id: string }
+>("task-detail", TaskSchema.nullable(), null);
+export const attemptsResource = keyedResourceDescriptor<
+  AttemptWithConversations[]
+>(
   "attempts",
   z.array(AttemptWithConversationsSchema),
   [],
   (r) => (r as AttemptWithConversations).id,
-  { bootCritical: true },
+  { preload: "boot" },
 );
 // Global push resource — a param-less push-mode carrier whose ONLY role now is
 // the SERVER cascade: the `attempts` status invalidation (`rel(pushesResource,…)`,
 // id-based) and the commits-graph refresh (a value-aware `map` reading the whole
 // pushes value). No web consumer subscribes anymore — every attempt-scoped push
 // surface reads the bounded `pushesByAttemptResource` below instead. It is NOT
-// bootCritical: nothing subscribes, so persisting/boot-shipping the full table
+// preloaded: nothing subscribes, so persisting/boot-shipping the full table
 // (the measured 525 KB churn) is pure waste. A window here is impossible — a
 // value-aware `map` downstream forces the loader to run on every change, and the
 // zero-subscriber cascade fans to the param-less `{}` tuple, which a windowed
@@ -78,7 +82,7 @@ export const pushesResource = resourceDescriptor<Push[]>(
 // attempt-scoped push consumer reads: filtering the global `pushes` window by
 // attemptId silently dropped an old attempt's pushes once they fell outside the
 // recent global window (a wrong "No pushes yet" / a destructive drop-vs-complete
-// mis-gate). NOT bootCritical — route-scoped, hydrates post-mount via its sub-ack
+// mis-gate). NOT preloaded — route-scoped, hydrates post-mount via its sub-ack
 // (the page-block-doc precedent). The server half is a hand-written keyed
 // `defineResource` with `identityTable: "pushes"`.
 export const pushesByAttemptResource = keyedResourceDescriptor<
@@ -98,28 +102,34 @@ export const pushesByAttemptResource = keyedResourceDescriptor<
 // its derived keyField against (a boot-time throw on drift). Web consumers still
 // read only key/origin/schema/keyOf, so the swap is additive (mirrors the
 // `tasksResource` precedent above).
-export const conversationsActiveResource = queryResourceDescriptor<Conversation>(
-  "conversations-active",
-  ConversationSchema,
-  "id",
-  { bootCritical: true },
-);
-export const conversationsSystemResource = queryResourceDescriptor<Conversation>(
-  "conversations-system",
-  ConversationSchema,
-  "id",
-  { bootCritical: true },
-);
-export const conversationsGoneResource = keyedResourceDescriptor<Conversation[]>(
+export const conversationsActiveResource =
+  queryResourceDescriptor<Conversation>(
+    "conversations-active",
+    ConversationSchema,
+    "id",
+    { preload: "boot" },
+  );
+export const conversationsSystemResource =
+  queryResourceDescriptor<Conversation>(
+    "conversations-system",
+    ConversationSchema,
+    "id",
+    { preload: "boot" },
+  );
+export const conversationsGoneResource = keyedResourceDescriptor<
+  Conversation[]
+>(
   "conversations-gone",
   z.array(ConversationSchema),
   [],
   (r) => (r as Conversation).id,
-  { bootCritical: true },
+  { preload: "boot" },
 );
-export const conversationsGoneStatsResource = resourceDescriptor<{ totalGoneCount: number }>(
+export const conversationsGoneStatsResource = resourceDescriptor<{
+  totalGoneCount: number;
+}>(
   "conversations-gone-stats",
   z.object({ totalGoneCount: z.number() }),
   { totalGoneCount: 0 },
-  { bootCritical: true },
+  { preload: "boot" },
 );

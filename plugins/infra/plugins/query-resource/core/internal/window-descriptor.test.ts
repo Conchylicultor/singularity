@@ -19,14 +19,14 @@ const el = z.object({ id: z.string() });
 describe("windowQueryResourceDescriptor", () => {
   const win = windowQueryResourceDescriptor("test.window.codec", el, "id", {
     defaultLimit: 100,
-    bootCritical: true,
+    preload: "boot",
   });
 
   test("registers a keyed z.array descriptor with the boot flag and defaultParams", () => {
     expect(resourceDescriptorByKey("test.window.codec")).toBe(win);
     expect(win.keyed.keyOf({ id: "a" })).toBe("a");
     expect(win.queryPk).toBe("id");
-    expect(win.bootCritical).toBe(true);
+    expect(win.preload).toBe("boot");
     expect(win.initialData).toEqual([]);
     expect(win.schema.parse([{ id: "a" }])).toEqual([{ id: "a" }]);
   });
@@ -76,7 +76,7 @@ describe("pointQueryResourceDescriptor", () => {
   test("registers a keyed descriptor with no defaultParams (point resources are never boot-critical)", () => {
     expect(resourceDescriptorByKey("test.point.codec")).toBe(pt);
     expect(pt.defaultParams).toBeUndefined();
-    expect(pt.bootCritical).toBeUndefined();
+    expect(pt.preload).toBeUndefined();
   });
 
   test("encode canonicalizes: sorted, deduped, comma-joined", () => {

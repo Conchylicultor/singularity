@@ -1,6 +1,9 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hydrateResource, resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/web";
+import {
+  hydrateResource,
+  resourceDescriptorByKey,
+} from "@plugins/primitives/plugins/live-state/web";
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
@@ -9,7 +12,7 @@ import { bootSnapshot } from "../../core";
 // live-state cache before first paint (no `pending` flash, no WS round-trip).
 //
 // The snapshot ships ONLY boot-critical resources (the single source is the shared
-// descriptor's `bootCritical: true`, which `Resource.Declare` derives) and omits any whose loader failed this
+// descriptor's `preload`, which `Resource.Declare` derives) and omits any whose loader failed this
 // boot, so ITS KEYS are the authoritative set to hydrate. We resolve each key to its
 // client descriptor via the live-state descriptor registry (populated when each
 // descriptor module is evaluated, which happens before boot tasks run). A snapshot key
@@ -58,7 +61,9 @@ export const bootSnapshotTask = Core.Boot({
       // throw would only reach the console. report() is a direct keepalive POST that
       // files a deduped crash task regardless of mount state.
       const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;
-      console.error(`[boot-snapshot] no descriptor registered for: ${missing.join(", ")}`);
+      console.error(
+        `[boot-snapshot] no descriptor registered for: ${missing.join(", ")}`,
+      );
       void report({
         kind: "crash",
         source: "boot-snapshot",

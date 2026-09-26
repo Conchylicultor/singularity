@@ -129,7 +129,7 @@ exactly ONE of `window` / `point` per spec, matching the descriptor factory:
 ```ts
 // shared/core — the descriptor carries the selector CODEC both sides share:
 export const pushesResource = windowQueryResourceDescriptor(
-  "pushes", PushSchema, "id", { defaultLimit: 100, bootCritical: true });
+  "pushes", PushSchema, "id", { defaultLimit: 100, preload: "boot" });
 export const categoriesResource = pointQueryResourceDescriptor(
   "conversation-categories", CategorySchema, "conversationId");
 
@@ -195,7 +195,7 @@ NOT apply here: a where-flip is a detected membership exit/entry.
 Structural differences from `queryResource`: no `limit` / `recompute` /
 `scopedMembership` fields exist on the spec (the bound comes from the params;
 membership is always incremental); bounded resources are never L2-persisted
-(runtime-enforced), so a `bootCritical` window loads via boot-snapshot's
+(runtime-enforced), so a preloaded window loads via boot-snapshot's
 fallback loader at the descriptor's `defaultParams` — the identical tuple
 `useWindowResource` subscribes to. `defaultLimit` lives ONLY on the descriptor
 (the client default and the boot default must be one number); the spec carries
@@ -295,6 +295,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `primitives/live-state.PointParams`
     - `primitives/live-state.PointResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
+    - `primitives/live-state.ResourcePreload`
     - `primitives/live-state.WindowParams`
     - `primitives/live-state.WindowResourceDescriptor`
     - `primitives/live-state.WindowSelector`

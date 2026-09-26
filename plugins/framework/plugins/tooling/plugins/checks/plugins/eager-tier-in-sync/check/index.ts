@@ -13,7 +13,7 @@ import {
 const check: Check = {
   id: "eager-tier-in-sync",
   description:
-    "plugins/framework/plugins/web-sdk/core/web-tiers.generated.ts matches the current derived load tiers (structural + watched-slot + bootCritical + dependsOn closure)",
+    "plugins/framework/plugins/web-sdk/core/web-tiers.generated.ts matches the current derived load tiers (structural + watched-slot + preload + dependsOn closure)",
   async run(checkCtx: CheckContext) {
     const repo = await checkCtx.repo();
     const { root } = repo;
@@ -27,7 +27,7 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    // Rendering may throw the reachability guard (a bootCritical descriptor whose
+    // Rendering may throw the reachability guard (a preloaded descriptor whose
     // owning plugin has no web entry). Surface it as a check failure with the fix,
     // not a crash, so push/build reports it cleanly.
     let expected: string;
