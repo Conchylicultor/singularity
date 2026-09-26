@@ -24594,6 +24594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
+          - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
           - `ui/tokens/sidebar-metrics`
@@ -26203,6 +26204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
               - `ui/tokens/sidebar-metrics`
@@ -26683,6 +26685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
               - `ui/tokens/sidebar-metrics`
@@ -30017,6 +30020,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
+          - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
           - `ui/tokens/sidebar-metrics`
@@ -35645,7 +35649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -35765,6 +35769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/font-family`
           - `ui/tokens/font-family/google-fonts`
           - `ui/tokens/rich-text-palette`
+          - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
           - `ui/tokens/sidebar-metrics`
@@ -35879,7 +35884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -35936,6 +35941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
               - `ui/tokens/sidebar-metrics`
@@ -36116,6 +36122,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `RichTextPaletteValues`
             - Exports (values): `richTextPaletteGroup`
+        - **`scrollbar`** — Scrollbar token group (native or custom, size, thumb inset and radius, thumb, hover and track colours) with its customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Scrollbar"
+              - `ThemeCustomizer.Section` "Scrollbar" → `ScrollbarSection`
+            - Uses:
+              - `primitives/collapsible.Collapsible`
+              - `primitives/collapsible.CollapsibleContent`
+              - `primitives/css/row.SectionHeaderRow`
+              - `primitives/css/spacing.Stack`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `ScrollbarTokenValues`
+            - Exports (values): `scrollbarGroup`
         - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
           - Web:
             - Contributes:

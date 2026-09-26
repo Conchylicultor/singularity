@@ -1674,6 +1674,34 @@
   html, body, #root {
     @apply h-full overflow-hidden;
     }
+  /* Themed scrollbars (the `scrollbar` token group). Only a theme that sets
+     `--scrollbar-style: custom` gets them: WebKit swaps the native bar for a
+     custom one as soon as ANY `::-webkit-scrollbar` rule matches an element, so
+     the rules sit behind a style query and match nothing under the default
+     `native`. The token inherits from the theme-scope root, so each app's scope
+     answers for its own scrollers. `no-scrollbar` still wins: it is a utility
+     (a later layer), and its `scrollbar-width: none` makes Chromium ignore these
+     pseudo-elements anyway. */
+  @container style(--scrollbar-style: custom) {
+    ::-webkit-scrollbar {
+      width: var(--scrollbar-size);
+      height: var(--scrollbar-size);
+      background: var(--scrollbar-track);
+      }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      background-clip: padding-box;
+      border: var(--scrollbar-thumb-inset) solid transparent;
+      border-radius: var(--scrollbar-radius);
+      }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+      background-clip: padding-box;
+      }
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+      }
+    }
   /* Inherited, themed typographic defaults (base font-family, font smoothing
      and text color) are consumed at EVERY theme-scope root — the desktop
      `:root` PLUS each `[data-theme-scope]` — never on a bare `html`/`body` above the scope

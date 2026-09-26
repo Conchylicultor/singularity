@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { maskNonDeclarations } from "./mask";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -21,36 +21,10 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  *      in tracked CSS, EXCLUDING declarations inside `@theme { … }` /
  *      `@theme inline { … }` blocks (Tailwind's build-time utility-token layer,
  *      a defined lower-precedence position rather than an ambiguous same-level
- *      conflict).
+ *      conflict). A container style query's condition
+ *      (`@container style(--x: custom)`) READS the var, so it is not a
+ *      declaration either.
  */
-
-function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "");
-}
-
-/**
- * Blank out the interior of every `@theme { … }` / `@theme inline { … }` block
- * (replaced by spaces, length preserved) so `--x:` declarations inside them are
- * not seen as ambiguous same-level runtime declarations. Brace matching reuses
- * `matchBracket` (skips comments/strings).
- */
-function maskThemeBlocks(src: string): string {
-  let out = src;
-  const re = /@theme\b[^{]*\{/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(out))) {
-    const braceStart = out.indexOf("{", m.index);
-    if (braceStart < 0) break;
-    const braceEnd = matchBracket(out, braceStart, "{", "}");
-    if (braceEnd < 0) break;
-    out =
-      out.slice(0, braceStart + 1) +
-      " ".repeat(braceEnd - braceStart - 1) +
-      out.slice(braceEnd);
-    re.lastIndex = braceEnd;
-  }
-  return out;
-}
 
 const check: Check = {
   id: "css-vars-single-owner",
@@ -95,7 +69,7 @@ const check: Check = {
     const overlaps: { name: string; file: string }[] = [];
     for (const rel of cssFiles) {
       const raw = readFileSync(join(root, rel), "utf8");
-      const code = maskThemeBlocks(stripComments(raw));
+      const code = maskNonDeclarations(raw);
       for (const mm of code.matchAll(/(--[\w-]+)\s*:/g)) {
         const name = mm[1];
         if (name && tokenGroupVars.has(name))

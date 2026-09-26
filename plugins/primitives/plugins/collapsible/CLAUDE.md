@@ -104,6 +104,7 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/font-family`
+    - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`
     - `ui/tokens/sidebar-metrics`

@@ -5268,6 +5268,10 @@
       "name": "@singularity/plugin-ui-tokens-rich-text-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/scrollbar": {
+      "name": "@singularity/plugin-ui-tokens-scrollbar",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/shadow": {
       "name": "@singularity/plugin-ui-tokens-shadow",
       "version": "0.0.1",
@@ -8378,6 +8382,8 @@
     "@singularity/plugin-ui-tokens-font-family-google-fonts": ["@singularity/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
 
     "@singularity/plugin-ui-tokens-rich-text-palette": ["@singularity/plugin-ui-tokens-rich-text-palette@workspace:plugins/ui/plugins/tokens/plugins/rich-text-palette"],
+
+    "@singularity/plugin-ui-tokens-scrollbar": ["@singularity/plugin-ui-tokens-scrollbar@workspace:plugins/ui/plugins/tokens/plugins/scrollbar"],
 
     "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 

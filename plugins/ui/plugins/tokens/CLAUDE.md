@@ -48,6 +48,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
     - Plugins:
       - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
   - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
+  - **`scrollbar`** — Scrollbar token group (native or custom, size, thumb inset and radius, thumb, hover and track colours) with its customizer section.
   - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
   - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
   - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.

@@ -6,6 +6,7 @@ import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 import { sidebarMetricsGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-metrics/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
+import { scrollbarGroup } from "@plugins/ui/plugins/tokens/plugins/scrollbar/core";
 
 /**
  * Mist, the agent manager's look (prototype proto-1789643584-ldt6): cool,
@@ -307,6 +308,31 @@ const typeScale = typeScaleGroup.fragment(
 );
 
 /**
+ * The mockup's scrollbars: a 10px gutter holding a 4px pill (inset 3px), in a
+ * tone one step past the hover fill, firming to the input outline under the
+ * pointer, over no track.
+ */
+const scrollbarShape = {
+  scrollbarStyle: "custom",
+  scrollbarSize: "10px",
+  scrollbarThumbInset: "3px",
+  scrollbarRadius: "9999px",
+  scrollbarTrack: "transparent",
+};
+const scrollbar = scrollbarGroup.fragment({
+  dark: {
+    ...scrollbarShape,
+    scrollbarThumb: "oklch(0.305 0.017 242)",
+    scrollbarThumbHover: DARK.input,
+  },
+  light: {
+    ...scrollbarShape,
+    scrollbarThumb: "oklch(0.87 0.01 240)",
+    scrollbarThumbHover: "oklch(0.78 0.012 240)",
+  },
+});
+
+/**
  * The agent manager's own theme. Selected for the app in
  * `config/ui/theme-engine/@app/agent-manager/theme.jsonc`; a group it does not
  * mention paints that group's schema defaults, never the desktop's choice.
@@ -322,5 +348,6 @@ export const mistTheme = defineTheme({
     typeScale,
     fontFamily,
     shape,
+    scrollbar,
   ],
 });
