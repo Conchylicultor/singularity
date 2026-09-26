@@ -56,12 +56,14 @@ function renderDescription(row: ReportRow): string {
   lines.push(
     data.reason === "blind-binding"
       ? `3. Establish how this binding attached to a doc that already held content, or how it missed the events for content applied after it attached — \`BindingReplica\`'s construction invariant is supposed to make the first impossible.`
-      : `3. Establish why the \`page-block-doc\` push never reached this client. Note the standing evidence that this resource loses pushes: \`reports\` carries "live-state wedged: missed-updates — page-block-doc" occurrences.`,
+      : `3. Establish why the \`page-block-doc:rows\` push never reached this client. Note the standing evidence that this resource loses pushes: \`reports\` carries "live-state wedged: missed-updates — page-block-doc" occurrences (the resource's key before it became \`page-block-doc:rows\`).`,
   );
   lines.push("");
   lines.push(`**Block**`);
   lines.push(`- **Block id:** \`${data.blockId}\``);
-  lines.push(`- **Rendered / doc / row:** ${data.shownLength} / ${data.docLength} / ${data.rowLength}`);
+  lines.push(
+    `- **Rendered / doc / row:** ${data.shownLength} / ${data.docLength} / ${data.rowLength}`,
+  );
   lines.push("");
   lines.push(`**Report**`);
   lines.push(`- **Source:** ${row.source}`);
@@ -80,6 +82,6 @@ function reasonExplanation(data: CollabHydrationPayload): string {
     case "blind-binding":
       return `The editor rendered nothing while its OWN content doc held ${data.docLength} characters. \`@lexical/yjs\` has no read-the-doc operation — a binding ingests its doc solely through post-attach \`observeDeep\` events — so a binding that attached to an already-populated doc, or that missed the events for content applied while it was detached, renders empty FOREVER while the doc and the server keep every character. This is the failure class the per-binding \`BindingReplica\` exists to make impossible.`;
     case "starved-doc":
-      return `The content doc was EMPTY while the block's row projection held ${data.rowLength} characters that this client never typed. The row is written by whichever client is editing the block, so it is an independent witness that the block has content — and this client's doc never received it. The doc is hydrated by the \`page-block-doc\` live-state push (plus its own doc-init response), so a missed push leaves the doc permanently short of the server with nothing to notice it.`;
+      return `The content doc was EMPTY while the block's row projection held ${data.rowLength} characters that this client never typed. The row is written by whichever client is editing the block, so it is an independent witness that the block has content — and this client's doc never received it. The doc is hydrated by the \`page-block-doc:rows\` live-state push (plus its own doc-init response), so a missed push leaves the doc permanently short of the server with nothing to notice it.`;
   }
 }

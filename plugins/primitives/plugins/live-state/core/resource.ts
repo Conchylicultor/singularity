@@ -171,22 +171,3 @@ export function keyedResourceDescriptor<
   registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
-
-// Like `resourceDescriptor` but tagged for the central WS endpoint. The
-// `keyed?: never` mirrors `resourceDescriptor` so a central resource passed to
-// the two-arg `defineResource(descriptor, …)` form matches the non-keyed
-// overload (central resources are never keyed — there is no DB change-feed to
-// scope a delta against).
-export function centralResourceDescriptor<
-  T,
-  P extends Record<string, string> = Record<string, never>,
->(
-  key: string,
-  schema: ZodParser<T>,
-  initialData: T,
-  opts?: ResourceDescriptorOptions,
-): ResourceDescriptor<T, P> & { keyed?: never; initialData: T } {
-  const d = { key, origin: "central" as const, schema, initialData, ...opts };
-  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
-  return d;
-}

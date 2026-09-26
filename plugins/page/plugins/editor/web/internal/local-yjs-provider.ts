@@ -14,7 +14,7 @@ import type { RowTruth } from "./row-truth";
  * `Provider` contract as {@link LiveStateYjsProvider}, so `CollaborationPlugin`
  * binds to it identically — but it has NO network: the per-block `Y.Doc` is
  * seeded ONCE from the block's `data.text` at `connect()` and never touches
- * `blockContentResource` / `doc-init` / `doc-update`. Typing, formatting,
+ * the `blockDocs` row / `doc-init` / `doc-update`. Typing, formatting,
  * split, and merge all operate purely on the local doc; nothing is persisted
  * or sent anywhere.
  *

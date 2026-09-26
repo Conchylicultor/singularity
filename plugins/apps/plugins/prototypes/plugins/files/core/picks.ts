@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { isOptionName, isOptionValue } from "./options";
@@ -68,16 +68,17 @@ export function applyPicksChange(
 }
 
 /**
- * One prototype's stored picks (push, keyed by `name` — a point resource, one
- * small record per subscription). Notified by the writer the moment it writes,
- * and by the watcher on every other backend (the store is host-global). `{}`
- * is "nothing picked", a legitimate answer; a name that is not a prototype
- * throws.
+ * One prototype's stored picks — a live value per `name`, one small record per
+ * subscription. Served from the file store (`source: "external"`), notified by
+ * the writer the moment it writes and by the watcher on every other backend
+ * (the store is host-global). `{}` is "nothing picked", a legitimate answer
+ * once loaded — and never a stand-in before: until the record is read the value
+ * is pending. A name that is not a prototype throws.
  */
-export const prototypePicksResource = resourceDescriptor<
-  StoredPicks,
-  { name: string }
->("prototypes.picks", StoredPicksSchema, {});
+export const prototypePicks = liveValue("prototypes.picks", {
+  schema: StoredPicksSchema,
+  params: ["name"],
+});
 
 /**
  * Apply one change to a prototype's picks. 404 for an unknown prototype. An

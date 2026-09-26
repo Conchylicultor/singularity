@@ -29,7 +29,8 @@
  *   - registration guards: keyed + identityTable required, mutually exclusive
  *     with membership / scopedMembership, incompatible with preload;
  *   - a throwing `rowIdentity` fails OPEN (delivered anyway) and is reported;
- *   - an `ackChannel` entry still acks a writer whose change missed its tuple;
+ *   - a tuple whose subscriber asked for acks still gets the writer's ack when
+ *     the change missed it;
  *   - the registration guards double as the proof that `ScopePolicy` rejects
  *     two arms at once: each carries a `@ts-expect-error` over its `toThrow`, so
  *     one test pins the compile-time rejection AND the runtime backstop;
@@ -48,7 +49,6 @@ const keyOf = (r: unknown) => (r as { id: string }).id;
 
 interface OwnRowOpts {
   rowIdentity?: boolean;
-  ackChannel?: true;
 }
 
 // One simulated identity table (`blk_table`, whose PK IS the resource's row key)
@@ -71,7 +71,6 @@ function ownRowHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}) {
   const define = (key: string, o: OwnRowOpts = {}): void => {
     const contract = { key, schema: rowsSchema, keyed: { keyOf } };
     const rest = {
-      ...(o.ackChannel ? { ackChannel: o.ackChannel } : {}),
       loader: (p: ResourceParams, ctx?: { affectedIds: readonly string[] }) => {
         const id = p.id ?? "";
         loaderCalls.push(`${key}:${ctx ? "scoped" : "FULL"}:${id}`);
@@ -380,13 +379,13 @@ describe("rowIdentity — routing", () => {
     expect(w.h.pushesFor("boom", 0)).toHaveLength(1); // the real change shipped
   });
 
-  test("ackChannel: a change that missed this tuple still acks the writer — one standalone ack, no version bump, no delta", async () => {
+  test("acks asked: a change that missed this tuple still acks the writer — one standalone ack, no version bump, no delta", async () => {
     const w = ownRowHarness();
-    w.define("own", { rowIdentity: true, ackChannel: true });
+    w.define("own", { rowIdentity: true });
     w.table.set("a", 1);
     w.table.set("b", 1);
     await w.h.subscribe("own", { id: "a" }, { socket: 0 });
-    await w.h.subscribe("own", { id: "b" }, { socket: 1 });
+    await w.h.subscribe("own", { id: "b" }, { socket: 1, acks: true });
     w.loaderCalls.length = 0;
 
     w.table.set("a", 2);
@@ -416,7 +415,7 @@ describe("rowIdentity — routing", () => {
     expect(after[1]!.version).toBe(1);
   });
 
-  test("without the ackChannel opt-in, a change that missed this tuple is a TOTAL no-op", async () => {
+  test("when no subscriber asked for acks, a change that missed this tuple is a TOTAL no-op", async () => {
     const w = ownRowHarness();
     w.define("own", { rowIdentity: true });
     w.table.set("a", 1);

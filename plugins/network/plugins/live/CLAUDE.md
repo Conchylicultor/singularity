@@ -48,6 +48,20 @@ useLiveRow(eventSources, sourceId);                                   // one row
   `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
   type (tsc), and `and` / `or` / `column` / `op` / `operand` cannot be column
   names (they spell a filter tree).
+- **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { row, id })`
+  — a collection mints `key:rows` alone: a table whose rows are only ever read by
+  id (one row per mounted block: `todo-block-task`, `page-block-doc`). Every
+  window field (`filterable`, `sortable`, `maxLimit`) and `preload` is `never`
+  there (an id set has no default tuple), and a stray one from an untyped caller
+  throws. It is `LiveLookupCollection<Row>`; `useLiveRow` and `useLive(c, { ids })`
+  take it (they take `LiveRowsCollection<Row>`, the part every collection has),
+  while a list read — `useLive(c)`, `{ where }`, `{ groupBy }` — is a tsc error.
+  `serveCollection` compiles and registers only the point resource and returns
+  `ServedLookupCollection` (`rows`, `keys: [key:rows]`, a one-entry `declare`).
+  Its `:rows` point routing is what "subscribe to one row of a table" means: a
+  change to row R reaches only the tuples whose id set holds R. Prefer it to a
+  param'd value over a one-row table (`oneRow` routing was rejected — see
+  `research/2026-09-26-global-live-values-migration-contract.md` §10).
 - **Preload.** `preload: "boot"` (or `"boot-and-keep"`) is forwarded as is to
   the WINDOW descriptor: the boot snapshot hydrates its default tuple
   (`defaultParams`) before first paint and the owning plugin is pinned to the
@@ -84,6 +98,14 @@ useLiveRow(eventSources, sourceId);                                   // one row
     (a group value is a stored value; an operand narrowing like
     `liveText(Enum)` is tsc-only), so a value the row type cannot hold fails
     loudly.
+  - **A column type's wire form.** A column built through sql-column's
+    `withWire` (collab-doc's `bytea` → unfolded base64) is encoded IN JS on every
+    row a loader returns (`encodeRow` on the window / point spec) — never in SQL,
+    whose `encode(…, 'base64')` folds lines at 76 chars. The row schema's field
+    must BE the codec's wire type (plus `| null` for a NULL-able column): a
+    mismatch on a by-name binding is a tsc error naming the field. A
+    wire-encoded column cannot be filterable or the id (an operand, a group value
+    and an id are compared as stored); that throws at module eval.
   - The served object exposes `window`, `rows`, `groups`, `keys` (all three
     minted keys — for anything that must know every reader of the table) and
     `declare`. `compileCollection` is the same derivation without registering
@@ -121,6 +143,13 @@ useLiveRow(eventSources, sourceId);                                   // one row
   `found: false` means the row is not in the collection — never "outside the
   window". A nullable id is not supported yet (it needs an `enabled` option on
   `useResource`).
+- **Optimistic reads** are `optimistic-mutation`'s, over the same argument
+  shapes: `useOptimisticResource(value, params?, options)` and
+  `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
+  ranks). `pending` until a real value lands, never on a placeholder, and
+  `dispatch` only on the settled arm. The hook asks the server for standalone
+  ack frames on its tuple (client-requested, per subscription), so a write
+  that changes nothing in the tuple still confirms — nothing is declared here.
 - `useLive` is on `live-state/no-pending-data-collapse`'s watched list;
   `useLiveRow` has no `data` to collapse.
 
@@ -157,8 +186,9 @@ useLive(taskDetail, { id });             // params required iff declared
 - **Declare.** The key is a positional string literal (the scanners read it).
   `params` is a const tuple of names; `P` is derived from it (no phantom
   generic to restate). There is **no `initial`**: not known yet is `pending`,
-  never a stand-in — the descriptor has no `initialData`, so a `liveValue` can
-  not be an `useOptimisticResource` base (tsc error). `preload` is typed `never`
+  never a stand-in — the descriptor has no `initialData` (an optimistic read of
+  a value is `useOptimisticResource(value, params?, options)`, pending until the
+  first value — see below). `preload` is typed `never`
   beside `params`: only a param-less value has a default tuple the server can
   load before a tab names one. A preloaded value sets `defaultParams: {}`, the
   tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
@@ -183,10 +213,41 @@ useLive(taskDetail, { id });             // params required iff declared
   - Returns `ServedValue` = the runtime `Resource` + `source` + `unbounded?` +
     `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a collection's);
     the external arm adds `notify`. `compileValue` is the same derivation
-    without registering (tests register it on their own runtime).
-  - Deliberately not yet: `debounceMs`, `dependsOn`, `revalidate`,
-    `ackChannel`, a read-side `select` — each arrives with the first migrated
-    call site that needs it.
+    without registering, and `shared/compile-value.ts`'s `registerValue`
+    registers it on any runtime (tests use their own).
+  - **`throttleMs`** (both arms): at most one flush per window — the first
+    change arms a trailing timer later changes do not re-arm (the runtime's
+    `debounceMs`, which was always a throttle). A flush already happening
+    drains it early.
+  - **`recomputeOn: [served, { value: served, params: (up) => P }]`** (both
+    arms): upstream served values whose change recomputes this one. A bare
+    served value recomputes **every currently-subscribed tuple** of this value
+    (the runtime's `toSubscribed` edge — it tracks them, so the hand-kept
+    "active set" filled by `onFirstSubscribe` is gone); a param-less value
+    always recomputes its `{}` tuple, so its version moves even with no tab
+    subscribed. The mapped form is one per-tuple edge; `params` is typed
+    against that upstream's params (the array is a const tuple, inferred per
+    element).
+  - **`whileSubscribed(params, notify?) → stop | Promise<stop>`**: start
+    something for as long as a tuple has a subscriber, return what stops it —
+    one function, so a start without its stop cannot be written. The external
+    arm is handed `notify` for that tuple; the db arm gets `params` only (tsc).
+    Paired in `shared/compile-value.ts` over the runtime's 0→1 / N→0 hooks: an
+    async start is awaited on the subscribe path, and a last unsubscribe that
+    arrives first runs the stop after the start resolves. A failed start has
+    nothing to stop (the runtime reports it).
+  - **`revalidate`** (both arms): the ETag signature, passed through
+    (read path only; co-produce it with the loader, e.g. `createSignedMemo`).
+  - Not spelled: `ackChannel` (an optimistic reader asks for acks on its own
+    subscription), a read-side `select`, scoped `rel()` edges — see
+    `research/2026-09-26-global-live-values-migration-contract.md`.
+- **Central.** `liveValue(key, { …, origin: "central" })` declares a value the
+  machine-wide central runtime serves (`LiveValue<T, P, "central">`; the browser
+  subscribes over the central socket; never preloaded). It is served by
+  `network/live/central`'s `serveValue` — external arm only (central has no
+  change feed), registered by the central plugin's `resources: [served]`, so no
+  `declare`. Each `serveValue` rejects the other origin's value (tsc). Both
+  compile options through `shared/compile-value.ts`, so they cannot drift.
 - **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
   `useResource`; the params object is the canonical tuple). A value with no
   placeholder makes no HTTP fetch on mount — the WS sub-ack fills it (the
@@ -195,6 +256,7 @@ useLive(taskDetail, { id });             // params required iff declared
 ## Internals
 
 - `core/` (browser-safe): `liveCollection(key, { row, id, filterable, sortable, default, maxLimit, preload? })`
+  (or `{ row, id }` alone — lookup-only, minting `` `${key}:rows` `` only)
   mints three resources from one declaration — `key` (window membership),
   `` `${key}:rows` `` (point membership) and `` `${key}:groups` `` (a plain push
   value; one wire schema for every column's values — any scalar or NULL — with
@@ -240,7 +302,7 @@ useLive(taskDetail, { id });             // params required iff declared
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.ResourceDescriptor`
@@ -258,6 +320,9 @@ useLive(taskDetail, { id });             // params required iff declared
 - Server:
   - Uses:
     - `database.db`
+    - `database/sql-column.ColumnWire`
+    - `database/sql-column.columnWireCodec`
+    - `database/sql-column.WireCodec`
     - `infra/query-resource.EntitySource`
     - `infra/query-resource.QueryDb`
     - `infra/query-resource.SelectMap`
@@ -270,9 +335,11 @@ useLive(taskDetail, { id });             // params required iff declared
     - `CollectionSpecs`
     - `CompiledValue`
     - `LiveValueSource`
+    - `LookupCollectionSpecs`
     - `ServeCollectionOptions`
     - `ServedCollection`
     - `ServedExternalValue`
+    - `ServedLookupCollection`
     - `ServedValue`
     - `ServeValueOptions`
   - Exports (values):
@@ -297,6 +364,7 @@ useLive(taskDetail, { id });             // params required iff declared
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourcePreload`
   - Exports (types):
+    - `LiveCentralValueSpec`
     - `LiveCollection`
     - `LiveCollectionSpec`
     - `LiveColumnFilter`
@@ -312,14 +380,18 @@ useLive(taskDetail, { id });             // params required iff declared
     - `LiveGroupQuery`
     - `LiveGroupsDescriptor`
     - `LiveGroupValue`
+    - `LiveLookupCollection`
+    - `LiveLookupSpec`
     - `LiveOrderBy`
     - `LiveParamValueSpec`
     - `LivePreload`
     - `LiveQuery`
     - `LiveReservedColumn`
     - `LiveRowSchema`
+    - `LiveRowsCollection`
     - `LiveSortDirection`
     - `LiveValue`
+    - `LiveValueOrigin`
     - `LiveValueParams`
     - `LiveValueSpec`
     - `LiveWhere`
@@ -334,7 +406,24 @@ useLive(taskDetail, { id });             // params required iff declared
   - Imported by:
     - `apps/events/events-core`
     - `apps/events/sources/source-field`
+    - `apps/prototypes/files`
+    - `auth`
+    - `build`
+    - `build/deployment`
+    - `conversations/conversation-view/code`
+    - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/drop-and-exit`
+    - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversations-view/queue`
+    - `infra/git/git-watcher`
+    - `page/annotations/todo/task-link`
+    - `page/editor`
+    - `page/editor-collab`
     - `shell/notifications`
+    - `tasks/attempt-work`
+- Central:
+  - Exports (types): `CentralServedValue`
+  - Exports (values): `serveValue`
 - Sub-plugins:
   - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
 

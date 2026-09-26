@@ -22,12 +22,15 @@ import { QueryClient } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 import { z } from "zod";
 import {
+  getNotificationsClient,
   NotificationsProvider,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   noteResourceTxAcks,
   noteResourceWatermark,
+  NotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web/testing";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
@@ -790,5 +793,234 @@ describe("useOptimisticResource", () => {
     });
     // Nothing unsettled ⇒ no ordering constraint left to hold ⇒ dropped.
     await waitFor(() => expect(activeSendLaneCount()).toBe(idle));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The positional forms: a `liveValue` (plus params) or a collection's `{ ids }`
+// read. No placeholder is ever the base: `pending` until a real value lands,
+// and `dispatch` exists only on the settled arm.
+// ---------------------------------------------------------------------------
+
+const numbersValue = liveValue("test.optimistic-mutation.value", {
+  schema: z.array(z.number()),
+});
+const numbersKey = queryKeyFor(numbersValue.key, undefined);
+const namedValue = liveValue("test.optimistic-mutation.named", {
+  schema: z.array(z.number()),
+  params: ["name"],
+});
+
+const RankRow = z.object({ id: z.string(), rank: z.string() });
+type RankRow = z.infer<typeof RankRow>;
+const ranks = liveCollection("test.optimistic-mutation.ranks", {
+  row: RankRow,
+  id: "id",
+  filterable: {},
+  sortable: ["rank"],
+  default: { orderBy: [["rank", "asc"]], limit: 50 },
+  maxLimit: 200,
+});
+const setRank = (rows: RankRow[], v: { id: string; rank: string }): RankRow[] =>
+  rows.map((r) => (r.id === v.id ? { ...r, rank: v.rank } : r));
+
+function providerWrapper(client: QueryClient) {
+  return ({ children }: { children: ReactNode }) => (
+    <NotificationsProvider queryClient={client}>
+      {children}
+    </NotificationsProvider>
+  );
+}
+
+/**
+ * Mount like `useLive`'s suite: the transport counts as having been ready, so
+ * no cold-start HTTP prime races the hand-written `setQueryData` values.
+ */
+function mountPositional<R>(client: QueryClient, useHook: () => R) {
+  const rendered = renderHook(useHook, { wrapper: providerWrapper(client) });
+  const notifications = getNotificationsClient();
+  if (!notifications) throw new Error("NotificationsClient not created");
+  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  return rendered;
+}
+
+/** Wait for the settled arm and return it. */
+async function settledOf<R extends { pending: boolean }>(result: {
+  current: R;
+}): Promise<Extract<R, { pending: false }>> {
+  await waitFor(() => expect(result.current.pending).toBe(false));
+  return result.current as Extract<R, { pending: false }>;
+}
+
+describe("useOptimisticResource — positional forms", () => {
+  it("a value is pending until its first value lands; then dispatch replays and a push confirms", async () => {
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(numbersValue, { apply, mutate }),
+    );
+    expect(result.current.pending).toBe(true);
+    expect("dispatch" in result.current).toBe(false);
+    expect("data" in result.current).toBe(false);
+
+    act(() => {
+      client.setQueryData(numbersKey, [1]);
+    });
+    const settled = await settledOf(result);
+    expect(settled.data).toEqual([1]);
+
+    act(() => {
+      settled.dispatch(2);
+    });
+    const withOp = await settledOf(result);
+    expect(withOp.data).toEqual([1, 2]);
+    expect(withOp.serverData).toEqual([1]);
+
+    act(() => {
+      client.setQueryData(numbersKey, [1, 2]); // the push, before the response
+    });
+    await act(async () => {
+      release();
+    });
+    await waitFor(() => {
+      const r = result.current;
+      if (r.pending) throw new Error("expected the settled arm");
+      expect(r.pendingOps).toEqual([]);
+      expect(r.saving).toBe(false);
+    });
+  });
+
+  it("the pending arm has no dispatch, data or serverData (type level)", () => {
+    const client = makeClient();
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(numbersValue, { apply, mutate: async () => {} }),
+    );
+    const r = result.current;
+    if (r.pending) {
+      // @ts-expect-error — an op cannot be made against a base nobody has seen
+      void r.dispatch;
+      // @ts-expect-error — no stand-in value while pending
+      void r.data;
+      // @ts-expect-error — no stand-in base while pending
+      void r.serverData;
+    }
+    expect(r.pending).toBe(true);
+  });
+
+  it("a parameterized value reads its own tuple; its params are required (type level)", async () => {
+    const client = makeClient();
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(
+        namedValue,
+        { name: "a" },
+        { apply, mutate: async () => {} },
+      ),
+    );
+    expect(result.current.pending).toBe(true);
+    act(() => {
+      client.setQueryData(queryKeyFor(namedValue.key, { name: "a" }), [7]);
+    });
+    expect((await settledOf(result)).data).toEqual([7]);
+
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const useTypeOnly = () => {
+      // @ts-expect-error — a parameterized value's params are required
+      useOptimisticResource(namedValue, { apply, mutate: async () => {} });
+      useOptimisticResource(
+        numbersValue,
+        // @ts-expect-error — apply must fold the value's own type
+        { apply: (c: string[]) => c, mutate: async () => {} },
+      );
+    };
+    expect(typeof useTypeOnly).toBe("function");
+  });
+
+  it("a collection's { ids } read never takes the :rows placeholder as its base", async () => {
+    // The `:rows` descriptor seeds `[]` into the cache for its legacy readers.
+    const client = makeClient();
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(
+        ranks,
+        { ids: ["b", "a"] },
+        { apply: setRank, mutate: async () => {} },
+      ),
+    );
+    expect(result.current.pending).toBe(true);
+    act(() => {
+      client.setQueryData(queryKeyFor(ranks.rows.key, { ids: "a,b" }), [
+        { id: "a", rank: "m" },
+      ]);
+    });
+    expect((await settledOf(result)).data).toEqual([{ id: "a", rank: "m" }]);
+  });
+
+  it("an optimistic reader asks for acks on its tuple, and drops the request on unmount", () => {
+    const original = NotificationsClient.prototype.requestAcks;
+    const released = vi.fn();
+    const requestAcks = vi
+      .spyOn(NotificationsClient.prototype, "requestAcks")
+      .mockImplementation(function (this: NotificationsClient, ...args) {
+        const release = original.apply(this, args);
+        return () => {
+          released();
+          release();
+        };
+      });
+    const client = makeClient();
+    const { unmount } = mountPositional(client, () =>
+      useOptimisticResource(
+        ranks,
+        { ids: ["a"] },
+        { apply: setRank, mutate: async () => {} },
+      ),
+    );
+    expect(requestAcks).toHaveBeenCalledWith(
+      ranks.rows.key,
+      { ids: "a" },
+      undefined,
+    );
+    expect(released).not.toHaveBeenCalled();
+    unmount();
+    expect(released).toHaveBeenCalledTimes(1);
+    requestAcks.mockRestore();
+  });
+
+  it("a reorder whose write changed nothing in the tuple still confirms, via the standalone ack", async () => {
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const params = { ids: "a,b" };
+    const { result } = mountPositional(client, () =>
+      useOptimisticResource(
+        ranks,
+        { ids: ["a", "b"] },
+        { apply: setRank, mutate },
+      ),
+    );
+    act(() => {
+      client.setQueryData(queryKeyFor(ranks.rows.key, params), [
+        { id: "a", rank: "a" },
+        { id: "b", rank: "b" },
+      ]);
+    });
+    const settled = await settledOf(result);
+    act(() => {
+      settled.dispatch({ id: "a", rank: "c" });
+    });
+    await act(async () => {
+      release({ watermark: "4242" });
+    });
+    await waitFor(() => {
+      const r = result.current;
+      if (r.pending) throw new Error("expected the settled arm");
+      expect(r.saving).toBe(false);
+      expect(r.pendingOps).toHaveLength(1); // resolved; no push, no ack yet
+    });
+
+    // The write landed outside what this tuple can see (net-zero here): the
+    // server sends a standalone ack, which produces no cache event at all.
+    act(() => {
+      noteResourceTxAcks(ranks.rows.key, params, ["4242"]);
+    });
+    expect((await settledOf(result)).pendingOps).toEqual([]);
   });
 });

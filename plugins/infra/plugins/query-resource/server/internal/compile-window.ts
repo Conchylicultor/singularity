@@ -99,6 +99,12 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
 
   const resolveWhere = (params: P): SQL | undefined =>
     typeof spec.where === "function" ? spec.where(params) : spec.where;
+  // The declared wire encoding, applied to every row a loader returns.
+  const encodeRow = spec.encodeRow;
+  const encoded = (rows: Row[]): Row[] =>
+    encodeRow
+      ? rows.map((r) => encodeRow(r as Record<string, unknown>) as Row)
+      : rows;
 
   const dependsOn: DependsOnEntry[] | undefined = spec.edges?.map((edge) =>
     compileEdge(edge, db),
@@ -139,7 +145,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       if (ids.length === 0) return [];
       const w = resolveWhere(params);
       const pred = inArray(pkColumn, [...ids]);
-      return await from().where(w ? and(w, pred)! : pred);
+      return encoded(await from().where(w ? and(w, pred)! : pred));
     };
 
     const membership: KeyedMembership<P> = {
@@ -162,7 +168,6 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       ...scopePolicy,
       ...(dependsOn ? { dependsOn } : {}),
       ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-      ...(spec.ackChannel ? { ackChannel: true as const } : {}),
     } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
     return { serverOpts, keyField, identityTableName: tableName };
   }
@@ -341,7 +346,9 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     params: P,
     ctx?: { affectedIds: readonly string[] },
   ): Promise<Row[]> =>
-    await (ctx ? buildScoped(params, ctx.affectedIds) : buildFull(params));
+    encoded(
+      await (ctx ? buildScoped(params, ctx.affectedIds) : buildFull(params)),
+    );
 
   // The ids-only bounded ordered id list — the membership authority. Same
   // where/order/limit as the FULL loader, projecting ONLY the pk.
@@ -371,7 +378,6 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     ...scopePolicy,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-    ...(spec.ackChannel ? { ackChannel: true as const } : {}),
   } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
   return { serverOpts, keyField, identityTableName: tableName };
 }

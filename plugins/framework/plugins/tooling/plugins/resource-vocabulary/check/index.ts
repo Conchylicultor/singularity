@@ -59,12 +59,11 @@ type RegisterMarkerNames<M> = {
 
 /**
  * A served collection: one call serving every resource a `liveCollection`
- * mints (`serveCollection`). Structural, like {@link ServedResource}.
+ * mints (`serveCollection`) — `rows` always, the window and groups unless it is
+ * lookup-only. Structural, like {@link ServedResource}.
  */
 interface ServedCollection {
-  window: ServedResource;
   rows: ServedResource;
-  groups: ServedResource;
 }
 
 /** Every export of `M` that is a function returning a served collection. */

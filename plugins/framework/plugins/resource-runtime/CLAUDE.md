@@ -357,9 +357,19 @@ co-production closes. Scoped and membership paths stamp the pending's set direct
 (ctx loads never coalesce). Hand-`notify()`/synthetic pushes and
 `invalidate`/`sub-ack`/HTTP frames never carry one. A recompute producing NO value
 change (empty scoped diff, membership net-zero / window-boundary skip, point
-empty-intersection) broadcasts a standalone version-less
-`{ kind: "ack", key, params, ackTx }` frame instead — gated on the per-resource
-`ackChannel: true` opt-in, never bumping the version counter, snapshot, or cascade.
+empty-intersection) sends a standalone version-less
+`{ kind: "ack", key, params, ackTx }` frame instead — never bumping the version
+counter, snapshot, or cascade — **only to the sockets holding that tuple for a
+tab that asked**. Acks are client-requested, not declared: each
+`SocketSubRecord` keeps `ackTabs`, the holding tabs that want them. A `sub`
+frame (and each `sub-batch` entry) restates its tab's flag (`acks: true`, absent
+= off), `op: "sub-acks"` flips it on a held sub without re-subscribing (no
+sub-ack, no loader run; dropped for a tuple the tab does not hold), and it
+leaves with the tab (unsub / unsub-tab / a `complete` batch that did not
+restate it / socket close). The feed router schedules an ACK-ONLY pending for a
+tuple its change missed (own-row routing, point empty-intersection) only when
+someone asked (`tupleWantsAcks`). The client half (`requestAcks`,
+`useResourceAcks`) is live-state's; the optimistic hook is its caller.
 Loader failure drops the frame and the acks together (no false ack). Client half:
 `optimistic-mutation/CLAUDE.md`; pinned by `runtime-ack-channel.test.ts`. Design:
 `research/2026-07-18-global-bounded-working-set-phase2.md` Part C.
@@ -525,7 +535,9 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `runtime-version-shortcircuit.test.ts`, `runtime-gate-dedup.test.ts`,
   `runtime-sub-batch.test.ts`, `runtime-watermark.test.ts`,
   `runtime-ack-channel.test.ts`, `runtime-revalidate.test.ts`,
-  `runtime-stale-flight.test.ts` (a drain refusing a pre-commit flight).
+  `runtime-stale-flight.test.ts` (a drain refusing a pre-commit flight),
+  `runtime-to-subscribed.test.ts` (a `toSubscribed` edge reaches exactly the
+  subscribed downstream tuples).
   Note `controllable()` resolves at RELEASE time, so it structurally cannot model
   a SELECT that already ran; any test about stale-flight joins must use
   `snapshotControllable()`, which captures at INVOCATION time.

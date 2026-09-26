@@ -8,16 +8,19 @@
  * folded in" — onto the value frames it produces (`update` / `delta`). A
  * recompute that produces NO value change (empty scoped diff, membership
  * net-zero / window-boundary skip, point empty-intersection) broadcasts a
- * standalone version-less `{ kind: "ack" }` frame instead, gated on the
- * per-resource `ackChannel` opt-in. Pinned here:
+ * standalone version-less `{ kind: "ack" }` frame instead, sent only to the
+ * subscribers that ASKED for acks on that tuple (`acks: true` on the sub, or
+ * `op: "sub-acks"`). Pinned here:
  *
  *   - a feed FULL recompute stamps ackTx on the delta/update; hand-`notify()`
  *     and synthetic pushes are structurally ack-less; `invalidate` never
  *     carries one;
  *   - coalescing unions xids into one frame; a scoped→FULL degrade KEEPS the
  *     union (a FULL reads post-commit — contrast `deleted`, which FULL drops);
- *   - the no-value-change paths broadcast `{ kind: "ack" }` iff `ackChannel`,
- *     without bumping the version stream the next real frame ships under;
+ *   - the no-value-change paths send `{ kind: "ack" }` iff a subscriber asked,
+ *     only to the sockets whose tabs asked, without bumping the version stream
+ *     the next real frame ships under; the request follows the tab (restated by
+ *     every sub, flipped by `sub-acks`, dropped with the tab);
  *   - the STALE-FLIGHT REFUSAL: a drain will not be served by a read flight
  *     that started before the notify it is draining, so it always produces its
  *     own value and can always stamp its own ackTx. Co-production made exact —
@@ -39,7 +42,7 @@ const keyOf = (r: unknown) => (r as { id: string }).id;
 
 // A keyed own-identity resource "rows" over a simulated table, with a feed
 // helper carrying the optional `xid` attribution.
-function keyedHarness(o: { ackChannel?: true } = {}) {
+function keyedHarness() {
   const table = new Map<string, number>();
   const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
   const h = createHarness({ readSet: () => ["row_table"], sockets: 2 });
@@ -48,7 +51,6 @@ function keyedHarness(o: { ackChannel?: true } = {}) {
     {
       identityTable: "row_table",
       fanOut: { reason: "one param-less tuple — nothing to narrow" },
-      ...(o.ackChannel ? { ackChannel: true as const } : {}),
       loader: (_p, c) =>
         c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
     },
@@ -259,12 +261,12 @@ describe("ackTx — coalescing", () => {
 });
 
 describe("standalone ack frames — no-value-change recomputes", () => {
-  test("an empty scoped diff broadcasts { kind: 'ack' } iff ackChannel — version-less, no value frame", async () => {
-    // Opted in: a byte-identical rewrite (the loader returns the same row) diffs
+  test("an empty scoped diff sends { kind: 'ack' } iff the subscriber asked — version-less, no value frame", async () => {
+    // Asked: a byte-identical rewrite (the loader returns the same row) diffs
     // to empty — no delta, but the writer's ack ships standalone.
-    const optIn = keyedHarness({ ackChannel: true });
+    const optIn = keyedHarness();
     optIn.table.set("a", 1);
-    await optIn.h.subscribe("rows");
+    await optIn.h.subscribe("rows", {}, { acks: true });
     optIn.feed("U", ["a"], "1000"); // no byte change
     await tick();
     expect(deltas(optIn.h, "rows")).toHaveLength(0);
@@ -273,7 +275,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     expect((ack[0] as { ackTx?: string[] }).ackTx).toEqual(["1000"]);
     expect("version" in ack[0]!).toBe(false); // version-less by design
 
-    // Not opted in: same recompute ships nothing at all (today's behavior).
+    // Did not ask: the same recompute ships nothing at all.
     const optOut = keyedHarness();
     optOut.table.set("a", 1);
     await optOut.h.subscribe("rows");
@@ -282,8 +284,8 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     expect(optOut.h.pushesFor("rows")).toHaveLength(0);
   });
 
-  test("point empty-intersection broadcasts an ack to the untouched tuple iff opt-in, with NO version bump", async () => {
-    const makePoint = (ackChannel: boolean) => {
+  test("point empty-intersection sends an ack to the untouched tuple iff it asked, with NO version bump", async () => {
+    const makePoint = () => {
       const table = new Map<string, number>();
       const idsOf = (p: Record<string, string>) =>
         (p.ids ?? "").split(",").filter(Boolean);
@@ -293,7 +295,6 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         {
           identityTable: "pt_table",
           membership: { kind: "point", idsOf },
-          ...(ackChannel ? { ackChannel: true as const } : {}),
           loader: (p, c) => {
             const ids = c ? [...c.affectedIds] : idsOf(p);
             return ids
@@ -314,9 +315,9 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       return { h, table, feed };
     };
 
-    const p = makePoint(true);
+    const p = makePoint();
     p.table.set("a", 1);
-    await p.h.subscribe("pt", { ids: "a" });
+    await p.h.subscribe("pt", { ids: "a" }, { acks: true });
 
     // A change entirely OUTSIDE the tuple's id set: value untouched, ack ships.
     p.table.set("z", 9);
@@ -334,8 +335,8 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     await tick();
     expect(deltas(p.h, "pt").at(-1)!.version).toBe(1);
 
-    // Without the opt-in the empty intersection stays a total no-op.
-    const q = makePoint(false);
+    // Nobody asked: the empty intersection stays a total no-op.
+    const q = makePoint();
     q.table.set("a", 1);
     await q.h.subscribe("pt", { ids: "a" });
     q.table.set("z", 9);
@@ -344,7 +345,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     expect(q.h.pushesFor("pt")).toHaveLength(0);
   });
 
-  test("a window-boundary skip (entrant past the tail) broadcasts an ack, with NO version bump", async () => {
+  test("a window-boundary skip (entrant past the tail) sends an ack, with NO version bump", async () => {
     const table = new Map<string, number>(); // id → n; window = 2 smallest n
     const members = () =>
       [...table.entries()]
@@ -355,7 +356,6 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       { key: "win", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "w_table",
-        ackChannel: true,
         membership: {
           kind: "window",
           windowIdsOf: async () =>
@@ -382,7 +382,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       });
     table.set("a", 1);
     table.set("b", 2);
-    await h.subscribe("win"); // window [a, b]
+    await h.subscribe("win", {}, { acks: true }); // window [a, b]
 
     // Entrant sorting PAST the tail: net-zero — no frame, but the ack ships.
     table.set("z", 9);
@@ -401,13 +401,90 @@ describe("standalone ack frames — no-value-change recomputes", () => {
   });
 
   test("an ack frame reaches only subscribers of the tuple; zero subscribers ⇒ nothing", async () => {
-    const k = keyedHarness({ ackChannel: true });
+    const k = keyedHarness();
     k.table.set("a", 1);
-    await k.h.subscribe("rows", {}, { socket: 0 });
+    await k.h.subscribe("rows", {}, { socket: 0, acks: true });
     k.feed("U", ["a"], "1300"); // empty diff → ack
     await tick();
     expect(acks(k.h, "rows").filter((f) => f.socket === 0)).toHaveLength(1);
     expect(acks(k.h, "rows").filter((f) => f.socket === 1)).toHaveLength(0);
+  });
+
+  test("an ack frame reaches only the subscriptions that asked — not a co-subscriber of the same tuple", async () => {
+    const k = keyedHarness();
+    k.table.set("a", 1);
+    await k.h.subscribe("rows", {}, { socket: 0, acks: true });
+    await k.h.subscribe("rows", {}, { socket: 1 });
+    k.feed("U", ["a"], "1310"); // empty diff → ack
+    await tick();
+    expect(acks(k.h, "rows").filter((f) => f.socket === 0)).toHaveLength(1);
+    expect(acks(k.h, "rows").filter((f) => f.socket === 1)).toHaveLength(0);
+  });
+
+  test("the request is OR-ed across the tabs sharing a socket and follows each tab", async () => {
+    const k = keyedHarness();
+    k.table.set("a", 1);
+    const feedNoop = () => k.feed("U", ["a"], String(++xid)); // empty diff each time
+    let xid = 1320;
+    const acked = () => acks(k.h, "rows").length;
+    await k.h.subscribe("rows", {}, { tabId: "t1", acks: true });
+    await k.h.subscribe("rows", {}, { tabId: "t2" });
+    feedNoop();
+    await tick();
+    expect(acked()).toBe(1); // t1 asked → the socket gets it (once)
+
+    // t2 asks too, then t1 stops asking: still delivered (t2 wants it).
+    await k.h.subscribe("rows", {}, { tabId: "t2", acks: true });
+    await k.h.subAcks("rows", {}, false, { tabId: "t1" });
+    feedNoop();
+    await tick();
+    expect(acked()).toBe(2);
+
+    // t2's own restating sub without `acks` turns it off: nobody asks now.
+    await k.h.subscribe("rows", {}, { tabId: "t2" });
+    feedNoop();
+    await tick();
+    expect(acked()).toBe(2);
+
+    // `sub-acks` turns it back on without a new sub-ack…
+    const subAcksBefore = k.h.frames.filter((f) => f.kind === "sub-ack").length;
+    await k.h.subAcks("rows", {}, true, { tabId: "t1" });
+    expect(k.h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(
+      subAcksBefore,
+    );
+    feedNoop();
+    await tick();
+    expect(acked()).toBe(3);
+
+    // …and the asking tab's departure takes its request with it, even though
+    // the other tab still holds the sub.
+    await k.h.unsubTab("t1");
+    feedNoop();
+    await tick();
+    expect(acked()).toBe(3);
+  });
+
+  test("a sub-acks frame for a tuple the tab does not hold is dropped", async () => {
+    const k = keyedHarness();
+    k.table.set("a", 1);
+    await k.h.subscribe("rows", {}, { tabId: "t1" });
+    await k.h.subAcks("rows", {}, true, { tabId: "t2" });
+    k.feed("U", ["a"], "1340");
+    await tick();
+    expect(acks(k.h, "rows")).toHaveLength(0);
+  });
+
+  test("a sub-batch entry restates the tab's request", async () => {
+    const k = keyedHarness();
+    k.table.set("a", 1);
+    await k.h.subscribeBatch([{ key: "rows", acks: true }], { tabId: "t1" });
+    k.feed("U", ["a"], "1350");
+    await tick();
+    expect(acks(k.h, "rows")).toHaveLength(1);
+    await k.h.subscribeBatch([{ key: "rows" }], { tabId: "t1" });
+    k.feed("U", ["a"], "1351");
+    await tick();
+    expect(acks(k.h, "rows")).toHaveLength(1);
   });
 });
 
@@ -487,14 +564,13 @@ describe("ackTx — failure and overflow", () => {
       {
         identityTable: "f_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        ackChannel: true,
         loader: async () => {
           if (boom) throw new Error("loader boom");
           return [{ id: "a", n: 1 }];
         },
       },
     );
-    await h.subscribe("f");
+    await h.subscribe("f", {}, { acks: true });
     boom = true;
     h.runtime.applyDbChange({
       table: "f_table",
@@ -509,9 +585,9 @@ describe("ackTx — failure and overflow", () => {
   });
 
   test("crossing the sourceTx cap (64) suppresses ackTx for the whole cycle", async () => {
-    const k = keyedHarness({ ackChannel: true });
+    const k = keyedHarness();
     k.table.set("a", 1);
-    await k.h.subscribe("rows");
+    await k.h.subscribe("rows", {}, { acks: true });
     k.table.set("a", 2); // real byte change → a delta ships
     for (let i = 0; i < 65; i++) k.feed("U", ["a"], `${2000 + i}`);
     await tick();

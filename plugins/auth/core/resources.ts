@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { centralResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   AUTH_PROVIDER_KINDS,
   type AuthIdentity,
@@ -34,12 +34,12 @@ export const AuthStateValueSchema = z.object({
 }) satisfies ZodParser<AuthStateValue>;
 
 /**
- * Web-facing typed view of the auth state resource. Marked `origin: "central"`
- * so the browser's NotificationsClient subscribes via `/ws/central-notifications`
- * — auth tokens live on the central runtime, shared across all worktrees.
+ * The shared auth state. `origin: "central"`: auth tokens live on the central
+ * runtime, shared across all worktrees, so the browser subscribes via
+ * `/ws/central-notifications` and only `network/live/central`'s `serveValue`
+ * can serve it.
  */
-export const authStateResource = centralResourceDescriptor<AuthStateValue>(
-  "auth-state",
-  AuthStateValueSchema,
-  { providers: {} },
-);
+export const authState = liveValue("auth-state", {
+  schema: AuthStateValueSchema,
+  origin: "central",
+});

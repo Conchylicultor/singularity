@@ -12,7 +12,9 @@ import type {
   LiveGroupQuery,
   LiveGroupValue,
   LiveQuery,
+  LiveRowsCollection,
   LiveValue,
+  LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
@@ -115,7 +117,9 @@ function listShape<Row, F, S extends string>(
  *   value; each value typed as the row field. The same list result
  *   as a window: `loadMore()` pages through groups.
  * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
- *   No paging fields: an id set is not a window.
+ *   No paging fields: an id set is not a window. The one list-free read, so it
+ *   (and `useLiveRow`) also takes a lookup-only collection; a window or
+ *   grouping read of one is a tsc error — it declares no order to list in.
  */
 /**
  * A value's params argument: absent for a param-less value (`P` is
@@ -145,23 +149,26 @@ export function useLive<
   collection: LiveCollection<Row, F, S>,
   query: LiveGroupQuery<F, G>,
 ): LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>;
-export function useLive<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S>,
+export function useLive<Row>(
+  collection: LiveRowsCollection<Row>,
   query: LiveIdsQuery,
 ): ResourceResult<Row[]>;
 /**
  * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
  *   `ResourceResult<T>` (pending, then settled; settled on its first render
  *   when the boot snapshot preloaded it). `params` is required exactly when the
- *   value declares params.
+ *   value declares params. A central value (`origin: "central"`) reads the
+ *   same way; its descriptor routes the subscription to the central socket.
  */
 export function useLive<T, P extends Record<string, string>>(
-  value: LiveValue<T, P>,
+  value: LiveValue<T, P, LiveValueOrigin>,
   ...params: LiveValueArgs<P>
 ): ResourceResult<T>;
 export function useLive<Row, F, S extends string>(
   source:
-    LiveCollection<Row, F, S> | LiveValue<unknown, Record<string, string>>,
+    | LiveCollection<Row, F, S>
+    | LiveRowsCollection<Row>
+    | LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
   query?:
     LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | Record<string, string>,
 ): LiveListResult<unknown> | ResourceResult<unknown> {
@@ -179,14 +186,19 @@ export function useLive<Row, F, S extends string>(
 }
 
 function useCollection<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
   query?: LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery,
 ): LiveListResult<unknown> | ResourceResult<Row[]> {
   const ids = query && "ids" in query ? query.ids : undefined;
-  const shape = listShape(
-    collection,
-    query && "ids" in query ? undefined : query,
-  );
+  // An id set reads `:rows` alone — it never touches the window codec, which a
+  // lookup-only collection does not have. A list query is typed to a full one.
+  const shape =
+    ids === undefined
+      ? listShape(
+          collection as LiveCollection<Row, F, S>,
+          query as LiveQuery<F, S> | LiveGroupQuery<F> | undefined,
+        )
+      : null;
 
   // A grow is forgotten (back to the asked limit) as soon as the query changes.
   const [grown, setGrown] = useState<{
@@ -194,22 +206,24 @@ function useCollection<Row, F, S extends string>(
     from: number;
     limit: number;
   } | null>(null);
-  const grow = ids === undefined && grown?.base === shape.base ? grown : null;
-  const limit = grow?.limit ?? shape.askedLimit;
+  const grow = shape !== null && grown?.base === shape.base ? grown : null;
+  const limit = grow?.limit ?? shape?.askedLimit ?? 0;
 
   const idsKey =
     ids === undefined ? null : collection.rows.point.encode(ids).ids;
   const paramsKey = JSON.stringify(
-    idsKey !== null ? { ids: idsKey } : shape.encode(limit),
+    shape === null ? { ids: idsKey } : shape.encode(limit),
   );
-  const prevKey = JSON.stringify(grow ? shape.encode(grow.from) : null);
+  const prevKey = JSON.stringify(
+    grow && shape ? shape.encode(grow.from) : null,
+  );
   const params = useMemo(
     () => JSON.parse(paramsKey) as Record<string, string>,
     [paramsKey],
   );
 
   const descriptor: AnyDescriptor =
-    idsKey !== null ? (collection.rows as AnyDescriptor) : shape.descriptor;
+    shape === null ? (collection.rows as AnyDescriptor) : shape.descriptor;
   const current = useResource(descriptor, params);
 
   // The list a grow started from, kept subscribed ONLY while the grown one is
@@ -222,7 +236,7 @@ function useCollection<Row, F, S extends string>(
   );
   const previous = useResource(descriptor, prevParams);
 
-  if (idsKey !== null) return current as ResourceResult<Row[]>;
+  if (shape === null) return current as ResourceResult<Row[]>;
 
   const loadMore = () => {
     const next = Math.min(limit + shape.step, shape.maxLimit);
@@ -257,8 +271,8 @@ function useCollection<Row, F, S extends string>(
  * a determinate answer, never a spinner. Reads the `:rows` point sibling, so it
  * ignores every window filter and bound: it answers "does this row exist".
  */
-export function useLiveRow<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S>,
+export function useLiveRow<Row>(
+  collection: LiveRowsCollection<Row>,
   id: string,
 ): LiveRowResult<Row> {
   const result = usePointResource(collection.rows, id);

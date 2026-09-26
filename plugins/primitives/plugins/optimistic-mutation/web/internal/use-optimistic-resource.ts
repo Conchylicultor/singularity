@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useResource,
+  useResourceAcks,
   queryKeyFor,
   liveStateSocketKind,
   getResourceWatermark,
@@ -10,6 +11,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  LiveCollection,
+  LiveValue,
+} from "@plugins/network/plugins/live/core";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
@@ -38,18 +43,12 @@ function ackParamsKey(params: Record<string, string> | undefined): string {
   return JSON.stringify(obj);
 }
 
-interface OptimisticBaseArgs<
-  Data,
-  Vars,
-  P extends Record<string, string> = Record<string, string>,
-> {
-  /**
-   * A descriptor WITH a placeholder (`initialData`): it is the overlay's base
-   * before the first push. A `liveValue` has none, so passing one is a tsc error
-   * until optimistic values get a base of their own.
-   */
-  resource: ResourceDescriptor<Data, P> & { initialData: Data };
-  params?: P;
+/**
+ * What an optimistic read does with its ops — everything but the read itself.
+ * The positional forms (`useOptimisticResource(value, params?, options)` /
+ * `(collection, { ids }, options)`) take exactly this.
+ */
+interface OptimisticOpArgs<Data, Vars> {
   /** Pure predicted next state. Must not mutate `current`. */
   apply: (current: Data, vars: Vars) => Data;
   /**
@@ -70,6 +69,21 @@ interface OptimisticBaseArgs<
    * throw propagates loudly rather than being swallowed.
    */
   describeOp?: (vars: Vars) => string;
+}
+
+/**
+ * The legacy object form: a descriptor WITH a placeholder (`initialData`),
+ * which is the overlay's base before the first push. Kept until its last
+ * caller (the page editor's blocks) moves to a declaration; the positional
+ * forms never have a placeholder base.
+ */
+interface OptimisticBaseArgs<
+  Data,
+  Vars,
+  P extends Record<string, string> = Record<string, string>,
+> extends OptimisticOpArgs<Data, Vars> {
+  resource: ResourceDescriptor<Data, P> & { initialData: Data };
+  params?: P;
 }
 
 /**
@@ -106,6 +120,57 @@ export type UseOptimisticResourceArgs<
   Vars,
   P extends Record<string, string> = Record<string, string>,
 > = OptimisticBaseArgs<Data, Vars, P> & ConfirmationArgs<Data, Vars>;
+
+/** The positional forms' options: the ops half, with the same confirmation pair. */
+export type OptimisticOptions<Data, Vars> = OptimisticOpArgs<Data, Vars> &
+  ConfirmationArgs<Data, Vars>;
+
+/**
+ * The positional forms' result. `pending` until a base exists — the first
+ * authoritative value, or (the loud exemption) the last one under a transient
+ * error — and then the settled arm, the only one that can `dispatch`: an op can
+ * never be made against a base nobody has seen. There is no placeholder base.
+ */
+export type OptimisticResult<Data, Vars> =
+  | {
+      pending: true;
+      /** The load error keeping it pending, or null while it is still loading. */
+      error: Error | null;
+    }
+  | ({ pending: false } & OptimisticSettled<Data, Vars>);
+
+/** The settled arm of {@link OptimisticResult}. */
+export interface OptimisticSettled<Data, Vars> {
+  /** Server truth with all pending ops replayed. */
+  data: Data;
+  /**
+   * Raw authoritative server truth — the overlay base, with NO pending ops
+   * applied. For consumers that must tell "the server has really absorbed
+   * this" from the prediction.
+   */
+  serverData: Data;
+  /**
+   * A transient load error the surface keeps painting through (the base is the
+   * last authoritative value — the sanctioned exemption to live-state's I1), or
+   * null. Sync-status already reports it with a Retry.
+   */
+  error: Error | null;
+  /** Enqueue an overlay op + fire `mutate`; returns the minted opId. */
+  dispatch: (vars: Vars) => string;
+  /** The replay set — see {@link UseOptimisticResourceResult.pendingOps}. */
+  pendingOps: ReadonlyArray<{ opId: string; vars: Vars }>;
+  /** True while at least one op's `mutate` has not come back yet. */
+  saving: boolean;
+  /** Ops durably rejected by the server — see {@link UseOptimisticResourceResult.failed}. */
+  failed: ReadonlyArray<{ opId: string; vars: Vars }>;
+  /** Re-fire a failed op's `mutate` in place. */
+  retry: (opId: string) => void;
+}
+
+/** The `{ ids }` read of a collection — its `:rows` point sibling. */
+interface OptimisticIdsQuery {
+  ids: readonly string[];
+}
 
 export interface UseOptimisticResourceResult<Data, Vars> {
   /** Server truth with all pending ops replayed; never undefined. */
@@ -158,32 +223,170 @@ export interface UseOptimisticResourceResult<Data, Vars> {
   retry: (opId: string) => void;
 }
 
+/**
+ * Optimistic read of a declared `liveValue` (param-less): `pending`, then the
+ * settled arm with `data` / `serverData` / `dispatch`.
+ *
+ * ```ts
+ * const picks = useOptimisticResource(prototypePicks, { name }, { apply, mutate });
+ * if (picks.pending) return <Loading />;
+ * picks.dispatch(change);               // only on the settled arm
+ * ```
+ */
+export function useOptimisticResource<Data, Vars>(
+  value: LiveValue<Data, Record<string, never>>,
+  options: OptimisticOptions<NoInfer<Data>, Vars>,
+): OptimisticResult<Data, Vars>;
+/** Optimistic read of a parameterized `liveValue` at `params`. */
+export function useOptimisticResource<
+  Data,
+  Vars,
+  P extends Record<string, string>,
+>(
+  value: LiveValue<Data, P>,
+  params: P,
+  options: OptimisticOptions<NoInfer<Data>, Vars>,
+): OptimisticResult<Data, Vars>;
+/**
+ * Optimistic read of an explicit id set of a `liveCollection` (its `:rows`
+ * point sibling — the same read as `useLive(c, { ids })`). Rows are unordered.
+ */
+export function useOptimisticResource<Row, F, S extends string, Vars>(
+  collection: LiveCollection<Row, F, S>,
+  query: OptimisticIdsQuery,
+  options: OptimisticOptions<Row[], Vars>,
+): OptimisticResult<Row[], Vars>;
+/**
+ * Legacy: a descriptor with a placeholder `initialData`, which is the base
+ * until the first push. Kept for the page editor's blocks until they migrate.
+ */
 export function useOptimisticResource<
   Data,
   Vars,
   P extends Record<string, string> = Record<string, string>,
 >(
   args: UseOptimisticResourceArgs<Data, Vars, P>,
-): UseOptimisticResourceResult<Data, Vars> {
-  const { resource, params, apply, mutate, onError, label, describeOp } = args;
+): UseOptimisticResourceResult<Data, Vars>;
+export function useOptimisticResource<Data, Vars>(
+  source: object,
+  second?: object,
+  third?: OptimisticOptions<Data, Vars>,
+): UseOptimisticResourceResult<Data, Vars> | OptimisticResult<Data, Vars> {
+  // The form is fixed for a call site (a declaration is a module-level const
+  // and the argument count never changes), and it is resolved here with no
+  // hooks, so every form runs the same ONE core hook.
+  const form = resolveForm<Data, Vars>(source, second, third);
+  const core = useOptimisticCore<Data, Vars>(
+    form.resource,
+    form.params,
+    form.options,
+    form.placeholder,
+  );
+  return form.legacy ? core.legacy : core.positional;
+}
+
+interface ResolvedForm<Data, Vars> {
+  resource: ResourceDescriptor<Data, Record<string, string>>;
+  params: Record<string, string> | undefined;
+  options: OptimisticOptions<Data, Vars>;
+  /** The legacy form's `initialData`; the positional forms never have one. */
+  placeholder: Data | undefined;
+  legacy: boolean;
+}
+
+function resolveForm<Data, Vars>(
+  source: object,
+  second: object | undefined,
+  third: OptimisticOptions<Data, Vars> | undefined,
+): ResolvedForm<Data, Vars> {
+  if ("resource" in source) {
+    const { resource, params, ...options } =
+      source as UseOptimisticResourceArgs<Data, Vars>;
+    return {
+      resource,
+      params,
+      options: options as OptimisticOptions<Data, Vars>,
+      placeholder: resource.initialData,
+      legacy: true,
+    };
+  }
+  if ("live" in source) {
+    return {
+      resource: source as unknown as ResourceDescriptor<
+        Data,
+        Record<string, string>
+      >,
+      params:
+        third === undefined ? undefined : (second as Record<string, string>),
+      options: (third ?? second) as OptimisticOptions<Data, Vars>,
+      placeholder: undefined,
+      legacy: false,
+    };
+  }
+  // A collection's `{ ids }` read: the `:rows` point sibling at the canonical
+  // encoding of the id set. That descriptor carries a `[]` placeholder for its
+  // legacy readers; this form never takes it as a base.
+  const rows = (source as LiveCollection<unknown, unknown, string>).rows;
+  return {
+    resource: rows as unknown as ResourceDescriptor<
+      Data,
+      Record<string, string>
+    >,
+    params: rows.point.encode((second as OptimisticIdsQuery).ids),
+    options: third as OptimisticOptions<Data, Vars>,
+    placeholder: undefined,
+    legacy: false,
+  };
+}
+
+// A params object with a stable identity per canonical content, so the
+// query-key memo and the effects keyed on it do not churn when a caller (or
+// the ids codec) builds an equal object each render.
+function useStableParams(
+  params: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  const json = params === undefined ? null : JSON.stringify(params);
+  return useMemo(
+    () =>
+      json === null ? undefined : (JSON.parse(json) as Record<string, string>),
+    [json],
+  );
+}
+
+function useOptimisticCore<Data, Vars>(
+  resource: ResourceDescriptor<Data, Record<string, string>>,
+  rawParams: Record<string, string> | undefined,
+  options: OptimisticOptions<Data, Vars>,
+  placeholder: Data | undefined,
+): {
+  legacy: UseOptimisticResourceResult<Data, Vars>;
+  positional: OptimisticResult<Data, Vars>;
+} {
+  const params = useStableParams(rawParams);
+  const { apply, mutate, onError, label, describeOp } = options;
   // Narrow on the object (not a destructure) so TS keeps the union correlation:
-  // when `args.isConfirmedBy` is truthy, `args` is the paired arm and
-  // `args.sameTarget` is known-defined.
-  const confirmation = args.isConfirmedBy
-    ? { isConfirmedBy: args.isConfirmedBy, sameTarget: args.sameTarget }
+  // when `options.isConfirmedBy` is truthy, `options` is the paired arm and
+  // `options.sameTarget` is known-defined.
+  const confirmation = options.isConfirmedBy
+    ? { isConfirmedBy: options.isConfirmedBy, sameTarget: options.sameTarget }
     : undefined;
   const queryClient = useQueryClient();
   const result = useResource(resource, params);
+  // Every optimistic reader asks for standalone ack frames on its tuple: a
+  // write that changes nothing this tuple can see (a net-zero diff, a row
+  // outside the id set) is then still confirmed exactly, instead of hanging
+  // until an unrelated frame. Asked by the reader, so it cannot be forgotten
+  // and a tuple nobody writes optimistically pays nothing.
+  useResourceAcks(resource, params);
   // Optimistic surfaces are the sanctioned, LOUD exemption to live-state's I1
   // ("`pending` means no trustworthy value"): they are editors, so under a
   // transient error they deliberately KEEP PAINTING last-known-good rather than
   // blanking — `sync-status` (wired below via useReportSync) owns their error
   // affordance. So the overlay base falls back to `result.stale` (the last
-  // authoritative value) before `resource.initialData`. Without this, the
-  // widened `pending` would collapse the base to `initialData` on any transient
-  // error and blank the page block editor / conversation queue sidebar.
-  const base = result.pending
-    ? (result.stale ?? resource.initialData)
+  // authoritative value). Only the legacy form then falls back further, to its
+  // placeholder; the positional forms have none, so no base means pending.
+  const base: Data | undefined = result.pending
+    ? (result.stale ?? placeholder)
     : result.data;
   // Preserve the documented `pending` contract — "true until the FIRST
   // authoritative value" — rather than forwarding the widened one: once a value
@@ -371,8 +574,10 @@ export function useOptimisticResource<
     // `applyRef` (stable useLatestRef handle) is read through `.current` at
     // compute time; recompute is intentionally keyed on base/pending only — apply
     // identity churn must NOT invalidate the overlay.
-    // eslint-disable-next-line react-hooks/refs -- intentional latest-reducer read inside the overlay memo (see above); the read is render-phase by design and the ref is stable
-    () => replay(base, pending, applyRef.current),
+    /* eslint-disable react-hooks/refs -- intentional latest-reducer read inside the overlay memo (see above); the read is render-phase by design and the ref is stable */
+    () =>
+      base === undefined ? undefined : replay(base, pending, applyRef.current),
+    /* eslint-enable react-hooks/refs */
     [base, pending],
   );
 
@@ -627,28 +832,45 @@ export function useOptimisticResource<
   });
 
   // Stable identity so the result can feed memo deps / combineResources gates.
-  return useMemo(
-    () => ({
-      data,
-      serverData: base,
-      pending: resultPending,
-      error: resultError,
-      dispatch,
-      pendingOps,
-      saving,
-      failed,
-      retry,
-    }),
-    [
-      data,
-      base,
-      resultPending,
-      resultError,
-      dispatch,
-      pendingOps,
-      saving,
-      failed,
-      retry,
-    ],
-  );
+  return useMemo(() => {
+    const positional: OptimisticResult<Data, Vars> =
+      base === undefined || data === undefined
+        ? { pending: true, error: resultError }
+        : {
+            pending: false,
+            data,
+            serverData: base,
+            error: resultError,
+            dispatch,
+            pendingOps,
+            saving,
+            failed,
+            retry,
+          };
+    return {
+      positional,
+      // The legacy form always has a base: its placeholder at worst.
+      legacy: {
+        data: data as Data,
+        serverData: base as Data,
+        pending: resultPending,
+        error: resultError,
+        dispatch,
+        pendingOps,
+        saving,
+        failed,
+        retry,
+      },
+    };
+  }, [
+    data,
+    base,
+    resultPending,
+    resultError,
+    dispatch,
+    pendingOps,
+    saving,
+    failed,
+    retry,
+  ]);
 }

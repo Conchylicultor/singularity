@@ -1,20 +1,19 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import type { Doc } from "yjs";
 import type { Provider } from "@lexical/yjs";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
-import { blockContentResource } from "@plugins/page/plugins/editor-collab/core";
+import { blockDocs } from "@plugins/page/plugins/editor-collab/core";
 import { coalesce, runsOf, xmlTextContentLength } from "../../core";
 import type { ProjectTextFn } from "./doc-sourced-runs";
 import type { RowTruth } from "./row-truth";
@@ -795,21 +794,24 @@ export function useCollabBlockDoc(
       ensure(blockId).owner.provider.markBlockRowConfirmed();
   }, [blockId, rowTruth, ensure]);
 
-  // IN: the per-block live subscription. Subscribing only while a block editor
-  // is mounted is the lazy content-loading win; each pushed value flows into
-  // the provider, which merges it (idempotently) into the shared doc.
-  const params = useMemo(() => ({ blockId }), [blockId]);
-  const contentRes = useResource(blockContentResource, params);
+  // IN: the per-block live row. Subscribing only while a block editor is
+  // mounted is the lazy content-loading win; each pushed state flows into the
+  // provider, which merges it (idempotently) into the shared doc.
+  const content = useLiveRow(blockDocs, blockId);
+  // While loading we can't tell "absent" (→ seed) from "not arrived yet", so
+  // nothing is delivered until the row settles (`undefined`); `found: false`
+  // is the positive "no doc yet" (`null`).
+  const serverState = content.pending
+    ? undefined
+    : content.found
+      ? content.row.state
+      : null;
   useEffect(() => {
-    // While loading we can't tell "absent" (→ seed) from "not arrived yet",
-    // so nothing is delivered until the subscription settles.
-    if (contentRes.pending) return;
-    ensure(blockId).owner.provider.onServerState(
-      contentRes.data[0]?.state ?? null,
-    );
-    // `contentRes` identity recomputes only on pending/data/error (structural
-    // sharing in useResource), so this fires once per actual server change.
-  }, [blockId, contentRes, ensure]);
+    if (serverState === undefined) return;
+    ensure(blockId).owner.provider.onServerState(serverState);
+    // Keyed on the state itself, so this fires once per actual server change
+    // (the row's `updatedAt` only moves when its state does).
+  }, [blockId, serverState, ensure]);
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
   const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
@@ -833,7 +835,7 @@ export function useCollabBlockDoc(
  * In-memory (`persist={false}`) twin of {@link useCollabBlockDoc}: binds a
  * block to a purely LOCAL {@link LocalYjsProvider} — the per-block `Y.Doc` is
  * seeded from `data.text` at connect() and NEVER touches the network (no
- * `blockContentResource` subscription — which would also require a
+ * `blockDocs` row subscription — which would also require a
  * `NotificationsProvider` the demo doesn't mount — no doc-init/doc-update, no
  * FK gate). Typing, formatting, split, and merge all work locally; the doc
  * observers (projection + run tracker) fire exactly as on the server path, so

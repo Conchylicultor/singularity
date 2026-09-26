@@ -1,5 +1,8 @@
-// Fan-out scoping verification for `page-block-doc`
-// (research/2026-08-25-global-own-row-resource-scoping.md).
+// Fan-out scoping verification for `page-block-doc:rows`
+// (research/2026-08-25-global-own-row-resource-scoping.md). The routing is now
+// the lookup-only `blockDocs` collection's point membership (an id set per
+// mounted block) rather than `rowIdentity` — the same narrowing, spelled as a
+// collection (research/2026-09-26-global-live-values-migration-contract.md §10).
 //
 // What this pins, in plain language:
 //

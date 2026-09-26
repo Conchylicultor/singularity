@@ -14,7 +14,7 @@ import {
   settleDeadInflightRun,
 } from "@plugins/build/plugins/run-ledger/server";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { deploymentResource } from "@plugins/build/plugins/deployment/server";
+import { deploymentServed } from "@plugins/build/plugins/deployment/server";
 import { reconcileDeployment } from "./reconcile";
 
 /** The index the claiming INSERT contends on — see `run-ledger`'s `tables.ts`. */
@@ -195,7 +195,7 @@ export async function notifyBuildStarted(
  * build that outlives three restarts still reaches its own verdict.
  *
  * **Idempotent, because a job retry re-runs it.** Both notifications carry a
- * `dedupeKey`, `deploymentResource.notify()` is a signal rather than a write,
+ * `dedupeKey`, `deploymentServed.notify()` is a signal rather than a write,
  * and `reconcileDeployment` is a stateless re-derivation whose debounce is a
  * singleton — so running this twice costs one redundant wakeup and changes
  * nothing.
@@ -216,7 +216,7 @@ export async function onBuildEnded(buildId: string): Promise<void> {
 
   // The dist has been republished and the ledger row is closed, so the
   // deployment description has changed on both axes it can change on.
-  deploymentResource.notify();
+  deploymentServed.notify();
   // The "a build reached terminal" convergence edge, and the single remaining
   // copy of it. It terminates because the row it reads was closed BEFORE this
   // ran: `lastClosedAttempt` sees this build's own commit as an attempt, so

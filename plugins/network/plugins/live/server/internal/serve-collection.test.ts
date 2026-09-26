@@ -21,7 +21,13 @@ import {
 } from "bun:test";
 import { eq, sql, type SQL } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { boolean, integer, pgTable, text } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  integer,
+  pgTable,
+  text,
+} from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { z } from "zod";
 import {
@@ -43,6 +49,7 @@ import {
   liveText,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { withWire } from "@plugins/database/plugins/sql-column/server";
 import { compileCollection } from "./serve-collection";
 
 const TABLE = "live_src";
@@ -176,7 +183,14 @@ function serve(c: ReturnType<typeof collection>, opts: { where?: SQL } = {}) {
     compileWindowQuery(c.rows, specs.rows).serverOpts,
   );
   runtime.defineResource(c.groups, specs.groups);
+  return attach(runtime, TABLE);
+}
 
+/** A WS subscriber on `runtime`, recording every frame, with a change-feed tap on `table`. */
+function attach(
+  runtime: ReturnType<typeof createResourceRuntime>,
+  table: string,
+) {
   const frames: SentFrame[] = [];
   const handler = runtime.notificationsWsHandler as any;
   const ws = {
@@ -214,11 +228,11 @@ function serve(c: ReturnType<typeof collection>, opts: { where?: SQL } = {}) {
     },
     change(op: "I" | "U" | "D", ids: string[]) {
       runtime.applyDbChange({
-        table: TABLE,
+        table,
         op,
         ids,
-        origin: TABLE,
-        identityBase: TABLE,
+        origin: table,
+        identityBase: table,
       });
     },
   };
@@ -614,5 +628,161 @@ describe("serveCollection — base where", () => {
     expect(h.deltas(c.rows.key, pointParams).at(-1)!.upserts).toEqual([
       ["b", row("b", 2, true, "b", "build")],
     ]);
+  });
+});
+
+describe("serveCollection — lookup-only", () => {
+  const lookup = () =>
+    liveCollection(`test.live.lookup-${seq++}`, { row: SrcSchema, id: "id" });
+
+  test("compiles the :rows point spec alone", () => {
+    const specs = compileCollection(lookup(), {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    expect(Object.keys(specs).sort()).toEqual(["rows", "select"]);
+    expect(specs.rows.point).toBeDefined();
+  });
+
+  test("a change to row R is read for, and reaches, only R's tuple", async () => {
+    const c = lookup();
+    const specs = compileCollection(c, {
+      from: srcT,
+      db: db as unknown as QueryDb,
+    });
+    const compiled = compileWindowQuery(c.rows, specs.rows).serverOpts;
+    // Every point read, by the tuple it ran for.
+    const reads: string[] = [];
+    const runtime = createResourceRuntime({ readSet: () => [TABLE] });
+    runtime.defineResource(c.rows, {
+      ...compiled,
+      loader: (params, ctx) => {
+        reads.push(params.ids);
+        return compiled.loader(params, ctx);
+      },
+    });
+    const h = attach(runtime, TABLE);
+    await put(row("a", 1), row("b", 2));
+    const pa = c.rows.point.encode(["a"]);
+    const pb = c.rows.point.encode(["b"]);
+    expect(ids(await h.subscribe(c.rows.key, pa))).toEqual(["a"]);
+    expect(ids(await h.subscribe(c.rows.key, pb))).toEqual(["b"]);
+
+    reads.length = 0;
+    await put(row("a", 10));
+    h.change("U", ["a"]);
+    await until(() => h.deltas(c.rows.key, pa).length > 0, "a's delta");
+    expect(h.deltas(c.rows.key, pa).at(-1)!.upserts).toEqual([
+      ["a", row("a", 10)],
+    ]);
+    expect(reads).toEqual(["a"]);
+
+    // A later change to `b` reaches `b` — and `a`'s tuple is not woken for it.
+    reads.length = 0;
+    await put(row("b", 20));
+    h.change("U", ["b"]);
+    await until(() => h.deltas(c.rows.key, pb).length > 0, "b's delta");
+    expect(reads).toEqual(["b"]);
+    expect(h.deltas(c.rows.key, pa)).toHaveLength(1);
+    expect(h.deltas(c.rows.key, pb)).toHaveLength(1);
+  });
+});
+
+describe("serveCollection — a column type's wire codec", () => {
+  const BLOB = "live_blob";
+  const bytes = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+    dataType() {
+      return "bytea";
+    },
+  });
+  const toBase64 = (b: Uint8Array): string => Buffer.from(b).toString("base64");
+  const wireBytes = (name: string) =>
+    withWire(bytes(name), { schema: z.string(), encode: toBase64 });
+  const blobT = pgTable(BLOB, {
+    id: text("id").primaryKey(),
+    blob: wireBytes("blob").notNull(),
+    maybe: wireBytes("maybe"),
+  });
+  const BlobSchema = z.object({
+    id: z.string(),
+    blob: z.string(),
+    maybe: z.string().nullable(),
+  });
+
+  beforeAll(async () => {
+    await db.execute(
+      sql.raw(
+        `CREATE TABLE ${BLOB} (id text PRIMARY KEY, blob bytea NOT NULL, maybe bytea)`,
+      ),
+    );
+  });
+
+  test("encodes in JS per row — unfolded past 76 bytes — and keeps NULL null", async () => {
+    const c = liveCollection(`test.live.blob-${seq++}`, {
+      row: BlobSchema,
+      id: "id",
+    });
+    const specs = compileCollection(c, {
+      from: blobT,
+      db: db as unknown as QueryDb,
+    });
+    const long = Uint8Array.from({ length: 300 }, (_, i) => (i * 37) % 256);
+    await db.insert(blobT).values([
+      { id: "x", blob: Buffer.from(long), maybe: null },
+      { id: "y", blob: Buffer.from([1, 2, 3]), maybe: Buffer.from([9]) },
+    ]);
+    const read = await compileWindowQuery(c.rows, specs.rows).serverOpts.loader(
+      c.rows.point.encode(["x", "y"]),
+    );
+    const byId = new Map(
+      (read as z.infer<typeof BlobSchema>[]).map((r) => [r.id, r]),
+    );
+    expect(byId.get("x")).toEqual({
+      id: "x",
+      blob: toBase64(long),
+      maybe: null,
+    });
+    expect(byId.get("x")!.blob).not.toContain("\n");
+    expect(byId.get("x")!.blob.length).toBeGreaterThan(76);
+    expect(byId.get("y")).toEqual({
+      id: "y",
+      blob: toBase64(Uint8Array.from([1, 2, 3])),
+      maybe: toBase64(Uint8Array.from([9])),
+    });
+  });
+
+  test("types: a row field that is not the column's wire type is a tsc error", () => {
+    const AsBytes = BlobSchema.extend({ blob: z.instanceof(Uint8Array) });
+    const NotNullable = BlobSchema.extend({ maybe: z.string() });
+    const asBytes = liveCollection(`test.live.blob-${seq++}`, {
+      row: AsBytes,
+      id: "id",
+    });
+    const notNullable = liveCollection(`test.live.blob-${seq++}`, {
+      row: NotNullable,
+      id: "id",
+    });
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const _typesOnly = () => {
+      // @ts-expect-error — `blob` crosses the wire as base64, not bytes
+      compileCollection(asBytes, { from: blobT });
+      // @ts-expect-error — `maybe` is a NULL-able column: `string | null`
+      compileCollection(notNullable, { from: blobT });
+    };
+    void _typesOnly;
+  });
+
+  test("a wire-encoded column cannot be filtered", () => {
+    const c = liveCollection(`test.live.blob-${seq++}`, {
+      row: BlobSchema,
+      id: "id",
+      filterable: { blob: liveText() },
+      sortable: ["id"],
+      default: { orderBy: [["id", "asc"]], limit: 1 },
+      maxLimit: 1,
+    });
+    expect(() =>
+      compileCollection(c, { from: blobT, db: db as unknown as QueryDb }),
+    ).toThrow(/wire-encoded column/);
   });
 });

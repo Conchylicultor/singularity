@@ -1,15 +1,16 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
-import { resolved, unresolved, type Resolvable } from "@plugins/primitives/plugins/live-state/core";
+import {
+  resolved,
+  unresolved,
+  type Resolvable,
+} from "@plugins/primitives/plugins/live-state/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { type EditedFile, EditedFilesPayloadSchema } from "../../core/protocol";
+import { editedFiles } from "../../core";
+import type { EditedFile } from "../../core/protocol";
 import { editedFilesMemo, evictEditedFiles } from "./edited-files-cache";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
-
-type Params = { id: string };
-
-const unsubscribes = new Map<string, () => void>();
 
 async function worktreeFor(conversationId: string): Promise<string | null> {
   const row = await getConversation(conversationId);
@@ -49,22 +50,29 @@ async function onWorktree<T>(
 }
 
 /** The `loader` half, resolved from a conversation id. */
-export function loadEditedFilesFor(conversationId: string): Promise<Resolvable<EditedFile[]>> {
-  return onWorktree(conversationId, unresolved("worktree unavailable"), async (wt) =>
-    resolved(await getEditedFiles(wt)),
+export function loadEditedFilesFor(
+  conversationId: string,
+): Promise<Resolvable<EditedFile[]>> {
+  return onWorktree(
+    conversationId,
+    unresolved("worktree unavailable"),
+    async (wt) => resolved(await getEditedFiles(wt)),
   );
 }
 
 /** The `revalidate` half — the same memo, hence the same authority. */
-export function editedFilesSignatureFor(conversationId: string): Promise<string> {
-  return onWorktree(conversationId, "no-worktree", (wt) => editedFilesMemo.signature(wt));
+export function editedFilesSignatureFor(
+  conversationId: string,
+): Promise<string> {
+  return onWorktree(conversationId, "no-worktree", (wt) =>
+    editedFilesMemo.signature(wt),
+  );
 }
 
-export const editedFilesResource = defineExternalResource({
-  key: "edited-files",
-  mode: "invalidate",
-  schema: EditedFilesPayloadSchema,
-  loader: ({ id }: Params) => loadEditedFilesFor(id),
+export const editedFilesServed = serveValue(editedFiles, {
+  source: "external",
+  load: "on-demand",
+  loader: ({ id }) => loadEditedFilesFor(id),
   // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
   // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`
   // (the loader's `getEditedFiles`) at its single declaration site. `revalidate` and
@@ -86,23 +94,20 @@ export const editedFilesResource = defineExternalResource({
   // are produced from the SAME `onWorktree` branch, so they are one consistent
   // signature/value pair for a real determinate state — never a fresh ETag over a
   // stale value.
-  revalidate: ({ id }: Params): Promise<string> => editedFilesSignatureFor(id),
-  async onFirstSubscribe({ id }: Params) {
-    if (unsubscribes.has(id)) return;
+  revalidate: ({ id }) => editedFilesSignatureFor(id),
+  // Watch the worktree while the conversation is on screen. The watcher's first
+  // callback reports the state the subscriber is already loading, so it is not a
+  // change.
+  whileSubscribed: async ({ id }, notify) => {
     const wt = await worktreeFor(id);
-    if (!wt) return;
+    if (!wt) return () => {};
     let first = true;
-    const unsub = watchEditedFiles(wt, () => {
+    return watchEditedFiles(wt, () => {
       if (first) {
         first = false;
         return;
       }
-      editedFilesResource.notify({ id });
+      notify();
     });
-    unsubscribes.set(id, unsub);
-  },
-  onLastUnsubscribe({ id }: Params) {
-    unsubscribes.get(id)?.();
-    unsubscribes.delete(id);
   },
 });

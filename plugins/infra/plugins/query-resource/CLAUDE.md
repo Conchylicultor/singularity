@@ -321,7 +321,6 @@ importing `db` never touches a worktree — no test env shim needed.
     - `conversations/conversation-progress`
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/turn-summary`
-    - `conversations/conversations-view/queue`
     - `network/live`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`

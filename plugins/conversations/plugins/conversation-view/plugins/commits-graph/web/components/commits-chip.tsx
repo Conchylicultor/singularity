@@ -1,9 +1,9 @@
 import { MdAltRoute, MdPublish } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { attemptWorkResource } from "@plugins/tasks/plugins/attempt-work/core";
+import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { convCommitsGraphPane } from "../panes";
 
 export function CommitsChip() {
@@ -12,7 +12,7 @@ export function CommitsChip() {
   // The attempt's standing is the ONE fact this chip shows — ahead/behind and the
   // push count both come from it, so there is a single subscription and nothing
   // for two resources to disagree about.
-  const workResult = useResource(attemptWorkResource, {
+  const workResult = useLive(attemptWork, {
     attemptId: conversation?.attemptId ?? "",
   });
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({});

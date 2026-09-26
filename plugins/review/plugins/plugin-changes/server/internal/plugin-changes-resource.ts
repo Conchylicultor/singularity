@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import {
-  editedFilesResource,
+  editedFilesServed,
   getEditedFiles,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
@@ -19,7 +19,7 @@ type Params = { conversationId: string };
 // ConversationIds with a live review-pane subscriber, tracked per resource via
 // the sub-lifecycle hooks. A git ref advance (local commit / rebase /
 // sync-to-head, or main moving) changes the worktree-vs-main plugin diff of
-// every visible review, so any refHeadResource notify fans out to exactly the
+// every visible review, so any refHeadServed notify fans out to exactly the
 // conversations currently on screen. git-watcher only tracks `main` + this
 // worktree's own branch, so a notify already implies a relevant ref moved — no
 // need to inspect the refName (same reasoning as commits-graph).
@@ -64,12 +64,12 @@ export const pluginChangesResource = defineResource({
   dependsOn: [
     // worktree file edits → edited-files resource is keyed { id: conversationId }
     {
-      resource: editedFilesResource,
+      resource: editedFilesServed,
       map: (p: { id: string }) => [{ conversationId: p.id }],
     },
     // main / own-branch advance → fan out to active subscribers only
     {
-      resource: refHeadResource,
+      resource: refHeadServed,
       map: activeConversationParams(activeConversations),
     },
   ],

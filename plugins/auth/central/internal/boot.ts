@@ -17,7 +17,7 @@ export async function onReady(): Promise<void> {
     } else {
       console.error("[auth] failed to initialize token store:", err);
     }
-    // Don't crash the runtime — UI surfaces the issue via authStateResource.
+    // Don't crash the runtime — UI surfaces the issue via the auth-state live value.
   }
   startRefreshLoop();
   // Pre-warm credentials-configured cache so the first GET /api/auth/state

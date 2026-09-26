@@ -1,9 +1,10 @@
-import { useResource, type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { AuthAccountState, AuthStateValue } from "@plugins/auth/core";
-import { authStateResource } from "@plugins/auth/core";
+import { authState } from "@plugins/auth/core";
 
 export function useAuthState(): ResourceResult<AuthStateValue> {
-  return useResource(authStateResource);
+  return useLive(authState);
 }
 
 export function useAccountStatus(providerId: string): AuthAccountState | null {

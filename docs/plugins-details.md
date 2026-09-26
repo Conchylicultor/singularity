@@ -3728,6 +3728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/optimistic-mutation.OptimisticSettled`
               - `primitives/optimistic-mutation.useOptimisticResource`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
@@ -3756,7 +3757,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FrameSourceMeta`
               - `FrameSourceProps`
               - `PageExtent`
-              - `PicksRead`
               - `PrototypeDetailContextValue`
               - `PrototypeFrame`
               - `Room`
@@ -3891,6 +3891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
+              - `network/live.serveValue`
             - Exports (values):
               - `checkpointPrototype`
               - `listPrototypeMetas`
@@ -3912,6 +3913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.defineEndpoint`
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
+              - `network/live.liveValue`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `MocksDeclaration`
@@ -3967,7 +3969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeIdsIn`
               - `PrototypeMetaSchema`
               - `PrototypeOptionSchema`
-              - `prototypePicksResource`
+              - `prototypePicks`
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesResource`
@@ -7151,6 +7153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.fetchEndpoint`
       - `infra/endpoints.getEndpointErrorMessage`
       - `infra/endpoints.useEndpointMutation`
+      - `network/live.useLive`
       - `primitives/css/badge.Badge`
       - `primitives/css/fill.Fill`
       - `primitives/css/rigid.rigidClass`
@@ -7161,8 +7164,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.DialogDescription`
       - `primitives/css/ui-kit.DialogTitle`
       - `primitives/css/ui-kit.Input`
-      - `primitives/live-state.ResourceResult`
-      - `primitives/live-state.useResource`
       - `primitives/loading.Loading`
       - `primitives/overlay/imperative-dialog.openDialog`
       - `primitives/pane.defineRoute`
@@ -7194,6 +7195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/secrets.ready`
       - `infra/secrets.SecretsKeychainLockedError`
       - `infra/secrets.setSecret`
+      - `network/live.serveValue`
     - Exports (types):
       - `ApiKeyConfig`
       - `AuthAccountState`
@@ -7217,7 +7219,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `AuthKeychainLockedError`
       - `AuthNeedsConsentError`
       - `AuthProviderUnknownError`
-      - `authStateResource`
+      - `authStateServed`
       - `defineAuthProvider`
       - `getAccessToken`
       - `getAccountIdentity`
@@ -7235,7 +7237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
-      - `primitives/live-state.centralResourceDescriptor`
+      - `network/live.liveValue`
     - Exports (types):
       - `ApiKeyConfig`
       - `AuthAccountState`
@@ -7263,7 +7265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `AuthKeychainLockedError`
       - `AuthNeedsConsentError`
       - `AuthProviderUnknownError`
-      - `authStateResource`
+      - `authState`
       - `AuthStateValueSchema`
       - `defineAuthProvider`
       - `disconnect`
@@ -7783,6 +7785,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
+      - `network/live.useLive`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
@@ -7822,7 +7825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resource.declare` "build.history"
       - `trigger` "build.run"
     - Uses:
-      - `build/deployment.deploymentResource`
+      - `build/deployment.deploymentServed`
       - `build/deployment.readDeployment`
       - `build/run-ledger._buildRuns`
       - `build/run-ledger.settleDeadInflightRun`
@@ -8057,16 +8060,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/server-build-id.getServerGraphHash`
           - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createSignedMemo`
-          - `infra/git/git-watcher.refHeadResource`
+          - `infra/git/git-watcher.refHeadServed`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
+          - `network/live.serveValue`
           - `primitives/commit-list.LOG_FORMAT`
           - `primitives/commit-list.parseGitLog`
           - `primitives/commit-list.runGit`
           - `primitives/commit-list.tryRunGit`
           - `primitives/commit-list.WorktreeGoneError`
         - Exports (values):
-          - `deploymentResource`
+          - `deploymentServed`
           - `readDeployment`
           - `readDeploymentState`
           - `serverPin`
@@ -8075,6 +8079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
@@ -8086,7 +8091,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
         - Exports (types): `DeploymentReading`
         - Exports (values):
@@ -8094,11 +8098,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useDeployment`
       - Core:
         - Uses:
+          - `network/live.liveValue`
           - `primitives/commit-list.CommitRowSchema`
           - `primitives/live-state.Resolvable`
           - `primitives/live-state.resolvableSchema`
           - `primitives/live-state.resolved`
-          - `primitives/live-state.resourceDescriptor`
           - `primitives/live-state.unresolved`
         - Exports (types):
           - `BuildAttempt`
@@ -8115,8 +8119,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CHAIN_CAP`
           - `ChainSchema`
           - `convergenceOf`
+          - `deployment`
           - `deploymentOf`
-          - `deploymentResource`
           - `DeploymentStateSchema`
           - `NO_CHAIN`
           - `sameCommit`
@@ -9892,36 +9896,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/file-watcher.getParcelWatcher`
               - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
+              - `network/live.serveValue`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
               - `tasks/tasks-core.getConversation`
             - Exports (values):
-              - `editedFilesResource`
+              - `editedFilesServed`
               - `editedFilesSignature`
               - `getEditedFiles`
             - Resources: `edited-files` (invalidate)
           - Web:
-            - Uses:
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
+            - Uses: `network/live.useLive`
             - Exports (values):
               - `gitStatusBadge`
               - `gitStatusDot`
               - `useEditedFiles`
           - Core:
             - Uses:
+              - `network/live.liveValue`
               - `primitives/live-state.Resolvable`
               - `primitives/live-state.resolvableSchema`
-              - `primitives/live-state.resourceDescriptor`
-              - `primitives/live-state.unresolved`
             - Exports (types):
               - `EditedFile`
               - `EditedFilesPayload`
               - `EditedFilesResponse`
               - `EditedFileStatus`
             - Exports (values):
+              - `editedFiles`
               - `EditedFileSchema`
-              - `editedFilesResource`
           - Cross-plugin:
             - Imported by:
               - `code-explorer/code-api`
@@ -10036,6 +10038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
+              - `network/live.useLive`
               - `primitives/commit-list.CommitRowItem`
               - `primitives/commit-list.MergeBaseMarker`
               - `primitives/css/column.Column`
@@ -10054,7 +10057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `resource.declare` "commits-graph.graph"
             - Uses:
-              - `infra/git/git-watcher.refHeadResource`
+              - `infra/git/git-watcher.refHeadServed`
               - `infra/host/host-read-pool.withHeavyReadSlot`
               - `primitives/commit-list.LOG_FORMAT`
               - `primitives/commit-list.parseGitLog`
@@ -10110,9 +10113,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useHasActiveSiblings`
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `shell/notifications.toast`
           - Server:
             - Uses:
@@ -11686,11 +11689,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
+              - `network/live.useLive`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `shell/notifications.toast`
@@ -12028,6 +12031,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `resource.declare` "queue-ranks"
+              - `resource.declare` "queue-ranks:rows"
+              - `resource.declare` "queue-ranks:groups"
               - `trigger` "queue.seed-rank"
               - `trigger` "queue.task-status-rerank"
             - Uses:
@@ -12039,7 +12044,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
-              - `infra/query-resource.windowQueryResource`
+              - `network/live.serveCollection`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core.getConversation`
@@ -12053,7 +12058,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `endRank`
               - `findTaskIdForConversation`
               - `lockDeck`
-              - `queueRanksResource`
               - `rankAdjacentTo`
               - `rankAfterBlockers`
               - `rankAfterN`
@@ -12068,7 +12072,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('queue.seed-rank')`
               - `defineJob('queue.task-status-rerank')`
               - `defineJob('queue.sweep-gone-ranks')`
-            - Resources: `queue-ranks` (keyed, point)
+            - Resources:
+              - `queue-ranks` (keyed, window)
+              - `queue-ranks:groups` (push)
+              - `queue-ranks:rows` (keyed, point)
             - Routes:
               - `POST /api/conversations-queue/reorder`
               - `POST /api/conversations-queue/promote`
@@ -12092,7 +12099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/rank/config.rankField`
               - `infra/endpoints.defineEndpoint`
               - `infra/entity-extensions.defineExtensionShape`
-              - `infra/query-resource.pointQueryResourceDescriptor`
+              - `network/live.liveCollection`
               - `primitives/rank.RankSchema`
             - Exports (types):
               - `QueueData`
@@ -12101,7 +12108,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `demoteQueue`
               - `pinQueue`
               - `promoteQueue`
-              - `queueRanksResource`
+              - `queueRanks`
               - `reorderQueue`
               - `rerankQueue`
               - `stepDownQueue`
@@ -13117,7 +13124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `dbQueryDeadlinesResource`
           - `QUERY_DEADLINE_RING_CAPACITY`
           - `QueryDeadlineHitSchema`
-    - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
+    - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
         - Imported by:
           - `apps/chord/curriculum`
@@ -13135,7 +13142,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events`
           - `infra/jobs`
           - `infra/trash`
+          - `network/live`
           - `page/editor`
+          - `primitives/collab-doc`
           - `release`
           - `reports`
           - `search/engine`
@@ -13143,12 +13152,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine/saved-themes`
       - Server:
         - Exports (types):
+          - `ColumnWire`
           - `SqlColumnDirection`
           - `SqlColumnFailure`
+          - `WireBrand`
+          - `WireCodec`
+          - `WithWire`
         - Exports (values):
+          - `columnWireCodec`
           - `formatSqlColumnError`
           - `parsedJson`
           - `parsedText`
+          - `withWire`
       - Test helpers:
         - Server: `@plugins/database/plugins/sql-column/server/testing`
           - `SqlColumnError` — A column value that disagrees with the schema the column decodes through.
@@ -19056,7 +19071,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `createGitStateMemo`
               - `createSignedMemo`
-        - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the refHeadResource live-state resource, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
+        - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the git-watcher.refHead live value, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
           - Server:
             - Contributes: `resource.declare` "git-watcher.refHead"
             - Uses:
@@ -19066,22 +19081,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.GIT`
               - `infra/paths.REPO_ROOT`
               - `infra/worktree.ensureMainWorktreeRoot`
+              - `network/live.serveValue`
               - `primitives/commit-list.GitError`
               - `primitives/commit-list.tryRunGit`
             - DB schema: `plugins/infra/plugins/git/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
             - Exports (types):
               - `RefAdvancedPayload`
-              - `RefHead`
               - `RefReactionSpec`
             - Exports (values):
               - `_refAdvancedTriggers`
               - `defineRefReaction`
               - `lastKnownMainSha`
               - `refAdvanced`
-              - `refHeadResource`
-              - `RefHeadSchema`
+              - `refHeadServed`
             - Register: `defineTriggerEvent('git.refAdvanced')`
             - Resources: `git-watcher.refHead` (push)
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types): `RefHead`
+            - Exports (values):
+              - `refHead`
+              - `RefHeadSchema`
           - Cross-plugin:
             - Imported by:
               - `build`
@@ -19981,7 +20001,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-progress`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/turn-summary`
-          - `conversations/conversations-view/queue`
           - `network/live`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
@@ -20771,7 +20790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value); every filter compiles through the filter language's filterSql.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
@@ -20789,6 +20808,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/sql-column.ColumnWire`
+          - `database/sql-column.columnWireCodec`
+          - `database/sql-column.WireCodec`
           - `infra/query-resource.EntitySource`
           - `infra/query-resource.QueryDb`
           - `infra/query-resource.SelectMap`
@@ -20801,9 +20823,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CollectionSpecs`
           - `CompiledValue`
           - `LiveValueSource`
+          - `LookupCollectionSpecs`
           - `ServeCollectionOptions`
           - `ServedCollection`
           - `ServedExternalValue`
+          - `ServedLookupCollection`
           - `ServedValue`
           - `ServeValueOptions`
         - Exports (values):
@@ -20828,6 +20852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourcePreload`
         - Exports (types):
+          - `LiveCentralValueSpec`
           - `LiveCollection`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
@@ -20843,14 +20868,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveGroupQuery`
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
+          - `LiveLookupCollection`
+          - `LiveLookupSpec`
           - `LiveOrderBy`
           - `LiveParamValueSpec`
           - `LivePreload`
           - `LiveQuery`
           - `LiveReservedColumn`
           - `LiveRowSchema`
+          - `LiveRowsCollection`
           - `LiveSortDirection`
           - `LiveValue`
+          - `LiveValueOrigin`
           - `LiveValueParams`
           - `LiveValueSpec`
           - `LiveWhere`
@@ -20865,7 +20894,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
+          - `apps/prototypes/files`
+          - `auth`
+          - `build`
+          - `build/deployment`
+          - `conversations/conversation-view/code`
+          - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/drop-and-exit`
+          - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversations-view/queue`
+          - `infra/git/git-watcher`
+          - `page/annotations/todo/task-link`
+          - `page/editor`
+          - `page/editor-collab`
           - `shell/notifications`
+          - `tasks/attempt-work`
+      - Central:
+        - Exports (types): `CentralServedValue`
+        - Exports (values): `serveValue`
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
@@ -21319,7 +21365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
               - Server:
                 - Contributes:
-                  - `resource.declare` "todo-block-task"
+                  - `resource.declare` "todo-block-task:rows"
                   - `page.block-annotation`
                 - Uses:
                   - `database.db`
@@ -21327,6 +21373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                   - `infra/retention.markCascadeBounded`
+                  - `network/live.serveCollection`
                   - `page/editor._blocks`
                   - `page/editor.Editor`
                   - `page/markdown-apply.loadBlockScope`
@@ -21344,22 +21391,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `_pageBlocksTodoTaskExt`
                   - `ensureTodoTask`
                   - `todoTask`
-                  - `todoTaskServerResource`
-                - Resources: `todo-block-task` (keyed)
+                  - `todoTasksServed`
+                - Resources: `todo-block-task:rows` (keyed, point)
                 - Routes: `POST /api/todo-blocks/:blockId/task`
               - Web:
                 - Uses:
                   - `conversations/conversation-ui/chip.ConversationChip`
                   - `conversations/conversation-ui/row.ConversationRow`
                   - `infra/endpoints.fetchEndpoint`
+                  - `network/live.LiveRowResult`
+                  - `network/live.useLiveRow`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/launch.LaunchAgentForm`
-                  - `primitives/live-state.mapResource`
-                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
                   - `tasks/task-status.StatusBadge`
                   - `tasks/tasks-core.useTaskConversations`
@@ -21380,7 +21427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `createTodoBlockTask`
                   - `TodoTaskLinkSchema`
-                  - `todoTaskResource`
+                  - `todoTasks`
     - **`attachment-block`** — Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
       - Server:
         - Contributes: `trigger` "page.attachment-block.reconcile"
@@ -21670,6 +21717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLiveRow`
           - `primitives/announce.announce`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
@@ -22195,27 +22243,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveBlockSlots` — The two web block SLOT OBJECTS, resolved once per call from the declaration pass that named them, so every loop that reads a block contribution compares by IDENTITY instead of against an id string.
           - `WEB_BLOCK_FRAME_SLOT`
           - `WEB_BLOCK_SLOT`
-    - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
+    - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
       - Server:
         - Contributes:
-          - `resource.declare` "page-block-doc"
+          - `resource.declare` "page-block-doc:rows"
           - `page.editor.block.onCopy`
         - Uses:
           - `database.db`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `infra/endpoints.implement`
+          - `network/live.serveCollection`
           - `page/editor._blocks`
           - `page/editor.BlockLifecycle`
           - `primitives/collab-doc.bytea`
+          - `primitives/collab-doc.stateToBase64`
         - DB schema: `plugins/page/plugins/editor-collab/server/internal/tables.ts`
         - Exports (values):
           - `_pageBlockDocs`
-          - `blockContentServerResource`
+          - `blockDocsServed`
           - `initBlockDoc`
-          - `loadBlockDoc`
           - `loadBlockDocs`
           - `mergeBlockDocUpdate`
-        - Resources: `page-block-doc` (keyed)
+        - Resources: `page-block-doc:rows` (keyed, point)
         - Routes:
           - `POST /api/blocks/:id/doc-init`
           - `POST /api/blocks/:id/doc-update`
@@ -22223,12 +22272,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.keyedResourceDescriptor`
-        - Exports (types): `BlockDocRow`
+          - `network/live.liveCollection`
         - Exports (values):
-          - `blockContentResource`
           - `blockDocInit`
           - `BlockDocRowSchema`
+          - `blockDocs`
           - `blockDocUpdate`
       - Cross-plugin:
         - Imported by:
@@ -24469,13 +24517,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/breadcrumb-separator`
       - Core:
         - Exports (types): `BreadcrumbSeparatorProps`
-    - **`collab-doc`** — Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state, on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.
+    - **`collab-doc`** — Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state — whose wire form is unfolded base64 (stateToBase64, declared once through sql-column's withWire) — on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.
+      - Server:
+        - Uses: `database/sql-column.withWire`
+        - Exports (values):
+          - `bytea`
+          - `stateToBase64`
       - Cross-plugin:
         - Imported by:
           - `page/editor`
           - `page/editor-collab`
-      - Server:
-        - Exports (values): `bytea`
       - Core:
         - Exports (types): `HeadlessCollabOptions`
         - Exports (values):
@@ -29609,7 +29660,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WindowResourceDescriptor`
           - `WindowSelector`
         - Exports (values):
-          - `centralResourceDescriptor`
           - `combineResources`
           - `ensureNotificationsClient`
           - `getNotificationsClient`
@@ -29623,7 +29673,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `liveStateSocketKind`
           - `mapResource`
           - `matchResource`
-          - `NotificationsClient`
           - `NotificationsProvider`
           - `pendingMountSnapshot`
           - `queryKeyFor`
@@ -29642,6 +29691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `usePointResource`
           - `usePointResources`
           - `useResource`
+          - `useResourceAcks`
           - `useWindowResource`
       - Cross-plugin:
         - Imported by:
@@ -29701,7 +29751,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/release/release-artifact`
           - `apps/studio/compositions/release/release-info`
           - `apps/studio/compositions/release/release-logs`
-          - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
           - `build`
@@ -29768,7 +29817,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`
           - `page/editor`
-          - `page/editor-collab`
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
@@ -29817,7 +29865,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WindowResourceDescriptor`
           - `WindowSelector`
         - Exports (values):
-          - `centralResourceDescriptor`
           - `compareTxWatermark`
           - `keyedResourceDescriptor`
           - `registerResourceDescriptor`
@@ -29831,6 +29878,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Web: `@plugins/primitives/plugins/live-state/web/testing`
           - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
           - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
+          - `NotificationsClient`
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:
@@ -30199,10 +30247,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.queryKeyFor`
           - `primitives/live-state.subscribeResourceTxAcks`
           - `primitives/live-state.useResource`
+          - `primitives/live-state.useResourceAcks`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/sync-status.useReportSync`
         - Exports (types):
           - `OptimisticDivergenceReport`
+          - `OptimisticOptions`
+          - `OptimisticResult`
+          - `OptimisticSettled`
           - `UseOptimisticResourceArgs`
           - `UseOptimisticResourceResult`
         - Exports (values):
@@ -33172,14 +33224,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `code-explorer.getRangeFiles`
           - `code-explorer.resolveParentSha`
-          - `conversations/conversation-view/code.editedFilesResource`
+          - `conversations/conversation-view/code.editedFilesServed`
           - `conversations/conversation-view/code.editedFilesSignature`
           - `conversations/conversation-view/code.getEditedFiles`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createGitStateMemo`
           - `infra/git/git-watcher.lastKnownMainSha`
-          - `infra/git/git-watcher.refHeadResource`
+          - `infra/git/git-watcher.refHeadServed`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
@@ -34234,9 +34286,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/git/git-read-cache.createSignedMemo`
           - `infra/git/git-watcher.lastKnownMainSha`
-          - `infra/git/git-watcher.refHeadResource`
+          - `infra/git/git-watcher.refHeadServed`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/worktree.ensureMainWorktreeRoot`
+          - `network/live.serveValue`
           - `primitives/commit-list.GitError`
           - `primitives/commit-list.runGit`
           - `primitives/commit-list.tryRunGit`
@@ -34246,7 +34299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.listPushesForAttempt`
         - Exports (values):
           - `attemptWorkEtag`
-          - `attemptWorkServerResource`
+          - `attemptWorkServed`
           - `attemptWorkSignature`
           - `deltaEtag`
           - `evictAttemptWork`
@@ -34264,9 +34317,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `attempt-work` (push)
       - Core:
         - Uses:
+          - `network/live.liveValue`
           - `primitives/live-state.resolvableSchema`
-          - `primitives/live-state.resourceDescriptor`
-          - `primitives/live-state.unresolved`
         - Exports (types):
           - `AttemptPending`
           - `AttemptWork`
@@ -34274,8 +34326,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Standing`
         - Exports (values):
           - `AttemptPendingSchema`
+          - `attemptWork`
           - `AttemptWorkPayloadSchema`
-          - `attemptWorkResource`
           - `AttemptWorkSchema`
           - `standingOf`
       - Cross-plugin:

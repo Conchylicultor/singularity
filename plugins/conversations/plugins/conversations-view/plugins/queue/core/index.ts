@@ -1,4 +1,4 @@
-export { queueRanksResource } from "./resources";
+export { queueRanks } from "./resources";
 export type { QueueData, QueueRankRow } from "./resources";
 export {
   reorderQueue,

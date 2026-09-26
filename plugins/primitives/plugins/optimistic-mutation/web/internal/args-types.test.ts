@@ -16,7 +16,11 @@
  * within it lands on that exact line, right under its directive.
  */
 
-import type { UseOptimisticResourceArgs } from "./use-optimistic-resource";
+import type { LiveValue } from "@plugins/network/plugins/live/core";
+import type {
+  UseOptimisticResourceArgs,
+  useOptimisticResource,
+} from "./use-optimistic-resource";
 
 type Row = { id: string };
 type Vars = { id: string };
@@ -48,4 +52,24 @@ export function _optimisticConfirmationArgsGuard(): void {
   void ok3;
   void bad1;
   void bad2;
+}
+
+declare const value: LiveValue<Row[], Record<string, never>>;
+declare const hook: typeof useOptimisticResource;
+
+export function _optimisticPositionalGuard(): void {
+  // The legacy object form needs a placeholder base; a liveValue has none.
+  // @ts-expect-error — a liveValue is not a legacy `resource` (no initialData)
+  const bad1: Args = { resource: value, apply, mutate };
+  // The positional form keeps the confirmation pair all-or-nothing too.
+  // @ts-expect-error — isConfirmedBy requires sameTarget
+  hook(value, { apply, mutate, isConfirmedBy });
+  const r = hook(value, { apply, mutate, isConfirmedBy, sameTarget });
+  if (r.pending) {
+    // @ts-expect-error — no dispatch on the pending arm
+    void r.dispatch;
+  } else {
+    void r.dispatch;
+  }
+  void bad1;
 }

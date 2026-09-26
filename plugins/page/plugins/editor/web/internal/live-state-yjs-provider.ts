@@ -19,7 +19,7 @@ import type { RowTruth } from "./row-truth";
  * (per-block CRDT plan, `research/2026-07-07-page-per-block-crdt-plan-b.md`,
  * Stage 2):
  *
- * - **in** — the per-block `blockContentResource` live subscription. The owning
+ * - **in** — the per-block `blockDocs` live row (`useLiveRow`). The owning
  *   hook pushes each server value into {@link onServerState}; the provider
  *   `Y.applyUpdate`s it with itself as transaction origin. Idempotent and
  *   commutative, so the sender's own echo is a no-op and a concurrent remote
@@ -509,7 +509,7 @@ export class LiveStateYjsProvider implements Provider {
   // --- Server → local (fed by the owning hook's live subscription) ----------
 
   /**
-   * Deliver the latest `blockContentResource` value: the stored base64 state,
+   * Deliver the latest `blockDocs` row: the stored base64 state,
    * or `null` when the block has no doc row yet (first-ever open → seed).
    * Called on every push; `Y.applyUpdate` idempotency makes echoes no-ops.
    */

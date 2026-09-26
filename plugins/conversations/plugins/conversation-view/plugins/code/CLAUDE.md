@@ -33,36 +33,34 @@ that settles would stop retrying and would render as a permanent answer.
     - `infra/file-watcher.getParcelWatcher`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
+    - `network/live.serveValue`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.WorktreeGoneError`
     - `tasks/tasks-core.getConversation`
   - Exports (values):
-    - `editedFilesResource`
+    - `editedFilesServed`
     - `editedFilesSignature`
     - `getEditedFiles`
   - Resources: `edited-files` (invalidate)
 - Web:
-  - Uses:
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
+  - Uses: `network/live.useLive`
   - Exports (values):
     - `gitStatusBadge`
     - `gitStatusDot`
     - `useEditedFiles`
 - Core:
   - Uses:
+    - `network/live.liveValue`
     - `primitives/live-state.Resolvable`
     - `primitives/live-state.resolvableSchema`
-    - `primitives/live-state.resourceDescriptor`
-    - `primitives/live-state.unresolved`
   - Exports (types):
     - `EditedFile`
     - `EditedFilesPayload`
     - `EditedFilesResponse`
     - `EditedFileStatus`
   - Exports (values):
+    - `editedFiles`
     - `EditedFileSchema`
-    - `editedFilesResource`
 - Cross-plugin:
   - Imported by:
     - `code-explorer/code-api`

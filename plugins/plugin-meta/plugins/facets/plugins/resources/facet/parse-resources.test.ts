@@ -31,9 +31,10 @@ describe("buildDescriptorIndex", () => {
       export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
         "task-detail", TaskSchema.nullable(), null,
       );
-      export const authStateResource = centralResourceDescriptor<AuthStateValue>(
-        "auth-state", AuthStateValueSchema, { providers: {} },
-      );
+      export const authState = liveValue("auth-state", {
+        schema: AuthStateValueSchema,
+        origin: "central",
+      });
       export const queryBackedResource = queryResourceDescriptor<Row>(
         "query-backed", RowSchema, "id",
       );
@@ -53,9 +54,9 @@ describe("buildDescriptorIndex", () => {
         membership: null,
       },
     ]);
-    // `centralResourceDescriptor` was known to the eager-tier generator and NOT
-    // to this scanner — the two hardcoded lists that are now one vocabulary.
-    expect(index.get("authStateResource")).toEqual([
+    // A central value is an ordinary `liveValue` to the scanner: which runtime
+    // serves it is where its `serveValue` call sits.
+    expect(index.get("authState")).toEqual([
       {
         key: "auth-state",
         keyed: false,
@@ -362,6 +363,64 @@ describe("resolveRegisterCall", () => {
         source: "db",
         unbounded: "one row per configured host — a handful",
       },
+    ]);
+  });
+
+  it("reads a serveValue through its lifecycle / recompute options, which carry lookalike fields", () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      [
+        "editedFiles",
+        [{ key: "edited-files", keyed: false, membership: null }],
+      ],
+    ]);
+    expect(
+      resolveRegisterCall(
+        "serveValue",
+        // Nested `source:` / `load:` / `unbounded:` inside recomputeOn's mapper,
+        // whileSubscribed's body and revalidate never count.
+        `editedFiles, {
+          source: "external",
+          load: "on-demand",
+          throttleMs: 300,
+          recomputeOn: [
+            refHeadServed,
+            { value: upstream, params: ({ id }) => ({ id, source: "db", load: "push" }) },
+          ],
+          loader: ({ id }) => loadEditedFilesFor(id),
+          revalidate: ({ id }) => signatureFor(id),
+          whileSubscribed: async ({ id }, notify) => {
+            const w = { unbounded: { reason: "nope" } };
+            return watch(id, notify, w);
+          },
+        }`,
+        bound("editedFiles", "editedFiles", "../../core"),
+        valueIndex,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toEqual([
+      { key: "edited-files", mode: "invalidate", source: "external" },
+    ]);
+  });
+
+  it("files a central serveValue (network/live/central) under the runtime it sits in", () => {
+    const central = file(
+      `
+      import { serveValue } from "@plugins/network/plugins/live/central";
+      import { authState } from "@plugins/auth/core";
+      export const authStateServed = serveValue(authState, {
+        source: "external",
+        loader: async () => computeAuthState(),
+      });
+    `,
+      "/repo/plugins/auth/central/internal/auth-resource.ts",
+    );
+    const resolveAuthCore = (specifier: string, name: string) =>
+      specifier === "@plugins/auth/core" && name === "authState"
+        ? [{ key: "auth-state", keyed: false, membership: null }]
+        : null;
+    expect(parseRegisterCalls([central], new Map(), resolveAuthCore)).toEqual([
+      { key: "auth-state", mode: "push", source: "external" },
     ]);
   });
 

@@ -12,9 +12,9 @@
     - `conversations.useHasActiveSiblings`
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `shell/notifications.toast`
 - Server:
   - Uses:

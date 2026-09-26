@@ -6,7 +6,6 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_FRAME_ATTR,
@@ -82,26 +81,18 @@ function PrototypeFrameView({
       layout={layout}
       letter={letter}
       kind={PROTOTYPE_FRAME_KIND}
-      status={src.pending ? "loading" : "found"}
+      status="found"
     >
-      {/* No `error` arm: a picks record that cannot be read stays broken
-          until someone fixes it, so it renders the default error placeholder
-          naming the problem — never a spinner that never ends. */}
-      {matchResource(src, {
-        pending: () => <Loading variant="block" />,
-        ready: (url) => (
-          <PrototypeFrame
-            src={url}
-            title={meta.title}
-            width={layout.width}
-            height={layout.height}
-            scale={layout.scale}
-            wholePage={wholePage}
-            pageHeight={pageHeight}
-            onPageExtent={onPageExtent}
-          />
-        ),
-      })}
+      <PrototypeFrame
+        src={src}
+        title={meta.title}
+        width={layout.width}
+        height={layout.height}
+        scale={layout.scale}
+        wholePage={wholePage}
+        pageHeight={pageHeight}
+        onPageExtent={onPageExtent}
+      />
     </Screen>
   );
   return <>{children(screen, null)}</>;

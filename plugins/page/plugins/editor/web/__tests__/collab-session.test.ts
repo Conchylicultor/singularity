@@ -45,6 +45,9 @@ vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
   useResource: vi.fn(() => ({ pending: true, data: [] })),
 }));
+vi.mock("@plugins/network/plugins/live/web", () => ({
+  useLiveRow: vi.fn(() => ({ pending: true, error: null })),
+}));
 
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { blockDocOwnerOf, CollabSession } from "../internal/collab-session";

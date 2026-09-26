@@ -5,7 +5,7 @@ import {
   resolved,
   unresolved,
 } from "@plugins/primitives/plugins/live-state/core";
-import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   probeHeadMain,
@@ -60,7 +60,7 @@ function evictWorktreeFor(attemptId: string): void {
 
 // AttemptIds with a live pane subscriber, tracked via the sub-lifecycle hooks. A
 // git ref advance (local commit / rebase / sync-to-head, or main moving) changes
-// the graph of every visible attempt, so any refHeadResource notify fans out to
+// the graph of every visible attempt, so any refHeadServed notify fans out to
 // exactly the attempts currently on screen. git-watcher only tracks `main` + this
 // worktree's own branch, so a notify already implies a relevant ref moved — no
 // need to inspect the refName.
@@ -81,7 +81,7 @@ export const commitsGraphResource = defineResource({
   // dependency: the graph no longer reads the ledger at all.
   dependsOn: [
     {
-      resource: refHeadResource,
+      resource: refHeadServed,
       map: activeAttemptParams(activeGraphAttempts),
     },
   ],

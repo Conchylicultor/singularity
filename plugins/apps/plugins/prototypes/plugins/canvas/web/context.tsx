@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import {
+  useOptimisticResource,
+  type OptimisticSettled,
+} from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   readDraft,
@@ -26,7 +29,7 @@ import {
   applyPicksChange,
   DEFAULT_PROTOTYPE_VIEWPORT,
   prototypesResource,
-  prototypePicksResource,
+  prototypePicks,
   prototypeUrl,
   prototypeVersionUrl,
   resolvePicks,
@@ -51,16 +54,6 @@ import {
 } from "./internal/canvas-model";
 import { restoreCanvas, serializeCanvas } from "./internal/saved-canvas";
 import { FrameSource } from "./slots";
-
-/**
- * Something derived from the shared picks: not known yet (still loading, or
- * the load failed — `error` says which), or known. The picks are the user's
- * choice, so while they are unknown there is nothing to stand in for them — the
- * defaults would be a claim about what the user picked, reversed a moment
- * later. A readiness gate (`matchResource`) takes it as is.
- */
-export type PicksRead<T> =
-  { pending: true; error: Error | null } | { pending: false; data: T };
 
 /** A frame source as the header lists it. */
 export interface CanvasSourceEntry {
@@ -103,9 +96,10 @@ export interface PrototypeDetailContextValue {
   /**
    * The prototype's ONE shared picks record (`prototypes.picks`), with this
    * pane's own not-yet-confirmed changes applied. Frame A shows it. Unjudged —
-   * read a frame's picks through {@link useFramePicks}.
+   * read a frame's picks through {@link useFramePicks}. Always known: the
+   * provider renders nothing of the canvas until the record has loaded.
    */
-  shared: PicksRead<StoredPicks>;
+  shared: StoredPicks;
   /** The canvas: frames, selection, size, zoom, layout. */
   canvas: CanvasState;
   /** The one way the canvas changes. */
@@ -165,14 +159,23 @@ interface PrototypeDetailProviderProps {
 
 /**
  * The canvas for one prototype. A fresh canvas opens at the size the prototype
- * declares (`<meta name="prototype-viewport">`), so the provider waits for the
- * prototype list before the canvas exists at all — a canvas at a stand-in size
- * would be a claim about the prototype that reverses itself. A prototype the
- * list does not have opens at the default (the pane then says "not found").
+ * declares (`<meta name="prototype-viewport">`), and every frame shows the
+ * user's picks, so the provider waits for both the prototype list and the
+ * shared picks record before the canvas exists at all — a canvas at a stand-in
+ * size, or a frame on the default variant, would be a claim that reverses
+ * itself. A prototype the list does not have opens at the default size (the
+ * pane then says "not found").
  */
 export function PrototypeDetailProvider(
   props: PrototypeDetailProviderProps,
 ): ReactNode {
+  // Keyed by prototype: the picks overlay below belongs to ONE prototype's
+  // record, so pointing the pane at another one starts a fresh overlay rather
+  // than replaying this one's unconfirmed picks onto it.
+  return <DetailGate key={props.name} {...props} />;
+}
+
+function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   const { name } = props;
   const select = useCallback(
     (rows: readonly PrototypeMeta[]): PrototypeViewport =>
@@ -185,21 +188,51 @@ export function PrototypeDetailProvider(
     select,
     gate: true,
   });
-  return matchResource(declared, {
-    pending: () => <Loading variant="block" />,
-    error: () => <Loading variant="block" />,
-    ready: (size) => <DetailProvider {...props} size={size} />,
-  });
+
+  // ONE shared record per prototype (`_picks/<id>.json` on the server), so the
+  // variant frame A shows is the variant main, every worktree deploy, every
+  // browser and the agents' CLI see — live. Optimistic, so a chip answers the
+  // click at once; a failed write keeps the pick on screen and shows in the
+  // sync-status cloud (never-revert). Pending until the record loads: a pick
+  // can only be made on top of the picks the user can see.
+  const stored = useOptimisticResource(
+    prototypePicks,
+    { name },
+    {
+      apply: applyPicksChange,
+      mutate: (change: PicksChange) =>
+        fetchEndpoint(setPrototypePicks, { name }, { body: change }),
+      label: "prototype options",
+      describeOp: (change: PicksChange) =>
+        change.kind === "reset" ? "reset" : `${change.option}=${change.value}`,
+    },
+  );
+
+  if (declared.pending) return <Loading variant="block" />;
+  if (stored.pending) {
+    // A record that cannot be read stays broken until someone fixes it, so it
+    // renders the default error placeholder naming the problem — never a
+    // spinner that never ends.
+    return matchResource(stored, {
+      pending: () => <Loading variant="block" />,
+      ready: () => null,
+    });
+  }
+  return <DetailProvider {...props} size={declared.data} stored={stored} />;
 }
 
 function DetailProvider({
   name,
   size,
+  stored,
   remember,
   initialVersion = null,
   initialPicks,
   children,
-}: PrototypeDetailProviderProps & { size: PrototypeViewport }) {
+}: PrototypeDetailProviderProps & {
+  size: PrototypeViewport;
+  stored: OptimisticSettled<StoredPicks, PicksChange>;
+}) {
   const contributed = FrameSource.useContributions();
   const sources = useMemo<CanvasSourceEntry[]>(
     () =>
@@ -211,33 +244,7 @@ function DetailProvider({
     [contributed],
   );
 
-  // ONE shared record per prototype (`_picks/<id>.json` on the server), so the
-  // variant frame A shows is the variant main, every worktree deploy, every
-  // browser and the agents' CLI see — live. Optimistic, so a chip answers the
-  // click at once; a failed write keeps the pick on screen and shows in the
-  // sync-status cloud (never-revert).
-  const params = useMemo(() => ({ name }), [name]);
-  const stored = useOptimisticResource<
-    StoredPicks,
-    PicksChange,
-    { name: string }
-  >({
-    resource: prototypePicksResource,
-    params,
-    apply: applyPicksChange,
-    mutate: (change) =>
-      fetchEndpoint(setPrototypePicks, { name }, { body: change }),
-    label: "prototype options",
-    describeOp: (change) =>
-      change.kind === "reset" ? "reset" : `${change.option}=${change.value}`,
-  });
-  const shared = useMemo<PicksRead<StoredPicks>>(
-    () =>
-      stored.pending
-        ? { pending: true, error: stored.error }
-        : { pending: false, data: stored.data },
-    [stored.pending, stored.error, stored.data],
-  );
+  const shared = stored.data;
 
   // The canvas belongs to ONE prototype in ONE pane instance: held with both,
   // so opening another opens its own canvas without an effect resetting
@@ -304,7 +311,7 @@ function DetailProvider({
 
   const currentState = (): CanvasState =>
     latest.current?.from === current ? latest.current.state : canvas;
-  const sharedSnapshot = (): StoredPicks => (shared.pending ? {} : shared.data);
+  const sharedSnapshot = (): StoredPicks => shared;
 
   const dispatch = useEventCallback((action: CanvasAction) => {
     const before = currentState();
@@ -358,17 +365,11 @@ export function documentOptions(
 
 /**
  * The picks a prototype frame shows, as STORED: frame A's are the shared
- * record, every other frame's its own. Pending while the shared record is
- * unknown (every frame waits, so no frame opens on a guess).
+ * record, every other frame's its own.
  */
-export function useFrameStoredPicks(
-  frame: PrototypeFrame,
-): PicksRead<StoredPicks> {
+export function useFrameStoredPicks(frame: PrototypeFrame): StoredPicks {
   const { shared } = usePrototypeDetail();
-  return useMemo<PicksRead<StoredPicks>>(() => {
-    if (frame.picks !== "shared") return { pending: false, data: frame.picks };
-    return shared.pending ? shared : { pending: false, data: shared.data };
-  }, [frame.picks, shared]);
+  return picksOf(frame, shared);
 }
 
 /**
@@ -379,54 +380,26 @@ export function useFrameStoredPicks(
 export function useFramePicks(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
-): PicksRead<OptionPicks> {
+): OptionPicks {
   const stored = useFrameStoredPicks(frame);
   const options = documentOptions(meta, frame.version);
-  return useMemo<PicksRead<OptionPicks>>(
-    () =>
-      stored.pending
-        ? stored
-        : { pending: false, data: resolvePicks(options, stored.data) },
-    [options, stored],
-  );
+  return useMemo(() => resolvePicks(options, stored), [options, stored]);
 }
 
 /** Every prototype frame's stored picks, `"shared"` read from the record. */
 export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
   const { shared } = usePrototypeDetail();
-  return useCallback(
-    // Before the record is known no frame renders its picks (every frame waits
-    // on `useFramePicks`), so the empty stand-in here is never shown.
-    (frame) => picksOf(frame, shared.pending ? {} : shared.data),
-    [shared],
-  );
+  return useCallback((frame) => picksOf(frame, shared), [shared]);
 }
 
-/**
- * THE url of a prototype frame's document: its version under its picks.
- * Pending while its picks are unknown.
- */
+/** THE url of a prototype frame's document: its version under its picks. */
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
   cacheBust: number,
-): PicksRead<string> {
+): string {
   const stored = useFrameStoredPicks(frame);
-  return useMemo<PicksRead<string>>(
-    () =>
-      stored.pending
-        ? stored
-        : {
-            pending: false,
-            data: prototypeDocumentSrc(
-              meta,
-              frame.version,
-              cacheBust,
-              stored.data,
-            ),
-          },
-    [stored, meta, frame.version, cacheBust],
-  );
+  return prototypeDocumentSrc(meta, frame.version, cacheBust, stored);
 }
 
 /**

@@ -21,7 +21,6 @@ import {
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import {
   liveBoolean,
   liveText,
@@ -337,6 +336,45 @@ describe("useLiveRow", () => {
   });
 });
 
+describe("a lookup-only collection", () => {
+  const lookup = () =>
+    liveCollection(`test.use-live.lookup-${seq++}`, { row: Row, id: "id" });
+
+  it("useLiveRow and an id set read its :rows sibling", async () => {
+    const c = lookup();
+    const client = makeClient();
+    const { result } = mount(client, () => ({
+      row: useLiveRow(c, "r0"),
+      set: useLive(c, { ids: ["r0"] }),
+    }));
+    expect(result.current.row.pending).toBe(true);
+    act(() => {
+      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
+    });
+    await waitFor(() => expect(result.current.row.pending).toBe(false));
+    expect(result.current.row).toEqual({
+      pending: false,
+      found: true,
+      row: rows(1)[0],
+    });
+    const set = result.current.set;
+    if (set.pending) throw new Error("unreachable");
+    expect(set.data).toEqual(rows(1));
+  });
+
+  it("types: a list read of it is a tsc error — it declares no order to list in", () => {
+    const c = lookup();
+    // Never called — the assertions are the `@ts-expect-error`s.
+    // @ts-expect-error — no default window
+    const useWhole = () => useLive(c);
+    // @ts-expect-error — no window to filter
+    const useWhere = () => useLive(c, { where: { id: "r0" } });
+    // @ts-expect-error — no groupings
+    const useGrouped = () => useLive(c, { groupBy: "id" });
+    expect([useWhole, useWhere, useGrouped]).toHaveLength(3);
+  });
+});
+
 const Unread = z.object({ errors: z.number(), warnings: z.number() });
 
 describe("useLive — value", () => {
@@ -429,7 +467,7 @@ describe("useLive — value", () => {
     });
   });
 
-  it("types: params are required iff declared; preload is never beside params; a value is not an optimistic base", () => {
+  it("types: params are required iff declared; preload is never beside params", () => {
     const bare = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
     const keyed = liveValue(`test.use-live.value.${seq++}`, {
       schema: Unread,
@@ -445,18 +483,11 @@ describe("useLive — value", () => {
       useLive(keyed);
       // @ts-expect-error — only the declared names
       useLive(keyed, { other: "x" });
+      // With the origin overloads the error lands on the call's first line, so
+      // the call stays on one line.
+      // prettier-ignore
       // @ts-expect-error — a parameterized value cannot be preloaded
-      liveValue("test.use-live.never", {
-        schema: Unread,
-        params: ["id"],
-        preload: "boot",
-      });
-      useOptimisticResource({
-        // @ts-expect-error — a liveValue has no placeholder to be the overlay base
-        resource: bare,
-        apply: (current) => current,
-        mutate: async () => {},
-      });
+      liveValue("test.use-live.never", { schema: Unread, params: ["id"], preload: "boot" });
     };
     expect(typeof useTypeOnly).toBe("function");
   });

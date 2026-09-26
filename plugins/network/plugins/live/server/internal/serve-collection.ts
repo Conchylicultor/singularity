@@ -18,6 +18,11 @@ import type {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
 import {
+  columnWireCodec,
+  type ColumnWire,
+  type WireCodec,
+} from "@plugins/database/plugins/sql-column/server";
+import {
   windowQueryResource,
   type EntitySource,
   type QueryDb,
@@ -29,6 +34,7 @@ import type {
   LiveCollection,
   LiveGroup,
   LiveGroupParams,
+  LiveLookupCollection,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
 
@@ -40,16 +46,48 @@ import type {
 // query (`GROUP BY` the column, re-run by the runtime whenever a table it read
 // changes — the read-set is captured automatically, so it needs no scope
 // policy). Nothing here is a new runtime path — only the specs are derived.
+// A lookup-only collection (declared without a default window) mints `:rows`
+// alone, so only that point resource is compiled and served.
 
 /** A table, or an `infra/entities` Entity (read through its table). */
 export type CollectionSource = PgTable | EntitySource;
 
-/** The column property names `from` exposes. */
-type ColumnNamesOf<T> = T extends EntitySource
-  ? keyof T["wireColumns"] & string
+/** The columns `from` exposes, by property name. */
+type ColumnsOf<T> = T extends EntitySource
+  ? T["wireColumns"]
   : T extends PgTable
-    ? keyof T["_"]["columns"] & string
+    ? T["_"]["columns"]
     : never;
+
+/** The column property names `from` exposes. */
+type ColumnNamesOf<T> = keyof ColumnsOf<T> & string;
+
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+
+/**
+ * Row fields bound by name to a column that declares a wire form (sql-column's
+ * `withWire`) whose wire type the field is not — e.g. a `bytea` column's field
+ * typed as bytes instead of its base64 `string`.
+ */
+type WireMismatch<T, Row> = {
+  [K in keyof Row & ColumnNamesOf<T>]: ColumnWire<ColumnsOf<T>[K]> extends {
+    wire: infer W;
+  }
+    ? Same<Row[K], W> extends true
+      ? never
+      : K
+    : never;
+}[keyof Row & ColumnNamesOf<T>];
+
+/** A wire-type mismatch is a REQUIRED property of type `never`, naming the field: a tsc error. */
+type WireCheck<T, Row> = [WireMismatch<T, Row>] extends [never]
+  ? unknown
+  : {
+      [
+        K in WireMismatch<T, Row> &
+          string as `row field "${K}" must be its column's wire type (sql-column withWire)`
+      ]: never;
+    };
 
 /**
  * `columns` is optional while every row field is a column of `from` by
@@ -78,17 +116,22 @@ export type ServeCollectionOptions<T extends CollectionSource, Row> = {
   where?: SQL;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
-} & ColumnOverrides<T, keyof Row & string>;
+} & ColumnOverrides<T, keyof Row & string> &
+  WireCheck<T, Row>;
 
-export interface CollectionSpecs {
-  window: WindowQueryResourceSpec<LiveWindowParams>;
+/** A lookup-only collection's one spec: the `:rows` point read. */
+export interface LookupCollectionSpecs {
   rows: WindowQueryResourceSpec<PointParams>;
+  /** The derived projection: exactly the row schema's keys. */
+  select: SelectMap;
+}
+
+export interface CollectionSpecs extends LookupCollectionSpecs {
+  window: WindowQueryResourceSpec<LiveWindowParams>;
   /** The `:groups` server half — the two-arg `defineResource` opts. */
   groups: ServerResourceOptions<LiveGroup<FilterScalar>[], LiveGroupParams> & {
     mode: "push";
   };
-  /** The derived projection: exactly the row schema's keys. */
-  select: SelectMap;
 }
 
 export interface ServedCollection<Row> {
@@ -108,15 +151,25 @@ export interface ServedCollection<Row> {
   ];
 }
 
+/** A lookup-only collection, served: its one minted resource, `${key}:rows`. */
+export interface ServedLookupCollection<Row> {
+  /** The point resource (`${key}:rows`) — the only one a lookup-only collection mints. */
+  rows: Resource<Row[], PointParams>;
+  /** Every minted key — `[key:rows]`. */
+  keys: [string];
+  /** Spread into the plugin's `contributions`: the one `Resource.Declare`. */
+  declare: [ReturnType<typeof ResourceContribution.Declare>];
+}
+
 function isEntitySource(from: CollectionSource): from is EntitySource {
   return "wireColumns" in from && "table" in from;
 }
 
 /**
- * Derive the three specs for a collection. Exported apart from
- * `serveCollection` (which also registers) so a test can compile them against
- * a fake or throwaway `db` and its own runtime — the `compileWindowQuery`
- * pattern. Every binding miss throws here, at module eval.
+ * Derive the specs for a collection — three, or just `rows` for a lookup-only
+ * one. Exported apart from `serveCollection` (which also registers) so a test
+ * can compile them against a fake or throwaway `db` and its own runtime — the
+ * `compileWindowQuery` pattern. Every binding miss throws here, at module eval.
  */
 export function compileCollection<
   Row,
@@ -126,7 +179,20 @@ export function compileCollection<
 >(
   collection: LiveCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row>,
-): CollectionSpecs {
+): CollectionSpecs;
+export function compileCollection<Row, T extends CollectionSource>(
+  collection: LiveLookupCollection<Row>,
+  opts: ServeCollectionOptions<T, Row>,
+): LookupCollectionSpecs;
+export function compileCollection<
+  Row,
+  F,
+  S extends string,
+  T extends CollectionSource,
+>(
+  collection: LiveCollection<Row, F, S> | LiveLookupCollection<Row>,
+  opts: ServeCollectionOptions<T, Row>,
+): CollectionSpecs | LookupCollectionSpecs {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
@@ -154,11 +220,58 @@ export function compileCollection<
   // checked here too, since a binding is a runtime fact.
   const bound = new Map<string, PgColumn>();
   for (const name of collection.rowKeys) bound.set(name, columnOf(name));
-  const filterable = Object.keys(collection.filterable as object);
-  for (const name of [...filterable, ...collection.sortable, collection.id]) {
+  const lists = collection.window !== undefined;
+  const filterable = lists ? Object.keys(collection.filterable as object) : [];
+  const sortable: readonly string[] = lists ? collection.sortable : [];
+  for (const name of [...filterable, ...sortable, collection.id]) {
     if (!bound.has(name)) fail(`"${name}" is not a field of the row schema.`);
   }
   const select: SelectMap = Object.fromEntries(bound);
+
+  // A column type's wire form (sql-column `withWire`), applied in JS to every
+  // row a loader returns — the field's type is the codec's wire type (tsc).
+  const wired: [string, WireCodec<unknown, unknown>][] = [];
+  for (const [name, col] of bound) {
+    const codec = columnWireCodec(col);
+    if (codec) wired.push([name, codec]);
+  }
+  for (const [name] of wired) {
+    if (filterable.includes(name) || name === collection.id) {
+      fail(
+        `"${name}" is a wire-encoded column — it cannot be filtered, grouped ` +
+          `or be the id: an operand, a group value and an id are compared as ` +
+          `stored, not as they cross the wire.`,
+      );
+    }
+  }
+  const encodeRow =
+    wired.length === 0
+      ? undefined
+      : (row: Record<string, unknown>): Record<string, unknown> => {
+          const out = { ...row };
+          for (const [name, codec] of wired) {
+            const value = out[name];
+            if (value !== null) out[name] = codec.encode(value);
+          }
+          return out;
+        };
+  const withEncode = encodeRow ? { encodeRow } : {};
+  const base = opts.where;
+  // One boundary cast — the `compileWindowQuery` precedent.
+  const db: QueryDb = opts.db ?? (realDb as unknown as QueryDb);
+  const withDb = opts.db ? { db: opts.db } : {};
+  const rows: WindowQueryResourceSpec<PointParams> = {
+    from: opts.from,
+    select,
+    point: { by: bound.get(collection.id)! },
+    // A base-where flip makes the refill omit a requested id — the point
+    // path's membership exit, so the row leaves the tuple.
+    ...(base ? { where: base } : {}),
+    ...withEncode,
+    ...withDb,
+  };
+  if (collection.window === undefined) return { rows, select };
+
   // The filter language's declaration, and each filterable column's target:
   // the column RENDERED as SQL, never the column object — an operand is not a
   // stored value, and a column would run its write-side encoder over it.
@@ -169,7 +282,6 @@ export function compileCollection<
   const filterWhere = (filter: Filter | undefined): SQL | undefined =>
     filterSql(filter, targets, filterDecl);
 
-  const base = opts.where;
   const allOf = (parts: (SQL | undefined)[]): SQL | undefined => {
     const present = parts.filter((p): p is SQL => p !== undefined);
     return present.length === 0 ? undefined : and(...present);
@@ -184,8 +296,6 @@ export function compileCollection<
       return { col, dir, nullable: !col.notNull };
     });
 
-  // One boundary cast — the `compileWindowQuery` precedent.
-  const db: QueryDb = opts.db ?? (realDb as unknown as QueryDb);
   const groupCodec = collection.groups.groups;
   // A group value is a STORED value, so it is checked against the row schema's
   // field — never against the filterable declaration, whose operand narrowing
@@ -235,7 +345,6 @@ export function compileCollection<
     return rows;
   };
 
-  const withDb = opts.db ? { db: opts.db } : {};
   return {
     window: {
       from: opts.from,
@@ -246,17 +355,10 @@ export function compileCollection<
       // to any of them re-derives each member tuple's window.
       signatureColumns: collection.sortable.map((name) => bound.get(name)!),
       window: {}, // maxLimit comes from the declaration's codec
+      ...withEncode,
       ...withDb,
     },
-    rows: {
-      from: opts.from,
-      select,
-      point: { by: bound.get(collection.id)! },
-      // A base-where flip makes the refill omit a requested id — the point
-      // path's membership exit, so the row leaves the tuple.
-      ...(base ? { where: base } : {}),
-      ...withDb,
-    },
+    rows,
     groups: { mode: "push", loader: groupsLoader },
     select,
   };
@@ -266,8 +368,11 @@ export function compileCollection<
  * Serve a `liveCollection` from a table (or Entity). Row fields bind to
  * columns by property name — type-checked against `from`; a renamed column
  * goes in `columns`. The projection is exactly the row schema's fields.
- * Returns the three compiled resources, their keys, and their
- * `Resource.Declare` contributions:
+ * A column whose type declares a wire form (sql-column `withWire`, e.g. a
+ * `bytea`) is encoded in JS on every row, and its row field must be typed as
+ * the wire type. Returns the compiled resources, their keys, and their
+ * `Resource.Declare` contributions — all three for a full collection, `:rows`
+ * alone for a lookup-only one:
  *
  * ```ts
  * export const eventSourcesServed = serveCollection(eventSources, { from: _eventSources });
@@ -282,7 +387,29 @@ export function serveCollection<
 >(
   collection: LiveCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row>,
-): ServedCollection<Row> {
+): ServedCollection<Row>;
+export function serveCollection<Row, T extends CollectionSource>(
+  collection: LiveLookupCollection<Row>,
+  opts: ServeCollectionOptions<T, Row>,
+): ServedLookupCollection<Row>;
+export function serveCollection<
+  Row,
+  F,
+  S extends string,
+  T extends CollectionSource,
+>(
+  collection: LiveCollection<Row, F, S> | LiveLookupCollection<Row>,
+  opts: ServeCollectionOptions<T, Row>,
+): ServedCollection<Row> | ServedLookupCollection<Row> {
+  if (collection.window === undefined) {
+    const specs = compileCollection(collection, opts);
+    const rows = windowQueryResource(collection.rows, specs.rows);
+    return {
+      rows,
+      keys: [rows.key],
+      declare: [ResourceContribution.Declare(rows)],
+    };
+  }
   const specs = compileCollection(collection, opts);
   const window = windowQueryResource(collection.window, specs.window);
   const rows = windowQueryResource(collection.rows, specs.rows);

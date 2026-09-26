@@ -35,8 +35,8 @@ import { useTodoTask } from "../hooks";
 export function TodoRuns({ blockId }: { blockId: string }) {
   const link = useTodoTask(blockId);
   // Nothing while loading, nothing when not dispatched.
-  if (link.pending || !link.data) return null;
-  return <DispatchedRuns taskId={link.data.taskId} />;
+  if (link.pending || !link.found) return null;
+  return <DispatchedRuns taskId={link.row.taskId} />;
 }
 
 /**

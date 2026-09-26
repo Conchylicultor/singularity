@@ -3824,6 +3824,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/announce.announce`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`

@@ -16,7 +16,7 @@ export const CollabHydrationPayloadSchema = z.object({
   // Which side was behind. `blind-binding` = the editor rendered less than its
   // own doc holds (the binding missed its post-attach events). `starved-doc` =
   // the doc itself was behind the server: the row projection held text this
-  // client never typed, so the `page-block-doc` push never arrived.
+  // client never typed, so the `page-block-doc:rows` push never arrived.
   reason: z.enum(["blind-binding", "starved-doc"]),
   // Volatile uuid — deliberately excluded from the fingerprint.
   blockId: z.string(),
@@ -27,7 +27,9 @@ export const CollabHydrationPayloadSchema = z.object({
   docLength: z.number(),
   rowLength: z.number(),
 });
-export type CollabHydrationPayload = z.infer<typeof CollabHydrationPayloadSchema>;
+export type CollabHydrationPayload = z.infer<
+  typeof CollabHydrationPayloadSchema
+>;
 
 // Fingerprint = sha256("collab-hydration" + reason), first 16 hex chars. Only
 // the reason: the block id is a fresh uuid per occurrence and the three lengths
@@ -38,7 +40,9 @@ export type CollabHydrationPayload = z.infer<typeof CollabHydrationPayloadSchema
 export async function collabHydrationFingerprint(
   data: CollabHydrationPayload,
 ): Promise<string> {
-  return sha256Hex(`collab-hydration|${data.reason}`).then((h) => h.slice(0, 16));
+  return sha256Hex(`collab-hydration|${data.reason}`).then((h) =>
+    h.slice(0, 16),
+  );
 }
 
 async function sha256Hex(input: string): Promise<string> {

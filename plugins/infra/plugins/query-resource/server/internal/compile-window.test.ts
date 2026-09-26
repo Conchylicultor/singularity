@@ -354,31 +354,6 @@ describe("compileWindowQuery — point", () => {
     );
     expect(calls[0]!.params).toEqual(["c1", "c2"]);
   });
-
-  test("ackChannel passes through verbatim into serverOpts (both kinds); absent stays absent", () => {
-    const { db } = fakeDb();
-    const pt = compileWindowQuery(ptDescriptor(), {
-      from: rows,
-      point: { by: rows.id },
-      ackChannel: true,
-      db,
-    });
-    expect(pt.serverOpts.ackChannel).toBe(true);
-    const win = compileWindowQuery(winDescriptor(), {
-      from: rows,
-      orderBy: { col: rows.n },
-      window: { maxLimit: 500 },
-      ackChannel: true,
-      db,
-    });
-    expect(win.serverOpts.ackChannel).toBe(true);
-    const off = compileWindowQuery(ptDescriptor(), {
-      from: rows,
-      point: { by: rows.id },
-      db,
-    });
-    expect("ackChannel" in off.serverOpts).toBe(false);
-  });
 });
 
 describe("compileWindowQuery — per-params orderBy", () => {

@@ -38,7 +38,7 @@ export {
   AuthKeychainLockedError,
   AuthCredentialsMissingError,
 } from "./internal/errors";
-export { authStateResource, AuthStateValueSchema } from "./resources";
+export { authState, AuthStateValueSchema } from "./resources";
 export type {
   GetAccessTokenArgs,
   TokenResponse,

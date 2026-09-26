@@ -1,6 +1,5 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { DeploymentStateSchema } from "./model";
-import type { DeploymentState } from "./model";
 
 /**
  * The one description of what is deployed: this checkout's HEAD, and where each
@@ -21,12 +20,11 @@ import type { DeploymentState } from "./model";
  * between two builds. There is no collection to window here, so do not "fix"
  * this into a windowed resource.
  *
- * `initialData` is the self-describing non-value, never a fabricated converged
- * state — before the first load the server has not vouched for anything.
+ * No placeholder: before the first load the server has not vouched for
+ * anything, and that is `pending` — never a fabricated state. Preloaded, so a
+ * tab normally never sees it.
  */
-export const deploymentResource = resourceDescriptor<DeploymentState>(
-  "build.deployment",
-  DeploymentStateSchema,
-  { kind: "unknown", reason: "not loaded", deployable: [] },
-  { preload: "boot" },
-);
+export const deployment = liveValue("build.deployment", {
+  schema: DeploymentStateSchema,
+  preload: "boot",
+});

@@ -10,4 +10,4 @@ export type {
 } from "./protocol";
 export { standingOf } from "./standing";
 export type { Standing } from "./standing";
-export { attemptWorkResource } from "./resources";
+export { attemptWork } from "./resources";

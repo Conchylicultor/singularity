@@ -364,7 +364,7 @@ interface BlockEditorContextValue {
   allowAttachments: boolean;
   /**
    * Whether this editor's per-block content docs SYNC to the server (the CRDT
-   * transport: `blockContentResource` subscription + `doc-init`/`doc-update`).
+   * transport: `blockDocs` row subscription + `doc-init`/`doc-update`).
    * True on the persistent path; false in the in-memory mode, where each block's
    * `Y.Doc` is purely local (seeded from `data.text`, never networked). Read by
    * `CollabTextPlugin` to pick the server vs local content-doc hook.

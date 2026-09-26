@@ -4,6 +4,7 @@ export {
   NotificationsProvider,
   ensureNotificationsClient,
   useResource,
+  useResourceAcks,
   hydrateResource,
   hydrateQuery,
   useNotificationsStatus,
@@ -38,7 +39,6 @@ export type {
   ResourceViewProps,
 } from "./components/resource-view";
 export {
-  NotificationsClient,
   queryKeyFor,
   liveStateSocketKind,
   ResourceStaleReadError,
@@ -59,7 +59,6 @@ export type {
 export {
   resourceDescriptor,
   keyedResourceDescriptor,
-  centralResourceDescriptor,
   resourceDescriptorByKey,
 } from "../core";
 export type {

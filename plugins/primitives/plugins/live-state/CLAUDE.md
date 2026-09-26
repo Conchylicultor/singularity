@@ -32,7 +32,9 @@ the boot snapshot.
 `dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`) seeds
 nothing and is still `pending` until the first value; its query stays disabled until a
 value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it).
-`useOptimisticResource` requires a descriptor WITH one (its pending overlay base).
+`useOptimisticResource`'s legacy object form still takes a descriptor WITH one
+(its pending overlay base); its positional forms (a `liveValue`, a collection's
+`{ ids }`) have none and stay `pending` instead.
 
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
@@ -78,6 +80,19 @@ the batch the server's whole truth for THIS tab, so subs the tab dropped while
 disconnected are reconciled away; a `pagehide` listener sends a best-effort
 `{op:"unsub-tab"}` per channel so a closing tab's subs release immediately
 instead of leaking until the socket cycles.
+
+## Standalone acks are asked for, per tuple
+
+`requestAcks(key, params, origin)` (hook: `useResourceAcks(resource, params)`)
+asks the server for the version-less `{ kind: "ack" }` frames a no-value-change
+recompute sends (see `resource-runtime/CLAUDE.md`). It is counted per tuple on
+the channel (`ackInterest`), apart from the sub itself, so the order of
+`observe()` and `requestAcks()` does not matter: every `sub` frame and every
+replay entry restates `acks: true` while the count is positive, and a 0→1 /
+1→0 transition while the sub is live sends one `{op:"sub-acks", key, params,
+acks, tabId}` — no re-sub, no sub-ack. The server ORs the tabs sharing a
+socket. The one caller is `useOptimisticResource`; the received frame is only
+noted into the tx-ack registry, exactly as before.
 
 The old per-sub replay **stagger was deleted deliberately**: same-boot replays
 short-circuit server-side for ~0 cost and post-restart replays are bounded by
@@ -300,8 +315,8 @@ frame can no longer be backed by a pre-commit read):
 
 ## Descriptor registry (`resourceDescriptorByKey`)
 
-Every descriptor factory (`resourceDescriptor`, `keyedResourceDescriptor`,
-`centralResourceDescriptor`) self-registers its result into a module-level
+Every descriptor factory (`resourceDescriptor`, `keyedResourceDescriptor`, and
+`network/live`'s `liveValue` / `liveCollection`) self-registers its result into a module-level
 key→descriptor map at **descriptor-module evaluation time** (the factory call runs
 on import, before first paint); `resourceDescriptorByKey(key)` reads it back.
 boot-snapshot uses it to resolve the snapshot's boot-critical keys to their client
@@ -677,7 +692,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `WindowResourceDescriptor`
     - `WindowSelector`
   - Exports (values):
-    - `centralResourceDescriptor`
     - `combineResources`
     - `ensureNotificationsClient`
     - `getNotificationsClient`
@@ -691,7 +705,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `liveStateSocketKind`
     - `mapResource`
     - `matchResource`
-    - `NotificationsClient`
     - `NotificationsProvider`
     - `pendingMountSnapshot`
     - `queryKeyFor`
@@ -710,6 +723,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `usePointResource`
     - `usePointResources`
     - `useResource`
+    - `useResourceAcks`
     - `useWindowResource`
 - Cross-plugin:
   - Imported by:
@@ -769,7 +783,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/compositions/release/release-info`
     - `apps/studio/compositions/release/release-logs`
-    - `auth`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
     - `build`
@@ -836,7 +849,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `page/annotations/instructions/instructions-page`
     - `page/annotations/todo/task-link`
     - `page/editor`
-    - `page/editor-collab`
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`
@@ -885,7 +897,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `WindowResourceDescriptor`
     - `WindowSelector`
   - Exports (values):
-    - `centralResourceDescriptor`
     - `compareTxWatermark`
     - `keyedResourceDescriptor`
     - `registerResourceDescriptor`
@@ -899,5 +910,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
   - Web: `@plugins/primitives/plugins/live-state/web/testing`
     - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
     - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
+    - `NotificationsClient`
 
 <!-- AUTOGENERATED:END -->

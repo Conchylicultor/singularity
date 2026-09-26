@@ -6,7 +6,7 @@ import { handleSetApiKey } from "./internal/handlers/api-key";
 import { handleSignIn } from "./internal/handlers/sign-in";
 import { handleGetState } from "./internal/handlers/state";
 import { handleGetToken } from "./internal/handlers/token";
-import { authStateResource } from "./internal/auth-resource";
+import { authStateServed } from "./internal/auth-resource";
 import { onReady } from "./internal/boot";
 import {
   oauthStart,
@@ -24,7 +24,7 @@ export {
   listProviders,
 } from "./internal/token-access";
 export { registerAuthProvider } from "./internal/registry";
-export { authStateResource } from "./internal/auth-resource";
+export { authStateServed } from "./internal/auth-resource";
 export { defineAuthProvider } from "@plugins/auth/core";
 export type {
   AuthIdentity,
@@ -64,6 +64,6 @@ export default {
     [getAuthState.route]: handleGetState,
     [getToken.route]: handleGetToken,
   },
-  resources: [authStateResource],
+  resources: [authStateServed],
   onReady,
 } satisfies CentralPluginDefinition;

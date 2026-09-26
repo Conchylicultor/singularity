@@ -9,7 +9,7 @@
 //     very end the whole time;
 //  4. open the same page in a SECOND browser context and assert it converges to
 //     the same text (server round-trip through doc-update → page_block_docs →
-//     blockContentResource).
+//     the blockDocs row).
 //
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts [--url <deploy>] [--out /tmp/crdt]
 import {

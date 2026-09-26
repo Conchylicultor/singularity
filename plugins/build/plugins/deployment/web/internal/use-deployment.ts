@@ -1,9 +1,5 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import {
-  deploymentResource,
-  type Carrier,
-  type DeploymentState,
-} from "../../core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { deployment, type Carrier, type DeploymentState } from "../../core";
 import { tabCarrier } from "./tab-carrier";
 
 /**
@@ -33,7 +29,7 @@ export type DeploymentReading =
  * — it is a fact only this tab holds.
  */
 export function useDeployment(): DeploymentReading {
-  const result = useResource(deploymentResource);
+  const result = useLive(deployment);
   if (result.pending) return { pending: true, error: result.error };
   return {
     pending: false,

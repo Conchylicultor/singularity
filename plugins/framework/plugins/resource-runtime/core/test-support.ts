@@ -89,6 +89,8 @@ export interface Harness {
       version?: number;
       epoch?: string;
       tabId?: string;
+      /** Ask for standalone `{ kind: "ack" }` frames on this tuple. */
+      acks?: boolean;
     },
   ) => Promise<void>;
   /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
@@ -98,8 +100,16 @@ export interface Harness {
       params?: ResourceParams;
       etag?: string;
       version?: number;
+      acks?: boolean;
     }>,
     o?: { socket?: number; tabId?: string; epoch?: string; complete?: boolean },
+  ) => Promise<void>;
+  /** Send `op:sub-acks` (flip a held sub's ack request) and await the next macrotask. */
+  subAcks: (
+    key: string,
+    params: ResourceParams,
+    acks: boolean,
+    o?: { socket?: number; tabId?: string },
   ) => Promise<void>;
   /** Send `op:unsub` on a socket and await the next macrotask. */
   unsub: (
@@ -167,6 +177,7 @@ export function createHarness(
           ...(o.version !== undefined ? { version: o.version } : {}),
           ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
           ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
+          ...(o.acks !== undefined ? { acks: o.acks } : {}),
         }),
       );
       await tick(); // let the async sub-ack (initial load) complete
@@ -186,10 +197,25 @@ export function createHarness(
             params: e.params ?? {},
             ...(e.etag !== undefined ? { etag: e.etag } : {}),
             ...(e.version !== undefined ? { version: e.version } : {}),
+            ...(e.acks !== undefined ? { acks: e.acks } : {}),
           })),
         }),
       );
       await tick(); // let detached full-path serves complete
+    },
+    async subAcks(key, params, acks, o = {}) {
+      const ws = wsList[o.socket ?? 0];
+      handler.message(
+        ws,
+        JSON.stringify({
+          op: "sub-acks",
+          key,
+          params,
+          acks,
+          ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
+        }),
+      );
+      await tick();
     },
     async unsub(key, params = {}, o = {}) {
       const ws = wsList[o.socket ?? 0];

@@ -38,14 +38,14 @@
   - Uses:
     - `code-explorer.getRangeFiles`
     - `code-explorer.resolveParentSha`
-    - `conversations/conversation-view/code.editedFilesResource`
+    - `conversations/conversation-view/code.editedFilesServed`
     - `conversations/conversation-view/code.editedFilesSignature`
     - `conversations/conversation-view/code.getEditedFiles`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/git/git-read-cache.createGitStateMemo`
     - `infra/git/git-watcher.lastKnownMainSha`
-    - `infra/git/git-watcher.refHeadResource`
+    - `infra/git/git-watcher.refHeadServed`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`

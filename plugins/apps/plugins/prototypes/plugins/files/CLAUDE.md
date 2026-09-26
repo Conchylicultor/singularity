@@ -440,6 +440,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
+    - `network/live.serveValue`
   - Exports (values):
     - `checkpointPrototype`
     - `listPrototypeMetas`
@@ -461,6 +462,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/endpoints.defineEndpoint`
     - `infra/html-decode.decodeHtmlText`
     - `infra/html-decode.readHtmlAttr`
+    - `network/live.liveValue`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `MocksDeclaration`
@@ -516,7 +518,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypeIdsIn`
     - `PrototypeMetaSchema`
     - `PrototypeOptionSchema`
-    - `prototypePicksResource`
+    - `prototypePicks`
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
     - `prototypesResource`

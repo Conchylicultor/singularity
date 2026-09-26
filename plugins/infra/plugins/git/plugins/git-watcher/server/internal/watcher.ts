@@ -8,10 +8,10 @@ import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
 import { refAdvanced } from "./tables-ref-advanced";
-import { refHeadResource } from "./ref-head-resource";
+import { refHeadServed } from "./ref-head-resource";
 import { runRefReactions } from "./reactions";
 
-// Refs whose movement we surface via refHeadResource. Always `refs/heads/main`
+// Refs whose movement we surface via refHeadServed. Always `refs/heads/main`
 // (the refAdvanced trigger event keys off it) plus, in a worktree, that
 // worktree's own branch — the ref a local commit / rebase / sync-to-head
 // advances. Together these are the only refs whose movement changes a
@@ -109,7 +109,7 @@ async function recompute(): Promise<void> {
     const previousSha = lastKnownSha.get(refName) ?? null;
     if (sha === previousSha) continue;
     lastKnownSha.set(refName, sha);
-    refHeadResource.notify({ refName });
+    refHeadServed.notify({ refName });
     if (!sha) continue;
     // In-process reactions run in EVERY backend, before the durable emit. That
     // difference is load-bearing: `emit` is main-only, so anything that reacts

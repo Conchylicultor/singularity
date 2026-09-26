@@ -13,7 +13,7 @@ import {
   NotificationsProvider,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
-import { authStateResource } from "@plugins/auth/core";
+import { authState } from "@plugins/auth/core";
 import type { UnionRun } from "@plugins/runs/core";
 import {
   BackupArchiveSize,
@@ -112,7 +112,7 @@ function renderSection(node: ReactNode): void {
       queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
     },
   });
-  client.setQueryData(queryKeyFor(authStateResource.key, undefined), {
+  client.setQueryData(queryKeyFor(authState.key, undefined), {
     providers: {},
   });
   const wrapper = ({ children }: { children: ReactNode }) => (

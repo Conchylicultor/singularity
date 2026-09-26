@@ -18,4 +18,4 @@ export type {
   DeploymentState,
 } from "./model";
 export { convergenceOf, deploymentOf, wantsBuild } from "./derive";
-export { deploymentResource } from "./resource";
+export { deployment } from "./resource";

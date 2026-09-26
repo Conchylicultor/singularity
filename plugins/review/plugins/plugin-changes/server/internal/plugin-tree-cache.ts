@@ -21,7 +21,7 @@ import { editedFilesSignature } from "@plugins/conversations/plugins/conversatio
 // shared across every conversation on this backend, with backend-wide
 // single-flight. Signature = main's HEAD sha, so the main tree is rebuilt only
 // when main actually advances — never on a worktree file save. When a main
-// advance fans out via refHeadResource to N active reviews, they all coalesce
+// advance fans out via refHeadServed to N active reviews, they all coalesce
 // onto ONE rebuild.
 const mainTreeMemo = createGitStateMemo<PluginTree>({
   name: "review.plugin-changes.main-tree",

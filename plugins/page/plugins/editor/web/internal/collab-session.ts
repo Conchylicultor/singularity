@@ -415,7 +415,7 @@ export class BlockDocOwner {
     this.serverSync = serverSync;
     this.doc = new Doc();
     // Transport seam: a server-synced editor gets the live-state provider
-    // (blockContentResource in, doc-init/doc-update out); the in-memory editor
+    // (the `blockDocs` row in, doc-init/doc-update out); the in-memory editor
     // (`persist={false}`) gets a purely local provider that seeds from
     // `data.text` and never networks. `rowTruth` is the consumer's RENDER-TIME
     // view (see useCollabBlockDoc and `row-truth.ts`) — construction-accurate,

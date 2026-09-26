@@ -1,6 +1,5 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { deploymentResource } from "./internal/deployment-resource";
+import { deploymentServed } from "./internal/deployment-resource";
 import { handleChainFrom } from "./internal/handle-chain-from";
 import { sealServerPin } from "./internal/server-pin";
 import { chainFromEndpoint } from "../shared/endpoints";
@@ -9,13 +8,13 @@ export {
   readDeployment,
   readDeploymentState,
 } from "./internal/read-deployment";
-export { deploymentResource } from "./internal/deployment-resource";
+export { deploymentServed } from "./internal/deployment-resource";
 export { serverPin } from "./internal/server-pin";
 
 export default {
   description:
     "The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.",
-  contributions: [Resource.Declare(deploymentResource)],
+  contributions: [...deploymentServed.declare],
   httpRoutes: {
     [chainFromEndpoint.route]: handleChainFrom,
   },
@@ -28,6 +27,6 @@ export default {
     sealServerPin();
     // Push the sealed answer: subscribers that hydrated from the boot snapshot
     // hold the pre-seal value.
-    deploymentResource.notify();
+    deploymentServed.notify();
   },
 } satisfies ServerPluginDefinition;

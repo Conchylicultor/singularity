@@ -8,9 +8,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 // schema file importing it fails drizzle-kit's loader (which then silently
 // reports "no schema change"). Keeping the column type on a lean drizzle-only
 // barrel makes that failure mode unrepresentable.
-export { bytea } from "../core/internal/bytea";
+export { bytea, stateToBase64 } from "./internal/bytea";
 
 export default {
   description:
-    "Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state, on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.",
+    "Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state — whose wire form is unfolded base64 (stateToBase64, declared once through sql-column's withWire) — on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.",
 } satisfies ServerPluginDefinition;

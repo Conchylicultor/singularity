@@ -1,13 +1,12 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { editedFilesResource } from "./internal/edited-files-resource";
+import { editedFilesServed } from "./internal/edited-files-resource";
 
 export { getEditedFiles } from "./internal/get-edited-files";
-export { editedFilesResource } from "./internal/edited-files-resource";
+export { editedFilesServed } from "./internal/edited-files-resource";
 export { editedFilesSignature } from "./internal/edited-files-signature";
 
 export default {
   description:
     "Tracks edited files in the conversation's worktree via the live-state primitive.",
-  contributions: [Resource.Declare(editedFilesResource)],
+  contributions: [...editedFilesServed.declare],
 } satisfies ServerPluginDefinition;

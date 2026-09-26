@@ -84,8 +84,9 @@ in the reconciler.
 facts back out of it for the reconciler — **one read, two consumers**, so the
 badge and the build decision cannot be computed from different git snapshots.
 
-`deploymentResource` recomputes on exactly two edges — a tracked ref advancing
-(`dependsOn: refHeadResource`) and an explicit `notify()` when a build
+The `build.deployment` live value (`deployment` in `core`, served as
+`deploymentServed`) recomputes on exactly two edges — a tracked ref advancing
+(`recomputeOn: [refHeadServed]`) and an explicit `notify()` when a build
 republishes the dist. Nothing polls it.
 
 **Everything expensive is behind a `createSignedMemo`.** The whole answer is a
@@ -125,7 +126,7 @@ walk.
 
 ### The chain covers all three carriers, not just the two the server knows
 
-`deploymentResource` draws from the oldest DEPLOYABLE pin up to HEAD. That range
+`build.deployment` draws from the oldest DEPLOYABLE pin up to HEAD. That range
 is chosen on the server, which cannot know where a browser tab is — so a tab that
 has not reloaded since the last build sits BELOW the start of it and has no row
 to stand on. It used to render as a line under the chain saying its commit was
@@ -216,16 +217,17 @@ convergence mechanisms all missing it) and the design.
     - `build/server-build-id.getServerGraphHash`
     - `infra/endpoints.implement`
     - `infra/git/git-read-cache.createSignedMemo`
-    - `infra/git/git-watcher.refHeadResource`
+    - `infra/git/git-watcher.refHeadServed`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
+    - `network/live.serveValue`
     - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseGitLog`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
     - `primitives/commit-list.WorktreeGoneError`
   - Exports (values):
-    - `deploymentResource`
+    - `deploymentServed`
     - `readDeployment`
     - `readDeploymentState`
     - `serverPin`
@@ -234,6 +236,7 @@ convergence mechanisms all missing it) and the design.
 - Web:
   - Uses:
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -245,7 +248,6 @@ convergence mechanisms all missing it) and the design.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
   - Exports (types): `DeploymentReading`
   - Exports (values):
@@ -253,11 +255,11 @@ convergence mechanisms all missing it) and the design.
     - `useDeployment`
 - Core:
   - Uses:
+    - `network/live.liveValue`
     - `primitives/commit-list.CommitRowSchema`
     - `primitives/live-state.Resolvable`
     - `primitives/live-state.resolvableSchema`
     - `primitives/live-state.resolved`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/live-state.unresolved`
   - Exports (types):
     - `BuildAttempt`
@@ -274,8 +276,8 @@ convergence mechanisms all missing it) and the design.
     - `CHAIN_CAP`
     - `ChainSchema`
     - `convergenceOf`
+    - `deployment`
     - `deploymentOf`
-    - `deploymentResource`
     - `DeploymentStateSchema`
     - `NO_CHAIN`
     - `sameCommit`

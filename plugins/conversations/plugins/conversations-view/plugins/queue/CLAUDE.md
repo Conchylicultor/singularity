@@ -8,6 +8,8 @@
 - Server:
   - Contributes:
     - `resource.declare` "queue-ranks"
+    - `resource.declare` "queue-ranks:rows"
+    - `resource.declare` "queue-ranks:groups"
     - `trigger` "queue.seed-rank"
     - `trigger` "queue.task-status-rerank"
   - Uses:
@@ -19,7 +21,7 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/query-resource.windowQueryResource`
+    - `network/live.serveCollection`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
@@ -33,7 +35,6 @@
     - `endRank`
     - `findTaskIdForConversation`
     - `lockDeck`
-    - `queueRanksResource`
     - `rankAdjacentTo`
     - `rankAfterBlockers`
     - `rankAfterN`
@@ -48,7 +49,10 @@
     - `defineJob('queue.seed-rank')`
     - `defineJob('queue.task-status-rerank')`
     - `defineJob('queue.sweep-gone-ranks')`
-  - Resources: `queue-ranks` (keyed, point)
+  - Resources:
+    - `queue-ranks` (keyed, window)
+    - `queue-ranks:groups` (push)
+    - `queue-ranks:rows` (keyed, point)
   - Routes:
     - `POST /api/conversations-queue/reorder`
     - `POST /api/conversations-queue/promote`
@@ -72,7 +76,7 @@
     - `fields/rank/config.rankField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
-    - `infra/query-resource.pointQueryResourceDescriptor`
+    - `network/live.liveCollection`
     - `primitives/rank.RankSchema`
   - Exports (types):
     - `QueueData`
@@ -81,7 +85,7 @@
     - `demoteQueue`
     - `pinQueue`
     - `promoteQueue`
-    - `queueRanksResource`
+    - `queueRanks`
     - `reorderQueue`
     - `rerankQueue`
     - `stepDownQueue`

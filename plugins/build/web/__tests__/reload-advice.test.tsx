@@ -16,7 +16,7 @@ import {
 import { markDeferredPluginsFailed } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
-  deploymentResource,
+  deployment,
   type DeploymentState,
 } from "@plugins/build/plugins/deployment/core";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
@@ -58,7 +58,7 @@ function wrapperServing(graph: string) {
     },
   });
   client.setQueryData(
-    queryKeyFor(deploymentResource.key, undefined),
+    queryKeyFor(deployment.key, undefined),
     servingGraph(graph),
   );
   return ({ children }: { children: ReactNode }) => (

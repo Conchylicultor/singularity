@@ -2,19 +2,13 @@ import { eq, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Y from "yjs";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import type { BlockDocRow } from "../../core";
 import { _pageBlockDocs } from "./tables";
 
 // Content-agnostic persistence for per-block Yjs docs. db-PARAMETRIZED (the
 // live-state-snapshot `persist.ts` precedent) so the real SQL — the ON CONFLICT
 // first-writer-wins seed and the SELECT … FOR UPDATE merge — is exercised
 // against a throwaway Postgres in `doc-store.test.ts`; the `db` singleton is
-// bound only in `routes.ts` / `resource.ts`.
-
-/** The single JS home for state-bytes → wire base64 (resource + doc-init). */
-export function stateToBase64(state: Uint8Array): string {
-  return Buffer.from(state).toString("base64");
-}
+// bound only in `routes.ts`.
 
 /**
  * node-postgres surfaces a foreign_key_violation as SQLSTATE 23503 (the
@@ -76,7 +70,7 @@ export async function initBlockDoc(
  * commutative, so replays and races converge) with no intermediate `Y.Doc`,
  * and the UPDATE commits the merged state (`updatedAt` is derived by the table's
  * trigger — it moves only when the bytes really change). The committed UPDATE fires
- * the DB change-feed, which pushes `blockContentResource` to the block's
+ * the DB change-feed, which pushes the `blockDocs` row to the block's
  * subscribers. `Y.mergeUpdates` requires the v1 update format (the Yjs default
  * used throughout — stored `state` is an `encodeStateAsUpdate` full state,
  * `update` a v1 incremental), so it is byte-equivalent to the doc rebuild.
@@ -110,31 +104,10 @@ export async function mergeBlockDocUpdate(
 }
 
 /**
- * The `blockContentResource` read: the block's row as a 0-or-1-element wire
- * array (base64 state). Param-scoped to one block, so the "scoped" and "full"
- * recomputes are the same single-row query — the loader can ignore
- * `ctx.affectedIds` without ever over-returning.
- */
-export async function loadBlockDoc(
-  db: NodePgDatabase,
-  blockId: string,
-): Promise<BlockDocRow[]> {
-  const rows = await db
-    .select()
-    .from(_pageBlockDocs)
-    .where(eq(_pageBlockDocs.blockId, blockId));
-  return rows.map((row) => ({
-    blockId: row.blockId,
-    state: stateToBase64(row.state),
-    updatedAt: row.updatedAt,
-  }));
-}
-
-/**
  * Many blocks' stored doc states in ONE query, as raw bytes keyed by block id —
  * the batched read a server-side text writer takes before touching N blocks,
- * instead of one {@link loadBlockDoc} round trip per block. Bytes out, not the
- * resource's base64 wire shape: the caller decodes the state, it never ships it.
+ * instead of one round trip per block. Bytes out, not the
+ * collection's base64 wire shape: the caller decodes the state, it never ships it.
  *
  * A block with no stored doc is ABSENT from the map. That is a real state (a
  * block nobody ever opened, whose `data.text` is the only text it has), not a

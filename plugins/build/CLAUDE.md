@@ -114,7 +114,7 @@ What each arm of `internal/run-build.ts` owns, and why the split is where it is:
   workflow, and that is what stops a dead workflow from leaving the in-flight
   index held against every future build.
 - **`onEnded`** — the terminal WORK, exactly once, in the owning workflow: the
-  bell, `deploymentResource.notify()`, and `reconcileDeployment()`. **The row is
+  bell, `deploymentServed.notify()`, and `reconcileDeployment()`. **The row is
   already closed by the time this runs** — the CLI stamps its own row ~100 s
   before its child exits, and failing that `closeRow` runs before the
   announcement that resumes the handler. So nothing here is gated on
@@ -209,6 +209,7 @@ The two other edges of the same argument:
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
@@ -248,7 +249,7 @@ The two other edges of the same argument:
     - `resource.declare` "build.history"
     - `trigger` "build.run"
   - Uses:
-    - `build/deployment.deploymentResource`
+    - `build/deployment.deploymentServed`
     - `build/deployment.readDeployment`
     - `build/run-ledger._buildRuns`
     - `build/run-ledger.settleDeadInflightRun`

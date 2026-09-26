@@ -93,7 +93,7 @@ function DispatchableTodoAnchor({
       />
     );
   }
-  const dispatched = link.data !== null;
+  const dispatched = link.found;
 
   return (
     <ContainerCornerLabel

@@ -26,14 +26,16 @@ import {
   xmlTextToRuns,
 } from "@plugins/page/plugins/editor/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import { _pageBlockDocs } from "./tables";
 import {
-  initBlockDoc,
-  loadBlockDoc,
-  loadBlockDocs,
-  mergeBlockDocUpdate,
-  stateToBase64,
-} from "./doc-store";
+  compileWindowQuery,
+  type QueryDb,
+} from "@plugins/infra/plugins/query-resource/server";
+import { compileCollection } from "@plugins/network/plugins/live/server";
+import { stateToBase64 } from "@plugins/primitives/plugins/collab-doc/server";
+import { blockDocs } from "../../core";
+import type { BlockDocRow } from "../../core/internal/resources";
+import { _pageBlockDocs } from "./tables";
+import { initBlockDoc, loadBlockDocs, mergeBlockDocUpdate } from "./doc-store";
 
 let t: TestDb;
 
@@ -121,7 +123,7 @@ describe("initBlockDoc (first-writer-wins seed)", () => {
     expect((caught as HttpError).status).toBe(404);
 
     // And nothing was written.
-    expect(await loadBlockDoc(t.db, "no-such-block")).toEqual([]);
+    expect((await loadBlockDocs(t.db, ["no-such-block"])).size).toBe(0);
   });
 
   test("second init with DIFFERENT bytes is a no-op and returns the winner's state", async () => {
@@ -193,30 +195,51 @@ describe("mergeBlockDocUpdate", () => {
     expect((caught as HttpError).status).toBe(409);
 
     // And nothing was written.
-    expect(await loadBlockDoc(t.db, blockId)).toEqual([]);
+    expect((await loadBlockDocs(t.db, [blockId])).size).toBe(0);
   });
 });
 
-describe("loadBlockDoc (blockContentResource loader)", () => {
-  test("returns the base64 state + updatedAt for one block, keyed by blockId", async () => {
+describe("blockDocs :rows (the served lookup-only collection)", () => {
+  /** The `:rows` point loader `serveCollection` registers, over the test DB. */
+  const readRows = (ids: string[]): Promise<BlockDocRow[]> => {
+    const specs = compileCollection(blockDocs, {
+      from: _pageBlockDocs,
+      db: t.db as unknown as QueryDb,
+    });
+    const { loader } = compileWindowQuery(
+      blockDocs.rows,
+      specs.rows,
+    ).serverOpts;
+    return Promise.resolve(loader(blockDocs.rows.point.encode(ids))) as Promise<
+      BlockDocRow[]
+    >;
+  };
+
+  test("serves the bytea state as unfolded base64, byte-identical to stateToBase64", async () => {
     const blockId = await createBlock();
-    const state = Y.encodeStateAsUpdate(docOf("live"));
+    // Well past 76 bytes — where SQL's `encode(…, 'base64')` would fold lines.
+    const state = Y.encodeStateAsUpdate(docOf("x".repeat(400)));
+    expect(state.length).toBeGreaterThan(76 * 3);
     await initBlockDoc(t.db, blockId, state);
 
-    const rows = await loadBlockDoc(t.db, blockId);
+    const rows = await readRows([blockId]);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.blockId).toBe(blockId);
     expect(rows[0]!.updatedAt).toBeInstanceOf(Date);
     expect(rows[0]!.state).toBe(stateToBase64(await storedState(blockId)));
+    expect(rows[0]!.state).not.toContain("\n");
 
     // The base64 round-trips back to the exact stored doc.
     const decoded = new Uint8Array(Buffer.from(rows[0]!.state, "base64"));
-    expect(textOfState(decoded)).toBe("live");
+    expect(
+      Buffer.from(decoded).equals(Buffer.from(await storedState(blockId))),
+    ).toBe(true);
+    expect(textOfState(decoded)).toBe("x".repeat(400));
   });
 
-  test("uninitialized block → empty array (0-element keyed payload)", async () => {
+  test("an uninitialized block is absent — the reader's found: false", async () => {
     const blockId = await createBlock();
-    expect(await loadBlockDoc(t.db, blockId)).toEqual([]);
+    expect(await readRows([blockId])).toEqual([]);
   });
 });
 
@@ -245,9 +268,9 @@ describe("FK lifecycle", () => {
   test("deleting the block cascades its doc row away", async () => {
     const blockId = await createBlock();
     await initBlockDoc(t.db, blockId, Y.encodeStateAsUpdate(docOf("doomed")));
-    expect(await loadBlockDoc(t.db, blockId)).toHaveLength(1);
+    expect((await loadBlockDocs(t.db, [blockId])).size).toBe(1);
 
     await t.db.execute(sql`DELETE FROM page_blocks WHERE id = ${blockId}`);
-    expect(await loadBlockDoc(t.db, blockId)).toEqual([]);
+    expect((await loadBlockDocs(t.db, [blockId])).size).toBe(0);
   });
 });

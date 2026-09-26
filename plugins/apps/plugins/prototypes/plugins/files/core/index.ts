@@ -68,7 +68,7 @@ export {
   StoredPicksSchema,
   PicksChangeSchema,
   applyPicksChange,
-  prototypePicksResource,
+  prototypePicks,
   setPrototypePicks,
 } from "./picks";
 export type { StoredPicks, PicksChange } from "./picks";

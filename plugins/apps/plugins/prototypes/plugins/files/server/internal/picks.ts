@@ -1,11 +1,11 @@
 import { statSync } from "node:fs";
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { defineAgentWriteLedger } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
 import {
   isPrototypeId,
-  prototypePicksResource as picksDescriptor,
+  prototypePicks,
   setPrototypePicks,
   type PicksChange,
 } from "../../core";
@@ -34,9 +34,9 @@ function prototypeExists(name: string): boolean {
 }
 
 /**
- * `prototypes.picks` — one prototype's stored picks. Push, keyed by `name`;
- * notified by the PUT below on this backend and by the watcher (`watcher.ts`)
- * on every backend.
+ * `prototypes.picks` — one prototype's stored picks, served from the file
+ * store. Pushed per `name`; notified by the PUT below on this backend and by
+ * the watcher (`watcher.ts`) on every backend.
  *
  * Nothing picked is `{}`, a legitimate answer. A name that is not a minted id,
  * or names no folder, throws — the detail pane reads the picks only for a
@@ -44,18 +44,15 @@ function prototypeExists(name: string): boolean {
  * malformed file throws too (`shared/picks.ts`): an unreadable record is not
  * "nothing picked".
  */
-export const prototypePicksLiveResource = defineExternalResource(
-  picksDescriptor,
-  {
-    mode: "push",
-    loader: async ({ name }) => {
-      if (!prototypeExists(name)) {
-        throw new Error(`prototypes.picks: no such prototype: ${name}`);
-      }
-      return store().read(name);
-    },
+export const prototypePicksServed = serveValue(prototypePicks, {
+  source: "external",
+  loader: async ({ name }) => {
+    if (!prototypeExists(name)) {
+      throw new Error(`prototypes.picks: no such prototype: ${name}`);
+    }
+    return store().read(name);
   },
-);
+});
 
 /**
  * What an automated browser session did to a prototype's picks, so the e2e
@@ -77,7 +74,7 @@ const picksLedger = defineAgentWriteLedger<"picks">({
       );
     }
     await s.restore(entry.key, entry.before.picks);
-    prototypePicksLiveResource.notify({ name: entry.key });
+    prototypePicksServed.notify({ name: entry.key });
   },
 });
 
@@ -113,6 +110,6 @@ export const handleSetPicks = implement(
         ),
       afterWrite: () => picksLedger.noteComplete(writer, name),
     });
-    prototypePicksLiveResource.notify({ name });
+    prototypePicksServed.notify({ name });
   },
 );

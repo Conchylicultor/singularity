@@ -48,9 +48,13 @@ value.
 
 Each factory entry lists what one call `mints`: `{ suffix, keyed, membership }`
 per runtime resource. A plain factory mints one (suffix `""`);
-`liveCollection("k", …)` mints `k` (window) and `k:rows` (point). Scanners emit
-one resource per minted entry, so the docs show both keys, and a register marker
-whose first argument names a collection (`serveCollection`) serves all of them.
+`liveCollection("k", …)` mints `k` (window), `k:rows` (point) and `k:groups`.
+Scanners emit one resource per minted entry, so the docs show every key, and a
+register marker whose first argument names a collection (`serveCollection`)
+serves all of them. An entry with `requires: "<field>"` is minted only when the
+call's spec sets that field: a `liveCollection` without `default` is
+lookup-only and mints `k:rows` alone (it cannot preload, so the eager-tier scan
+never reads the window entry for it).
 
 Deliberately NOT rewired: `keyed-resource-scope` and `no-db-backed-notify`. Each
 names one marker on purpose, to ban one shape.

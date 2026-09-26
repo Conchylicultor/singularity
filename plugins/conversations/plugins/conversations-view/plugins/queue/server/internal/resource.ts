@@ -1,31 +1,26 @@
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { queueRanksResource as queueRanksDescriptor } from "../../core/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { queueRanks } from "../../core/resources";
 import { conversationsQueue } from "./tables";
 
-// Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`) — the queue's LIVE conversation set — and the
-// change-feed routes a rank insert/reseat to a tuple iff the changed conversation
-// ids intersect its set. So `seedRankJob` on every `conversationCreated` ships a
-// single-row point delta to whatever tuple contains that id (structurally none
-// until the live set includes it), never a full 2,726-row re-select + persist.
-// The extension handle is the source, so the projection is its `wireColumns`
-// and the identity is its key `conversationId` (the `parent_id` PK); `point.by`
-// IS that identity pk. No orderBy — point sets are unordered (the client sorts
-// by rank).
+// The queue rows, served from the queue extension's side-table. The extension
+// handle is the source, so every row field binds to one of its wire columns
+// and the id is its key `conversationId` (the `parent_id` PK). The sidebar's
+// `{ ids }` read is the `:rows` point sibling: a rank insert/reseat reaches a
+// tuple iff the changed conversation ids intersect its set, so `seedRankJob` on
+// every `conversationCreated` ships a single-row delta to whatever tuple holds
+// that id (none until the live set includes it), never a full re-select.
 //
-// `ackChannel: true` is load-bearing: a reorder write that lands OUTSIDE the
-// subscribed tuple, or produces a net-zero diff, still emits a standalone ack
-// frame so the optimistic overlay confirms via exact-ack (the reorder endpoint's
-// returned `{ watermark }` doubles as the ack token).
+// A reorder write that lands OUTSIDE the subscribed id set, or nets to zero,
+// still confirms the sidebar's optimistic op: the optimistic hook ASKS for
+// standalone ack frames on its tuple, and the reorder endpoint's returned
+// `{ watermark }` is the ack token. Nothing is declared here.
 //
-// There is deliberately NO dependsOn the conversations resource: point routing
-// gives that structurally — a status tick does not write a rank row. The `pinned`
-// flag rides the same row because it is user-set state, not something derived
-// from conversation status; the SECTION a pinned row shows up in still follows
-// status, but that is computed client-side from the conversations the sidebar
-// already holds.
-export const queueRanksResource = windowQueryResource(queueRanksDescriptor, {
+// There is deliberately NO dependency on the conversations resource: point
+// routing gives that structurally — a status tick does not write a rank row.
+// The `pinned` flag rides the same row because it is user-set state, not
+// something derived from conversation status; the SECTION a pinned row shows up
+// in still follows status, but that is computed client-side from the
+// conversations the sidebar already holds.
+export const queueRanksServed = serveCollection(queueRanks, {
   from: conversationsQueue,
-  point: { by: conversationsQueue.table.conversationId },
-  ackChannel: true,
 });

@@ -13,6 +13,7 @@
  */
 import * as Y from "yjs";
 import { agentFetch } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { blockDocs } from "@plugins/page/plugins/editor-collab/core";
 
 /** Decode a base64 Yjs update into the plain text of its lexical `root`. */
 export function blockDocText(stateB64: string): string {
@@ -67,12 +68,13 @@ export function stateVectorCovers(
 export async function fetchBlockDoc(
   blockId: string,
 ): Promise<{ state: string } | undefined> {
+  const query = new URLSearchParams(blockDocs.rows.point.encode([blockId]));
   const res = await agentFetch(
-    `/api/resources/page-block-doc?blockId=${encodeURIComponent(blockId)}`,
+    `/api/resources/${encodeURIComponent(blockDocs.rows.key)}?${query}`,
   );
   if (!res.ok) {
     throw new Error(
-      `page-block-doc ${blockId}: HTTP ${res.status} ${res.statusText}`,
+      `${blockDocs.rows.key} ${blockId}: HTTP ${res.status} ${res.statusText}`,
     );
   }
   const body = (await res.json()) as { value?: { state?: string }[] };

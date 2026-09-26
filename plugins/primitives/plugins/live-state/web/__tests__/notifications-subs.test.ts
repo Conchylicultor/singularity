@@ -272,6 +272,73 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(departures[0]!.tabId).toBe("tab-X");
   });
 
+  describe("client-requested acks (requestAcks)", () => {
+    const subAcksFrames = (socket: FakeWebSocket): Record<string, unknown>[] =>
+      socket.sentJson().filter((m) => m.op === "sub-acks");
+
+    test("asked before the sub: the sub frame itself carries acks: true, no separate flip", async () => {
+      const { client, socket } = await setup();
+      const release = client.requestAcks("ak", { id: "1" });
+      client.observe("ak", { id: "1" }, undefined, pushSchema);
+      expect(subFrames(socket, "ak")[0]).toMatchObject({ acks: true });
+      expect(subAcksFrames(socket)).toHaveLength(0);
+      release();
+      expect(subAcksFrames(socket)).toEqual([
+        expect.objectContaining({
+          key: "ak",
+          params: { id: "1" },
+          acks: false,
+        }),
+      ]);
+    });
+
+    test("OR across this tab's readers: one flip on at the first, one flip off after the last", async () => {
+      const { client, socket } = await setup();
+      client.observe("ak", {}, undefined, pushSchema);
+      expect("acks" in subFrames(socket, "ak")[0]!).toBe(false);
+      const a = client.requestAcks("ak", {});
+      const b = client.requestAcks("ak", {});
+      expect(subAcksFrames(socket)).toEqual([
+        expect.objectContaining({
+          key: "ak",
+          acks: true,
+          tabId: expect.any(String),
+        }),
+      ]);
+      a();
+      a(); // a release is idempotent — it never takes another reader's count
+      expect(subAcksFrames(socket)).toHaveLength(1);
+      b();
+      expect(subAcksFrames(socket).at(-1)).toMatchObject({ acks: false });
+      expect(subAcksFrames(socket)).toHaveLength(2);
+    });
+
+    test("a tuple's request never leaks onto another tuple's sub", async () => {
+      const { client, socket } = await setup();
+      client.requestAcks("ak", { id: "1" });
+      client.observe("ak", { id: "2" }, undefined, pushSchema);
+      expect("acks" in subFrames(socket, "ak")[0]!).toBe(false);
+    });
+
+    test("the reconnect replay restates the flag per entry", async () => {
+      const { hub, client, socket } = await setup();
+      client.observe("ak", {}, undefined, pushSchema);
+      client.observe("plain", {}, undefined, pushSchema);
+      client.requestAcks("ak", {});
+      socket.serverClose();
+      await vi.advanceTimersByTimeAsync(500);
+      const socket2 = hub.server.all().find((s) => s.readyState === 0)!;
+      socket2.open();
+      const batch = socket2.sentJson().find((m) => m.op === "sub-batch") as {
+        entries: Array<{ key: string; acks?: boolean }>;
+      };
+      expect(batch.entries.find((e) => e.key === "ak")?.acks).toBe(true);
+      expect("acks" in batch.entries.find((e) => e.key === "plain")!).toBe(
+        false,
+      );
+    });
+  });
+
   test("version guard: a frame with version ≤ the applied version is dropped; a strictly-greater one applies", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);

@@ -7,13 +7,11 @@ import {
   useConversation,
   useHasActiveSiblings,
 } from "@plugins/conversations/web";
-import {
-  useResource,
-  useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
-  attemptWorkResource,
+  attemptWork,
   standingOf,
 } from "@plugins/tasks/plugins/attempt-work/core";
 import { dropAndExit } from "../../core";
@@ -29,7 +27,7 @@ export function DropAndExitItem({
   // ingest job, so an empty result meant either "nothing was pushed" or "nothing
   // has been ingested yet" — and reading it as the former picked the destructive
   // "Drop & Close" label over landed work.
-  const workResult = useResource(attemptWorkResource, {
+  const workResult = useLive(attemptWork, {
     attemptId: conversation.attemptId,
   });
   const siblingsResult = useHasActiveSiblings(

@@ -68,4 +68,8 @@ export async function countUnreadNotifications(
 export const notificationsUnreadServed = serveValue(notificationsUnread, {
   source: "db",
   loader: () => countUnreadNotifications(),
+  // Every write to `notifications` re-runs the count. A burst (a build or a
+  // crash storm filing hundreds of rows) is one count per window, not one per
+  // insert, which measured ~16 no-op pushes/s while 700 rows were seeded.
+  throttleMs: 250,
 });

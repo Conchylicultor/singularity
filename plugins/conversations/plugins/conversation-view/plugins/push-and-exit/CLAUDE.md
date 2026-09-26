@@ -25,11 +25,11 @@
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `network/live.useLive`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `shell/notifications.toast`

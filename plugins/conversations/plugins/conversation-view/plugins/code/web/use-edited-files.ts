@@ -1,8 +1,6 @@
-import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import { editedFilesResource } from "../core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { editedFiles } from "../core";
 import type { EditedFilesPayload } from "../core";
 
 // The payload is a `Resolvable<EditedFile[]>`: consumers narrow on `.resolved`
@@ -10,5 +8,5 @@ import type { EditedFilesPayload } from "../core";
 export function useEditedFiles(
   conversationId: string,
 ): ResourceResult<EditedFilesPayload> {
-  return useResource(editedFilesResource, { id: conversationId });
+  return useLive(editedFiles, { id: conversationId });
 }

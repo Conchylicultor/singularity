@@ -1,6 +1,6 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
-import { deploymentResource as deploymentDescriptor } from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import { deployment } from "../../core";
 import { deploymentEtag, readDeploymentState } from "./read-deployment";
 
 /**
@@ -8,7 +8,7 @@ import { deploymentEtag, readDeploymentState } from "./read-deployment";
  * two dotfiles in the served dist, not Postgres), and it recomputes on exactly
  * the two things that can change the answer:
  *
- * - **the target moved** — any tracked ref advance, via `refHeadResource`. No
+ * - **the target moved** — any tracked ref advance, via `refHeadServed`. No
  *   ref-name filter: main's checkout is on `main` and a worktree checkout is on
  *   its own branch, and `HEAD` is the target in both, so every ref this backend
  *   tracks is one that can move its own target.
@@ -24,9 +24,9 @@ import { deploymentEtag, readDeploymentState } from "./read-deployment";
  * a recompute. Bound to the loader through `createSignedMemo`, so the ETag and
  * the value cannot come to disagree.
  */
-export const deploymentResource = defineExternalResource(deploymentDescriptor, {
-  mode: "push",
-  dependsOn: [{ resource: refHeadResource, map: () => [{}] }],
+export const deploymentServed = serveValue(deployment, {
+  source: "external",
+  recomputeOn: [refHeadServed],
   loader: async () => readDeploymentState(),
   revalidate: async () => deploymentEtag(),
 });

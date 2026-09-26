@@ -119,7 +119,7 @@ export function defineAuthProvider(
 }
 
 // ---------------------------------------------------------------------------
-// State payload (broadcast to web clients via authStateResource).
+// State payload (broadcast to web clients via the auth-state live value).
 // MUST NEVER include secret material (accessToken, refreshToken, apiKey).
 // ---------------------------------------------------------------------------
 

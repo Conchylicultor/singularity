@@ -244,16 +244,16 @@ export interface WindowQueryResourceSpec<
   point?: { by: PgColumn };
   /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
   edges?: Edge[];
+  /**
+   * The wire row, derived IN JS from each selected row — every row a loader
+   * returns (full, scoped refill and point) goes through it, so the order
+   * signature reads the encoded row too. For a column whose stored form cannot
+   * cross the JSON wire as is (a `bytea`: sql-column's `withWire`); never done
+   * in SQL, where `encode(…, 'base64')` folds lines at 76 chars.
+   */
+  encodeRow?: (row: Record<string, unknown>) => Record<string, unknown>;
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */
   debounceMs?: number;
-  /**
-   * Standalone mutation-ack frames opt-in — passed through verbatim to the
-   * runtime's `ackChannel` (see `ResourceDefinition.ackChannel`): a recompute
-   * that produces no value change (empty scoped diff, net-zero membership,
-   * point empty-intersection) then broadcasts a version-less `{ kind: "ack" }`
-   * frame so an optimistic client's exact-ack confirmation never hangs.
-   */
-  ackChannel?: true;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }

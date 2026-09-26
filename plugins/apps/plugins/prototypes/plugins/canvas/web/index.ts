@@ -37,11 +37,7 @@ export {
   useFrameSrc,
   usePrototypeDetail,
 } from "./context";
-export type {
-  CanvasSourceEntry,
-  PicksRead,
-  PrototypeDetailContextValue,
-} from "./context";
+export type { CanvasSourceEntry, PrototypeDetailContextValue } from "./context";
 export { frameA, prototypeFrames } from "./internal/canvas-model";
 export type {
   CanvasAction,

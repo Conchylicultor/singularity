@@ -208,9 +208,10 @@ type ServerMsg =
       changedAt?: number;
     }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
-  // Standalone mutation-ack frame (per-resource `ackChannel` opt-in): a
-  // recompute produced NO value change (empty scoped diff, net-zero membership,
-  // point empty-intersection) but the writer's ack must not hang on it.
+  // Standalone mutation-ack frame (sent only for tuples a tab asked acks for —
+  // `requestAcks`): a recompute produced NO value change (empty scoped diff,
+  // net-zero membership, point empty-intersection) but the writer's ack must
+  // not hang on it.
   // Version-less, cache-less, idempotent — handled BEFORE the version-guard
   // block, gated on the local sub entry like `sub-error`.
   | { kind: "ack"; key: string; params: ResourceParams; ackTx: string[] }
@@ -369,6 +370,15 @@ interface SocketChannel {
    * sub down. Keyed by the same `${key}\0${paramsKey}` id as `subs`.
    */
   pendingTeardown: Map<string, ReturnType<typeof setTimeout>>;
+  /**
+   * (key, paramsKey) -> how many of this tab's readers want standalone ack
+   * frames for the tuple (`requestAcks`). Kept apart from `subs` so the order
+   * of `observe()` and `requestAcks()` does not matter: every `sub` frame and
+   * replay entry restates `acks: true` while the count is positive, and a
+   * 0↔1 transition on a live sub sends `op: "sub-acks"`. Keyed by the same
+   * `${key}\0${paramsKey}` id as `subs`.
+   */
+  ackInterest: Map<string, number>;
   /**
    * The server's boot identity, learned from any ack frame carrying `epoch`
    * (`sub-ack` / `up-to-date` / `up-to-date-batch`). Echoed with each sub's
@@ -835,6 +845,62 @@ export class NotificationsClient {
     channel.pendingTeardown.set(id, timer);
   }
 
+  /**
+   * Ask the server for standalone `{ kind: "ack" }` frames on (key, params) —
+   * the frames a recompute that changed nothing visible sends so an
+   * optimistic op's exact-ack confirmation does not hang. Counted per tuple
+   * (OR across this tab's readers; the server ORs across tabs); returns the
+   * release. Independent of `observe()`: the flag rides the tuple's `sub`
+   * frame whenever the count is positive, and a 0→1 / 1→0 transition while
+   * the sub is live flips it with one `op: "sub-acks"` frame (no re-sub, no
+   * loader run).
+   */
+  requestAcks(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): () => void {
+    const channel = this.channelFor(socketKindFor(origin));
+    const id = `${key}\0${paramsKey(params)}`;
+    const prev = channel.ackInterest.get(id) ?? 0;
+    channel.ackInterest.set(id, prev + 1);
+    if (prev === 0) this.sendSubAcks(channel, id, key, params, true);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const n = (channel.ackInterest.get(id) ?? 0) - 1;
+      if (n > 0) {
+        channel.ackInterest.set(id, n);
+        return;
+      }
+      channel.ackInterest.delete(id);
+      this.sendSubAcks(channel, id, key, params, false);
+    };
+  }
+
+  private wantsAcks(channel: SocketChannel, id: string): boolean {
+    return (channel.ackInterest.get(id) ?? 0) > 0;
+  }
+
+  // The ack flag flip for a LIVE sub. Without one there is nothing to flip on
+  // the server — the next `sub` frame carries the flag instead.
+  private sendSubAcks(
+    channel: SocketChannel,
+    id: string,
+    key: string,
+    params: ResourceParams,
+    acks: boolean,
+  ): void {
+    if (!channel.subs.has(id)) return;
+    trace(
+      `subAcks key=${key} params=${paramsKey(params)} acks=${acks ? 1 : 0}`,
+    );
+    channel.ws.send(
+      JSON.stringify({ op: "sub-acks", key, params, acks, tabId: this.tabId }),
+    );
+  }
+
   // --- Conditional-revalidation ETag accessors (HTTP fallback path) -----------
 
   /**
@@ -1165,6 +1231,7 @@ export class NotificationsClient {
       ws: this.makeSocket(WS_URLS[kind]),
       subs: new Map(),
       pendingTeardown: new Map(),
+      ackInterest: new Map(),
     };
     channel.ws.onopen = () => this.replaySubs(channel);
     channel.ws.onmessage = (ev) => {
@@ -1251,6 +1318,7 @@ export class NotificationsClient {
       params: ResourceParams;
       etag?: string;
       version?: number;
+      acks?: true;
     }> = [];
     // Counted, not traced per sub: a replay carries the tab's whole set (hundreds
     // of subs), and the always-on channel logs transitions, not per-item lines.
@@ -1278,6 +1346,9 @@ export class NotificationsClient {
         params: sub.params,
         ...(backed && sub.etag !== undefined ? { etag: sub.etag } : {}),
         ...(backed && knownVersion >= 0 ? { version: knownVersion } : {}),
+        ...(this.wantsAcks(channel, `${sub.key}\0${paramsKey(sub.params)}`)
+          ? { acks: true as const }
+          : {}),
       });
     }
     channel.ws.send(
@@ -1331,6 +1402,11 @@ export class NotificationsClient {
         key,
         params,
         ...(etag !== undefined ? { etag } : {}),
+        // Restated on every sub (fresh, recovery): the server takes the frame
+        // as this tab's whole statement for the tuple, flag included.
+        ...(this.wantsAcks(channel, `${key}\0${paramsKey(params)}`)
+          ? { acks: true }
+          : {}),
         tabId: this.tabId,
       }),
     );

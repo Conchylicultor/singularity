@@ -56,16 +56,19 @@ vi.mock("@plugins/primitives/plugins/networking/web", () => ({
   },
 }));
 
-// Re-ASSIGNED, never mutated in place: `useResource`'s identity is what the
-// subscription effect depends on, so delivering a value has to hand the hook a
-// new object — mutating this one's fields would leave the effect asleep.
-let resourceValue: { pending: boolean; data: { state: string }[] } = {
+// The block's `blockDocs` row as `useLiveRow` hands it over: pending until the
+// test delivers a stored state.
+let rowValue:
+  | { pending: true; error: null }
+  | { pending: false; found: true; row: { state: string } } = {
   pending: true,
-  data: [],
+  error: null,
 };
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
-  useResource: () => resourceValue,
+}));
+vi.mock("@plugins/network/plugins/live/web", () => ({
+  useLiveRow: () => rowValue,
 }));
 
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -107,7 +110,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   fetchEndpointMock.mockReset();
   fetchEndpointMock.mockResolvedValue({ state: EMPTY_DOC_STATE });
-  resourceValue = { pending: true, data: [] };
+  rowValue = { pending: true, error: null };
 });
 
 afterEach(() => {
@@ -487,9 +490,10 @@ test("refetch() re-reads the server without dropping the session or re-attaching
   expect(result.current.isSynced()).toBe(false);
 
   act(() => {
-    resourceValue = {
+    rowValue = {
       pending: false,
-      data: [{ state: toBase64(docStateFor([{ text: "hello" }])) }],
+      found: true,
+      row: { state: toBase64(docStateFor([{ text: "hello" }])) },
     };
     rerender();
   });
@@ -544,9 +548,10 @@ test("rehydrate() DOES re-attach — and the everRendered latch survives it", as
     replica.connect();
   });
   act(() => {
-    resourceValue = {
+    rowValue = {
       pending: false,
-      data: [{ state: toBase64(docStateFor([{ text: "hello" }])) }],
+      found: true,
+      row: { state: toBase64(docStateFor([{ text: "hello" }])) },
     };
     rerender();
   });

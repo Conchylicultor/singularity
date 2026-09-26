@@ -160,6 +160,37 @@ export function hydrateQuery(queryKey: unknown[], data: unknown): void {
   getDefaultQueryClient().setQueryData(queryKey, data);
 }
 
+/**
+ * Ask for standalone ack frames on (resource, params) for as long as the
+ * calling component is mounted — see `NotificationsClient.requestAcks`. For a
+ * reader holding optimistic ops whose writes may change nothing it can see
+ * (a reorder that only moved other rows, a net-zero write): the server then
+ * confirms each such write with a version-less `{ kind: "ack" }` frame instead
+ * of shipping nothing. Pair it with a `useResource` on the same tuple.
+ */
+export function useResourceAcks<P extends ResourceParams = ResourceParams>(
+  resource: Pick<ResourceDescriptor<unknown, P>, "key" | "origin">,
+  params?: P,
+): void {
+  const notifications = useContext(NotificationsContext);
+  if (!notifications) {
+    throw new Error(
+      "useResourceAcks must be used within a NotificationsProvider",
+    );
+  }
+  const { key, origin } = resource;
+  const paramsJson = JSON.stringify(params ?? {});
+  useEffect(
+    () =>
+      notifications.requestAcks(
+        key,
+        JSON.parse(paramsJson) as ResourceParams,
+        origin,
+      ),
+    [notifications, key, origin, paramsJson],
+  );
+}
+
 // `pending` means "no trustworthy value" — never-loaded ∪ errored are the same
 // state to a consumer (invariant I1). The settled arm therefore DELIBERATELY
 // OMITS `error`: a value you can read (`data`) is one the server currently

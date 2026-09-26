@@ -13,25 +13,20 @@ Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
   updated_at)` — one compacted `Y.encodeStateAsUpdate(doc)` per text block.
   Deliberately in the change-feed: the `doc-update` UPDATE is what pushes the
   live resource.
-- `blockContentResource` (`page-block-doc`, keyed, params `{ blockId }`) — a
-  0-or-1-element array of `{ blockId, state: base64, updatedAt }`. Param-scoped
-  to ONE block so only mounted editors subscribe (lazy content loading);
-  `identityTable: "page_block_docs"` marks this table's changes as this
-  resource's own, and `rowIdentity: ({ blockId }) => blockId` says which of them
-  are THIS tuple's — the params name exactly one row, and `block_id` is the
-  table's single-column PK, so it is the id the change-feed hands the runtime.
-  A `doc-update` is therefore scheduled for the block it wrote and no other.
-  Before that, every subscribed block was woken on every write: each re-ran its
-  own `where block_id = ?` and diffed to empty. They got no frame, which made it
-  look free — the read was the cost, and typing flushes an update every ~300 ms.
-  `rowIdentity` narrows WHO is woken and nothing else: the owning block's frames
-  are byte-identical to before, which is why it is not `membership: { point }`
-  (that would reroute the drain and assert an `order` a 0-or-1-row value has no
-  use for). See `resource-runtime/CLAUDE.md` §"Own-row routing".
-  Hand-written loader (not `queryResource`): base64 must be encoded in JS —
-  Postgres `encode(…, 'base64')` folds lines at 76 chars, which would corrupt
-  large states — and `stateToBase64` is the single shared encoder with the
-  doc-init response.
+- `blockDocs` — the lookup-only `liveCollection("page-block-doc", { row, id:
+  "blockId" })`: no default window, so it mints `page-block-doc:rows` alone,
+  served by `serveCollection(blockDocs, { from: _pageBlockDocs })` and read with
+  `useLiveRow(blockDocs, blockId)` (`found: false` = no doc yet → seed). Only
+  mounted editors subscribe (lazy content loading), each to its own block's id
+  set, and the point membership routes a `doc-update` to that block's tuple and
+  no other (a delta for a 1-row set carries a 1-id `order`). This replaced the
+  hand-written keyed `blockContentResource` + `rowIdentity` (see
+  `research/2026-09-26-global-live-values-migration-contract.md` §10; the older
+  own-row analysis is `research/2026-08-25-global-own-row-resource-scoping.md`).
+  `state` is a `bytea` whose wire form (collab-doc's `bytea`, via sql-column's
+  `withWire`) is base64 encoded in JS per row — Postgres `encode(…, 'base64')`
+  folds lines at 76 chars — by `stateToBase64`, the one encoder the doc-init
+  response shares.
 - `POST /api/blocks/:id/doc-init` (body: raw update bytes via `blob()`) — the
   first-writer-wins seed and the ONLY row creator (`ON CONFLICT DO NOTHING`,
   then return the authoritative state as base64 JSON). A losing seeder merges
@@ -60,27 +55,28 @@ bun test plugins/page/plugins/editor-collab/server/internal
 
 ## Plugin reference
 
-- Description: Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
+- Description: Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
 - Server:
   - Contributes:
-    - `resource.declare` "page-block-doc"
+    - `resource.declare` "page-block-doc:rows"
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.implement`
+    - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`
     - `primitives/collab-doc.bytea`
+    - `primitives/collab-doc.stateToBase64`
   - DB schema: `plugins/page/plugins/editor-collab/server/internal/tables.ts`
   - Exports (values):
     - `_pageBlockDocs`
-    - `blockContentServerResource`
+    - `blockDocsServed`
     - `initBlockDoc`
-    - `loadBlockDoc`
     - `loadBlockDocs`
     - `mergeBlockDocUpdate`
-  - Resources: `page-block-doc` (keyed)
+  - Resources: `page-block-doc:rows` (keyed, point)
   - Routes:
     - `POST /api/blocks/:id/doc-init`
     - `POST /api/blocks/:id/doc-update`
@@ -88,12 +84,11 @@ bun test plugins/page/plugins/editor-collab/server/internal
   - Uses:
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.keyedResourceDescriptor`
-  - Exports (types): `BlockDocRow`
+    - `network/live.liveCollection`
   - Exports (values):
-    - `blockContentResource`
     - `blockDocInit`
     - `BlockDocRowSchema`
+    - `blockDocs`
     - `blockDocUpdate`
 - Cross-plugin:
   - Imported by:

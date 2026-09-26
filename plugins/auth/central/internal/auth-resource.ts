@@ -1,11 +1,9 @@
-import { defineExternalResource } from "@plugins/framework/plugins/central-core/core";
-import { AuthStateValueSchema, type AuthStateValue } from "@plugins/auth/core";
+import { serveValue } from "@plugins/network/plugins/live/central";
+import { authState } from "@plugins/auth/core";
 import { computeAuthState, warmAuthState } from "./auth-state";
 
-export const authStateResource = defineExternalResource<AuthStateValue>({
-  key: "auth-state",
-  mode: "push",
-  schema: AuthStateValueSchema,
+export const authStateServed = serveValue(authState, {
+  source: "external",
   loader: async () => {
     await warmAuthState();
     return computeAuthState();
@@ -13,5 +11,5 @@ export const authStateResource = defineExternalResource<AuthStateValue>({
 });
 
 export function notifyAuthState(): void {
-  authStateResource.notify();
+  authStateServed.notify();
 }

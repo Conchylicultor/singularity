@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
@@ -24,22 +24,27 @@ export const QueueRankRowSchema = queueShape.schema.extend({
 export type QueueRankRow = z.infer<typeof QueueRankRowSchema>;
 
 // The CLIENT-ASSEMBLED input type of `classifyQueue` — NO LONGER a wire shape.
-// The queue was one push value; it is now a bounded POINT ranks resource, which
-// the sidebar wraps in this shape so `classifyQueue` stays a pure function of
-// plain data.
+// The queue was one push value; the sidebar now reads the ranks of the LIVE
+// conversations as an id set of the `queueRanks` collection, and wraps them in
+// this shape so `classifyQueue` stays a pure function of plain data.
 export const QueueDataSchema = z.object({
   ranks: z.array(QueueRankRowSchema),
 });
 export type QueueData = z.infer<typeof QueueDataSchema>;
 
-// Bounded POINT resource: the queue subscribes by the LIVE conversation id set it
-// already tracks (`conversations-active`), so ranks cost O(live) — ~26 rows — not
-// O(2726). Rows key on `conversationId` (the extension's key, whose column is
-// the side-table's `parent_id` PK, which IS the point identity). Not
-// preloaded: point resources hydrate post-mount (the recorded decision) — the
-// existing all-or-nothing gate shows the loading skeleton for the one round-trip.
-export const queueRanksResource = pointQueryResourceDescriptor<QueueRankRow>(
-  "queue-ranks",
-  QueueRankRowSchema,
-  "conversationId",
-);
+// The queue rows, one per conversation that has been ranked. The sidebar reads
+// them as an explicit id set — the LIVE conversation ids it already tracks
+// (`conversations-active`), `useOptimisticResource(queueRanks, { ids }, …)` —
+// so ranks cost O(live), ~26 rows, not O(2726). Rows key on `conversationId`
+// (the extension's key, whose column is the side-table's `parent_id` PK).
+// The window (rank order) has no reader yet; it is bounded like any window.
+// Not preloaded: an id set has no default tuple — the existing all-or-nothing
+// gate shows the loading skeleton for the one round-trip.
+export const queueRanks = liveCollection("queue-ranks", {
+  row: QueueRankRowSchema,
+  id: "conversationId",
+  filterable: {},
+  sortable: ["rank"],
+  default: { orderBy: [["rank", "asc"]], limit: 100 },
+  maxLimit: 500,
+});

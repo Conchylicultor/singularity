@@ -17,7 +17,7 @@ import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/se
 // or "Delete permanently") and in history restore's content wipe.
 //
 // Deliberately NOT excluded from the DB change-feed: the `doc-update` UPDATE is
-// what pushes `blockContentResource` to the block's subscribers.
+// what pushes the block's `blockDocs` row to its subscribers.
 //
 // `updatedAt` is DERIVED (derived-updated-at): it moves when the merged
 // `state` really changes — a doc-update that merges to identical bytes leaves

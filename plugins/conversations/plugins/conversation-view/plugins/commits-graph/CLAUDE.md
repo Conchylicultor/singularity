@@ -6,7 +6,7 @@ Toolbar chip showing how many commits the conversation's worktree branch is ahea
 
 This plugin does not own "where does this attempt stand relative to `main`?" — the server-side exit-drop guard needs the same fact, so it lives in [`tasks/attempt-work`](../../../../../tasks/plugins/attempt-work/CLAUDE.md). Here:
 
-- The **chip** subscribes `attemptWorkResource` and nothing else. `↑ahead ↓behind` come from `pending`'s `measured` arm; the push count is `landedPushes || ledgerPushes` (git-measured, with the ledger as corroboration — a `pushes` row proves a push happened, its absence proves nothing, and pre-trailer-era commits are visible only to the ledger).
+- The **chip** subscribes the `attemptWork` live value and nothing else. `↑ahead ↓behind` come from `pending`'s `measured` arm; the push count is `landedPushes || ledgerPushes` (git-measured, with the ledger as corroboration — a `pushes` row proves a push happened, its absence proves nothing, and pre-trailer-era commits are visible only to the ledger).
 - The **pane** owns only the commit *rows*, behind `commits-graph.graph`. Its landed shas come from `readLandedShas(attemptId)`; the pending-side git helpers (`readBranch`, `readMergeBase`, `probeHeadMain`) are imported from `attempt-work/server`, not re-implemented.
 
 **The landed set is git-measured** — `main`'s commits carrying this attempt's `Singularity-Conversation` trailers — never read off the `pushes` ledger, which lags behind a background ingest job (`research/2026-08-17-global-attempt-work-git-derived-standing.md`). Two consequences worth keeping: the graph resource depends on `refHeadResource` **alone** (a commit joins the landed set only by landing on `main`, so a ref advance is the complete refresh signal), and `graphEtag` folds in only `(headSha, mainSha)` for the same reason. It tracks its subscribed attempts via `onFirstSubscribe`/`onLastUnsubscribe`, so a ref advance fans out only to the panes on screen.
@@ -34,6 +34,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.useLive`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/commit-list.MergeBaseMarker`
     - `primitives/css/column.Column`
@@ -52,7 +53,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"
   - Uses:
-    - `infra/git/git-watcher.refHeadResource`
+    - `infra/git/git-watcher.refHeadServed`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseGitLog`

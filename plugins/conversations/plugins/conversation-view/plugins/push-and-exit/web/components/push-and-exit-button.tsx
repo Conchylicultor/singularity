@@ -41,11 +41,9 @@ import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/pl
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { CONVERSATION_PROMPT_DRAFT_KEY } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
-import {
-  useResource,
-  useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
-import { attemptWorkResource } from "@plugins/tasks/plugins/attempt-work/core";
+import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { deriveExitMode, type Mode } from "./exit-mode";
@@ -164,7 +162,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // be decided by how far a background ingest job happens to have got. The
   // subscription is per attempt because the standing is a fact about this attempt
   // and nothing else.
-  const workResult = useResource(attemptWorkResource, {
+  const workResult = useLive(attemptWork, {
     attemptId: conversation?.attemptId ?? "",
   });
   // Derived slice: only re-renders when this worktree's sibling-active answer

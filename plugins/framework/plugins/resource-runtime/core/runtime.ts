@@ -86,6 +86,16 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
     upstreamValue: unknown,
   ) => P[];
   /**
+   * Cascade to EVERY currently-subscribed params tuple of this resource (the
+   * runtime's own subscription state — `subscribedParamsFor`), whatever the
+   * upstream tuple was. Replaces the hand-kept "active set" a `map` used to read
+   * back (a module `Set` filled by `onFirstSubscribe` / drained by
+   * `onLastUnsubscribe`). Mutually exclusive with `map` (a loud throw at
+   * registration). Unlike a `map`, it never forces the upstream's value.
+   * Spelled `recomputeOn: [served]` by `network/live`'s `serveValue`.
+   */
+  toSubscribed?: true;
+  /**
    * Scoped-recompute (Layer 2): translate the set of changed upstream row ids
    * into the set of changed downstream row ids, so the downstream loader can
    * recompute only the affected rows (`WHERE id IN (…)`) instead of the whole
@@ -397,21 +407,6 @@ export interface ResourceDefinition<
    * differs only on the client (resident cache).
    */
   preload?: "boot" | "boot-and-keep";
-  /**
-   * Opt into STANDALONE mutation-ack frames (`{ kind: "ack" }`). Every
-   * feed-driven value frame (`update` / `delta`) carries `ackTx` — the source
-   * transaction ids folded into the recompute — unconditionally (free bytes, no
-   * extra frames). But a recompute that produces NO value change (an empty
-   * scoped diff, a membership net-zero / window-boundary skip, a point
-   * empty-intersection) normally ships nothing, which would leave an optimistic
-   * client's exact-ack confirmation hanging until an unrelated frame. Declaring
-   * `ackChannel: true` makes those paths broadcast a version-less
-   * `{ kind: "ack", key, params, ackTx }` frame instead: no cache write, no
-   * version bump, no snapshot touch, no cascade — pure ack delivery. Opt-in
-   * per resource because only optimistic-mutation consumers need it. See
-   * research/2026-07-18-global-bounded-working-set-phase2.md Part C.
-   */
-  ackChannel?: true;
 }
 
 /**
@@ -622,8 +617,6 @@ export interface ServerResourceOptions<
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
-  /** Standalone mutation-ack frames — see `ResourceDefinition.ackChannel`. */
-  ackChannel?: ResourceDefinition<T, P>["ackChannel"];
 }
 
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
@@ -655,7 +648,6 @@ function contractToDefinition<T, P extends ResourceParams>(
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
     authorize: opts.authorize,
-    ackChannel: opts.ackChannel,
   };
 }
 
@@ -702,6 +694,8 @@ interface DownstreamEdge {
     upstreamParams: ResourceParams,
     upstreamValue: unknown,
   ) => ResourceParams[];
+  /** Cascade to every subscribed downstream tuple (see DependsOnEntry.toSubscribed). */
+  toSubscribed?: true;
   affectedMap?: (
     upstreamAffected: ReadonlySet<string>,
     upstreamParams: ResourceParams,
@@ -916,12 +910,6 @@ interface RegistryEntry {
    * if it resolves falsy.
    */
   authorize?: (params: ResourceParams) => boolean | Promise<boolean>;
-  /**
-   * Standalone mutation-ack frames opt-in (see `ResourceDefinition.ackChannel`).
-   * Undefined ⇒ no-value-change recomputes ship nothing (today's behavior);
-   * value-frame `ackTx` stamping is unconditional either way.
-   */
-  ackChannel?: true;
 }
 
 /**
@@ -939,6 +927,16 @@ interface RegistryEntry {
 interface SocketSubRecord {
   params: ResourceParams;
   tabs: Set<string>;
+  /**
+   * The holding tabs that ASKED for standalone ack frames on this tuple — a
+   * subset of `tabs`. Client-requested, never declared by the resource: only
+   * the client knows it holds an optimistic op whose write may change nothing
+   * visible. Every `sub` frame (and `sub-batch` entry) restates its tab's
+   * current flag (`acks: true` adds it, absent removes it); an `op: "sub-acks"`
+   * frame flips it on a held sub without re-subscribing. Removed with the tab.
+   * The socket gets `{ kind: "ack" }` frames for this tuple iff non-empty.
+   */
+  ackTabs: Set<string>;
 }
 
 interface SocketState {
@@ -2069,19 +2067,19 @@ export function createResourceRuntime(
   }
 
   // Broadcast a standalone `{ kind: "ack" }` frame for a recompute that produced
-  // NO value change — gated on the entry's `ackChannel` opt-in, a non-empty
-  // (non-overflowed) sourceTx, and live subscribers. Version-less and
-  // cache-less by design: it MUST NOT bump the per-pk version counter, touch
-  // the snapshot, or cascade — it exists purely so an optimistic client's
-  // exact-ack confirmation never hangs on a no-op recompute.
+  // NO value change — gated on a non-empty (non-overflowed) sourceTx and on
+  // subscribers that ASKED for acks on this tuple (`SocketSubRecord.ackTabs`).
+  // Client-requested, not declared: a tuple nobody writes optimistically pays
+  // nothing. Version-less and cache-less by design: it MUST NOT bump the per-pk
+  // version counter, touch the snapshot, or cascade — it exists purely so an
+  // optimistic client's exact-ack confirmation never hangs on a no-op recompute.
   function broadcastAckOnly(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
   ): number {
-    if (!entry.ackChannel) return 0;
     const ackTx = pendingAckTx(pendingEntry);
     if (ackTx === undefined) return 0;
-    const subs = subscribersFor(entry.key, paramsKey(pendingEntry.params));
+    const subs = ackSubscribersFor(entry.key, paramsKey(pendingEntry.params));
     if (subs.length === 0) return 0;
     return broadcastJson(subs, {
       kind: "ack" as const,
@@ -2220,11 +2218,17 @@ export function createResourceRuntime(
       edge: DownstreamEdge;
     }> = [];
     for (const dep of def.dependsOn ?? []) {
+      if (dep.toSubscribed && dep.map) {
+        throw new Error(
+          `defineResource: dependsOn "${dep.resource.key}" sets both "map" and "toSubscribed" for key "${def.key}" — toSubscribed IS the downstream tuple set`,
+        );
+      }
       upstreamKeys.push(dep.resource.key);
       ownDownstreamEdges.push({
         upstreamKey: dep.resource.key,
         edge: {
           downstreamKey: def.key,
+          ...(dep.toSubscribed ? { toSubscribed: true as const } : {}),
           map: dep.map as
             | ((
                 upstreamParams: ResourceParams,
@@ -2277,7 +2281,6 @@ export function createResourceRuntime(
         ((params: ResourceParams) => Promise<string>) | undefined,
       authorize: def.authorize as
         ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
-      ackChannel: def.ackChannel,
     };
     registry.set(def.key, entry);
 
@@ -2441,6 +2444,24 @@ export function createResourceRuntime(
       if (inner?.has(pk)) out.push(st);
     }
     return out;
+  }
+
+  // The sockets holding (key, pk) on behalf of at least one tab that asked for
+  // standalone ack frames — the only recipients of `{ kind: "ack" }`.
+  function ackSubscribersFor(key: string, pk: string): SocketState[] {
+    const out: SocketState[] = [];
+    for (const st of sockets.values()) {
+      const rec = st.subs.get(key)?.get(pk);
+      if (rec !== undefined && rec.ackTabs.size > 0) out.push(st);
+    }
+    return out;
+  }
+
+  // Does any socket hold this tuple for a tab that asked for acks? The feed
+  // router's gate for scheduling an ACK-ONLY pending on a tuple the change
+  // missed — without an asker there is nobody to deliver it to.
+  function tupleWantsAcks(key: string, params: ResourceParams): boolean {
+    return ackSubscribersFor(key, paramsKey(params)).length > 0;
   }
 
   function sendJson(ws: ServerWebSocket<WsData>, obj: unknown): void {
@@ -2849,7 +2870,9 @@ export function createResourceRuntime(
       const down = registry.get(edge.downstreamKey);
       if (!down) continue;
       let derived: ResourceParams[];
-      if (edge.map) {
+      if (edge.toSubscribed) {
+        derived = subscribedParamsFor(edge.downstreamKey);
+      } else if (edge.map) {
         try {
           derived = edge.map(params, valueComputed ? value : undefined);
         } catch (err) {
@@ -3156,8 +3179,8 @@ export function createResourceRuntime(
     // Nothing actually changed (an empty scoped set with no deletes) → skip
     // entirely: no version bump, no frame, no cascade. This is also the ACK-ONLY
     // pending a point empty-intersection routes here (the change's ids missed
-    // this tuple's set, but the writer still deserves its ack) — an opted-in
-    // `ackChannel` entry broadcasts the standalone ack frame, version-less.
+    // this tuple's set, but the writer still deserves its ack) — broadcast to
+    // the subscribers that asked for acks as a standalone frame, version-less.
     if (requestedIds.size === 0 && deletedIds.size === 0) {
       broadcastAckOnly(entry, pendingEntry);
       return;
@@ -3451,7 +3474,7 @@ export function createResourceRuntime(
     } else {
       // Net-zero recompute (an entrant sorting past the tail, a window-boundary
       // skip): no frame, no version bump — but the writer's ack must not hang
-      // on it. Opted-in entries broadcast the standalone ack frame.
+      // on it. Subscribers that asked for acks get the standalone ack frame.
       broadcastAckOnly(entry, pendingEntry);
     }
     // Mirror the legacy scoped path's accounting: an empty diff is a recorded
@@ -3541,9 +3564,8 @@ export function createResourceRuntime(
         // Nothing changed for this tuple — no version bump, no empty delta, no
         // cascade. It is ALSO where a `rowIdentity` non-match lands its ACK-ONLY
         // pending (the change named another tuple's row, but the writer still
-        // deserves its ack), so an opted-in `ackChannel` entry broadcasts the
-        // standalone ack frame here. Inert without that opt-in, so no existing
-        // resource moves.
+        // deserves its ack), so the standalone ack frame goes to the
+        // subscribers that asked for acks. Inert when none did.
         broadcastAckOnly(entry, pendingEntry);
         continue;
       }
@@ -3758,7 +3780,7 @@ export function createResourceRuntime(
               frameChars = broadcastJson(subs, msg);
             } else {
               // Empty scoped diff: the recompute proved the bytes unchanged —
-              // no value frame, but an opted-in entry still delivers the
+              // no value frame, but an ack-requesting subscriber still gets the
               // writer's ack (a no-byte-change write must not hang it).
               frameChars = broadcastAckOnly(entry, pendingEntry);
             }
@@ -3903,6 +3925,10 @@ export function createResourceRuntime(
         // The sending tab's id (per-tab sub bookkeeping — see `SocketSubRecord`).
         // Optional; an untagged frame lands in the legacy `""` bucket.
         tabId?: string;
+        // Client-requested standalone ack frames (see `SocketSubRecord.ackTabs`):
+        // on `op: "sub"` / a `sub-batch` entry it restates the tab's current
+        // flag (absent = off); on `op: "sub-acks"` it flips it on a held sub.
+        acks?: boolean;
         // `op: "sub-batch"` fields: one whole-set replay for ONE tab. `complete:
         // true` additionally reconciles — releases every sub that tab previously
         // held on this socket and did not restate.
@@ -3913,6 +3939,7 @@ export function createResourceRuntime(
           params?: ResourceParams;
           etag?: string;
           version?: number;
+          acks?: boolean;
         }>;
       };
       if (m.kind === "pong") return;
@@ -3926,6 +3953,10 @@ export function createResourceRuntime(
       }
       if (m.op === "unsub") {
         handleUnsub(state, m);
+        return;
+      }
+      if (m.op === "sub-acks") {
+        handleSubAcks(state, m);
         return;
       }
       if (m.op === "unsub-tab") {
@@ -3958,13 +3989,15 @@ export function createResourceRuntime(
   // `SocketSubRecord` (tagging the holding tab), and bumps `entry.subCounts` only
   // on the socket-level 0→1 (pk record created). Returns whether this
   // registration was the GLOBAL 0→1 transition — the caller then owes the
-  // (possibly async) `onFirstSubscribe` exactly once.
+  // (possibly async) `onFirstSubscribe` exactly once. `acks` is the frame's
+  // restated ack flag for this tab (see `SocketSubRecord.ackTabs`).
   function registerSubOnSocket(
     state: SocketState,
     entry: RegistryEntry,
     pk: string,
     params: ResourceParams,
     tabId: string,
+    acks: boolean,
   ): { firstGlobal: boolean } {
     let inner = state.subs.get(entry.key);
     if (!inner) {
@@ -3974,10 +4007,12 @@ export function createResourceRuntime(
     let rec = inner.get(pk);
     const alreadyHeldBySocket = rec !== undefined;
     if (!rec) {
-      rec = { params, tabs: new Set<string>() };
+      rec = { params, tabs: new Set<string>(), ackTabs: new Set<string>() };
       inner.set(pk, rec);
     }
     rec.tabs.add(tabId);
+    if (acks) rec.ackTabs.add(tabId);
+    else rec.ackTabs.delete(tabId);
     if (alreadyHeldBySocket) return { firstGlobal: false };
     const prev = entry.subCounts.get(pk) ?? 0;
     entry.subCounts.set(pk, prev + 1);
@@ -3994,6 +4029,7 @@ export function createResourceRuntime(
       version?: number;
       epoch?: string;
       tabId?: string;
+      acks?: boolean;
     },
   ): Promise<void> {
     const { id, key, params = {}, etag: clientEtag } = m;
@@ -4042,6 +4078,7 @@ export function createResourceRuntime(
       pk,
       params,
       typeof m.tabId === "string" ? m.tabId : "",
+      m.acks === true,
     );
     if (firstGlobal && entry.onFirstSubscribe) {
       try {
@@ -4259,6 +4296,7 @@ export function createResourceRuntime(
         params?: ResourceParams;
         etag?: string;
         version?: number;
+        acks?: boolean;
       }>;
     },
   ): void {
@@ -4309,6 +4347,7 @@ export function createResourceRuntime(
           version: e.version,
           epoch: m.epoch,
           tabId,
+          acks: e.acks,
         });
         continue;
       }
@@ -4318,6 +4357,7 @@ export function createResourceRuntime(
         pk,
         params,
         tabId,
+        e.acks === true,
       );
       prepared.push({
         entry,
@@ -4408,10 +4448,37 @@ export function createResourceRuntime(
     // socket-level refcount releases only when the last holding tab is gone.
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     if (!rec.tabs.delete(tabId)) return;
+    rec.ackTabs.delete(tabId);
     if (rec.tabs.size > 0) return;
     inner.delete(pk);
     if (inner.size === 0) state.subs.delete(key);
     releaseSubRefcount(key, pk, rec.params);
+  }
+
+  // `op: "sub-acks"` — flip one tab's ack request on a sub it already holds on
+  // this socket, without re-subscribing (no sub-ack, no loader run). The
+  // client sends it when its first optimistic observer of a tuple arrives or
+  // its last one leaves while the sub stays; every later `sub` / `sub-batch`
+  // entry restates the flag anyway. A frame for a sub this tab does not hold is
+  // dropped: the client only sends it after the tuple's `sub`, and frames on a
+  // socket are handled in order — only an `authorize`-deferred registration
+  // (no shipped resource declares one) could still be pending.
+  function handleSubAcks(
+    state: SocketState,
+    m: {
+      key?: string;
+      params?: ResourceParams;
+      tabId?: string;
+      acks?: boolean;
+    },
+  ): void {
+    const { key, params = {} } = m;
+    if (!key) return;
+    const rec = state.subs.get(key)?.get(paramsKey(params));
+    const tabId = typeof m.tabId === "string" ? m.tabId : "";
+    if (!rec?.tabs.has(tabId)) return;
+    if (m.acks === true) rec.ackTabs.add(tabId);
+    else rec.ackTabs.delete(tabId);
   }
 
   // Release every sub `tabId` holds on this socket, except (key,pk)s named in
@@ -4427,6 +4494,7 @@ export function createResourceRuntime(
       for (const [pk, rec] of inner) {
         if (retain?.has(`${key}\0${pk}`)) continue;
         if (!rec.tabs.delete(tabId)) continue;
+        rec.ackTabs.delete(tabId);
         if (rec.tabs.size > 0) continue;
         inner.delete(pk);
         releaseSubRefcount(key, pk, rec.params);
@@ -4949,13 +5017,13 @@ export function createResourceRuntime(
             routeIds !== null &&
             !ownRowChanged(entry, rowIdentity, params, routeIds)
           ) {
-            // Another tuple's row — but an opted-in ackChannel entry still owes
-            // the writer its ack (an optimistic client subscribed to THIS tuple
-            // may hold a pending op whose write landed on another row). Schedule
-            // an ACK-ONLY pending: an empty scoped set carrying only sourceTx,
+            // Another tuple's row — but a subscriber that asked for acks is
+            // still owed the writer's ack (its optimistic client may hold a
+            // pending op whose write landed on another row). Schedule an
+            // ACK-ONLY pending: an empty scoped set carrying only sourceTx,
             // which the drain resolves to a standalone ack frame (no version
             // bump, no other frame, no cascade).
-            if (entry.ackChannel && change.xid !== undefined) {
+            if (change.xid !== undefined && tupleWantsAcks(key, params)) {
               scheduleNotify(entry, params, new Set<string>(), {
                 source: "feed",
                 sourceTx: change.xid,
@@ -4982,15 +5050,15 @@ export function createResourceRuntime(
               tupleAffected.size === 0 &&
               (tupleDeleted === undefined || tupleDeleted.size === 0)
             ) {
-              // Empty intersection: the tuple's value is untouched — but an
-              // opted-in ackChannel entry still owes the writer its ack (an
+              // Empty intersection: the tuple's value is untouched — but a
+              // subscriber that asked for acks is still owed the writer's ack (an
               // optimistic client subscribed to THIS tuple may hold a pending
               // op whose write landed outside the tuple's id set — e.g. a
               // reorder that only moved OTHER rows' ranks). Schedule an
               // ACK-ONLY pending: an empty scoped set carrying only sourceTx,
               // which the membership drain resolves to a standalone ack frame
               // (no version bump, no frame otherwise, no cascade).
-              if (entry.ackChannel && change.xid !== undefined) {
+              if (change.xid !== undefined && tupleWantsAcks(key, params)) {
                 scheduleNotify(entry, params, new Set<string>(), {
                   source: "feed",
                   sourceTx: change.xid,

@@ -30,9 +30,8 @@ import { prototypeFrames, type PrototypeFrame } from "../internal/canvas-model";
  *
  * App DOM, never inside the prototype's page — that is what keeps switchers
  * out of the designs. It always edits ITS frame, so nothing needs
- * disambiguating. Renders nothing for a document with no options, and nothing
- * while the frame's picks are unknown (a pill naming the defaults would claim a
- * choice the user may not have made).
+ * disambiguating. Renders nothing for a document with no options. The frame's
+ * picks are always known here: the canvas does not exist until they load.
  */
 export function OptionsPill({
   frame,
@@ -44,9 +43,8 @@ export function OptionsPill({
   const [open, setOpen] = useState(false);
   const { dispatch } = usePrototypeDetail();
   const options = documentOptions(meta, frame.version);
-  const read = useFramePicks(frame, meta);
-  if (options.length === 0 || read.pending) return null;
-  const picks = read.data;
+  const picks = useFramePicks(frame, meta);
+  if (options.length === 0) return null;
   return (
     <InlinePopover
       open={open}

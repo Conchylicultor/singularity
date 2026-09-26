@@ -9,7 +9,7 @@ import {
   adoptPrototypeHistories,
   prototypeHistoryLiveResource,
 } from "./history";
-import { prototypePicksLiveResource } from "./picks";
+import { prototypePicksServed } from "./picks";
 import { prototypeStatusesLiveResource } from "./status";
 import {
   prototypesResource,
@@ -122,7 +122,7 @@ function onTreeEvents(paths: string[]): void {
     else if (kind.kind === "tree") treeMoved = true;
   }
   for (const id of recorded) notifyHistory(id);
-  for (const name of picked) prototypePicksLiveResource.notify({ name });
+  for (const name of picked) prototypePicksServed.notify({ name });
   if (statusMoved) prototypeStatusesLiveResource.notify();
   if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
 }

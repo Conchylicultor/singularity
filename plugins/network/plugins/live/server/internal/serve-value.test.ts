@@ -13,7 +13,8 @@ import {
   type ResourceParams,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { compileValue, serveValue } from "./serve-value";
+import { compileValue } from "../../shared/compile-value";
+import { serveValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
 const Names = z.array(z.string());
@@ -222,6 +223,19 @@ describe("serveValue", () => {
     expect("notify" in served).toBe(false);
     // @ts-expect-error — a Postgres-backed value is driven by the change feed alone
     expect(served.notify).toBeUndefined();
+  });
+
+  test("types: a central value is not served here", () => {
+    const central = liveValue(key("served-central"), {
+      schema: Count,
+      origin: "central",
+    });
+    expect(central.origin).toBe("central");
+    // Never called — the assertion is the `@ts-expect-error`.
+    const typeOnly = () =>
+      // @ts-expect-error — a central value is served by network/live/central
+      serveValue(central, { source: "external", loader: () => ({ n: 1 }) });
+    expect(typeof typeOnly).toBe("function");
   });
 
   test("the external arm has notify; on-demand is served as invalidate", () => {

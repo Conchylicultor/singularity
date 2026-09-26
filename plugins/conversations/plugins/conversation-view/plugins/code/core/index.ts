@@ -1,3 +1,8 @@
-export type { EditedFileStatus, EditedFile, EditedFilesResponse, EditedFilesPayload } from "./protocol";
+export type {
+  EditedFileStatus,
+  EditedFile,
+  EditedFilesResponse,
+  EditedFilesPayload,
+} from "./protocol";
 export { EditedFileSchema } from "./protocol";
-export { editedFilesResource } from "./resources";
+export { editedFiles } from "./resources";

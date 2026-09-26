@@ -94,7 +94,9 @@ export type ImportedDescriptorResolver = (
 /**
  * Scan sources for descriptor factory calls and map each declared const name to
  * one `{ key, keyed, membership }` PER RESOURCE THE CALL MINTS — one for a plain
- * descriptor factory, two for `liveCollection("k", …)` (`k` and `k:rows`). Pass the WHOLE plugin's sources: a descriptor
+ * descriptor factory, three for `liveCollection("k", …)` (`k`, `k:rows` and
+ * `k:groups`), or only `k:rows` when it is lookup-only (no `default:` — a mint
+ * whose `requires` field the call does not set is skipped). Pass the WHOLE plugin's sources: a descriptor
  * is declared in `core/`/`shared/` but referenced by the register call in
  * `server/`/`central/`.
  *
@@ -142,13 +144,22 @@ export function buildDescriptorIndex(
             }),
           );
         }
+        const argsText = src.slice(span.open + 1, span.close);
         index.set(
           name,
-          entry.mints.map((m) => ({
-            key: id.value + m.suffix,
-            keyed: m.keyed,
-            membership: m.membership,
-          })),
+          entry.mints
+            .filter((m) => {
+              const requires = "requires" in m ? m.requires : undefined;
+              return (
+                requires === undefined ||
+                parseStringField(argsText, requires).kind !== "absent"
+              );
+            })
+            .map((m) => ({
+              key: id.value + m.suffix,
+              keyed: m.keyed,
+              membership: m.membership,
+            })),
         );
       }
     }

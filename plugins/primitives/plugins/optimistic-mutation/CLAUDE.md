@@ -103,10 +103,18 @@ NOT "is anything unsaved" — read `saving` for that.
 
 ## API
 
+The read is a declaration, positionally — mirroring `useLive`'s arguments:
+
 ```ts
-const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry } = useOptimisticResource({
-  resource,            // ResourceDescriptor<Data, P> from live-state
-  params,              // optional resource params
+const picks = useOptimisticResource(prototypePicks, { name }, options); // a param'd liveValue
+const unread = useOptimisticResource(someValue, options);              // a param-less liveValue
+const ranks = useOptimisticResource(queueRanks, { ids }, options);     // a collection's id set (`:rows`)
+if (picks.pending) return <Loading />;   // { pending: true; error }
+picks.dispatch(change);                  // the settled arm: data, serverData, error, dispatch,
+                                         // pendingOps, saving, failed, retry
+
+// options:
+{
   apply,               // (current: Data, vars: Vars) => Data — PURE predicted next state
   mutate,              // (vars: Vars) => Promise<void | { watermark?: string }> — the network call
   // Content-based confirmation is an all-or-nothing PAIR (omit both for coarse):
@@ -115,8 +123,31 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   onError,             // optional (err, vars) => void
   label,               // optional string — names the thing being saved (sync-status error state)
   describeOp,          // optional (vars) => string — bounded op summary for the divergence report
-});
+}
 ```
+
+- **`pending` until a base exists, and no placeholder is ever the base.** The
+  base is the first authoritative value — or, once one has landed, the last one
+  under a transient error (the loud exemption below). `dispatch` exists only on
+  the settled arm (a tsc error on the pending one), so an op can never be folded
+  onto a base nobody has seen — `prototypes.picks` used to fold a click onto
+  `{}` before the stored picks loaded. A collection's `:rows` descriptor still
+  carries a `[]` placeholder for its legacy readers; the `{ ids }` form never
+  takes it.
+- **Ops do not reset when the params change** (a re-baseline: the queue's live
+  id set moves). The overlay keeps its ops and replays them on the new tuple's
+  base; the result is `pending` again until that base lands. A caller that must
+  let the user keep acting through that window keeps the settled arm it
+  rendered from (the queue keeps its last display together with its
+  `dispatch`); a caller whose params name a different entity keys the
+  component by it, so the overlay starts fresh (the prototype canvas).
+- **Legacy form**: `useOptimisticResource({ resource, params, ...options })`
+  over a `ResourceDescriptor & { initialData }` — the placeholder is the base
+  until the first push, `pending` is a boolean and `dispatch` is always there.
+  Kept only for the page editor's blocks (`page/editor/web/block-store.ts`)
+  until they migrate; a `liveValue` does not fit it (no `initialData`, tsc).
+- **Every optimistic reader asks for acks** on its tuple (`useResourceAcks` —
+  see *Exact-ack confirmation* below): nothing to declare, nothing to forget.
 
 - `dispatch(vars)` mints an `opId`, appends `{opId, vars, resolved:false,
   dispatchGen, misses:0, divergenceReported:false}` to the ordered pending list,
@@ -147,7 +178,8 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   committed first" — the ordering rule doesn't; it only makes the retried op
   block its same-target juniors until it settles, which is correct either way.
 - `serverData` is the raw authoritative overlay base — server truth with NO
-  pending ops applied (`resource.initialData` until the first push). For
+  pending ops applied (the legacy form's `resource.initialData` until the first
+  push; the positional forms are `pending` instead). For
   consumers that must distinguish "the server has really absorbed this row" from
   the prediction — e.g. the page editor gates a block's content-doc seed (an
   FK-dependent write) on the block id appearing here, never in overlaid `data`.
@@ -163,10 +195,20 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   React can coalesce away within one render (the hazard `sync-status/CLAUDE.md`
   documents). Outside a `<SyncStatusProvider>` the report is a no-op.
 - **Exact-ack confirmation (`ackTx`).** Feed-driven frames carry `ackTx` — the
-  source-transaction ids the recompute folded in — and `ackChannel`-opted
-  resources additionally broadcast standalone `{ kind: "ack" }` frames for
-  no-value-change recomputes (frame production + the narrow claim are owned by
-  `resource-runtime/CLAUDE.md`). The client notes them into a module-level tx-ack
+  source-transaction ids the recompute folded in — and a recompute that changed
+  nothing visible (an empty scoped diff, a net-zero window, a point set the
+  write missed) sends a standalone `{ kind: "ack" }` frame instead, **to the
+  subscribers that asked for it**. The hook asks on its own: it calls
+  `useResourceAcks(resource, params)` (live-state), which sets `acks: true` on
+  the tuple's `sub` frame — OR-ed across this tab's readers, and across the tabs
+  sharing the socket by the server — and flips it with one `op: "sub-acks"`
+  frame when the first reader arrives or the last leaves while the sub stays.
+  So a reorder whose write lands outside the subscribed id set, or nets to
+  zero, still confirms exactly, and a tuple nobody writes optimistically pays
+  nothing. (It used to be a server-declared `ackChannel: true` — only the client
+  knows it holds such an op, and a forgotten declaration hung confirmation.)
+  Frame production + the narrow claim are owned by `resource-runtime/CLAUDE.md`.
+  The client notes them into a module-level tx-ack
   registry (`hasResourceTxAck` / `subscribeResourceTxAcks` from `live-state/web`,
   namespaced per `(key, paramsKey)`, 256-entry ring). Consumption here: a registry
   hit on an op's `ackWatermark` proves *that commit's rows were re-read
@@ -202,7 +244,9 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   another writer later deletes.
 
   **Only an authoritative snapshot may confirm.** Both edges are gated on one, and
-  neither `resource.initialData` nor "the cache emitted an event" qualifies:
+  neither a placeholder `initialData` nor "the cache emitted an event" qualifies
+  (the gate stays for every form: a collection's `:rows` query still seeds its
+  `[]` placeholder into the cache, even though no form takes it as a base):
   - The QueryCache emits `"updated"` for **every** query action (`fetch`,
     `error`, `invalidate`, `setState`), none of which touch `state.data`. Only
     `success` bumps `dataUpdateCount`, so the push edge ignores any event that
@@ -345,8 +389,9 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   redo *wait* instead of evicting the undo. Both replay, X renders present, and
   the pair drains as soon as any watermark-carrying frame denies the undo.
   Content-mode consumer: the page editor (`sameOverlayTarget` — block-id-set
-  intersection over ops/patches, `web/block-store.ts`). The conversation queue is
-  the coarse-mode consumer and supplies neither half.
+  intersection over ops/patches, `web/block-store.ts`). The conversation queue
+  (`queueRanks` `{ ids }`) and the prototype canvas (`prototypePicks`) are the
+  coarse-mode consumers and supply neither half.
 - `apply` must be pure. For the "this op no longer applies to the current base"
   case (e.g. the server already absorbed it and the row it referenced is gone),
   throw `OpNoLongerApplies` (exported from the barrel) — the replay drops just
@@ -416,7 +461,9 @@ the input `pending` array **by identity** when nothing changed, so the React she
 skips the state write. Unit-tested in `overlay.test.ts` (`bun test`) — where new
 lifecycle coverage belongs.
 
-The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell: the
+The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell —
+`resolveForm` turns any of the forms into (descriptor, params, options,
+placeholder) with no hooks, so every form runs the same one core hook: the
 `pending` state (mirrored in a commit-time ref, because a functional `setState`
 updater cannot yield the report lists without becoming effectful), the cache
 subscription, the reconnect auto-retry subscription, the `savedAt` stamp, and the
@@ -440,10 +487,14 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `primitives/live-state.queryKeyFor`
     - `primitives/live-state.subscribeResourceTxAcks`
     - `primitives/live-state.useResource`
+    - `primitives/live-state.useResourceAcks`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/sync-status.useReportSync`
   - Exports (types):
     - `OptimisticDivergenceReport`
+    - `OptimisticOptions`
+    - `OptimisticResult`
+    - `OptimisticSettled`
     - `UseOptimisticResourceArgs`
     - `UseOptimisticResourceResult`
   - Exports (values):

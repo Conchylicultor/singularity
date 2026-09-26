@@ -22,7 +22,7 @@ export const blockDocInit = defineEndpoint({
 // `update` event payload). 409 if the doc was never initialized — the server
 // NEVER auto-seeds here (that would reopen the duplicate-seed hazard); callers
 // must `doc-init` first. Subscribers learn the merged state via
-// `blockContentResource` (the row UPDATE fires the DB change-feed), so the
+// `blockDocs` (the row UPDATE fires the DB change-feed), so the
 // response carries no body.
 export const blockDocUpdate = defineEndpoint({
   route: "POST /api/blocks/:id/doc-update",

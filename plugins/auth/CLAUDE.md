@@ -14,11 +14,11 @@ The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything t
 
 ## Topology
 
-- **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateResource` all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
+- **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateServed` (the central `serveValue` of `core`'s `authState` live value, declared `origin: "central"`) all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
 - **Tokens persist via the central secrets store.** Encrypted blob at `~/.singularity/state/secrets/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
 - **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.singularity/state/gateway/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` — the manifest covers it.
 - **A provider added on a branch reads "Unavailable" in its own worktree's Accounts pane.** Central runs main's code, so it knows the provider only once the branch is merged; the row says so instead of offering a Connect that central would reject.
-- **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateResource.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
+- **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateServed.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
 
 ## How a consumer plugin uses it
 
@@ -81,7 +81,7 @@ Google uses Desktop-app + PKCE, but the token endpoint **still requires** `clien
 - **Revoke on disconnect.** `descriptor.oauth.revoke` is a hook in the type but unused. MVP deletes locally only.
 - **Rate-limited refresh retries.** Unconditional 60 s tick. Acceptable until something proves otherwise.
 - **Scope-merging UI.** Incremental scope requests trigger full re-consent. Google's `include_granted_scopes=true` is already passed in `buildAuthorizeParams`, so providers should generally re-grant cleanly.
-- **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, `authStateResource` returns providers with `credentialsConfigured: false` and the UI surfaces the configuration empty-state. No web UI to repair the keychain itself.
+- **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, the `auth-state` value returns providers with `credentialsConfigured: false` and the UI surfaces the configuration empty-state. No web UI to repair the keychain itself.
 
 ## Verification
 
@@ -104,6 +104,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
@@ -114,8 +115,6 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.defineRoute`
@@ -147,6 +146,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `infra/secrets.ready`
     - `infra/secrets.SecretsKeychainLockedError`
     - `infra/secrets.setSecret`
+    - `network/live.serveValue`
   - Exports (types):
     - `ApiKeyConfig`
     - `AuthAccountState`
@@ -170,7 +170,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthKeychainLockedError`
     - `AuthNeedsConsentError`
     - `AuthProviderUnknownError`
-    - `authStateResource`
+    - `authStateServed`
     - `defineAuthProvider`
     - `getAccessToken`
     - `getAccountIdentity`
@@ -188,7 +188,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.centralResourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ApiKeyConfig`
     - `AuthAccountState`
@@ -216,7 +216,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthKeychainLockedError`
     - `AuthNeedsConsentError`
     - `AuthProviderUnknownError`
-    - `authStateResource`
+    - `authState`
     - `AuthStateValueSchema`
     - `defineAuthProvider`
     - `disconnect`

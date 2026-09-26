@@ -1,22 +1,15 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-import { RefHeadSchema } from "../../shared/types";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { refHead } from "../../core";
 import { readSha } from "./read-sha";
 
-type Params = { refName: string };
-
-export const refHeadResource = defineExternalResource<
-  { sha: string | null },
-  Params
->({
-  key: "git-watcher.refHead",
-  mode: "push",
-  schema: RefHeadSchema,
+export const refHeadServed = serveValue(refHead, {
+  source: "external",
   // A rebase rewrites refs/heads/main many times in quick succession; the
   // watcher notifies per distinct sha, cascading to build.deployment +
   // commitDelta/commitsGraph (git subprocesses) in every worktree. A fixed-window
-  // trailing debounce collapses a rebase's rewrites into one flush per worktree —
-  // the cross-worktree storm relief. Source is push (not keyed), so debouncing it
-  // is safe. See research/2026-06-15-global-live-state-cascade-contention.md (Change 2B).
-  debounceMs: 300,
+  // trailing throttle collapses a rebase's rewrites into one flush per worktree —
+  // the cross-worktree storm relief. See
+  // research/2026-06-15-global-live-state-cascade-contention.md (Change 2B).
+  throttleMs: 300,
   loader: async ({ refName }) => ({ sha: await readSha(refName) }),
 });

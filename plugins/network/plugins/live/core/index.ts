@@ -1,8 +1,10 @@
 export { liveCollection } from "./internal/live-collection";
 export { liveValue } from "./internal/live-value";
 export type {
+  LiveCentralValueSpec,
   LiveParamValueSpec,
   LiveValue,
+  LiveValueOrigin,
   LiveValueParams,
   LiveValueSpec,
 } from "./internal/live-value";
@@ -11,7 +13,10 @@ export type {
   LiveCollectionSpec,
   LiveGroupCodec,
   LiveGroupsDescriptor,
+  LiveLookupCollection,
+  LiveLookupSpec,
   LivePreload,
+  LiveRowsCollection,
   LiveRowSchema,
   LiveWindowCodec,
   LiveWindowDescriptor,

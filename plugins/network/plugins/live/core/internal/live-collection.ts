@@ -109,22 +109,46 @@ export type LiveRowSchema<Row> = ZodParser<Row> & {
  */
 export type LivePreload = "none" | ResourcePreload;
 
-export interface LiveCollection<Row, F, S extends string> {
+/**
+ * What EVERY collection has — the `:rows` point sibling and the row schema — so
+ * the id-set reads (`useLive(c, { ids })`, `useLiveRow`) take any collection,
+ * lookup-only or full.
+ */
+export interface LiveRowsCollection<Row> {
   key: string;
-  /** `key` — the ordered, filtered, bounded window. */
-  window: LiveWindowDescriptor<Row, F, S>;
   /** `${key}:rows` — explicit id sets; answers "does this row exist", ignoring any filter. */
   rows: PointQueryResourceContract<Row>;
-  /** `${key}:groups` — the values a filterable column takes, with counts. */
-  groups: LiveGroupsDescriptor<F>;
   id: keyof Row & string;
   /** The row schema — its keys are exactly the fields the server projects. */
   row: LiveRowSchema<Row>;
   /** The row schema's keys — exactly the fields the server projects. */
   rowKeys: readonly (keyof Row & string)[];
+}
+
+/** A full collection: the point sibling plus a default window and groupings to list it by. */
+export interface LiveCollection<
+  Row,
+  F,
+  S extends string,
+> extends LiveRowsCollection<Row> {
+  /** `key` — the ordered, filtered, bounded window. */
+  window: LiveWindowDescriptor<Row, F, S>;
+  /** `${key}:groups` — the values a filterable column takes, with counts. */
+  groups: LiveGroupsDescriptor<F>;
   /** The filterable columns' domains — the filter language's declaration. */
   filterable: F;
   sortable: readonly S[];
+}
+
+/**
+ * A lookup-only collection: declared without a default window, so it mints
+ * `${key}:rows` alone. Rows are read by id (`useLiveRow`, `useLive(c, { ids })`);
+ * a list read has no order to list in, so it is a tsc error (the `window` /
+ * `groups` a list read needs are absent, and typed `never`).
+ */
+export interface LiveLookupCollection<Row> extends LiveRowsCollection<Row> {
+  window?: never;
+  groups?: never;
 }
 
 export interface LiveCollectionSpec<Row, F, S extends string> {
@@ -142,11 +166,32 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
 }
 
 /**
+ * A lookup-only declaration: a row schema and its id, nothing to list by. Every
+ * window field is `never` — `filterable` too, since no list read or grouping
+ * would ever read it — and so is `preload`: an id set has no default tuple the
+ * server could load before a tab names one.
+ */
+export interface LiveLookupSpec<Row> {
+  row: LiveRowSchema<Row>;
+  /** The row field that identifies a row — the point sibling's id set. */
+  id: keyof Row & string;
+  filterable?: never;
+  sortable?: never;
+  default?: never;
+  maxLimit?: never;
+  preload?: never;
+}
+
+/**
  * Declare a live collection: one declaration minting three resources — `key`
  * (window membership: filtered, ordered, limited), `${key}:rows` (point
  * membership: explicit ids) and `${key}:groups` (a filterable column's values
  * with counts). Bounded by construction: a default limit and a `maxLimit` are
  * required, and a grouping query is capped at `LIST_MAX` groups.
+ *
+ * Declared WITHOUT `default` (and so without `sortable` / `maxLimit` /
+ * `filterable` / `preload`), it is lookup-only and mints `${key}:rows` alone —
+ * for a table whose rows are only ever read by id (one row per mounted block).
  *
  * `key` stays a positional string literal: the build scanners read it statically.
  */
@@ -163,6 +208,57 @@ export function liveCollection<
       ]: never;
     };
   },
+): LiveCollection<Row, F, S>;
+export function liveCollection<Row>(
+  key: string,
+  spec: LiveLookupSpec<Row>,
+): LiveLookupCollection<Row>;
+export function liveCollection<Row, F, S extends string>(
+  key: string,
+  spec: LiveCollectionSpec<Row, F, S> | LiveLookupSpec<Row>,
+): LiveCollection<Row, F, S> | LiveLookupCollection<Row> {
+  if (spec.default === undefined) {
+    // An untyped caller could pass half a window: every window field goes
+    // with `default`, so a stray one is a declaration that means nothing.
+    const stray = Object.entries(spec)
+      .filter(([f, v]) => v !== undefined && WINDOW_FIELDS.includes(f))
+      .map(([f]) => f);
+    if (stray.length > 0) {
+      throw new Error(
+        `liveCollection("${key}"): ${stray.join(", ")} without \`default\` — a ` +
+          `lookup-only collection has no window to list, sort, cap or preload.`,
+      );
+    }
+    return rowsPart(key, spec);
+  }
+  return fullCollection(key, spec as LiveCollectionSpec<Row, F, S>);
+}
+
+/** The spec fields that only mean something beside `default`. */
+const WINDOW_FIELDS: readonly string[] = [
+  "filterable",
+  "sortable",
+  "maxLimit",
+  "preload",
+];
+
+/** The `:rows` point sibling and the row schema — what every collection mints. */
+function rowsPart<Row>(
+  key: string,
+  spec: { row: LiveRowSchema<Row>; id: keyof Row & string },
+): LiveRowsCollection<Row> {
+  return {
+    key,
+    rows: pointQueryResourceDescriptor(`${key}:rows`, spec.row, spec.id),
+    id: spec.id,
+    row: spec.row,
+    rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
+  };
+}
+
+function fullCollection<Row, F, S extends string>(
+  key: string,
+  spec: LiveCollectionSpec<Row, F, S>,
 ): LiveCollection<Row, F, S> {
   const codec = createLiveQueryCodec<keyof F & string, S>({
     key,
@@ -197,7 +293,8 @@ export function liveCollection<
     }),
     { window: windowCodec, defaultParams: windowCodec.encode() },
   );
-  const rows = pointQueryResourceDescriptor(`${key}:rows`, spec.row, spec.id);
+  // Minted after the window, as it always was (descriptor registration order).
+  const base = rowsPart(key, spec);
   const groupCodec: LiveGroupCodec<F> = {
     defaultLimit: LIVE_GROUP_DEFAULT_LIMIT,
     maxLimit: LIST_MAX,
@@ -218,13 +315,9 @@ export function liveCollection<
     { groups: groupCodec },
   );
   return {
-    key,
+    ...base,
     window,
-    rows,
     groups,
-    id: spec.id,
-    row: spec.row,
-    rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
     filterable: spec.filterable,
     sortable: spec.sortable,
   };

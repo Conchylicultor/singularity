@@ -179,7 +179,7 @@ async function deploymentSignature(): Promise<string> {
 }
 
 /**
- * `refHeadResource` fires in EVERY backend on every advance of a ref it tracks,
+ * `refHeadServed` fires in EVERY backend on every advance of a ref it tracks,
  * and `refs/heads/main` is tracked everywhere — so on this host a single push to
  * main wakes this loader in 100+ worktree backends at once. In all but one of
  * them the target is that worktree's OWN branch, which did not move, so the

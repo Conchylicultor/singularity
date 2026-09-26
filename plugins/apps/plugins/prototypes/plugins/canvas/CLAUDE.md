@@ -80,11 +80,16 @@ frame first), that frame's own picks are written to the shared record, so what
 is on screen does not change; and the frame that stopped being A keeps what it
 showed as picks of its own. Undo after Keep only puts back the record as it was.
 
-The shared record is read through `useOptimisticResource`: a chip answers the
-click at once, and a failed write stays on screen and shows in the sync-status
-cloud. Until the record is known, no prototype frame renders its document
-(`PicksRead` is pending) — a frame built on a guess would open the defaults
-and then swap. Picks are judged per document: a frame's options are those its
+The shared record (the `prototypes.picks` live value) is read through
+`useOptimisticResource`: a chip answers the click at once, and a failed write
+stays on screen and shows in the sync-status cloud. Until the record is known
+the canvas does not exist at all — `PrototypeDetailProvider` renders a loading
+block (or the load error), exactly as it does for the prototype list — so no
+frame opens on a guess of the defaults and then swaps, and no pick can be
+folded onto a record nobody has seen (the hook has no `dispatch` while
+pending). The provider is keyed by prototype, so pointing a pane at another
+prototype starts a fresh overlay instead of replaying the old one's picks onto
+it. Picks are judged per document: a frame's options are those its
 own version declares (`documentOptions`), and a stored pick that version does
 not declare is dropped from its URL.
 
@@ -333,6 +338,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/optimistic-mutation.OptimisticSettled`
     - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
@@ -361,7 +367,6 @@ navigation, so it starts from nothing remembered.
     - `FrameSourceMeta`
     - `FrameSourceProps`
     - `PageExtent`
-    - `PicksRead`
     - `PrototypeDetailContextValue`
     - `PrototypeFrame`
     - `Room`

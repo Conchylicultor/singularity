@@ -28,7 +28,7 @@ the durable emit that follows.
 
 ## Plugin reference
 
-- Description: Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the refHeadResource live-state resource, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
+- Description: Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the git-watcher.refHead live value, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
 - Load-bearing: yes
 - Server:
   - Contributes: `resource.declare` "git-watcher.refHead"
@@ -39,22 +39,27 @@ the durable emit that follows.
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `network/live.serveValue`
     - `primitives/commit-list.GitError`
     - `primitives/commit-list.tryRunGit`
   - DB schema: `plugins/infra/plugins/git/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
   - Exports (types):
     - `RefAdvancedPayload`
-    - `RefHead`
     - `RefReactionSpec`
   - Exports (values):
     - `_refAdvancedTriggers`
     - `defineRefReaction`
     - `lastKnownMainSha`
     - `refAdvanced`
-    - `refHeadResource`
-    - `RefHeadSchema`
+    - `refHeadServed`
   - Register: `defineTriggerEvent('git.refAdvanced')`
   - Resources: `git-watcher.refHead` (push)
+- Core:
+  - Uses: `network/live.liveValue`
+  - Exports (types): `RefHead`
+  - Exports (values):
+    - `refHead`
+    - `RefHeadSchema`
 - Cross-plugin:
   - Imported by:
     - `build`

@@ -10,10 +10,9 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  queueRanksResource,
+  queueRanks,
   reorderQueue,
   type QueueData,
-  type QueueRankRow,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import {
   applyReorder,
@@ -24,12 +23,7 @@ import {
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
 export type QueueSection =
-  | "pinned"
-  | "queued"
-  | "working"
-  | "unranked"
-  | "disconnected"
-  | "done";
+  "pinned" | "queued" | "working" | "unranked" | "disconnected" | "done";
 
 /**
  * One flat DataView row per conversation. Extends {@link Conversation} with the
@@ -53,8 +47,18 @@ export type QueueRow = Conversation & {
   memberCount: number;
 };
 
-/** The computed queue display. */
-type QueueDisplay = { rows: QueueRow[] };
+/**
+ * The computed queue display, and the reorder that was made against it. The
+ * dispatch is kept WITH the display it belongs to: while a live-set change
+ * re-baselines the ranks read (pending again, for one round trip) the sidebar
+ * keeps painting this display, and a drag made on it is an op against ranks
+ * the user did see — so it goes through the same overlay, which replays it on
+ * the new tuple's base once that lands.
+ */
+type QueueDisplay = {
+  rows: QueueRow[];
+  dispatchReorder: (vars: ReorderVars) => void;
+};
 
 /**
  * Combines the queue's live resources — active + gone conversations, tasks, and
@@ -82,25 +86,24 @@ export function useQueueRows(): {
     if (activeResult.pending) return null;
     return activeResult.data.map((c) => c.id);
   }, [activeResult]);
-  // Encode the tuple the ranks resource subscribes to. A pending live set falls
-  // back to the empty tuple — a valid EMPTY point subscription (no query), never
-  // surfaced because the gate stays pending until active settles. `point.encode`
-  // sorts+dedupes, so the params are canonical.
-  const rankParams = useMemo(
-    () => queueRanksResource.point.encode(liveIds ?? []),
-    [liveIds],
+  // The ranks of the live set, as an id set of the collection. A pending live
+  // set reads the empty set — a valid EMPTY point subscription (no query), never
+  // surfaced because the gate stays pending until active settles. The id set
+  // is encoded canonically (sorted, deduped), so its order does not matter.
+  const ranksResult = useOptimisticResource(
+    queueRanks,
+    { ids: liveIds ?? [] },
+    {
+      apply: applyReorder,
+      // Exact-ack confirmation: a point delta carries no snapshot watermark, so
+      // the reorder endpoint's returned `{ watermark }` is matched against the
+      // frames' ackTx via the tx-ack registry — no isConfirmedBy needed. A
+      // write that changes nothing in this id set is acked by a standalone
+      // frame, which the hook asks the server for on its own.
+      mutate: (vars: ReorderVars) =>
+        fetchEndpoint(reorderQueue, {}, { body: vars }),
+    },
   );
-
-  const ranksResult = useOptimisticResource<QueueRankRow[], ReorderVars>({
-    resource: queueRanksResource,
-    params: rankParams,
-    apply: applyReorder,
-    // Exact-ack confirmation comes from the ack channel (queue-ranks declares
-    // `ackChannel: true`): a scoped/point delta carries no snapshot watermark, so
-    // the reorder endpoint's returned `{ watermark }` is matched against the
-    // frame's ackTx via the tx-ack registry — no isConfirmedBy needed.
-    mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
-  });
 
   // All-or-nothing gate over the four live resources, memoized on their STABLE
   // result identities (each `useResource`/`useOptimisticResource` result is
@@ -225,7 +228,7 @@ export function useQueueRows(): {
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");
 
-    return { rows: out };
+    return { rows: out, dispatchReorder: ranksResult.dispatch };
   }, [activeResult, goneResult, ranksResult, tasksResult]);
 
   // Flash mitigation: the live-set changing re-baselines the ranks subscription
@@ -243,7 +246,14 @@ export function useQueueRows(): {
 
   return {
     rows: display?.rows ?? [],
-    dispatchReorder: ranksResult.dispatch,
+    dispatchReorder: display?.dispatchReorder ?? noReorder,
     pending: display === null,
   };
+}
+
+// No display yet: nothing is on screen to drag, so there is nothing to reorder.
+function noReorder(): void {
+  throw new Error(
+    "useQueueRows: a reorder was dispatched before the queue rendered",
+  );
 }

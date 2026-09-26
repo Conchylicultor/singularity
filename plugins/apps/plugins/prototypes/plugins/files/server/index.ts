@@ -21,7 +21,7 @@ import {
   handleRestoreVersion,
   prototypeHistoryLiveResource,
 } from "./internal/history";
-import { handleSetPicks, prototypePicksLiveResource } from "./internal/picks";
+import { handleSetPicks, prototypePicksServed } from "./internal/picks";
 import {
   handleSetStatus,
   prototypeStatusesLiveResource,
@@ -69,7 +69,7 @@ export default {
     Resource.Declare(prototypesResource),
     Resource.Declare(prototypesVersionResource),
     Resource.Declare(prototypeHistoryLiveResource),
-    Resource.Declare(prototypePicksLiveResource),
+    ...prototypePicksServed.declare,
     Resource.Declare(prototypeStatusesLiveResource),
   ],
   onReady: async () => {

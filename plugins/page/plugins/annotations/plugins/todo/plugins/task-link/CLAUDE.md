@@ -50,7 +50,7 @@ which cannot pull in retention's `db`/`jobs` closure.
 
 ## The status is joined client-side, never stored
 
-`todoTaskResource` is keyed by `{ blockId }` and carries the link and nothing
+`todoTasks` (a row per dispatched card) carries the link and nothing
 else — no title, no status. Those belong to the TASK: they change without the
 link changing, and the browser already holds them on the boot-critical `tasks`
 resource that the task list itself renders. Copying them here would make this row
@@ -59,32 +59,23 @@ status flip would have to remember to write two places. `useTodoTaskState` does
 the join; the card's glyph then follows its task through every transition with
 nothing stored on the card.
 
-`identityTable: "page_blocks_ext_todo_task"` says *this table's changes are
-mine* — a dispatch on one card never recomputes an unrelated RESOURCE.
-`rowIdentity: ({ blockId }) => blockId` says which of them are THIS tuple's: the
-params name exactly one row, and `defineExtension` makes `parent_id` the table's
-single-column PRIMARY KEY, so the blockId IS the id the change-feed emits. A
-dispatch is scheduled for the card it wrote and no other. Before that, every
-mounted card was woken on every write: each ran its own primary-key seek and
-diffed to empty. It is easy to look at one of those seeks — a one-row lookup that
-a scoped refill could not make any narrower — and conclude there was nothing to
-save. That reasoning answers the wrong question. The seek is cheap; there was one
-per open card per write, and how many that is belongs to the page, not to this
-resource. `rowIdentity` narrows WHO is woken and nothing else — the owning card's
-frames are unchanged, which is why it is not `membership` (that reroutes the
-drain). See `resource-runtime/CLAUDE.md` §"Own-row routing".
+`todoTasks` is a lookup-only `liveCollection("todo-block-task", { row, id:
+"blockId" })` — no default window, so it mints `todo-block-task:rows` alone —
+served from the extension entity (`serveCollection(todoTasks, { from: todoTask
+})`) and read with `useLiveRow(todoTasks, blockId)`: `found: false` is "not
+dispatched". Each mounted card subscribes to its own id set, and the point
+membership routes a dispatch to the card it wrote and no other. That routing is
+the point: the seek per card is cheap, but there used to be one per open card
+per write, and how many that is belongs to the page, not to this read. It
+replaced the hand-written keyed `todoTaskResource` + `rowIdentity`
+(`research/2026-09-26-global-live-values-migration-contract.md` §10).
 
-The row key must be `blockId`, not `taskId` — see the descriptor's own comment in
-`shared/schemas.ts`. The change-feed hands the runtime `parent_id` values, and it
-looks them up in the per-tuple snapshot to work out what entered and what left,
-so a row keyed on anything else makes the two id spaces disjoint and a cascade
-delete ships no removal. `rowIdentity` now depends on that same agreement even
-more directly: what it returns is intersected against the ids the feed emitted,
-so it must be spelled in the feed's id space (the table's PK) or every delivery
-would be dropped.
-
-The loader still ignores `ctx.affectedIds`, and there it really is free: the read
-is already one row by `params.blockId`.
+The row id must be `blockId`, not `taskId` — see the declaration's comment in
+`shared/schemas.ts`. `defineExtension` makes `parent_id` (the `blockId` wire
+column) the table's single-column PRIMARY KEY, the change-feed hands the runtime
+those PK values, and the point membership intersects them with each card's id
+set — so an id in any other space would never intersect, and a cascade delete
+would ship no removal.
 
 ## What the markdown provider emits
 
@@ -175,7 +166,7 @@ card, not a collection.
 - Description: Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
 - Server:
   - Contributes:
-    - `resource.declare` "todo-block-task"
+    - `resource.declare` "todo-block-task:rows"
     - `page.block-annotation`
   - Uses:
     - `database.db`
@@ -183,6 +174,7 @@ card, not a collection.
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `infra/retention.markCascadeBounded`
+    - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.Editor`
     - `page/markdown-apply.loadBlockScope`
@@ -200,22 +192,22 @@ card, not a collection.
     - `_pageBlocksTodoTaskExt`
     - `ensureTodoTask`
     - `todoTask`
-    - `todoTaskServerResource`
-  - Resources: `todo-block-task` (keyed)
+    - `todoTasksServed`
+  - Resources: `todo-block-task:rows` (keyed, point)
   - Routes: `POST /api/todo-blocks/:blockId/task`
 - Web:
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`
     - `conversations/conversation-ui/row.ConversationRow`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.LiveRowResult`
+    - `network/live.useLiveRow`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchAgentForm`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `tasks/task-status.StatusBadge`
     - `tasks/tasks-core.useTaskConversations`
@@ -236,6 +228,6 @@ card, not a collection.
   - Exports (values):
     - `createTodoBlockTask`
     - `TodoTaskLinkSchema`
-    - `todoTaskResource`
+    - `todoTasks`
 
 <!-- AUTOGENERATED:END -->

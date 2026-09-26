@@ -1,5 +1,5 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { deploymentResource } from "@plugins/build/plugins/deployment/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { deployment } from "@plugins/build/plugins/deployment/core";
 
 // Robust stale-tab detection: compare the graph hash baked into the executing
 // bundle against the graph the server is currently serving — the `web` carrier's
@@ -18,7 +18,7 @@ export function useStaleFrontend(): {
   stale: boolean;
   serverGraph: string | null;
 } {
-  const res = useResource(deploymentResource);
+  const res = useLive(deployment);
   // Not a collapse: staleness is unknowable mid-load, so stale=false while
   // pending is genuinely correct — we cannot claim the tab is stale or fresh
   // until the server's graph hash has been received.

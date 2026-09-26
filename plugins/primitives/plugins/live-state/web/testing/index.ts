@@ -3,3 +3,5 @@
 // the registries they write; the notifications client is their shipping caller.
 export { noteResourceWatermark } from "../watermark-registry";
 export { noteResourceTxAcks } from "../tx-ack-registry";
+// The client class itself, for a test that spies on one of its methods.
+export { NotificationsClient } from "../notifications-client";

@@ -1,30 +1,24 @@
 import { useMemo } from "react";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
-  mapResource,
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   tasksResource,
   type TaskStatus,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { todoTaskResource, type TodoTaskLink } from "../shared/schemas";
+import { todoTasks, type TodoTaskLink } from "../shared/schemas";
 
 /**
- * The task a TODO card has been dispatched onto. Settled `null` means it has not
- * been dispatched; "not loaded yet" stays the pending arm, so a dispatched card
- * never offers "Launch" as if it were fresh. Callers that render the two the same
- * (the run chips: nothing either way) decide that themselves.
- *
- * At most one link exists per card — the extension table's primary key is the
- * block id — so the array the resource carries is read as its first element
- * rather than searched.
+ * The task a TODO card has been dispatched onto: its row of the lookup-only
+ * `todoTasks` collection. `found: false` means it has not been dispatched; "not
+ * loaded yet" stays the pending arm, so a dispatched card never offers "Launch"
+ * as if it were fresh. Callers that render the two the same (the run chips:
+ * nothing either way) decide that themselves.
  */
-export function useTodoTask(
-  blockId: string,
-): ResourceResult<TodoTaskLink | null> {
-  const result = useResource(todoTaskResource, { blockId });
-  return mapResource(result, (links) => links[0] ?? null);
+export function useTodoTask(blockId: string): LiveRowResult<TodoTaskLink> {
+  return useLiveRow(todoTasks, blockId);
 }
 
 /** A dispatched card's task, as the card's two surfaces need to render it. */
@@ -54,7 +48,7 @@ export function useTodoTaskState(blockId: string): TodoTaskState | null {
   const link = useTodoTask(blockId);
   const tasks = useResource(tasksResource);
   // Hydrating reads as "no task" here by design — see above.
-  const taskId = link.pending ? undefined : link.data?.taskId;
+  const taskId = !link.pending && link.found ? link.row.taskId : undefined;
 
   return useMemo(() => {
     if (taskId === undefined || tasks.pending) return null;

@@ -80,6 +80,13 @@ export interface MintedResource {
    * preloads.
    */
   preloadable: boolean;
+  /**
+   * Minted only when the call's spec sets this field — absent means always.
+   * A `liveCollection` declared without `default` is lookup-only: it mints
+   * `k:rows` alone, so its window and groups carry `requires: "default"`. A
+   * scanner reads the field's PRESENCE from source text, like `preload:`.
+   */
+  requires?: string;
 }
 
 /**
@@ -155,14 +162,13 @@ type DescriptorFactoryNames<M> = {
 }[keyof M];
 
 /**
- * A collection declaration: one call minting a window descriptor and its
- * `:rows` point and `:groups` siblings (`liveCollection`). Matched structurally for the same
- * reason as {@link MintedDescriptor}.
+ * A collection declaration: one call minting a `:rows` point descriptor and —
+ * unless it is lookup-only — a window and a `:groups` sibling
+ * (`liveCollection`). Matched on `rows`, the one descriptor every form mints,
+ * structurally for the same reason as {@link MintedDescriptor}.
  */
 interface MintedCollection {
-  window: MintedDescriptor;
   rows: MintedDescriptor;
-  groups: MintedDescriptor;
 }
 
 /** Every export of `M` that is a function returning a collection declaration. */
@@ -207,11 +213,6 @@ export const resourceDescriptorFactories = {
     preload: PRELOAD,
     mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
-  centralResourceDescriptor: {
-    barrel: LIVE_STATE_CORE,
-    preload: PRELOAD,
-    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
-  },
   queryResourceDescriptor: {
     barrel: QUERY_RESOURCE_CORE,
     preload: PRELOAD,
@@ -240,13 +241,20 @@ export const resourceDescriptorFactories = {
     barrel: LIVE_CORE,
     preload: PRELOAD,
     mints: [
-      { suffix: "", keyed: true, membership: "window", preloadable: true },
+      {
+        suffix: "",
+        keyed: true,
+        membership: "window",
+        preloadable: true,
+        requires: "default",
+      },
       { suffix: ":rows", keyed: true, membership: "point", preloadable: false },
       {
         suffix: ":groups",
         keyed: false,
         membership: null,
         preloadable: false,
+        requires: "default",
       },
     ],
   },
@@ -262,6 +270,14 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
  * around the first, `serveCollection` serves every resource a
  * `liveCollection` mints (its first argument resolves to every minted key),
  * and `serveValue` serves a `liveValue`.
+ *
+ * `serveValue` is ALSO exported by `network/live/central` — the central
+ * runtime's twin (a value declared `origin: "central"`, external arm only),
+ * built on the same option compilation. One name, one entry: a scanner matches
+ * the call by name, and which runtime serves it is the folder the call sits in
+ * (`server/` vs `central/`). The entry's `barrel` names the worktree barrel, and
+ * the `check/` completeness derivation covers it (a `check/` may not import a
+ * `central` barrel, so a new central-only marker must be added here by hand).
  *
  * Completeness is asserted in this plugin's `check/` — see the header note.
  */
