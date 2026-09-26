@@ -17702,6 +17702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/space-ramp`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
+              - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
@@ -25832,9 +25833,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/video`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
-              - `primitives/data-view/icons`
-              - `primitives/data-view/list`
-              - `primitives/data-view/table`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
@@ -27911,6 +27909,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
@@ -28353,7 +28352,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/avatar.AvatarPresentationProvider`
               - `primitives/css/center.Center`
               - `primitives/css/grid.Grid`
-              - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -28376,7 +28374,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/rank-reorder.RankReorderProvider`
-              - `primitives/rank-reorder.useRankReorderItem`
+              - `primitives/rank-reorder.useRankSortableItem`
               - `primitives/virtual-rows.VirtualRows`
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
@@ -28386,7 +28384,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
               - `primitives/css/fill.Fill`
-              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
@@ -28414,7 +28411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/rank-reorder.RankReorderProvider`
-              - `primitives/rank-reorder.useRankReorderItem`
+              - `primitives/rank-reorder.useRankSortableItem`
               - `primitives/virtual-rows.VirtualRows`
             - Exports (types): `ListViewOptions`
           - Core:
@@ -28457,7 +28454,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/badge.Badge`
               - `primitives/css/inline.Inline`
-              - `primitives/css/pin.Pin`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/text.Text`
               - `primitives/data-table.ColumnDef`
@@ -28485,7 +28481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/rank-reorder.RankReorderProvider`
-              - `primitives/rank-reorder.useRankReorderItem`
+              - `primitives/rank-reorder.useRankSortableItem`
             - Exports (types): `TableViewOptions`
           - Core:
             - Exports (types): `TableViewOptions`
@@ -31119,7 +31115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RankSchema`
           - `rankText`
           - `withRank`
-    - **`rank-reorder`** — Flat rank-based drag-reorder primitive: a RankReorderProvider (lifted DnD shell + computeFlatReorder drop resolution, group-by aware) and useRankReorderItem (per-row draggable + before/after droppables). Shared by the tree's sibling zones and the data-view manual-order; depends only on rank + dnd-kit.
+    - **`rank-reorder`** — Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
       - Web:
         - Uses: `primitives/css/text.Text`
         - Exports (types):
@@ -31127,10 +31123,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RankReorderItem`
           - `RankReorderItemControls`
           - `RankReorderProviderProps`
+          - `RankSortableItemControls`
         - Exports (values):
           - `RankReorderDndContext`
           - `RankReorderProvider`
           - `useRankReorderItem`
+          - `useRankSortableItem`
       - Cross-plugin:
         - Imported by:
           - `primitives/data-view/icons`

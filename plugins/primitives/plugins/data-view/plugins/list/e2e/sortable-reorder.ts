@@ -179,8 +179,8 @@ await withBrowser(async (h) => {
   // handful of frames — wait for the sampler itself to finish.
   await page.waitForFunction(
     (frames) =>
-      (window as unknown as { __sortableSamples: string[][] })
-        .__sortableSamples.length >= frames,
+      (window as unknown as { __sortableSamples: string[][] }).__sortableSamples
+        .length >= frames,
     FRAMES,
     { timeout: 10_000 },
   );
