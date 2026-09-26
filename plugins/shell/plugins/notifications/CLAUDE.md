@@ -12,7 +12,8 @@
   table, not over the loaded window — so an unread error older than the newest
   200 still turns the badge red. One `count(*) FILTER (…)` query
   (`countUnreadNotifications` in `server/internal/resources.ts`), recomputed and
-  pushed whole on every write to the table; the partial index
+  pushed whole after writes to the table (`throttleMs: 250`, so a burst is
+  one count per window); the partial index
   `notifications_unread_badge_idx` holds exactly the rows it counts. The
   button's label carries the exact count (`"Notifications, 253 unread"`) since
   the visible badge caps at `9+`; closing the popover after it opened with
