@@ -63,6 +63,12 @@ export interface DescriptorInfo {
   key: string;
   keyed: boolean;
   membership: ResourceMembership | null;
+  /**
+   * The declaration opts into `load: "on-demand"` (a `liveValue`): served as the
+   * runtime's `invalidate`. Read at the DECLARATION, the one place the delivery
+   * mode is written — `serveValue` takes no `load`.
+   */
+  onDemand?: true;
 }
 
 /** How one local identifier got into a file. */
@@ -145,6 +151,10 @@ export function buildDescriptorIndex(
           );
         }
         const argsText = src.slice(span.open + 1, span.close);
+        const onDemand = declaresOnDemand(argsText, {
+          file: path,
+          line: lineAt(src, span.identifier),
+        });
         index.set(
           name,
           entry.mints
@@ -159,12 +169,37 @@ export function buildDescriptorIndex(
               key: id.value + m.suffix,
               keyed: m.keyed,
               membership: m.membership,
+              ...(onDemand ? { onDemand: true as const } : {}),
             })),
         );
       }
     }
   }
   return index;
+}
+
+/**
+ * Whether a declaration's spec object (the first `{ … }` of its args — the key
+ * is a string literal, masked, so its text can never open one) sets
+ * `load: "on-demand"` at its own depth. THROWS on a non-literal `load:`: it
+ * decides what the docs say the resource is.
+ */
+function declaresOnDemand(
+  argsText: string,
+  where: { file: string; line: number },
+): boolean {
+  const masked = maskSource(argsText);
+  const body = objectBodyAt(argsText, masked, masked.indexOf("{"));
+  if (body === null) return false;
+  const f = parseStringField(body, "load", { depth0: true });
+  if (f.kind === "dynamic") {
+    throw new Error(
+      `${where.file}:${where.line}: a resource declaration's \`load:\` is not a ` +
+        `static string literal — got \`${f.expr}\`. The docs facet reads it from ` +
+        "source text; write the literal at the declaration.",
+    );
+  }
+  return f.kind === "value" && f.value === "on-demand";
 }
 
 /**
@@ -313,9 +348,7 @@ export function resolveRegisterCall(
     resolveImported,
   );
   if (marker === "serveValue") {
-    return (infos ?? []).map((info) =>
-      servedValueDef(info.key, argsText, where),
-    );
+    return (infos ?? []).map((info) => servedValueDef(info, argsText, where));
   }
   // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
   // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
@@ -335,21 +368,25 @@ export function resolveRegisterCall(
 }
 
 /**
- * A `serveValue(value, { source, loader, load?, unbounded? })` call: a value is
- * pushed (`push`) unless it opts into `load: "on-demand"` (the runtime's
- * `invalidate`), is never keyed and has no membership. `source` and the
+ * A `serveValue(value, { source, loader, unbounded? })` call: a value is pushed
+ * (`push`) unless its DECLARATION opts into `load: "on-demand"` (the runtime's
+ * `invalidate` — see {@link DescriptorInfo.onDemand}), is never keyed and has
+ * no membership. `source` and the
  * `unbounded.reason` are recorded as written. Every field is read at the
  * options object's own depth, so an inline loader's object literal (which may
  * well have a `source` or a `reason` of its own) is never mistaken for one.
- * THROWS on a non-literal `load:` / `source:` / `reason:` — each decides what
- * the docs say the resource is.
+ * THROWS on a non-literal `source:` / `reason:` — each decides what the docs
+ * say the resource is.
  */
 function servedValueDef(
-  key: string,
+  info: DescriptorInfo,
   argsText: string,
   where: { file: string; line: number },
 ): ResourceDef {
-  const def: ResourceDef = { key, mode: "push" };
+  const def: ResourceDef = {
+    key: info.key,
+    mode: info.onDemand ? "invalidate" : "push",
+  };
   const masked = maskSource(argsText);
   // The first argument is an identifier, so the first `{` opens the options.
   const optsBody = objectBodyAt(argsText, masked, masked.indexOf("{"));
@@ -366,7 +403,6 @@ function servedValueDef(
     }
     return f.value;
   };
-  if (literal(optsBody, "load") === "on-demand") def.mode = "invalidate";
   const source = literal(optsBody, "source");
   if (source === "db" || source === "external") def.source = source;
   const bodyMasked = maskSource(optsBody);

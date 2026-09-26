@@ -168,13 +168,13 @@ export const notificationsUnread = liveValue("notifications.unread", {
 export const taskDetail = liveValue("task-detail", {
   schema: TaskDetailSchema,
   params: ["id"],                        // → P = { id: string }; preload is `never` here
+  // load: "on-demand",                  — opt out of push (slow loader; tabs refetch over HTTP)
 });
 
 // server/ — serve
 export const unreadServed = serveValue(notificationsUnread, {
   source: "db",                          // or "external" (then .notify(params?))
   loader: countUnread,                   // (params: P) => Promise<T> | T
-  // load: "on-demand",                  — opt out of push (slow loader; tabs refetch over HTTP)
 });
 // contributions: [...unreadServed.declare]
 
@@ -193,6 +193,14 @@ useLive(taskDetail, { id });             // params required iff declared
   load before a tab names one. A preloaded value sets `defaultParams: {}`, the
   tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
   discriminant `useLive` dispatches on.
+- **Load (delivery mode).** `load` defaults to `"push"` (the value is
+  recomputed and pushed); `"on-demand"` is the runtime's `invalidate` — the
+  server never ships the value over the socket, and each tab reads it over
+  HTTP (on mount, and again after every `invalidate`). It is declared on the
+  `liveValue`, never on `serveValue`, because BOTH halves act on it: the
+  server picks its mode from it and `useResource` enables the HTTP read from
+  it. Declared once, they cannot disagree (when `load` was a serve option the
+  client waited forever for a sub-ack value the server never sent).
 - **Preload.** `"boot"`: hydrated by the boot snapshot before first paint
   (settled on the first render), the owning plugin pinned eager, and a
   DB-backed one L2-persisted. `"boot-and-keep"`: the same, plus the client
@@ -204,8 +212,6 @@ useLive(taskDetail, { id });             // params required iff declared
     scope policy — a keyed payload is a collection). No `notify`, at runtime
     too.
   - `"external"`: truth outside Postgres; the served value has `notify(params?)`.
-  - `load` defaults to `"push"` (the value is recomputed and pushed);
-    `"on-demand"` is the runtime's `invalidate` (each tab refetches over HTTP).
   - **The bound rule is a type:** a `"db"` value whose type is an array or a
     string-indexed record must pass `unbounded: { reason }` (recorded on the
     served value and shown in the docs), and nothing else may. An external
@@ -302,7 +308,7 @@ useLive(taskDetail, { id });             // params required iff declared
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, `load: "on-demand"` to refetch over HTTP instead) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.ResourceDescriptor`

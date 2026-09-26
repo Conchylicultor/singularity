@@ -71,6 +71,16 @@ export interface ResourceDescriptor<
    */
   preload?: ResourcePreload;
   /**
+   * `"on-demand"`: the server never ships this resource's value over the
+   * socket — a change sends an `invalidate` and each tab refetches over HTTP
+   * (the runtime's `invalidate` mode). The CLIENT must know it: with no
+   * placeholder, `useResource` otherwise waits for a sub-ack value that this
+   * mode never sends. Declared here, on the shared descriptor, so the server's
+   * delivery mode and the client's read cannot disagree (`liveValue`'s `load`;
+   * the server derives its mode from it). Absent ⇒ pushed.
+   */
+  load?: "on-demand";
+  /**
    * Config only — deleted by Resources page item 9 (config hydration folds into
    * the boot snapshot). Keeps the cached value resident (`gcTime: Infinity`)
    * like `preload: "boot-and-keep"`, for config's two resources, which hydrate

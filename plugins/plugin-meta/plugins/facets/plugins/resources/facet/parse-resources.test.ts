@@ -123,6 +123,34 @@ describe("buildDescriptorIndex", () => {
     ]);
   });
 
+  it("reads a liveValue's literal load: \"on-demand\" at its spec's own depth, and refuses a dynamic one", () => {
+    const src = `
+      export const editedFiles = liveValue("edited-files", {
+        schema: S.refine(() => ({ load: "on-demand" })),
+        params: ["id"],
+        load: "on-demand",
+      });
+      export const pushed = liveValue("pushed", { schema: S, load: "push" });
+      export const nested = liveValue("nested", { schema: z.object({ load: "on-demand" }) });
+    `;
+    const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
+    expect(index.get("editedFiles")).toEqual([
+      { key: "edited-files", keyed: false, membership: null, onDemand: true },
+    ]);
+    expect(index.get("pushed")).toEqual([
+      { key: "pushed", keyed: false, membership: null },
+    ]);
+    expect(index.get("nested")).toEqual([
+      { key: "nested", keyed: false, membership: null },
+    ]);
+    expect(() =>
+      buildDescriptorIndex(
+        [file(`export const d = liveValue("d", { schema: S, load: MODE });`)],
+        { ownerPlugin: false },
+      ),
+    ).toThrow(/load:.*not a static string literal/);
+  });
+
   it("resolves a local (non-exported) const and ignores factory names in strings/comments", () => {
     const src = `
       const localDesc = resourceDescriptor("local", S, null);
@@ -338,16 +366,18 @@ describe("resolveRegisterCall", () => {
     ).toEqual([{ key: "notifications.unread", mode: "push", source: "db" }]);
   });
 
-  it('reads a serveValue\'s literal load: "on-demand" as invalidate, and its unbounded reason', () => {
+  it("serves an on-demand declaration as invalidate, and reads its unbounded reason", () => {
     const valueIndex = new Map<string, DescriptorInfo[]>([
-      ["hosts", [{ key: "hosts", keyed: false, membership: null }]],
+      [
+        "hosts",
+        [{ key: "hosts", keyed: false, membership: null, onDemand: true }],
+      ],
     ]);
     expect(
       resolveRegisterCall(
         "serveValue",
         `hosts, {
           source: "db",
-          load: "on-demand",
           loader: readHosts,
           unbounded: { reason: "one row per configured host — a handful" },
         }`,
@@ -370,7 +400,14 @@ describe("resolveRegisterCall", () => {
     const valueIndex = new Map<string, DescriptorInfo[]>([
       [
         "editedFiles",
-        [{ key: "edited-files", keyed: false, membership: null }],
+        [
+          {
+            key: "edited-files",
+            keyed: false,
+            membership: null,
+            onDemand: true,
+          },
+        ],
       ],
     ]);
     expect(
@@ -380,7 +417,6 @@ describe("resolveRegisterCall", () => {
         // whileSubscribed's body and revalidate never count.
         `editedFiles, {
           source: "external",
-          load: "on-demand",
           throttleMs: 300,
           recomputeOn: [
             refHeadServed,
@@ -422,23 +458,6 @@ describe("resolveRegisterCall", () => {
     expect(parseRegisterCalls([central], new Map(), resolveAuthCore)).toEqual([
       { key: "auth-state", mode: "push", source: "external" },
     ]);
-  });
-
-  it("throws on a serveValue whose load is not a literal", () => {
-    expect(() =>
-      resolveRegisterCall(
-        "serveValue",
-        `hosts, { source: "external", load: mode, loader }`,
-        bound("hosts"),
-        new Map([
-          ["hosts", [{ key: "hosts", keyed: false, membership: null }]],
-        ]),
-        where,
-        NOTHING_IMPORTED,
-      ),
-    ).toThrow(
-      /serveValue\(…\) `load:` is not a static string literal — got `mode`/,
-    );
   });
 
   it("honours an explicit serverOpts mode over the non-keyed default", () => {

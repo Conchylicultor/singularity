@@ -16,8 +16,9 @@ import type {
 // barrels cannot drift: each only injects its runtime's two register
 // primitives and shapes the served object its plugin definition takes.
 //
-// A value declares WHERE its truth lives (`source`) and how to read it
-// (`loader`), never a delivery mode: it is pushed whole whenever it changes.
+// A served value declares WHERE its truth lives (`source`) and how to read it
+// (`loader`), never a delivery mode: that is the `liveValue` declaration's
+// `load`, which the client reads too.
 // Everything else is one named option, each folded into the runtime's own
 // two-arg `defineResource` / `defineExternalResource`:
 //
@@ -140,13 +141,6 @@ export type ServeValueOptions<
   source: Src;
   /** Read the value for one params tuple. Parsed against the declaration's schema. */
   loader: (params: P) => Promise<T> | T;
-  /**
-   * `"push"` (the default): the server recomputes a changed value and pushes it.
-   * `"on-demand"`: the server skips the loader in the shared flush and each
-   * subscribed tab refetches over HTTP — for a slow loader kept out of the
-   * flush cycle.
-   */
-  load?: "push" | "on-demand";
   /**
    * Flush this value at most once per window (ms): the first change arms a
    * trailing timer that later changes do not re-arm, so a burst (a rebase
@@ -318,8 +312,10 @@ export function compileValue<
   const loader = opts.loader;
   return {
     options: {
+      // Read off the DECLARATION (`liveValue`'s `load`), never a serve option:
+      // the client reads the same field, so the two halves cannot disagree.
       // The runtime's own `"invalidate"` is the named opt-in's spelling.
-      mode: opts.load === "on-demand" ? "invalidate" : "push",
+      mode: value.load === "on-demand" ? "invalidate" : "push",
       // Only the params: the runtime's scoped-refill `ctx` is a keyed concept.
       loader: (params: P) => loader(params),
       ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),

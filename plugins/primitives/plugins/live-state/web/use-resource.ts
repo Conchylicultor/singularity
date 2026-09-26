@@ -314,7 +314,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // value lands (then `invalidate` refetches behave as for any other). That is
     // exactly a placeholder query's behavior under `staleTime: Infinity`. A
     // manual `refetch()` ignores `enabled`.
-    ...(resource.initialData === undefined
+    //
+    // An on-demand resource is the exception: its value NEVER rides the socket
+    // (no sub-ack value, only `invalidate` frames), so HTTP is its read path,
+    // not a fallback — it fetches on mount like any enabled query.
+    ...(resource.initialData === undefined && resource.load !== "on-demand"
       ? {
           enabled: (query: { state: { data: unknown } }) =>
             query.state.data !== undefined,

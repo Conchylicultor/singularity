@@ -65,16 +65,41 @@ function harness(readSet: string[] = []) {
 }
 
 describe("compileValue", () => {
-  test("the default load is push; `on-demand` maps to the runtime's invalidate", () => {
-    const v = liveValue(key("modes"), { schema: Count });
+  test("the declaration's load decides the mode: push by default, on-demand → invalidate", () => {
     const loader = () => ({ n: 1 });
-    expect(compileValue(v, { source: "db", loader }).options.mode).toBe("push");
-    expect(
-      compileValue(v, { source: "db", loader, load: "push" }).options.mode,
-    ).toBe("push");
-    expect(
-      compileValue(v, { source: "db", loader, load: "on-demand" }).options.mode,
-    ).toBe("invalidate");
+    const pushed = liveValue(key("modes-default"), { schema: Count });
+    expect(compileValue(pushed, { source: "db", loader }).options.mode).toBe(
+      "push",
+    );
+    const explicit = liveValue(key("modes-push"), {
+      schema: Count,
+      load: "push",
+    });
+    expect(explicit.load).toBeUndefined();
+    expect(compileValue(explicit, { source: "db", loader }).options.mode).toBe(
+      "push",
+    );
+    const onDemand = liveValue(key("modes-on-demand"), {
+      schema: Count,
+      load: "on-demand",
+    });
+    // The client reads this same field (useResource enables the HTTP read).
+    expect(onDemand.load).toBe("on-demand");
+    expect(compileValue(onDemand, { source: "db", loader }).options.mode).toBe(
+      "invalidate",
+    );
+  });
+
+  test("serveValue takes no load: the delivery mode is the declaration's", () => {
+    const v = liveValue(key("no-serve-load"), { schema: Count });
+    const typeOnly = () =>
+      compileValue(v, {
+        source: "db",
+        loader: () => ({ n: 1 }),
+        // @ts-expect-error — `load` lives on liveValue, not serveValue
+        load: "on-demand",
+      });
+    expect(typeof typeOnly).toBe("function");
   });
 
   test("a db value is recomputed and pushed when a table it read changes", async () => {
@@ -100,16 +125,15 @@ describe("compileValue", () => {
   });
 
   test("an on-demand value ships an invalidate, never the value, on a change", async () => {
-    const v = liveValue(key("on-demand"), { schema: Count });
+    const v = liveValue(key("on-demand"), {
+      schema: Count,
+      load: "on-demand",
+    });
     let n = 1;
     const h = harness(["t"]);
     h.runtime.defineResource(
       v,
-      compileValue(v, {
-        source: "db",
-        loader: () => ({ n }),
-        load: "on-demand",
-      }).options,
+      compileValue(v, { source: "db", loader: () => ({ n }) }).options,
     );
     await h.subscribe(v.key);
     n = 2;
@@ -239,11 +263,13 @@ describe("serveValue", () => {
   });
 
   test("the external arm has notify; on-demand is served as invalidate", () => {
-    const v = liveValue(key("served-ext"), { schema: Count });
+    const v = liveValue(key("served-ext"), {
+      schema: Count,
+      load: "on-demand",
+    });
     const served = serveValue(v, {
       source: "external",
       loader: () => ({ n: 1 }),
-      load: "on-demand",
     });
     expect(served.mode).toBe("invalidate");
     expect(served.source).toBe("external");

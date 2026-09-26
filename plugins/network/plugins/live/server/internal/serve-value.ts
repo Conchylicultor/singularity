@@ -13,8 +13,9 @@ import {
 
 // `serveValue` — the server half of a worktree `liveValue`. It declares WHERE the
 // value's truth lives (`source`) and how to read it (`loader`), never a delivery
-// mode: a value is pushed whole whenever it changes. Loading on demand is the
-// one named opt-in, for a loader too slow for the shared flush cycle.
+// mode: a value is pushed whole whenever it changes, unless its `liveValue`
+// declaration opts into `load: "on-demand"` (declared there because the client
+// reads it too).
 //
 // - `source: "db"` — the truth is Postgres. The read-set is captured at the DB
 //   pool chokepoint, and a change to any table the loader read recomputes every

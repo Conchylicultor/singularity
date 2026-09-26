@@ -71,7 +71,6 @@ export function editedFilesSignatureFor(
 
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
-  load: "on-demand",
   loader: ({ id }) => loadEditedFilesFor(id),
   // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
   // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`

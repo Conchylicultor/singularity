@@ -6,7 +6,12 @@ import { EditedFilesPayloadSchema } from "./protocol";
 // settled `{ resolved: false, reason }`, never `[]` — an empty list would be an
 // absorbable failure indistinguishable from a genuinely clean worktree. Not
 // loaded yet is `pending` (a value has no placeholder).
+//
+// `load: "on-demand"`: the loader (merge-base + two `git diff` passes + untracked
+// reads) is too slow for the shared flush, so a change sends an `invalidate` and
+// each tab refetches over HTTP.
 export const editedFiles = liveValue("edited-files", {
   schema: EditedFilesPayloadSchema,
   params: ["id"],
+  load: "on-demand",
 });

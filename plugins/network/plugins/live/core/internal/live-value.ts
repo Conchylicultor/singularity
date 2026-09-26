@@ -7,8 +7,11 @@ import {
 import type { LivePreload } from "./live-collection";
 
 // `liveValue` — the declaration half of a live VALUE: one payload per params
-// tuple, pushed whole whenever it changes (the server half is `serveValue`, the
-// read is `useLive(value, params?)`). A value has no rows, no window and no id
+// tuple, pushed whole whenever it changes — or, with `load: "on-demand"`,
+// refetched over HTTP by each tab (the server half is `serveValue`, the read is
+// `useLive(value, params?)`). The delivery mode is declared HERE, not on
+// `serveValue`: the client reads it too, so it lives on the one declaration
+// both halves share and they cannot disagree. A value has no rows, no window and no id
 // set; anything row-shaped and growing is a `liveCollection`.
 //
 // Not known yet is a STATE: a value declares no `initial` placeholder. Its read
@@ -46,7 +49,7 @@ export type LiveValue<
   O extends LiveValueOrigin = "worktree",
 > = Omit<
   ResourceDescriptor<T, P>,
-  "initialData" | "keyed" | "preload" | "origin"
+  "initialData" | "keyed" | "preload" | "origin" | "load"
 > &
   OriginField<O> & {
     live: "value";
@@ -54,11 +57,21 @@ export type LiveValue<
     params: readonly (keyof P & string)[];
     /** Absent ⇒ loaded on first mount (the declaration's `"none"`). */
     preload?: ResourcePreload;
+    /** Absent ⇒ pushed (the declaration's `"push"`). See {@link LiveValueLoad}. */
+    load?: "on-demand";
     /** A value has no placeholder: not known yet is `pending`, never a stand-in. */
     initialData?: never;
     /** A value is pushed whole — never a row-keyed delta. */
     keyed?: never;
   };
+
+/**
+ * How a value reaches the tab. `"push"` (the default): the server recomputes a
+ * changed value and pushes it. `"on-demand"`: the server skips the loader in
+ * the shared flush, sends an `invalidate`, and each subscribed tab refetches
+ * over HTTP — for a slow loader kept out of the flush cycle.
+ */
+export type LiveValueLoad = "push" | "on-demand";
 
 /** A param-less value: may be preloaded. */
 export interface LiveValueSpec<T> {
@@ -67,6 +80,8 @@ export interface LiveValueSpec<T> {
   params?: undefined;
   /** Default `"none"` (see {@link LivePreload}). */
   preload?: LivePreload;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
   /** A worktree value (the default) — see {@link LiveCentralValueSpec}. */
   origin?: undefined;
 }
@@ -80,6 +95,8 @@ export interface LiveCentralValueSpec<T> {
   schema: ZodParser<T>;
   params?: undefined;
   preload?: never;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
   origin: "central";
 }
 
@@ -93,6 +110,8 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
   /** The param names — a const tuple; derives `P` (each name → a string). */
   params: N;
   preload?: never;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: "central";
 }
@@ -108,6 +127,7 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
  * export const taskDetail = liveValue("task-detail", {
  *   schema: TaskDetailSchema,
  *   params: ["id"],                  // → P = { id: string }; no preload
+ *   load: "on-demand",               // "push" (default) | "on-demand"
  * });
  * ```
  *
@@ -162,6 +182,7 @@ export function liveValue<T>(
     params,
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
     ...(preload !== undefined ? { preload, defaultParams: {} } : {}),
+    ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;

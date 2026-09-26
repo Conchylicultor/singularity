@@ -31,7 +31,10 @@ the boot snapshot.
 **`initialData` is optional.** It was only ever a typed placeholder seeded at
 `dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`) seeds
 nothing and is still `pending` until the first value; its query stays disabled until a
-value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it).
+value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it). The
+exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
+mode): its value never rides the socket, so HTTP is its read path and it fetches on
+mount. `load` sits on the shared descriptor so server and client cannot disagree.
 `useOptimisticResource`'s legacy object form still takes a descriptor WITH one
 (its pending overlay base); its positional forms (a `liveValue`, a collection's
 `{ ids }`) have none and stay `pending` instead.
