@@ -73,7 +73,15 @@ export function ToolCallCard({
                 ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary"
             }
-            className={cn(rigidClass(), "font-mono")}
+            // The badge's shape and type are the tool-badge tokens (density
+            // `padToolBadge*`, shape `radiusToolBadge` / `borderToolBadge`,
+            // type-scale `*ToolBadge`), defaulting to the compact chip rung the
+            // `xs` card gives it; its hairline, when a theme draws one, is its
+            // own text colour at 28%.
+            className={cn(
+              rigidClass(),
+              "font-mono p-tool-badge text-tool-badge font-tool-badge rounded-tool-badge hairline-tool-badge border-current/28",
+            )}
           >
             {event.name || "tool_call"}
           </Badge>

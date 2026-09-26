@@ -21,12 +21,19 @@ export type TextVariant =
   | "label"
   | "control"
   | "caption"
+  | "count"
   | "eyebrow"
   | "code";
 
 /** Foreground tone applied on top of the variant. `default` inherits the surface. */
 export type TextTone =
-  "default" | "muted" | "faint" | "primary" | "destructive";
+  | "default"
+  | "strong"
+  | "subtle"
+  | "muted"
+  | "faint"
+  | "primary"
+  | "destructive";
 
 /** Which edge keeps its text when single-line. `end` ellipsizes the tail; `start` ellipsizes the lead. */
 export type TruncateSide = "end" | "start";
@@ -44,6 +51,10 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   // the same themable role Button's label wears, so a region sets both at once.
   control: "text-control",
   caption: "text-caption",
+  // A count beside a glyph — a toolbar button's "3", a diff's "+387". Its own
+  // role (type-scale `*Count` tokens, defaulting to the caption rung at regular
+  // weight), so a theme can set its counters apart from its captions.
+  count: "text-count",
   // Eyebrow/overline role: caption geometry + the small-caps treatment, single
   // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
   // section label (see the SectionLabel helper).
@@ -69,12 +80,18 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
   label: "text-label-compact",
   control: "text-control-compact",
   caption: "text-caption-compact",
+  // A count in a compact region steps down with the captions around it.
+  count: "text-caption-compact",
   eyebrow: "text-caption-compact uppercase tracking-wide whitespace-nowrap",
   code: "text-code-compact",
 };
 
 const TONE_CLASS: Record<TextTone, string> = {
   default: "",
+  // The palette's role steps around body text: `strong` above it (default =
+  // body text), `subtle` between it and muted (default = muted).
+  strong: "text-strong-foreground",
+  subtle: "text-subtle-foreground",
   muted: "text-muted-foreground",
   faint: "text-faint-foreground",
   primary: "text-primary",

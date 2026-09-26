@@ -47,9 +47,88 @@ export const densityGroup = defineTokenGroup("density", {
   controlGapSm: { default: "0.375rem", label: "Control gap SM" },
   controlGapMd: { default: "0.375rem", label: "Control gap MD" },
   controlGapLg: { default: "0.375rem", label: "Control gap LG" },
+  // The glyph inside a control, per size (Button's `[&_svg]`, IconButton
+  // inherits). Defaults are the old `size-3` at `xs` and `size-4` above it.
+  controlIconXs: { default: "0.75rem", label: "Control icon XS" },
+  controlIconSm: { default: "1rem", label: "Control icon SM" },
+  controlIconMd: { default: "1rem", label: "Control icon MD" },
+  controlIconLg: { default: "1rem", label: "Control icon LG" },
   chromeBarH: { default: "3rem", label: "Chrome bar height" },
   chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
   chromePadX: { default: "0.75rem", label: "Chrome padding X" },
+  // A pane header's own inline insets (`Bar tier="pane"`): before its leading
+  // control and after its last one. Default = the shared `chromePadX`.
+  chromePanePadStart: {
+    default: "var(--chrome-pad-x)",
+    label: "Pane header padding start",
+  },
+  chromePanePadEnd: {
+    default: "var(--chrome-pad-x)",
+    label: "Pane header padding end",
+  },
+  // The inline inset of a pane's secondary strip under its header
+  // (`Bar tier="subpane"`, the conversation toolbar). Default = the `sm` step.
+  subpanePadX: {
+    default: "var(--space-sm)",
+    label: "Sub-pane strip padding X",
+  },
+  // A conversation thread's cards (the user's message, a collapsible tool or
+  // meta row): default = the `md` × `sm` steps they always wore.
+  padThreadCardX: {
+    default: "var(--space-md)",
+    label: "Thread card padding X",
+  },
+  padThreadCardY: {
+    default: "var(--space-sm)",
+    label: "Thread card padding Y",
+  },
+  // The prompt box (text-editor `EditorShell`): the box's own padding, the
+  // editable text's (and its placeholder's) padding inside it, and the padding
+  // of the action row under the text. Defaults = none on the box, `xs` × `sm`
+  // on the text, `sm` sides and an `xs` foot on the row — as always.
+  padComposer: { default: "0", label: "Composer padding" },
+  padComposerText: {
+    default: "var(--space-xs) var(--space-sm)",
+    label: "Composer text padding",
+  },
+  padComposerActions: {
+    default: "0 var(--space-sm) var(--space-xs)",
+    label: "Composer actions padding",
+  },
+  // A pane header's chips (a conversation's model and status chips). Default =
+  // the regular chip pad.
+  padChipHeaderX: {
+    default: "var(--pad-chip-x)",
+    label: "Header chip padding X",
+  },
+  padChipHeaderY: {
+    default: "var(--pad-chip-y)",
+    label: "Header chip padding Y",
+  },
+  // A transcript card's tool-name badge. It sits in an `xs` card, so the
+  // defaults are the compact chip rung it always wore.
+  padToolBadgeX: {
+    default: "var(--pad-chip-compact-x)",
+    label: "Tool badge padding X",
+  },
+  padToolBadgeY: {
+    default: "var(--pad-chip-compact-y)",
+    label: "Tool badge padding Y",
+  },
+  // An inline `code` span in rendered markdown. Defaults = the `xs` × `2xs`
+  // steps.
+  padCodeX: { default: "var(--space-xs)", label: "Inline code padding X" },
+  padCodeY: { default: "var(--space-2xs)", label: "Inline code padding Y" },
+  // The icon-only end segment of a split control (the send half of a prompt
+  // template chip), whose width is its padding plus its glyph. Default = the
+  // `xs` control pad it always had.
+  padSplitArrowX: {
+    default: "var(--control-pad-xs)",
+    label: "Split arrow padding X",
+  },
+  // A conversation row's in-flight op glyph (build / push / check …). Default
+  // = the old `size-3.5`.
+  opStatusIcon: { default: "0.875rem", label: "Op status icon" },
   // 1-D spacing ramp — the closed set of gap/padding roles consumed by the
   // <Stack gap> / <Inset pad> primitives and the gap-*/p-* @utility classes.
   // Lives here (not a separate group) so layout rhythm scales with the active

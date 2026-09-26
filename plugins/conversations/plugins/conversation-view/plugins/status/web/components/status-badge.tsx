@@ -1,10 +1,8 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  Badge,
-  formatStatusLabel,
-} from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 
 // Each status is a bordered pill; the live one (working) takes the accent for
 // its text and outline, so the one conversation doing something reads at a glance.
@@ -31,12 +29,8 @@ export function StatusBadge() {
   const conversation = useConversationById(convId);
   if (!conversation) return null;
   return (
-    <Badge
-      shape="pill"
-      colorClass={STATUS_CLASSES[conversation.status]}
-      className="border"
-    >
+    <HeaderChip colorClass={STATUS_CLASSES[conversation.status]}>
       {prettify(conversation.status)}
-    </Badge>
+    </HeaderChip>
   );
 }

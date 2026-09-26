@@ -13,7 +13,12 @@ the accumulated context and merges it with the base component map.
 
 Base components include typography overrides, `remarkGfm`, and
 syntax-highlighted code blocks via `<HighlightedCode>` from the
-syntax-highlight primitive.
+syntax-highlight primitive. Inline (non-fenced) code is the one `InlineCode`
+element, whose pad, corners, hairline and type are theme tokens (density
+`padCode*`, shape `radiusCode` / `borderCode`, type-scale `*Code`, palette
+`codeBorder`) defaulting to its old `rounded-md`, `xs` × `2xs`, borderless
+caption look. It has no notion of a span's *kind* (path, keyword, removed
+token), so a theme can border every chip but cannot tint one kind.
 
 Design rationale lives in:
 

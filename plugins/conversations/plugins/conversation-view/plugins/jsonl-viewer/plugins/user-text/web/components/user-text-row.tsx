@@ -77,7 +77,11 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
+      {/* The user's turn is a card: the shape group's card corners, the
+          thread-card pad (density `padThreadCard*`) and the palette's
+          `messageCard` fill and border — each defaulting to the `rounded-md`,
+          `md` × `sm` pad, page fill and 60% hairline it always wore. */}
+      <div className="relative rounded-card border border-message-card-border bg-message-card p-thread-card">
         <Pin to="top-right" offset="sm">
           <EventRowActions floating />
         </Pin>

@@ -12,7 +12,8 @@ preset (Comfortable / Cozy / Compact) like every other padded chrome surface.
 - Polymorphic `as` (`div` | `button` | `a` | `li`, default `div`); `ref`
   forwards to the root DOM element (DnD consumers depend on it).
 - `interactive` adds the hover affordance; `selected` adds the emphasis border.
-- Default chrome is `rounded-md border border-border bg-card shadow-sm p-card`; pass
+- Default chrome is `rounded-card border border-border bg-card shadow-sm p-card`
+  (`rounded-card` = the shape group's `radiusCard`, default the `rounded-md` step); pass
   `className` to override (cn uses `tailwind-merge`, so `rounded-lg` /
   `bg-muted/30` / a different padding cleanly replace the defaults).
 

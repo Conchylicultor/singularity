@@ -4,7 +4,7 @@ import {
   MODEL_REGISTRY,
   normalizeModel,
 } from "@plugins/conversations/plugins/model-provider/core";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 
 export function ModelBadge() {
   const { convId } = conversationPane.useParams();
@@ -12,9 +12,11 @@ export function ModelBadge() {
   if (!conversation) return null;
   const model = normalizeModel(conversation.model);
   const meta = MODEL_REGISTRY[model];
+  // The neutral header chip: the palette's `chip` fill (default `muted`, the
+  // badge fill it always had) and `subtle` text (default muted).
   return (
-    <Badge shape="pill" className="border border-border">
+    <HeaderChip colorClass="bg-chip text-subtle-foreground border-border">
       {meta.label}
-    </Badge>
+    </HeaderChip>
   );
 }

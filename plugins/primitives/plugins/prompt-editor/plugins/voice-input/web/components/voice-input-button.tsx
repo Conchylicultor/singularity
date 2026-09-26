@@ -22,7 +22,10 @@ export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
       onMouseDown={(e) => e.preventDefault()}
       onClick={toggle}
       aria-pressed={isListening}
+      // At rest the glyph wears the palette's `toolbarForeground` (the
+      // inherited text colour by default), like the pane toolbar's glyphs.
       className={cn(
+        "text-toolbar-foreground",
         isListening && "text-destructive bg-destructive/10",
         error && "text-destructive",
       )}

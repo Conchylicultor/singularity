@@ -1,6 +1,19 @@
 import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 
 export const typeScaleGroup = defineTokenGroup("type-scale", {
+  // The base text every element INHERITS when no role sets its own size — set
+  // at each theme-scope root (`:root, [data-theme-scope]` in ui-kit's app.css),
+  // never on `html`, which would rescale every rem token. The defaults are
+  // exactly what a scope root inherited before these existed: `1em` is the
+  // parent's size (no change anywhere) and the unitless `1.5` is preflight's
+  // `html` line-height factor — a length here would freeze one pixel height
+  // for every nested size.
+  fontSizeBase: { default: "1em", label: "Font size base" },
+  lineHeightBase: { default: "1.5", label: "Line height base" },
+  // The reading measure (`max-w-reading`: a transcript, a document column).
+  // `75ch` follows the text it measures, so a theme that shrinks its base font
+  // also narrows its column; such a theme pins the measure here instead.
+  measureReading: { default: "75ch", label: "Reading measure" },
   "font-size-2xs": { default: "0.6875rem", label: "Font size 2xs" },
   "font-size-3xs": { default: "0.625rem", label: "Font size 3xs" },
   "line-height-2xs": { default: "1rem", label: "Line height 2xs" },
@@ -34,6 +47,17 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   fontSizeControl: { default: "0.875rem", label: "Font size control" },
   lineHeightControl: { default: "1.25rem", label: "Line height control" },
   fontWeightControl: { default: "500", label: "Font weight control" },
+  // The control role's compact (`xs`) rung — a Button at `xs` density. Defaults
+  // are the caption size and line height it always wore, so only a theme that
+  // sets them gives its dense controls their own type.
+  fontSizeControlCompact: {
+    default: "var(--font-size-caption)",
+    label: "Font size compact control",
+  },
+  lineHeightControlCompact: {
+    default: "var(--line-height-caption)",
+    label: "Line height compact control",
+  },
   // The compact chip rung: a `Badge` at `xs` density (a count chip in a dense
   // row). Defaults are what that chip always wore — the 2xs size and line
   // height at medium weight — so only a theme that sets them changes it.
@@ -48,6 +72,63 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   fontWeightChipCompact: {
     default: "var(--font-weight-medium)",
     label: "Font weight compact chip",
+  },
+  // The strong control: a primary action (a conversation's Stop / Restore /
+  // Send). Default = the control weight every button wears.
+  fontWeightControlStrong: {
+    default: "var(--font-weight-control)",
+    label: "Font weight strong control",
+  },
+  // A pane header's chips (a conversation's model and status chips). Defaults
+  // = the regular chip's caption size at medium weight.
+  fontSizeChipHeader: {
+    default: "var(--font-size-caption)",
+    label: "Font size header chip",
+  },
+  lineHeightChipHeader: {
+    default: "var(--line-height-caption)",
+    label: "Line height header chip",
+  },
+  fontWeightChipHeader: {
+    default: "var(--font-weight-medium)",
+    label: "Font weight header chip",
+  },
+  // A transcript card's tool-name badge. It sits in an `xs` card, so the
+  // defaults are the compact chip rung it always wore.
+  fontSizeToolBadge: {
+    default: "var(--font-size-chip-compact)",
+    label: "Font size tool badge",
+  },
+  lineHeightToolBadge: {
+    default: "var(--line-height-chip-compact)",
+    label: "Line height tool badge",
+  },
+  fontWeightToolBadge: {
+    default: "var(--font-weight-chip-compact)",
+    label: "Font weight tool badge",
+  },
+  // An inline `code` span in rendered markdown. Defaults = the caption rung.
+  fontSizeCode: {
+    default: "var(--font-size-caption)",
+    label: "Font size inline code",
+  },
+  lineHeightCode: {
+    default: "var(--line-height-caption)",
+    label: "Line height inline code",
+  },
+  // A count beside a toolbar glyph (the conversation toolbar's "3", "+387").
+  // Defaults = the caption rung at regular weight.
+  fontSizeCount: {
+    default: "var(--font-size-caption)",
+    label: "Font size count",
+  },
+  lineHeightCount: {
+    default: "var(--line-height-caption)",
+    label: "Line height count",
+  },
+  fontWeightCount: {
+    default: "var(--font-weight-normal)",
+    label: "Font weight count",
   },
 });
 

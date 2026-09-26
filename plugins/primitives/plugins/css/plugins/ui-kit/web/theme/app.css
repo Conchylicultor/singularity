@@ -19,7 +19,6 @@
     --font-sans: 'Inter Variable', sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: 'Cascadia Code Variable', monospace;
-    --max-width-reading: 75ch;
     --text-2xs: 0.6875rem;
     --text-2xs--line-height: 1rem;
     --text-3xs: 0.625rem;
@@ -43,6 +42,11 @@
 }
 
 @theme inline {
+    /* The reading measure (`max-w-reading`), from the type-scale group's
+       `--measure-reading`. Inline, so the utility reads the token where it is
+       used: its default `75ch` resolves against that element's own font, as
+       the literal did, and a scoped app's theme is not frozen at `:root`. */
+    --max-width-reading: var(--measure-reading);
     --font-heading: var(--font-sans);
     --color-ring: var(--ring);
     --color-input: var(--input);
@@ -70,6 +74,20 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+    /* Role colours (color-palette group), each defaulting to what its surface
+       always painted — see the group for which surface reads which. */
+    --color-strong-foreground: var(--strong-foreground);
+    --color-subtle-foreground: var(--subtle-foreground);
+    --color-chip: var(--chip);
+    --color-message-card: var(--message-card);
+    --color-message-card-border: var(--message-card-border);
+    --color-thread-card: var(--thread-card);
+    --color-thread-card-border: var(--thread-card-border);
+    --color-composer: var(--composer);
+    --color-outline-border: var(--outline-border);
+    --color-outline-fill: var(--outline-fill);
+    --color-code-border: var(--code-border);
+    --color-toolbar-foreground: var(--toolbar-foreground);
     /* The sticky-chrome mask color — the background a pinned bar paints to hide
        content scrolling under it. `bg-chrome-mask` resolves to `--chrome-mask`,
        which every surface co-publishes with its own background (see `:root`
@@ -234,6 +252,14 @@
  * Shape preset, so it deliberately ignores --radius. Reach for it through
  * `<Avatar shape="squircle">` rather than directly. */
 @utility rounded-squircle { border-radius: 26%; } /* twmerge: extend rounded */
+
+/* Role radii from the shape token group, each defaulting to the scale step it
+ * replaced: a raised card's corners (`--radius-card`, default the `rounded-md`
+ * step — `SURFACE_LEVELS.raised` wears it) and a Button's (`--radius-control`,
+ * default `rounded-lg` = `--radius`). A theme rounds cards or buttons alone
+ * without moving the rest of the scale. */
+@utility rounded-card { border-radius: var(--radius-card); } /* twmerge: extend rounded */
+@utility rounded-control { border-radius: var(--radius-control); } /* twmerge: extend rounded */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class
@@ -465,6 +491,30 @@
  * defaults read `--pad-chip-*`, so untouched it pads exactly like `p-chip`. */
 @utility p-chip-compact { padding: var(--pad-chip-compact-y) var(--pad-chip-compact-x); } /* twmerge: sg-pad */
 @utility rounded-chip-compact { border-radius: var(--radius-chip-compact); } /* twmerge: extend rounded */
+/* Role paddings, each defaulting (in the density group) to the steps its
+ * surface always wore: a pane header's chips, a thread card (the user's
+ * message, a collapsible tool row), the prompt box and the text and action row
+ * inside it, a transcript card's tool-name badge, an inline `code` span. */
+@utility p-chip-header { padding: var(--pad-chip-header-y) var(--pad-chip-header-x); } /* twmerge: sg-pad */
+@utility p-thread-card { padding: var(--pad-thread-card-y) var(--pad-thread-card-x); } /* twmerge: sg-pad */
+@utility p-composer { padding: var(--pad-composer); } /* twmerge: sg-pad */
+@utility p-composer-text { padding: var(--pad-composer-text); } /* twmerge: sg-pad */
+@utility p-composer-actions { padding: var(--pad-composer-actions); } /* twmerge: sg-pad */
+@utility p-tool-badge { padding: var(--pad-tool-badge-y) var(--pad-tool-badge-x); } /* twmerge: sg-pad */
+@utility p-inline-code { padding: var(--pad-code-y) var(--pad-code-x); } /* twmerge: sg-pad */
+/* The icon-only end segment of a split control: its inline padding (density
+ * `padSplitArrowX`, default the `xs` control pad). */
+@utility px-split-arrow { padding-inline: var(--pad-split-arrow-x); } /* twmerge: extend px */
+/* Role corners and hairlines (shape group): a tool badge's and an inline code
+ * span's. The widths default to 0 — no border, and no box change — so only a
+ * theme that sets them draws one. */
+@utility rounded-tool-badge { border-radius: var(--radius-tool-badge); } /* twmerge: extend rounded */
+@utility rounded-inline-code { border-radius: var(--radius-code); } /* twmerge: extend rounded */
+@utility hairline-tool-badge { border-width: var(--border-tool-badge); } /* twmerge: standalone -- Role border width for one element that sets no other border width. Not named border-*: tailwind-merge files any border-<word> as a border COLOR, so a colour class beside it would silently drop it. */
+@utility hairline-inline-code { border-width: var(--border-code); } /* twmerge: standalone -- Role border width for one element that sets no other border width. Not named border-*: tailwind-merge files any border-<word> as a border COLOR, so a colour class beside it would silently drop it. */
+/* A conversation row's in-flight op glyph (density `opStatusIcon`, default the
+ * old size-3.5). */
+@utility size-op-status-icon { width: var(--op-status-icon); height: var(--op-status-icon); } /* twmerge: extend size */
 
 /* Status dot diameters, one per density tier — `StatusDot` picks the tier from
  * the ambient `ControlSize`. Values come from the density token group
@@ -513,6 +563,14 @@
 @utility control-min-sm { min-height: var(--control-height-sm); } /* twmerge: sg-control-min */
 @utility control-min-md { min-height: var(--control-height-md); } /* twmerge: sg-control-min */
 @utility control-min-lg { min-height: var(--control-height-lg); } /* twmerge: sg-control-min */
+/* The glyph inside a control, per size — Button's `[&_svg]` reads these, so a
+ * theme sizes every button's icon with its box. Values come from the density
+ * token group (--control-icon-*), whose defaults are the old size-3 (xs) and
+ * size-4 (sm, md, lg). Not `control-icon-*`: that is the square icon BUTTON. */
+@utility size-control-icon-xs { width: var(--control-icon-xs); height: var(--control-icon-xs); } /* twmerge: extend size */
+@utility size-control-icon-sm { width: var(--control-icon-sm); height: var(--control-icon-sm); } /* twmerge: extend size */
+@utility size-control-icon-md { width: var(--control-icon-md); height: var(--control-icon-md); } /* twmerge: extend size */
+@utility size-control-icon-lg { width: var(--control-icon-lg); height: var(--control-icon-lg); } /* twmerge: extend size */
 /* A control size's width rhythm — the other two thirds of its bundle: the inline
  * padding and the icon-to-label gap, from the density token group
  * (--control-pad-* / --control-gap-*). So a preset owns how wide a control is,
@@ -558,6 +616,15 @@
 @utility h-chrome-pane { height: var(--chrome-pane-h); } /* twmerge: extend h */
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
 @utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
+/* A pane header's own insets (`Bar tier="pane"`) — density `chromePanePadStart`
+ * / `chromePanePadEnd`, both defaulting to `--chrome-pad-x`, so untouched this
+ * is `px-chrome`. The end side, when the header reserves the floating bar's
+ * safe area, is `pr-floating-bar-pane`: the safe area when one is published,
+ * the header's own end inset otherwise. A sub-pane strip (`tier="subpane"`,
+ * the conversation toolbar) insets by `subpanePadX` (default the `sm` step). */
+@utility px-chrome-pane { padding-left: var(--chrome-pane-pad-start); padding-right: var(--chrome-pane-pad-end); } /* twmerge: extend px */
+@utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--chrome-pane-pad-end)); } /* twmerge: extend pr */
+@utility px-subpane { padding-inline: var(--subpane-pad-x); } /* twmerge: extend px */
 
 /* ── THE RAIL ─────────────────────────────────────────────────────────────
  * Applying padding is the act of OPENING A REGION, not decorating a box. A box
@@ -1508,7 +1575,9 @@
 @utility text-body-compact       { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
-@utility text-control-compact    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
+/* The control role's compact rung has its own size tokens (defaults: caption),
+ * so a theme can size its dense controls apart from its captions. */
+@utility text-control-compact    { font-size: var(--font-size-control-compact); line-height: var(--line-height-control-compact); font-weight: var(--font-weight-control); }            /* twmerge: extend font-size */
 /* The compact CHIP rung: what a `Badge` wears at `xs` density. Its size, line
  * height and weight are type-scale tokens whose defaults are exactly
  * `text-caption-compact` + `font-medium`, so a theme can re-set a dense row's
@@ -1517,6 +1586,18 @@
  * (ToggleChip's `text-2xs`) keeps it. */
 @utility text-chip-compact       { font-size: var(--font-size-chip-compact); line-height: var(--line-height-chip-compact); } /* twmerge: extend font-size */
 @utility font-chip-compact       { font-weight: var(--font-weight-chip-compact); } /* twmerge: extend font-weight */
+/* Role type from the type-scale group, each defaulting to what its surface
+ * always wore: a pane header's chips (caption, medium), a transcript card's
+ * tool-name badge (the compact chip rung it sits on), an inline `code` span
+ * (caption; the mono family stays the caller's `font-mono`), a toolbar count
+ * (caption, regular), and a primary action's weight (the control weight). */
+@utility text-chip-header        { font-size: var(--font-size-chip-header); line-height: var(--line-height-chip-header); } /* twmerge: extend font-size */
+@utility font-chip-header        { font-weight: var(--font-weight-chip-header); } /* twmerge: extend font-weight */
+@utility text-tool-badge         { font-size: var(--font-size-tool-badge); line-height: var(--line-height-tool-badge); } /* twmerge: extend font-size */
+@utility font-tool-badge         { font-weight: var(--font-weight-tool-badge); } /* twmerge: extend font-weight */
+@utility text-inline-code        { font-size: var(--font-size-code); line-height: var(--line-height-code); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
+@utility text-count              { font-size: var(--font-size-count); line-height: var(--line-height-count); font-weight: var(--font-weight-count); } /* twmerge: extend font-size */
+@utility font-control-strong     { font-weight: var(--font-weight-control-strong); } /* twmerge: extend font-weight */
 @utility text-code-compact       { font-family: var(--font-mono);           font-size: var(--font-size-2xs);            line-height: var(--line-height-caption); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
@@ -1604,6 +1685,17 @@
      cross-window font-bleed bug). Re-declaring them on the scope root makes each
      `[data-theme-scope]` re-evaluate the `var()` inside its own scope, so the
      app's preset wins per-window. Enforced by `inherited-theme-defaults-scoped`. */
+  /* The inherited base text size (type-scale `--font-size-base` /
+     `--line-height-base`), consumed at every theme-scope root for the same
+     inheritance reason as `font-family` below. NOT on `:root`: the injector
+     paints the focused app's theme into `:root`, and a font-size there would
+     be the `html` font-size — rescaling every rem token in the app. Defaults
+     are `1em` and the unitless `1.5` — exactly what a scope root inherited
+     before — so only a theme that sets them changes anything. */
+  [data-theme-scope] {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    }
   :root,
   [data-theme-scope] {
     font-family: var(--font-sans);

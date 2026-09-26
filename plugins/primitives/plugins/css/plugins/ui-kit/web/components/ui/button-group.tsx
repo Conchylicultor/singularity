@@ -17,7 +17,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
  * radii, never size or variant (those live on the child Buttons). It does not
  * clone children or inject props — arbitrary direct children pass through
  * untouched. The container carries `data-slot="button-group"`, which activates
- * the `in-data-[slot=button-group]:rounded-lg` rule already baked into the
+ * the `in-data-[slot=button-group]:rounded-control` rule already baked into the
  * Button size variants, then squares the inner corners and collapses the
  * doubled border between adjacent segments into a single seam.
  *

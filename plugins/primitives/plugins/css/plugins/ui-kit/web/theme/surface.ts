@@ -45,9 +45,10 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // The ground plane: pane / page canvas, toolbar bands, sticky headers. Tone
   // only — flush bands supply their own `border-b` / radius via className.
   base: "bg-background [--chrome-mask:var(--background)] [--hover-fill:var(--muted)]",
-  // A card lifted one step above base.
+  // A card lifted one step above base. Its corners are the shape group's
+  // `--radius-card` (`rounded-card`), which defaults to the `rounded-md` step.
   raised:
-    "rounded-md border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)]",
+    "rounded-card border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)]",
   // Floats above everything — popovers, menus, command palette, floating panels.
   // Hovers to `--accent`, the tone base-ui's own menu/select items highlight
   // with, so a ghost button in a popover matches the items beside it.

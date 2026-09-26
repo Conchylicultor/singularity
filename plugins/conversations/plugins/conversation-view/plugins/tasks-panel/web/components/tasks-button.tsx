@@ -51,10 +51,10 @@ export function TasksButton() {
       disabled={!taskId}
       className="gap-xs"
     >
-      <MdChecklist className="size-4" />
+      <MdChecklist />
       {status && <StatusDot colorClass={status.dotClass} />}
       {blockedCount !== null && (
-        <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+        <Text as="span" variant="count" tone="muted" className="tabular-nums">
           {blockedCount}
         </Text>
       )}

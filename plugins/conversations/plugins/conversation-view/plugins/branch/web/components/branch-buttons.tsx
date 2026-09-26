@@ -53,13 +53,15 @@ export function BranchButtons({
       open={open}
       onOpenChange={setOpen}
       trigger={
+        // A quiet footer pill: the palette's `subtle` text step (muted by
+        // default), its glyph the footer's own control-icon size.
         <Button
           variant="ghost"
-          className="text-muted-foreground"
+          className="text-subtle-foreground"
           title="Branch conversation"
           aria-label="Branch conversation"
         >
-          <MdCallSplit className="size-3.5" />
+          <MdCallSplit />
           Branch
         </Button>
       }

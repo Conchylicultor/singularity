@@ -12,6 +12,14 @@ slot components can call `useLexicalComposerContext()`).
 Feature-specific behaviors live in sub-plugins that contribute via the
 Plugin slot.
 
+The box is themable end to end: its corners are the shape group's
+`radiusCard` (`rounded-card`), its padding the density group's `padComposer`
+(none by default), the editable text's and placeholder's padding
+`padComposerText` (`xs` × `sm` by default), and its fill the palette's
+`composer` (transparent, or `input` at 30% in dark mode, by default). A
+`bottomSlot` row that wants the text's inset reads `padComposerActions`
+(`p-composer-actions`), as the prompt editor's action row does.
+
 ## Node extensions
 
 A `NodeExtension` is the one declaration that makes a token round-trip — this

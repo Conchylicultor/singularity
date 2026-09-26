@@ -29,7 +29,7 @@ export function AttemptSwitchButton() {
         aria-pressed={isOpen}
         onClick={toggle}
       >
-        <MdSplitscreen className="size-4" />
+        <MdSplitscreen />
       </Button>
     );
   }
@@ -47,8 +47,8 @@ export function AttemptSwitchButton() {
       onClick={toggle}
       className="gap-xs"
     >
-      <MdSplitscreen className="size-4" />
-      <Text as="span" variant="caption" className="tabular-nums">
+      <MdSplitscreen />
+      <Text as="span" variant="count" className="tabular-nums">
         {count}
       </Text>
     </Button>

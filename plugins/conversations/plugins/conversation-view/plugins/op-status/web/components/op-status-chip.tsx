@@ -57,7 +57,8 @@ export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
   return (
     <WithTooltip content={title}>
       <Inline gap="none" className="text-muted-foreground">
-        <Icon className="size-3.5" />
+        {/* The density group's `opStatusIcon` (default 14px). */}
+        <Icon className="size-op-status-icon" />
       </Inline>
     </WithTooltip>
   );

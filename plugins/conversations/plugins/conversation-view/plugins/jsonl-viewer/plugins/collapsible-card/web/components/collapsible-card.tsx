@@ -1,9 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
-import {
-  useCollapsible,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
+import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -42,7 +39,7 @@ export interface CollapsibleCardProps {
    *  group, so it inherits the canonical title size/color — pass the raw icon
    *  element (e.g. `<MdReplay className="size-3.5" />`), never a styled wrapper. */
   icon?: ReactNode;
-  /** Title content after the built-in chevron. Natural case — never all-caps
+  /** Title content after the optional icon. Natural case — never all-caps
    *  (jsonl-viewer rule). The card owns the title TYPOGRAPHY (house font + size);
    *  pass content only — `font-*`/`text-*` classes here are banned by lint
    *  (`collapsible-card/no-adhoc-card-title-font`). A semantic color accent
@@ -84,7 +81,10 @@ export interface CollapsibleCardProps {
 // label content (e.g. a primary tool-name Badge), the `error` flag (destructive
 // chrome), and the call-site `className` (the single Instructions callout) — never
 // in a per-family tone. See research/2026-06-12-conversations-transcript-card-design-system.md.
-const CARD_CHROME = "border-border/50 bg-muted/20";
+// The fill and hairline are the palette's `threadCard` / `threadCardBorder`
+// (defaults: `muted` at 20%, `border` at 50%), the pad the density group's
+// `padThreadCard*` (default `md` × `sm`), the corners Card's own `rounded-card`.
+const CARD_CHROME = "border-thread-card-border bg-thread-card";
 const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 // font-sans pins one house font for every transcript card title — the header
 // font is a property of the card chrome, not of each renderer. Without it,
@@ -115,13 +115,16 @@ export function CollapsibleCard({
     <Card
       controlSize="xs"
       className={cn(
-        "group px-md py-sm",
+        "group p-thread-card",
         error ? ERROR_CARD : CARD_CHROME,
         className,
       )}
     >
       {/* The toggle is a full-bleed layer sitting BEHIND the content via
-          <Overlay behind clickThrough>, not a row sibling. This decouples the
+          <Overlay behind clickThrough>, not a row sibling. The card draws no
+          chevron: the whole row is the affordance, and the button's
+          `aria-expanded` (from useCollapsible) and Expand / Collapse label
+          carry the state. This decouples the
           click target (the whole header row) from the layout (the named-slot row
           below) — the two roles that, fused onto one <button>, pulled in
           opposite directions. Overlay paints the button under the content and
@@ -153,7 +156,7 @@ export function CollapsibleCard({
             collapsed below the shrink-0 badge, overlapping it.) */}
         <Line className="gap-sm">
           {/* Zone 1 — rigid identity. shrink-0: never grows into slack, never
-              collapses under a long neighbour, so the chevron + tool badge stay
+              collapses under a long neighbour, so the icon + tool badge stay
               intact. pointer-events-none lets clicks fall through to the overlay
               toggle beneath, so tapping the identity area collapses the card. */}
           <Stack
@@ -163,7 +166,6 @@ export function CollapsibleCard({
             gap="xs"
             className={cn(rigidClass(), "pointer-events-none relative")}
           >
-            <CollapsibleChevron open={open} className="size-3" />
             {icon}
             {label}
             {note != null && (

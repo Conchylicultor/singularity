@@ -15,6 +15,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 // Surface a refused transparent resume. Every other arm ("resumed", "nothing to
 // resume") is the silent success this is supposed to be.
@@ -73,14 +75,13 @@ export function ConversationView() {
         headerSpill
       >
         <Clip fill as={Stack} className="h-full">
-          <Stack
-            direction="row"
-            gap="none"
-            align="center"
-            className="border-b px-sm py-xs"
-          >
+          {/* The toolbar strip under the header. Its glyphs and counters wear
+              the palette's `toolbarForeground` (the inherited text colour by
+              default), so a theme can quiet them without touching the labels'
+              hover. */}
+          <Bar tier="subpane" className="text-toolbar-foreground">
             <ActionBarView />
-          </Stack>
+          </Bar>
           <Clip fill>
             <JsonlPane conversation={conversation}>
               {showBottomBar && (
@@ -102,18 +103,22 @@ export function ConversationView() {
                         )}
                       </Conversation.PromptInput.Render>
                       {promptBarItems.length > 0 && (
-                        <Stack direction="row" gap="none" justify="end">
-                          <Stack direction="row" gap="xs" align="center">
-                            <Conversation.PromptBar.Render>
-                              {(item) => {
-                                const Component = item.component;
-                                return (
-                                  <Component conversation={conversation} />
-                                );
-                              }}
-                            </Conversation.PromptBar.Render>
+                        // The footer under the prompt is a row of small pills:
+                        // its own `xs` density, one step below the prompt's.
+                        <ControlSizeProvider size="xs">
+                          <Stack direction="row" gap="none" justify="end">
+                            <Stack direction="row" gap="xs" align="center">
+                              <Conversation.PromptBar.Render>
+                                {(item) => {
+                                  const Component = item.component;
+                                  return (
+                                    <Component conversation={conversation} />
+                                  );
+                                }}
+                              </Conversation.PromptBar.Render>
+                            </Stack>
                           </Stack>
-                        </Stack>
+                        </ControlSizeProvider>
                       )}
                     </Stack>
                   </div>

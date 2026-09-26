@@ -12,6 +12,8 @@ export function EventCounter() {
   const count = result.data.length;
   if (count === 0) return null;
   return (
-    <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">{count}</Text>
+    <Text as="span" variant="count" tone="muted" className="tabular-nums">
+      {count}
+    </Text>
   );
 }

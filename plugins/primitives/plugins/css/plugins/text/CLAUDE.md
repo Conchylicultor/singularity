@@ -23,10 +23,11 @@ runtime vars. Picking a typography preset re-themes every variant together.
 | `label`      | 0.8125rem | 1.25rem     | 500    | 0        | `text-sm font-medium`     |
 | `control`    | 0.875rem  | 1.25rem     | 500 (token) | 0   | a button's own `text-sm font-medium` |
 | `caption`    | 0.75rem   | 1rem        | 400    | 0        | `text-xs`                 |
+| `count`      | 0.75rem (token) | 1rem (token) | 400 (token) | 0 | a counter's `text-caption` (a toolbar button's "3", "+387") |
 | `eyebrow`    | 0.75rem   | 1rem        | 400    | wide     | `text-xs uppercase …`     |
 | `code`       | 0.75rem   | 1.25rem     | 400    | 0        | `font-mono text-xs leading-5` |
 
-`tone` layers a foreground color (`default | muted | faint | primary | destructive`; `faint` is the dimmer tier below muted, from the palette's `faintForeground`);
+`tone` layers a foreground color (`default | strong | subtle | muted | faint | primary | destructive`; `faint` is the dimmer tier below muted, from the palette's `faintForeground`; `strong` / `subtle` are the palette's `strongForeground` / `subtleForeground`, which default to body text and to muted, so they only differ where a theme sets them);
 `as` swaps the host element (default `span`). `cn(variant, tone, className)` —
 caller `className` wins last, so layout margins/truncation compose on top.
 
@@ -44,6 +45,12 @@ not pair it with `font-mono`. Its line-height is the looser `label` rung, not
 It is the one role whose weight is a token (`--font-weight-control`): the app
 chrome's fixed theme sets its controls to 12.5px regular without re-weighting
 the prose around them. Its compact rung is caption-sized at the same weight.
+
+`count` is a number beside a glyph — a toolbar button's count, a diff's `+387`.
+Its size, line-height and weight are type-scale tokens (`fontSizeCount` /
+`lineHeightCount` / `fontWeightCount`) that default to the caption rung at
+regular weight, so a theme sets its counters apart from its captions. Its
+compact rung is `caption`'s.
 
 `textVariantClass(variant)` returns a variant's classes as a string, for the
 elements `<Text>` cannot be — a shiki `<pre>`, a `dangerouslySetInnerHTML` div, a

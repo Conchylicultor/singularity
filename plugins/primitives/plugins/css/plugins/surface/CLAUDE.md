@@ -18,8 +18,12 @@ re-themes all surfaces of a role at once.
 | --------- | -------------------------------------------------------- | ----------------------------------------------- |
 | `sunken`  | `bg-muted`                                               | recessed well / band *below* the base plane     |
 | `base`    | `bg-background`                                           | page / pane canvas, toolbar bands, sticky headers |
-| `raised`  | `rounded-md border border-border bg-card shadow-sm`      | a card lifted one step above base               |
+| `raised`  | `rounded-card border border-border bg-card shadow-sm`    | a card lifted one step above base               |
 | `overlay` | `rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10` | floats above all: popovers, menus, floating panels |
+
+`raised`'s corners are the shape group's `radiusCard` token (`rounded-card`),
+which defaults to the `rounded-md` step, so a theme can round its cards without
+moving the rest of the radius scale.
 
 `sunken` / `base` are tone-only (flush bands add their own `border-b` / radius via
 `className`); `raised` / `overlay` are contained boxes. The bundles are plain

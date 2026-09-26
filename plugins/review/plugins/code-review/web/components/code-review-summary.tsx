@@ -49,20 +49,35 @@ export function CodeReviewSummary({
   const additions = files.reduce((sum, f) => sum + f.additions, 0);
   const deletions = files.reduce((sum, f) => sum + f.deletions, 0);
 
-  const maxLevel: FileWarningLevel = files.reduce<FileWarningLevel>((max, f) => {
-    const level = getFileWarningLevel(f.path, safePaths, carefulPaths);
-    if (level === "critical") return "critical";
-    if (level === "careful" && max === "safe") return "careful";
-    return max;
-  }, "safe");
+  const maxLevel: FileWarningLevel = files.reduce<FileWarningLevel>(
+    (max, f) => {
+      const level = getFileWarningLevel(f.path, safePaths, carefulPaths);
+      if (level === "critical") return "critical";
+      if (level === "careful" && max === "safe") return "careful";
+      return max;
+    },
+    "safe",
+  );
 
   if (count === 0 && !hasPastPushes) return null;
 
   return (
-    <Stack as="span" direction="row" gap="xs" align="center" className="tabular-nums">
-      <Text as="span" variant="caption">{count}</Text>
-      <Text as="span" variant="caption" className="text-success">+{additions}</Text>
-      <Text as="span" variant="caption" className="text-destructive">−{deletions}</Text>
+    <Stack
+      as="span"
+      direction="row"
+      gap="xs"
+      align="center"
+      className="tabular-nums"
+    >
+      <Text as="span" variant="count">
+        {count}
+      </Text>
+      <Text as="span" variant="count" className="text-success">
+        +{additions}
+      </Text>
+      <Text as="span" variant="count" className="text-destructive">
+        −{deletions}
+      </Text>
       {maxLevel !== "safe" && (
         <MdWarning className={WARNING_ICON_CLASS[maxLevel]} />
       )}

@@ -194,13 +194,14 @@ function EditorShell({
     <div
       // Yields, never grows: the self-contained editor box falls below its
       // content width inside an arbitrary external flex parent.
+      // The box is a card: the shape group's card corners, the density
+      // group's `padComposer` (none by default) and the palette's `composer`
+      // fill (transparent, or `input` at 30% in dark mode, by default).
       className={cn(
         yieldClass("x"),
-        "focus-ring-within w-full rounded-md border transition-colors",
+        "focus-ring-within w-full rounded-card border p-composer transition-colors",
         "border-input",
-        disabled
-          ? "bg-input/50 dark:bg-input/80"
-          : "bg-transparent dark:bg-input/30",
+        disabled ? "bg-input/50 dark:bg-input/80" : "bg-composer",
       )}
     >
       {/* One grid cell holds both the editable and its placeholder, so the box
@@ -226,7 +227,7 @@ function EditorShell({
               style={{ minHeight, maxHeight }}
               // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(
-                "min-w-0 px-sm py-xs text-body outline-none resize-none",
+                "min-w-0 p-composer-text text-body outline-none resize-none",
                 "overflow-y-auto",
                 className,
               )}
@@ -235,7 +236,7 @@ function EditorShell({
               placeholder={
                 // Shares the editable's grid cell (see the wrapper above) and so
                 // counts toward the box's height, unlike an absolute overlay.
-                <div className="text-muted-foreground pointer-events-none select-none px-sm py-xs text-body">
+                <div className="text-muted-foreground pointer-events-none select-none p-composer-text text-body">
                   {placeholder ?? ""}
                 </div>
               }

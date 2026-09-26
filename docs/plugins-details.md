@@ -9619,10 +9619,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/hibernation.markConversationViewed`
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/bar.Bar`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -10199,15 +10201,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer.useLastAssistantEvent`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
               - `primitives/launch.LaunchControl`
-        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
+        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad and type tokens) the model and status chips share.
           - Web:
             - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
             - Uses:
               - `primitives/collapsible-wrap.CollapsibleWrap`
+              - `primitives/css/badge.Badge`
               - `primitives/css/spacing.Stack`
               - `primitives/slot-render.defineRenderSlot`
             - Exports (values):
               - `Conversation`
+              - `HeaderChip`
               - `HeaderView`
           - Cross-plugin:
             - Imported by:
@@ -10682,11 +10686,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-            - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
+            - **`collapsible-card`** — Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
               - Web:
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
-                  - `primitives/collapsible.CollapsibleChevron`
                   - `primitives/collapsible.useCollapsible`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -11476,7 +11479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.Conversation`
-              - `primitives/css/badge.Badge`
+              - `conversations/conversation-view/header.HeaderChip`
         - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
           - Web:
             - Uses:
@@ -11677,6 +11680,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
@@ -11820,7 +11824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.Conversation`
-              - `primitives/css/badge.Badge`
+              - `conversations/conversation-view/header.HeaderChip`
               - `primitives/css/badge.formatStatusLabel`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
           - Web:
@@ -24423,6 +24427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/shell`
           - `apps/browser/tabs`
           - `apps/chord/shell`
+          - `conversations/conversation-view`
           - `primitives/app-shell`
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
@@ -24705,6 +24710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/artifacts/skill`
               - `conversations/conversation-view/dependent-count`
+              - `conversations/conversation-view/header`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -24717,7 +24723,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/launch-prompts`
-              - `conversations/conversation-view/model`
               - `conversations/conversation-view/status`
               - `conversations/summary`
               - `conversations/transcript-watcher`
@@ -27439,6 +27444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings/conflict-agent`
               - `conversations/agents`
               - `conversations/conversation-ui/item`
+              - `conversations/conversation-view`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/branch`
               - `conversations/conversation-view/commits-graph`

@@ -6,7 +6,7 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import type { ElementType, HTMLAttributes } from "react";
 
-export type BarTier = "chrome" | "pane";
+export type BarTier = "chrome" | "pane" | "subpane";
 
 export interface BarProps extends HTMLAttributes<HTMLElement> {
   /**
@@ -16,7 +16,13 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
    *   sits on, page canvas by default). Reserves the floating-bar safe area by
    *   default (`endSafeArea`). Used by the app-shell toolbar and pane headers.
    * - `"pane"`: the **pane-header** tier — a `<div>` at the shorter `h-chrome-pane`
-   *   with symmetric `px-chrome` and `min-w-0` (truncation-safe). Used by PaneChrome.
+   *   with its own start/end insets (`px-chrome-pane`, density
+   *   `chromePanePadStart` / `chromePanePadEnd`, both `chromePadX` by default)
+   *   and `min-w-0` (truncation-safe). Used by PaneChrome.
+   * - `"subpane"`: a pane's **secondary strip** under its header (the
+   *   conversation toolbar) — a `<div>` as tall as its controls plus an `xs`
+   *   block pad, inset by `px-subpane` (density `subpanePadX`, the `sm` step
+   *   by default), `min-w-0`.
    */
   tier?: BarTier;
   /**
@@ -45,12 +51,22 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
 /** Per-tier chrome: height token, horizontal inset, and (chrome only) the mask. */
 const TIER_CLASS: Record<BarTier, string> = {
   chrome: "h-chrome-bar pl-chrome bg-chrome-mask",
-  pane: "h-chrome-pane px-chrome min-w-0",
+  pane: "h-chrome-pane px-chrome-pane min-w-0",
+  subpane: "py-xs px-subpane min-w-0",
+};
+
+/** The end inset that reserves the floating bar's safe area, per tier: the
+ *  safe area when one is published, the tier's own end inset otherwise. */
+const SAFE_AREA_CLASS: Record<BarTier, string> = {
+  chrome: "pr-floating-bar",
+  pane: "pr-floating-bar-pane",
+  subpane: "pr-floating-bar",
 };
 
 const TIER_ELEMENT: Record<BarTier, ElementType> = {
   chrome: "header",
   pane: "div",
+  subpane: "div",
 };
 
 /**
@@ -88,7 +104,7 @@ export function Bar({
       className={cn(
         "gap-sm border-b",
         TIER_CLASS[tier],
-        safe && "pr-floating-bar",
+        safe && SAFE_AREA_CLASS[tier],
         overflow === "visible" ? "overflow-visible" : "overflow-hidden",
         className,
       )}

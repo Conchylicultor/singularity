@@ -82,9 +82,12 @@ function TemplateChip({
         disabled={!canSend}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onSend(template)}
-        className={
-          canSend ? "text-muted-foreground" : "text-muted-foreground/30"
-        }
+        // The icon-only end segment: its width is the density group's
+        // `padSplitArrowX` (default the `xs` control pad) around the glyph.
+        className={cn(
+          "px-split-arrow",
+          canSend ? "text-muted-foreground" : "text-muted-foreground/30",
+        )}
       >
         <MdSend className="size-3" />
       </Button>

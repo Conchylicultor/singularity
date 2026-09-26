@@ -59,6 +59,13 @@ The global UI kit — one cohesive design-system unit. It owns:
   shares `md`'s 14px label, it shares its 16px icon and every density preset
   gives `controlGapSm` the same value as `controlGapMd` — a shorter box, never
   a tighter label. Only `xs`, whose text drops a rung, tightens them.
+  The glyph inside a Button is a density token too (`controlIcon*`, read as
+  `[&_svg]:size-control-icon-<size>`; defaults 12px at `xs`, 16px above), and
+  the corners of the `md` / `lg` sizes and of every ButtonGroup segment are the
+  shape group's `radiusControl` (`rounded-control`, default `--radius`). The
+  `xs` compact label has its own size tokens (`fontSizeControlCompact` /
+  `lineHeightControlCompact`, default the caption rung). So a theme sets a
+  button's whole bundle; the agent manager's Mist does.
 - **`Button variant="frame"`** is `outline`'s hairline with no fill of its
   own: like `ghost` it wears the surface it sits on and hovers to
   `--hover-fill`. Use it for a framed control on anything but the page canvas —
@@ -565,6 +572,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `config_v2/settings/conflict-agent`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-view`
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/commits-graph`

@@ -133,6 +133,75 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     darkDefault: "oklch(0.556 0 0)",
     label: "Focus ring",
   },
+  // Role colours below default to the value (or the mix) the surface always
+  // painted, so a theme that leaves them out renders exactly as before; a theme
+  // sets one to restyle that role alone.
+  //
+  // Emphasised text above body text: a conversation pane's title.
+  strongForeground: {
+    default: "var(--foreground)",
+    label: "Strong text",
+  },
+  // Quiet text between body and muted: a header chip's label, a footer pill's.
+  subtleForeground: {
+    default: "var(--muted-foreground)",
+    label: "Subtle text",
+  },
+  // A neutral header chip's fill (a conversation's model chip).
+  chip: {
+    default: "var(--muted)",
+    label: "Chip",
+  },
+  // The user's message card in a conversation thread.
+  messageCard: {
+    default: "var(--background)",
+    label: "Message card",
+  },
+  messageCardBorder: {
+    default: "color-mix(in oklab, var(--border) 60%, transparent)",
+    label: "Message card border",
+  },
+  // A collapsible transcript card: a tool call, a thinking block, a hook row.
+  threadCard: {
+    default: "color-mix(in oklab, var(--muted) 20%, transparent)",
+    label: "Thread card",
+  },
+  threadCardBorder: {
+    default: "color-mix(in oklab, var(--border) 50%, transparent)",
+    label: "Thread card border",
+  },
+  // A prompt box's fill (the text editor): transparent in light mode, a faint
+  // wash of the input colour in dark mode.
+  composer: {
+    default: "transparent",
+    darkDefault: "color-mix(in oklab, var(--input) 30%, transparent)",
+    label: "Composer",
+  },
+  // An `outline` Button's hairline and fill (the prompt's split template
+  // chips, among others).
+  outlineBorder: {
+    default: "var(--border)",
+    darkDefault: "var(--input)",
+    label: "Outline control border",
+  },
+  outlineFill: {
+    default: "var(--background)",
+    darkDefault: "color-mix(in oklab, var(--input) 30%, transparent)",
+    label: "Outline control fill",
+  },
+  // The inline-code chip's hairline (only drawn where a theme gives the chip a
+  // border width, `borderCode` in density).
+  codeBorder: {
+    default: "var(--border)",
+    label: "Inline code border",
+  },
+  // The glyphs and counters of a pane's toolbar strip, and a prompt box's own
+  // icon actions (the mic). `currentColor` = the text colour they always
+  // inherited.
+  toolbarForeground: {
+    default: "currentColor",
+    label: "Toolbar icons",
+  },
 });
 
 export type ColorPaletteTokenValues = {

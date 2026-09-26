@@ -14,13 +14,19 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 
 const buttonVariants = cva(
-  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding font-control whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        // Its hairline and fill are the palette's `outlineBorder` /
+        // `outlineFill` — defaults `border` + the canvas in light mode, `input`
+        // + `input` at 30% in dark mode, exactly the pairs it always wore — so a
+        // theme restyles every outlined control (and every segment of an
+        // outlined ButtonGroup: the seam between two segments is their shared
+        // hairline) at once.
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-outline-border bg-outline-fill hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         // Ghost is the ONE transparent variant — it has no background of its
@@ -68,21 +74,26 @@ const buttonVariants = cva(
       // (`gap-control-*`) — so a preset sets a button's width rhythm, not only
       // its height. Never a numeric `px-`/`gap-` here: that is the width a
       // theme cannot reach.
-      // The icon follows the TEXT, not the box: `sm` sets the same 14px label
-      // as `md` (`buttonTextClassFor`), so it keeps the base 16px icon. Only
-      // `xs`, whose text drops a rung, shrinks it.
+      // The icon is the size's density token (`size-control-icon-*`, the
+      // density group's `controlIcon*`). Its defaults follow the TEXT, not the
+      // box: `sm` sets the same 14px label as `md` (`buttonTextClassFor`), so it
+      // keeps the 16px icon; only `xs`, whose text drops a rung, gets 12px.
+      // The corners are the shape group's `rounded-control` (md / lg and every
+      // ButtonGroup segment); `xs` / `sm` keep their capped `rounded-md` step.
       size: {
-        md: "control-md gap-control-md px-control-md",
-        default: "control-md gap-control-md px-control-md",
-        xs: "control-xs gap-control-xs px-control-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        lg: "control-lg gap-control-lg px-control-lg",
-        icon: "control-icon-md",
+        md: "control-md gap-control-md px-control-md [&_svg:not([class*='size-'])]:size-control-icon-md",
+        default:
+          "control-md gap-control-md px-control-md [&_svg:not([class*='size-'])]:size-control-icon-md",
+        xs: "control-xs gap-control-xs px-control-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
+        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
+        lg: "control-lg gap-control-lg px-control-lg [&_svg:not([class*='size-'])]:size-control-icon-lg",
+        icon: "control-icon-md [&_svg:not([class*='size-'])]:size-control-icon-md",
         "icon-xs":
-          "control-icon-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "control-icon-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
         "icon-sm":
-          "control-icon-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "control-icon-lg",
+          "control-icon-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
+        "icon-lg":
+          "control-icon-lg [&_svg:not([class*='size-'])]:size-control-icon-lg",
         // Sized by the surrounding text, so it has no control role: its
         // weight is the fixed medium, not the themable control weight.
         inline:

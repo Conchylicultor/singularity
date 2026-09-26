@@ -45,7 +45,7 @@ export function ArtifactsButton() {
         disabled
         className="gap-xs"
       >
-        <MdCategory className="size-4" />
+        <MdCategory />
       </Button>
     );
   }
@@ -118,7 +118,7 @@ function ArtifactsReady({
         disabled
         className="gap-xs"
       >
-        <MdCategory className="size-4" />
+        <MdCategory />
       </Button>
     );
   }
@@ -149,13 +149,13 @@ function ArtifactsReady({
           className="gap-xs"
         >
           {madeKinds.length === 0 ? (
-            <MdCategory className="size-4" />
+            <MdCategory />
           ) : (
             <>
               {madeKinds.map(({ kind }) => (
-                <kind.icon key={kind.id} className="size-4" />
+                <kind.icon key={kind.id} />
               ))}
-              <Text variant="caption" className="tabular-nums">
+              <Text variant="count" className="tabular-nums">
                 {count}
               </Text>
             </>

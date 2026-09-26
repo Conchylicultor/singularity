@@ -116,6 +116,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/artifacts/skill`
     - `conversations/conversation-view/dependent-count`
+    - `conversations/conversation-view/header`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -128,7 +129,6 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/launch-prompts`
-    - `conversations/conversation-view/model`
     - `conversations/conversation-view/status`
     - `conversations/summary`
     - `conversations/transcript-watcher`

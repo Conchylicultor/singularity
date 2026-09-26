@@ -304,7 +304,7 @@
       - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
       - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
       - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
-      - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
+      - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad and type tokens) the model and status chips share.
       - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
       - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
         - Plugins:
@@ -312,7 +312,7 @@
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
           - **`attachment`** [27 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
           - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
-          - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
+          - **`collapsible-card`** — Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
           - **`event-counter`** — Displays the total event count in the conversation toolbar.
           - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
           - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.

@@ -4,15 +4,17 @@
 
 ## Plugin reference
 
-- Description: Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
+- Description: Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad and type tokens) the model and status chips share.
 - Web:
   - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
   - Uses:
     - `primitives/collapsible-wrap.CollapsibleWrap`
+    - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values):
     - `Conversation`
+    - `HeaderChip`
     - `HeaderView`
 - Cross-plugin:
   - Imported by:

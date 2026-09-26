@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { IconType } from "react-icons";
@@ -88,6 +88,10 @@ function endpointErrorText(err: unknown): string {
 // size), so these overrides used to restate it — invisibly, because a class
 // string reached through an identifier was outside every no-adhoc-* rule.
 const PRIMARY = "bg-primary hover:bg-primary/90 text-primary-foreground";
+
+// The prompt's one primary action carries the type-scale's strong control
+// weight (`font-control-strong`, default = every button's control weight).
+const STRONG = "font-control-strong";
 
 const ICONS: Record<Mode, IconType> = {
   restore: MdReplay,
@@ -323,7 +327,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       loading={busy}
       disabled={disabled}
       onClick={onClick}
-      className={BUTTON_CLASS[mode]}
+      className={cn(STRONG, BUTTON_CLASS[mode])}
     >
       <Icon className="size-3.5" />
       {label}

@@ -18,10 +18,12 @@ export function ReviewButton() {
       onClick={toggle}
       className="gap-xs"
     >
-      <MdRateReview className="size-4" />
+      <MdRateReview />
       {sections.map((s) => {
         const S = s.summary;
-        return S ? <S key={s.id} conversationId={convId} source={{ kind: "working" }} /> : null;
+        return S ? (
+          <S key={s.id} conversationId={convId} source={{ kind: "working" }} />
+        ) : null;
       })}
     </Button>
   );

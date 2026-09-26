@@ -29,6 +29,27 @@ const GROUPS: GroupDef[] = [
   { label: "Warning", keys: ["warning", "warningForeground"] },
   { label: "Info", keys: ["info", "infoForeground"] },
   { label: "Border & Input", keys: ["border", "input", "ring"] },
+  { label: "Text roles", keys: ["strongForeground", "subtleForeground"] },
+  {
+    label: "Thread",
+    keys: [
+      "messageCard",
+      "messageCardBorder",
+      "threadCard",
+      "threadCardBorder",
+      "codeBorder",
+    ],
+  },
+  {
+    label: "Controls",
+    keys: [
+      "chip",
+      "composer",
+      "outlineBorder",
+      "outlineFill",
+      "toolbarForeground",
+    ],
+  },
 ];
 
 export function ColorPaletteSection({ search }: { search: string }) {

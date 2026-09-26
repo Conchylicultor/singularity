@@ -4,11 +4,10 @@
 
 ## Plugin reference
 
-- Description: Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
+- Description: Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
 - Web:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
-    - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`

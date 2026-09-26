@@ -26,6 +26,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`

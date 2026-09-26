@@ -108,7 +108,9 @@ function ToolbarRow() {
         direction="row"
         align="center"
         gap="xs"
-        className="px-sm pb-xs"
+        // The density group's `padComposerActions`: `sm` sides and an `xs` foot
+        // by default, the text box's own inset.
+        className="p-composer-actions"
         onMouseDown={focusEditor}
       >
         <PromptEditorSlots.FloatingAction.Render>
