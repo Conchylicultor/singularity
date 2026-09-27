@@ -17,8 +17,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  * `useResolveCellEditor()` capability (the same per-type editors the table
  * uses) instead of the table's click-to-edit `EditableCell`, because the tree
  * label doubles as the navigation target: it must keep **select-then-edit**
- * (first interaction selects/navigates; a second click on the already-selected
- * row enters edit mode). New rows created via `onCreate` auto-open into edit via
+ * (a first click selects/navigates — via the row's own `onSelect`; a second
+ * click on the already-selected row enters edit mode). New rows created via `onCreate` auto-open into edit via
  * the tree primitive's pending-focus → `shouldAutoFocus` signal.
  */
 export function EditableTreeLabel<TNode extends TreeItem>(props: {
@@ -85,10 +85,11 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
     <span
       // eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
       className={cn("min-w-0 flex-1 truncate", className)}
-      onMouseDown={() => {
-        // First interaction selects/navigates the row.
-        if (ctx.selectedId !== node.id) ctx.onSelect(node.id);
-      }}
+      // Selection happens on CLICK, never on press: the whole row is the drag
+      // source, and selecting on mousedown navigated before dnd-kit's
+      // activation distance was reached — the page opened and the drag never
+      // started. A click on an unselected row bubbles to TreeRowChrome's
+      // `onSelect`; dnd-kit swallows the click that ends a real drag.
       onClick={(e) => {
         // Clicking the label of an already-selected row enters edit mode.
         if (ctx.selectedId === node.id) {
