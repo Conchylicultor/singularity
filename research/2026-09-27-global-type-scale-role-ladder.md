@@ -144,7 +144,9 @@ export function typeVar(name): string; // calc(var(--x) * var(--font-scale))
   4. the lint message misses a Text variant;
   5. `var(--font-size-*)` / `var(--line-height-*)` appears in `.ts(x)` outside the
      text and type-scale plugins (use `typeVar`).
-- Avatar `SIZE_MAP` (function-result class map the walk can't read): follow-up task.
+- Avatar `SIZE_MAP` (function-result class map the walk couldn't read): done —
+  the walk now follows a same-file function's return values and any local's
+  initializer; the avatar's glyph is a `cqh` share of its box, not a role.
 
 ### 5. Consumer migration
 

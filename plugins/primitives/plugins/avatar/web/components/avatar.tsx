@@ -44,47 +44,52 @@ export interface AvatarProps extends DensityControlled {
 interface Geometry {
   box: string;
   icon: string;
-  /** Font size of the fallback letter; empty when the box's own `text-*` sizes it. */
+  /** Font size of the fallback letter, as a share of the box's height (`cqh` —
+   *  the box is a size container). The letter is part of the disc's geometry,
+   *  like the icon, never a text role: a role would follow the theme's type
+   *  scale while the box stays put. */
   glyph: string;
   dot: string;
   ring: string;
 }
 
+// Glyph shares are not one ratio: a small disc needs a relatively larger
+// letter to stay legible (10px in 16px, 12px in 24px, 14px in 32px, 16px in 48px).
 const SIZE_MAP: Record<ControlSize, Geometry> = {
   xs: {
-    box: "size-4 text-[10px]",
+    box: "size-4",
     icon: "size-2.5",
-    glyph: "",
+    glyph: "text-[length:62.5cqh]",
     dot: "size-1.5 -right-px -bottom-px",
     ring: "ring-1",
   },
   sm: {
-    box: "size-6 text-xs",
+    box: "size-6",
     icon: "size-3.5",
-    glyph: "",
+    glyph: "text-[length:50cqh]",
     dot: "size-2 -right-px -bottom-px",
     ring: "ring-2",
   },
   md: {
-    box: "size-8 text-sm",
+    box: "size-8",
     icon: "size-4",
-    glyph: "",
+    glyph: "text-[length:43.75cqh]",
     dot: "size-2.5 -right-0.5 -bottom-0.5",
     ring: "ring-2",
   },
   lg: {
-    box: "size-12 text-base",
+    box: "size-12",
     icon: "size-6",
-    glyph: "",
+    glyph: "text-[length:33.333cqh]",
     dot: "size-3 -right-0.5 -bottom-0.5",
     ring: "ring-2",
   },
 };
 
-/** Tile geometry: the box fills the host-sized parent and is a size container,
- *  so the glyph (svg, or the letter's font size) is 46% of it; the dot carries no ring. */
+/** Tile geometry: the box fills the host-sized parent, so the glyph (svg, or
+ *  the letter) is 46% of it; the dot carries no ring. */
 const TILE_GEOMETRY: Geometry = {
-  box: "size-full @container-[size]",
+  box: "size-full",
   icon: "size-[46%]",
   glyph: "text-[length:46cqh]",
   dot: "size-[18%] right-[4%] bottom-[4%]",
@@ -129,8 +134,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     : null;
   const paint =
     presentation === "tile" ? avatarFlatClass(pick) : avatarSoftClass(pick);
-  // leading-none keeps the fallback glyph optically centered; its font size comes
-  // from the box's density variant (badge) or the tile's glyph size, not text hierarchy.
+  // leading-none keeps the fallback glyph optically centered; its font size is
+  // the geometry's share of the box (see Geometry.glyph), not text hierarchy.
   // eslint-disable-next-line text/no-adhoc-typography -- see above
   const glyphClass = cn("font-medium leading-none", sz.glyph);
   return (
@@ -139,7 +144,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       title={title}
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid inline-level avatar disc: inline-flex center on a shrink-0 leaf that sits inline in flex rows; Center is block-level grid and would break inline placement
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center",
+        // A size container, so the glyph's `cqh` share resolves against the box.
+        "relative inline-flex shrink-0 items-center justify-center @container-[size]",
         SHAPE_CLASS[shape],
         sz.box,
         paint,

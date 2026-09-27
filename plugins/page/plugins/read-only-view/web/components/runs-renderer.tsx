@@ -33,7 +33,7 @@ import {
 // Lexical theme.text mark classes (block-text-editor.tsx initialConfig.theme).
 const MARK_UNDERLINE = "underline";
 const MARK_STRIKETHROUGH = "line-through";
-const MARK_CODE = "rounded-md bg-muted px-1 font-mono text-[0.9em]";
+const MARK_CODE = "rounded-md bg-muted px-xs font-mono text-[0.9em]";
 // Lexical theme.link.
 const LINK_CLASS = "text-primary underline";
 

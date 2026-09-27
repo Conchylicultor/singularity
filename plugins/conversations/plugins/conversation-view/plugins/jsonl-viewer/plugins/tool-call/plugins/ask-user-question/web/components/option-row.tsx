@@ -34,8 +34,8 @@ function Indicator({
   // stay a square / circle under every Shape preset. The selection-indicator
   // primitive owns those fixed shapes, so this just picks the right one.
   // The `mt` nudges the indicator to align with the first line of multi-line
-  // label text — there is no named margin utility at that step.
-  const nudge = align === "start" ? "mt-0.5" : undefined;
+  // label text.
+  const nudge = align === "start" ? "mt-2xs" : undefined;
   return multi ? (
     <CheckboxIndicator checked={selected} className={nudge} />
   ) : (

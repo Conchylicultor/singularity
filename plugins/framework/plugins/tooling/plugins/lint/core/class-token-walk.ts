@@ -47,21 +47,27 @@ export const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 export const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge", "cva"]);
 
 /**
- * Is this child slot a non-computed identifier KEY of an object property
- * (`{ size: … }`, cva's `variants` / `size` / `defaultVariants`)? Such a key is
- * a name, never a class, so the walk must not resolve it as an alias — a same-
- * file binding that happens to share the name (`const size = "text-sm"`) would
- * otherwise be harvested. A string-literal key (`clsx({ "text-x": cond })`) IS
- * a class and is still harvested; so is the property's value, shorthand
- * included.
+ * Is this child slot a NAME rather than a value? Two shapes:
+ *
+ *   - a non-computed identifier KEY of an object property (`{ size: … }`,
+ *     cva's `variants` / `size` / `defaultVariants`);
+ *   - a non-computed member PROPERTY (`sz.box`, `styles.title`).
+ *
+ * Either is a name, never a class, so the walk must not resolve it as an alias
+ * — a same-file binding that happens to share the name (`const size =
+ * "text-sm"`, `const box = …`) would otherwise be harvested. A string-literal
+ * key (`clsx({ "text-x": cond })`) IS a class and is still harvested; so is the
+ * property's value, shorthand included, and a computed member's key
+ * (`SIZE[size]`).
  */
-function isVariantNameKey(node: TSESTree.Node, key: string): boolean {
-  return (
-    node.type === "Property" &&
-    key === "key" &&
-    !node.computed &&
-    node.key.type === "Identifier"
-  );
+function isNameSlot(node: TSESTree.Node, key: string): boolean {
+  if (node.type === "Property") {
+    return key === "key" && !node.computed && node.key.type === "Identifier";
+  }
+  if (node.type === "MemberExpression") {
+    return key === "property" && !node.computed;
+  }
+  return false;
 }
 
 /**
@@ -75,17 +81,120 @@ export function baseClass(token: string): string {
   return bare.startsWith("-") ? bare.slice(1) : bare;
 }
 
+type FunctionNode =
+  | TSESTree.FunctionDeclaration
+  | TSESTree.FunctionExpression
+  | TSESTree.ArrowFunctionExpression;
+
+function isFunctionNode(node: TSESTree.Node): node is FunctionNode {
+  return (
+    node.type === "FunctionDeclaration" ||
+    node.type === "FunctionExpression" ||
+    node.type === "ArrowFunctionExpression"
+  );
+}
+
+/** Is this a class-builder call (`cn(…)`, `cva(…)`, …)? */
+function isClassBuilderCall(node: TSESTree.Node): boolean {
+  return (
+    node.type === "CallExpression" &&
+    node.callee.type === "Identifier" &&
+    CLASS_BUILDERS.has(node.callee.name)
+  );
+}
+
 /**
- * Recursively harvest class-name tokens from a class-value subtree into `out`.
+ * The expressions a function's CALL evaluates to: an arrow's expression body,
+ * or the argument of every `return` in its body — not descending into nested
+ * functions, whose returns are theirs, not this function's.
+ */
+function returnValues(fn: FunctionNode): TSESTree.Node[] {
+  if (fn.body.type !== "BlockStatement") return [fn.body];
+  const out: TSESTree.Node[] = [];
+  const visit = (node: TSESTree.Node): void => {
+    if (node.type === "ReturnStatement") {
+      if (node.argument) out.push(node.argument);
+      return;
+    }
+    if (isFunctionNode(node)) return;
+    for (const key of Object.keys(node)) {
+      if (key === "parent") continue;
+      const value = (node as unknown as Record<string, unknown>)[key];
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          if (child && typeof child === "object" && "type" in child) {
+            visit(child as TSESTree.Node);
+          }
+        }
+      } else if (value && typeof value === "object" && "type" in value) {
+        visit(value as TSESTree.Node);
+      }
+    }
+  };
+  for (const stmt of fn.body.body) visit(stmt);
+  return out;
+}
+
+/**
+ * The value nodes a same-file identifier stands for, when it is reached from a
+ * class context — what the walk continues into in place of the name.
+ *
+ *   - A `const`/`let` with an initializer stands for that initializer, whatever
+ *     its shape: a literal, a map (`SIZE`), a lookup into one (`SIZE[s]`), a
+ *     ternary between two, a `satisfies`/`as` wrapper, or a CALL — whose callee
+ *     the walk then resolves in turn.
+ *   - A FUNCTION (a declaration, or a `const` bound to an arrow / function
+ *     expression) stands for its return values. That is what a call of it —
+ *     `geometryFor(p, s).box`, `const sz = geometryFor(p, s)` — evaluates to,
+ *     so a class table returned through a helper is read like one indexed in
+ *     place.
+ *   - A class-builder call inside the value (`const cls = cn(…)`,
+ *     `const buttonVariants = cva(…)`, a helper returning `cn(…)`) is not
+ *     re-entered by the walk — see {@link walkTokens}.
+ *   - A parameter or an import has no in-file value and stands for nothing.
+ *
+ * `seen` guards cycles (a recursive function, `a = b; b = a`) and makes every
+ * binding contribute once per walk.
+ */
+function aliasValues(
+  sourceCode: TSESLint.SourceCode,
+  node: TSESTree.Identifier,
+  seen: Set<unknown>,
+): TSESTree.Node[] {
+  let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
+  let variable: TSESLint.Scope.Variable | undefined;
+  while (scope && !variable) {
+    variable = scope.variables.find((v) => v.name === node.name);
+    scope = scope.upper;
+  }
+  if (!variable || seen.has(variable)) return [];
+  seen.add(variable);
+  const out: TSESTree.Node[] = [];
+  for (const def of variable.defs) {
+    if (def.type === "FunctionName") {
+      // A body-less overload / `declare function` has no value to read.
+      if (isFunctionNode(def.node)) out.push(...returnValues(def.node));
+      continue;
+    }
+    const init = def.type === "Variable" ? def.node.init : null;
+    if (!init) continue;
+    if (isFunctionNode(init)) out.push(...returnValues(init));
+    else out.push(init);
+  }
+  return out;
+}
+
+/**
+ * The ONE traversal both harvesters run: every class-name token reachable from
+ * `node`, handed to `emit` with the node it was read from.
  *
  * Directly contained strings are harvested wherever they sit: bare `Literal`
  * `.value`s and `TemplateElement.value.raw`s (split on whitespace), inside
  * `cn(...)`/`clsx(...)` calls, ternaries, `clsx({ "text-x": cond })` object
  * keys, and arbitrary nesting — the walk is structural, not shape-specific.
  *
- * It ALSO follows same-file aliases: an `Identifier` reached from a class
- * context is resolved to its declaration, and a **string**, **template**,
- * **object-literal** or **array-literal** initializer is harvested too. Both
+ * It ALSO follows same-file aliases (see {@link aliasValues}): an `Identifier`
+ * reached from a class context is replaced by the value it stands for. The
  * indirections are load-bearing:
  *
  *   - a MAP indexed in a class context (`cn(TONE[tone])`, `styles.title`) is how
@@ -93,18 +202,69 @@ export function baseClass(token: string): string {
  *   - a standalone string `const` referenced from a class context is how a
  *     banned class hides one hoist away. That hoist is not hypothetical: an
  *     author wrote `const ANCHOR_COLUMN = "block-anchor absolute z-raised"`
- *     specifically because a class literal inline in the JSX would be reported.
- *     A rule anchored on a position teaches authors where the position isn't, so
- *     the walk follows the value instead of guarding the position.
+ *     specifically because a class literal inline in the JSX would be reported;
+ *   - an intermediate local or a helper's RESULT (`const sz =
+ *     geometryFor(p, s)` → `SIZE_MAP[size]`) is how a size table hid behind a
+ *     function — the avatar's `SIZE_MAP` carried raw font sizes no rule saw.
+ *
+ * A rule anchored on a position teaches authors where the position isn't, so
+ * the walk follows the value instead of guarding the position.
  *
  * A `cva(...)` CALL is walked like any class builder (its base and variant
  * values are literal classes), but a styling-function RESULT — an identifier
- * bound to `cva(...)` and later called — is not followed: its output is not a
- * value this walk can read. Non-computed identifier object keys (cva's variant
- * names) are skipped, never resolved as aliases. Resolution is same-file only
- * (an imported or parameter binding has no in-file initializer) and
- * cycle-guarded via `seen`. Because the walk only ever starts from a real class-name context,
- * an unrelated doc-string that merely mentions `text-sm` is never inspected.
+ * bound to `cva(...)` and later called — is not followed: the table is checked
+ * where it is written. Name slots (object keys, `.property` names) are skipped,
+ * never resolved as aliases. Resolution is same-file only. Because the walk
+ * only ever starts from a real class-name context, an unrelated doc-string that
+ * merely mentions `text-sm` is never inspected.
+ */
+function walkTokens(
+  sourceCode: TSESLint.SourceCode,
+  node: TSESTree.Node | null | undefined,
+  emit: (token: string, node: TSESTree.Node) => void,
+  seen: Set<unknown>,
+  viaAlias = false,
+): void {
+  if (!node) return;
+  // Every class-builder call is a check site of its own. Reached through an
+  // alias (`const cls = cond ? cn(…) : …`), its tokens were already reported
+  // where the call is written — reporting them again at the use would land on a
+  // line the call's own `eslint-disable` does not cover.
+  if (viaAlias && isClassBuilderCall(node)) return;
+  if (node.type === "Literal") {
+    if (typeof node.value === "string") {
+      for (const t of node.value.split(/\s+/)) if (t) emit(t, node);
+    }
+    return;
+  }
+  if (node.type === "TemplateElement") {
+    for (const t of node.value.raw.split(/\s+/)) if (t) emit(t, node);
+    return;
+  }
+  if (node.type === "Identifier") {
+    for (const value of aliasValues(sourceCode, node, seen)) {
+      walkTokens(sourceCode, value, emit, seen, true);
+    }
+    return;
+  }
+  for (const key of Object.keys(node)) {
+    if (key === "parent" || isNameSlot(node, key)) continue;
+    const value = (node as unknown as Record<string, unknown>)[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        if (child && typeof child === "object" && "type" in child) {
+          walkTokens(sourceCode, child as TSESTree.Node, emit, seen, viaAlias);
+        }
+      }
+    } else if (value && typeof value === "object" && "type" in value) {
+      walkTokens(sourceCode, value as TSESTree.Node, emit, seen, viaAlias);
+    }
+  }
+}
+
+/**
+ * Recursively harvest class-name tokens from a class-value subtree into `out`.
+ * See {@link walkTokens} for what is reached and why.
  */
 export function collectTokens(
   sourceCode: TSESLint.SourceCode,
@@ -112,54 +272,7 @@ export function collectTokens(
   out: Set<string>,
   seen: Set<unknown> = new Set(),
 ): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.add(t);
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
-    return;
-  }
-  if (node.type === "Identifier") {
-    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
-    let variable: TSESLint.Scope.Variable | undefined;
-    while (scope && !variable) {
-      variable = scope.variables.find((v) => v.name === node.name);
-      scope = scope.upper;
-    }
-    if (variable && !seen.has(variable)) {
-      seen.add(variable);
-      for (const def of variable.defs) {
-        const init = def.type === "Variable" ? def.node.init : null;
-        if (
-          init &&
-          (init.type === "Literal" ||
-            init.type === "TemplateLiteral" ||
-            init.type === "ObjectExpression" ||
-            init.type === "ArrayExpression")
-        ) {
-          collectTokens(sourceCode, init, out, seen);
-        }
-      }
-    }
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent" || isVariantNameKey(node, key)) continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(sourceCode, child as TSESTree.Node, out, seen);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(sourceCode, value as TSESTree.Node, out, seen);
-    }
-  }
+  walkTokens(sourceCode, node, (token) => out.add(token), seen);
 }
 
 /** A harvested token paired with the node it came from, for rules that report
@@ -174,10 +287,8 @@ export interface TokenNode {
  * alias policy, but each token carries the node it was harvested from.
  *
  * Two rules need this — one autofixes the class it reports, one reports the
- * guarded branch a class sits in — and before this existed they each hand-rolled
- * it, which is how the string walk grew seventeen copies in the first place. A
- * token reached through an alias is reported at the initializer it was found in,
- * which is a real location in the same file.
+ * guarded branch a class sits in. A token reached through an alias is reported
+ * at the node it was found in, which is a real location in the same file.
  */
 export function collectTokenNodes(
   sourceCode: TSESLint.SourceCode,
@@ -185,56 +296,12 @@ export function collectTokenNodes(
   out: TokenNode[],
   seen: Set<unknown> = new Set(),
 ): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/))
-        if (t) out.push({ token: t, node });
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/))
-      if (t) out.push({ token: t, node });
-    return;
-  }
-  if (node.type === "Identifier") {
-    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
-    let variable: TSESLint.Scope.Variable | undefined;
-    while (scope && !variable) {
-      variable = scope.variables.find((v) => v.name === node.name);
-      scope = scope.upper;
-    }
-    if (variable && !seen.has(variable)) {
-      seen.add(variable);
-      for (const def of variable.defs) {
-        const init = def.type === "Variable" ? def.node.init : null;
-        if (
-          init &&
-          (init.type === "Literal" ||
-            init.type === "TemplateLiteral" ||
-            init.type === "ObjectExpression" ||
-            init.type === "ArrayExpression")
-        ) {
-          collectTokenNodes(sourceCode, init, out, seen);
-        }
-      }
-    }
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent" || isVariantNameKey(node, key)) continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokenNodes(sourceCode, child as TSESTree.Node, out, seen);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokenNodes(sourceCode, value as TSESTree.Node, out, seen);
-    }
-  }
+  walkTokens(
+    sourceCode,
+    node,
+    (token, at) => out.push({ token, node: at }),
+    seen,
+  );
 }
 
 /**

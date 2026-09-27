@@ -263,7 +263,7 @@ export function BlockTextEditor({
           italic: "italic",
           underline: "underline",
           strikethrough: "line-through",
-          code: "rounded-md bg-muted px-1 font-mono text-[0.9em]",
+          code: "rounded-md bg-muted px-xs font-mono text-[0.9em]",
         },
         link: "text-primary underline",
       },

@@ -3,14 +3,15 @@
  *
  *   bun test plugins/primitives/plugins/text/lint/no-adhoc-typography.test.ts
  *
- * The focus is the hardened class-token walk's MAPS-ONLY alias resolution: a
- * banned `text-*`/`leading-*` parked in an object/array-literal MAP indexed
- * directly in a class context (e.g. `cn(TONE[tone])`, `styles.title`) must be
- * flagged (the regression guard), while a bare string `const`, an intermediate-
- * local map indirection, doc-strings, sanctioned sub-scale classes, and param-
- * passed classNames (no in-file initializer) must NOT be.
+ * The focus is the class-token walk's alias resolution: a banned
+ * `text-*`/`leading-*` parked in a MAP indexed in a class context
+ * (`cn(TONE[tone])`, `styles.title`), in a string `const`, behind an
+ * intermediate local, or returned through a same-file helper must be flagged,
+ * while doc-strings, sanctioned sub-scale classes, member/key NAMES, and
+ * param-passed classNames (no in-file initializer) must NOT be.
  */
 
+import { describe, it } from "bun:test";
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
 // The rule is a FACTORY taking the shared class-token walk (rule files cannot
@@ -20,6 +21,12 @@ import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/cor
 import buildRule from "./no-adhoc-typography";
 
 const rule = buildRule(lintToolkit);
+
+// Hand RuleTester bun's own describe/it, or it registers nothing under
+// `./singularity test`.
+RuleTester.describe = describe;
+RuleTester.it = it;
+RuleTester.itOnly = it.only;
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -32,9 +39,9 @@ const ruleTester = new RuleTester({
   },
 });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
+// `RuleTester.run` drives the test harness itself (through the describe/it
+// handed to it above), so it must run at module top level — never wrapped in a
+// `test()` callback.
 ruleTester.run(
   "no-adhoc-typography",
   // The eslint flat-config RuleTester is typed against the legacy Rule shape;
@@ -63,21 +70,18 @@ ruleTester.run(
           }
         `,
       },
-      // Maps-only: a map reached only through an INTERMEDIATE LOCAL is out of
-      // range by design. `sz` resolves to a `SIZE[s]` member-access init (not an
-      // object/array literal), so the walk stops — documents the limitation.
+      // A member NAME is not an alias: `.box` never resolves the same-file
+      // `box` binding.
       {
         code: `
-          const SIZE = { a: { box: "text-xs" } };
-          function C({ s }: { s: keyof typeof SIZE }) {
-            const sz = SIZE[s];
-            return <span className={sz.box} />;
-          }
+          const box = "text-sm";
+          const M = { box: "text-caption" };
+          const C = () => <span className={M.box} />;
         `,
       },
       // A `cva` table is walked, but its variant NAMES and `defaultVariants`
       // values are not classes: roles in the values pass, and a same-file
-      // binding that shares a variant name (\`size\`) is never resolved as an
+      // binding that shares a variant name (`size`) is never resolved as an
       // alias of that key.
       {
         code: `
@@ -133,6 +137,57 @@ ruleTester.run(
           { messageId: "adhocTypography" },
           { messageId: "adhocTypography" },
         ],
+      },
+      // A styling-function RESULT is not followed: `buttonVariants` is bound to
+      // a cva(...) call, which is a check site of its own — the table reports
+      // once where it is written, never again at each use. 1 error, not 2.
+      {
+        code: `
+          const buttonVariants = cva("text-sm");
+          const C = () => <button className={buttonVariants()} />;
+        `,
+        errors: [{ messageId: "adhocTypography" }],
+      },
+      // A map reached through an INTERMEDIATE LOCAL is followed: `sz` stands for
+      // its initializer `SIZE[s]`, which resolves `SIZE`. 1 error.
+      {
+        code: `
+          const SIZE = { a: { box: "text-xs" } };
+          function C({ s }: { s: keyof typeof SIZE }) {
+            const sz = SIZE[s];
+            return <span className={sz.box} />;
+          }
+        `,
+        errors: [{ messageId: "adhocTypography" }],
+      },
+      // A map returned through a HELPER is followed (the avatar's SIZE_MAP hid
+      // this way): `sz` stands for `geometryFor(...)`, whose callee stands for
+      // its return values — both branches of the ternary. 2 tokens → 2 errors.
+      {
+        code: `
+          const SIZE = { sm: { box: "text-xs" }, md: { box: "text-sm" } };
+          const TILE = { box: "size-full" };
+          function geometryFor(tile: boolean, s: keyof typeof SIZE) {
+            if (tile) return TILE;
+            return SIZE[s];
+          }
+          function C({ s }: { s: keyof typeof SIZE }) {
+            const sz = geometryFor(false, s);
+            return <span className={sz.box} />;
+          }
+        `,
+        errors: [
+          { messageId: "adhocTypography" },
+          { messageId: "adhocTypography" },
+        ],
+      },
+      // An arrow-bound helper is followed the same way, called inline.
+      {
+        code: `
+          const pick = (loud: boolean) => (loud ? "text-lg" : "text-caption");
+          const C = () => <span className={pick(true)} />;
+        `,
+        errors: [{ messageId: "adhocTypography" }],
       },
       // Member access into an object-literal MAP: resolving `styles` harvests the
       // whole object literal, which carries the banned `text-lg`. Only the

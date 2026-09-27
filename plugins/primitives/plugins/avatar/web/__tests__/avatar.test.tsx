@@ -23,8 +23,17 @@ describe("Avatar badge (default presentation)", () => {
   it("renders today's density-ramp disc with the soft paint", () => {
     const { container } = render(<Avatar color="rose" svgNodes={svgNodes} />);
     expect(box(container).className).toBe(
-      "relative inline-flex shrink-0 items-center justify-center rounded-full size-8 text-sm bg-categorical-4/15 text-categorical-4",
+      "relative inline-flex shrink-0 items-center justify-center @container-[size] rounded-full size-8 bg-categorical-4/15 text-categorical-4",
     );
+  });
+
+  it("sizes a fallback letter as the md disc's share of its box", () => {
+    const { container } = render(
+      <Avatar fallbackKey="mail" fallbackGlyph="m" />,
+    );
+    const letter = box(container).querySelector("span");
+    expect(letter?.textContent).toBe("M");
+    expect(letter?.classList).toContain("text-[length:43.75cqh]");
   });
 
   it("keeps the ringed status dot", () => {

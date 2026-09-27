@@ -12,6 +12,13 @@ sizing is a `<ControlSizeProvider size>` around the region (mirroring `Badge`),
 never a per-instance `size`; passing one is a compile error (`size?: never`).
 The no-provider default is `md`.
 
+The fallback letter is part of that geometry, not text hierarchy: the box is a
+size container (`@container-[size]`) and each bundle's `glyph` is a `cqh` share
+of it (10px in the 16px `xs` disc up to 16px in the 48px `lg` one). A text role
+would follow the theme's type scale while the box stays fixed, so no role is
+used — and because the class-token lint walk follows a helper's return value
+(`geometryFor` → `SIZE_MAP`), a raw `text-*` size in a bundle is reported.
+
 ## Presentation: badge or tile (from context)
 
 How an avatar draws is also a region property —
@@ -22,8 +29,8 @@ How an avatar draws is also a region property —
   paint (a 15% tint of the colour, the colour as the glyph).
 - **`tile`**: the box fills its parent (the view sizes the tile, so density is
   ignored), the FLAT paint (the solid colour under the `categorical-foreground` glyph token, white by default), the glyph at
-  46% of the box (svg by `size-[46%]`, a fallback letter by a `cqh` font size on
-  the box's size container), and the status dot has no ring.
+  46% of the box (svg by `size-[46%]`, a fallback letter by a `cqh` font size, as
+  every presentation does), and the status dot has no ring.
 
 A field renders its avatar without knowing which one it is in; the launcher view
 declares `tile` once around its items.
