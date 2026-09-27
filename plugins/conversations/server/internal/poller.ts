@@ -17,6 +17,8 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
+import { conversationCreated } from "./tables-created-event";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import {
   findTranscriptPath,
@@ -179,6 +181,24 @@ async function tick(): Promise<void> {
             runtimeId: live.runtime,
             status: liveStatusFor(live),
             title: live.title || null,
+            // An adopted conversation is created like any other: announce it
+            // on the adoption's tx, so its subscribers (queue rank, title
+            // generation, …) run for it too — without a rank the sidebar queue
+            // has no section to put it in.
+            onAdopted: (tx, { conversation, taskId }) =>
+              conversationCreated.emit(
+                {
+                  conversationId: conversation.id,
+                  taskId,
+                  model: conversation.model,
+                  spawnedBy: "poller",
+                  createdAt: conversation.createdAt.toISOString(),
+                  kind: conversation.kind,
+                },
+                // Same narrow cast as lifecycle's `commitConversation`: a
+                // PgTransaction is structurally the facade EmitTx names.
+                { tx: tx as EmitTx },
+              ),
           });
           if (adopted) {
             dbById.set(adopted.conversation.id, adopted.conversation);

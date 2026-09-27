@@ -129,6 +129,7 @@ export function useQueueRows(): {
       pinnedGroups,
       waitingGroups,
       workingGroups,
+      workingUnranked,
       blockedIds,
       unranked,
       disconnected,
@@ -222,6 +223,7 @@ export function useQueueRows(): {
         isBlocked: false,
       });
     }
+    for (const conv of workingUnranked) emitFlat(conv, "working");
 
     // 4–6. flat sections (keep incoming order).
     for (const conv of unranked) emitFlat(conv, "unranked");

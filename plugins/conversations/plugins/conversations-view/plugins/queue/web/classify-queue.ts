@@ -22,6 +22,12 @@ export interface ClassifiedQueue {
   pinnedGroups: TaskGroup[];
   waitingGroups: TaskGroup[];
   workingGroups: TaskGroup[];
+  /**
+   * Running conversations with no queue rank yet (a fresh launch before its
+   * rank is seeded, or one whose seed never ran). Still Working: the section
+   * answers "what is running right now", which does not depend on a rank.
+   */
+  workingUnranked: Conversation[];
   allWaitingCount: number;
   blockedIds: Set<string>;
   unranked: Conversation[];
@@ -54,6 +60,7 @@ export function classifyQueue(data: {
   const ranked: RankedConversation[] = [];
   const blocked = new Set<string>();
   const noRank: Conversation[] = [];
+  const workingNoRank: Conversation[] = [];
 
   for (const c of active) {
     if (
@@ -74,6 +81,8 @@ export function classifyQueue(data: {
       ranked.push({ ...c, rank: row.rank, pinned: row.pinned });
     } else if (c.status === "waiting") {
       noRank.push(c);
+    } else {
+      workingNoRank.push(c);
     }
   }
   ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
@@ -124,6 +133,7 @@ export function classifyQueue(data: {
     pinnedGroups: pinnedWaiting,
     waitingGroups: waiting,
     workingGroups: working,
+    workingUnranked: workingNoRank,
     allWaitingCount: waitingCount,
     blockedIds: blocked,
     unranked: noRank,

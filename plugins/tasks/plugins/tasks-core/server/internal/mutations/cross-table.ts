@@ -11,6 +11,7 @@ import { findNextRankInFolder } from "../queries/tasks";
 import { listActiveConversations } from "../queries/conversations";
 import { insertConversationRow } from "./conversations";
 import { updateTask } from "./tasks";
+import type { DbExecutor } from "../status-batch";
 import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
@@ -55,7 +56,22 @@ export interface AdoptOrphanInput {
   runtimeId: string;
   status: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
+  /**
+   * Runs on the adoption's own transaction, only when this call inserted the
+   * row — so whatever the caller announces (the `conversationCreated` emit, and
+   * with it the queue rank, title generation, …) commits together with the row
+   * or not at all. Required: an adopted conversation that skips it is a live
+   * session the rest of the app never hears was created.
+   */
+  onAdopted: (
+    tx: DbExecutor,
+    adopted: { conversation: AdoptedRow; taskId: string },
+  ) => Promise<void>;
 }
+
+type AdoptedRow = NonNullable<
+  Awaited<ReturnType<typeof insertConversationRow>>
+>;
 
 // Synthesises a task + attempt + conversation row in a single transaction for
 // a live tmux session that has no corresponding DB rows. Called by the poller
@@ -100,23 +116,20 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .where(eq(_attempts.id, attemptId))
     .limit(1);
 
-  if (existing) {
-    const row = await insertConversationRow(
-      db,
-      {
-        id: input.id,
-        attemptId,
-        runtime: input.runtimeId,
-        status: input.status,
-        title: input.title ?? null,
-        spawnedBy: "poller",
-        model: resolveModel(DEFAULT_MODEL_CHOICE),
-      },
-      { ignoreConflict: true },
-    );
-    inserted = !!row;
-  } else {
-    await db.transaction(async (tx) => {
+  const conversationValues = {
+    id: input.id,
+    attemptId,
+    runtime: input.runtimeId,
+    status: input.status,
+    title: input.title ?? null,
+    spawnedBy: "poller",
+    model: resolveModel(DEFAULT_MODEL_CHOICE),
+  };
+  await db.transaction(async (tx) => {
+    let rowTaskId: string;
+    if (existing) {
+      rowTaskId = existing.taskId;
+    } else {
       const rank = await findNextRankInFolder(null, tx);
       await tx.insert(_tasks).values({
         id: taskId,
@@ -126,23 +139,16 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
       await tx
         .insert(_attempts)
         .values({ id: attemptId, taskId, worktreePath: input.worktreePath });
-      const row = await insertConversationRow(
-        tx,
-        {
-          id: input.id,
-          attemptId,
-          runtime: input.runtimeId,
-          status: input.status,
-          title: input.title ?? null,
-          spawnedBy: "poller",
-          model: resolveModel(DEFAULT_MODEL_CHOICE),
-        },
-        { ignoreConflict: true },
-      );
-      inserted = !!row;
-      if (inserted) createdTaskId = taskId;
+      rowTaskId = taskId;
+    }
+    const row = await insertConversationRow(tx, conversationValues, {
+      ignoreConflict: true,
     });
-  }
+    if (!row) return;
+    inserted = true;
+    if (!existing) createdTaskId = taskId;
+    await input.onAdopted(tx, { conversation: row, taskId: rowTaskId });
+  });
   if (!inserted) return null;
   const [row] = await db
     .select()
