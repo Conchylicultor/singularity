@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
+  ConversationModelSchema,
   DEFAULT_MODEL_CHOICE,
   StoredModelSchema,
   resolveModel,
@@ -70,8 +72,30 @@ export const claudeCliCallFields = {
 export const ClaudeCliCallSchema = fieldsToZodObject(claudeCliCallFields);
 export type ClaudeCliCall = z.infer<typeof ClaudeCliCallSchema>;
 
-export const claudeCliCallsResource = resourceDescriptor<ClaudeCliCall[]>(
-  "claude-cli-calls",
-  z.array(ClaudeCliCallSchema),
-  [],
-);
+/**
+ * How many calls the log keeps: the recorder trims `claude_cli_calls` to the
+ * newest this-many rows after every insert (`record-call.ts`), and a window of
+ * the `claudeCliCalls` collection grows to at most the same — so a fully grown
+ * window is the whole log.
+ */
+export const RECENT_CALLS_LIMIT = 1000;
+
+/**
+ * The call log — Debug → Claude CLI Calls — as a live collection: a bounded
+ * window, newest first (100, grown to at most `RECENT_CALLS_LIMIT`), plus its
+ * `:rows` / `:groups` siblings. The pane's chips filter on the server:
+ * `sourceName` (its chips are a `groupBy: "sourceName"` grouping, so a source
+ * seen only in older calls still has one) and `model` (a tier chip is an `in`
+ * over that tier's model ids — the tier is not a column).
+ */
+export const claudeCliCalls = liveCollection("claude-cli-calls", {
+  row: ClaudeCliCallSchema,
+  id: "id",
+  filterable: {
+    sourceName: liveText(),
+    model: liveText(ConversationModelSchema),
+  },
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  maxLimit: RECENT_CALLS_LIMIT,
+});

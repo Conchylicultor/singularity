@@ -9,8 +9,18 @@ Layer-2 scoped recompute, `withNotifyBatch`), and the `/ws/notifications` +
 `/api/resources/:key` handlers. `createResourceRuntime(opts)` returns a fresh,
 fully-isolated instance (own registry, sockets, DAG, batch state); each facade
 calls it once with its own hooks and re-presents the runtime's types/values as its
-own stable public surface, so `defineResource` call sites and `Resource.Declare`
-contributors never see this plugin directly.
+own stable public surface, so its callers and `Resource.Declare` contributors
+never see this plugin directly.
+
+Plugins do not call it to add live state: they declare with `network/live`'s
+`liveValue` / `liveCollection` and serve with `serveValue` / `serveCollection`,
+which compile to `defineResource` (`plugins/network/plugins/live/CLAUDE.md`). The
+only direct callers left are that substrate and the tree / revision-tick / config
+resources (Resources page items 3 / 7 / 9). `mode` has no default: a non-keyed
+definition states `push` or `invalidate` (the flat `DefineResourceInput` and the
+two-arg `ServerResourceOptions` require it; the keyed `KeyedServerResourceOptions`
+has none), because the old implicit `invalidate` was a delivery choice nobody
+made.
 
 **Flush is level-parallel.** `flushNotifies` walks the dependsOn DAG grouped by
 longest-path depth (`rebuildDag` stamps `entry.depth`; every edge strictly
@@ -72,14 +82,20 @@ at the declaration site or the resource does not compile.
 1. **Which RESOURCE does a change belong to?** `identityTable`, or the explicit
    `recompute: { kind: "full", reason }` opt-out.
 2. **And which subscribed TUPLE of it owns the changed row?** Under
-   `identityTable`, exactly one of `rowIdentity` (the tuple names ONE row) /
-   `membership` / `scopedMembership` (a bounded window or point set) /
-   `fanOut: { reason }` (every tuple genuinely must be woken).
+   `identityTable`, exactly one of `membership` / `scopedMembership` (a bounded
+   window or point set) / `fanOut: { reason }` (every tuple genuinely must be
+   woken).
 
-Question 2 used to have no spelling, so its answer was always "wake all of them"
-— see the fan-out cost under Own-row routing below. `fanOut` normalizes to
-NOTHING in `createResource`: a declaration requirement only, byte-identical at
-runtime, exactly as the `recompute` arm is. It is deliberately a SIBLING of
+Question 2 used to have no spelling, so its answer was always "wake all of them":
+every subscribed tuple re-ran its own read, found the changed row was not its
+own, and diffed to empty. No frame shipped, which is what hid the cost — the read
+IS the cost. A tuple that names ONE row is a lookup-only `liveCollection` read by
+id (its `:rows` point membership routes a change only to the tuples holding that
+id); the own-row `rowIdentity` arm that once answered it went with its last
+caller.
+
+`fanOut` normalizes to NOTHING in `createResource`: a declaration requirement
+only, byte-identical at runtime, exactly as the `recompute` arm is. It is deliberately a SIBLING of
 `membership` and never a `kind` inside `KeyedMembership` — a membership record is
 truthy at `drainEntry`'s membership branch and at `applyDbChange`'s INSERT/DELETE
 scoping decision, so a `kind: "fan-out"` member would reroute the drain, which is
@@ -188,66 +204,6 @@ diff base started empty. The seed is a no-op once a snapshot exists (a sub-ack t
 arrived first is never clobbered), and it targets only unbounded-window aliases
 (`unboundedWindowKeys`), the only shape whose durable value is byte-sufficient to
 reconstruct the base.
-
-## Own-row routing (`rowIdentity`) — narrows *who* is woken, never *what* they get
-
-A keyed own-identity resource whose params tuple names EXACTLY ONE row of its
-identity table may declare `rowIdentity: (params) => rowId` (again only on the
-two-arg keyed form, which supplies the required `identityTable`). It is read by
-`applyDbChange` and by nothing else: a change whose ids are known and do not
-include that row is not scheduled for that tuple at all — no read, no version
-bump, no frame. The owning tuple falls through with its `affected` / `deleted`
-exactly as computed, so it stays on the legacy scoped/FULL drain and its frames
-are byte-identical to the no-`rowIdentity` behavior. That equivalence is pinned
-as a test (`runtime-row-identity.test.ts` §"the owning tuple's frame stream is
-IDENTICAL with and without rowIdentity"), not asserted as a comment.
-
-What it deletes is the fan-out: without it the feed schedules a recompute on
-EVERY subscribed tuple, each of which re-runs its own one-row read, finds the
-changed row is not its own, and diffs to empty. Those tuples ship no frame —
-which is exactly what hides the cost. The read IS the cost. (`page-block-doc`
-flushes a `doc-update` roughly every 300 ms while someone types, so it was one
-read per open block editor per flush: `research/2026-08-25-global-own-row-resource-scoping.md`.)
-
-Three rules make it safe, and each is a test:
-
-- **The filter runs only in the identity-origin arm**, gated on
-  `identityOrigin && routeIds !== null` — never on `affected !== null`. It must
-  filter op-`I`/`D`, where `affected` is deliberately `null` for a
-  non-membership entry; and a `null` `affected` ALSO arises from the
-  uncovered-dependency arm, whose `change.ids` live in a FOREIGN table's key
-  space, where intersecting would silently drop every delivery. This is the
-  whole correctness argument and it is invisible in the code.
-- **`ids: null`** (a bulk statement, or one over the ~7000-byte NOTIFY cap) has
-  nothing to intersect, so it still reaches every tuple, FULL — today's
-  behavior.
-- **The declaration must be pure, total, synchronous and cheap** (it runs per
-  subscribed tuple on the routing path) and nothing enforces that, so the call
-  site fails OPEN: a throwing `rowIdentity` is reported and treated as MATCHING.
-  Fail-closed would be a silent drop; worse, letting it throw would land in
-  `applyDbChange`'s swallowing catch and drop every delivery for that change
-  across every resource.
-
-**It is deliberately not `membership: { kind: "point", idsOf: () => [oneId] }`**,
-which routes identically and then changes everything else. Point membership
-turns INSERT/DELETE on the identity table from a FULL recompute into an
-incremental membership diff and reroutes the drain to branch 4; a membership
-delta must always ship the full `order`, which the client rebuilds the array
-from — a drift/`forceFullResub` surface bought for nothing on a 0-or-1-row value
-that has neither membership nor order. It is also a persistence decision
-(`membershipBounded` excludes the entry from L2). **The drain difference is the
-entire reason both declarations exist.** Accordingly `rowIdentity` is mutually
-exclusive with `membership` / `scopedMembership`, requires `mode: "keyed"` +
-`identityTable`, and is incompatible with `preload` (the L2 boot init and
-`recomputeResource` schedule the `{}` tuple, for which `rowIdentity({})` names
-no row) — all four are loud registration throws.
-
-There is deliberately **no reverse `rowId → tuple` index**: the per-tuple work
-on the routing path is one closure call and a Set lookup, and an index would be
-a second source of truth for subscription state that must stay in lockstep with
-sub / unsub / socket close / `sub-batch` replay. Revisit above ~10⁴ subscribed
-tuples for one key, or if `applyDbChange` shows up in a CPU profile once the
-fan-out is gone.
 
 ## Keyed snapshot representation (`SnapEntry` / `SnapEncoder`)
 
@@ -367,7 +323,7 @@ frame (and each `sub-batch` entry) restates its tab's flag (`acks: true`, absent
 sub-ack, no loader run; dropped for a tuple the tab does not hold), and it
 leaves with the tab (unsub / unsub-tab / a `complete` batch that did not
 restate it / socket close). The feed router schedules an ACK-ONLY pending for a
-tuple its change missed (own-row routing, point empty-intersection) only when
+tuple its change missed (a point empty-intersection) only when
 someone asked (`tupleWantsAcks`). The client half (`requestAcks`,
 `useResourceAcks`) is live-state's; the optimistic hook is its caller.
 Loader failure drops the frame and the acks together (no false ack). Client half:
@@ -577,6 +533,7 @@ and those plugins' `CLAUDE.md`.
     - `KeyedDiff`
     - `KeyedMembership`
     - `KeyedMembershipInput`
+    - `KeyedServerResourceOptions`
     - `RecomputeIntent`
     - `Resource`
     - `ResourceContract`

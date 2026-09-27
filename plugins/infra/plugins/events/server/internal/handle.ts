@@ -10,22 +10,16 @@ import {
 } from "../../core/endpoints";
 import { triggerTableRegistry } from "./registry";
 import { deleteTrigger } from "./trigger";
-import {
-  loadEmissions,
-  loadTriggers,
-} from "./resources";
+import { loadEmissions, loadTriggers } from "./resources";
 
-export const handleListEmissions = implement(
-  listEmissions,
-  async ({ req }) => {
-    const url = new URL(req.url);
-    const limit = Math.min(Number(url.searchParams.get("limit") ?? 200), 1000);
-    return loadEmissions(limit);
-  },
-);
+export const handleListEmissions = implement(listEmissions, async ({ req }) => {
+  const url = new URL(req.url);
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 200), 1000);
+  return loadEmissions(limit);
+});
 
 export const handleListTriggers = implement(listTriggers, async () => {
-  return loadTriggers();
+  return { rows: await loadTriggers() };
 });
 
 export const handleDeleteTrigger = implement(

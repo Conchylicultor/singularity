@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 
 export const configV2ValuesSchema = z.record(z.unknown());
@@ -116,24 +117,29 @@ export type ConfigV2ConflictLocations = z.infer<
 
 // storePath → where it conflicts. Only conflicting paths are present, so
 // membership answers "does this row warn?" and the value answers "about what?".
-// Keyed by `{}` (the whole map). Powers the nav-row warning badge, the scope-tab
-// dots and the rail/sidebar attention dots — distinct from
-// configV2ConflictResource, which carries ONE descriptor's conflict entry (the
-// full origin/override documents) for ONE scope.
+// Powers the nav-row warning badge, the scope-tab dots and the rail/sidebar
+// attention dots — distinct from configV2ConflictResource, which carries ONE
+// descriptor's conflict entry (the full origin/override documents) for ONE scope.
 export const configV2ConflictMapSchema = z.record(
   configV2ConflictLocationsSchema,
 );
 export type ConfigV2ConflictMap = z.infer<typeof configV2ConflictMapSchema>;
 
-export const configV2ConflictMapResource = resourceDescriptor<
-  ConfigV2ConflictMap,
-  {}
->("config-v2.conflict-locations", configV2ConflictMapSchema, {});
+// The whole map, one param-less live value served from the external arm (its
+// truth is the config files on disk). Bounded by the registered descriptors
+// (~250), of which only the conflicting ones are present. Not preloaded: the
+// attention dots paint nothing until it lands.
+export const configConflictLocations = liveValue(
+  "config-v2.conflict-locations",
+  {
+    schema: configV2ConflictMapSchema,
+  },
+);
 
 // storePaths whose BASE config the USER LAYER has changed, mapped to the count of
-// such fields (only paths with ≥1 are present). Keyed by `{}` (the whole map).
-// Powers the config nav-row modified count badge AND the "Modified only" filter
-// without any per-row reactive read.
+// such fields (only paths with ≥1 are present). Powers the config nav-row
+// modified count badge AND the "Modified only" filter without any per-row
+// reactive read.
 //
 // "Modified" is measured against the GIT LAYER — the generated origin ⊕ any
 // committed authored override, as propagated by `./singularity build` — not
@@ -145,7 +151,8 @@ export type ConfigV2ModifiedCounts = z.infer<
   typeof configV2ModifiedCountsSchema
 >;
 
-export const configV2ModifiedCountsResource = resourceDescriptor<
-  ConfigV2ModifiedCounts,
-  {}
->("config-v2.modified-counts", configV2ModifiedCountsSchema, {});
+// The whole map, one param-less live value served from the external arm (disk is
+// the truth). Bounded by the registered descriptors. Not preloaded.
+export const configModifiedCounts = liveValue("config-v2.modified-counts", {
+  schema: configV2ModifiedCountsSchema,
+});

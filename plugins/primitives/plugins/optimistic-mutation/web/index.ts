@@ -5,8 +5,6 @@ export type {
   OptimisticOptions,
   OptimisticResult,
   OptimisticSettled,
-  UseOptimisticResourceArgs,
-  UseOptimisticResourceResult,
 } from "./internal/use-optimistic-resource";
 export { OpNoLongerApplies } from "./internal/overlay";
 export { enqueueResourceWrite } from "./internal/send-lane";

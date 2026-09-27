@@ -1,20 +1,28 @@
-import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { DeploymentSchema, type Deployment } from "./schemas";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { DeploymentSchema } from "./schemas";
 
 /**
- * Every deployment, push-mode — the `deploy.servers` resource next door is the
- * precedent, and this one is co-bounded with it.
+ * Every deployment, as a live collection over `deploy_deployments`: a bounded
+ * window (oldest first — the order a server's list has always shown — 100 / max
+ * 500) plus its `:rows` point sibling.
  *
- * Plain (unbounded) is correct here and does NOT need the bounded working-set
- * contract: a deployment is one row per (composition × server), both of which
- * are hand-authored by a human — the compositions come from a config someone
- * edits, the servers from a registry someone fills in. That is an inherently
- * tiny, domain-bounded set, and it migrates to the bounded contract together
- * with the `deploy.servers` resource it sits beside.
+ * - **One deployment** (the pane, its sections, the analytics gate) is
+ *   `useLiveRow(deployments, deploymentId)`: a point read, so `found: false` is
+ *   "this deployment no longer exists", never "outside the window".
+ * - **One server's list** is `useLive(deployments, { where: { serverId } })` —
+ *   `serverId` is the one filterable column, because it is the one a reader
+ *   filters on.
+ *
+ * A deployment is one row per (composition × server), both hand-authored, so
+ * the default window holds every deployment of any real server; the bound is
+ * the collection's, not a promise that the set stays small.
  */
-export const deploymentsResource = resourceDescriptor<Deployment[]>(
-  "deploy.deployments",
-  z.array(DeploymentSchema),
-  [],
-);
+export const deployments = liveCollection("deploy.deployments", {
+  row: DeploymentSchema,
+  id: "id",
+  filterable: { serverId: liveText() },
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "asc"]], limit: 100 },
+  maxLimit: 500,
+});

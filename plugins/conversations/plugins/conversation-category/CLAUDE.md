@@ -63,10 +63,17 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - Storage is plugin-owned: `conversation_categories`, one row per
   (conversation, category), FK to `_conversations` with cascade-delete. NOT a
   1:1 `defineExtension` — that primitive's sole primary key is the parent id.
+- The live read is `conversationCategories` (`shared/schemas.ts`), a
+  lookup-only `liveCollection` keyed on `id` — it mints
+  `conversation-categories:rows` alone, is served by
+  `serveCollection(conversationCategories, { from: _conversationCategories })`
+  (the projection is the row schema's keys, so `createdAt` stays server-only),
+  and is read by `useCategoryRows` through `useLive(c, { ids })`.
 - The primary key is the derived `categoryRowId(conversationId, categoryId)`
-  rather than a composite, because the live-state **point** resource requires its
-  subscription key to be a single-column pk. That keeps reads bounded: a sidebar
-  row subscribes to the ONE avatar-category id.
+  rather than a composite, because a lookup collection's row id must be a
+  single-column pk (the `:rows` point routing matches written pk values against
+  each subscriber's id set). That keeps reads bounded: a sidebar row subscribes
+  to the ONE avatar-category id.
 - A row whose category was deleted from config is **structurally invisible** —
   no subscribed id set can contain it. That is why nothing sweeps orphans: a
   config write fires on every debounce in the settings form, so an automatic
@@ -96,11 +103,11 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `conversations/conversation-ui/item.ConversationItemConv`
     - `conversations/conversation-ui/item.Item`
     - `fields/dynamic-enum/config.DynamicEnum`
+    - `network/live.useLive`
     - `primitives/avatar.Avatar`
     - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.usePointResources`
   - Exports (types):
     - `Category`
     - `CategoryItem`
@@ -113,7 +120,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
-    - `resource.declare` "conversation-categories"
+    - `resource.declare` "conversation-categories:rows"
     - `trigger` "conversation-category.classify"
   - Uses:
     - `config_v2.ConfigV2`
@@ -129,21 +136,20 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `infra/endpoints.implement`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/query-resource.windowQueryResource`
+    - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
   - Exports (types): `CategoryDescriptor`
   - Exports (values):
     - `classifyConversationJob`
-    - `conversationCategoriesResource`
     - `conversationCategoryConfig`
     - `getAvatarCategoryId`
     - `getCategories`
     - `getItemMap`
     - `getItemOrder`
   - Register: `defineJob('conversation-category.classify')`
-  - Resources: `conversation-categories` (keyed, point)
+  - Resources: `conversation-categories:rows` (keyed, point)
   - Routes:
     - `POST /api/conversation-category/:conversationId/classify`
     - `POST /api/conversation-category/:conversationId`
@@ -153,7 +159,6 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - Shared:
   - Exports (types):
     - `ClassifyBody`
-    - `ConversationCategoriesPayload`
     - `ConversationCategory`
     - `SetCategoryItemBody`
   - Exports (values):
@@ -161,8 +166,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `ClassifyBodySchema`
     - `classifyConversation`
     - `clearConversationCategory`
-    - `ConversationCategoriesPayloadSchema`
-    - `conversationCategoriesResource`
+    - `conversationCategories`
     - `conversationCategoryConfig`
     - `ConversationCategorySchema`
     - `SetCategoryItemBodySchema`

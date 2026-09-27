@@ -1,21 +1,33 @@
 import { desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
 import {
-  EmissionsPayloadSchema,
-  TriggersPayloadSchema,
+  eventEmissions,
+  eventTriggers,
   type EmissionsPayload,
-  type TriggersPayload,
+  type TriggerRow,
 } from "../../core/resources";
 import { triggerTableRegistry } from "./registry";
 import { _event_emissions } from "./tables";
 
-const BASE_COLS = new Set(["id", "jobName", "jobWith", "enabled", "oneShot", "createdAt"]);
+const BASE_COLS = new Set([
+  "id",
+  "jobName",
+  "jobWith",
+  "enabled",
+  "oneShot",
+  "createdAt",
+]);
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic row shape across per-event tables.
 type Row = Record<string, any>;
 
+// The `GET /api/events/emissions` read. The Events tab reads the
+// `event-emissions` collection instead (`eventEmissionsServed` below).
 export async function loadEmissions(limit = 200): Promise<EmissionsPayload> {
   // `_event_emissions.$inferSelect ≡ EmissionRow` by construction (both derive
   // from `eventEmissionFields`), so rows are returned verbatim — no projection.
@@ -27,8 +39,8 @@ export async function loadEmissions(limit = 200): Promise<EmissionsPayload> {
   return { rows };
 }
 
-export async function loadTriggers(): Promise<TriggersPayload> {
-  const out: TriggersPayload["rows"] = [];
+export async function loadTriggers(): Promise<TriggerRow[]> {
+  const out: TriggerRow[] = [];
   const registeredNames = getAllRegisteredJobNames();
   for (const [eventName, table] of triggerTableRegistry.entries()) {
     const rows = (await db.select().from(table)) as Row[];
@@ -45,26 +57,37 @@ export async function loadTriggers(): Promise<TriggersPayload> {
         enabled: r.enabled as boolean,
         oneShot: r.oneShot as boolean,
         createdAt:
-          r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : String(r.createdAt),
         filters,
         dangling: !registeredNames.has(r.jobName as string),
       });
     }
   }
   out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return { rows: out };
+  return out;
 }
 
-export const eventEmissionsResource = defineResource({
-  key: "event-emissions",
-  mode: "invalidate",
-  schema: EmissionsPayloadSchema,
-  loader: async (): Promise<EmissionsPayload> => loadEmissions(200),
+// The emit() log over `event_emissions`: its window (newest first) and its
+// `:rows` / `:groups` siblings. Every column is on the wire — the row IS the
+// entity (`EmissionRow`), bound by name. Rows are written once and never
+// updated; `emittedAt` never changes, so an emit is a window insert and the
+// ring's inline prune a window delete.
+export const eventEmissionsServed = serveCollection(eventEmissions, {
+  from: _event_emissions,
 });
 
-export const eventTriggersResource = defineResource({
-  key: "event-triggers",
-  mode: "invalidate",
-  schema: TriggersPayloadSchema,
-  loader: async (): Promise<TriggersPayload> => loadTriggers(),
+// The loader's read-set is every per-event trigger table, so a write to any of
+// them (a trigger() binding, a ctx.waitFor's oneShot binding and its deletion
+// on dispatch, the Triggers tab's enable / delete, the boot re-projection)
+// recomputes and pushes the whole list. `dangling` reads the job registry,
+// which is fixed once boot has registered every job.
+export const eventTriggersServed = serveValue(eventTriggers, {
+  source: "db",
+  loader: loadTriggers,
+  unbounded: {
+    reason:
+      "every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind",
+  },
 });

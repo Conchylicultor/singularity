@@ -8,7 +8,7 @@ toolbar button that lists them and opens each one where it already lives.
 
 Nothing new on the server, and no second pass over the transcript. The
 conversation view already subscribes to the parsed event array
-(`jsonlEventsResource`); `useConversationArtifacts` joins that subscription and
+(`useLive(jsonlEvents, { id })`); `useConversationArtifacts` joins that subscription and
 derives everything here, in a `useMemo` over the array. So the cost of the
 button is one pass per new turn, not a query.
 
@@ -143,6 +143,7 @@ here.
   - Uses:
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -152,7 +153,6 @@ here.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`

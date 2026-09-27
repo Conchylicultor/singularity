@@ -26,10 +26,8 @@ import {
   xmlTextToRuns,
 } from "@plugins/page/plugins/editor/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import {
-  compileWindowQuery,
-  type QueryDb,
-} from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server";
 import { stateToBase64 } from "@plugins/primitives/plugins/collab-doc/server";
 import { blockDocs } from "../../core";

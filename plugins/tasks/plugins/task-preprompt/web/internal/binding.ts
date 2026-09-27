@@ -25,5 +25,9 @@ export function useTaskPrepromptBinding(
   );
 
   if (result.pending) return { pending: true };
-  return { pending: false, value: result.data, onChange };
+  return {
+    pending: false,
+    value: result.found ? result.row.prepromptId : null,
+    onChange,
+  };
 }

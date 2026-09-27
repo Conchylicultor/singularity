@@ -5,10 +5,14 @@ import {
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { triggerBuildEndpoint, BUILD_LOG_CHANNEL } from "../../core";
+import {
+  buildHistory,
+  triggerBuildEndpoint,
+  BUILD_LOG_CHANNEL,
+} from "../../core";
 import { MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -22,7 +26,6 @@ import { RunsDataView } from "@plugins/runs/web";
 // reasoning wrong.
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
-import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 
 // Both build surfaces open on the `active` tab, which is empty whenever nothing
@@ -204,7 +207,7 @@ export function BuildPopoverContent({
    */
   onRowActivate?: () => void;
 }) {
-  const historyResult = useResource(buildHistoryResource);
+  const historyResult = useLive(buildHistory);
   if (historyResult.pending) {
     return (
       <Stack gap="none" className={cn(variant === "pane" && "h-full")}>

@@ -1,14 +1,18 @@
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { mailSyncStateResource } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { mailSyncState } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { _mailSyncState } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 
 // Live `mail_sync_state` table mirror — the UI reads sync progress + failures
-// off this. A push resource scoped to its own table: every UPSERT/UPDATE from the
-// sync jobs auto-pushes via the DB change-feed (no manual notify). `key` /
-// `schema` come from the shared client descriptor; the server adds the DB half.
-export const mailSyncStateServerResource = defineResource(mailSyncStateResource, {
-  mode: "push",
-  identityTable: "mail_sync_state",
+// off this. A db value: every UPSERT/UPDATE from the sync jobs recomputes and
+// pushes it through the DB change-feed (no manual notify). The declaration
+// (key + schema) lives in `mail-core`, the leaf every mail plugin imports; this
+// plugin, which owns the writes, adds the DB half.
+export const mailSyncStateServed = serveValue(mailSyncState, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one row per connected mail account — the app is single-account today",
+  },
   loader: async () => db.select().from(_mailSyncState),
 });

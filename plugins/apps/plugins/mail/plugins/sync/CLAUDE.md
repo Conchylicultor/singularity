@@ -50,6 +50,17 @@ idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (
   DB — durable in the graphile row, so crash recovery resumes the exact page with
   no schema column.
 
+## Live sync state (`mailSyncStateServed`)
+
+The `mail_sync_state` rows reach the UI as the `mailSyncState` live value,
+declared in `mail-core` (the leaf every mail plugin imports) and served here,
+beside the jobs that write it: `serveValue(mailSyncState, { source: "db",
+unbounded: { reason }, loader })` in `server/internal/resource.ts` (one row per
+connected account; the app is single-account today). Every write the engine
+makes — progress, a recorded error, a retry's reset — recomputes and pushes it
+through the DB change-feed, so nothing here calls `notify`. `sync-status` folds
+the rows into the banner and rail dot.
+
 ## The four jobs + the manual endpoint
 
 - **`mail.backfill`** (`backfill.ts`) — one **windowed** `messages.list` page per
@@ -217,14 +228,14 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`
     - `integrations/gmail.isGmailEnabled`
+    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-  - Exports (values): `mailSyncStateServerResource`
   - Register:
     - `defineJob('mail.backfill')`
     - `defineJob('mail.delta')`
     - `defineJob('mail.sync-tick')`
     - `defineJob('mail.attachment-scan')`
-  - Resources: `mail-sync-state` (push)
+  - Resources: `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
   - Routes:
     - `POST /api/mail/sync`
     - `POST /api/mail/hydrate`

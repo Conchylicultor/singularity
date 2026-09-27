@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
@@ -12,7 +11,7 @@ import {
   handleRetryJob,
 } from "./internal/handle";
 import { deadJobGcJob, reconcileDeadJobs } from "./internal/dead-job-gc";
-import { deadJobsResource, jobsListResource } from "./internal/resources";
+import { deadJobsServed, jobsListServed } from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
 import { installQueueSchema } from "./internal/queue-schema";
 import {
@@ -75,7 +74,6 @@ export {
 } from "./internal/forfeit";
 export type { ForfeitedSlot, JobSlotFloorReport } from "./internal/forfeit";
 export { abortDurableRun } from "./internal/abort-run";
-export { jobsListResource, deadJobsResource } from "./internal/resources";
 export {
   queryDeadJobStats,
   queryQueueBacklog,
@@ -133,8 +131,8 @@ export default {
   },
   register: [jobsResumeJob, deadJobGcJob],
   contributions: [
-    Resource.Declare(jobsListResource),
-    Resource.Declare(deadJobsResource),
+    ...jobsListServed.declare,
+    ...deadJobsServed.declare,
     // Graphile's own bookkeeping — queued jobs, worker locks, and the crontab's
     // last-execution watermarks. Inheriting it is actively wrong for a fresh
     // worktree: it would adopt main's pending jobs and, worse, main's

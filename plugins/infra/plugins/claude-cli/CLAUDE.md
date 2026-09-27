@@ -66,6 +66,16 @@ call (context / system / prompt / output-or-error / meta), so consumers don't
 each re-render prompts. Debug → Claude CLI Calls composes it and owns only its
 collapsed header; callers supply their own chrome (card, indent, collapse).
 
+Debug → Claude CLI Calls lists the log through `claudeCliCalls`
+(`core/resources.ts`, key `claude-cli-calls`), a `liveCollection` over
+`claude_cli_calls`: newest first, 100 rows by default, grown up to
+`RECENT_CALLS_LIMIT` — the recorder's own trim, so a fully grown window is the
+whole log. It declares `filterable: { sourceName, model }`: the pane's source
+chips are a `groupBy: "sourceName"` grouping (every source in the log, with
+counts), and a model-tier chip is an `in` over that tier's model ids, since the
+tier is not a column. Both filters run on the server. `claudeCliCallsServed`
+serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
+
 ## When NOT to use
 
 - Anything that needs a real conversation (multi-turn, tool use). Use `createConversation` from `@plugins/conversations/server` instead.
@@ -80,6 +90,8 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
 - Server:
   - Contributes:
     - `resource.declare` "claude-cli-calls"
+    - `resource.declare` "claude-cli-calls:rows"
+    - `resource.declare` "claude-cli-calls:groups"
     - `fork-data-exclusion` "claude_cli_calls"
   - Uses:
     - `database.db`
@@ -91,15 +103,18 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
+    - `network/live.serveCollection`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
   - Exports (types): `RunClaudePrintInput`
   - Exports (values):
     - `_claudeCliCalls`
-    - `claudeCliCallsResource`
     - `ClaudeCliError`
     - `listCallsFor`
     - `runClaudePrint`
-  - Resources: `claude-cli-calls` (push)
+  - Resources:
+    - `claude-cli-calls` (keyed, window)
+    - `claude-cli-calls:groups` (push)
+    - `claude-cli-calls:rows` (keyed, point)
   - Routes: `GET /api/claude-cli/calls`
 - Web:
   - Uses:
@@ -111,6 +126,7 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `useClaudeCliCalls`
 - Core:
   - Uses:
+    - `conversations/model-provider.ConversationModelSchema`
     - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
     - `conversations/model-provider.resolveModel`
     - `conversations/model-provider.StoredModelSchema`
@@ -124,14 +140,15 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `ClaudeCliCall`
     - `ClaudeCliCallsResult`
   - Exports (values):
     - `claudeCliCallFields`
+    - `claudeCliCalls`
     - `ClaudeCliCallSchema`
-    - `claudeCliCallsResource`
     - `ClaudeCliCallsResultSchema`
     - `listClaudeCliCallsFor`
 - Cross-plugin:

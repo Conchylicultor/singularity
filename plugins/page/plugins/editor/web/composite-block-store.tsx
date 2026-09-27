@@ -18,12 +18,17 @@ import {
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { blocksResource, moveBlock, patchBlocks, type Block } from "../core";
+import { moveBlock, pageBlocks, patchBlocks, type Block } from "../core";
 import {
-  BlockEditorProviderInner,
+  BlockEditorProviderGate,
   type ProviderHostViewProps,
 } from "./block-editor-context";
-import { useServerBlockStore, type BlockStore } from "./block-store";
+import {
+  NOTHING_LOADING,
+  PENDING_BLOCK_STORE,
+  useServerBlockStore,
+  type BlockStore,
+} from "./block-store";
 import type { BlockOverlayOp } from "./internal/optimistic-block-ops";
 import {
   deriveMounts,
@@ -39,24 +44,40 @@ import {
 } from "./internal/composition";
 
 /**
- * One mounted feed's published state. `data`/`serverData`/`pending` are the
- * render-driving snapshot (reference-stable through `useOptimisticResource`'s
- * memoization); `store` is a stable-identity ref to the feed's CURRENT
- * `BlockStore`, so routed writes always reach the latest render's callbacks
- * without the registry churning on every store re-creation.
+ * One mounted feed's published state: `pending` until the page's first
+ * authoritative rows land — a pending feed has NO rows, not an empty list of
+ * them — then `data`/`serverData`, the render-driving snapshot
+ * (reference-stable through `useOptimisticResource`'s memoization), and a
+ * stable-identity `dispatch` that routes to the feed's CURRENT store, so
+ * routed writes always reach the latest render's callbacks without the
+ * registry churning on every store re-creation.
  */
-interface FeedSnapshot {
-  data: Block[];
-  serverData: Block[];
-  pending: boolean;
-  store: { readonly current: BlockStore };
+type FeedSnapshot =
+  | { pending: true }
+  | {
+      pending: false;
+      data: Block[];
+      serverData: Block[];
+      dispatch: (v: BlockOverlayOp) => void;
+    };
+
+const PENDING_FEED: FeedSnapshot = { pending: true };
+
+/** Reference-identical state — what the publish convergence guard compares. */
+function sameSnapshot(a: FeedSnapshot, b: FeedSnapshot): boolean {
+  if (a.pending || b.pending) return a.pending === b.pending;
+  return (
+    a.data === b.data &&
+    a.serverData === b.serverData &&
+    a.dispatch === b.dispatch
+  );
 }
 
 /**
  * The sanctioned dynamic-hook-count seam: the composite renders one
  * `PageFeedMount` per mounted page, and each mount calls exactly one
  * `useServerBlockStore`. The snapshot publishes via an effect keyed on the
- * reference-stable triplet; the host's `setFeeds` bails on reference-equal
+ * reference-stable store; the host's `setFeeds` bails on reference-equal
  * snapshots, so a no-op push can never loop publish→render→publish.
  */
 function PageFeedMount({
@@ -70,19 +91,42 @@ function PageFeedMount({
 }) {
   const store = useServerBlockStore(pageId);
   const storeRef = useLatestRef(store);
-  const { data, serverData, pending } = store;
+  // Stable per mount. The mount is keyed by its page, so its read never changes
+  // tuple, and a read that has landed a value never goes back to pending — the
+  // throw is that invariant stated, not a state this can reach.
+  const dispatch = useCallback(
+    (v: BlockOverlayOp) => {
+      const current = storeRef.current;
+      if (current.pending) {
+        throw new Error(`Page ${pageId}'s feed went back to loading`);
+      }
+      current.dispatch(v);
+    },
+    [pageId, storeRef],
+  );
   useEffect(() => {
-    onSnapshot(pageId, { data, serverData, pending, store: storeRef });
-  }, [pageId, data, serverData, pending, onSnapshot]);
+    onSnapshot(
+      pageId,
+      store.pending
+        ? PENDING_FEED
+        : {
+            pending: false,
+            data: store.data,
+            serverData: store.serverData,
+            dispatch,
+          },
+    );
+  }, [pageId, store, dispatch, onSnapshot]);
   useEffect(() => () => onRelease(pageId), [pageId, onRelease]);
   return null;
 }
 
 /**
  * The server-backed provider host: the composite union over every mounted
- * page's feed, handed to the storage-agnostic `BlockEditorProviderInner` as one
- * `BlockStore`. With no expanded nested page it degenerates to exactly one feed
- * (the base page) and identity composition.
+ * page's feed, handed to the storage-agnostic provider as one `BlockStore` —
+ * through `BlockEditorProviderGate`, which mounts the provider only once the
+ * base page's rows have landed. With no expanded nested page it degenerates to
+ * exactly one feed (the base page) and identity composition.
  */
 export function CompositeServerProviderHost({
   pageId: basePageId,
@@ -106,14 +150,7 @@ export function CompositeServerProviderHost({
       // Convergence guard: a publish carrying reference-identical state must
       // return the SAME map, or each push would mint a new union and re-run the
       // publish effect forever.
-      if (
-        cur &&
-        cur.data === snapshot.data &&
-        cur.serverData === snapshot.serverData &&
-        cur.pending === snapshot.pending
-      ) {
-        return prev;
-      }
+      if (cur && sameSnapshot(cur, snapshot)) return prev;
       const next = new Map(prev);
       next.set(pageId, snapshot);
       return next;
@@ -129,9 +166,13 @@ export function CompositeServerProviderHost({
     });
   }, []);
 
+  // A pending feed is absent from `rowsByPage`, exactly like one that has not
+  // published yet: it contributes no further expansions until its rows land.
   const mounts = useMemo(() => {
     const rowsByPage = new Map<string, readonly Block[]>();
-    for (const [pageId, feed] of feeds) rowsByPage.set(pageId, feed.data);
+    for (const [pageId, feed] of feeds) {
+      if (!feed.pending) rowsByPage.set(pageId, feed.data);
+    }
     return deriveMounts(basePageId, rowsByPage);
   }, [basePageId, feeds]);
 
@@ -143,7 +184,7 @@ export function CompositeServerProviderHost({
     const union: Block[] = [];
     for (const pageId of mounts.keys()) {
       const feed = feeds.get(pageId);
-      if (feed) union.push(...feed.data);
+      if (feed && !feed.pending) union.push(...feed.data);
     }
     return remapUnionParents(union, mounts);
   }, [feeds, mounts]);
@@ -154,14 +195,30 @@ export function CompositeServerProviderHost({
     const union: Block[] = [];
     for (const pageId of mounts.keys()) {
       const feed = feeds.get(pageId);
-      if (feed) union.push(...feed.serverData);
+      if (feed && !feed.pending) union.push(...feed.serverData);
     }
     return union;
   }, [feeds, mounts]);
 
-  // The BASE feed's pending only: a still-loading expanded child contributes no
-  // rows yet but must not blank the whole editor.
-  const pending = feeds.get(basePageId)?.pending ?? true;
+  // A still-loading expanded child must not blank the whole editor, and must not
+  // read as an empty page either: it contributes no rows, and its ANCHOR (the
+  // sub-page or page-link row it expands under) is named here, so the editor
+  // renders a loading region in its place. A feed that has not published yet is
+  // loading too — the mount exists, its answer does not.
+  const loadingBelow = useMemo(() => {
+    const anchors = new Set<string>();
+    for (const [pageId, anchorId] of mounts) {
+      if (pageId === basePageId) continue;
+      const feed = feeds.get(pageId);
+      if (!feed || feed.pending) anchors.add(anchorId);
+    }
+    // The shared empty set when nothing loads, so a push that changes no
+    // expansion hands the context no new identity for it.
+    return anchors.size === 0 ? NOTHING_LOADING : anchors;
+  }, [basePageId, feeds, mounts]);
+
+  // The BASE feed alone decides whether the editor has a document at all.
+  const basePending = feeds.get(basePageId)?.pending ?? true;
 
   // Cumulative indexes for writes that outlive their feed (undo entries are
   // mount-scoped to the EDITOR, not to a child feed, so they can replay after
@@ -175,6 +232,7 @@ export function CompositeServerProviderHost({
   const seenAnchorsRef = useRef(new Map<string, string>());
   useEffect(() => {
     for (const [pageId, feed] of feeds) {
+      if (feed.pending) continue;
       for (const row of feed.data) seenOwnersRef.current.set(row.id, pageId);
     }
     for (const [anchorId, pageId] of pageByAnchor(mounts)) {
@@ -186,20 +244,27 @@ export function CompositeServerProviderHost({
   const mountsRef = useLatestRef(mounts);
   const dataRef = useLatestRef(data);
 
-  // The owning page's live store. Throws on an unmounted page: an OP targets
-  // rows the user can currently see, so a miss is a routing bug — fail loudly.
-  // (The two writes that legitimately have no mounted feed — the detached patch
-  // persist and the cross-page move — never come through here.)
-  const storeFor = useCallback((owner: string): BlockStore => {
-    const feed = feedsRef.current.get(owner);
-    if (!feed) throw new Error(`No mounted feed for page ${owner}`);
-    return feed.store.current;
-  }, []);
+  // The owning page's live dispatch. Throws on an unmounted page, and on one
+  // whose rows are still loading: an OP targets rows the user can currently
+  // see, and a loading page shows none, so a miss is a routing bug — fail
+  // loudly. (The two writes that legitimately have no settled feed — the
+  // detached patch persist and the cross-page move — never come through here.)
+  const dispatchFor = useCallback(
+    (owner: string): ((v: BlockOverlayOp) => void) => {
+      const feed = feedsRef.current.get(owner);
+      if (!feed) throw new Error(`No mounted feed for page ${owner}`);
+      if (feed.pending) {
+        throw new Error(`Page ${owner}'s rows are still loading`);
+      }
+      return feed.dispatch;
+    },
+    [],
+  );
 
   /**
    * A drop whose source and destination live on DIFFERENT pages permutes two
    * forests at once, and no per-page overlay can predict it: the moved row leaves
-   * the source page's `blocksResource` entirely (the server re-stamps its
+   * the source page's `pageBlocks` entirely (the server re-stamps its
    * `page_id`), so the source feed could never confirm a `reparent` effect that
    * names a row it will never hold again.
    *
@@ -217,7 +282,7 @@ export function CompositeServerProviderHost({
     ) => {
       if (op.kind !== "move") throw new Error(`Not a move op: ${op.kind}`);
       const parentId = translateUnionParentId(op.parentId, mountsRef.current);
-      void enqueueResourceWrite(blocksResource, { pageId: sourcePageId }, () =>
+      void enqueueResourceWrite(pageBlocks, { pageId: sourcePageId }, () =>
         fetchEndpoint(
           moveBlock,
           { id: op.blockId },
@@ -244,23 +309,24 @@ export function CompositeServerProviderHost({
         for (const [owner, group] of groupPatchByOwnerPage(v.patch, ownerOf)) {
           const patch = translatePatchForStore(group, seenAnchorsRef.current);
           const feed = feedsRef.current.get(owner);
-          if (feed) {
+          if (feed && !feed.pending) {
             // The whole gesture's `restoreIds` ride along: the set is keyed by
             // row id, which neither grouping nor translation rewrites, and a
             // predicate only consults it for the creates its own group carries.
-            feed.store.current.dispatch({
+            feed.dispatch({
               tag: "patch",
               patch,
               restoreIds: v.restoreIds,
             });
           } else {
-            // Detached persist (undo/redo targeting a collapsed page): no
-            // mounted feed means no overlay to reconcile, so write the patch
-            // straight to the owning page — the data stays correct, invisible
-            // until re-expanded. The send lane is MODULE-level, so the write
-            // still joins that page's own ordered stream with no mounted hook:
-            // ordering holds, there is simply nothing to predict.
-            void enqueueResourceWrite(blocksResource, { pageId: owner }, () =>
+            // Detached persist (undo/redo targeting a collapsed page, or one
+            // re-expanded whose rows have not landed yet): no settled feed means
+            // no overlay base to predict on, so write the patch straight to the
+            // owning page — the data stays correct, visible once its rows land.
+            // The send lane is MODULE-level, so the write still joins that
+            // page's own ordered stream, a loading feed's included: ordering
+            // holds, there is simply nothing to predict.
+            void enqueueResourceWrite(pageBlocks, { pageId: owner }, () =>
               fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch }),
             );
           }
@@ -291,12 +357,12 @@ export function CompositeServerProviderHost({
         curMounts,
         basePageId,
       )) {
-        storeFor(owner).dispatch(
+        dispatchFor(owner)(
           translateOpForStore(routed, curMounts, seenAnchorsRef.current),
         );
       }
     },
-    [basePageId, storeFor, moveAcrossPages],
+    [basePageId, dispatchFor, moveAcrossPages],
   );
 
   // There are no routed write members left. Every structural mutation is a
@@ -307,8 +373,11 @@ export function CompositeServerProviderHost({
   // `translateOpForStore` rewrites a page-link anchor `parentId` into the real
   // page id.
   const store = useMemo<BlockStore>(
-    () => ({ data, serverData, pending, dispatch }),
-    [data, serverData, pending, dispatch],
+    () =>
+      basePending
+        ? PENDING_BLOCK_STORE
+        : { pending: false, data, serverData, loadingBelow, dispatch },
+    [basePending, data, serverData, loadingBelow, dispatch],
   );
 
   return (
@@ -321,7 +390,9 @@ export function CompositeServerProviderHost({
           onRelease={releaseFeed}
         />
       ))}
-      <BlockEditorProviderInner
+      {/* The feed mounts above stay mounted either way — they ARE the reads.
+          Only the provider waits for the base page's rows. */}
+      <BlockEditorProviderGate
         store={store}
         pageId={basePageId}
         serverSync
@@ -331,7 +402,7 @@ export function CompositeServerProviderHost({
         rootId={rootId}
       >
         {children}
-      </BlockEditorProviderInner>
+      </BlockEditorProviderGate>
     </>
   );
 }

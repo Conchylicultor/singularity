@@ -68,6 +68,9 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
 - Cross-plugin:
   - Imported by:
     - `apps/mail/search`
+    - `apps/pages/trash`
+    - `debug/claude-cli-calls`
+    - `debug/queue`
     - `primitives/data-view`
     - `shell/notifications`
 - Core:

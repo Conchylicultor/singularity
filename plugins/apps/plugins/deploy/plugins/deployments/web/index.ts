@@ -17,6 +17,7 @@ export {
 } from "./components/deployment-item-actions";
 export { DeploymentDetail, Deployments } from "./slots";
 export { deploymentDetailPane } from "./panes";
+export { useDeploymentsListServerId } from "./internal/list-server-id-context";
 
 export default {
   description:

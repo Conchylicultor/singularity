@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { eventsDispatchJob } from "./internal/dispatch-job";
 import { jobsHooksRegistration } from "./internal/install-jobs-hooks";
@@ -9,8 +8,8 @@ import {
   handlePatchTrigger,
 } from "./internal/handle";
 import {
-  eventEmissionsResource,
-  eventTriggersResource,
+  eventEmissionsServed,
+  eventTriggersServed,
 } from "./internal/resources";
 import {
   syncTriggerContributions,
@@ -32,19 +31,15 @@ export type {
   FilterSlot,
 } from "./internal/event";
 export { triggerTableRegistry } from "./internal/registry";
-export { _event_emissions, EMISSIONS_CAP } from "./internal/tables";
+export { _event_emissions } from "./internal/tables";
 export {
   deleteTrigger,
   deleteTriggersFor,
   trigger,
   UNSAFE_triggerByName,
 } from "./internal/trigger";
-export type {
-  TriggerSpec,
-  UnsafeTriggerByNameSpec,
-} from "./internal/trigger";
+export type { TriggerSpec, UnsafeTriggerByNameSpec } from "./internal/trigger";
 export { Trigger } from "./internal/trigger-contributions";
-export { eventEmissionsResource, eventTriggersResource } from "./internal/resources";
 
 export default {
   description:
@@ -57,7 +52,10 @@ export default {
     [patchTriggerEndpoint.route]: handlePatchTrigger,
   },
   register: [eventsDispatchJob, jobsHooksRegistration],
-  contributions: [Resource.Declare(eventEmissionsResource), Resource.Declare(eventTriggersResource)],
+  contributions: [
+    ...eventEmissionsServed.declare,
+    ...eventTriggersServed.declare,
+  ],
   onReady: async () => {
     await syncTriggerContributions();
     await sweepStaleTriggers();

@@ -98,6 +98,7 @@ and
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
+    - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`

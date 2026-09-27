@@ -18,7 +18,7 @@ export function useTaskAutoStartBinding(
   if (autoStart.pending) return { pending: true };
   return {
     pending: false,
-    value: autoStart.data?.autoStartModel ?? null,
+    value: autoStart.found ? autoStart.row.autoStartModel : null,
     onChange,
   };
 }

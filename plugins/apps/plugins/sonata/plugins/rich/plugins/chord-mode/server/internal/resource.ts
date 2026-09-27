@@ -1,18 +1,10 @@
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { chordModeResource, type ChordModeRow } from "../../shared/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { chordModes } from "../../shared/resources";
 import { songChordMode } from "./tables";
 
-/**
- * Push-mode rollup of every song's chord mode. The wire shape is the
- * extension's own (`chordModeShape`, whose key IS the domain's `songId`), so the
- * row type comes from the table's declaration rather than from a projection a
- * later column could fall out of.
- */
-export const chordModeLiveResource = defineResource<ChordModeRow[]>({
-  key: chordModeResource.key,
-  mode: "push",
-  schema: z.array(songChordMode.schema),
-  loader: () => db.select(songChordMode.wireColumns).from(songChordMode.table),
+// Server half of the per-song chord-mode read: the lookup-only collection
+// served from the extension entity (its wire columns — `songId` is the
+// `parent_id` PK), so the row shape is the extension's own declaration.
+export const chordModesServed = serveCollection(chordModes, {
+  from: songChordMode,
 });

@@ -1,8 +1,8 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -19,7 +19,7 @@ export function AnswerHereButton({
   // answer, its card renders its own inline answer form — defer to it so the
   // two surfaces never double up. We only show this generic indicator when the
   // tool_use has NOT yet hit the transcript (still blocked in the terminal).
-  const eventsResult = useResource(jsonlEventsResource, { id: conversationId });
+  const eventsResult = useLive(jsonlEvents, { id: conversationId });
   const m = useEndpointMutation(flushQuestion, {
     onError: (err) =>
       toast({

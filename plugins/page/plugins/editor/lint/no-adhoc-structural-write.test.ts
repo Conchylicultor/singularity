@@ -30,14 +30,16 @@ ruleTester.run(
     valid: [
       // The sanctioned route: dispatch through the store, which owns the lane.
       { code: `store.dispatch({ tag: "op", op, effect });` },
-      { code: `dispatchOp({ kind: "move", blockId, parentId, targetId, zone });` },
+      {
+        code: `dispatchOp({ kind: "move", blockId, parentId, targetId, zone });`,
+      },
       // A write with no surface to predict it still goes on the lane — and a
       // lane enqueue is not itself a licence: wrapping is orthogonal to WHICH
       // endpoint is named, which is why the invalid list carries the same shape
       // around `patchBlocks`.
       {
         code:
-          `void enqueueResourceWrite(blocksResource, { pageId }, () =>` +
+          `void enqueueResourceWrite(pageBlocks, { pageId }, () =>` +
           ` fetchEndpoint(moveBlock, { id }, { body }));`,
       },
       // `moveBlock` is a live endpoint for the sidebar and the cross-page drop.
@@ -70,7 +72,7 @@ ruleTester.run(
       // is a third writer of page structure.
       {
         code:
-          `void enqueueResourceWrite(blocksResource, { pageId }, () =>` +
+          `void enqueueResourceWrite(pageBlocks, { pageId }, () =>` +
           ` fetchEndpoint(patchBlocks, { pageId }, { body: patch }));`,
         errors: [{ messageId: "adhocWrite" }],
       },

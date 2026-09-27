@@ -1,8 +1,6 @@
 import type { ReactElement } from "react";
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   Pane,
@@ -17,7 +15,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { AgentSideBody } from "./components/agent-side-body";
-import { agentsResource, type Agent } from "../shared/resources";
+import { agentRows, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";
@@ -36,7 +34,7 @@ export const agentsRootPane = Pane.define({
 });
 
 function useResolveAgent({ id }: { id: string }) {
-  const result = useResource(agentsResource);
+  const result = useLive(agentRows);
   if (result.pending) return { pending: true, found: false };
   return { pending: false, found: result.data.some((a) => a.id === id) };
 }
@@ -101,7 +99,7 @@ function AgentsRoot(): ReactElement {
 
 function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
-  const agentsResult = useResource(agentsResource);
+  const agentsResult = useLive(agentRows);
   const title = matchResource(agentsResult, {
     pending: () => undefined,
     ready: (agents) => agents.find((a: Agent) => a.id === id)?.name,

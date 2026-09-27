@@ -4,7 +4,11 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { StepDone, StepNote } from "@plugins/primitives/plugins/setup-steps/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  StepDone,
+  StepNote,
+} from "@plugins/primitives/plugins/setup-steps/web";
 import type { SshFailureKind } from "@plugins/infra/plugins/ssh/core";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
@@ -13,19 +17,39 @@ import {
   type ServerHealthRow,
   type SshCheckResult,
 } from "../../shared";
-import { useServerHealth, useServerVerified } from "../hooks";
+import { isKeyVerified, useServerHealth } from "../hooks";
 
 /**
  * Body of the generic last step of the SSH setup flow: opens a real SSH session
  * with the configured key and reports a *classified* verdict. Every failure
  * kind gets its own remediation — never a generic "something went wrong" —
  * because the whole point of the step is telling the user what to fix.
+ *
+ * Loading until the persisted verdict lands: offering "Test connection" before
+ * then would present a server that passed its last check as never tested.
  */
 export function VerifyConnectionBody({ server }: { server: Server }) {
   const health = useServerHealth(server.id);
-  const verified = useServerVerified(server);
+  if (health.pending) return <Loading />;
+  return (
+    <VerifyConnectionForm
+      server={server}
+      health={health.found ? health.row : null}
+    />
+  );
+}
+
+function VerifyConnectionForm({
+  server,
+  health,
+}: {
+  server: Server;
+  /** The persisted verdict, or `null` — the server has never been checked. */
+  health: ServerHealthRow | null;
+}) {
   const check = useEndpointMutation(checkServerSsh);
   const forget = useEndpointMutation(forgetServerHostKey);
+  const verified = isKeyVerified(health, server);
 
   // The mutation's own answer is the freshest truth AND the only one carrying
   // raw stderr (the durable row stores the classified kind + message, not the
@@ -98,8 +122,8 @@ export function VerifyConnectionBody({ server }: { server: Server }) {
   return (
     <Stack gap="sm" align="start">
       <StepNote>
-        Opens an SSH session to {server.sshUser}@{server.host}:{server.port} with
-        the configured key and reads the host&apos;s platform (
+        Opens an SSH session to {server.sshUser}@{server.host}:{server.port}{" "}
+        with the configured key and reads the host&apos;s platform (
         <code>uname -sm</code>).
       </StepNote>
       {/* `last.ok` while `verified` is false means the key was replaced after
@@ -116,7 +140,7 @@ export function VerifyConnectionBody({ server }: { server: Server }) {
 }
 
 /** Project the durable row back onto the endpoint's result shape (no stderr). */
-function persistedResult(row: ServerHealthRow | undefined): SshCheckResult | null {
+function persistedResult(row: ServerHealthRow | null): SshCheckResult | null {
   if (!row) return null;
   if (row.ok) return { ok: true };
   return {
@@ -167,15 +191,15 @@ function remediation(kind: SshFailureKind, server: Server): ReactNode {
         <>
           The server presented a different host key than the one pinned on the
           first successful check. That is expected after a reinstall — and it is
-          also what a man-in-the-middle looks like. Only forget the pinned key if
-          you know the server was rebuilt.
+          also what a man-in-the-middle looks like. Only forget the pinned key
+          if you know the server was rebuilt.
         </>
       );
     case "command-failed":
       return (
         <>
-          The connection and login succeeded, but the read-only check command
-          (<code>uname -sm</code>) failed on the server — the account may have a
+          The connection and login succeeded, but the read-only check command (
+          <code>uname -sm</code>) failed on the server — the account may have a
           restricted or non-interactive shell.
         </>
       );

@@ -1,11 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { jsonlEventsResource } from "../../core";
+import { jsonlEvents } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
@@ -193,9 +191,7 @@ export function JsonlPane({
   conversation: Conversation;
   children?: ReactNode;
 }) {
-  const eventsResult = useResource(jsonlEventsResource, {
-    id: conversation.id,
-  });
+  const eventsResult = useLive(jsonlEvents, { id: conversation.id });
 
   return (
     // Declared out here as well as inside `TranscriptView`, and it is not a

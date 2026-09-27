@@ -35,12 +35,13 @@ contributions: [
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.useLive`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

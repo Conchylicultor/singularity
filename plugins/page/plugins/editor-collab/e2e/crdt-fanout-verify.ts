@@ -10,8 +10,9 @@
 //   document row. Today, saving ONE block's document wakes EVERY open block
 //   editor in the app: each one re-reads its own row, finds nothing changed,
 //   and sends no frame. The frames are right; the wasted reads are the bug.
-//   `rowIdentity` narrows *who gets woken* — the owning block only — and is
-//   supposed to change nothing else.
+//   The `page-block-doc` lookup-only collection's point membership narrows
+//   *who gets woken* — the owning block only — and is supposed to change
+//   nothing else.
 //
 //   An earlier attempt at that narrowing (point membership) was reverted after
 //   a symptom nobody ever explained: open a page in a second browser window

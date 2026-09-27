@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   defaultBassPattern,
   defaultChordPattern,
@@ -65,9 +65,14 @@ export const rhythmShape = defineExtensionShape({
 export const RhythmRowSchema = rhythmShape.schema;
 export type RhythmRow = z.infer<typeof RhythmRowSchema>;
 
-/** Reactive list of every song's rhythm groove (push resource). */
-export const rhythmResource = resourceDescriptor<RhythmRow[]>(
-  "sonata-rhythm",
-  z.array(RhythmRowSchema),
-  [],
-);
+/**
+ * The groove of ONE song, read by the song's id: a lookup-only collection over
+ * the extension table (nothing lists every song's groove), minting
+ * `sonata-rhythm:rows` alone. The observer and `useGroove` read the open song's
+ * row with `useLiveRow(rhythms, songId)`; `found: false` is an absent row, i.e.
+ * no groove and the default patterns.
+ */
+export const rhythms = liveCollection("sonata-rhythm", {
+  row: RhythmRowSchema,
+  id: "songId",
+});

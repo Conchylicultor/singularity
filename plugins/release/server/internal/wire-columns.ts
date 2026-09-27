@@ -4,13 +4,14 @@ import { _releaseRuns } from "./tables";
  * The public projection of `release_runs`: every column EXCEPT `pid`, which is
  * an internal liveness marker and never part of `ReleaseRun`.
  *
- * ONE spelling, shared by every read path (the per-id detail resource, the
- * keyset history query, the candidate endpoint). Each of those parses its rows
- * through `ReleaseRunSchema`, so a column present in the schema and missing from
- * a hand-copied projection is a runtime parse failure on exactly the surface
- * that forgot it — which is what happened with `commitSha`/`commitDirty` and
- * would happen again with every future column. Adding a column here reaches all
- * three at once.
+ * ONE spelling, shared by every hand-written read path (the keyset history
+ * query, the candidate endpoint, the latest-run endpoint). Each of those parses
+ * its rows through `ReleaseRunSchema`, so a column present in the schema and
+ * missing from a hand-copied projection is a runtime parse failure on exactly
+ * the surface that forgot it — which is what happened with
+ * `commitSha`/`commitDirty` and would happen again with every future column.
+ * Adding a column here reaches all three at once. The `releaseRuns` collection
+ * needs no copy: `serveCollection` derives its projection from the schema.
  */
 export const RELEASE_RUN_WIRE_COLUMNS = {
   id: _releaseRuns.id,

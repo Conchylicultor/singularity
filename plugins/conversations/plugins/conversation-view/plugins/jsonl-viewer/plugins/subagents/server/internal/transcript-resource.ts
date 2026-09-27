@@ -1,10 +1,10 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { SubagentRef, SubagentTranscript } from "../../core";
-import { subagentTranscriptResource as descriptor } from "../../core";
+import { SubagentRefSchema, subagentTranscript } from "../../core";
 import {
   evictSubagentTranscript,
   primeSubagentTranscript,
@@ -16,23 +16,29 @@ import {
   resolveTranscriptTargets,
 } from "./transcript-read";
 
-type Params = { id: string } & SubagentRef;
+/**
+ * The ref a subscription names. Every value param reaches the server as a plain
+ * string, so `by` is re-parsed here rather than trusted to be `call` | `agent`.
+ */
+function refOf({ by, key }: { by: string; key: string }): SubagentRef {
+  return SubagentRefSchema.parse({ by, key });
+}
 
-const unsubscribes = new Map<string, () => void>();
-
-export const subagentTranscriptResource = defineExternalResource(descriptor, {
-  mode: "push",
-  loader: ({ id, by, key }: Params) =>
-    subagentTranscriptMemo.get(transcriptMemoKey(id, { by, key })),
-  revalidate: ({ id, by, key }: Params): Promise<string> =>
-    subagentTranscriptMemo.signature(transcriptMemoKey(id, { by, key })),
-  onFirstSubscribe({ id, by, key: refKey }: Params) {
-    const ref: SubagentRef = { by, key: refKey };
-    const key = transcriptMemoKey(id, ref);
-    if (unsubscribes.has(key)) return;
+export const subagentTranscriptServed = serveValue(subagentTranscript, {
+  source: "external",
+  loader: ({ id, ...ref }) =>
+    subagentTranscriptMemo.get(transcriptMemoKey(id, refOf(ref))),
+  revalidate: ({ id, ...ref }) =>
+    subagentTranscriptMemo.signature(transcriptMemoKey(id, refOf(ref))),
+  // Watch the sub-agent's file (or, while it is still starting, its
+  // directories) while its pane is open. A synchronous start: `watchPaths`
+  // hands back its unsubscribe at once.
+  whileSubscribed: ({ id, ...params }, notify) => {
+    const ref = refOf(params);
+    const memoKey = transcriptMemoKey(id, ref);
     const unsub = watchPaths<SubagentTranscript>(
       {
-        key: `subagent-transcript:${id}:${by}:${refKey}`,
+        key: `subagent-transcript:${id}:${ref.by}:${ref.key}`,
         refreshOn: conversationChainTag(id),
         resolve: () => resolveTranscriptTargets(id, ref),
         // The RAW read, not the memo — the room primes the memo with the pair it
@@ -40,16 +46,13 @@ export const subagentTranscriptResource = defineExternalResource(descriptor, {
         read: () => readSubagentTranscript(id, ref),
       },
       ({ value, signature }) => {
-        primeSubagentTranscript(key, signature, value);
-        subagentTranscriptResource.notify({ id, ...ref });
+        primeSubagentTranscript(memoKey, signature, value);
+        notify();
       },
     );
-    unsubscribes.set(key, unsub);
-  },
-  onLastUnsubscribe({ id, by, key: refKey }: Params) {
-    const key = transcriptMemoKey(id, { by, key: refKey });
-    unsubscribes.get(key)?.();
-    unsubscribes.delete(key);
-    evictSubagentTranscript(key);
+    return () => {
+      unsub();
+      evictSubagentTranscript(memoKey);
+    };
   },
 });

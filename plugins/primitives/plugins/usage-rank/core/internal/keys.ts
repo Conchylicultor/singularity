@@ -1,16 +1,16 @@
 /**
  * The single-column primary key of a usage rollup.
  *
- * A composite `(namespace, key)` PK is not an option: the live-state point
- * resource's `point.by` IS the identity pk and must be ONE column, so the two
- * halves are joined into one opaque string here — the single place the encoding
- * exists, shared by the client hook, the record endpoint and the SQL upsert.
+ * A composite `(namespace, key)` PK is not an option: the `usageStats`
+ * collection's row id IS the pk and must be ONE column, so the two halves are
+ * joined into one opaque string here — the single place the encoding exists,
+ * shared by the client hook, the record endpoint and the SQL upsert.
  *
- * Both halves must be non-empty and comma-free: the point codec joins subscribed
- * ids with `,` (`pointQueryResourceDescriptor`'s `point.encode`), so a comma would silently
- * split one id into two. That codec throws on the same condition — we throw
- * HERE, one level earlier, so the message names the namespace/key the caller
- * actually passed rather than the derived id.
+ * Both halves must be non-empty and comma-free: the id-set codec joins
+ * subscribed ids with `,` (`usageStats.rows.point.encode`), so a comma would
+ * silently split one id into two. That codec throws on the same condition — we
+ * throw HERE, one level earlier, so the message names the namespace/key the
+ * caller actually passed rather than the derived id.
  */
 export function usageKey(namespace: string, key: string): string {
   if (namespace === "" || key === "") {
@@ -20,7 +20,7 @@ export function usageKey(namespace: string, key: string): string {
   }
   if (namespace.includes(",") || key.includes(",")) {
     throw new Error(
-      `usageKey: namespace and key must be comma-free (the point-resource id codec is comma-joined), got ${JSON.stringify([namespace, key])}`,
+      `usageKey: namespace and key must be comma-free (the id-set codec is comma-joined), got ${JSON.stringify([namespace, key])}`,
     );
   }
   return `${namespace}:${key}`;

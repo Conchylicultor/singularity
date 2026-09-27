@@ -56,11 +56,7 @@ export type {
   LeaderInfo,
   MissedFrame,
 } from "./notifications-client";
-export {
-  resourceDescriptor,
-  keyedResourceDescriptor,
-  resourceDescriptorByKey,
-} from "../core";
+export { resourceDescriptorByKey } from "../core";
 export type {
   ResourceDescriptor,
   ResourceOrigin,
@@ -70,11 +66,6 @@ export type {
   PointParams,
   WindowSelector,
 } from "../core";
-export {
-  useWindowResource,
-  usePointResource,
-  usePointResources,
-} from "./window-hooks";
 
 export default {
   description:

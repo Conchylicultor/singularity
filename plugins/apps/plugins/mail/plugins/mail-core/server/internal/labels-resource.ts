@@ -1,21 +1,21 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { mailLabelsResource } from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { mailLabels } from "../../core";
 import { _mailLabels } from "./tables";
 import { resolveMailAccountId } from "./account";
 
-// User labels for the connected account, ordered by name. Push-scoped to
-// `mail_labels`, so every label upsert from the sync engine auto-pushes through
-// the DB change-feed. Returns [] on a cold mailbox (no account yet) rather than
-// throwing.
-//
-// The set is bounded by the mailbox's own label count (Gmail caps user labels at
-// a low four figures), so a full-table read is the whole working set — not an
-// unbounded collection resource.
-export const mailLabelsServerResource = defineResource(mailLabelsResource, {
-  mode: "push",
-  identityTable: "mail_labels",
+// User labels for the connected account, ordered by name. A db value: the
+// loader's read-set routes every label upsert from the sync engine back here
+// through the DB change-feed, which recomputes and pushes the whole list.
+// Returns [] on a cold mailbox (no account yet) — a legitimate answer, not a
+// stand-in: there are no labels to name.
+export const mailLabelsServed = serveValue(mailLabels, {
+  source: "db",
+  unbounded: {
+    reason:
+      "the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set",
+  },
   loader: async () => {
     const accountId = await resolveMailAccountId();
     if (!accountId) return [];

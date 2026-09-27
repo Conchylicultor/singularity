@@ -115,6 +115,7 @@ it, so an id means the same thing wherever it is clicked.
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `infra/trash.useUndoableTrash`
+    - `network/live.useLive`
     - `page/editor.blockContentScope`
     - `page/editor.BlockEditor`
     - `page/editor.BlockEditorHandle`

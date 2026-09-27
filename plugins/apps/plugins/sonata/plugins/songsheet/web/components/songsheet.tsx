@@ -12,6 +12,7 @@ import type {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Inset,
@@ -74,7 +75,7 @@ function groupLines(
 }
 
 function SongsheetInner({ score }: SongsheetProps) {
-  const { seekTo, isPlaying } = useSonata();
+  const { seekTo, isPlaying, scorePending } = useSonata();
 
   // Lyric lines, sorted by start = the songsheet's rows. Memoized off the Score
   // so the per-frame cursor selectors below only walk this stable array.
@@ -137,6 +138,15 @@ function SongsheetInner({ score }: SongsheetProps) {
     });
   }, [activeLine, isPlaying]);
 
+  if (scorePending) {
+    // The song's settings are still loading (the score is withheld until they
+    // settle): not "no lyrics".
+    return (
+      <Center className="h-full w-full bg-background">
+        <Loading />
+      </Center>
+    );
+  }
   if (lines.length === 0) {
     return (
       <Center className="h-full w-full bg-background">

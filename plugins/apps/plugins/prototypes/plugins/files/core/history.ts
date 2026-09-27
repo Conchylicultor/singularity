@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PrototypeOptionSchema } from "./prototypes";
 
@@ -69,14 +69,16 @@ export const PrototypeHistorySchema = z.object({
 export type PrototypeHistory = z.infer<typeof PrototypeHistorySchema>;
 
 /**
- * One prototype's history (push, keyed by `name`). Re-broadcast when a version
- * is recorded — by any backend, since the store is host-global — and when the
- * folder is edited, which is what flips `dirty`.
+ * One prototype's history (push, a value per `name`). Served from the history
+ * store (`source: "external"`) and re-broadcast when a version is recorded — by
+ * any backend, since the store is host-global — and when the folder is edited,
+ * which is what flips `dirty`. Pending until read: never an empty history
+ * standing in for one not loaded yet.
  */
-export const prototypeHistoryResource = resourceDescriptor<
-  PrototypeHistory,
-  { name: string }
->("prototypes.history", PrototypeHistorySchema, { versions: [], dirty: false });
+export const prototypeHistory = liveValue("prototypes.history", {
+  schema: PrototypeHistorySchema,
+  params: ["name"],
+});
 
 /**
  * Make an older version live again: saves unsaved changes first (a `manual`

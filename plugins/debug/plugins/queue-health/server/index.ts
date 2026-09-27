@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { queueHealthConfig, queueHealthSummaryEndpoint } from "../core";
@@ -14,7 +13,7 @@ import { classStarvedKind } from "./internal/class-starved-kind";
 import { wedgedKind } from "./internal/wedged-kind";
 import { queueHealthTool } from "./internal/mcp-tool";
 import { handleQueueHealthSummary } from "./internal/summary-endpoint";
-import { queuePulseResource } from "./internal/pulse";
+import { queuePulseServed } from "./internal/pulse";
 
 export { queueHealthTickOnce } from "./internal/watchdog";
 
@@ -27,7 +26,7 @@ export default {
   register: [queueHealthTool],
   contributions: [
     ConfigV2.Register({ descriptor: queueHealthConfig }),
-    Resource.Declare(queuePulseResource),
+    ...queuePulseServed.declare,
     deadJobKind,
     backlogKind,
     slotHogKind,

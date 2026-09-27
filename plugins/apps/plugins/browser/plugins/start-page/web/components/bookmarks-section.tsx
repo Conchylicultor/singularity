@@ -1,20 +1,35 @@
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
-import { browserBookmarksResource } from "@plugins/apps/plugins/browser/plugins/bookmarks/web";
+import { browserBookmarks } from "@plugins/apps/plugins/browser/plugins/bookmarks/web";
 import { LinkTile } from "./link-tile";
 
 /**
  * The "Bookmarks" section: a grid of bookmark tiles from the live
- * `browser-bookmarks` resource. Rendered only once data is present and
- * non-empty (no empty heading while pending/empty) — the same sanctioned
- * narrowing the bookmarks bar uses.
+ * `browserBookmarks` collection's default window (oldest first, 100), with a
+ * "Show more" that grows it when it is full. Rendered only once data is
+ * present and non-empty (no empty heading while pending/empty) — the same
+ * sanctioned narrowing the bookmarks bar uses.
  */
 export function BookmarksSection() {
   const { navigate } = useBrowserNav();
-  const result = useResource(browserBookmarksResource);
+  const result = useLive(browserBookmarks);
+  // A grow in flight reports `canGrow: false` (the grown window's size is not
+  // known yet), so the button stays up — loading — while `growing`.
+  const more =
+    !result.pending && (result.canGrow || result.growing) ? (
+      <Button
+        variant="ghost"
+        loading={result.growing}
+        onClick={result.loadMore}
+      >
+        Show more
+      </Button>
+    ) : null;
 
   return matchResource(result, {
     pending: () => null,
@@ -33,6 +48,7 @@ export function BookmarksSection() {
               />
             ))}
           </Grid>
+          {more}
         </Stack>
       );
     },

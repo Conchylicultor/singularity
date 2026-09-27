@@ -17,8 +17,8 @@ this type.
 
 The config-render capability — the `secretField` factory, the password-input
 renderer contributed to `config-v2.fields.renderer`, the encrypted
-`FieldStorageProvider` (namespace `"config-fields"`), the live-state meta
-resource (`"config-v2.secret-meta"`), and the central `readSecretConfig` reader
+`FieldStorageProvider` (namespace `"config-fields"`), the meta live value
+(`configSecretMeta`, `"config-v2.secret-meta"`), and the central `readSecretConfig` reader
 consumed by auth providers — lives in the `plugins/config` sub-plugin across its
 four runtimes (core / web / server / central).
 

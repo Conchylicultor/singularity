@@ -3,15 +3,13 @@ import {
   SectionCount,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginStaleness, getPluginHealthTasks } from "../../core";
-import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
+import { pluginHealthReviews } from "../../shared/schemas";
 import type {
   PluginHealthReview,
   PluginStaleness,
@@ -50,13 +48,11 @@ function HealthSectionInner({
   reviews: PluginHealthReview[];
   node: PluginNode;
 }) {
-  const pluginReviews = reviews.filter((r) => r.pluginId === node.id);
-
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- async fetch+merge on live-state node.id/reviews change: setEnriched is driven by parallel staleness + per-review task reads; the cancelled-flag guards unmount/stale writes. No deriving-in-render path exists (the data is fetched, not pushed), and a single useResource cannot express the per-review Promise.all fan-out. */
-    if (pluginReviews.length === 0) {
+    /* eslint-disable react-hooks/set-state-in-effect -- async fetch+merge on live-state node.id/reviews change: setEnriched is driven by parallel staleness + per-review task reads; the cancelled-flag guards unmount/stale writes. No deriving-in-render path exists (the data is fetched, not pushed), and a single live read cannot express the per-review Promise.all fan-out. */
+    if (reviews.length === 0) {
       setEnriched([]);
       return;
     }
@@ -67,7 +63,7 @@ function HealthSectionInner({
       const [stalenessRes, ...taskResults] = await Promise.all([
         // read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
         fetchEndpoint(getPluginStaleness, { pluginId: node.id }),
-        ...pluginReviews.map((r) =>
+        ...reviews.map((r) =>
           // read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
           fetchEndpoint(getPluginHealthTasks, { reviewId: r.id }),
         ),
@@ -79,7 +75,7 @@ function HealthSectionInner({
       const stalenessMap = new Map(stalenessRes.map((s) => [s.axis, s]));
 
       setEnriched(
-        pluginReviews.map((r, i) => ({
+        reviews.map((r, i) => ({
           id: r.id,
           axis: r.axis,
           commitHash: r.commitHash,
@@ -94,7 +90,6 @@ function HealthSectionInner({
       cancelled = true;
     };
     /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pluginReviews is derived inline; use stable node.id as the key
   }, [node.id, reviews]);
 
   return (
@@ -157,15 +152,24 @@ function HealthSectionInner({
 }
 
 /**
- * How many health reviews this plugin has, or `null` while the resource is still
+ * This plugin's reviews, live: the collection's window filtered server-side to
+ * `node.id`. The count, the availability gate and the section all read this ONE
+ * query, so they share one subscription.
+ */
+function usePluginReviews(node: PluginNode) {
+  return useLive(pluginHealthReviews, { where: { pluginId: node.id } });
+}
+
+/**
+ * How many health reviews this plugin has, or `null` while the read is still
  * in flight. The `null` is load-bearing: collapsing "not known yet" into `0`
  * would make a reviewed plugin's card read as never-reviewed for the whole load
  * window, and would paint a literal "0" count beside the title.
  */
 function useReviewCount(node: PluginNode): number | null {
-  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
+  const reviewsResult = usePluginReviews(node);
   if (reviewsResult.pending) return null;
-  return reviewsResult.data.filter((r) => r.pluginId === node.id).length;
+  return reviewsResult.data.length;
 }
 
 /**
@@ -190,7 +194,7 @@ export function HealthCount({ node }: { node: PluginNode }) {
 }
 
 export function HealthSection({ node }: { node: PluginNode }) {
-  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
+  const reviewsResult = usePluginReviews(node);
   return (
     <ResourceView resource={reviewsResult}>
       {(reviews) => <HealthSectionInner reviews={reviews} node={node} />}

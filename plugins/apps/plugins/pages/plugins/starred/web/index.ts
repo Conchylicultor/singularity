@@ -7,10 +7,7 @@ import { StarredField } from "./components/starred-field";
 import { StarRowAction } from "./components/star-row-action";
 import { StarHeaderAction } from "./components/star-header-action";
 
-export {
-  starredPagesResource,
-  StarredPageRowSchema,
-} from "../shared/resources";
+export { StarredPageRowSchema } from "../shared/resources";
 export type { StarredPageRow } from "../shared/resources";
 
 export default {

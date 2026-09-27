@@ -1,11 +1,8 @@
 export {
-  claudeCliCallsResource,
+  claudeCliCalls,
   ClaudeCliCallSchema,
   claudeCliCallFields,
 } from "./resources";
 export type { ClaudeCliCall } from "./resources";
-export {
-  listClaudeCliCallsFor,
-  ClaudeCliCallsResultSchema,
-} from "./endpoints";
+export { listClaudeCliCallsFor, ClaudeCliCallsResultSchema } from "./endpoints";
 export type { ClaudeCliCallsResult } from "./endpoints";

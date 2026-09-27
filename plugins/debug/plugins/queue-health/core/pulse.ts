@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   HOLD_CLASSES,
   HoldClassSchema,
   TOTAL_JOB_SLOTS,
   type HoldClass,
 } from "@plugins/infra/plugins/jobs/core";
-import { QUEUE_TONES, type QueueTone } from "./verdict";
+import { QUEUE_TONES } from "./verdict";
 
 // The Job queue row's live payload: what the health report needs to colour the
 // dot, draw the per-class bars and list the jobs behind the colour — built by
@@ -126,24 +126,9 @@ export type QueueWaitingJob = z.infer<typeof QueueWaitingJobSchema>;
 export type QueueDeadGroup = z.infer<typeof QueueDeadGroupSchema>;
 
 // Not boot-critical: the row's socket is still connecting at first paint
-// anyway, and a boot-critical resource would add these reads to every page
-// load. The initial value is never shown — `useResource` reports it as pending.
-export const queuePulseResource = resourceDescriptor<QueuePulse>(
-  "queue-health.pulse",
-  QueuePulseSchema,
-  {
-    classes: [],
-    running: [],
-    oldestWaiting: [],
-    dead: [],
-    orphanLocked: 0,
-    pickupWindowMs: 0,
-    verdict: {
-      state: "ok",
-      summary: "",
-      cause: Object.fromEntries(
-        HOLD_CLASSES.map((hold) => [hold, "ok"]),
-      ) as Record<HoldClass, QueueTone>,
-    },
-  },
-);
+// anyway, and a boot-critical value would add these reads to every page load.
+// No placeholder: before the first load the row reads as loading, never as an
+// idle queue. Served external (`server/internal/pulse.ts`).
+export const queuePulse = liveValue("queue-health.pulse", {
+  schema: QueuePulseSchema,
+});

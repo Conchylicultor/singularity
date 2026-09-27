@@ -5,13 +5,16 @@ messages, oldest→newest.
 
 ## Server
 
-`threadMessagesResource` (descriptor in `core`) is declared as a `push` resource
-scoped to the `mail_messages` table (`server/internal/resource.ts`). The DB
-change-feed auto-pushes whenever a message in the open thread is inserted or
-updated — a new reply, a flag flip, or a body hydration — so the pane stays live
-with no polling. The loader returns the thread's message **envelopes** ordered by
-`internal_date ASC NULLS FIRST, id ASC`. Bodies are null on the stubs; they are
-hydrated on demand (below).
+`threadMessages` (a `liveCollection` declared in `core`) is served by
+`serveCollection` over `mail_messages` (`server/internal/resource.ts`; its
+`declare` entries are spread into the plugin's contributions). It is filterable
+on `threadId` and sorted by `internalDate`; the default window is the **newest
+100** (`internalDate desc`, max 500). The DB change-feed pushes whenever a
+message in an open thread's window is inserted or updated — a new reply, a flag
+flip, or a body hydration — so the pane stays live with no polling. Rows are
+message **envelopes**: bodies are null on the stubs and hydrated on demand
+(below). A message with no internal date (rare) sorts last under `desc`, so in a
+thread longer than the window it shows only once the window has grown to it.
 
 ## Web
 
@@ -21,9 +24,15 @@ thread-list plugin can open + track it, and registered via `Pane.Register` in
 the plugin definition. Open it with
 `openPane(threadPane, { threadId }, { mode: "push" })`.
 
-`ThreadPaneView` reads the live `threadMessagesResource` and renders a scrolling
-list of collapsible message cards inside `PaneChrome` (title = thread subject):
+`ThreadPaneView` reads `useLive(threadMessages, { where: { threadId } })` —
+loading and error are their own states, never an empty thread — reverses the
+newest-first window for display, and renders a scrolling list of collapsible
+message cards inside `PaneChrome` (title = thread subject):
 
+- **Older messages**: when the window is full (`canGrow`), a "Load older
+  messages" button above the first card calls `loadMore()` (one more page of
+  100, up to 500); it shows its spinner while the grown window loads, and the
+  cards already shown stay put.
 - **Collapse model** (`useCollapsible`): the newest message is expanded by
   default; older ones collapse to a one-line summary (sender · snippet · date)
   and expand on click.
@@ -47,7 +56,8 @@ list of collapsible message cards inside `PaneChrome` (title = thread subject):
 
 Consumes only barrels: `mail-core` (types + `_mailMessages`), `sync`
 (`mailHydrateMessageEndpoint`), `mail-html` (`<MailHtml>`), `attachments`
-(`useMailAttachment` + `AttachmentChip`), and the shared primitives. The
+(`useMailAttachment` + `AttachmentChip`), `network/live` (`liveCollection` /
+`serveCollection` / `useLive`), and the shared primitives. The
 `mail-html` plugin owns all HTML sanitization/transform — this plugin never
 parses MIME or HTML itself.
 
@@ -55,7 +65,7 @@ parses MIME or HTML itself.
 
 ## Plugin reference
 
-- Description: Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
+- Description: Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (a live window, with Load older messages for a longer thread), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
 - Web:
   - Slots: `threadPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-thread"
@@ -64,6 +74,7 @@ parses MIME or HTML itself.
     - `apps/mail/attachments.useMailAttachment`
     - `apps/mail/mail-html.MailHtml`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/avatar.Avatar`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
@@ -80,8 +91,6 @@ parses MIME or HTML itself.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -89,17 +98,23 @@ parses MIME or HTML itself.
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `threadPane`
 - Server:
-  - Contributes: `resource.declare` "mail-thread-messages"
+  - Contributes:
+    - `resource.declare` "mail-thread-messages"
+    - `resource.declare` "mail-thread-messages:rows"
+    - `resource.declare` "mail-thread-messages:groups"
   - Uses:
     - `apps/mail/mail-core._mailMessages`
-    - `infra/query-resource.queryResource`
-  - Exports (values): `threadMessagesServerResource`
-  - Resources: `mail-thread-messages` (keyed)
+    - `network/live.serveCollection`
+  - Resources:
+    - `mail-thread-messages` (keyed, window)
+    - `mail-thread-messages:groups` (push)
+    - `mail-thread-messages:rows` (keyed, point)
 - Core:
   - Uses:
     - `apps/mail/mail-core.MailMessageSchema`
-    - `infra/query-resource.queryResourceDescriptor`
-  - Exports (values): `threadMessagesResource`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveText`
+  - Exports (values): `threadMessages`
 - Cross-plugin:
   - Imported by: `apps/mail/threads`
 

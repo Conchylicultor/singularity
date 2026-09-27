@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { MdPlayArrow, MdStop, MdOpenInNew } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -11,27 +11,27 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   previewEndpoint,
   stopPreviewEndpoint,
-  releaseRunResource,
-  previewStateResource,
+  releaseRuns,
+  releasePreviews,
 } from "@plugins/release/core";
 
 export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
-  const runResult = useResource(releaseRunResource, { id: runId });
-  const previewResult = useResource(previewStateResource);
+  const runResult = useLiveRow(releaseRuns, runId);
+  const previewResult = useLive(releasePreviews);
 
   const startPreview = useEndpointMutation(previewEndpoint);
   const stopPreview = useEndpointMutation(stopPreviewEndpoint);
 
   if (runResult.pending || previewResult.pending) return <Loading />;
 
-  const run = runResult.data;
-  if (!run) {
+  if (!runResult.found) {
     return (
       <Text as="p" variant="caption" className="text-muted-foreground">
         Run not found
       </Text>
     );
   }
+  const run = runResult.row;
 
   const preview = previewResult.data[runId];
   const isPreviewRunning = preview?.status === "running";

@@ -1,6 +1,6 @@
 export {
   bookmarkFields,
   BookmarkRowSchema,
-  browserBookmarksResource,
+  browserBookmarks,
 } from "./resources";
 export type { BookmarkRow } from "./resources";

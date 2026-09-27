@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -22,7 +23,7 @@ import {
   formatElapsed,
   useNow,
 } from "@plugins/primitives/plugins/relative-time/web";
-import { worktreeOpsResource, type WorktreeOp } from "../../shared";
+import { worktreeOps, type WorktreeOp } from "../../shared";
 
 // The op markers are keyed on the worktree directory basename, exactly how the
 // status poller keys them (`basename(worktreePath)`). Avoid node:path in the
@@ -224,7 +225,7 @@ export function OpStatusBanner({
 }: {
   conversation: ConversationRecord;
 }) {
-  const result = useResource(worktreeOpsResource);
+  const result = useLive(worktreeOps);
   const titleBySlug = useTitleBySlug();
   const now = useNow(1000);
   const [expanded, setExpanded] = useState(false);

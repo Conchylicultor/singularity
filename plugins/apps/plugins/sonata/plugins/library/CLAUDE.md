@@ -86,12 +86,28 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
 - The shell exports the shared `useAvailable` gates `useHasChords` /
   `useHasDerivedChord` / `useHasVoicedChords`.
 
+## The song list (`songs`)
+
+`songs` (`core/resources.ts`, key `"sonata-songs"`) is a `liveValue` of the
+whole `sonata_songs` table, newest-first, served by `songsServed`
+(`serveValue({ source: "db", unbounded: { reason } })`) and read with
+`useLive(songs)` — by `SongLibrary`, `useCurrentSong`, and the player pane's
+title and resolve hooks (each a `.find` / `.some` over the settled list). No
+placeholder: pending renders DataView's loading skeleton, never the empty state,
+and the player's `resolve` stays pending until the list settles.
+
+It is whole-table only until Resources item 7: the library DataView sorts and
+filters every song client-side, including the side-table field-extension
+columns (plays, tracks, file-missing), and a bounded window needs joined
+side-table sort/filter columns, the host rows in data-view's
+`FieldExtensionProps`, and live-window paging in DataView.
+
 ## Song title ownership
 
 `sonata_songs.title` has exactly **one** client-side owner: this plugin's
-`songsResource`. There is no shell-context mirror of it. Anything that needs the
+`songs` value. There is no shell-context mirror of it. Anything that needs the
 open song's title reads it through `useCurrentSong()` (the canonical row for
-`currentSongId`, straight from `songsResource`, preserving the `pending`
+`currentSongId`, straight from `songs`, preserving the `pending`
 discriminant), and the title is *edited* in exactly one place — the inline
 `SongTitle` field, which is the player pane's TITLE node
 (`<PaneChrome title={<SongTitle/>}>`, `web/components/song-title-field.tsx`) and
@@ -128,6 +144,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/shell.TEMPO_MATH_FLOOR`
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -155,8 +172,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Hint`
@@ -183,6 +198,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
+    - `network/live.serveValue`
   - DB schema:
     - `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`
     - `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
@@ -193,9 +209,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `_songs`
     - `createSongRow`
     - `songAttachments`
-    - `songsLiveResource`
     - `updateSongMeta`
-  - Resources: `sonata-songs` (push)
+  - Resources: `sonata-songs` (push, unbounded: the whole song library — whole-table only until Resources item 7: the library DataView sorts and filters every song client-side, including side-table field-extension columns (plays, tracks, file-missing), and a bounded window needs joined side-table sort/filter columns, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
   - Routes:
     - `DELETE /api/sonata/songs/:id`
     - `PATCH /api/sonata/songs/:id`
@@ -208,14 +223,14 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `fields/float/config.floatField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `Song`
     - `UpdateSongBody`
   - Exports (values):
     - `deleteSong`
+    - `songs`
     - `SongSchema`
-    - `songsResource`
     - `updateSong`
 - Cross-plugin:
   - Imported by:

@@ -165,7 +165,7 @@ export function buildNoteVisuals(input: {
   plane: PitchPlane;
   /** Track ids dropped from the roll (track-mixer "hide"). */
   hiddenIds: ReadonlySet<string>;
-  /** trackId → CSS color expression (track-mixer rollup). */
+  /** trackId → CSS color expression (the track-mixer's per-song track views). */
   colorMap: ReadonlyMap<string, string>;
   /**
    * Base color → its Synthesia accidental (sharp/flat) shade. Injected (not

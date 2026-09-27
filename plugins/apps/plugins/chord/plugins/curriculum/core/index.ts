@@ -41,7 +41,7 @@ export type {
   PathRow,
   TokenStanding,
 } from "./path";
-export { chordCurriculumResource } from "./resource";
+export { chordCurriculum } from "./resource";
 export {
   CellSchema,
   applyCellEndpoint,

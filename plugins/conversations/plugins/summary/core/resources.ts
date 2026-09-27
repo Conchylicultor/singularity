@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   fieldsToZodObject,
   nullable,
@@ -53,24 +54,23 @@ export const ConversationSummarySchema = fieldsToZodObject(
 );
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 
-// One conversation's summary history — a keyed resource parametrized by
-// `{ conversationId }`, so each consumer subscribes to exactly ONE
-// conversation's summaries (bounded by how often that conversation was
-// summarised), never the whole table. A point resource does not fit: its
-// identity must be the pk, and the pk is the summary `id` — many rows per
-// conversation. NOT preloaded — route-scoped, hydrates post-mount via its
-// sub-ack. The server half is a hand-written keyed `defineResource` with
-// `identityTable: "conversation_summaries"` (the `pushes-by-attempt` precedent).
+// Every summary ever generated, as a live collection over
+// `conversation_summaries`: a bounded window (newest first, 20 / max 200) plus
+// its `:rows` point sibling. A reader scopes it to ONE conversation with
+// `where: { conversationId }` — the only declared filter, because it is the only
+// one any reader applies (add `phase` when a reader filters by it) — so a tab
+// never subscribes to the whole table, and the `(conversationId, generatedAt)`
+// index serves the read.
 //
-// Row order on the client is NOT guaranteed latest-first: a scoped upsert
-// appends. Read the latest through `useLatestConversationSummary`, which picks
-// it by `generatedAt`.
-export const conversationSummariesResource = keyedResourceDescriptor<
-  ConversationSummary[],
-  { conversationId: string }
->(
-  "conversation-summaries",
-  z.array(ConversationSummarySchema),
-  [],
-  (r) => (r as ConversationSummary).id,
-);
+// The latest summary is `useLive(conversationSummaries, { where:
+// { conversationId }, limit: 1 })`: the window is ordered server-side, so its
+// first row IS the latest (`useLatestConversationSummary`). NOT preloaded —
+// route-scoped, it hydrates post-mount via its sub-ack.
+export const conversationSummaries = liveCollection("conversation-summaries", {
+  row: ConversationSummarySchema,
+  id: "id",
+  filterable: { conversationId: liveText() },
+  sortable: ["generatedAt"],
+  default: { orderBy: [["generatedAt", "desc"]], limit: 20 },
+  maxLimit: 200,
+});

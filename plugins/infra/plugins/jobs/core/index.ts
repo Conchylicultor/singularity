@@ -1,9 +1,9 @@
 export {
-  jobsListResource,
+  jobsList,
   JobRowSchema,
   JobStateSchema,
   JobsPayloadSchema,
-  deadJobsResource,
+  deadJobs,
   DeadJobRowSchema,
   DeadJobsPayloadSchema,
 } from "./resources";

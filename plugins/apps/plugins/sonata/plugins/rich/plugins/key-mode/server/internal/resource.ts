@@ -1,16 +1,10 @@
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  keyAutoDetectResource,
-  type KeyAutoDetectRow,
-} from "../../shared/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { keyAutoDetects } from "../../shared/resources";
 import { songKeyAutoDetect } from "./tables";
 
-export const keyAutoDetectLiveResource = defineResource<KeyAutoDetectRow[]>({
-  key: keyAutoDetectResource.key,
-  mode: "push",
-  schema: z.array(songKeyAutoDetect.schema),
-  loader: () =>
-    db.select(songKeyAutoDetect.wireColumns).from(songKeyAutoDetect.table),
+// Server half of the per-song key-auto-detect read: the lookup-only collection
+// served from the extension entity (its wire columns — `songId` is the
+// `parent_id` PK).
+export const keyAutoDetectsServed = serveCollection(keyAutoDetects, {
+  from: songKeyAutoDetect,
 });

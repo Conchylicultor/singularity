@@ -1,7 +1,4 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   applyCellEndpoint,
   setBlanksEndpoint,
@@ -14,7 +11,7 @@ import {
   handleSetChapterState,
   handleSetChordState,
 } from "./internal/handlers";
-import { chordCurriculumServerResource } from "./internal/resource";
+import { chordCurriculumServed } from "./internal/resource";
 
 export default {
   description:
@@ -30,6 +27,6 @@ export default {
     // purpose (no ExcludeFromFork / ExcludeFromBackup / ExcludeFromChangeFeed):
     // it is the learner's own choice, which nothing can rebuild, and the feed
     // is what pushes `chord.curriculum`. No growth bound: it is one row.
-    Resource.Declare(chordCurriculumServerResource),
+    ...chordCurriculumServed.declare,
   ],
 } satisfies ServerPluginDefinition;

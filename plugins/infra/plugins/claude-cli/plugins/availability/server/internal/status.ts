@@ -1,9 +1,9 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { resolveClaudeBin } from "@plugins/infra/plugins/paths/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   claudeCodeBlockMessage,
-  claudeCodeStatusResource as descriptor,
+  claudeCodeStatus,
   type ClaudeCodeBlock,
   type ClaudeCodeStatus,
 } from "../../core";
@@ -49,7 +49,7 @@ function record(status: ClaudeCodeStatus): void {
   last = { status, at: Date.now() };
   if (before !== undefined && JSON.stringify(before) === JSON.stringify(status))
     return;
-  claudeCodeStatusServerResource.notify();
+  claudeCodeStatusServed.notify();
   // Only a real transition wakes the listeners: the first answer after boot has
   // nothing to catch up on (whatever runs at boot asked for itself).
   if (
@@ -62,15 +62,13 @@ function record(status: ClaudeCodeStatus): void {
 }
 
 // External, not DB-backed: the truth is a CLI on the host, which no change feed
-// observes. Push: one small value, the same for every tab, read by the
-// always-mounted health dot.
-export const claudeCodeStatusServerResource = defineExternalResource(
-  descriptor,
-  {
-    mode: "push",
-    loader: () => (last ? Promise.resolve(last.status) : probe()),
-  },
-);
+// observes, so `record` calls its `notify()`. Pushed (the `liveValue` default):
+// one small value, the same for every tab, read by the always-mounted health
+// dot.
+export const claudeCodeStatusServed = serveValue(claudeCodeStatus, {
+  source: "external",
+  loader: () => (last ? Promise.resolve(last.status) : probe()),
+});
 
 /**
  * Claude Code's status, fresh enough to act on: a `ready` answer younger than

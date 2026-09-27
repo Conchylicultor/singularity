@@ -9,15 +9,18 @@
   - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/scroll.Scroll`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/relative-time.RelativeTime`
 - Server:
-  - Contributes: `resource.declare` "plugin-health-reviews"
+  - Contributes:
+    - `resource.declare` "plugin-health-reviews"
+    - `resource.declare` "plugin-health-reviews:rows"
+    - `resource.declare` "plugin-health-reviews:groups"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
@@ -26,19 +29,20 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/mcp.Mcp`
     - `infra/paths.GIT`
-    - `infra/query-resource.queryResource`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `network/live.serveCollection`
     - `tasks/launch-options.inheritLaunchOptions`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
-  - Exports (values):
-    - `healthReviewExt`
-    - `pluginHealthReviewsResource`
+  - Exports (values): `healthReviewExt`
   - Register: `mcpTool('propose_task')`
-  - Resources: `plugin-health-reviews` (keyed)
+  - Resources:
+    - `plugin-health-reviews` (keyed, window)
+    - `plugin-health-reviews:groups` (push)
+    - `plugin-health-reviews:rows` (keyed, point)
   - Routes:
     - `GET /api/plugin-health/reviews`
     - `GET /api/plugin-health/staleness/:pluginId`

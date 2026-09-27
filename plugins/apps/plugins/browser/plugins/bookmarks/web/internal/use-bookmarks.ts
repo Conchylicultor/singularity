@@ -1,32 +1,56 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useLive,
+  type LiveListResult,
+} from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { addBookmark, deleteBookmark } from "../../shared/endpoints";
-import { browserBookmarksResource, type BookmarkRow } from "../../core";
+import { browserBookmarks, type BookmarkRow } from "../../core";
 
 /**
- * Shared read + mutate logic for the bookmark surfaces (star toggle + bar).
- * Wraps the live `browser-bookmarks` resource and the add/delete endpoints.
+ * The bookmarks list for the bar: the `browserBookmarks` default window
+ * (oldest first, 100 — `loadMore` grows it) plus the remove endpoint.
  *
- * The raw `ResourceResult` is exposed (never collapsed into a fake-empty list)
- * so consumers gate on `.pending` themselves — `matchResource` in the bar, the
- * `&&`-guarded helpers below for the star.
+ * The raw window result is exposed (never collapsed into a fake-empty list),
+ * so the consumer gates on `.pending` itself.
  */
 export function useBookmarks(): {
-  result: ResourceResult<BookmarkRow[]>;
-  isBookmarked: (url: string) => boolean;
-  toggle: (url: string, title: string) => Promise<void>;
+  result: LiveListResult<BookmarkRow>;
   remove: (id: string) => Promise<void>;
 } {
-  const result = useResource(browserBookmarksResource);
+  const result = useLive(browserBookmarks);
+  const { mutateAsync: del } = useEndpointMutation(deleteBookmark);
+
+  const remove = async (id: string) => {
+    await del({ params: { id } });
+  };
+
+  return { result, remove };
+}
+
+/**
+ * Whether ONE url is bookmarked, and the toggle for it — the star's read. A
+ * `{ where: { url }, limit: 1 }` window, so the server answers for this url
+ * alone, whatever the list's size.
+ *
+ * Not known yet is its own arm, and `toggle` exists only once the answer is
+ * known: a click while pending cannot add a second bookmark for a url that
+ * already has one.
+ */
+export function useBookmarkToggle(url: string):
+  | { pending: true }
+  | {
+      pending: false;
+      bookmarked: boolean;
+      toggle: (title: string) => Promise<void>;
+    } {
+  const result = useLive(browserBookmarks, { where: { url }, limit: 1 });
   const { mutateAsync: add } = useEndpointMutation(addBookmark);
   const { mutateAsync: del } = useEndpointMutation(deleteBookmark);
 
-  const isBookmarked = (url: string) =>
-    !result.pending && result.data.some((b) => b.url === url);
+  if (result.pending) return { pending: true };
+  const existing = result.data[0];
 
-  const toggle = async (url: string, title: string) => {
-    const existing = !result.pending && result.data.find((b) => b.url === url);
+  const toggle = async (title: string) => {
     if (existing) {
       await del({ params: { id: existing.id } });
     } else {
@@ -34,9 +58,5 @@ export function useBookmarks(): {
     }
   };
 
-  const remove = async (id: string) => {
-    await del({ params: { id } });
-  };
-
-  return { result, isBookmarked, toggle, remove };
+  return { pending: false, bookmarked: existing !== undefined, toggle };
 }

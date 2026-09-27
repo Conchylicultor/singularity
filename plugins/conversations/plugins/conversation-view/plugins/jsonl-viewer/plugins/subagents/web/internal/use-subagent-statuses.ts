@@ -1,13 +1,13 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useConversationById } from "@plugins/conversations/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   agentCallForSubagent,
   agentCallsIn,
   agentCallJoin,
   describedSubagent,
-  subagentActivityResource,
+  subagentActivity,
   subagentRunState,
   workflowCallsIn,
   workflowRunsOf,
@@ -118,7 +118,7 @@ export type ConversationSubagents =
  * and the one place the row ⇄ `Agent`-call join is done.
  *
  * Every caller in a conversation subscribes on the same id, and that is
- * deliberate: `useResource` is a TanStack Query wrapper, so N callers on
+ * deliberate: `useLive` is a TanStack Query wrapper, so N callers on
  * identical params share ONE query and ONE subscription. A band listing every
  * running sub-agent and a hundred cards each reading their own therefore cost
  * the same three reads.
@@ -126,10 +126,8 @@ export type ConversationSubagents =
 export function useConversationSubagents(
   conversationId: string | null,
 ): ConversationSubagents {
-  const activity = useResource(subagentActivityResource, {
-    id: conversationId ?? "",
-  });
-  const events = useResource(jsonlEventsResource, { id: conversationId ?? "" });
+  const activity = useLive(subagentActivity, { id: conversationId ?? "" });
+  const events = useLive(jsonlEvents, { id: conversationId ?? "" });
   const conversation = useConversationById(conversationId);
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.

@@ -1,17 +1,15 @@
 import { MdDashboardCustomize } from "react-icons/md";
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { prototypesResource } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 
 /**
  * A raw `proto-…` id rendered as a chip that opens the mock beside the text.
  *
- * Resolution is free: `prototypesResource` is a live, app-wide list re-broadcast
+ * Resolution is free: `prototypesList` is a live, app-wide list re-broadcast
  * on every file change under the prototypes dir, so a transcript full of ids
  * costs no requests and the labels track a rename of the `<title>` live.
  *
@@ -30,7 +28,7 @@ export function PrototypeChip({
 }) {
   const id = content.trim();
   const openPane = useOpenPane();
-  const result = useResource(prototypesResource);
+  const result = useLive(prototypesList);
 
   // The id exactly as written. Not a degraded chip and not a loading glyph:
   // this is spliced into a sentence, so anything else moves the prose around

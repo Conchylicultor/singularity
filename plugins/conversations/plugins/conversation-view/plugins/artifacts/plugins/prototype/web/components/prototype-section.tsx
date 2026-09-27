@@ -1,12 +1,10 @@
 import { MdDashboardCustomize } from "react-icons/md";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { prototypesResource } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
@@ -32,7 +30,7 @@ const NO_SUCH_PROTOTYPE = "No such prototype — deleted, or never created here"
 /**
  * The prototypes a conversation touched, one per line.
  *
- * Resolution is free: `prototypesResource` is a live, app-wide list
+ * Resolution is free: `prototypesList` is a live, app-wide list
  * re-broadcast on every file change under the prototypes dir, so a popover full
  * of ids costs no requests and the titles track a rename of the `<title>` live.
  *
@@ -42,7 +40,7 @@ const NO_SUCH_PROTOTYPE = "No such prototype — deleted, or never created here"
  * the answer rather than as the wait for it.
  */
 export function PrototypeSection({ items }: { items: ArtifactItem[] }) {
-  const prototypes = useResource(prototypesResource);
+  const prototypes = useLive(prototypesList);
   const openPane = useOpenPane();
 
   return matchResource(prototypes, {

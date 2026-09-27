@@ -148,19 +148,20 @@ ruleTester.run(
       // A hook handing its caller the result itself — the pending arm survives.
       {
         code: `
-          function useProgress(id) {
-            const r = usePointResource(progressResource, id);
+          function useProgress(ids) {
+            const r = useLive(progressRows, { ids });
             return r;
           }
         `,
       },
-      // A component rendering nothing while a point read loads — sanctioned.
+      // A component rendering nothing while an id read loads — sanctioned,
+      // even though its JSX reads a nullable row.
       {
         code: `
           function Chip({ id }) {
-            const r = usePointResource(progressResource, id);
+            const r = useLive(progressRows, { ids: [id] });
             if (r.pending) return null;
-            return <span>{r.data?.phase}</span>;
+            return <span>{r.data[0]?.phase}</span>;
           }
         `,
       },
@@ -181,8 +182,8 @@ ruleTester.run(
         code: `
           export const pane = Pane.define({
             useTitle: ({ id }) => {
-              const r = usePointResource(rowsResource, id);
-              return r.pending ? undefined : r.data?.name;
+              const r = useLive(rows, { ids: [id] });
+              return r.pending ? undefined : r.data[0]?.name;
             },
           });
         `,
@@ -193,40 +194,29 @@ ruleTester.run(
       {
         code: `
           function useTitle2({ id }) {
-            const result = usePointResource(rowsResource, id);
+            const result = useLive(rows, { ids: [id] });
             if (result.pending) return null;
-            return result.data?.name ?? null;
+            return result.data[0]?.name ?? null;
           }
           export const pane = Pane.define({ useTitle: useTitle2 });
         `,
         errors: [{ messageId: "pendingCollapseReturn" }],
       },
-      // Point read collapsed by a ternary: pending and absent are both null.
+      // An id read collapsed by a ternary: pending and absent are both null.
       {
         code: `
           function useProgressFor(id) {
-            const result = usePointResource(progressResource, id);
-            return result.pending ? null : (result.data ?? null);
+            const result = useLive(progressRows, { ids: [id] });
+            return result.pending ? null : (result.data[0] ?? null);
           }
         `,
         errors: [{ messageId: "pendingCollapse" }],
       },
-      // Point read collapsed by an early return — settled data is row | null.
-      {
-        code: `
-          function usePreprompt(id) {
-            const result = usePointResource(prepromptsResource, id);
-            if (result.pending) return null;
-            return result.data;
-          }
-        `,
-        errors: [{ messageId: "pendingCollapseReturn" }],
-      },
-      // Point set narrowed to one row: `?? null` makes the settled value nullable.
+      // An id set narrowed to one row: `?? null` makes the settled value nullable.
       {
         code: `
           function useTaskAutoStart(ids) {
-            const result = usePointResources(autoStartResource, ids);
+            const result = useLive(autoStartRows, { ids });
             if (result.pending) return null;
             return result.data[0] ?? null;
           }
@@ -245,22 +235,22 @@ ruleTester.run(
         `,
         errors: [{ messageId: "pendingCollapseReturn" }],
       },
-      // Point set collapsed to undefined by a ternary.
+      // An id set collapsed to undefined by a ternary.
       {
         code: `
           function useRows(ids) {
-            const result = usePointResources(categoriesResource, ids);
+            const result = useLive(categories, { ids });
             const rows = result.pending ? undefined : result.data;
             return rows;
           }
         `,
         errors: [{ messageId: "pendingCollapse" }],
       },
-      // Window read collapsed to an empty list.
+      // A hook returning a window read collapsed to an empty list.
       {
         code: `
           function useStarred() {
-            const result = useWindowResource(starredResource);
+            const result = useLive(starredPages);
             return result.pending ? [] : result.data;
           }
         `,
@@ -333,8 +323,8 @@ ruleTester.run(
       // Optimistic results are tainted too.
       {
         code: `
-          const r = useOptimisticResource({ resource, apply, mutate });
-          const ranks = r.pending ? [] : r.data.ranks;
+          const r = useOptimisticResource(queueRanks, { ids }, { apply, mutate });
+          const ranks = r.pending ? [] : r.data.map((row) => row.rank);
         `,
         errors: [{ messageId: "pendingCollapse" }],
       },
@@ -385,7 +375,7 @@ ruleTester.run(
       {
         code: `
           function useRanks() {
-            const r = useOptimisticResource({ resource, apply, mutate });
+            const r = useOptimisticResource(queueRanksValue, { apply, mutate });
             if (r.pending) return [];
             return r.data.ranks;
           }

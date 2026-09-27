@@ -1,18 +1,14 @@
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { conversationPrepromptsResource as conversationPrepromptsDescriptor } from "../../shared/schemas";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { conversationPrepromptRows } from "../../shared/schemas";
 import { conversationPreprompt } from "./tables";
 
-// Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`), and the change-feed routes a preprompt
-// insert/update to a tuple iff the changed conversation ids intersect its set —
-// so a snapshot write never sweeps the whole table. The extension handle is the
-// source, so the projection is its `wireColumns` and the identity is its key
-// `conversationId` (the `parent_id` PK); `point.by` IS that identity pk. No
-// orderBy — point sets are unordered.
-export const conversationPrepromptsResource = windowQueryResource(
-  conversationPrepromptsDescriptor,
-  {
-    from: conversationPreprompt,
-    point: { by: conversationPreprompt.table.conversationId },
-  },
+// Server half of the per-conversation preprompt read: the lookup-only
+// collection served from the extension entity (its wire columns —
+// `conversationId` is the `parent_id` PK, and `text` binds to the
+// `prompt_text` column by its property name). The `:rows` point routing sends
+// a snapshot write to the one conversation's tuple alone, so a write never
+// sweeps the table.
+export const conversationPrepromptRowsServed = serveCollection(
+  conversationPrepromptRows,
+  { from: conversationPreprompt },
 );

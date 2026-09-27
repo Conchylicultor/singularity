@@ -3,47 +3,43 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   keyedResourceDescriptor,
   type PointParams,
-  type PointResourceDescriptor,
   type ResourcePreload,
   type WindowParams,
-  type WindowResourceDescriptor,
   type WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  PointQueryResourceContract,
+  WindowQueryResourceContract,
+} from "@plugins/infra/plugins/query-resource/core";
 
-// The web-safe halves of a bounded (window / point) query-resource declaration —
-// the exact twins of `QueryResourceContract`: the live-state descriptor (which
-// carries the selector codec both sides share) plus `queryPk`, so the server's
-// `windowQueryResource` can assert the descriptor and the derived query identity
-// key on the same field (a boot-time throw on drift, not a runtime mismatch).
+// The two factories `liveCollection` mints its bounded resources with: the
+// window (`windowQueryResourceDescriptor`) and the `:rows` point sibling
+// (`pointQueryResourceDescriptor`). Internal to this plugin on purpose — the
+// barrel exports `liveCollection`, and a collection is the one way to declare a
+// bounded resource. A second, lower-level spelling would be a way to mint a
+// window or point resource without the row schema, id and filterable columns
+// `serveCollection` binds to the table.
 //
-// These are the ONLY factories for window / point descriptors: live-state owns
-// the descriptor TYPES and the hooks, but the only server half that can serve a
-// bounded resource is `windowQueryResource`, which needs `queryPk` — so a
-// codec-carrying descriptor without it would be an unservable second spelling.
+// Each returns a query-resource CONTRACT (`{Window,Point}QueryResourceContract`,
+// declared in `query-resource/core`): the live-state descriptor (which carries
+// the selector codec both sides share) plus `queryPk`, so the server's
+// `windowQueryResource` — the compiler behind `serveCollection` — can assert the
+// descriptor and the derived query identity key on the same field (a boot-time
+// throw on drift, not a runtime mismatch). The types stay in `query-resource`
+// because its server consumes them, and `query-resource` never imports
+// `network/live`.
 //
 // The selector codecs follow the bounded working-set contract
 // (research/2026-07-18-global-bounded-working-set-resource-contract.md). A
 // window/point subscription is just a params tuple, so the SAME logical
 // selector MUST always produce the SAME params object: paramsKey identity is
-// what makes boot hydration, the `useResource` subscription, and the server
-// loader land on ONE per-tuple state. Both codecs are therefore canonical on
+// what makes boot hydration, the client subscription (`useLive`), and the
+// server loader land on ONE per-tuple state. Both codecs are therefore canonical on
 // encode and STRICT on decode (malformed params throw — fail loudly; a
 // defaulting decode would let `{}` and the default window name the same
 // logical window under two paramsKeys, doubling every per-tuple state).
-
-export type WindowQueryResourceContract<
-  Row,
-  P extends WindowParams = WindowParams,
-  S extends WindowSelector = WindowSelector,
-> = WindowResourceDescriptor<Row, P, S> & {
-  /** The row field the client `keyOf` reads — matched against the server keyField. */
-  queryPk: string;
-};
-
-export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
-  /** The row field the client `keyOf` reads — matched against the server keyField. */
-  queryPk: string;
-};
+// `liveCollection` replaces the window's limit-only codec with its query codec,
+// which holds the same two properties.
 
 function assertWindowLimit(limit: number, context: string): void {
   if (!Number.isSafeInteger(limit) || limit <= 0) {
@@ -60,10 +56,11 @@ function pkKeyOf<Row>(pkField: keyof Row & string): (row: unknown) => string {
 /**
  * Declare a bounded ordered-window keyed resource whose rows are a flat SQL
  * query result. Wraps `keyedResourceDescriptor` (schema stays
- * `z.array(rowSchema)`, so `useResource` callers still get `Row[]` and the keyed
- * delta wire is unchanged), attaches the window codec + the canonical
- * `defaultParams` tuple, and records `queryPk` for the server-side drift
- * assertion. The matching server half is `windowQueryResource(descriptor, spec)`.
+ * `z.array(rowSchema)`, so a reader still gets `Row[]` and the keyed delta wire
+ * is unchanged), attaches the window codec + the canonical `defaultParams`
+ * tuple, and records `queryPk` for the server-side drift assertion. The
+ * matching server half is `windowQueryResource(descriptor, spec)`, which
+ * `serveCollection` calls.
  */
 export function windowQueryResourceDescriptor<Row>(
   key: string,
@@ -106,11 +103,12 @@ export function windowQueryResourceDescriptor<Row>(
 
 /**
  * Declare an explicit point-set keyed resource whose rows are a flat SQL query
- * result — the `windowQueryResourceDescriptor` twin for `point: { by }` specs.
- * The id-set codec lives on the descriptor so the client hooks and the server
- * compiler share one encoding; `decode` doubles as the server membership
- * `idsOf`. Point resources are never preloaded (post-mount hydration is the
- * recorded decision — the server cannot know a client's id set at snapshot time).
+ * result — the `windowQueryResourceDescriptor` twin for `point: { by }` specs,
+ * and a collection's `:rows` sibling. The id-set codec lives on the descriptor
+ * so the client reads and the server compiler share one encoding; `decode`
+ * doubles as the server membership `idsOf`. Point resources are never
+ * preloaded (post-mount hydration is the recorded decision — the server cannot
+ * know a client's id set at snapshot time).
  */
 export function pointQueryResourceDescriptor<Row>(
   key: string,

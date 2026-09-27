@@ -49,7 +49,6 @@ vi.mock("@plugins/primitives/plugins/networking/web", () => ({
 }));
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
-  useResource: vi.fn(() => ({ pending: true, data: [] })),
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
   useLiveRow: vi.fn(() => ({ pending: true, error: null })),
@@ -554,8 +553,9 @@ describe("a flush during an in-flight replay lands", () => {
     const y = h.id("C");
     // X: a SERVER-synced owner whose doc is empty and unsynced, so a replay
     // onto it waits (push-based) for the transport's `sync` — the in-flight
-    // window this test needs. Nothing is fetched: `useResource` is stubbed
-    // pending, and the state is delivered by hand below.
+    // window this test needs. Nothing is fetched: no block-doc read is
+    // mounted (`useLiveRow` is stubbed pending), and the state is delivered by
+    // hand below.
     const xSession = CollabSession.start(
       x,
       () => buildSeedStateFor([{ text: "X" }]),

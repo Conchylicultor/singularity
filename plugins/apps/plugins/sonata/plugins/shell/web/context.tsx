@@ -37,10 +37,8 @@ import { useConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
-import { useKeyAutoDetect } from "./key-mode-store";
-import { useTransposeSemitones } from "./transpose-store";
-import { useRhythmGroove } from "./rhythm-store";
-import { useChordMode } from "./chord-mode-store";
+import { useEditLoadedRaw, useLoadSong, useLoadedRaw } from "./loaded-song";
+import { useScoreSettings } from "./score-settings";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -150,11 +148,20 @@ const LOOP_MIN_GAP = 1;
 
 export interface SonataContextValue {
   /**
-   * The derived canonical model (empty before a source loads), with the current
-   * `tempoScale` already folded into its tempo map — so displays, audio, and the
-   * transport cursor all share one consistent timeline.
+   * The derived canonical model (empty before a source loads, and while
+   * {@link scorePending}), with the current `tempoScale` already folded into its
+   * tempo map — so displays, audio, and the transport cursor all share one
+   * consistent timeline.
    */
   score: Score;
+  /**
+   * A song's content is loaded but the per-song settings the composition
+   * registers (`Sonata.SongSetting`) have not all settled for it yet. `score`
+   * is empty meanwhile — nothing renders or plays the song under a default or
+   * under another song's settings — so a display shows a loading state here,
+   * never its empty-score message.
+   */
+  scorePending: boolean;
   /**
    * The seekable span `[startBeat, endBeat]` of {@link score}, in beats — THE
    * bound every navigation surface shares. `startBeat` is the timeline origin
@@ -259,19 +266,28 @@ export interface SonataContextValue {
    */
   setSourceRaw: (sourceId: string, raw: unknown) => void;
   /**
-   * Bulk, source-agnostic raw write — set the full `{ sourceId: raw }` map,
+   * Load song `songId` with its content — the full `{ sourceId: raw }` map,
    * REPLACING the current inputs (not merging). Unlike `setRaw` this does NOT
    * depend on (or change) `activeSourceId`; the library uses it to load a song's
    * complete set of persisted per-source inputs in one shot.
+   *
+   * The song id comes WITH the content because the content, the song and its
+   * per-song settings are one state (`loaded-song.tsx`): a different song
+   * replaces all three at once, its settings pending until its observers settle
+   * them; the same song keeps its settled settings. So no render can pair one
+   * song's content with another song's settings, whatever `currentSongId` says
+   * at that moment (a song played in the background, a player not mounted yet).
    */
-  setRawMap: (rawMap: Record<string, unknown>) => void;
+  setRawMap: (songId: string, rawMap: Record<string, unknown>) => void;
   /**
    * Mark a song as the one currently open: sets `currentSongId` and bumps
    * `songOpenEpoch` (re-arms once-per-open effects, even for the same song).
    * Called by the player surface on mount — each open is a fresh `mode:"root"`
    * pane instance, so this fires exactly once per open. Takes a bare id: the
-   * title is library-owned (read `songsResource` via `useCurrentSong`), never
-   * mirrored into this context — a bare id cannot be fabricated.
+   * title is library-owned (the library's `songs` value, read via
+   * `useCurrentSong`), never mirrored into this context — a bare id cannot be
+   * fabricated. It touches neither the content nor the settings: those belong
+   * to the song `setRawMap` loaded.
    */
   setCurrentSong: (songId: string) => void;
   /**
@@ -390,35 +406,41 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
   const displays = Sonata.Display.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
-  // Per-song key-source override (per-surface scoped store, written by the
-  // `key-mode` plugin's observer / the key-readout toggle). When on, the score
-  // pipeline ignores the authored key and infers it from the notes — see
-  // `baseScore`.
-  const keyAutoDetect = useKeyAutoDetect();
-  // Per-song global transpose offset in semitones (per-surface scoped store,
-  // written by the `transpose` plugin's observer / the toolbar control). Applied
-  // early in `baseScore` (before re-voicing / inference / spelling) so every
-  // downstream consumer — audio, roll geometry, overlays, key readout —
-  // transposes for free.
-  const transposeSemitones = useTransposeSemitones();
+  // The loaded song's settings the pipeline transforms with (`score-settings.ts`;
+  // each feature plugin's observer / its controls write them into the loaded
+  // song — see `loaded-song.tsx`), pending until EVERY setting the composition
+  // registers has settled for that song, not only these:
+  //  - transpose: the global offset in semitones, applied early in `baseScore`
+  //    (before re-voicing / inference / spelling) so every downstream consumer —
+  //    audio, roll geometry, overlays, key readout — transposes for free;
+  //  - key auto-detect: when on, the pipeline ignores the authored key and
+  //    infers it from the notes;
+  //  - groove: the two-hand rhythm necklace plus each hand's tone-order
+  //    figuration id, threaded into `reVoiceChords`. Like voicing, it lands notes
+  //    on the chord annotations' EXISTING beats (a bar-anchored groove over the
+  //    same timeline), so it belongs in the view layer and never rewinds the
+  //    transport. `null` ⇒ block chords;
+  //  - chord mode: when on, `baseScore` runs a SECOND re-voicing pass after
+  //    chord analysis, so the analyzer-derived chords of a MIDI song become
+  //    playable notes on the Chords / Bass tracks — through the same voicing
+  //    config + groove a chord grid uses. A view transform: it lands notes on the
+  //    chords' existing beats and never rewinds the transport;
+  //  - any other registered setting (the track-mixer's track view): not read by
+  //    the pipeline, but part of the gate.
+  // A setting whose feature is not in the composition is not waited on, and
+  // reads as its `absent` value (the identity transform).
+  const settings = useScoreSettings();
+  // The loaded song's content: raw input keyed by source id — each source keeps
+  // its own input so they accumulate and merge, rather than one active source
+  // replacing another. Read from the same state as `settings`: one song id for
+  // both, so they can never belong to two songs.
+  const rawById = useLoadedRaw();
+  const loadSong = useLoadSong();
+  const editLoadedRaw = useEditLoadedRaw();
   // Global chord-voicing config (realistic toggle / octave). Read reactively here
   // so toggling it re-derives the score below — chord notes are (re)generated from
   // authored chord annotations in `baseScore`.
   const voicing = useConfig(voicingConfig);
-  // Per-song groove (per-surface scoped store, written by the `rhythm-controls`
-  // plugin's observer / its controls): the two-hand rhythm necklace plus each
-  // hand's tone-order figuration id. Threaded into `reVoiceChords` in `baseScore`:
-  // like voicing, it lands notes on the chord annotations' EXISTING beats (a
-  // bar-anchored groove over the same timeline), so it belongs in the view layer
-  // and never rewinds the transport. `null` ⇒ today's block-chord behaviour.
-  const groove = useRhythmGroove();
-  // Per-song chord mode (per-surface scoped store, written by the `chord-mode`
-  // plugin's observer / its toggle). When on, `baseScore` runs a SECOND
-  // re-voicing pass after chord analysis, so the analyzer-derived chords of a
-  // MIDI song become playable notes on the Chords / Bass tracks — through the
-  // same voicing config + groove a chord grid uses. A view transform: it lands
-  // notes on the chords' existing beats and never rewinds the transport.
-  const chordMode = useChordMode();
   // The per-surface cursor store's imperative facade. Resolves to the
   // `<CursorStoreProvider>` mounted in `SonataLayout` (wrapping this provider),
   // so every surface gets its own playhead. Memoized on the stable store, so it
@@ -453,9 +475,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     activeDisplayId ??
     (displays.find((d) => d.default) ?? displays[0])?.id ??
     null;
-  // Raw input keyed by source id — each source keeps its own input so they
-  // accumulate and merge, rather than one active source replacing another.
-  const [rawById, setRawById] = useState<Record<string, unknown>>({});
   // The playhead lives in the per-surface cursor store (not React state) so the
   // ~60fps transport advance doesn't re-render every `useSonata()` consumer. The
   // provider is the sole writer (`cursor.setBeat`); reads use `cursor.getBeat()`.
@@ -486,11 +505,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Mirrors `clockRef`: a single provider, last registration wins.
   const countInProviderRef = useRef<(() => number) | null>(null);
 
-  // Source-keyed raw write (merges one key). The generic primitive both `setRaw`
-  // and per-source editor sections build on; never touches `activeSourceId`.
-  const setSourceRaw = useCallback((sourceId: string, raw: unknown) => {
-    setRawById((prev) => ({ ...prev, [sourceId]: raw }));
-  }, []);
+  // Source-keyed raw write (merges one key into the loaded song). The generic
+  // primitive both `setRaw` and per-source editor sections build on; never
+  // touches `activeSourceId`.
+  const setSourceRaw = editLoadedRaw;
 
   // `setRaw` writes the *active* source's slot. Read the active id from a ref so
   // the callback stays stable (loaders depend on its identity in effects).
@@ -506,15 +524,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [setSourceRaw],
   );
 
-  // Bulk, source-agnostic raw write (does NOT touch activeSourceId). Used by the
+  // Bulk, source-agnostic song load (does NOT touch activeSourceId). Used by the
   // library to load a song's complete set of per-source inputs in one shot.
   // REPLACES the prior raw map (rather than merging) so opening a song never
   // leaves a previously-opened song's source inputs lingering — each open shows
-  // exactly the new song's sources.
-  const setRawMap = useCallback(
-    (m: Record<string, unknown>) => setRawById(m),
-    [],
-  );
+  // exactly the new song's sources. A different song also replaces the settings
+  // in the same write (pending until its observers settle them) — see
+  // `SonataContextValue.setRawMap`.
+  const setRawMap = loadSong;
 
   // --- The score in two physically separate layers. -------------------------
   //
@@ -536,6 +553,15 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     return mergeScores(compiled);
   }, [sources, rawById]);
 
+  // Content is loaded but its song's settings are not all known: the view is
+  // withheld (`baseScore` is empty) until they are. With no content there is
+  // nothing to withhold — an empty score is then simply the truth.
+  const hasContent = useMemo(
+    () => sources.some((s) => rawById[s.id] !== undefined),
+    [sources, rawById],
+  );
+  const scorePending = hasContent && settings.pending;
+
   // `baseScore` layers the pure VIEW transforms on top of `contentScore`. Every
   // step here PRESERVES the playable timeline (note onsets, durations, tempo
   // map): it shifts pitches, re-voices chord notes onto the *existing* chord
@@ -545,6 +571,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // no-rewind invariant structural: a transform added here cannot change
   // `contentScore`'s identity, so the reset effect below stays inert to it.
   const baseScore = useMemo<Score>(() => {
+    // Not one frame of the song under a setting it does not have: until every
+    // per-song setting has settled for the loaded song there is no view of it
+    // (`scorePending` tells the displays why the score is empty).
+    if (settings.pending) return emptyScore();
+    const { transposeSemitones, keyAutoDetect, groove, chordMode } =
+      settings.value;
     // Shift the whole song by the per-song transpose offset BEFORE anything else
     // (re-voicing / key inference / spelling / chord analysis all operate on the
     // shifted pitches). No-op at 0 semitones — see `transposeScore`.
@@ -587,15 +619,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     return spellScore(
       reVoiceChords(analyzed, voicing, groove, { include: "all" }),
     );
-  }, [
-    contentScore,
-    analyzers,
-    keyAutoDetect,
-    transposeSemitones,
-    voicing,
-    groove,
-    chordMode,
-  ]);
+  }, [contentScore, analyzers, settings, voicing]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single
@@ -782,7 +806,23 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // If the library armed `requestPlayOnLoad` (background "Play" on a card/row),
   // start playback from the top once the new score is composed instead of
   // stopping; `play`'s own guards keep an empty/0% score from starting.
+  //
+  // New content whose song settings are still loading (`scorePending`) is not
+  // composed yet: it stops the transport at once — the previous song must not
+  // play on over the load — and the rewind + play-on-load wait for the settle,
+  // when the start beat is the real score's. `resetForRef` is the content the
+  // last full reset ran for, so settings that re-settle over the SAME content
+  // never rewind it.
+  const resetForRef = useRef<Score | null>(null);
   useEffect(() => {
+    if (contentScore === resetForRef.current) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- intentional transport reset on content change: every state write here is paired with the imperative cursor rewind (cursor.setBeat) or the play-on-load start, a genuine side-effect not derivable in render */
+    if (scorePending) {
+      setCountIn(null);
+      setIsPlaying(false);
+      return;
+    }
+    resetForRef.current = contentScore;
     // Park at the timeline origin (the negative lead-in pre-roll beat), not beat
     // 0, so a freshly loaded song opens with an empty bar below its first notes
     // and — whether it auto-plays or the user presses play — the notes fall INTO
@@ -794,7 +834,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
     // unconditionally (even when auto-playing) so a freshly loaded song never
     // inherits a stale practice loop.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: clearing the loop is paired with the imperative cursor rewind above, not derivable in render
     setLoopState(null);
     // A freshly loaded song never inherits a stale count-in (its lead-in belonged
     // to the previous content). Paired with the imperative cursor rewind above.
@@ -812,21 +851,26 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSeekEpoch((n) => n + 1);
       play();
     } else {
-      // intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
+      // Loading/editing new content rewinds the cursor above and stops playback.
       setIsPlaying(false);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
     // Keyed on `contentScore` (the loaded timeline), NOT `baseScore` — so the
     // pitch/voicing/key view-transforms layered into `baseScore` over the same
     // timeline don't rewind or stop playback (they apply live). `play`/`reanchor`
     // are stable, and `contentScore`'s identity is stable across renders (its
     // deps — the slot contributions + the raw map — change only on a real
-    // load/edit), so this never fires spuriously.
-  }, [contentScore, cursor, play, reanchor]);
+    // load/edit), so this never fires spuriously. `scorePending` only defers the
+    // reset of new content to its settle.
+  }, [contentScore, scorePending, cursor, play, reanchor]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
   // and the epoch bump re-arms once-per-open effects (even for the same song).
   // The existing `useEffect([contentScore])` auto-stops + rewinds on content change.
+  //
+  // It touches no setting: the settings belong to the LOADED song, and change
+  // only with it (`setRawMap`).
   const setCurrentSong = useCallback((songId: string) => {
     setCurrentSongId(songId);
     // Bump every open (even the same song) so once-per-open effects re-arm.
@@ -834,7 +878,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // The player surface calls this on unmount so library-state effects don't
-  // mis-attribute playback to a song that is no longer on screen.
+  // mis-attribute playback to a song that is no longer on screen. The loaded
+  // content is still the closed song's (it may play on in the background), and
+  // so are its settings, which stay in force over it.
   const clearCurrentSong = useCallback(() => {
     setCurrentSongId(null);
   }, []);
@@ -1199,6 +1245,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
+      scorePending,
       timelineBeats,
       currentSongId,
       songOpenEpoch,
@@ -1244,6 +1291,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }),
     [
       score,
+      scorePending,
       timelineBeats,
       currentSongId,
       songOpenEpoch,

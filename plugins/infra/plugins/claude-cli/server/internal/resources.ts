@@ -1,27 +1,13 @@
-import { desc } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  ClaudeCliCallSchema,
-  type ClaudeCliCall,
-} from "../../core/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { claudeCliCalls } from "../../core/resources";
 import { _claudeCliCalls } from "./tables";
 
-export const RECENT_CALLS_LIMIT = 1000;
-
-// The table row type and the `ClaudeCliCall` wire schema both derive from the
-// single `claudeCliCallFields` record (core), so `_claudeCliCalls.$inferSelect`
-// matches `ClaudeCliCall` by construction — the loader returns `db.select()`
-// rows verbatim, no projection.
-export const claudeCliCallsResource = defineResource({
-  key: "claude-cli-calls",
-  mode: "push",
-  schema: z.array(ClaudeCliCallSchema),
-  loader: async (): Promise<ClaudeCliCall[]> =>
-    db
-      .select()
-      .from(_claudeCliCalls)
-      .orderBy(desc(_claudeCliCalls.createdAt))
-      .limit(RECENT_CALLS_LIMIT),
+// The call log over `claude_cli_calls`: its window (newest first, filterable on
+// `sourceName` / `model`), its `:rows` point sibling and the `:groups` the
+// pane's source chips read. The table row and `ClaudeCliCall` both derive from
+// the single `claudeCliCallFields` record (core), so every row field binds to
+// its column by name. A call is written once and never updated; the recorder's
+// trim to `RECENT_CALLS_LIMIT` is a window delete.
+export const claudeCliCallsServed = serveCollection(claudeCliCalls, {
+  from: _claudeCliCalls,
 });

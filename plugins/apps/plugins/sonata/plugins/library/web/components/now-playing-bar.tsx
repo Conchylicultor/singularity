@@ -1,9 +1,15 @@
 import { MdMusicNote, MdPause, MdPlayArrow } from "react-icons/md";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenSong } from "../hooks";
@@ -16,14 +22,14 @@ import { useCurrentSong } from "../use-current-song";
  * playback the library started without navigating: the song identity, a
  * play/pause toggle, and the shared transport scrubber for seeking. Clicking the
  * title opens the full player. The title is read from the canonical
- * `songsResource` row (`useCurrentSong`), never a shell-context mirror.
+ * `songs` row (`useCurrentSong`), never a shell-context mirror.
  */
 export function NowPlayingBar() {
   const { isPlaying, play, stop } = useSonata();
   const current = useCurrentSong();
   const openSong = useOpenSong();
   // Nothing to show until the open song's canonical row is available (no song
-  // open, or the songs resource still loading).
+  // open, or the live `songs` value still loading).
   if (current.pending || !current.data) return null;
   const song = current.data;
   const title = song.title;

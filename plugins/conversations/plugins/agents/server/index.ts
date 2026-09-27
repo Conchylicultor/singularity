@@ -11,7 +11,7 @@ import { handleMove } from "./internal/handle-move";
 import { handleDelete } from "./internal/handle-delete";
 import { handleLaunch } from "./internal/handle-launch";
 import { handleListLaunches } from "./internal/handle-list-launches";
-import { agentLaunchesResource, agentsResource } from "./internal/resources";
+import { agentLaunchesResource, agentRowsServed } from "./internal/resources";
 import { agents } from "./internal/views";
 import { taskLatestConversationSpec } from "./internal/rollup-spec";
 import { backfillAgentSvgNodes } from "./internal/backfill-svg";
@@ -28,9 +28,17 @@ import {
 
 export { _agent_launches, _agents } from "./internal/tables";
 export { agents } from "./internal/views";
-export { AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
-export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./internal/schema";
-export { agentsResource, agentLaunchesResource } from "./internal/resources";
+export {
+  AgentSchema,
+  AgentLaunchSchema,
+  AgentLaunchWithStatusSchema,
+} from "./internal/schema";
+export type {
+  Agent,
+  AgentLaunch,
+  AgentLaunchWithStatus,
+} from "./internal/schema";
+export { agentLaunchesResource } from "./internal/resources";
 export { nextAgentRankUnder } from "./internal/rank";
 
 export default {
@@ -45,7 +53,13 @@ export default {
     [launchAgent.route]: handleLaunch,
     [listAgentLaunches.route]: handleListLaunches,
   },
-  contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource), View({ view: agents }), DerivedTable(taskLatestConversationSpec), TaskCategory({ id: "agents", label: "Agents", order: 2 })],
+  contributions: [
+    ...agentRowsServed.declare,
+    Resource.Declare(agentLaunchesResource),
+    View({ view: agents }),
+    DerivedTable(taskLatestConversationSpec),
+    TaskCategory({ id: "agents", label: "Agents", order: 2 }),
+  ],
   onReady: async () => {
     await backfillAgentSvgNodes();
   },

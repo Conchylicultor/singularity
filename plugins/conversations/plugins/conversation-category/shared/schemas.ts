@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 
 // Who set the classification. Written once: this IS the `source` column's decoder
 // (see server/internal/tables.ts) and the wire schema's own member, so the stored
@@ -21,29 +21,22 @@ export const ConversationCategorySchema = z.object({
 });
 export type ConversationCategory = z.infer<typeof ConversationCategorySchema>;
 
-export const ConversationCategoriesPayloadSchema = z.array(
-  ConversationCategorySchema,
-);
-export type ConversationCategoriesPayload = z.infer<
-  typeof ConversationCategoriesPayloadSchema
->;
-
-// Bounded POINT resource. A conversation now holds one row per configured
-// category, so the point identity is the (conversation, category) pair folded
-// into the `id` primary key — `point.by` must BE the identity pk, because the
-// change feed routes a write by intersecting changed row ids with each tuple's
-// id set.
+// The category assignments, read by row id. A conversation holds one row per
+// configured category, so the row id is the (conversation, category) pair
+// folded into the `id` primary key (`categoryRowId`) — the id MUST be the table's
+// single-column pk, because the `:rows` point routing intersects the pk values a
+// write touched with each subscriber's id set. It is a lookup-only collection:
+// no default window (nothing lists every assignment), minting
+// `conversation-categories:rows` alone, read with `useLive(c, { ids })`.
 //
 // Subscribers name the exact rows they render: a sidebar row asks for the ONE
-// avatar-category id (same per-row budget as before). A row whose
-// category was deleted from config is therefore structurally invisible — no
-// subscribed id set can contain it — which is why nothing sweeps orphans.
+// avatar-category id (same per-row budget as before). A row whose category was
+// deleted from config is therefore structurally invisible — no subscribed id
+// set can contain it — which is why nothing sweeps orphans.
 //
-// NOT preloaded: point resources hydrate post-mount (the recorded decision),
-// and CategoryAvatarRow keeps its title-glyph fallback for the one round-trip.
-export const conversationCategoriesResource =
-  pointQueryResourceDescriptor<ConversationCategory>(
-    "conversation-categories",
-    ConversationCategorySchema,
-    "id",
-  );
+// NOT preloaded (a lookup-only collection cannot be): it hydrates post-mount,
+// and CategoryAvatarRow renders a neutral disc for that one round-trip.
+export const conversationCategories = liveCollection(
+  "conversation-categories",
+  { row: ConversationCategorySchema, id: "id" },
+);

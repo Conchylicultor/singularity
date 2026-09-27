@@ -1,14 +1,18 @@
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
-import { taskDetailResource, type Task } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskDetail, type Task } from "@plugins/tasks/plugins/tasks-core/core";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
-import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
+import {
+  useFlushAll,
+  useRegisterFlush,
+} from "@plugins/tasks/plugins/task-detail/web";
 import { DescriptionView } from "./description-view";
 import { LaunchOptions } from "./launch-options";
 
@@ -31,8 +35,11 @@ function TaskDescriptionInner({
 
   const buildLaunchRequest = useCallback(async () => {
     await flushAll();
-    // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort fresh-task refetch before launch; null falls back to the already-loaded detailTask (`fresh ?? detailTask ?? {}`), a deliberate stale-but-present degradation, not a lost result
-    const fresh = await fetchEndpoint(getTaskEndpoint, { id: taskId }).catch(() => null);
+    /* eslint-disable promise-safety/no-absorbed-failure -- best-effort fresh-task refetch before launch; null falls back to the already-loaded detailTask (`fresh ?? detailTask ?? {}`), a deliberate stale-but-present degradation, not a lost result */
+    const fresh = await fetchEndpoint(getTaskEndpoint, { id: taskId }).catch(
+      () => null,
+    );
+    /* eslint-enable promise-safety/no-absorbed-failure */
     return { taskId, prompt: buildTaskPrompt(fresh ?? detailTask ?? {}) };
   }, [taskId, detailTask, flushAll]);
 
@@ -60,8 +67,8 @@ function TaskDescriptionInner({
 export function TaskDescription({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   // `description` is not in the lean list payload — read the full task (incl.
-  // description) from the per-id detail resource, which stays live across tabs.
-  const detail = useResource(taskDetailResource, { id: taskId });
+  // description) from the per-id detail value, which stays live across tabs.
+  const detail = useLive(taskDetail, { id: taskId });
 
   if (!task) return null;
 
@@ -70,7 +77,11 @@ export function TaskDescription({ taskId }: { taskId: string }) {
   return (
     <ResourceView resource={detail}>
       {(detailTask) => (
-        <TaskDescriptionInner taskId={taskId} task={task} detailTask={detailTask} />
+        <TaskDescriptionInner
+          taskId={taskId}
+          task={task}
+          detailTask={detailTask}
+        />
       )}
     </ResourceView>
   );

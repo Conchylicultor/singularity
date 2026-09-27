@@ -43,7 +43,12 @@ worktrees must collide on purpose.
 **State is in memory, so there is no migration.** Every arm is derivable from
 the filesystem (a fingerprint, plus whether its PNG exists) — a table would be a
 second copy of what the disk already says, free to rebuild and impossible to
-leave stale.
+leave stale. It reaches the browser as one live value,
+`prototypeThumbnails` (`liveValue("prototypes.thumbnails")` in `core/`), served
+from that map by `serveValue(…, { source: "external" })` in
+`server/internal/state.ts` (`prototypeThumbnailsServed`, whose `notify()` every
+state change calls) and read by `usePrototypeThumbnails()` (`useLive`). It has
+no placeholder: before the map loads it is pending, never an empty map.
 
 **`failed` carries the fingerprint it failed at.** That field is what stops a
 permanently broken prototype from launching a browser on every unrelated save,
@@ -114,14 +119,15 @@ prototype looks like without a picture. The failure marker sits in an
 `Overlay`'s `behind` slot, not `above`: `above` is click-through by design and
 would swallow the hover its tooltip needs.
 
-**The card takes the state; it never fetches it.** A resource primes over HTTP
-when its FIRST subscriber mounts, so a card that read the resource itself could
-only start that request after the list it belongs to had painted — every load
-showed the swatch for one round trip and then swapped in the picture, which is
-the flicker a user reads as "the thumbnails aren't cached" (they are: the URL is
-a content fingerprint served `immutable`). So the surface that owns the cards
-subscribes to both at once — `usePrototypeThumbnails()` beside the list, joined
-with `combineResources` — and the cover is right the first time it is painted.
+**The card takes the state; it never fetches it.** A value is filled by its
+subscription's first answer, asked for when its FIRST subscriber mounts, so a
+card that read the value itself could only ask after the list it belongs to had
+painted — every load showed the swatch for one round trip and then swapped in
+the picture, which is the flicker a user reads as "the thumbnails aren't cached"
+(they are: the URL is a content fingerprint served `immutable`). So the surface
+that owns the cards subscribes to both at once — `usePrototypeThumbnails()`
+beside the list, joined with `useCombinedResources` — and the cover is right the
+first time it is painted.
 A card with no pending arm has nowhere to put a stand-in-then-swap.
 
 The `<img>` is `decoding="sync"`: a cache hit that decodes asynchronously still
@@ -141,30 +147,30 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `apps/prototypes/files.listPrototypeMetas`
     - `apps/prototypes/files.onPrototypesChanged`
     - `infra/jobs.defineJob`
+    - `network/live.serveValue`
   - Register:
     - `defineJob('prototypes.render-thumbnail')`
     - `defineJob('prototypes.sweep-thumbnails')`
   - Resources: `prototypes.thumbnails` (push)
 - Web:
   - Uses:
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values):
     - `PrototypeThumbnail`
     - `usePrototypeThumbnails`
 - Core:
-  - Uses: `primitives/live-state.resourceDescriptor`
+  - Uses: `network/live.liveValue`
   - Exports (types):
     - `ThumbnailFailureKind`
     - `ThumbnailState`
   - Exports (values):
     - `PROTOTYPE_THUMB_ROUTE`
     - `PROTOTYPE_THUMBS_BASE`
-    - `prototypeThumbnailsResource`
+    - `prototypeThumbnails`
     - `prototypeThumbnailUrl`
     - `ThumbnailFailureKindSchema`
     - `ThumbnailStateSchema`

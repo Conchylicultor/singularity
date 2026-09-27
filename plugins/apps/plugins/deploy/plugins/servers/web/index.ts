@@ -12,9 +12,9 @@ import {
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
 export { Servers, ServerDetail } from "./slots";
 export {
-  serversResource,
   generateSshKeypair,
   importSshPrivateKey,
+  servers,
   SshKeySchema,
 } from "../shared";
 export type { Server, SshKey } from "../shared";

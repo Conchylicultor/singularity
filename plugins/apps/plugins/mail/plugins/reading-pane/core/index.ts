@@ -1,1 +1,1 @@
-export { threadMessagesResource } from "./internal/resources";
+export { threadMessages } from "./internal/resources";

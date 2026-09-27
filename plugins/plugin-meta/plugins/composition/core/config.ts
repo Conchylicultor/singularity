@@ -145,7 +145,7 @@ export const compositionsConfig = defineConfig({
         // `!review.plugin-changes.**` is the migration of the
         // `singularity.disabled: true` flag that used to live in
         // `plugins/review/plugins/plugin-changes/package.json`. That plugin's
-        // review-pane summary subscribed to `pluginChangesResource`, firing the
+        // review-pane summary subscribed to `review.plugin-changes`, firing the
         // worktree-vs-main diff on every render. The negative resolves to the same
         // twelve plugins the flag's closure did — the plugin, its two sub-plugins,
         // and the nine `plugin-meta.facets.<f>.render-diff` adapters that import it

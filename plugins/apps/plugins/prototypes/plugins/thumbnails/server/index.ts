@@ -1,11 +1,10 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { onPrototypesChanged } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import { PROTOTYPE_THUMB_ROUTE } from "../core";
 import { handleThumbnail } from "./internal/handlers";
 import { renderThumbnailJob, sweepThumbnailsJob } from "./internal/jobs";
-import { prototypeThumbnailsResource } from "./internal/state";
+import { prototypeThumbnailsServed } from "./internal/state";
 import { syncThumbnails } from "./internal/sync";
 
 export default {
@@ -14,7 +13,7 @@ export default {
   httpRoutes: {
     [PROTOTYPE_THUMB_ROUTE]: handleThumbnail,
   },
-  contributions: [Resource.Declare(prototypeThumbnailsResource)],
+  contributions: [...prototypeThumbnailsServed.declare],
   register: [renderThumbnailJob, sweepThumbnailsJob],
   onReady: () => {
     // `files` owns `prototypes/` and already watches it; subscribing to the

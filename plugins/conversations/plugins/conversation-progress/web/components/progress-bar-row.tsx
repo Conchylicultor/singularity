@@ -7,9 +7,8 @@ export function ProgressBarRow({ conv }: { conv: ConversationItemConv }) {
   const result = useProgressFor(conv.id);
   if (conv.kind === "agent") return null;
   // Nothing while loading, nothing when no progress is classified yet.
-  if (result.pending) return null;
-  const progress = result.data;
-  if (!progress) return null;
+  if (result.pending || !result.found) return null;
+  const progress = result.row;
   return (
     <SegmentedProgressBar
       steps={PHASE_STEPS}

@@ -89,7 +89,7 @@ one compute + one cached value (coalesce fan-out).
   could adopt the same floor later
   (`research/2026-08-08-global-live-state-flight-freshness.md`).
 - `evict(worktreePath)` drops a worktree's entry on the subscription lifecycle
-  (e.g. `onLastUnsubscribe`); a later re-subscribe re-probes cheaply with one cold
+  (e.g. a `whileSubscribed` stop); a later re-subscribe re-probes cheaply with one cold
   compute.
 
 ## Observability
@@ -157,9 +157,9 @@ signed memo is the only thing that makes drift unrepresentable. Three do:
   stale pin. See `research/2026-07-10-conversations-jsonl-events-shared-authority.md`.
 
 **`review/plugin-changes`** and **`plugin-meta/plugin-tree`** use the plain
-`createGitStateMemo`: their values back `mode: "push"` resources with no
-`revalidate`, so there is no ETag/value pair to keep in agreement — they need only
-a faithful, fresh signature.
+`createGitStateMemo`: no `revalidate` reads them (`review.plugin-changes` is a
+pushed `serveValue` with none), so there is no ETag/value pair to keep in
+agreement — they need only a faithful, fresh signature.
 
 See `research/2026-06-19-global-incremental-git-loaders.md` (the unifying
 primitive and Stage 2.1).

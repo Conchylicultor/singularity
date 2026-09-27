@@ -112,10 +112,10 @@ contribution/registry sets:
   + `feedExemptTables()` only to label the reason. This catches hand-written AND
   query-resource-compiled resources uniformly, because the check reads the
   runtime's stored `identityTable` string, not source text. Fix: point the resource
-  at a real triggered base table (not a view/rollup), drop the exclusion, or make
-  it a plain push resource with no `identityTable` (like `slowOpsResource`), or
-  serve it from an endpoint refreshed by an in-process revision tick (like the
-  Reports DataView and its `reports.revision` tick).
+  at a real triggered base table (not a view/rollup), drop the exclusion, or
+  serve it from an endpoint read on open (like the Slow Ops pane's
+  `listSlowOps`) or refreshed by an in-process revision tick (like the Reports
+  DataView and its `reports.revision` tick).
 
 ## The LISTEN connection
 

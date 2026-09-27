@@ -2,8 +2,12 @@ import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   keyedResourceDescriptor,
+  type PointResourceDescriptor,
   type ResourceDescriptor,
   type ResourcePreload,
+  type WindowParams,
+  type WindowResourceDescriptor,
+  type WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
 
 // The web-safe half of a query-resource declaration. It is exactly a keyed
@@ -23,6 +27,26 @@ export type QueryResourceContract<
   keyed: { keyOf: (row: unknown) => string };
   /** Always `[]` — the placeholder an optimistic overlay starts from. */
   initialData: Row[];
+  /** The row field the client `keyOf` reads — matched against the server keyField. */
+  queryPk: string;
+};
+
+// The bounded twins: a window (ordered `LIMIT`) or point (`ids`) membership
+// descriptor, plus `queryPk` for the same drift assertion — what the server's
+// `windowQueryResource` compiles. Only the TYPES live here, because that
+// compiler consumes them. The one factory for each is internal to
+// `network/live`: `liveCollection` mints its window and `:rows` sibling with
+// them, and a collection is the one way to declare a bounded resource.
+export type WindowQueryResourceContract<
+  Row,
+  P extends WindowParams = WindowParams,
+  S extends WindowSelector = WindowSelector,
+> = WindowResourceDescriptor<Row, P, S> & {
+  /** The row field the client `keyOf` reads — matched against the server keyField. */
+  queryPk: string;
+};
+
+export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
   /** The row field the client `keyOf` reads — matched against the server keyField. */
   queryPk: string;
 };

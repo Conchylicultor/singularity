@@ -1,18 +1,13 @@
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { conversationProgressResource as conversationProgressDescriptor } from "../../shared/schemas";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { conversationProgressRows } from "../../shared/schemas";
 import { conversationProgress } from "./tables";
 
-// Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`), and the change-feed routes a progress
-// insert/reclassify to a tuple iff the changed conversation ids intersect its
-// set — so a phase change never sweeps the whole table. The extension handle is
-// the source, so the projection is its `wireColumns` and the identity is its key
-// `conversationId` (the `parent_id` PK); `point.by` IS that identity pk. No
-// orderBy — point sets are unordered.
-export const conversationProgressResource = windowQueryResource(
-  conversationProgressDescriptor,
-  {
-    from: conversationProgress,
-    point: { by: conversationProgress.table.conversationId },
-  },
+// Server half of the per-conversation progress read: the lookup-only
+// collection served from the extension entity (its wire columns —
+// `conversationId` is the `parent_id` PK). The `:rows` point routing sends a
+// progress insert / reclassify to the one conversation's tuple alone, so a
+// phase change never sweeps the table.
+export const conversationProgressRowsServed = serveCollection(
+  conversationProgressRows,
+  { from: conversationProgress },
 );

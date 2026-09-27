@@ -1,5 +1,5 @@
 import { MdAdd, MdDelete } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type {
   RowChromeMenuHelpers,
@@ -24,7 +24,7 @@ import {
   createAgent,
   deleteAgent,
 } from "@plugins/conversations/plugins/agents/core";
-import { agentsResource } from "../../shared/resources";
+import { agentRows } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
@@ -98,7 +98,7 @@ export function AgentsList({
   selectedSystemId?: string;
   onSelect?: (id: string) => void;
 }) {
-  const result = useResource(agentsResource);
+  const result = useLive(agentRows);
   const openPane = useOpenPane();
 
   if (result.pending) return <Loading variant="rows" />;

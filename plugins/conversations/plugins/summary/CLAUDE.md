@@ -12,6 +12,7 @@
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
@@ -21,14 +22,16 @@
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `shell/notifications.toast`
 - Server:
-  - Contributes: `resource.declare` "conversation-summaries"
+  - Contributes:
+    - `resource.declare` "conversation-summaries"
+    - `resource.declare` "conversation-summaries:rows"
+    - `resource.declare` "conversation-summaries:groups"
   - Uses:
     - `conversations.createConversation`
     - `conversations.deleteConversation`
@@ -40,14 +43,16 @@
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/mcp.Mcp`
+    - `network/live.serveCollection`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.getTask`
   - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
-  - Exports (values):
-    - `_conversationSummaries`
-    - `conversationSummariesResource`
+  - Exports (values): `_conversationSummaries`
   - Register: `mcpTool('submit_conversation_summary')`
-  - Resources: `conversation-summaries` (keyed)
+  - Resources:
+    - `conversation-summaries` (keyed, window)
+    - `conversation-summaries:groups` (push)
+    - `conversation-summaries:rows` (keyed, point)
   - Routes: `POST /api/conversation-summary/:conversationId/generate`
 - Core:
   - Uses:
@@ -58,12 +63,13 @@
     - `fields/int/config.intField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
-    - `primitives/live-state.keyedResourceDescriptor`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `ConversationSummary`
     - `Phase`
   - Exports (values):
-    - `conversationSummariesResource`
+    - `conversationSummaries`
     - `conversationSummaryFields`
     - `ConversationSummarySchema`
     - `PHASE_VALUES`

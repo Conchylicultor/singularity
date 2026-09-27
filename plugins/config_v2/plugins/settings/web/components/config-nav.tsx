@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
-import { configV2ModifiedCountsResource } from "@plugins/config_v2/core";
+import { configModifiedCounts } from "@plugins/config_v2/core";
 import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import {
   DataView,
@@ -21,7 +21,7 @@ import {
   flattenConfigTree,
   type ConfigNavRow,
 } from "../internal/flatten-config-tree";
-import { useConflictLocationsOf } from "../internal/use-conflicts";
+import { useConflictMap } from "../internal/use-conflicts";
 import { ConfigRowBadge } from "./config-row-badge";
 
 const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
@@ -43,10 +43,14 @@ export function ConfigNav() {
   const { data: payload, isPending } = useEndpoint(getPluginTree, {});
 
   // Modified/conflict state, read once data-level (no per-row config hooks).
-  // While a resource is still loading we report "not modified / no conflict" —
-  // the badge simply doesn't paint yet, exactly as the per-row hook behaved.
-  const modifiedRes = useResource(configV2ModifiedCountsResource, {});
-  const conflictLocationsOf = useConflictLocationsOf();
+  // While either map is pending its answer is `undefined` — not known yet — and
+  // the whole nav renders its loading state (`loading` below): the Modified /
+  // Conflict fields decide which rows a view's filter keeps (the authored
+  // "Conflicts" view is `conflict is true`), so rendering rows before both maps
+  // land would show that view as confirmed-empty — "no conflicts" — while the
+  // answer is still unknown.
+  const modifiedRes = useLive(configModifiedCounts);
+  const conflictRes = useConflictMap();
 
   // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
   // equals `PluginNode.id`, so no slash→dot bridging is needed.
@@ -99,19 +103,24 @@ export function ConfigNav() {
     return flattenConfigTree(pruned);
   }, [payload, byPluginId, registrations]);
 
+  // `undefined` = not known yet. A row with no registration (a group header)
+  // has no config of its own, so it is known-unmodified.
   const modifiedCountOf = useCallback(
-    (row: ConfigNavRow) => {
-      if (modifiedRes.pending || !row.registration) return 0;
+    (row: ConfigNavRow): number | undefined => {
+      if (!row.registration) return 0;
+      if (modifiedRes.pending) return undefined;
       return modifiedRes.data[row.registration.storePath] ?? 0;
     },
     [modifiedRes],
   );
+  // `null` = known not to conflict; `undefined` = not known yet.
   const conflictOf = useCallback(
-    (row: ConfigNavRow): ConfigV2ConflictLocations | undefined =>
-      row.registration
-        ? conflictLocationsOf(row.registration.storePath)
-        : undefined,
-    [conflictLocationsOf],
+    (row: ConfigNavRow): ConfigV2ConflictLocations | null | undefined => {
+      if (!row.registration) return null;
+      if (conflictRes.pending) return undefined;
+      return conflictRes.data[row.registration.storePath] ?? null;
+    },
+    [conflictRes],
   );
 
   const selectedPath = configDetailPane.useRouteEntry()?.params.configPath;
@@ -150,14 +159,20 @@ export function ConfigNav() {
         label: "Modified",
         type: "bool",
         filterable: false,
-        value: (r) => modifiedCountOf(r) > 0,
+        value: (r) => {
+          const count = modifiedCountOf(r);
+          return count === undefined ? undefined : count > 0;
+        },
       },
       {
         id: "conflict",
         label: "Conflict",
         type: "bool",
         filterable: false,
-        value: (r) => conflictOf(r) !== undefined,
+        value: (r) => {
+          const conflict = conflictOf(r);
+          return conflict === undefined ? undefined : conflict !== null;
+        },
       },
       {
         id: "source",
@@ -186,7 +201,7 @@ export function ConfigNav() {
       trailing: (r) => (
         <ConfigRowBadge
           modifiedCount={modifiedCountOf(r)}
-          conflict={conflictOf(r)}
+          conflict={conflictOf(r) ?? undefined}
           source={r.registration?.descriptor.source}
         />
       ),
@@ -201,7 +216,7 @@ export function ConfigNav() {
       rowKey={(r) => r.id}
       views={["tree"]}
       storageKey={CONFIG_NAV_VIEW}
-      loading={isPending}
+      loading={isPending || modifiedRes.pending || conflictRes.pending}
       hierarchy={configHierarchy}
       selectedRowId={selectedRowId}
       onRowActivate={handleActivate}

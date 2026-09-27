@@ -53,7 +53,7 @@ import {
   type DocSourcedRuns,
 } from "../internal/doc-sourced-runs";
 import type { BlockOverlayOp } from "../internal/optimistic-block-ops";
-import { useMemoryBlockStore, type BlockStore } from "../block-store";
+import { useMemoryBlockStore, type SettledBlockStore } from "../block-store";
 import {
   BlockEditorProviderInner,
   useBlockEditor,
@@ -178,7 +178,7 @@ function mount(initialBlocks: Block[]): Harness {
 
   function Host() {
     const store = useMemoryBlockStore({ initialBlocks });
-    const spied = useMemo<BlockStore>(
+    const spied = useMemo<SettledBlockStore>(
       () => ({
         ...store,
         dispatch: (v: BlockOverlayOp) => {

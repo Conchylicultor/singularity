@@ -1,10 +1,7 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { recordRoundEndpoint } from "../core";
 import { handleRecordRound } from "./internal/handlers";
-import { chordProgressServerResource } from "./internal/resource";
+import { chordProgressServed } from "./internal/resource";
 
 export default {
   description:
@@ -18,6 +15,6 @@ export default {
     // learner's history, which nothing can rebuild, and the feed is what pushes
     // `chord.progress`. No growth bound: rows are written only when a person
     // checks a round. See CLAUDE.md.
-    Resource.Declare(chordProgressServerResource),
+    ...chordProgressServed.declare,
   ],
 } satisfies ServerPluginDefinition;

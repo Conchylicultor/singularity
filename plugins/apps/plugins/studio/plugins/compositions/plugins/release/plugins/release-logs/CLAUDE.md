@@ -10,6 +10,7 @@
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -19,7 +20,6 @@
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.useResource`
     - `primitives/log-channels.LiveLogChannel`
     - `shell/notifications.toast`
 

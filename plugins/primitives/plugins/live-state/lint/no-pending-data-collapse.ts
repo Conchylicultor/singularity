@@ -7,8 +7,9 @@
  *
  * Flags a ConditionalExpression when ALL of:
  *   - the test is `X.pending` (or `!X.pending`, branches swapped),
- *   - X is a binding initialized from useResource / useOptimisticResource /
- *     combineResources / useCombinedResources,
+ *   - X is a binding initialized from a resource read (`RESOURCE_HOOKS`:
+ *     useLive / useResource / useOptimisticResource / combineResources /
+ *     useCombinedResources / useConfigResult),
  *   - the pending branch is an empty default ([], {}, null, false, 0, "",
  *     undefined, or a const initialized to one of those),
  *   - the settled branch references `X.data`.
@@ -31,14 +32,13 @@
  *
  * A `null`/`undefined` early-return is flagged too, but only when the later
  * value-return can ITSELF produce `null`/`undefined` — it contains a
- * `null`/`undefined` literal (`?? null`, `? … : null`) or an optional chain, or
- * X comes from `usePointResource`, whose settled data is `row | null` with
- * `null` meaning "the row doesn't exist". Then "not loaded yet" and "absent"
- * reach the caller as the same value, which is the bug (a picker showing "Off"
- * for an armed task during the load window). When the value-return can never be
- * nullish, a pending `null` stays a distinct "not yet" the caller must check,
- * and is allowed. The non-JSX guard still keeps a component's "render nothing
- * while loading" early-return legal.
+ * `null`/`undefined` literal (`?? null`, `? … : null`) or an optional chain
+ * (`rows[0] ?? null` narrowing a one-id read to "the row, or absent"). Then
+ * "not loaded yet" and "absent" reach the caller as the same value, which is
+ * the bug (a picker showing "Off" for an armed task during the load window).
+ * When the value-return can never be nullish, a pending `null` stays a distinct
+ * "not yet" the caller must check, and is allowed. The non-JSX guard still
+ * keeps a component's "render nothing while loading" early-return legal.
  *
  * Carve-out: a pane `useTitle` hook (inline in a `useTitle:` property, or a
  * function declared in the file and passed as one) may return `undefined` while
@@ -74,14 +74,10 @@ const RESOURCE_HOOKS = new Set([
   // config's empty defaults read as a legitimate answer, so the wrong state is
   // indistinguishable from a real one.
   "useConfigResult",
-  // The bounded reads. `usePointResource` settles on `row | null` where `null`
-  // means "absent", so collapsing its pending arm to `null` is indistinguishable
-  // from a real answer.
-  "usePointResource",
-  "usePointResources",
-  "useWindowResource",
-  // `network/live`'s collection read: a `ResourceResult<Row[]>` (plus paging
-  // handles on the settled arm), so `pending ? [] : r.data` is the same collapse.
+  // `network/live`'s read — the one bounded read of a collection (a window, a
+  // grouping or an id set) and of a value: a `ResourceResult<Row[]>` (plus
+  // paging handles on a window's settled arm) or `ResourceResult<T>`, so
+  // `pending ? [] : r.data` is the same collapse.
   // `useLiveRow` needs no entry — it has no `data` to collapse into: its
   // settled arms are `found: true` (with `row`) and `found: false`.
   "useLive",
@@ -586,8 +582,7 @@ export default createRule({
         // nullish too — see the file header.
         const nullishCollapse =
           isNullishLiteral(consReturn.argument) &&
-          (canBeNullish(dataReturn.argument) ||
-            hookCallOf(context, obj)?.name === "usePointResource");
+          canBeNullish(dataReturn.argument);
         if (!typedEmpty && !nullishCollapse) return;
         if (isTitleFallback(context, node, consReturn.argument)) return;
         if (!isResourceResultBinding(context, obj)) return;

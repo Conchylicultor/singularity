@@ -21,11 +21,22 @@ Do not re-introduce a mailbox vocabulary in code. If a mailbox needs to change,
 edit the config row. Design:
 `research/2026-08-03-global-mail-mailbox-as-dataview-views-v2.md`.
 
-`mailLabelsResource` (the account's `type="user"` labels, push-scoped to
-`mail_labels`) does live here: `threads` reads it for the id→name map that keeps
-"Label_12" off the screen in its `labels` field options and filter chips. It sits
-in `mail-core` rather than in a consumer so any future label consumer can read it
-without an import cycle.
+Two live values are declared here (`core/internal/resources.ts`), in the leaf
+every mail plugin imports, so no consumer has to import another to read them:
+
+- `mailLabels` (`liveValue("mail-labels")`, the account's `type="user"` labels
+  ordered by name) is also served here, as `mailLabelsServed` — a `source: "db"`
+  `serveValue` with `unbounded: { reason }` (Gmail caps an account's labels in
+  the thousands, so the whole list is the working set). `threads` reads it with
+  `useLive` for the id→name map that keeps "Label_12" off the screen in its
+  `labels` field options and filter chips.
+- `mailSyncState` (`liveValue("mail-sync-state")`, one row per connected
+  account) is only declared here; `sync`, which owns the writes, serves it
+  (`mailSyncStateServed`). `sync-status` reads it for the banner and rail dot.
+
+Both recompute and push on every write to a table their loader reads
+(`mailLabels` also reads `mail_accounts`, to resolve the account) through the
+DB change-feed — no manual notify.
 
 ## Data model (`defineEntity` over field records)
 
@@ -118,6 +129,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `integrations/gmail.getGmailToken`
+    - `network/live.serveValue`
   - DB schema:
     - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`
     - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/tables.ts`
@@ -131,10 +143,9 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `_mailSyncState`
     - `_mailThreads`
     - `mailDraftAttachments`
-    - `mailLabelsServerResource`
     - `requireGmailToken`
     - `resolveMailAccountId`
-  - Resources: `mail-labels` (push)
+  - Resources: `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -147,7 +158,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
     - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `MailAccount`
@@ -185,16 +196,16 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `MailDraftSchema`
     - `mailLabelFields`
     - `MailLabelRefSchema`
+    - `mailLabels`
     - `MailLabelSchema`
-    - `mailLabelsResource`
     - `mailMessageFields`
     - `mailMessageLabelFields`
     - `MailMessageLabelSchema`
     - `MailMessageSchema`
     - `mailOutboxFields`
     - `MailOutboxItemSchema`
+    - `mailSyncState`
     - `mailSyncStateFields`
-    - `mailSyncStateResource`
     - `MailSyncStateSchema`
     - `mailThreadFields`
     - `MailThreadSchema`

@@ -35,12 +35,15 @@ function wirePattern(p: RhythmPattern) {
  * so the user learns their groove did not save instead of silently losing it on
  * the next reload.
  *
- * The write is still *optimistic*: the panel sets the shell's per-surface store
- * first (instant playback + circle), and `rhythmResource`'s live-state push
- * re-affirms server truth. Named `save*` (not `set*`) to stay distinct from that
- * in-memory store setter (`useSetRhythmGroove()`).
+ * The write is still *optimistic*: the panel writes the loaded song's
+ * `grooveSetting` first (instant playback + circle), and the `rhythms` row push
+ * re-affirms server truth. Named `save*` (not `set*`) to stay distinct from
+ * that in-memory write (`useWriteSongSetting`).
  */
-export function useSaveRhythm(): (songId: string, groove: RhythmGroove) => void {
+export function useSaveRhythm(): (
+  songId: string,
+  groove: RhythmGroove,
+) => void {
   const { mutate } = useEndpointMutation(setRhythmEndpoint);
   return useCallback(
     (songId, groove) =>

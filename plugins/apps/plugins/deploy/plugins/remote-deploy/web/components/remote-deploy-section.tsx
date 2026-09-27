@@ -15,17 +15,16 @@ import {
   Steps,
   type StepState,
 } from "@plugins/primitives/plugins/setup-steps/web";
-import {
-  matchResource,
-  useCombinedResources,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
+import {
+  useServerHealth,
+  type ServerHealthRow,
+} from "@plugins/apps/plugins/deploy/plugins/health/web";
 import { useBlockedReason } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import {
-  deploymentsResource,
-  deployRunsResource,
+  deployments,
+  deployRuns,
   loopbackOnlySentence,
   publicUrls,
   runDeployment,
@@ -59,48 +58,68 @@ const PHASES: ReadonlyArray<{ id: DeployPhase; title: string }> = [
  * `resolveBundle` + `compareToHead` already answer "do I need to build?" without
  * asking anyone.
  *
- * The two resources are gated together, so this can never paint from a
- * half-loaded snapshot.
+ * Everything it reads — the deployment's row, the run map and the server's
+ * probe verdict — is gated by hand before anything paints, so it can never
+ * paint from a half-loaded snapshot: "no verified platform" or "never run"
+ * shown only because a read had not landed would be exactly the
+ * wrong-state-while-loading bug. (By hand because a row read has no `data` for
+ * `useCombinedResources` to combine.)
  */
 export function RemoteDeploySection({
   deploymentId,
 }: {
   deploymentId: string;
 }): ReactNode {
-  const loaded = useCombinedResources({
-    deployments: useResource(deploymentsResource),
-    runs: useResource(deployRunsResource),
-  });
+  const deployment = useLiveRow(deployments, deploymentId);
+  const runs = useLive(deployRuns);
 
-  return matchResource(loaded, {
-    pending: () => <Loading variant="rows" />,
-    error: () => <Loading variant="rows" />,
-    ready: ({ deployments, runs }) => {
-      const deployment = deployments.find((d) => d.id === deploymentId);
-      if (!deployment) {
-        return (
-          <Placeholder tone="error">
-            This deployment no longer exists.
-          </Placeholder>
-        );
-      }
-      return <RemoteDeploy deployment={deployment} run={runs[deployment.id]} />;
-    },
-  });
+  if (deployment.pending || runs.pending) return <Loading variant="rows" />;
+  if (!deployment.found) {
+    return (
+      <Placeholder tone="error">This deployment no longer exists.</Placeholder>
+    );
+  }
+  return (
+    <RemoteDeployHealth
+      deployment={deployment.row}
+      run={runs.data[deployment.row.id]}
+    />
+  );
 }
 
-function RemoteDeploy({
+/** Waits for the server's probe verdict — the platform everything below labels. */
+function RemoteDeployHealth({
   deployment,
   run,
 }: {
   deployment: Deployment;
   run: DeployRun | undefined;
 }): ReactNode {
+  const health = useServerHealth(deployment.serverId);
+  if (health.pending) return <Loading variant="rows" />;
+  return (
+    <RemoteDeploy
+      deployment={deployment}
+      run={run}
+      health={health.found ? health.row : null}
+    />
+  );
+}
+
+function RemoteDeploy({
+  deployment,
+  run,
+  health,
+}: {
+  deployment: Deployment;
+  run: DeployRun | undefined;
+  /** The server's last probe verdict, or `null` — it has never been checked. */
+  health: ServerHealthRow | null;
+}): ReactNode {
   // The same hook the row's Deploy button gates on — the row launches the same
   // `update` verb — so a tooltip and this button can never disagree about why
   // something is blocked.
   const blocked = useBlockedReason(deployment);
-  const health = useServerHealth(deployment.serverId);
   // Never a picker: the platform a deploy needs is DISCOVERED by the probe, and
   // a field with a default is a field someone sets back to the wrong value. The
   // orchestrator reads the same fact server-side; this copy only labels.

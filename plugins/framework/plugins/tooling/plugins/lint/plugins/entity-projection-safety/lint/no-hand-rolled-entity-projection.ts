@@ -39,7 +39,8 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *       `p.x.toISOString()`, or `p.x as T`. Anything else (a call other than
  *       `.toISOString()`, a `?? null`, a ternary, a non-`p` reference) means a
  *       genuine transform → we DO NOT report.
- *   (4) It sits inside a `defineResource({ loader })`.
+ *   (4) It sits inside a resource loader: the `loader` of a
+ *       `defineResource({ loader })` or a `serveValue(value, { loader })`.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -277,28 +278,38 @@ function propertyKeyName(prop: TSESTree.Property): string | null {
   return null;
 }
 
-/** Is `call` a call to `defineResource` (bare or `X.defineResource`)? */
-function isDefineResourceCall(call: TSESTree.CallExpression): boolean {
+/**
+ * The calls whose options object carries a live-state resource `loader`: the
+ * runtime's `defineResource` and network/live's `serveValue` (either arm — an
+ * external value has no business projecting `db.select()` rows either).
+ */
+const LOADER_HOST_CALLEES = new Set(["defineResource", "serveValue"]);
+
+/** Is `call` a loader host — bare `name(…)` or `X.name(…)`, for a name above? */
+function isLoaderHostCall(call: TSESTree.CallExpression): boolean {
   const callee = call.callee;
-  if (callee.type === "Identifier") return callee.name === "defineResource";
+  if (callee.type === "Identifier") return LOADER_HOST_CALLEES.has(callee.name);
   if (
     callee.type === "MemberExpression" &&
     callee.property.type === "Identifier"
   ) {
-    return callee.property.name === "defineResource";
+    return LOADER_HOST_CALLEES.has(callee.property.name);
   }
   return false;
 }
 
 /**
- * (4) Does `node` sit inside a `defineResource({ loader })`? Walk parents to the
- * nearest object Property named `loader` whose object literal is an argument to a
- * `defineResource(...)` call. This scopes the rule to live-state loaders (both the
- * flat `defineResource({...})` and the 2-arg `defineResource(descriptor, {...})`
- * forms place `loader` as a direct Property of an argument object), so it never
- * flags endpoints, scripts, or ad-hoc `.map`s elsewhere.
+ * (4) Does `node` sit inside a resource loader? Walk parents to the nearest
+ * object Property named `loader` whose object literal is an argument to a
+ * `defineResource(...)` or `serveValue(...)` call. This scopes the rule to
+ * live-state loaders (the flat `defineResource({...})`, the 2-arg
+ * `defineResource(descriptor, {...})` and `serveValue(value, {...})` forms all
+ * place `loader` as a direct Property of an argument object), so it never flags
+ * endpoints, scripts, or ad-hoc `.map`s elsewhere. A loader passed by reference
+ * (`loader: loadRows`) is not followed — the function it names is not inside
+ * the call (favor a false negative).
  */
-function isInsideDefineResourceLoader(node: TSESTree.Node): boolean {
+function isInsideResourceLoader(node: TSESTree.Node): boolean {
   let cur: TSESTree.Node | undefined = node.parent;
   while (cur) {
     if (cur.type === "Property" && propertyKeyName(cur) === "loader") {
@@ -306,7 +317,7 @@ function isInsideDefineResourceLoader(node: TSESTree.Node): boolean {
       if (
         objectLiteral?.type === "ObjectExpression" &&
         objectLiteral.parent?.type === "CallExpression" &&
-        isDefineResourceCall(objectLiteral.parent)
+        isLoaderHostCall(objectLiteral.parent)
       ) {
         return true;
       }
@@ -370,8 +381,9 @@ export default createRule({
           : new Map<string, TSESTree.Expression>();
         if (!receiverIsDbSelect(node.callee.object, bindings)) return;
 
-        // (4) Must live inside a `defineResource({ loader })`.
-        if (!isInsideDefineResourceLoader(node)) return;
+        // (4) Must live inside a `defineResource({ loader })` or a
+        // `serveValue(value, { loader })`.
+        if (!isInsideResourceLoader(node)) return;
 
         context.report({ node, messageId: "handRolledProjection" });
       },

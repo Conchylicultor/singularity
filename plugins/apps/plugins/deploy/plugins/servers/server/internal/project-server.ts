@@ -10,8 +10,8 @@ import type { Server } from "../../shared";
 // The single row→wire projection for this plugin. It was triplicated across
 // handle-get / handle-list / handle-create / handle-update / resources.ts,
 // which is exactly what `no-hand-rolled-entity-projection` exists to prevent
-// and exactly what it cannot see: the rule only inspects `defineResource
-// ({loader})`, and even there the `await hasSecret(…)` in the old loader failed
+// and exactly what it cannot see: the rule only inspects a resource's
+// `loader`, and even there the `await hasSecret(…)` in the old loader failed
 // its purity check. `defineEntity` does not apply either — both derived fields
 // here (a secrets lookup and a SHA-256) are computed, and `defineEntity`
 // returns rows verbatim with no hook for a derived field.
@@ -31,7 +31,8 @@ function buildServer(row: ServerRow, hasPrivateKey: boolean): Server {
     updatedAt: updatedAt.toISOString(),
     // Both halves or nothing: the public key alone identifies a key we cannot
     // use, and a private key alone is a key we cannot name.
-    sshKey: sshPublicKey && hasPrivateKey ? parseSshPublicKey(sshPublicKey) : null,
+    sshKey:
+      sshPublicKey && hasPrivateKey ? parseSshPublicKey(sshPublicKey) : null,
   };
 }
 

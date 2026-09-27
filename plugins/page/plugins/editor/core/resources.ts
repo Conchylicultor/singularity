@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { BlockSchema, PageRowSchema } from "./schemas";
-import type { Block, PageRow } from "./schemas";
+import type { PageRow } from "./schemas";
 
 // All pages (`type="page"` blocks). The sidebar tree is built from these by
 // `pageId` (the nearest page ancestor — `parentId` may point at a content
@@ -14,9 +15,13 @@ export const pagesResource = resourceDescriptor<PageRow[]>(
   [],
 );
 
-// A page's content: non-page blocks scoped by `pageId`.
-export const blocksResource = resourceDescriptor<Block[], { pageId: string }>(
-  "page-blocks",
-  z.array(BlockSchema),
-  [],
-);
+// A page's content forest: every block whose nearest page ancestor is
+// `pageId`, sub-page rows included, pushed whole whenever it changes. A value
+// rather than a collection: the editor's reducer, its optimistic overlay and
+// document order all need EVERY block of the page (a window would truncate the
+// document), and its loader reads through the `liveBlocks` subquery rather than
+// one table's rows. Not known yet is `pending` — there is no `[]` placeholder.
+export const pageBlocks = liveValue("page-blocks", {
+  schema: z.array(BlockSchema),
+  params: ["pageId"],
+});

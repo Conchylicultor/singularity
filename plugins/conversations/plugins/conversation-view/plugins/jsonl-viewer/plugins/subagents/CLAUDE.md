@@ -62,12 +62,21 @@ the **one** 30 s reconcile sweep that `transcript-watcher` already holds. A
 second subscription over the identical root would double the native watch cost
 for nothing.
 
-## The two resources
+## The two live values
 
-**`subagent-activity`**, keyed `{ id: conversationId }` — one row per sub-agent,
-and **one subscription serving every card in the conversation**, never one per
-card. `useResource` is a TanStack Query wrapper, so N cards on identical params
-are one query and one subscription; no provider is needed to share it.
+Both are `liveValue`s declared in `core/protocol.ts`, served on the external arm
+(`serveValue`, `server/internal/*-resource.ts`) and read with `useLive`. Each
+watches its files only while its tuple has a subscriber: `whileSubscribed` opens
+a `watchPaths` room (a synchronous start — the sub-ack is never held behind it),
+primes the memo from the room's `{ value, signature }` pair before calling
+`notify`, and returns the stop that closes the room and evicts the memo.
+
+**`subagentActivity`** (`subagent-activity`), keyed `{ id: conversationId }` — one
+row per sub-agent, and **one subscription serving every card in the
+conversation**, never one per card. `useLive` is a TanStack Query wrapper, so N
+cards on identical params are one query and one subscription; no provider is
+needed to share it. Its stop also evicts the parent-chain name index
+(`evictConversationJoin`).
 
 `lastStep` comes from a **bounded tail read** (the last 64 KB) of the one file
 that changed. A sub-agent transcript grows into the megabytes, and the index
@@ -105,12 +114,14 @@ speaking, which says more than any tool name. They are skipped only when OLDER
 than a trailing result, where reporting them would quote something the sub-agent
 said before the step it has since taken.
 
-**`subagent-transcript`**, keyed `{ id, toolUseId }` → the parsed events. Keyed
-by the *tool-use* id, not the agent id, so a card and the pane route it opens
-need no extra identifier. While the sub-agent is still starting there is no file,
-so the room watches the directories; once the file is known its identity is
-fixed and the room narrows to that one path, so a sibling's appends stop waking
-it.
+**`subagentTranscript`** (`subagent-transcript`), keyed `{ id, by, key }` — the
+parent conversation plus a flat `SubagentRef` (`by: "call"` with the parent's
+tool-use id, or `by: "agent"` with the sub-agent's own id) → the parsed events. A
+value's params are plain strings on the wire, so the server re-parses `by` / `key`
+through `SubagentRefSchema` before it reads anything. While the sub-agent is still
+starting there is no file, so the room watches the directories; once the file is
+known its identity is fixed and the room narrows to that one path, so a sibling's
+appends stop waking it.
 
 Both resources pair their `revalidate` and their `loader` through **one**
 `createSignedMemo` binding, exactly as `jsonl-events-cache.ts` does — never two
@@ -121,9 +132,11 @@ value with a fresh ETag.
 
 - A sub-agent whose **meta file** has not landed has **no row**. Inventing one
   would mean naming it "unknown"; the card renders the absence as "starting".
-- The transcript resource returns a **discriminated result**
+- The transcript value is a **discriminated result**
   (`{ kind: "linked", … }` / `{ kind: "unlinked" }`), so "the file isn't there
-  yet" can never be read as "the sub-agent did nothing".
+  yet" can never be read as "the sub-agent did nothing". Before the first value
+  lands the read is `pending` — `unlinked` is a settled answer, never used as a
+  placeholder.
 - `lastStep: null` means it has written nothing classifiable yet — a fact, not a
   stand-in for "idle".
 
@@ -245,8 +258,8 @@ Two guards on the name path, because **a name is not an id**:
 
 **Who reads the name.** A surface rendering the card already holds the `Agent`
 event, so `agentCallJoin(event)` hands `describedSubagent` both keys and the join
-costs nothing. The `subagent-transcript` resource cannot: a resource is given
-only a tool-use id, so it reads the name back out of the parent chain
+costs nothing. The `subagent-transcript` value cannot: opened `by: "call"`, it is
+given only the tool-use id, so it reads the name back out of the parent chain
 (`server/internal/agent-calls.ts`) — raw lines rather than built events, memoized
 on the parent chain's signature, so the multi-megabyte read happens once per
 parent write rather than once per sub-agent append.
@@ -391,6 +404,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `conversations/transcript-watcher.watchPaths`
     - `infra/git/git-read-cache.createSignedMemo`
+    - `network/live.serveValue`
   - Resources:
     - `subagent-activity` (push)
     - `subagent-transcript` (push)
@@ -400,6 +414,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.TranscriptView`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -411,7 +426,6 @@ downstream can widen the set, because nothing downstream resolves one.
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/relative-time.ElapsedTime`
@@ -435,7 +449,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
     - `conversations/transcript-watcher.JsonlEvent`
     - `conversations/transcript-watcher.JsonlEventSchema`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `DescribedSubagent`
     - `LastStep`
@@ -461,14 +475,14 @@ downstream can widen the set, because nothing downstream resolves one.
     - `formatLastStep`
     - `lastStepOfLines`
     - `LastStepSchema`
+    - `subagentActivity`
     - `SubagentActivityPayloadSchema`
-    - `subagentActivityResource`
     - `SubagentActivityRowSchema`
     - `SubagentRefSchema`
     - `subagentReport`
     - `SubagentRequestShapeSchema`
     - `subagentRunState`
-    - `subagentTranscriptResource`
+    - `subagentTranscript`
     - `SubagentTranscriptSchema`
     - `toolResultIsOutcome`
     - `turnEndedOfLines`

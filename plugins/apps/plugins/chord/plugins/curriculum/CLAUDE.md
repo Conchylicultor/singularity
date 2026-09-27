@@ -56,7 +56,7 @@ not in Major keys, and borrowed iv / ♭VII are in Minor keys.
 ## Server surface
 
 ```ts
-chord.curriculum;                      // live: Selection
+chordCurriculum;                       // liveValue "chord.curriculum": Selection
 POST /api/chord/curriculum/chord       // { token, state }
 POST /api/chord/curriculum/chapter     // { chapter, state } — every chord of it, and its modes
 POST /api/chord/curriculum/blanks      // { blanks }
@@ -66,7 +66,12 @@ POST /api/chord/curriculum/cell        // { cell } — the server computes cellS
 - The writes are pure functions over a selection (`change.ts`:
   `withChordState`, `withChapterState`, `withBlanks`), applied in one
   transaction by `updateSelection`, which locks the row so two tabs apply one
-  after the other. None answers the new value: the resource pushes it.
+  after the other. None answers the new value: `chordCurriculum` pushes it.
+- `chordCurriculum` is a param-less `liveValue` in `core/resource.ts`, served
+  by `serveValue({ source: "db" })` (`server/internal/resource.ts`): a
+  committed `chord_curriculum` write reaches it through the change feed, and
+  the new selection is pushed to every observing tab. One object from one row,
+  so no bound to state.
 - `chapter` → `off` that would leave no key mode on is refused with a 409 —
   no loop could play.
 - A client never sends a whole selection it computed: `cell` takes the cell
@@ -137,8 +142,9 @@ A round nothing was typed into reads exactly like the next one, so after
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
-  - Resources: `chord.curriculum` (invalidate)
+  - Resources: `chord.curriculum` (push)
   - Routes:
     - `POST /api/chord/curriculum/chord`
     - `POST /api/chord/curriculum/chapter`
@@ -150,6 +156,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `apps/chord/vocabulary.chordToneStyle`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
@@ -169,8 +176,6 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/popover.InlinePopover`
     - `shell/toast.showToast`
   - Exports (types):
@@ -192,7 +197,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `AskedBox`
     - `AskedOptions`
@@ -224,7 +229,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `chapterById`
     - `CHAPTERS`
     - `CHORD_STATES`
-    - `chordCurriculumResource`
+    - `chordCurriculum`
     - `chordState`
     - `ChordStateSchema`
     - `firstSelection`

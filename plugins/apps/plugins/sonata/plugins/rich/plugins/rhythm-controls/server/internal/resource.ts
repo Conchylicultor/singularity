@@ -1,12 +1,8 @@
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { rhythmResource, type RhythmRow } from "../../shared/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { rhythms } from "../../shared/resources";
 import { songRhythm } from "./tables";
 
-export const rhythmLiveResource = defineResource<RhythmRow[]>({
-  key: rhythmResource.key,
-  mode: "push",
-  schema: z.array(songRhythm.schema),
-  loader: () => db.select(songRhythm.wireColumns).from(songRhythm.table),
-});
+// Server half of the per-song groove read: the lookup-only collection served
+// from the extension entity (its wire columns — `songId` is the `parent_id` PK;
+// both patterns are jsonb decoded by `RhythmPatternSchema`).
+export const rhythmsServed = serveCollection(rhythms, { from: songRhythm });

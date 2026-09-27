@@ -1,20 +1,14 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { trashEntriesResource as descriptor } from "../../core/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { trashEntries } from "../../core/resources";
 import { _trashEntries } from "./tables";
 
-// One source's trash entries, newest-deleted first — scoped by `sourceId`
-// (mirrors `blocksLiveResource`'s per-param scoping). Push mode broadcasts the
-// whole (small) array. DB-backed resources have no hand-`notify` — the L4
-// change-feed on `trash_entries` pushes the recompute for EVERY write (record
-// inside the domain's tx, restore, purge, TTL sweep, out-of-process alike).
-export const trashEntriesLiveResource = defineResource(descriptor, {
-  mode: "push",
-  loader: async ({ sourceId }) =>
-    db
-      .select()
-      .from(_trashEntries)
-      .where(eq(_trashEntries.sourceId, sourceId))
-      .orderBy(desc(_trashEntries.deletedAt)),
+// The trash ledger over `trash_entries`: its window (filterable on `sourceId`,
+// newest-deleted first — the `(source_id, deleted_at)` index serves it) and its
+// `:rows` / `:groups` siblings, every row field bound to its column by name
+// (`meta` decodes through `parsedJson`). No hand-notify: the L4 change feed on
+// `trash_entries` moves every subscribed window on every write — a record
+// inside the domain's tx, a restore, a purge, the TTL sweep, out-of-process
+// alike. A row is never updated, so `deletedAt` never re-sorts one.
+export const trashEntriesServed = serveCollection(trashEntries, {
+  from: _trashEntries,
 });

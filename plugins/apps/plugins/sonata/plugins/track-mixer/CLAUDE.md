@@ -42,21 +42,38 @@ plus a per-song reset.
   contribution (else the first). The picker writes the override (or `null` to
   reset to auto); the audio engine consumes the resolved map to route each
   track's notes to its own voice manager.
-- **One reactive rollup, multiple consumers.** The `trackViewResource`
-  live-state rollup is the single source of truth. The panel reads + writes it;
-  the **piano-roll** imports `useTrackColorMap` + `useHiddenTrackIds` to color
-  and filter notes; the **audio engine** imports `useMutedTrackIds` to drop muted
-  tracks' notes, `useTrackInstrumentMap` to route each track's notes to its
-  resolved timbre, and `useTrackVolumeMap` to set each track's fader gain. The
-  narrow hooks all derive from `useTrackMixerEntries`, which
-  joins `score.tracks` (order → default color, GM program → instrument) with the
-  persisted overrides and a per-track note tally.
+- **One song's overrides, one value, multiple consumers.** `trackViews =
+  liveValue("sonata-track-view", { schema: z.array(TrackViewRowSchema), params:
+  ["songId"] })` is the song's rows, served by `serveValue({ source: "db",
+  unbounded: { reason }, loader })` (at most one row per track of that song; a
+  value, not a collection, because the key is the composite `(songId,
+  trackId)`). This plugin owns the song's track views as a per-song setting of
+  the loaded song, `trackViewSetting` (`web/track-view-setting.ts`, a
+  `defineSongSetting` key: pending until the rows are read, pending again
+  whenever another song is loaded), and registers it with the shell
+  (`Sonata.SongSetting`, with the headless `TrackViewObserver`, mounted afresh
+  for each loaded song), which reads the rows for that song and writes them once
+  settled. The shell never reads the value — it only waits, generically, on
+  every registered setting — so no frame draws or plays the song with default
+  track views (a muted track audible) or the previous song's while they load.
+  Every hook here reads the setting and is itself **pending-aware**
+  (`SongSetting<…>`): the panel reads it; the **piano-roll** imports `useTrackColorMap` +
+  `useHiddenTrackIds` to color and filter notes; the **audio engine** imports
+  `useMutedTrackIds` to drop muted tracks' notes, `useTrackInstrumentMap` to
+  route each track's notes to its resolved timbre, and `useTrackVolumeMap` to
+  set each track's fader gain; each handles the pending arm (nothing drawn,
+  nothing scheduled, a loading state). The narrow hooks all derive from
+  `useTrackMixerEntries`, which joins `score.tracks` (order → default color, GM
+  program → instrument) with the persisted overrides and a per-track note
+  tally.
 - **Writes are fire-and-forget, but ordered.** The UI never reads the response
-  — state refreshes via the live-state push the upsert/reset emits. Every write
-  still goes through the resource's send lane (`enqueueResourceWrite`), because
-  these are last-writer-wins upserts: sent as bare concurrent fetches, a loaded
-  backend can apply an older fader position after a newer one and silently keep
-  the wrong level. The lane departs writes in the order they were issued.
+  — state refreshes via the `trackViews` push the upsert/reset's commit
+  triggers. Every write still goes through the song's send lane
+  (`enqueueResourceWrite(trackViews, { songId }, …)`), because these are
+  last-writer-wins upserts: sent as bare concurrent fetches, a loaded backend
+  can apply an older fader position after a newer one and silently keep the
+  wrong level. The lane departs a song's writes in the order they were issued;
+  writes for different songs touch different rows and need no order.
 - **The upsert addresses many tracks at once.** Its body carries `trackIds`
   (a single-track edit passes `[trackId]`) and the handler writes every row in
   one transaction — so a whole-arrangement flip is one commit and one push. The
@@ -81,14 +98,22 @@ plus a per-song reset.
 
 ## Plugin reference
 
-- Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
+- Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the shell as a per-song setting (Sonata.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
 - Web:
-  - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
+  - Contributes:
+    - `Sonata.SongSetting` "track-view-sync" → `TrackViewObserver`
+    - `Sonata.Section` "Tracks" → `TrackMixerPanel`
   - Uses:
     - `apps/sonata/audio/instruments.SonataAudio`
+    - `apps/sonata/shell.defineSongSetting`
     - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.SongSetting`
+    - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSongSetting`
+    - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/color-picker.SwatchGrid`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -104,7 +129,7 @@ plus a per-song reset.
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`
@@ -129,11 +154,10 @@ plus a per-song reset.
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
+    - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
-  - Exports (values):
-    - `_trackView`
-    - `trackViewLiveResource`
-  - Resources: `sonata-track-view` (push)
+  - Exports (values): `_trackView`
+  - Resources: `sonata-track-view` (push, unbounded: one song's per-track view overrides — at most one row per track of that song)
   - Routes:
     - `POST /api/sonata/songs/:songId/track-view`
     - `DELETE /api/sonata/songs/:songId/track-view`

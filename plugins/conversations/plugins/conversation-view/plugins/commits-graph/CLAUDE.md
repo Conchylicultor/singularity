@@ -7,9 +7,9 @@ Toolbar chip showing how many commits the conversation's worktree branch is ahea
 This plugin does not own "where does this attempt stand relative to `main`?" — the server-side exit-drop guard needs the same fact, so it lives in [`tasks/attempt-work`](../../../../../tasks/plugins/attempt-work/CLAUDE.md). Here:
 
 - The **chip** subscribes the `attemptWork` live value and nothing else. `↑ahead ↓behind` come from `pending`'s `measured` arm; the push count is `landedPushes || ledgerPushes` (git-measured, with the ledger as corroboration — a `pushes` row proves a push happened, its absence proves nothing, and pre-trailer-era commits are visible only to the ledger).
-- The **pane** owns only the commit *rows*, behind `commits-graph.graph`. Its landed shas come from `readLandedShas(attemptId)`; the pending-side git helpers (`readBranch`, `readMergeBase`, `probeHeadMain`) are imported from `attempt-work/server`, not re-implemented.
+- The **pane** owns only the commit *rows*, behind the `commitsGraph` live value (`commits-graph.graph`, params `{ attemptId }`, db arm). Its landed shas come from `readLandedShas(attemptId)`; the pending-side git helpers (`readBranch`, `readMergeBase`, `probeHeadMain`) are imported from `attempt-work/server`, not re-implemented.
 
-**The landed set is git-measured** — `main`'s commits carrying this attempt's `Singularity-Conversation` trailers — never read off the `pushes` ledger, which lags behind a background ingest job (`research/2026-08-17-global-attempt-work-git-derived-standing.md`). Two consequences worth keeping: the graph resource depends on `refHeadResource` **alone** (a commit joins the landed set only by landing on `main`, so a ref advance is the complete refresh signal), and `graphEtag` folds in only `(headSha, mainSha)` for the same reason. It tracks its subscribed attempts via `onFirstSubscribe`/`onLastUnsubscribe`, so a ref advance fans out only to the panes on screen.
+**The landed set is git-measured** — `main`'s commits carrying this attempt's `Singularity-Conversation` trailers — never read off the `pushes` ledger, which lags behind a background ingest job (`research/2026-08-17-global-attempt-work-git-derived-standing.md`). Two consequences worth keeping: the graph value recomputes on `refHeadServed` **alone** (a commit joins the landed set only by landing on `main`, so a ref advance is the complete refresh signal), and `graphEtag` folds in only `(headSha, mainSha)` for the same reason. `recomputeOn: [refHeadServed]` recomputes every subscribed attempt, so a ref advance fans out only to the panes on screen; the `whileSubscribed` stop evicts the worktree's git memo.
 
 ## Unresolved payloads (worktree gone)
 
@@ -44,7 +44,6 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Separator`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -55,6 +54,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
   - Uses:
     - `infra/git/git-watcher.refHeadServed`
     - `infra/host/host-read-pool.withHeavyReadSlot`
+    - `network/live.serveValue`
     - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseGitLog`
     - `primitives/commit-list.runGit`

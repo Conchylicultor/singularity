@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -19,9 +19,13 @@ export const chordModeShape = defineExtensionShape({
 export const ChordModeRowSchema = chordModeShape.schema;
 export type ChordModeRow = z.infer<typeof ChordModeRowSchema>;
 
-/** Reactive list of every song's chord-mode setting (push resource). */
-export const chordModeResource = resourceDescriptor<ChordModeRow[]>(
-  "sonata-chord-mode",
-  z.array(ChordModeRowSchema),
-  [],
-);
+/**
+ * The chord mode of ONE song, read by the song's id: a lookup-only collection
+ * over the extension table (nothing lists every song's mode), minting
+ * `sonata-chord-mode:rows` alone. The observer reads the open song's row with
+ * `useLiveRow(chordModes, songId)`; `found: false` is an absent row, i.e. off.
+ */
+export const chordModes = liveCollection("sonata-chord-mode", {
+  row: ChordModeRowSchema,
+  id: "songId",
+});

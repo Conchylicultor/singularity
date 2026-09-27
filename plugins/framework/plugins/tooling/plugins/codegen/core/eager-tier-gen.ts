@@ -225,11 +225,12 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
 // The descriptor factories that can carry a `preload:` field (in a trailing
 // options object, or a declaration's spec) come from the shared vocabulary
 // (`tooling/resource-vocabulary/core`), whose key set `tsc` derives from the
-// live-state and query-resource barrels themselves.
+// live-state, query-resource and network/live barrels themselves.
 //
 // This file used to keep its own four-name list, and the docs facet kept a
 // different three-name one. Neither knew the five bounded-membership factories,
-// so a `windowQueryResourceDescriptor(…, { preload: "boot" })` under
+// so a preloaded bounded descriptor (then declared with its own window
+// factory; today a `liveCollection(…, { preload: "boot" })`) under
 // `apps/plugins/**` was invisible here: the plugin stayed deferred, its
 // descriptor was not registered before the boot snapshot hydrated, and the
 // surface painted the pending state it was designed never to show. Every miss
@@ -336,9 +337,9 @@ async function watchedSlotIn(
  *
  * `ownerPlugin` skips the file entirely: inside the plugins that OWN the
  * factories (`isResourceVocabularyOwner`), a factory call is the wrapper
- * IMPLEMENTING one — `liveCollection` forwarding a caller's `preload` to
- * `windowQueryResourceDescriptor(key, …, { preload })` — with a computed key,
- * not a plugin declaring a resource. The declaration site is the caller's.
+ * IMPLEMENTING one — `queryResourceDescriptor` forwarding a caller's `preload`
+ * to `keyedResourceDescriptor(key, …, opts)` — with a computed key, not a
+ * plugin declaring a resource. The declaration site is the caller's.
  * The docs facet's index exempts the same plugins through the same predicate.
  */
 export function preloadedKeysIn(

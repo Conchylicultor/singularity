@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from "react";
-import { usePointResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
-import { conversationNotesResource } from "../../shared";
+import { conversationNoteRows } from "../../shared";
 import { upsertNote, deleteNote } from "./api";
 import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
 
@@ -18,16 +18,13 @@ export interface ConversationNoteState extends EditableField<string> {
 export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
-  const notesResult = usePointResource(conversationNotesResource, conversationId);
+  const note = useLiveRow(conversationNoteRows, conversationId);
   // While pending, serverNote stays "" so useEditableField (which must run
   // unconditionally) has a valid initial value. Consumers gate on `pending`
-  // to avoid showing a blank note before the resource settles. On the settled
-  // arm `data` is the row or `null` (this conversation has no note).
-  let serverNote = "";
-  if (!notesResult.pending) {
-    serverNote = notesResult.data?.notes ?? "";
-  }
-  const noteExists = !notesResult.pending && serverNote.trim().length > 0;
+  // to avoid showing a blank note before the row settles. On the settled arm
+  // `found: false` means this conversation has no note.
+  const serverNote = !note.pending && note.found ? note.row.notes : "";
+  const noteExists = !note.pending && serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);
 
   const handleSave = useCallback(
@@ -62,7 +59,7 @@ export function useConversationNote(
     ...field,
     isVisible: noteExists || isManuallyOpen,
     noteExists,
-    pending: notesResult.pending,
+    pending: note.pending,
     toggleVisible,
   };
 }

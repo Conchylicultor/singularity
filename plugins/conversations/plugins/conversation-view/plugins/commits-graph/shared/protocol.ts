@@ -32,4 +32,3 @@ export type CommitsGraph = z.infer<typeof CommitsGraphSchema>;
 // non-value (`{resolved: false, reason}`). See
 // research/2026-07-09-global-resource-unknown-value-and-error-gate.md.
 export const CommitsGraphPayloadSchema = resolvableSchema(CommitsGraphSchema);
-export type CommitsGraphPayload = z.infer<typeof CommitsGraphPayloadSchema>;

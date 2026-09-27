@@ -19,16 +19,14 @@ import {
   type DraftOptions,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   applyPicksChange,
   DEFAULT_PROTOTYPE_VIEWPORT,
-  prototypesResource,
+  prototypesList,
   prototypePicks,
   prototypeUrl,
   prototypeVersionUrl,
@@ -177,17 +175,15 @@ export function PrototypeDetailProvider(
 
 function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   const { name } = props;
-  const select = useCallback(
-    (rows: readonly PrototypeMeta[]): PrototypeViewport =>
-      rows.find((p) => p.name === name)?.viewport ?? DEFAULT_PROTOTYPE_VIEWPORT,
-    [name],
-  );
-  // `gate`: this read decides whether the canvas exists, so its settle must
-  // re-render even when the slice equals the initial one.
-  const declared = useResource(prototypesResource, undefined, {
-    select,
-    gate: true,
-  });
+  // The whole list, and this prototype's declared size looked up in it once it
+  // has loaded. A list change re-renders this gate and `DetailProvider`, but
+  // not the canvas: `size` only SEEDS a canvas (the `useState` initializer, and
+  // the re-open when the pane points at another prototype), and the context
+  // value `DetailProvider` memoizes never depends on it — so a fresh `size`
+  // object from a re-broadcast list moves nothing its consumers see.
+  // Not-loaded is `pending` (no placeholder list), so the settle always
+  // re-renders this gate.
+  const list = useLive(prototypesList);
 
   // ONE shared record per prototype (`_picks/<id>.json` on the server), so the
   // variant frame A shows is the variant main, every worktree deploy, every
@@ -208,7 +204,7 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
     },
   );
 
-  if (declared.pending) return <Loading variant="block" />;
+  if (list.pending) return <Loading variant="block" />;
   if (stored.pending) {
     // A record that cannot be read stays broken until someone fixes it, so it
     // renders the default error placeholder naming the problem — never a
@@ -218,7 +214,10 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
       ready: () => null,
     });
   }
-  return <DetailProvider {...props} size={declared.data} stored={stored} />;
+  const size =
+    list.data.find((p) => p.name === name)?.viewport ??
+    DEFAULT_PROTOTYPE_VIEWPORT;
+  return <DetailProvider {...props} size={size} stored={stored} />;
 }
 
 function DetailProvider({
@@ -408,7 +407,7 @@ export function useFrameSrc(
  * declares.
  *
  * - live: its `index.html`, cache-busted by `cacheBust` (the live
- *   `prototypesVersionResource` value), so an agent's edit reloads the frame.
+ *   `prototypesVersion` value), so an agent's edit reloads the frame.
  * - a recorded version: its frozen document. No cache-bust, since a sha
  *   addresses content that never changes.
  */

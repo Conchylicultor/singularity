@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { StoredEffortSchema } from "@plugins/conversations/plugins/effort-provider/core";
@@ -20,23 +20,22 @@ export const taskEffortShape = defineExtensionShape({
 export const TaskEffortSchema = taskEffortShape.schema;
 export type TaskEffort = z.infer<typeof TaskEffortSchema>;
 
-// Bounded POINT resource. The mode is 1:1 with its task, so the point identity
-// IS the side-table's pk (`taskId`, stored as `parent_id`): one subscribed id
-// names exactly one task's mode.
+// One task's mode, read by the task's id. The mode is 1:1 with its task — the
+// side-table's primary key IS the task (`taskId`, stored as `parent_id`) — so
+// it is a lookup-only collection: no default window (nothing lists every
+// task's mode), minting `task-efforts:rows` alone. A reader asks with
+// `useLiveRow(taskEfforts, taskId)`, and `found: false` is "no mode set".
 //
 // Every consumer asks about ONE task and needs an exact answer — the launch
-// option's picker both reads and writes this row — so `point` is the right bound
-// rather than a window, which could silently render a set mode as "none". The
-// change feed routes a write to a tuple iff the changed ids intersect its set,
-// so setting one task's mode never sweeps the table.
+// option's picker both reads and writes this row — so a point read is the
+// right bound rather than a window, which could silently render a set mode as
+// "none". The `:rows` point routing sends a write to a tuple iff the changed
+// ids intersect its set, so setting one task's mode never sweeps the table.
 //
-// NOT preloaded: point resources hydrate post-mount (the recorded decision of
-// the bounded working-set contract).
-//
-// The server half is compiled from the extension handle in
-// `server/internal/resource.ts`; the wire shape is `TaskEffort[]`.
-export const taskEffortsResource = pointQueryResourceDescriptor<TaskEffort>(
-  "task-efforts",
-  TaskEffortSchema,
-  "taskId",
-);
+// NOT preloaded (a lookup-only collection cannot be): it hydrates post-mount
+// via its sub-ack. Served from the extension handle in
+// `server/internal/resource.ts`.
+export const taskEfforts = liveCollection("task-efforts", {
+  row: TaskEffortSchema,
+  id: "taskId",
+});

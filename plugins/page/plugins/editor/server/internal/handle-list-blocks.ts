@@ -20,7 +20,7 @@ export const handleListBlocks = implement(listBlocks, async ({ params }) => {
     .limit(1);
   if (!page) throw new HttpError(404, "Page not found");
   // The page's content forest, sub-page rows included — the SAME set as
-  // `blocksLiveResource` and as the reducer's `loadPageBlocks`. This endpoint is
+  // `pageBlocksServed` and as the reducer's `loadPageBlocks`. This endpoint is
   // the HTTP twin of that resource, so it must not project the forest
   // differently: `(parent_id, rank)` is one ordering space, and a consumer that
   // sees only part of it mints fractional keys that collide with the rows it

@@ -2816,7 +2816,7 @@ describe("unwrap", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * `blocksLiveResource` no longer filters `type <> 'page'`, so the client's
+ * `pageBlocksServed` no longer filters `type <> 'page'`, so the client's
  * reducer sees exactly the forest the server's has always seen: every block
  * whose nearest page ancestor is this page, sub-page rows included. Two
  * consequences are load-bearing.

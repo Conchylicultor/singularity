@@ -50,21 +50,20 @@ export default {
       "plugins/shell/plugins/notifications/web/components/bell-button.tsx",
       // Secondary DB persistence of a toast already shown via Shell.Toast.
       "plugins/shell/plugins/notifications/web/internal/toast.ts",
-      // Page-tree expand toggle + DnD reorder; blocksLiveResource push refreshes.
+      // Page-tree expand toggle + DnD reorder; the page_blocks push refreshes.
       "plugins/apps/plugins/pages/plugins/page-tree/web/components/pages-sidebar.tsx",
-      // Track color/instrument/mute/hide toggles + reset; live-state push refreshes.
+      // Track color/instrument/mute/hide toggles + reset; the trackViews push refreshes.
       "plugins/apps/plugins/sonata/plugins/track-mixer/web/actions.ts",
       // Play-count telemetry; an off-by-one on failure has no UX consequence.
       "plugins/apps/plugins/sonata/plugins/playback-history/web/components/record-play-observer.tsx",
       // Per-song key-auto-detect toggle; set optimistically on the shell store
-      // first, and the keyAutoDetectResource push reaffirms it — a failed persist
+      // first, and the keyAutoDetects row push reaffirms it — a failed persist
       // self-corrects on the next toggle.
       "plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web/actions.ts",
       // Per-song global transpose offset; set optimistically on the shell store
-      // first, and the transposeResource push reaffirms it — a failed persist
+      // first, and the transposes row push reaffirms it — a failed persist
       // self-corrects on the next step.
       "plugins/apps/plugins/sonata/plugins/transpose/web/actions.ts",
-
     ],
   },
 };

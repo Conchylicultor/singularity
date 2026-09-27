@@ -13,13 +13,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
+      - `network/live.useLive`
       - `page/editor.blockTextTokenExtension`
       - `page/editor.registerBlockTextExtensionSource`
       - `primitives/inline-text.InlineTextWalker`
       - `primitives/inline-text.InlineTextWalkerContext`
       - `primitives/inline-text.InlineTextWalkerSlot`
       - `primitives/inline-text.useInlineTextWalker`
-      - `primitives/live-state.useResource`
       - `primitives/markdown.InlineCode`
       - `primitives/markdown.MarkdownEnhancement`
       - `primitives/markdown.MarkdownEnhancementContext`
@@ -57,27 +57,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/derived-updated-at.deriveUpdatedAt`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `network/live.serveValue`
       - `tasks/tasks-core._conversations`
     - DB schema: `plugins/active-data/server/internal/tables.ts`
-    - Exports (values):
-      - `_activeDataBindings`
-      - `activeDataBindingsResource`
-    - Resources: `active-data.bindings` (push)
+    - Exports (values): `_activeDataBindings`
+    - Resources: `active-data.bindings` (push, unbounded: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
     - Routes:
       - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
       - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
-      - `primitives/live-state.resourceDescriptor`
+      - `network/live.liveValue`
     - Exports (types):
       - `ActiveDataBinding`
       - `ActiveDataBindingsPayload`
       - `PutBindingBody`
     - Exports (values):
+      - `activeDataBindings`
       - `ActiveDataBindingSchema`
       - `ActiveDataBindingsPayloadSchema`
-      - `activeDataBindingsResource`
       - `deleteBinding`
       - `inlineBoundary`
       - `putBinding`
@@ -197,9 +196,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
         - Uses:
           - `apps/prototypes/canvas.prototypeDetailPane`
+          - `network/live.useLive`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/live-state.matchResource`
-          - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
@@ -315,7 +314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `welcomePane`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
-        - **`bookmarks`** — Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live resource, and add/delete endpoints backing the star toggle and bookmarks bar.
+        - **`bookmarks`** — Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
           - Web:
             - Contributes:
               - `Browser.Actions` "Chrome actions" → `BookmarkStar`
@@ -325,34 +324,41 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell.Favicon`
               - `apps/browser/shell.useBrowserNav`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveListResult`
+              - `network/live.useLive`
               - `primitives/bar.Bar`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
             - Exports (types): `BookmarkRow`
             - Exports (values):
               - `BookmarkRowSchema`
-              - `browserBookmarksResource`
+              - `browserBookmarks`
               - `useBookmarks`
           - Server:
-            - Contributes: `resource.declare` "browser-bookmarks"
+            - Contributes:
+              - `resource.declare` "browser-bookmarks"
+              - `resource.declare` "browser-bookmarks:rows"
+              - `resource.declare` "browser-bookmarks:groups"
             - Uses:
               - `database.db`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
-              - `infra/query-resource.queryResource`
+              - `network/live.serveCollection`
             - DB schema: `plugins/apps/plugins/browser/plugins/bookmarks/server/internal/tables.ts`
             - Exports (values):
               - `_browserBookmarks`
               - `addBookmark`
-              - `browserBookmarksServerResource`
               - `deleteBookmark`
-            - Resources: `browser-bookmarks` (keyed)
+            - Resources:
+              - `browser-bookmarks` (keyed, window)
+              - `browser-bookmarks:groups` (push)
+              - `browser-bookmarks:rows` (keyed, point)
             - Routes:
               - `POST /api/browser/bookmarks`
               - `DELETE /api/browser/bookmarks/:id`
@@ -362,40 +368,39 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields.fieldsToZodObject`
               - `fields/date/config.dateField`
               - `fields/text/config.textField`
-              - `infra/query-resource.queryResourceDescriptor`
+              - `network/live.liveCollection`
+              - `network/live/filter.liveText`
             - Exports (types): `BookmarkRow`
             - Exports (values):
               - `bookmarkFields`
               - `BookmarkRowSchema`
-              - `browserBookmarksResource`
+              - `browserBookmarks`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
-        - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the useRecents() hook over the browser-recents live resource. Browser history store (browser_history table), the distinct-by-url recents live resource, and the POST /api/browser/history record endpoint.
+        - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
           - Web:
             - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
             - Uses:
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.useBrowserNav`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/live-state.useResource`
             - Exports (types): `BrowserRecent`
             - Exports (values):
+              - `browserRecents`
               - `BrowserRecentSchema`
-              - `browserRecentsResource`
-              - `useRecents`
               - `useRecordVisit`
           - Server:
             - Contributes: `resource.declare` "browser-recents"
             - Uses:
               - `database.db`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/browser/plugins/history/server/internal/tables.ts`
             - Exports (values):
               - `browserHistory`
-              - `browserRecentsServerResource`
               - `recordVisit`
-            - Resources: `browser-recents` (push)
+            - Resources: `browser-recents` (push, unbounded: the 12 most recent distinct urls — capped by the loader's LIMIT; a DISTINCT ON derivation over browser_history, not rows of one table)
             - Routes: `POST /api/browser/history`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
@@ -503,12 +508,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
             - Uses:
-              - `apps/browser/bookmarks.browserBookmarksResource`
-              - `apps/browser/history.browserRecentsResource`
+              - `apps/browser/bookmarks.browserBookmarks`
+              - `apps/browser/history.browserRecents`
               - `apps/browser/omnibox.normalizeInput`
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.Favicon`
               - `apps/browser/shell.useBrowserNav`
+              - `network/live.useLive`
               - `primitives/css/card.Card`
               - `primitives/css/grid.Grid`
               - `primitives/css/row.Row`
@@ -516,10 +522,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
         - **`tabs`** — Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.
@@ -569,8 +575,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/chord/plugins/curriculum/server/internal/tables.ts`
-            - Resources: `chord.curriculum` (invalidate)
+            - Resources: `chord.curriculum` (push)
             - Routes:
               - `POST /api/chord/curriculum/chord`
               - `POST /api/chord/curriculum/chapter`
@@ -582,6 +589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/vocabulary.chordToneStyle`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.CollapsibleContent`
@@ -601,8 +609,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/overlay/popover.InlinePopover`
               - `shell/toast.showToast`
             - Exports (types):
@@ -624,7 +630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `AskedBox`
               - `AskedOptions`
@@ -656,7 +662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `chapterById`
               - `CHAPTERS`
               - `CHORD_STATES`
-              - `chordCurriculumResource`
+              - `chordCurriculum`
               - `chordState`
               - `ChordStateSchema`
               - `firstSelection`
@@ -736,8 +742,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/chord/plugins/progress/server/internal/tables.ts`
-            - Resources: `chord.progress` (invalidate)
+            - Resources: `chord.progress` (push)
             - Routes: `POST /api/chord/rounds`
           - Core:
             - Uses:
@@ -749,7 +756,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/chord/song-index.LOOP_SHAPE_IDS`
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.TheorytabSectionIdSchema`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `ChordAnswerSample`
               - `ChordMastery`
@@ -762,7 +769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RoundAnswer`
             - Exports (values):
               - `chordMastery`
-              - `chordProgressResource`
+              - `chordProgress`
               - `ChordProgressSchema`
               - `ChordStandingSchema`
               - `decodeProgressParams`
@@ -799,6 +806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2.ConfigV2`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/spacing.Inset`
@@ -806,7 +814,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
             - Exports (values): `SongIndexGate`
           - Server:
@@ -837,6 +844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
               - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `network/live.serveValue`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
             - Exports (values):
@@ -866,7 +874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/hooktheory.HookpadModeSchema`
               - `integrations/hooktheory.hookpadTonicPc`
               - `integrations/hooktheory.TheorytabSectionIdSchema`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `BeatTimesAlignment`
               - `ChordFeature`
@@ -911,7 +919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `bestModeWindows`
               - `CHORD_FEATURES`
               - `chordFeatures`
-              - `chordIndexStatusResource`
+              - `chordIndexStatus`
               - `chordOverlapsWindow`
               - `chordToken`
               - `chordTokenFromParts`
@@ -992,6 +1000,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `integrations/youtube.useYouTubePlayhead`
               - `integrations/youtube.YouTubePlayer`
               - `integrations/youtube.YouTubePlayerController`
+              - `network/live.useLive`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -1015,7 +1024,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/pane.defineRoute`
@@ -1363,6 +1371,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/deployments.DeploymentDetail`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.getEndpointErrorMessage`
+                  - `network/live.LiveRowResult`
+                  - `network/live.useLiveRow`
                   - `plugin-meta/composition.useCompositionIncludes`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
@@ -1382,8 +1392,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.ResourceResult`
-                  - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
               - Server:
@@ -1447,6 +1455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core/tabs.navigate`
               - `apps/deploy/deployments.DeploymentDetail`
+              - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItemByName`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -1454,8 +1463,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
         - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
           - Web:
@@ -1488,7 +1495,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/deploy-history.DeployRunItemActions`
                   - `primitives/icon-button.IconButton`
                   - `primitives/launch.LaunchAgentPopover`
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
               - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
@@ -1502,12 +1509,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
             - Uses:
+              - `apps/deploy/health.ServerHealthRow`
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/servers.ServerDetail`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveRowResult`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItems`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
@@ -1536,7 +1547,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
@@ -1549,9 +1559,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeploymentItemActions`
               - `Deployments`
               - `useBlockedReason`
+              - `useDeploymentsListServerId`
           - Server:
             - Contributes:
               - `resource.declare` "deploy.deployments"
+              - `resource.declare` "deploy.deployments:rows"
+              - `resource.declare` "deploy.deployments:groups"
               - `resource.declare` "deploy.runs"
               - `resource.declare` "deploy.runs-revision"
             - Uses:
@@ -1570,6 +1583,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.REPO_ROOT`
               - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
+              - `network/live.serveCollection`
+              - `network/live.serveValue`
               - `primitives/data-view/server-query.augmentServerQuery`
               - `primitives/data-view/server-query.bindColumns`
               - `primitives/data-view/server-query.compileWhere`
@@ -1587,12 +1602,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `_deployDeployments`
               - `_deployRuns`
-              - `deploymentsServerResource`
             - Register:
               - `defineJob('retention.deploy_runs')`
               - `defineSupervisedJob('deploy.run')`
             - Resources:
-              - `deploy.deployments` (push)
+              - `deploy.deployments` (keyed, window)
+              - `deploy.deployments:groups` (push)
+              - `deploy.deployments:rows` (keyed, point)
               - `deploy.runs` (push)
               - `deploy.runs-revision` (push)
             - Routes:
@@ -1607,6 +1623,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/deploy/servers.serverDetailRoute`
               - `infra/endpoints.defineEndpoint`
+              - `network/live.liveCollection`
+              - `network/live.liveValue`
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveText`
               - `primitives/data-view.ServerFilterWireSchema`
@@ -1634,12 +1652,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DEPLOY_RUN_FILTERABLE`
               - `DEPLOY_RUN_SEARCHABLE`
               - `deploymentDetailRoute`
+              - `deployments`
               - `DeploymentSchema`
-              - `deploymentsResource`
               - `DeployPhaseSchema`
               - `DeployRunRecordSchema`
+              - `deployRuns`
               - `DeployRunSchema`
-              - `deployRunsResource`
               - `deployRunsRevisionResource`
               - `DeployVerbSchema`
               - `deriveInstall`
@@ -1697,31 +1715,39 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `DEPLOY_RUN_KIND`
                   - `DEPLOY_STATUS_OUTCOME`
                   - `deployRunFields`
-        - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
+        - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
               - `Servers.Fields` "status" → `StatusField`
               - `ServerDetail.Section` "Status" → `ServerStatusSection`
             - Uses:
+              - `apps/deploy/servers.Server`
               - `apps/deploy/servers.ServerDetail`
+              - `apps/deploy/servers.servers`
               - `apps/deploy/servers.Servers`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveRowResult`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/live-state.useResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useCombinedResources`
+              - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
               - `primitives/setup-steps.StepDone`
               - `primitives/setup-steps.StepNote`
             - Exports (types):
               - `ServerHealthRow`
               - `ServerStatus`
+              - `ServerVerification`
               - `SshCheckResult`
             - Exports (values):
               - `checkServerSsh`
               - `forgetServerHostKey`
-              - `serverHealthResource`
               - `serverStatus`
               - `ServerStatusBadge`
               - `useServerHealth`
@@ -1729,7 +1755,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useServerVerified`
               - `VerifyConnectionBody`
           - Server:
-            - Contributes: `resource.declare` "deploy.server-health"
+            - Contributes:
+              - `resource.declare` "deploy.server-health"
+              - `resource.declare` "deploy.server-health:rows"
+              - `resource.declare` "deploy.server-health:groups"
             - Uses:
               - `apps/deploy/servers._deployServers`
               - `apps/deploy/servers.getServerSshPrivateKey`
@@ -1737,8 +1766,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.queryResource`
               - `infra/ssh.sshRun`
+              - `network/live.serveCollection`
             - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
             - Entity extension of: `apps/deploy/servers` (table `servers_ext_health`)
             - Exports (types):
@@ -1749,10 +1778,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `resolveServerSshTarget`
               - `serverHealth`
-              - `serverHealthResource`
               - `ServerHealthRowSchema`
-              - `serverHealthServerResource`
-            - Resources: `deploy.server-health` (keyed)
+            - Resources:
+              - `deploy.server-health` (keyed, window)
+              - `deploy.server-health:groups` (push)
+              - `deploy.server-health:rows` (keyed, point)
             - Routes:
               - `POST /api/deploy/servers/:id/ssh-check`
               - `POST /api/deploy/servers/:id/forget-host-key`
@@ -1769,7 +1799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `checkServerSsh`
               - `forgetServerHostKey`
-              - `serverHealthResource`
+              - `serverHealthRows`
               - `ServerHealthRowSchema`
               - `SshCheckResultSchema`
         - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.
@@ -1783,13 +1813,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/serve-composition.ServeTargetPanel`
               - `build/serve-composition.useServeComposition`
               - `build/serve-composition.useServeStatus`
+              - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItemByName`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
         - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
           - Web:
@@ -1801,10 +1830,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deployments.DeploymentDetail`
               - `apps/deploy/deployments.Deployments`
               - `apps/deploy/deployments.useBlockedReason`
+              - `apps/deploy/deployments.useDeploymentsListServerId`
+              - `apps/deploy/health.ServerHealthRow`
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/health.useServerHealthMap`
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/cluster.Cluster`
@@ -1815,8 +1848,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/log-channels.LiveLogChannel`
@@ -1856,6 +1887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/fill.Fill`
               - `primitives/css/fill.fillClasses`
@@ -1874,7 +1906,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
@@ -1889,8 +1920,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `NEW_SERVER_ID`
               - `ServerDetail`
               - `serverDetailPane`
+              - `servers`
               - `Servers`
-              - `serversResource`
               - `serversRootPane`
               - `SshKeySchema`
           - Server:
@@ -1905,12 +1936,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/secrets.hasSecret`
               - `infra/secrets.listKeysInNamespace`
               - `infra/secrets.setSecret`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports (values):
               - `_deployServers`
               - `getServerSshPrivateKey`
-              - `serversResource`
-            - Resources: `deploy.servers` (push)
+            - Resources: `deploy.servers` (push, unbounded: the hand-registered server registry; each row's sshKey is derived from a central secrets lookup, which a column projection cannot express)
             - Routes:
               - `GET /api/deploy/servers`
               - `POST /api/deploy/servers`
@@ -1949,8 +1980,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ImportKeypairBodySchema`
               - `importSshPrivateKey`
               - `listServers`
+              - `servers`
               - `ServerSchema`
-              - `serversResource`
               - `SshKeySchema`
               - `updateServer`
               - `UpdateServerBodySchema`
@@ -1992,6 +2023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
@@ -2907,6 +2939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
               - `integrations/gmail.getGmailToken`
+              - `network/live.serveValue`
             - DB schema:
               - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`
               - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/tables.ts`
@@ -2920,10 +2953,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `_mailSyncState`
               - `_mailThreads`
               - `mailDraftAttachments`
-              - `mailLabelsServerResource`
               - `requireGmailToken`
               - `resolveMailAccountId`
-            - Resources: `mail-labels` (push)
+            - Resources: `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
           - Core:
             - Uses:
               - `fields.FieldsRecord`
@@ -2936,7 +2968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/text/config.enumTextField`
               - `fields/text/config.parsedTextField`
               - `fields/text/config.textField`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
               - `primitives/live-state.tolerantEnum`
             - Exports (types):
               - `MailAccount`
@@ -2974,16 +3006,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `MailDraftSchema`
               - `mailLabelFields`
               - `MailLabelRefSchema`
+              - `mailLabels`
               - `MailLabelSchema`
-              - `mailLabelsResource`
               - `mailMessageFields`
               - `mailMessageLabelFields`
               - `MailMessageLabelSchema`
               - `MailMessageSchema`
               - `mailOutboxFields`
               - `MailOutboxItemSchema`
+              - `mailSyncState`
               - `mailSyncStateFields`
-              - `mailSyncStateResource`
               - `MailSyncStateSchema`
               - `mailThreadFields`
               - `MailThreadSchema`
@@ -3000,7 +3032,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Exports (types): `MailHtmlProps`
             - Exports (values): `MailHtml`
-        - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
+        - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (a live window, with Load older messages for a longer thread), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
           - Web:
             - Slots: `threadPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-thread"
@@ -3009,6 +3041,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/attachments.useMailAttachment`
               - `apps/mail/mail-html.MailHtml`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/avatar.Avatar`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
@@ -3025,8 +3058,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -3034,17 +3065,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/relative-time.RelativeTime`
             - Exports (values): `threadPane`
           - Server:
-            - Contributes: `resource.declare` "mail-thread-messages"
+            - Contributes:
+              - `resource.declare` "mail-thread-messages"
+              - `resource.declare` "mail-thread-messages:rows"
+              - `resource.declare` "mail-thread-messages:groups"
             - Uses:
               - `apps/mail/mail-core._mailMessages`
-              - `infra/query-resource.queryResource`
-            - Exports (values): `threadMessagesServerResource`
-            - Resources: `mail-thread-messages` (keyed)
+              - `network/live.serveCollection`
+            - Resources:
+              - `mail-thread-messages` (keyed, window)
+              - `mail-thread-messages:groups` (push)
+              - `mail-thread-messages:rows` (keyed, point)
           - Core:
             - Uses:
               - `apps/mail/mail-core.MailMessageSchema`
-              - `infra/query-resource.queryResourceDescriptor`
-            - Exports (values): `threadMessagesResource`
+              - `network/live.liveCollection`
+              - `network/live/filter.liveText`
+            - Exports (values): `threadMessages`
           - Cross-plugin:
             - Imported by: `apps/mail/threads`
         - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
@@ -3153,14 +3190,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
               - `integrations/gmail.isGmailEnabled`
+              - `network/live.serveValue`
               - `primitives/log-channels.defineLogSink`
-            - Exports (values): `mailSyncStateServerResource`
             - Register:
               - `defineJob('mail.backfill')`
               - `defineJob('mail.delta')`
               - `defineJob('mail.sync-tick')`
               - `defineJob('mail.attachment-scan')`
-            - Resources: `mail-sync-state` (push)
+            - Resources: `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
             - Routes:
               - `POST /api/mail/sync`
               - `POST /api/mail/hydrate`
@@ -3197,6 +3234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/shell.Mail`
               - `infra/endpoints.useEndpointMutation`
               - `integrations/gmail.GmailAccessAction`
+              - `network/live.useLive`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
@@ -3205,7 +3243,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/live-state.useResource`
         - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
           - Web:
             - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
@@ -3213,6 +3250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/mail/reading-pane.threadPane`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Stack`
@@ -3280,31 +3318,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `PageTree.Fields` "origin" → `OriginField`
             - Uses:
               - `apps/pages/page-tree.PageTree`
-              - `primitives/live-state.useWindowResource`
+              - `network/live.useLive`
             - Exports (types): `AgentPageRow`
-            - Exports (values):
-              - `AgentPageRowSchema`
-              - `agentPagesResource`
+            - Exports (values): `AgentPageRowSchema`
           - Server:
             - Contributes:
               - `resource.declare` "pages-origin"
+              - `resource.declare` "pages-origin:rows"
+              - `resource.declare` "pages-origin:groups"
               - `page.editor.block.afterCreate`
             - Uses:
               - `database.db`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.windowQueryResource`
               - `infra/retention.defineRetention`
+              - `network/live.serveCollection`
               - `page/editor._blocks`
               - `page/editor.BlockLifecycle`
               - `page/editor.deleteBlocksSubtree`
               - `page/editor.liveBlocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `editor_ext_origin`)
-            - Exports (values):
-              - `agentPagesServerResource`
-              - `pageBlocksOrigin`
+            - Exports (values): `pageBlocksOrigin`
             - Register: `defineJob('retention.page_blocks_ext_origin')`
-            - Resources: `pages-origin` (keyed, window)
+            - Resources:
+              - `pages-origin` (keyed, window)
+              - `pages-origin:groups` (push)
+              - `pages-origin:rows` (keyed, point)
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
@@ -3356,6 +3395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree.PageDetail`
               - `history/dialog.VersionHistoryDialog`
               - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `page/editor.BLOCK_INSET`
               - `page/editor.PageIcon`
               - `page/read-only-view.ReadOnlyBlocks`
@@ -3365,7 +3405,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
           - Server:
             - Contributes:
@@ -3408,10 +3447,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
             - Uses:
               - `apps/pages/page-tree.PageDetail`
+              - `network/live.useLive`
               - `page/editor.blockContentScope`
               - `page/editor.blockRowIn`
               - `page/editor.Editor`
-              - `primitives/live-state.useResource`
               - `primitives/outline/rail.OutlineRail`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.
           - Web:
@@ -3439,6 +3478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `infra/trash.useUndoableTrash`
+              - `network/live.useLive`
               - `page/editor.blockContentScope`
               - `page/editor.BlockEditor`
               - `page/editor.BlockEditorHandle`
@@ -3569,26 +3609,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree.PageDetail`
               - `apps/pages/page-tree.PageTree`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useWindowResource`
             - Exports (types): `StarredPageRow`
-            - Exports (values):
-              - `StarredPageRowSchema`
-              - `starredPagesResource`
+            - Exports (values): `StarredPageRowSchema`
           - Server:
-            - Contributes: `resource.declare` "pages-starred"
+            - Contributes:
+              - `resource.declare` "pages-starred"
+              - `resource.declare` "pages-starred:rows"
+              - `resource.declare` "pages-starred:groups"
             - Uses:
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.windowQueryResource`
+              - `network/live.serveCollection`
               - `page/editor._blocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `editor_ext_starred`)
             - Exports (values):
               - `pageBlocksStarred`
               - `setPageStarred`
-              - `starredPagesServerResource`
-            - Resources: `pages-starred` (keyed, window)
+            - Resources:
+              - `pages-starred` (keyed, window)
+              - `pages-starred:groups` (push)
+              - `pages-starred:rows` (keyed, point)
             - Routes: `PUT /api/pages/:pageId/starred`
         - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
           - Web:
@@ -3596,6 +3639,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/pages/shell.Pages`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.LiveListResult`
+              - `network/live.useLive`
               - `primitives/css/inline.Inline`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/row.Row`
@@ -3607,8 +3652,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DialogContent`
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/cursor-pagination.InfiniteScrollFooter`
+              - `primitives/cursor-pagination.useInfiniteScroll`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
@@ -3686,6 +3732,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core/tabs.navigate`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
@@ -3726,7 +3773,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/optimistic-mutation.OptimisticSettled`
               - `primitives/optimistic-mutation.useOptimisticResource`
@@ -3914,7 +3960,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
               - `network/live.liveValue`
-              - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `MocksDeclaration`
               - `OptionDeclaration`
@@ -3964,7 +4009,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PROTOTYPE_VERSION_FILE_ROUTE`
               - `PROTOTYPE_VERSION_KINDS`
               - `PROTOTYPE_VIEWPORT_WORDS`
-              - `prototypeHistoryResource`
+              - `prototypeHistory`
               - `PrototypeHistorySchema`
               - `prototypeIdsIn`
               - `PrototypeMetaSchema`
@@ -3972,11 +4017,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypePicks`
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
-              - `prototypesResource`
+              - `prototypesList`
               - `PrototypeStatusChangeSchema`
-              - `prototypeStatusesResource`
+              - `prototypeStatuses`
               - `PrototypeStatusSchema`
-              - `prototypesVersionResource`
+              - `prototypesVersion`
               - `prototypeUrl`
               - `PrototypeVersionSchema`
               - `prototypeVersionUrl`
@@ -4016,6 +4061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
@@ -4029,7 +4075,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -4073,6 +4118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `apps/prototypes/canvas.useWindowSize`
               - `apps/prototypes/canvas.VersionStepper`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/pin.Pin`
@@ -4095,7 +4141,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
@@ -4126,30 +4171,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/files.listPrototypeMetas`
               - `apps/prototypes/files.onPrototypesChanged`
               - `infra/jobs.defineJob`
+              - `network/live.serveValue`
             - Register:
               - `defineJob('prototypes.render-thumbnail')`
               - `defineJob('prototypes.sweep-thumbnails')`
             - Resources: `prototypes.thumbnails` (push)
           - Web:
             - Uses:
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
             - Exports (values):
               - `PrototypeThumbnail`
               - `usePrototypeThumbnails`
           - Core:
-            - Uses: `primitives/live-state.resourceDescriptor`
+            - Uses: `network/live.liveValue`
             - Exports (types):
               - `ThumbnailFailureKind`
               - `ThumbnailState`
             - Exports (values):
               - `PROTOTYPE_THUMB_ROUTE`
               - `PROTOTYPE_THUMBS_BASE`
-              - `prototypeThumbnailsResource`
+              - `prototypeThumbnails`
               - `prototypeThumbnailUrl`
               - `ThumbnailFailureKindSchema`
               - `ThumbnailStateSchema`
@@ -4185,7 +4230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/settings/shell.Settings`
               - `config_v2/settings.ConfigNav`
               - `config_v2/settings.configNavPane`
-              - `primitives/live-state.useResource`
+              - `network/live.useLive`
               - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -4226,6 +4271,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.Sonata`
+                  - `apps/sonata/shell.SongSetting`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useSonata`
                   - `apps/sonata/track-mixer.useMutedTrackIds`
@@ -4368,6 +4414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.TEMPO_MATH_FLOOR`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -4395,8 +4442,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.matchResource`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Hint`
@@ -4423,6 +4468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
+              - `network/live.serveValue`
             - DB schema:
               - `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`
               - `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
@@ -4433,9 +4479,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `_songs`
               - `createSongRow`
               - `songAttachments`
-              - `songsLiveResource`
               - `updateSongMeta`
-            - Resources: `sonata-songs` (push)
+            - Resources: `sonata-songs` (push, unbounded: the whole song library — whole-table only until Resources item 7: the library DataView sorts and filters every song client-side, including side-table field-extension columns (plays, tracks, file-missing), and a bounded window needs joined side-table sort/filter columns, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
             - Routes:
               - `DELETE /api/sonata/songs/:id`
               - `PATCH /api/sonata/songs/:id`
@@ -4448,14 +4493,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/float/config.floatField`
               - `fields/text/config.textField`
               - `infra/endpoints.defineEndpoint`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `Song`
               - `UpdateSongBody`
             - Exports (values):
               - `deleteSong`
+              - `songs`
               - `SongSchema`
-              - `songsResource`
               - `updateSong`
           - Cross-plugin:
             - Imported by:
@@ -4534,6 +4579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
+              - `primitives/loading.Loading`
               - `primitives/virtual-rows.useVirtualRows`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -4616,6 +4662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
+              - `primitives/loading.Loading`
               - `primitives/log-channels.clientLog`
               - `primitives/slot-render.renderIsolated`
             - Exports (types):
@@ -4738,13 +4785,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/live-state.mapResource`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
+              - `network/live.useLive`
               - `primitives/relative-time.formatRelativeTime`
-            - Exports (values):
-              - `usePlaybackHistory`
-              - `usePlaybackHistoryMap`
+            - Exports (values): `usePlaybackHistoryMap`
           - Server:
             - Contributes: `resource.declare` "sonata-playback-history"
             - Uses:
@@ -4752,12 +4795,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
             - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
-            - Exports (values):
-              - `playbackHistoryLiveResource`
-              - `songPlayback`
-            - Resources: `sonata-playback-history` (push)
+            - Exports (values): `songPlayback`
+            - Resources: `sonata-playback-history` (push, unbounded: one row per played song (sonata_songs_ext_playback) — whole-table only until Resources item 7: the library's Plays / Last-played field extension sorts every song client-side, and a bounded read needs joined side-table sort/filter columns on the songs collection, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
             - Routes: `POST /api/sonata/songs/:id/play`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
@@ -4973,35 +5015,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
-            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the shell voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and syncs into the shell's score pipeline via a headless Sonata.Effect observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves the reactive rollup.
+            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the shell voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes:
-                  - `Sonata.Effect` "chord-mode-sync" → `ChordModeObserver`
+                  - `Sonata.SongSetting` "chord-mode-sync" → `ChordModeObserver`
                   - `Sonata.Section` "Chords"
                 - Uses:
+                  - `apps/sonata/shell.chordModeSetting`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useChordMode`
                   - `apps/sonata/shell.useHasDerivedChord`
-                  - `apps/sonata/shell.useSetChordMode`
+                  - `apps/sonata/shell.useMountedSongId`
                   - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSongSetting`
+                  - `apps/sonata/shell.useWriteSongSetting`
                   - `apps/sonata/track-mixer.setTracksActive`
                   - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLiveRow`
                   - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
                 - Exports (values): `useSaveChordMode`
               - Server:
-                - Contributes: `resource.declare` "sonata-chord-mode"
+                - Contributes: `resource.declare` "sonata-chord-mode:rows"
                 - Uses:
                   - `apps/sonata/library._songs`
-                  - `database.db`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveCollection`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_mode`)
-                - Exports (values):
-                  - `chordModeLiveResource`
-                  - `songChordMode`
-                - Resources: `sonata-chord-mode` (push)
+                - Exports (values): `songChordMode`
+                - Resources: `sonata-chord-mode:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/chord-mode`
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
@@ -5058,29 +5101,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useSonata`
-            - **`key-mode`** — Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and syncs it into the shell's score pipeline via a headless Sonata.Effect observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves the reactive rollup.
+            - **`key-mode`** — Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves it as a per-song lookup collection.
               - Web:
-                - Contributes: `Sonata.Effect` "key-mode-sync" → `KeyModeObserver`
+                - Contributes: `Sonata.SongSetting` "key-mode-sync" → `KeyModeObserver`
                 - Uses:
+                  - `apps/sonata/shell.keyAutoDetectSetting`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSetKeyAutoDetect`
-                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useMountedSongId`
+                  - `apps/sonata/shell.useWriteSongSetting`
                   - `infra/endpoints.fetchEndpoint`
-                  - `primitives/live-state.useResource`
+                  - `network/live.useLiveRow`
                 - Exports (values): `saveKeyAutoDetect`
               - Server:
-                - Contributes: `resource.declare` "sonata-key-auto-detect"
+                - Contributes: `resource.declare` "sonata-key-auto-detect:rows"
                 - Uses:
                   - `apps/sonata/library._songs`
-                  - `database.db`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveCollection`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_key_auto_detect`)
-                - Exports (values):
-                  - `keyAutoDetectLiveResource`
-                  - `songKeyAutoDetect`
-                - Resources: `sonata-key-auto-detect` (push)
+                - Exports (values): `songKeyAutoDetect`
+                - Resources: `sonata-key-auto-detect:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/key-readout`
@@ -5092,31 +5134,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/primitives/keyboard.Keyboard`
                   - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
+                  - `apps/sonata/shell.keyAutoDetectSetting`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorSelector`
-                  - `apps/sonata/shell.useKeyAutoDetect`
-                  - `apps/sonata/shell.useSetKeyAutoDetect`
                   - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSongSetting`
+                  - `apps/sonata/shell.useWriteSongSetting`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
-            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
+                  - `primitives/loading.Loading`
+            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
               - Web:
                 - Contributes:
-                  - `Sonata.Effect` "rhythm-sync" → `RhythmObserver`
+                  - `Sonata.SongSetting` "rhythm-sync" → `RhythmObserver`
                   - `Sonata.Section` "Rhythm" → `RhythmControls`
                 - Uses:
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircle`
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
+                  - `apps/sonata/shell.grooveSetting`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useHasVoicedChords`
-                  - `apps/sonata/shell.useRhythmGroove`
-                  - `apps/sonata/shell.useSetRhythmGroove`
+                  - `apps/sonata/shell.useMountedSongId`
                   - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/shell.useSongSetting`
+                  - `apps/sonata/shell.useWriteSongSetting`
                   - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLiveRow`
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
@@ -5128,22 +5175,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.SelectTrigger`
                   - `primitives/css/ui-kit.SelectValue`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
                 - Exports (types): `RhythmGroove`
                 - Exports (values): `useSaveRhythm`
               - Server:
-                - Contributes: `resource.declare` "sonata-rhythm"
+                - Contributes: `resource.declare` "sonata-rhythm:rows"
                 - Uses:
                   - `apps/sonata/library._songs`
-                  - `database.db`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveCollection`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_rhythm`)
-                - Exports (values):
-                  - `rhythmLiveResource`
-                  - `songRhythm`
-                - Resources: `sonata-rhythm` (push)
+                - Exports (values): `songRhythm`
+                - Resources: `sonata-rhythm:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
             - **`voicing-controls`** — Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.
               - Web:
@@ -5240,7 +5285,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
-              - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
+              - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`
+              - `Sonata.SongSetting` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.track-mixer`, `apps.sonata.transpose`
               - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
               - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
@@ -5271,35 +5317,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RhythmGroove`
               - `SonataContextValue`
               - `SonataSection`
+              - `SongSetting`
+              - `SongSettingKey`
               - `TransportClock`
             - Exports (values):
-              - `ChordModeStoreProvider`
+              - `chordModeSetting`
               - `cursorApiFor`
               - `CursorStoreProvider`
-              - `KeyModeStoreProvider`
+              - `defineSongSetting`
+              - `grooveSetting`
+              - `keyAutoDetectSetting`
               - `LaneInsetsProvider`
-              - `RhythmStoreProvider`
               - `Sonata`
               - `SonataProvider`
               - `SonataSectionItem`
               - `TEMPO_MATH_FLOOR`
-              - `TransposeStoreProvider`
-              - `useChordMode`
+              - `transposeSetting`
               - `useCursorApi`
               - `useCursorBeat`
               - `useCursorSelector`
               - `useHasChords`
               - `useHasDerivedChord`
               - `useHasVoicedChords`
-              - `useKeyAutoDetect`
               - `useLaneInsets`
-              - `useRhythmGroove`
-              - `useSetChordMode`
-              - `useSetKeyAutoDetect`
-              - `useSetRhythmGroove`
-              - `useSetTransposeSemitones`
+              - `useMountedSongId`
               - `useSonata`
-              - `useTransposeSemitones`
+              - `useSongSetting`
+              - `useWriteSongSetting`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
@@ -5358,6 +5402,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/scroll-reveal.revealElement`
+              - `primitives/loading.Loading`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
@@ -5403,17 +5448,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/attachments.getAttachmentFile`
                   - `infra/attachments.uploadAttachment`
                   - `infra/endpoints.fetchEndpoint`
+                  - `network/live.useLive`
                   - `primitives/css/line.Line`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-                  - `primitives/live-state.mapResource`
-                  - `primitives/live-state.ResourceResult`
-                  - `primitives/live-state.useResource`
                 - Exports (values):
                   - `MIDI_SOURCE_ID`
-                  - `useSongMidi`
                   - `useSongMidiMap`
               - Server:
                 - Contributes: `resource.declare` "sonata-song-midi"
@@ -5427,6 +5469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/attachments.getAttachment`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveValue`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
                 - Exports (types): `ImportMidiSongInput`
@@ -5436,8 +5479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `listFolderImportedSongs`
                   - `setSourceMissing`
                   - `songMidi`
-                  - `songMidiLiveResource`
-                - Resources: `sonata-song-midi` (push)
+                - Resources: `sonata-song-midi` (push, unbounded: one row per MIDI song (sonata_songs_ext_midi) — whole-table only until Resources item 7: the library's Tracks / File-missing field extensions sort and filter every song client-side, and a bounded read needs joined side-table sort/filter columns on the songs collection, the host rows in data-view's FieldExtensionProps, and live-window paging in DataView)
                 - Routes:
                   - `POST /api/sonata/songs/midi`
                   - `GET /api/sonata/songs/:id/midi`
@@ -5590,14 +5632,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/chord/vocabulary`
               - `apps/sonata/voicing`
-        - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
+        - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the shell as a per-song setting (Sonata.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
-            - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
+            - Contributes:
+              - `Sonata.SongSetting` "track-view-sync" → `TrackViewObserver`
+              - `Sonata.Section` "Tracks" → `TrackMixerPanel`
             - Uses:
               - `apps/sonata/audio/instruments.SonataAudio`
+              - `apps/sonata/shell.defineSongSetting`
               - `apps/sonata/shell.Sonata`
+              - `apps/sonata/shell.SongSetting`
+              - `apps/sonata/shell.useMountedSongId`
               - `apps/sonata/shell.useSonata`
+              - `apps/sonata/shell.useSongSetting`
+              - `apps/sonata/shell.useWriteSongSetting`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/color-picker.SwatchGrid`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -5613,7 +5663,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
-              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
               - `primitives/optimistic-mutation.enqueueResourceWrite`
               - `primitives/overlay/floating-action.FloatingAction`
               - `primitives/overlay/floating-action.FloatingActionFadeIn`
@@ -5638,11 +5688,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
-            - Exports (values):
-              - `_trackView`
-              - `trackViewLiveResource`
-            - Resources: `sonata-track-view` (push)
+            - Exports (values): `_trackView`
+            - Resources: `sonata-track-view` (push, unbounded: one song's per-track view overrides — at most one row per track of that song)
             - Routes:
               - `POST /api/sonata/songs/:songId/track-view`
               - `DELETE /api/sonata/songs/:songId/track-view`
@@ -5678,37 +5727,39 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
-        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, syncs it into the shell's score pipeline via a headless Sonata.Effect observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves the reactive rollup.
+        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
-              - `Sonata.Effect` "transpose-sync" → `TransposeObserver`
+              - `Sonata.SongSetting` "transpose-sync" → `TransposeObserver`
               - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
             - Uses:
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/toolbar-control.ToolbarControl`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSetTransposeSemitones`
+              - `apps/sonata/shell.transposeSetting`
+              - `apps/sonata/shell.useMountedSongId`
               - `apps/sonata/shell.useSonata`
-              - `apps/sonata/shell.useTransposeSemitones`
+              - `apps/sonata/shell.useSongSetting`
+              - `apps/sonata/shell.useWriteSongSetting`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLiveRow`
+              - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
             - Exports (values): `saveTranspose`
           - Server:
-            - Contributes: `resource.declare` "sonata-transpose"
+            - Contributes: `resource.declare` "sonata-transpose:rows"
             - Uses:
               - `apps/sonata/library._songs`
-              - `database.db`
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
+              - `network/live.serveCollection`
             - DB schema: `plugins/apps/plugins/sonata/plugins/transpose/server/internal/tables.ts`
             - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_transpose`)
-            - Exports (values):
-              - `songTranspose`
-              - `transposeLiveResource`
-            - Resources: `sonata-transpose` (push)
+            - Exports (values): `songTranspose`
+            - Resources: `sonata-transpose:rows` (keyed, point)
             - Routes: `POST /api/sonata/songs/:id/transpose`
         - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet).
           - Web:
@@ -5962,23 +6013,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpointMutation`
+                      - `network/live.useLive`
+                      - `network/live.useLiveRow`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/link-chip.LinkChip`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
-                      - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                 - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
                   - Web:
                     - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
+                      - `network/live.useLiveRow`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/status-dot.StatusDot`
                       - `primitives/css/text.Text`
-                      - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                       - `primitives/relative-time.RelativeTime`
                 - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
@@ -5987,6 +6039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpoint`
+                      - `network/live.useLiveRow`
                       - `primitives/copy-to-clipboard.CopyButton`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -5996,7 +6049,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.textVariantClass`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
-                      - `primitives/live-state.useResource`
                       - `primitives/log-channels.LiveLogChannel`
                       - `shell/notifications.toast`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
@@ -7341,6 +7393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth.Auth`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.Fill`
               - `primitives/css/spacing.Stack`
@@ -7391,11 +7444,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth.useAccountStatus`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -7798,7 +7851,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/icon-button.IconButton`
       - `primitives/live-state.useNotificationsChannelStatuses`
-      - `primitives/live-state.useResource`
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
       - `primitives/log-channels.LiveLogChannel`
@@ -7823,6 +7875,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "config"
       - `taskCategory` "build"
       - `resource.declare` "build.history"
+      - `resource.declare` "build.history:rows"
+      - `resource.declare` "build.history:groups"
       - `trigger` "build.run"
     - Uses:
       - `build/deployment.deploymentServed`
@@ -7841,8 +7895,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.checkoutRef`
       - `infra/paths.REPO_ROOT`
-      - `infra/query-resource.queryResource`
       - `infra/worktree.readCompositionMarker`
+      - `network/live.serveCollection`
       - `primitives/log-channels.Log`
       - `shell/notifications.recordNotification`
       - `tasks/task-category.TaskCategory`
@@ -7851,7 +7905,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `defineJob('build.run.debounced')`
       - `defineJob('build.composition-tick')`
       - `defineSupervisedJob('build.run.supervised')`
-    - Resources: `build.history` (keyed)
+    - Resources:
+      - `build.history` (keyed, window)
+      - `build.history:groups` (push)
+      - `build.history:rows` (keyed, point)
     - Routes:
       - `POST /api/build`
       - `POST /api/build/serve`
@@ -7859,14 +7916,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `infra/namespace.MAIN_COMPOSITION_ID`
-      - `infra/query-resource.queryResourceDescriptor`
+      - `network/live.liveCollection`
       - `primitives/pane.defineRoute`
     - Exports (types): `BuildRun`
     - Exports (values):
       - `BUILD_CATEGORY_ID`
       - `BUILD_LOG_CHANNEL`
       - `buildDetailRoute`
-      - `buildHistoryResource`
+      - `buildHistory`
       - `buildRoute`
       - `BuildRunSchema`
       - `isMainCompositionBuild`
@@ -7885,8 +7942,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types): `BuildRun`
     - Exports (values):
       - `buildConfig`
-      - `buildHistoryResource`
-      - `BuildRunSchema`
       - `isMainCompositionBuild`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
@@ -7922,11 +7977,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/css/ui-kit.Button`
           - `primitives/launch.LaunchAgentPopover`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.useResource`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
@@ -7934,13 +7988,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build.BuildDetailSlots`
           - `build/build-status.BuildStatusBadge`
           - `infra/endpoints.useEndpoint`
+          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
@@ -8179,6 +8233,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
+          - `network/live.LiveListResult`
+          - `network/live.useLive`
           - `plugin-meta/composition.useManifestActions`
           - `plugin-meta/composition.useManifestItems`
           - `primitives/css/badge.Badge`
@@ -8190,8 +8246,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.useResource`
           - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
@@ -8408,6 +8462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
       - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
       - `infra/request-origin/agent-write-ledger.FileSnapshot`
+      - `network/live.serveValue`
     - Exports (types):
       - `ConfigWriteOpts`
       - `FieldStorageProvider`
@@ -8448,6 +8503,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/list/config.ListFieldDef`
       - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
+      - `network/live.liveValue`
       - `primitives/live-state.resourceDescriptor`
     - Exports (types):
       - `ConfigDescriptor`
@@ -8481,15 +8537,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `appScopeId`
       - `codeConfigProxy`
       - `computeHash`
+      - `configConflictLocations`
       - `configFileOwner`
+      - `configModifiedCounts`
       - `configSnapshot`
       - `configV2ConflictEntrySchema`
       - `configV2ConflictLocationsSchema`
-      - `configV2ConflictMapResource`
       - `configV2ConflictMapSchema`
       - `configV2ConflictResource`
       - `configV2ConflictsSchema`
-      - `configV2ModifiedCountsResource`
       - `configV2ModifiedCountsSchema`
       - `configV2Resource`
       - `configV2ScopesMapSchema`
@@ -8734,6 +8790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/fields.FieldRenderer`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -8829,6 +8886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
+      - `network/live.useLive`
       - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useCombinedResources`
       - `primitives/live-state.useResource`
@@ -9114,6 +9172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider.ModelSelect`
           - `fields/avatar/table.avatarFieldDef`
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
           - `primitives/app-shell.opensPane`
           - `primitives/avatar.Avatar`
           - `primitives/avatar.AVATAR_COLOR_KEYS`
@@ -9161,7 +9220,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `agentLaunchesResource`
           - `Agents`
           - `agentSidePane`
-          - `agentsResource`
           - `agentsRootPane`
           - `defineSystemAgent`
           - `patchAgent`
@@ -9186,6 +9244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/query-resource.compileEdges`
           - `infra/query-resource.rel`
+          - `network/live.serveValue`
           - `primitives/icon-picker.resolveIconSvgNodesJson`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
@@ -9216,11 +9275,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AgentLaunchWithStatusSchema`
           - `agents`
           - `AgentSchema`
-          - `agentsResource`
           - `nextAgentRankUnder`
         - Resources:
           - `agent-launches` (keyed)
-          - `agents` (push)
+          - `agents` (push, unbounded: the user's hand-written agent roster (agents_v) — the Agents sidebar renders the whole tree; grows only by hand)
         - Routes:
           - `GET /api/agents`
           - `POST /api/agents`
@@ -9352,11 +9410,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.ConversationItemConv`
           - `conversations/conversation-ui/item.Item`
           - `fields/dynamic-enum/config.DynamicEnum`
+          - `network/live.useLive`
           - `primitives/avatar.Avatar`
           - `primitives/css/status-dot.statusDotPaintClass`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResources`
         - Exports (types):
           - `Category`
           - `CategoryItem`
@@ -9369,7 +9427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes:
           - `ConfigV2.Register` "config"
-          - `resource.declare` "conversation-categories"
+          - `resource.declare` "conversation-categories:rows"
           - `trigger` "conversation-category.classify"
         - Uses:
           - `config_v2.ConfigV2`
@@ -9385,21 +9443,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Exports (types): `CategoryDescriptor`
         - Exports (values):
           - `classifyConversationJob`
-          - `conversationCategoriesResource`
           - `conversationCategoryConfig`
           - `getAvatarCategoryId`
           - `getCategories`
           - `getItemMap`
           - `getItemOrder`
         - Register: `defineJob('conversation-category.classify')`
-        - Resources: `conversation-categories` (keyed, point)
+        - Resources: `conversation-categories:rows` (keyed, point)
         - Routes:
           - `POST /api/conversation-category/:conversationId/classify`
           - `POST /api/conversation-category/:conversationId`
@@ -9409,7 +9466,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Shared:
         - Exports (types):
           - `ClassifyBody`
-          - `ConversationCategoriesPayload`
           - `ConversationCategory`
           - `SetCategoryItemBody`
         - Exports (values):
@@ -9417,8 +9473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ClassifyBodySchema`
           - `classifyConversation`
           - `clearConversationCategory`
-          - `ConversationCategoriesPayloadSchema`
-          - `conversationCategoriesResource`
+          - `conversationCategories`
           - `conversationCategoryConfig`
           - `ConversationCategorySchema`
           - `SetCategoryItemBodySchema`
@@ -9436,18 +9491,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/preprompts.PrepromptGlyph`
           - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.usePreprompt`
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResource`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `useConversationPreprompt`
       - Server:
         - Contributes:
-          - `resource.declare` "conversation-preprompts"
+          - `resource.declare` "conversation-preprompts:rows"
           - `trigger` "conversation-preprompt.record"
         - Uses:
           - `conversations.conversationCreated`
@@ -9455,7 +9510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `tasks/task-preprompt.getTaskPreprompt`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
@@ -9463,18 +9518,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
         - Exports (values):
           - `conversationPreprompt`
-          - `conversationPrepromptsResource`
           - `recordConversationPreprompt`
           - `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
-        - Resources: `conversation-preprompts` (keyed, point)
+        - Resources: `conversation-preprompts:rows` (keyed, point)
       - Shared:
         - Exports (types):
           - `ConversationPreprompt`
           - `PrepromptIcon`
         - Exports (values):
+          - `conversationPrepromptRows`
           - `ConversationPrepromptSchema`
-          - `conversationPrepromptsResource`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes:
@@ -9485,13 +9539,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/header.Conversation`
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/css/inline.Inline`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResource`
           - `ui/segmented-progress-bar.SegmentedProgressBar`
       - Server:
         - Contributes:
-          - `resource.declare` "conversation-progress"
+          - `resource.declare` "conversation-progress:rows"
           - `trigger` "conversation-progress.classify"
           - `trigger` "conversation-progress.mark-pushed"
         - Uses:
@@ -9501,7 +9555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/paths.GIT`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
           - `tasks/tasks-core.pushLanded`
@@ -9510,12 +9564,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `classifyProgressJob`
           - `conversationProgress`
-          - `conversationProgressResource`
           - `markProgressPushedJob`
         - Register:
           - `defineJob('conversation-progress.classify')`
           - `defineJob('conversation-progress.mark-pushed')`
-        - Resources: `conversation-progress` (keyed, point)
+        - Resources: `conversation-progress:rows` (keyed, point)
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`chip`** — A conversation as a clickable chip that opens its run: a ghost ToggleChip around an inline ConversationItem, active while that run is the open column.
@@ -9748,22 +9801,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.Conversation`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
-              - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
           - Server:
             - Contributes: `resource.declare` "allow-files"
             - Uses:
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
+              - `network/live.serveValue`
               - `tasks/tasks-core.getConversation`
             - Resources: `allow-files` (push)
           - Shared:
             - Exports (types): `AllowFiles`
-            - Exports (values):
-              - `allowFilesResource`
-              - `AllowFilesSchema`
+            - Exports (values): `allowFiles`
         - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
           - Web:
             - Slots: `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.page`, `conversations.conversation-view.artifacts.prototype`, `conversations.conversation-view.artifacts.research`, `conversations.conversation-view.artifacts.screenshot`, `conversations.conversation-view.artifacts.skill`
@@ -9771,6 +9823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
+              - `network/live.useLive`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
@@ -9780,7 +9833,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/live-state.useResource`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
               - `primitives/slot-render.defineRenderSlot`
@@ -9834,9 +9886,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/prototypes/canvas.prototypeDetailPane`
                   - `conversations/conversation-view/artifacts.ArtifactRow`
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
+                  - `network/live.useLive`
                   - `primitives/css/spacing.Stack`
                   - `primitives/live-state.matchResource`
-                  - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
             - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation.
@@ -10048,7 +10100,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Separator`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -10059,6 +10110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/git/git-watcher.refHeadServed`
               - `infra/host/host-read-pool.withHeavyReadSlot`
+              - `network/live.serveValue`
               - `primitives/commit-list.LOG_FORMAT`
               - `primitives/commit-list.parseGitLog`
               - `primitives/commit-list.runGit`
@@ -10272,6 +10324,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.PendingTurnCard`
               - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
+              - `network/live.useLive`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
@@ -10286,7 +10339,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/auto-scroll.useStickyScroll`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/live-state.ResourceView`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/overlay/popover.InlinePopover`
@@ -10325,17 +10377,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/transcript-watcher.transcriptChainSignature`
               - `conversations/transcript-watcher.watchTranscript`
               - `infra/git/git-read-cache.createSignedMemo`
+              - `network/live.serveValue`
             - Resources: `jsonl-events` (push)
           - Core:
             - Uses:
-              - `conversations/transcript-watcher.JsonlEvent`
               - `conversations/transcript-watcher.JsonlEventSchema`
-              - `primitives/live-state.resourceDescriptor`
-            - Exports (types): `JsonlEventsResponse`
+              - `network/live.liveValue`
             - Exports (values):
               - `eventKey`
-              - `JsonlEventsPayloadSchema`
-              - `jsonlEventsResource`
+              - `jsonlEvents`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view`
@@ -10752,8 +10802,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/action-bar.Conversation`
+                  - `network/live.useLive`
                   - `primitives/css/text.Text`
-                  - `primitives/live-state.useResource`
             - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
               - Web:
                 - Uses:
@@ -10888,6 +10938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/transcript-watcher.transcriptChainSignature`
                   - `conversations/transcript-watcher.watchPaths`
                   - `infra/git/git-read-cache.createSignedMemo`
+                  - `network/live.serveValue`
                 - Resources:
                   - `subagent-activity` (push)
                   - `subagent-transcript` (push)
@@ -10897,6 +10948,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.TranscriptView`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
@@ -10908,7 +10960,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
                   - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.ResourceView`
-                  - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/markdown.Markdown`
                   - `primitives/relative-time.ElapsedTime`
@@ -10932,7 +10983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
                   - `conversations/transcript-watcher.JsonlEvent`
                   - `conversations/transcript-watcher.JsonlEventSchema`
-                  - `primitives/live-state.resourceDescriptor`
+                  - `network/live.liveValue`
                 - Exports (types):
                   - `DescribedSubagent`
                   - `LastStep`
@@ -10958,14 +11009,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `formatLastStep`
                   - `lastStepOfLines`
                   - `LastStepSchema`
+                  - `subagentActivity`
                   - `SubagentActivityPayloadSchema`
-                  - `subagentActivityResource`
                   - `SubagentActivityRowSchema`
                   - `SubagentRefSchema`
                   - `subagentReport`
                   - `SubagentRequestShapeSchema`
                   - `subagentRunState`
-                  - `subagentTranscriptResource`
+                  - `subagentTranscript`
                   - `SubagentTranscriptSchema`
                   - `toolResultIsOutcome`
                   - `turnEndedOfLines`
@@ -11133,6 +11184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `infra/endpoints.fetchEndpoint`
                       - `infra/endpoints.useEndpointMutation`
+                      - `network/live.useLive`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -11149,7 +11201,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/ui-kit.DropdownMenuItem`
                       - `primitives/css/ui-kit.DropdownMenuTrigger`
                       - `primitives/css/ui-kit.Input`
-                      - `primitives/live-state.useResource`
                       - `primitives/persistent-draft.useDraft`
                       - `primitives/persistent-draft.writeDraft`
                       - `shell/notifications.toast`
@@ -11332,6 +11383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/model-provider.familyClass`
+                      - `network/live.useLive`
                       - `primitives/collapsible.useCollapsible`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/badge.formatStatusLabel`
@@ -11348,7 +11400,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/yield.yieldClass`
-                      - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
                       - `primitives/pane.defineRoute`
@@ -11525,35 +11576,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-view.Conversation`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLiveRow`
               - `primitives/css/pin.Pin`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.usePointResource`
           - Server:
-            - Contributes: `resource.declare` "conversation-notes"
+            - Contributes: `resource.declare` "conversation-notes:rows"
             - Uses:
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.windowQueryResource`
+              - `network/live.serveCollection`
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
-            - Exports (values):
-              - `conversationNotes`
-              - `conversationNotesResource`
-            - Resources: `conversation-notes` (keyed, point)
+            - Exports (values): `conversationNotes`
+            - Resources: `conversation-notes:rows` (keyed, point)
             - Routes:
               - `PUT /api/conversation-notes/:conversationId`
               - `DELETE /api/conversation-notes/:conversationId`
           - Shared:
             - Exports (types): `ConversationNote`
             - Exports (values):
+              - `conversationNoteRows`
               - `ConversationNoteSchema`
-              - `conversationNotesResource`
               - `deleteNote`
               - `upsertNote`
-        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to the worktree-ops live value. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
           - Web:
             - Contributes:
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
@@ -11562,6 +11611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversation`
               - `conversations/conversation-ui/item.Item`
               - `conversations/conversation-view.Conversation`
+              - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
@@ -11583,16 +11633,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreesDir`
               - `infra/worktree.resolveActiveWorktreeOps`
               - `infra/worktree.WorktreeOp`
-            - Exports (values): `worktreeOpsResource`
+              - `network/live.serveValue`
             - Resources: `worktree-ops` (push)
           - Shared:
             - Exports (types):
               - `WorktreeOp`
               - `WorktreeOpsPayload`
             - Exports (values):
+              - `worktreeOps`
               - `WorktreeOpSchema`
               - `WorktreeOpsPayloadSchema`
-              - `worktreeOpsResource`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000`, on the page its task was filed from when one was attached (else `/`).
           - Web:
             - Contributes: `Conversation.ActionBar` → `OpenAppButton`
@@ -11897,6 +11947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2.ConfigV2`
               - `conversations/conversation-view.Conversation`
+              - `network/live.useLiveRow`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/fill.Fill`
@@ -11904,11 +11955,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
-              - `primitives/live-state.usePointResource`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "config"
-              - `resource.declare` "turn-summaries"
+              - `resource.declare` "turn-summaries:rows"
               - `trigger` "turn-summary.generate"
             - Uses:
               - `config_v2.ConfigV2`
@@ -11921,7 +11971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
-              - `infra/query-resource.windowQueryResource`
+              - `network/live.serveCollection`
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core.getConversation`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
@@ -11929,14 +11979,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `generateTurnSummaryJob`
               - `turnSummaries`
-              - `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
-            - Resources: `turn-summaries` (keyed, point)
+            - Resources: `turn-summaries:rows` (keyed, point)
           - Shared:
             - Exports (types): `TurnSummary`
             - Exports (values):
-              - `turnSummariesResource`
               - `turnSummaryConfig`
+              - `turnSummaryRows`
               - `TurnSummarySchema`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Web:
@@ -12403,6 +12452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/spacing.selfClass`
           - `primitives/css/spacing.Stack`
@@ -12412,14 +12462,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `shell/notifications.toast`
       - Server:
-        - Contributes: `resource.declare` "conversation-summaries"
+        - Contributes:
+          - `resource.declare` "conversation-summaries"
+          - `resource.declare` "conversation-summaries:rows"
+          - `resource.declare` "conversation-summaries:groups"
         - Uses:
           - `conversations.createConversation`
           - `conversations.deleteConversation`
@@ -12431,14 +12483,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/mcp.Mcp`
+          - `network/live.serveCollection`
           - `tasks/tasks-core.getConversation`
           - `tasks/tasks-core.getTask`
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
-        - Exports (values):
-          - `_conversationSummaries`
-          - `conversationSummariesResource`
+        - Exports (values): `_conversationSummaries`
         - Register: `mcpTool('submit_conversation_summary')`
-        - Resources: `conversation-summaries` (keyed)
+        - Resources:
+          - `conversation-summaries` (keyed, window)
+          - `conversation-summaries:groups` (push)
+          - `conversation-summaries:rows` (keyed, point)
         - Routes: `POST /api/conversation-summary/:conversationId/generate`
       - Core:
         - Uses:
@@ -12449,12 +12503,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/int/config.intField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
-          - `primitives/live-state.keyedResourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `ConversationSummary`
           - `Phase`
         - Exports (values):
-          - `conversationSummariesResource`
+          - `conversationSummaries`
           - `conversationSummaryFields`
           - `ConversationSummarySchema`
           - `PHASE_VALUES`
@@ -12598,12 +12653,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/pages/content-search`
       - `apps/sonata/library`
       - `apps/sonata/playback-history`
-      - `apps/sonata/rich/chord-mode`
-      - `apps/sonata/rich/key-mode`
-      - `apps/sonata/rich/rhythm-controls`
       - `apps/sonata/sources/midi`
       - `apps/sonata/track-mixer`
-      - `apps/sonata/transpose`
       - `apps/studio/contributions/tables/columns`
       - `apps/studio/contributions/tables/foreign-keys`
       - `apps/studio/contributions/tables/indexes`
@@ -12655,7 +12706,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/links`
       - `page/markdown-apply`
       - `page/page-link`
-      - `page/prompt/link`
       - `plugin-meta/plugin-health`
       - `primitives/data-view/custom-columns`
       - `primitives/data-view/view-order`
@@ -13102,9 +13152,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Reports.KindView` → `AbandonCapSummary`
           - `HealthReport.Row` "Database"
         - Uses:
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/live-state.useResource`
           - `reports.Reports`
           - `shell/health-report.HealthReport`
       - Server:
@@ -13119,6 +13169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/connection.queryDeadlineSink`
           - `database/embedded.PG_LOG_FILE`
           - `database/pgbouncer.PGBOUNCER_LOG_FILE`
+          - `network/live.serveValue`
           - `reports.recordReport`
           - `reports.ReportKind`
           - `reports.ReportRow`
@@ -13130,7 +13181,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database/connection.DB_CALL_PHASES`
           - `database/connection.DB_POOL_NAMES`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveValue`
         - Exports (types):
           - `DbAbandonCapPayload`
           - `DbQueryDeadlinePayload`
@@ -13141,7 +13192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DB_QUERY_DEADLINE_KIND`
           - `DbAbandonCapPayloadSchema`
           - `DbQueryDeadlinePayloadSchema`
-          - `dbQueryDeadlinesResource`
+          - `dbQueryDeadlines`
           - `QUERY_DEADLINE_RING_CAPACITY`
           - `QueryDeadlineHitSchema`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
@@ -13474,20 +13525,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
           - `infra/claude-cli.ClaudeCliCallDetail`
+          - `network/live.LiveListResult`
+          - `network/live.useLive`
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
+          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/cursor-pagination.InfiniteScrollFooter`
+          - `primitives/cursor-pagination.useInfiniteScroll`
           - `primitives/filter-chips.FilterChip`
           - `primitives/filter-chips.FilterGroup`
           - `primitives/filter-chips.useChipFilter`
-          - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
@@ -14310,12 +14364,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.LiveListResult`
+          - `network/live.LivePaging`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
@@ -14325,11 +14383,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/cursor-pagination.InfiniteScrollFooter`
+          - `primitives/cursor-pagination.useInfiniteScroll`
           - `primitives/filter-chips.FilterChip`
           - `primitives/filter-chips.useChipFilter`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
@@ -14352,6 +14411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps-core/tabs.navigate`
           - `config_v2.ConfigV2`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
@@ -14363,7 +14423,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useNotificationsChannelStatuses`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `reports.Reports`
           - `shell/health-report.HealthReport`
@@ -14406,6 +14465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.RunningJobStat`
           - `infra/jobs.TOTAL_JOB_SLOTS`
           - `infra/mcp.Mcp`
+          - `network/live.serveValue`
           - `reports.recordReport`
           - `reports.ReportKind`
           - `tasks/tasks-core.getConversation`
@@ -14427,7 +14487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.HoldClassSchema`
           - `infra/jobs.pickupTargetMsFor`
           - `infra/jobs.TOTAL_JOB_SLOTS`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveValue`
         - Exports (types):
           - `QueueBacklogPayload`
           - `QueueClassPulse`
@@ -14466,7 +14526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queueHealthConfig`
           - `queueHealthSummaryEndpoint`
           - `QueueHealthSummarySchema`
-          - `queuePulseResource`
+          - `queuePulse`
           - `QueueRunningJobSchema`
           - `QueueSlotBlockedPayloadSchema`
           - `QueueSlotHogPayloadSchema`
@@ -14631,6 +14691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
         - Uses:
           - `config_v2.ConfigV2`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/clip.Clip`
           - `primitives/css/cluster.Cluster`
@@ -14642,7 +14703,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/relative-time.useNow`
           - `reports.Reports`
@@ -14683,6 +14743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress/latch.refreshDuress`
           - `infra/host/duress/latch.setDuress`
           - `infra/paths.isHostSingleton`
+          - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelEntries`
           - `primitives/log-channels.readChannelJson`
@@ -14701,7 +14762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/bool/config.boolField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveValue`
         - Exports (types):
           - `ClusterSample`
           - `ClusterSection`
@@ -14719,9 +14780,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SENTINEL_DOWN_KIND`
           - `sentinelConfig`
           - `SentinelDownPayloadSchema`
-          - `sentinelStatusResource`
+          - `sentinelStatus`
           - `SentinelStatusValueSchema`
-          - `sentinelVitalsResource`
+          - `sentinelVitals`
           - `SentinelVitalsSchema`
       - Cross-plugin:
         - Imported by: `debug/timeline`
@@ -14824,7 +14885,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports.Reports`
       - Server:
         - Contributes:
-          - `resource.declare` "slow-ops"
           - `ConfigV2.Register` "slow-op"
           - `report-kind` "slow-op"
           - `change-feed-exclusion` "slow_ops"
@@ -14860,10 +14920,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readSlowOpMarkers`
           - `recordSlowOp`
           - `recordSlowOpBatch`
-          - `slowOpsResource`
         - Register: `defineJob('retention.slow_ops')`
-        - Resources: `slow-ops` (push)
-        - Routes: `POST /api/slow-ops/client`
+        - Routes:
+          - `GET /api/slow-ops`
+          - `POST /api/slow-ops/client`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -14875,11 +14935,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
+          - `infra/endpoints.defineEndpoint`
           - `infra/host/contention.ContentionSnapshotSchema`
           - `infra/runtime-profiler.SPAN_MEASURES`
           - `infra/runtime-profiler.SpanMeasure`
           - `infra/runtime-profiler.WaitBreakdown`
-          - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `CallerBreakdown`
           - `CallerRef`
@@ -14893,6 +14953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `CallerBreakdownSchema`
           - `CallerRefSchema`
+          - `listSlowOps`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `OTHER_VARIANT`
@@ -14903,7 +14964,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SlowOpReportPayloadSchema`
           - `SlowOpSampleSchema`
           - `SlowOpSchema`
-          - `slowOpsResource`
           - `VARIANT_CAP`
           - `VariantBreakdownSchema`
       - Cross-plugin:
@@ -14948,15 +15008,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps-core/tabs.navigate`
               - `debug/trace/pane.SlowEvents`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpoint`
               - `primitives/css/link-chip.LinkChip`
+              - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
-              - `primitives/live-state.ResourceView`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
     - **`stall-monitor`** — Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
@@ -16387,12 +16448,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
+              - `network/live.useLive`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.Input`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
           - Server:
             - Contributes: `resource.declare` "config-v2.secret-meta"
@@ -16404,6 +16465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/secrets.getSecret`
               - `infra/secrets.getSecretMetadata`
               - `infra/secrets.setSecret`
+              - `network/live.serveValue`
             - Resources: `config-v2.secret-meta` (push)
           - Central:
             - Uses: `infra/secrets.getSecret`
@@ -16411,13 +16473,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `fields/secret.secretFieldType`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `ConfigV2SecretMeta`
               - `SecretFieldDef`
             - Exports (values):
-              - `configV2SecretMetaResource`
-              - `configV2SecretMetaSchema`
+              - `configSecretMeta`
               - `secretField`
           - Cross-plugin:
             - Imported by:
@@ -17100,6 +17161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `KeyedDiff`
           - `KeyedMembership`
           - `KeyedMembershipInput`
+          - `KeyedServerResourceOptions`
           - `RecomputeIntent`
           - `Resource`
           - `ResourceContract`
@@ -17139,6 +17201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DependsOnEntry`
           - `ExternalResource`
           - `HttpHandler`
+          - `KeyedServerResourceOptions`
           - `LiveStateSnapshotHooks`
           - `LoadedServerPlugin`
           - `LoaderAggregateView`
@@ -17168,6 +17231,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WsHandler`
         - Exports (values):
           - `applyDbChange`
+          - `assertPreloadedResourcesDeclared`
           - `boundedMembershipKeys`
           - `collectContributions`
           - `defineExternalResource`
@@ -17692,6 +17756,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/compare`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata`
               - `apps/sonata/library`
               - `apps/sonata/look`
               - `apps/sonata/piano-roll`
@@ -18310,6 +18375,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes:
           - `resource.declare` "claude-cli-calls"
+          - `resource.declare` "claude-cli-calls:rows"
+          - `resource.declare` "claude-cli-calls:groups"
           - `fork-data-exclusion` "claude_cli_calls"
         - Uses:
           - `database.db`
@@ -18321,15 +18388,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
+          - `network/live.serveCollection`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports (types): `RunClaudePrintInput`
         - Exports (values):
           - `_claudeCliCalls`
-          - `claudeCliCallsResource`
           - `ClaudeCliError`
           - `listCallsFor`
           - `runClaudePrint`
-        - Resources: `claude-cli-calls` (push)
+        - Resources:
+          - `claude-cli-calls` (keyed, window)
+          - `claude-cli-calls:groups` (push)
+          - `claude-cli-calls:rows` (keyed, point)
         - Routes: `GET /api/claude-cli/calls`
       - Web:
         - Uses:
@@ -18341,6 +18411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useClaudeCliCalls`
       - Core:
         - Uses:
+          - `conversations/model-provider.ConversationModelSchema`
           - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
           - `conversations/model-provider.resolveModel`
           - `conversations/model-provider.StoredModelSchema`
@@ -18354,14 +18425,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `ClaudeCliCall`
           - `ClaudeCliCallsResult`
         - Exports (values):
           - `claudeCliCallFields`
+          - `claudeCliCalls`
           - `ClaudeCliCallSchema`
-          - `claudeCliCallsResource`
           - `ClaudeCliCallsResultSchema`
           - `listClaudeCliCallsFor`
       - Cross-plugin:
@@ -18380,8 +18452,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `HealthReport.Row` "Claude Code" → `ClaudeCodeDetail`
             - Uses:
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useResource`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
               - `primitives/setup-steps.StepNote`
@@ -18395,6 +18467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/endpoints.implement`
               - `infra/paths.resolveClaudeBin`
+              - `network/live.serveValue`
             - Exports (values):
               - `assertClaudeCodeReady`
               - `checkClaudeCode`
@@ -18407,7 +18480,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `ClaudeCodeBlock`
               - `ClaudeCodeStatus`
@@ -18416,7 +18489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `claudeCodeBlockMessage`
               - `claudeCodeFixCommands`
               - `claudeCodeProblem`
-              - `claudeCodeStatusResource`
+              - `claudeCodeStatus`
               - `ClaudeCodeStatusSchema`
               - `recheckClaudeCode`
           - Cross-plugin:
@@ -18617,6 +18690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/reports`
           - `debug/slow-ops`
           - `debug/slow-ops/cluster`
+          - `debug/slow-ops/pane`
           - `debug/timeline`
           - `debug/trace/engine`
           - `debug/trace/pane`
@@ -18821,6 +18895,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes:
           - `resource.declare` "event-emissions"
+          - `resource.declare` "event-emissions:rows"
+          - `resource.declare` "event-emissions:groups"
           - `resource.declare` "event-triggers"
         - Uses:
           - `database.db`
@@ -18836,6 +18912,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.NonRetryableError`
           - `infra/jobs.UNSAFE_getRegisteredJob`
           - `infra/jobs.UNSAFE_installDurableHooks`
+          - `network/live.serveCollection`
+          - `network/live.serveValue`
         - DB schema:
           - `plugins/infra/plugins/events/server/internal/event.ts`
           - `plugins/infra/plugins/events/server/internal/tables.ts`
@@ -18852,9 +18930,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineTriggerEvent`
           - `deleteTrigger`
           - `deleteTriggersFor`
-          - `EMISSIONS_CAP`
-          - `eventEmissionsResource`
-          - `eventTriggersResource`
           - `trigger`
           - `Trigger`
           - `triggerTableRegistry`
@@ -18863,8 +18938,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('events.dispatch')`
           - `UNSAFE_installDurableHooks()`
         - Resources:
-          - `event-emissions` (invalidate)
-          - `event-triggers` (invalidate)
+          - `event-emissions` (keyed, window)
+          - `event-emissions:groups` (push)
+          - `event-emissions:rows` (keyed, point)
+          - `event-triggers` (push, unbounded: every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind)
         - Routes:
           - `GET /api/events/emissions`
           - `GET /api/events/triggers`
@@ -18880,7 +18957,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live.liveValue`
         - Exports (types):
           - `EmissionRow`
           - `EmissionsPayload`
@@ -18890,10 +18968,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `deleteTriggerEndpoint`
           - `EmissionRowSchema`
+          - `EMISSIONS_CAP`
           - `EmissionsPayloadSchema`
           - `eventEmissionFields`
-          - `eventEmissionsResource`
-          - `eventTriggersResource`
+          - `eventEmissions`
+          - `eventTriggers`
           - `listEmissions`
           - `listTriggers`
           - `patchTriggerBodySchema`
@@ -19340,6 +19419,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `resource.declare` "jobs-list"
           - `resource.declare` "dead-jobs"
+          - `resource.declare` "dead-jobs:rows"
+          - `resource.declare` "dead-jobs:groups"
           - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
           - `database.db`
@@ -19352,6 +19433,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/sql-column.parsedText`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `network/live.serveCollection`
+          - `network/live.serveValue`
           - `primitives/log-channels.Log`
         - DB schema:
           - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
@@ -19387,7 +19470,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ALL_JOB_TASKS`
           - `ceilingMsFor`
           - `DEAD_ERROR_PREVIEW_CHARS`
-          - `deadJobsResource`
           - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
           - `defineJob`
@@ -19407,7 +19489,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `JOB_SLOT_FLOOR_KIND`
           - `JobDeadlineExceededError`
           - `jobDeadlineSink`
-          - `jobsListResource`
           - `LEGACY_JOB_TASK`
           - `NonRetryableError`
           - `onQueueActivity`
@@ -19435,7 +19516,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('jobs.resume')`
           - `defineJob('jobs.dead-gc')`
         - Resources:
-          - `dead-jobs` (invalidate)
+          - `dead-jobs` (keyed, window)
+          - `dead-jobs:groups` (push)
+          - `dead-jobs:rows` (keyed, point)
           - `jobs-list` (invalidate)
         - Routes:
           - `GET /api/jobs`
@@ -19445,7 +19528,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live.liveValue`
         - Exports (types):
           - `DeadJobRow`
           - `DeadJobsPayload`
@@ -19459,15 +19543,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ALL_JOB_TASKS`
           - `cancelJob`
           - `DeadJobRowSchema`
+          - `deadJobs`
           - `DeadJobsPayloadSchema`
-          - `deadJobsResource`
           - `deadlineMsFor`
           - `HOLD_CLASSES`
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
           - `JobRowSchema`
-          - `jobsListResource`
+          - `jobsList`
           - `JobsPayloadSchema`
           - `JobStateSchema`
           - `LEGACY_JOB_TASK`
@@ -19985,14 +20069,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `compileEdges`
           - `compileQuery`
-          - `compileWindowQuery`
           - `queryResource`
           - `rel`
           - `windowQueryResource`
       - Core:
         - Uses:
           - `primitives/live-state.keyedResourceDescriptor`
-          - `primitives/live-state.PointParams`
           - `primitives/live-state.PointResourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourcePreload`
@@ -20003,33 +20085,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PointQueryResourceContract`
           - `QueryResourceContract`
           - `WindowQueryResourceContract`
-        - Exports (values):
-          - `pointQueryResourceDescriptor`
-          - `queryResourceDescriptor`
-          - `windowQueryResourceDescriptor`
+        - Exports (values): `queryResourceDescriptor`
       - Cross-plugin:
         - Imported by:
-          - `apps/browser/bookmarks`
-          - `apps/deploy/health`
-          - `apps/mail/reading-pane`
-          - `apps/pages/agent-origin`
-          - `apps/pages/starred`
-          - `build`
           - `conversations/agents`
-          - `conversations/conversation-category`
-          - `conversations/conversation-preprompt`
-          - `conversations/conversation-progress`
-          - `conversations/conversation-view/notes`
-          - `conversations/conversation-view/turn-summary`
           - `network/live`
-          - `page/prompt/link`
-          - `plugin-meta/plugin-health`
-          - `primitives/usage-rank`
-          - `tasks/auto-start`
           - `tasks/task-category`
-          - `tasks/task-effort`
-          - `tasks/task-preprompt`
           - `tasks/tasks-core`
+      - Test helpers:
+        - Server: `@plugins/infra/plugins/query-resource/server/testing`
+          - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Exports (types): `WriteOrigin`
@@ -20358,15 +20423,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `frameKey`
           - `normalizeTraces`
           - `withThreadActivity`
-    - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
+    - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source), and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Server:
-        - Contributes: `resource.declare` "trash-entries"
+        - Contributes:
+          - `resource.declare` "trash-entries"
+          - `resource.declare` "trash-entries:rows"
+          - `resource.declare` "trash-entries:groups"
         - Uses:
           - `database.db`
           - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
         - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
         - Exports (types):
           - `TrashExecutor`
@@ -20377,7 +20446,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getTrashSource`
           - `recordTrashEntry`
         - Register: `defineJob('retention.trash_entries')`
-        - Resources: `trash-entries` (push)
+        - Resources:
+          - `trash-entries` (keyed, window)
+          - `trash-entries:groups` (push)
+          - `trash-entries:rows` (keyed, point)
         - Routes:
           - `GET /api/trash/:sourceId`
           - `POST /api/trash/:sourceId/:entryId/restore`
@@ -20393,7 +20465,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
-          - `primitives/live-state.resourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `TrashEntry`
           - `TrashOutcome`
@@ -20401,7 +20474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listTrash`
           - `purgeTrash`
           - `restoreTrash`
-          - `trashEntriesResource`
+          - `trashEntries`
           - `TrashEntrySchema`
           - `TrashOutcomeSchema`
       - Cross-plugin:
@@ -20815,7 +20888,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResource`
           - `primitives/live-state.useResource`
         - Exports (types):
           - `LiveIdsQuery`
@@ -20857,20 +20929,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serveValue`
       - Core:
         - Uses:
-          - `infra/query-resource.PointQueryResourceContract`
-          - `infra/query-resource.pointQueryResourceDescriptor`
-          - `infra/query-resource.WindowQueryResourceContract`
-          - `infra/query-resource.windowQueryResourceDescriptor`
           - `network/live/filter.decodeFilter`
           - `network/live/filter.encodeFilter`
           - `network/live/filter.Filter`
           - `network/live/filter.Filterable`
           - `network/live/filter.FilterScalar`
           - `network/live/filter.LIST_MAX`
+          - `primitives/live-state.keyedResourceDescriptor`
+          - `primitives/live-state.PointParams`
           - `primitives/live-state.registerResourceDescriptor`
           - `primitives/live-state.resourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourcePreload`
+          - `primitives/live-state.WindowParams`
+          - `primitives/live-state.WindowSelector`
         - Exports (types):
           - `LiveCentralValueSpec`
           - `LiveCollection`
@@ -20912,23 +20984,118 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `liveValue`
       - Cross-plugin:
         - Imported by:
+          - `active-data`
+          - `active-data/prototype`
+          - `apps/browser/bookmarks`
+          - `apps/browser/history`
+          - `apps/browser/start-page`
+          - `apps/chord/curriculum`
+          - `apps/chord/progress`
+          - `apps/chord/song-index`
+          - `apps/chord/trainer`
+          - `apps/deploy/analytics/dashboard`
+          - `apps/deploy/composition`
+          - `apps/deploy/deployments`
+          - `apps/deploy/health`
+          - `apps/deploy/local-serve`
+          - `apps/deploy/remote-deploy`
+          - `apps/deploy/servers`
           - `apps/events/events-core`
           - `apps/events/sources/source-field`
+          - `apps/mail/mail-core`
+          - `apps/mail/reading-pane`
+          - `apps/mail/sync`
+          - `apps/mail/sync-status`
+          - `apps/mail/threads`
+          - `apps/pages/agent-origin`
+          - `apps/pages/history`
+          - `apps/pages/page-outline`
+          - `apps/pages/page-tree`
+          - `apps/pages/starred`
+          - `apps/pages/trash`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/files`
+          - `apps/prototypes/gallery`
+          - `apps/prototypes/present`
+          - `apps/prototypes/thumbnails`
+          - `apps/settings/config`
+          - `apps/sonata/library`
+          - `apps/sonata/playback-history`
+          - `apps/sonata/rich/chord-mode`
+          - `apps/sonata/rich/key-mode`
+          - `apps/sonata/rich/rhythm-controls`
+          - `apps/sonata/sources/midi`
+          - `apps/sonata/track-mixer`
+          - `apps/sonata/transpose`
+          - `apps/studio/compositions/release/release-artifact`
+          - `apps/studio/compositions/release/release-info`
+          - `apps/studio/compositions/release/release-logs`
           - `auth`
+          - `auth/apple-signing/setup-wizard`
+          - `auth/google/setup-wizard`
           - `build`
+          - `build/build-fix`
+          - `build/build-info`
           - `build/deployment`
+          - `build/serve-composition`
+          - `config_v2`
+          - `config_v2/settings`
+          - `conversations`
+          - `conversations/agents`
+          - `conversations/conversation-category`
+          - `conversations/conversation-preprompt`
+          - `conversations/conversation-progress`
+          - `conversations/conversation-view/allow-monitor`
+          - `conversations/conversation-view/artifacts`
+          - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/drop-and-exit`
+          - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/event-counter`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/notes`
+          - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
+          - `conversations/summary`
+          - `database/query-deadline`
+          - `debug/claude-cli-calls`
+          - `debug/queue`
+          - `debug/queue-health`
+          - `debug/sentinel`
+          - `fields/secret/config`
+          - `infra/claude-cli`
+          - `infra/claude-cli/availability`
+          - `infra/events`
           - `infra/git/git-watcher`
+          - `infra/jobs`
+          - `infra/trash`
+          - `page/annotations/agent-notes/authorship`
           - `page/annotations/todo/task-link`
           - `page/editor`
           - `page/editor-collab`
+          - `page/links`
+          - `page/prompt/link`
+          - `plugin-meta/plugin-health`
+          - `primitives/data-view/custom-columns`
+          - `primitives/data-view/view-order`
+          - `primitives/usage-rank`
+          - `release`
+          - `review`
+          - `review/code-review`
+          - `review/plugin-changes`
           - `shell/notifications`
           - `tasks/attempt-work`
+          - `tasks/auto-start`
+          - `tasks/task-description`
+          - `tasks/task-effort`
+          - `tasks/task-events`
+          - `tasks/task-preprompt`
+          - `tasks/tasks-core`
       - Central:
         - Exports (types): `CentralServedValue`
         - Exports (values): `serveValue`
@@ -20936,16 +21103,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
             - Imported by:
+              - `apps/browser/bookmarks`
               - `apps/deploy/deployments`
               - `apps/events/event-list`
               - `apps/events/events-core`
+              - `apps/mail/reading-pane`
               - `apps/mail/threads`
               - `conversations/all-conversations`
+              - `conversations/summary`
+              - `infra/claude-cli`
+              - `infra/trash`
               - `network/live`
               - `primitives/data-view/server-query`
               - `release`
               - `reports`
               - `shell/notifications`
+              - `tasks/tasks-core`
           - Server:
             - Exports (values):
               - `filterSql`
@@ -21224,7 +21397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
                   - `primitives/loading.Loading`
-            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover; a copied block keeps its authors.
+            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
               - Server:
                 - Contributes:
                   - `resource.declare` "agent-notes-authors"
@@ -21232,21 +21405,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `database.db`
                   - `infra/retention.markCascadeBounded`
+                  - `network/live.serveValue`
                   - `page/editor._blocks`
                   - `page/editor.BlockLifecycle`
                 - DB schema: `plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server/internal/tables.ts`
                 - Exports (values):
                   - `_pageBlocksAgentAuthors`
-                  - `agentNotesAuthorsServerResource`
                   - `recordAgentNotesAuthor`
-                - Resources: `agent-notes-authors` (keyed)
+                - Resources: `agent-notes-authors` (push, unbounded: one card's authors — the conversations that wrote into one block)
               - Web:
                 - Uses:
                   - `conversations/conversation-ui/row.ConversationRowById`
+                  - `network/live.useLive`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/live-state.ResourceResult`
-                  - `primitives/live-state.useResource`
                   - `primitives/relative-time.RelativeTime`
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
@@ -21261,8 +21433,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Shared:
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
+                  - `agentNotesAuthors`
                   - `AgentNotesAuthorSchema`
-                  - `agentNotesAuthorsResource`
         - **`human-notes`** — Human block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding the page author's own words addressed to agents rather than to the reader — and, being the author's, the one an agent may read but never write. Human block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -21930,6 +22102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/trash._trashEntries`
           - `infra/trash.defineTrashSource`
           - `infra/trash.recordTrashEntry`
+          - `network/live.serveValue`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
@@ -21958,7 +22131,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockLifecycle`
           - `blocksChanged`
           - `BlockSchema`
-          - `blocksLiveResource`
           - `blockTextProtectedSpans`
           - `blockTextServerExtensions`
           - `blockTextServerNodes`
@@ -21978,7 +22150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineTrashSource('pages')`
           - `defineTrashSource('page-blocks')`
         - Resources:
-          - `page-blocks` (push)
+          - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
           - `pages` (push)
         - Routes:
           - `GET /api/pages`
@@ -21996,6 +22168,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `infra/trash.TrashOutcomeSchema`
+          - `network/live.liveValue`
           - `primitives/collab-doc.readYDoc`
           - `primitives/collab-doc.yDocContent`
           - `primitives/collab-doc.yDocFromLexical`
@@ -22070,7 +22243,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockPatchSchema`
           - `BlockSchema`
           - `blockSelectionRoots`
-          - `blocksResource`
           - `canIndent`
           - `canOutdent`
           - `changedFields`
@@ -22116,6 +22288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageBlockAuthor`
           - `pageBlockHandle`
           - `pageBlockMarkdown`
+          - `pageBlocks`
           - `PageCoverSchema`
           - `pageData`
           - `PageDataSchema`
@@ -22607,6 +22780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/sql-projection.parsed`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
+          - `network/live.serveValue`
           - `page/editor._blocks`
           - `page/editor.BlockDeleteHook`
           - `page/editor.BlockLifecycle`
@@ -22619,27 +22793,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
         - Exports (types): `PageLinkExtractor`
         - Exports (values):
-          - `backlinksResource`
           - `PageLinks`
           - `pageLinksLiveResource`
           - `reindexPage`
         - Register: `defineJob('page.links.reindex')`
         - Resources:
-          - `page-backlinks` (push)
+          - `page-backlinks` (push, unbounded: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table)
           - `page-links` (push)
       - Web:
         - Uses:
+          - `network/live.useLive`
           - `page/editor.PageIcon`
           - `page/page-reference.usePageNavigation`
           - `primitives/css/center.Center`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
-          - `primitives/live-state.useResource`
         - Exports (types): `BacklinksProps`
         - Exports (values): `Backlinks`
       - Core:
         - Uses:
+          - `network/live.liveValue`
           - `page/editor.SvgNodeSchema`
           - `primitives/live-state.resourceDescriptor`
         - Exports (types):
@@ -22647,7 +22821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageLinkEdge`
         - Exports (values):
           - `BacklinkRowSchema`
-          - `backlinksResource`
+          - `pageBacklinks`
           - `PageLinkEdgeSchema`
           - `pageLinksResource`
       - Cross-plugin:
@@ -23030,17 +23204,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `promptBlock`
               - `promptDataSchema`
-        - **`link`** — Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the block-keyed and task-keyed live reads over it, the create-task endpoint, and the Pages task category.
+        - **`link`** — Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the live link collection over it (block-side window, task-side row lookup), the create-task endpoint, and the Pages task category.
           - Server:
             - Contributes:
               - `resource.declare` "prompt-block-tasks"
-              - `resource.declare` "prompt-task-origins"
+              - `resource.declare` "prompt-block-tasks:rows"
+              - `resource.declare` "prompt-block-tasks:groups"
               - `taskCategory` "pages"
             - Uses:
-              - `database.db`
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.queryResource`
+              - `network/live.serveCollection`
               - `tasks/task-category.setTaskCategory`
               - `tasks/task-category.TaskCategory`
               - `tasks/task-title.scheduleTaskTitleUpdate`
@@ -23050,25 +23224,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/page/plugins/prompt/plugins/link/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `tasks_ext_prompt_block`)
             - Exports (values):
-              - `blockPromptTasksServerResource`
               - `createTaskFromPromptBlock`
               - `getPromptTaskOrigin`
               - `PAGES_CATEGORY_ID`
               - `promptBlock`
-              - `promptTaskOriginsServerResource`
             - Resources:
-              - `prompt-block-tasks` (keyed)
-              - `prompt-task-origins` (keyed)
+              - `prompt-block-tasks` (keyed, window)
+              - `prompt-block-tasks:groups` (push)
+              - `prompt-block-tasks:rows` (keyed, point)
             - Routes: `POST /api/prompt-blocks/tasks`
           - Web:
             - Uses:
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/live-state.mapResource`
-              - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useResource`
-            - Exports (types):
-              - `PromptTaskLink`
-              - `PromptTaskOrigin`
+              - `network/live.LiveListResult`
+              - `network/live.LiveRowResult`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
+            - Exports (types): `PromptTaskLink`
             - Exports (values):
               - `createPromptTask`
               - `useBlockPromptTasks`
@@ -23082,13 +23254,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `CreatePromptBlockTaskBody`
               - `PromptTaskLink`
-              - `PromptTaskOrigin`
             - Exports (values):
-              - `blockPromptTasksResource`
               - `createPromptBlockTask`
+              - `promptBlockTasks`
               - `PromptTaskLinkSchema`
-              - `PromptTaskOriginSchema`
-              - `promptTaskOriginsResource`
     - **`quote`** — Quote block type: a void CONTAINER whose left bar spans blocks of any type nested inside it, so a quotation may be a passage — several paragraphs, a list, a heading — rather than one line. Quote block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
       - Web:
         - Contributes:
@@ -23896,15 +24065,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
           - `plugin-meta/plugin-view.PluginNode`
           - `plugin-meta/plugin-view.PluginViewSlots`
           - `plugin-meta/plugin-view.SectionCount`
           - `primitives/css/scroll.Scroll`
           - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/relative-time.RelativeTime`
       - Server:
-        - Contributes: `resource.declare` "plugin-health-reviews"
+        - Contributes:
+          - `resource.declare` "plugin-health-reviews"
+          - `resource.declare` "plugin-health-reviews:rows"
+          - `resource.declare` "plugin-health-reviews:groups"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
@@ -23913,19 +24085,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entity-extensions.defineExtension`
           - `infra/mcp.Mcp`
           - `infra/paths.GIT`
-          - `infra/query-resource.queryResource`
           - `infra/worktree.ensureMainWorktreeRoot`
+          - `network/live.serveCollection`
           - `tasks/launch-options.inheritLaunchOptions`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getConversation`
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
-        - Exports (values):
-          - `healthReviewExt`
-          - `pluginHealthReviewsResource`
+        - Exports (values): `healthReviewExt`
         - Register: `mcpTool('propose_task')`
-        - Resources: `plugin-health-reviews` (keyed)
+        - Resources:
+          - `plugin-health-reviews` (keyed, window)
+          - `plugin-health-reviews:groups` (push)
+          - `plugin-health-reviews:rows` (keyed, point)
         - Routes:
           - `GET /api/plugin-health/reviews`
           - `GET /api/plugin-health/staleness/:pluginId`
@@ -24309,6 +24482,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/sonata`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/pane`
           - `reorder/node-types/overflow`
@@ -25990,14 +26164,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/commits-graph`
               - `conversations/recover`
               - `debug/boot-profile`
+              - `debug/claude-cli-calls`
               - `debug/health-monitor`
               - `debug/heap-snapshot`
               - `debug/live-state-churn/emit`
               - `debug/profiling/build`
               - `debug/profiling/ops`
+              - `debug/queue`
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/slow-ops/cluster`
+              - `debug/slow-ops/pane`
               - `debug/timeline`
               - `debug/trace/boot`
               - `debug/trace/client-boot`
@@ -26456,6 +26633,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
+              - `apps/sonata/transpose`
               - `apps/studio/compositions`
               - `apps/studio/compositions/closure-tree`
               - `apps/studio/compositions/contributors`
@@ -27904,6 +28082,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/mail/search`
+          - `apps/pages/trash`
+          - `debug/claude-cli-calls`
+          - `debug/queue`
           - `primitives/data-view`
           - `shell/notifications`
       - Core:
@@ -28344,6 +28525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.usePanelStack`
               - `primitives/css/ui-kit.Input`
@@ -28357,10 +28539,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useResolveValueCodec`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/live-state.useResource`
             - Exports (types):
               - `CustomColumnDefsController`
               - `CustomColumnValueIndex`
+              - `CustomColumnValues`
             - Exports (values):
               - `CustomColumnsFields`
               - `useCustomColumnDefs`
@@ -28375,22 +28557,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/derived-updated-at.deriveUpdatedAt`
               - `fields/server-capabilities.resolveFieldValueTextCast`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
               - `primitives/data-view/server-query.AugmentedColumn`
               - `primitives/data-view/server-query.DataViewServer`
               - `primitives/data-view/server-query.QueryAugmentor`
               - `primitives/data-view/server-query.QueryAugmentorContext`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
-            - Exports (values):
-              - `_dataViewCustomValues`
-              - `customColumnValuesLiveResource`
-            - Resources: `data-view-custom-values` (push)
+            - Exports (values): `_dataViewCustomValues`
+            - Resources: `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
             - Routes:
               - `POST /api/data-view/custom-values`
               - `POST /api/data-view/custom-values/delete-column`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
             - Exports (types):
               - `CustomColumnDef`
               - `CustomColumnValueRow`
@@ -28399,7 +28580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `CustomColumnDefSchema`
               - `CustomColumnValueRowSchema`
-              - `customColumnValuesResource`
+              - `customColumnValues`
               - `deleteCustomColumnValues`
               - `DeleteCustomColumnValuesBodySchema`
               - `setCustomColumnValue`
@@ -28738,9 +28919,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `DataViewSlots.RowOrder` "view-order" → `RowOrderContribution`
             - Uses:
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/data-view.DataViewSlots`
               - `primitives/latest-ref.useEventCallback`
-              - `primitives/live-state.useResource`
             - Exports (types): `RowOrderState`
             - Exports (values):
               - `useRowOrder`
@@ -28751,18 +28932,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
               - `primitives/rank.rankText`
             - DB schema: `plugins/primitives/plugins/data-view/plugins/view-order/server/internal/tables.ts`
             - Exports (values):
               - `_dataViewRowOrder`
               - `applyRowOrder`
-              - `rowOrderLiveResource`
-            - Resources: `data-view-row-order` (push)
+            - Resources: `data-view-row-order` (push, unbounded: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
             - Routes: `POST /api/data-view/row-order`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
-              - `primitives/live-state.resourceDescriptor`
+              - `network/live.liveValue`
               - `primitives/rank.Rank`
               - `primitives/rank.RankSchema`
             - Exports (types):
@@ -28772,7 +28953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `applyMove`
               - `computeMoveWrites`
-              - `rowOrderResource`
+              - `rowOrder`
               - `RowOrderRowSchema`
               - `seedRanks`
               - `setRowOrder`
@@ -29712,14 +29893,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `hydrateEndpoint`
           - `hydrateQuery`
           - `hydrateResource`
-          - `keyedResourceDescriptor`
           - `liveStateSocketKind`
           - `mapResource`
           - `matchResource`
           - `NotificationsProvider`
           - `pendingMountSnapshot`
           - `queryKeyFor`
-          - `resourceDescriptor`
           - `resourceDescriptorByKey`
           - `ResourceStaleReadError`
           - `ResourceView`
@@ -29731,32 +29910,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useNotificationsChannelStatuses`
           - `useNotificationsClient`
           - `useNotificationsStatus`
-          - `usePointResource`
-          - `usePointResources`
           - `useResource`
           - `useResourceAcks`
-          - `useWindowResource`
       - Cross-plugin:
         - Imported by:
-          - `active-data`
           - `active-data/attempt`
           - `active-data/page-link`
           - `active-data/prototype`
           - `active-data/task`
           - `active-data/task-link`
           - `apps/browser/bookmarks`
-          - `apps/browser/history`
           - `apps/browser/start-page`
-          - `apps/chord/curriculum`
-          - `apps/chord/progress`
           - `apps/chord/song-index`
           - `apps/chord/trainer`
-          - `apps/deploy/analytics/dashboard`
-          - `apps/deploy/composition`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
-          - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/events/event-list`
@@ -29764,43 +29933,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-field`
           - `apps/mail/mail-core`
-          - `apps/mail/reading-pane`
-          - `apps/mail/sync-status`
           - `apps/mail/threads`
-          - `apps/pages/agent-origin`
-          - `apps/pages/history`
           - `apps/pages/page-author`
-          - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
-          - `apps/pages/starred`
-          - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
-          - `apps/prototypes/files`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
-          - `apps/prototypes/thumbnails`
-          - `apps/settings/config`
           - `apps/sonata/library`
-          - `apps/sonata/playback-history`
-          - `apps/sonata/rich/chord-mode`
-          - `apps/sonata/rich/key-mode`
-          - `apps/sonata/rich/rhythm-controls`
-          - `apps/sonata/sources/midi`
-          - `apps/sonata/track-mixer`
-          - `apps/sonata/transpose`
           - `apps/studio/compositions/release`
-          - `apps/studio/compositions/release/release-artifact`
-          - `apps/studio/compositions/release/release-info`
-          - `apps/studio/compositions/release/release-logs`
           - `auth/apple-signing/setup-wizard`
-          - `auth/google/setup-wizard`
           - `build`
-          - `build/build-fix`
-          - `build/build-info`
           - `build/deployment`
-          - `build/serve-composition`
           - `code-explorer/code-api`
           - `config_v2`
           - `config_v2/settings`
@@ -29808,90 +29953,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/agents`
           - `conversations/all-conversations`
           - `conversations/conversation-category`
-          - `conversations/conversation-preprompt`
-          - `conversations/conversation-progress`
           - `conversations/conversation-view`
-          - `conversations/conversation-view/allow-monitor`
-          - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/code`
-          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-          - `conversations/conversation-view/notes`
           - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-and-exit`
-          - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/effort-provider`
           - `conversations/model-provider`
           - `conversations/recover`
           - `conversations/summary`
-          - `database/query-deadline`
-          - `debug/claude-cli-calls`
           - `debug/latency-ledger`
           - `debug/live-state-health`
           - `debug/queue`
           - `debug/queue-health`
           - `debug/reports`
-          - `debug/sentinel`
           - `debug/slow-ops`
-          - `debug/slow-ops/pane`
-          - `fields/secret/config`
           - `framework/web-core`
           - `infra/boot-snapshot`
-          - `infra/claude-cli`
-          - `infra/claude-cli/availability`
-          - `infra/events`
           - `infra/health`
-          - `infra/jobs`
           - `infra/query-resource`
-          - `infra/trash`
           - `network/live`
-          - `page/annotations/agent-notes/authorship`
           - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`
           - `page/editor`
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
-          - `page/prompt/link`
           - `plugin-meta/plugin-health`
-          - `primitives/data-view/custom-columns`
-          - `primitives/data-view/view-order`
           - `primitives/optimistic-mutation`
-          - `primitives/usage-rank`
           - `release`
           - `reports`
           - `reports/live-state-stale-drop`
-          - `review`
           - `review/code-review`
-          - `review/plugin-changes`
           - `runs`
           - `stats/responsiveness`
           - `tasks`
           - `tasks/attempt-view`
           - `tasks/attempt-work`
-          - `tasks/auto-start`
           - `tasks/task-category`
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
           - `tasks/task-detail`
           - `tasks/task-draft-form`
-          - `tasks/task-effort`
-          - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-list`
-          - `tasks/task-preprompt`
           - `tasks/tasks-core`
           - `tasks/worktree-identity`
           - `ui/theme-engine/saved-themes`
@@ -29946,9 +30060,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deployments`
+          - `apps/deploy/health`
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
+          - `apps/deploy/ssh-setup`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/caveats`
           - `apps/events/sources/source-detail/runs/model-call`
@@ -29966,7 +30082,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/canvas`
           - `apps/prototypes/present`
           - `apps/sonata/library`
+          - `apps/sonata/notation`
+          - `apps/sonata/piano-roll`
+          - `apps/sonata/rich/chord-mode`
+          - `apps/sonata/rich/key-readout`
+          - `apps/sonata/rich/rhythm-controls`
+          - `apps/sonata/songsheet`
           - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/track-mixer`
+          - `apps/sonata/transpose`
           - `apps/studio/compositions`
           - `apps/studio/compositions/closure-tree`
           - `apps/studio/compositions/draft-actions`
@@ -30040,6 +30164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
+          - `review`
           - `review/code-review`
           - `review/plugin-changes`
           - `review/plugin-changes/file-changes`
@@ -30299,8 +30424,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `OptimisticOptions`
           - `OptimisticResult`
           - `OptimisticSettled`
-          - `UseOptimisticResourceArgs`
-          - `UseOptimisticResourceResult`
         - Exports (values):
           - `enqueueResourceWrite`
           - `OpNoLongerApplies`
@@ -32295,25 +32418,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/page-link`
           - `page/place`
           - `primitives/text-editor`
-    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced point subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a bounded point resource and swept by a nightly 1-year retention job.
+    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
       - Server:
-        - Contributes: `resource.declare` "usage-stats"
+        - Contributes: `resource.declare` "usage-stats:rows"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
-          - `infra/query-resource.windowQueryResource`
           - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
         - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
-        - Exports (values):
-          - `_usageStats`
-          - `usageStatsResource`
+        - Exports (values): `_usageStats`
         - Register: `defineJob('retention.usage_stats')`
-        - Resources: `usage-stats` (keyed, point)
+        - Resources: `usage-stats:rows` (keyed, point)
         - Routes: `POST /api/usage-rank/record`
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/live-state.usePointResources`
+          - `network/live.useLive`
           - `primitives/persistent-draft.readDraft`
           - `primitives/persistent-draft.writeDraft`
         - Exports (values):
@@ -32322,7 +32443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
-          - `infra/query-resource.pointQueryResourceDescriptor`
+          - `network/live.liveCollection`
         - Exports (types):
           - `RecordUsageBody`
           - `ScorableStat`
@@ -32334,8 +32455,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recordUsageEndpoint`
           - `sortByUsage`
           - `usageKey`
+          - `usageStats`
           - `UsageStatSchema`
-          - `usageStatsResource`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/prompt-templates`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
@@ -32374,10 +32495,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/list`
           - `primitives/tree`
 
-- **`release`** — Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+- **`release`** — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Server:
     - Contributes:
-      - `resource.declare` "release.run"
+      - `resource.declare` "release.runs:rows"
       - `resource.declare` "release.history-revision"
       - `resource.declare` "release.previews"
     - Uses:
@@ -32393,6 +32514,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/launcher.teardownSelfContainedApp`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.worktreeArtifacts`
+      - `network/live.serveCollection`
+      - `network/live.serveValue`
       - `primitives/data-view/server-query.augmentServerQuery`
       - `primitives/data-view/server-query.bindColumns`
       - `primitives/data-view/server-query.compileWhere`
@@ -32420,7 +32543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Resources:
       - `release.history-revision` (push)
       - `release.previews` (push)
-      - `release.run` (push)
+      - `release.runs:rows` (keyed, point)
     - Routes:
       - `POST /api/release`
       - `GET /api/release/candidate`
@@ -32432,6 +32555,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
+      - `network/live.liveCollection`
+      - `network/live.liveValue`
       - `network/live/filter.liveInstant`
       - `network/live/filter.liveText`
       - `primitives/data-view.ServerFilterWireSchema`
@@ -32462,7 +32587,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `PlatformTagSchema`
       - `previewEndpoint`
       - `PreviewSchema`
-      - `previewStateResource`
       - `queryReleaseHistory`
       - `QueryReleaseHistoryBodySchema`
       - `QueryReleaseHistoryResponseSchema`
@@ -32477,7 +32601,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReleaseLatestRunResponseSchema`
       - `releaseLogsEndpoint`
       - `ReleaseLogsResponseSchema`
-      - `releaseRunResource`
+      - `releasePreviews`
+      - `releaseRuns`
       - `ReleaseRunSchema`
       - `releaseRunsRevisionResource`
       - `releaseTargetById`
@@ -33176,12 +33301,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations.useConversationById`
       - `conversations/conversation-view.conversationPane`
       - `conversations/conversation-view/action-bar.Conversation`
+      - `network/live.useLive`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/toggle-chip.ToggleChip`
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
-      - `primitives/live-state.useResource`
+      - `primitives/loading.Loading`
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
@@ -33208,6 +33334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code.gitStatusBadge`
           - `conversations/conversation-view/code.useEditedFiles`
           - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.CollapsibleContent`
@@ -33227,7 +33354,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
           - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `review.ReviewSlots`
       - Server:
@@ -33243,6 +33369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
         - Uses:
           - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/collapsible.ExpandAllButton`
           - `primitives/collapsible.useExpandAll`
           - `primitives/css/badge.Badge`
@@ -33255,7 +33382,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `review.ReviewSlots`
@@ -33279,6 +33405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
+          - `network/live.serveValue`
           - `primitives/commit-list.runGit`
           - `tasks/tasks-core.getConversation`
           - `tasks/tasks-core.listPushesByPushId`
@@ -34382,20 +34509,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResources`
           - `tasks.setAutoStart`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskAutoStartRow`
-        - Exports (values):
-          - `taskAutoStartResource`
-          - `TaskAutoStartRowSchema`
-          - `useTaskAutoStart`
+        - Exports (values): `useTaskAutoStart`
       - Server:
         - Contributes:
-          - `resource.declare` "tasks-auto-start"
+          - `resource.declare` "tasks-auto-start:rows"
           - `trigger` "tasks.auto-start-cancel-on-drop"
         - Uses:
           - `database.db`
@@ -34403,8 +34526,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
-          - `infra/query-resource.windowQueryResource`
           - `infra/warmup.defineWarmup`
+          - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.taskStatusChanged`
         - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
@@ -34414,11 +34537,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getTaskAutoStart`
           - `listArmedTaskIds`
           - `setTaskAutoStart`
-          - `tasksAutoStartResource`
         - Register:
           - `defineJob('tasks.auto-start-cancel-on-drop')`
           - `defineWarmup('tasks.auto-start-dropped-sweep')`
-        - Resources: `tasks-auto-start` (keyed, point)
+        - Resources: `tasks-auto-start:rows` (keyed, point)
       - Cross-plugin:
         - Imported by:
           - `conversations`
@@ -34638,6 +34760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
@@ -34651,7 +34774,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/inline-text.InlineText`
           - `primitives/launch.LaunchControl`
           - `primitives/live-state.ResourceView`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -34786,21 +34908,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/effort-provider.effortItems`
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResources`
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskEffort`
       - Server:
         - Contributes:
-          - `resource.declare` "task-efforts"
+          - `resource.declare` "task-efforts:rows"
           - `taskLaunchServer` "effort"
         - Uses:
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
@@ -34808,9 +34929,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `getTaskEffort`
           - `setTaskEffort`
-          - `taskEffortsResource`
           - `tasksEffort`
-        - Resources: `task-efforts` (keyed, point)
+        - Resources: `task-efforts:rows` (keyed, point)
         - Routes:
           - `PUT /api/task-efforts/:taskId`
           - `DELETE /api/task-efforts/:taskId`
@@ -34828,7 +34948,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteTaskEffort`
           - `putTaskEffort`
           - `TaskEffortSchema`
-          - `taskEffortsResource`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
       - Web:
         - Contributes:
@@ -34838,6 +34957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/row.ConversationRow`
           - `conversations/conversation-view.useConversationOpener`
           - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
@@ -34846,7 +34966,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.TaskDetailSlots`
@@ -34940,21 +35059,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/preprompts.PrepromptSelect`
           - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.usePointResources`
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
           - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskPreprompt`
       - Server:
         - Contributes:
-          - `resource.declare` "task-preprompts"
+          - `resource.declare` "task-preprompts:rows"
           - `taskLaunchServer` "preprompt"
         - Uses:
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
-          - `infra/query-resource.windowQueryResource`
+          - `network/live.serveCollection`
           - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
@@ -34962,9 +35080,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `getTaskPreprompt`
           - `setTaskPreprompt`
-          - `taskPrepromptsResource`
           - `tasksPreprompt`
-        - Resources: `task-preprompts` (keyed, point)
+        - Resources: `task-preprompts:rows` (keyed, point)
         - Routes:
           - `PUT /api/task-preprompts/:taskId`
           - `DELETE /api/task-preprompts/:taskId`
@@ -34981,7 +35098,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-          - `taskPrepromptsResource`
     - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt.
       - Web:
         - Uses: `infra/endpoints.useEndpoint`
@@ -35064,14 +35180,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
         - Contributes:
           - `resource.declare` "tasks"
           - `resource.declare` "task-detail"
           - `resource.declare` "attempts"
           - `resource.declare` "pushes"
-          - `resource.declare` "pushes-by-attempt"
+          - `resource.declare` "pushes:rows"
+          - `resource.declare` "pushes:groups"
+          - `resource.declare` "pushes.attempts-cascade"
           - `resource.declare` "conversations-active"
           - `resource.declare` "conversations-system"
           - `resource.declare` "conversations-gone"
@@ -35101,6 +35219,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.rel`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.isCanonicalWorktreePath`
+          - `network/live.serveCollection`
+          - `network/live.serveValue`
           - `primitives/commit-list.runGit`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
@@ -35155,7 +35275,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationsActiveResource`
           - `ConversationSchema`
           - `conversationsGoneResource`
-          - `conversationsGoneStatsResource`
           - `conversationsSystemResource`
           - `conversationStatusChanged`
           - `conversationsView`
@@ -35197,8 +35316,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markConversationClosed`
           - `markConversationGone`
           - `orphanedAttemptSink`
-          - `pushesByAttemptResource`
-          - `pushesResource`
           - `pushLanded`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
@@ -35206,7 +35323,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setConversationHibernated`
           - `taskAttachments`
           - `taskDependsOn`
-          - `taskDetailResource`
           - `TaskListItemSchema`
           - `TaskSchema`
           - `tasksResource`
@@ -35231,8 +35347,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations-gone` (keyed)
           - `conversations-gone-stats` (push)
           - `conversations-system` (keyed)
-          - `pushes` (push)
-          - `pushes-by-attempt` (keyed)
+          - `pushes` (keyed, window)
+          - `pushes:groups` (push)
+          - `pushes:rows` (keyed, point)
+          - `pushes.attempts-cascade` (push)
           - `task-detail` (push)
           - `tasks` (keyed)
       - Web:
@@ -35256,8 +35374,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `infra/query-resource.queryResourceDescriptor`
+          - `network/live.liveCollection`
+          - `network/live.liveValue`
+          - `network/live/filter.liveText`
           - `primitives/live-state.keyedResourceDescriptor`
-          - `primitives/live-state.resourceDescriptor`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
         - Exports (types):
@@ -35286,7 +35406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationsActiveResource`
           - `ConversationSchema`
           - `conversationsGoneResource`
-          - `conversationsGoneStatsResource`
+          - `conversationsGoneStats`
           - `conversationsSystemResource`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`
@@ -35297,12 +35417,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `newTaskId`
           - `parseTrailerLog`
           - `PUSH_TRAILER_KEY`
-          - `pushesByAttemptResource`
-          - `pushesResource`
+          - `pushRows`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `SETTLED_STATUSES`
-          - `taskDetailResource`
+          - `taskDetail`
           - `taskDetailRoute`
           - `TaskGraph`
           - `TaskListItemSchema`

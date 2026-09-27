@@ -32,13 +32,15 @@ import {
   noteResourceWatermark,
   NotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web/testing";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
   SyncStatusIndicator,
   SyncStatusProvider,
 } from "@plugins/primitives/plugins/sync-status/web";
-import { useOptimisticResource } from "../internal/use-optimistic-resource";
+import {
+  useOptimisticResource,
+  type OptimisticOptions,
+} from "../internal/use-optimistic-resource";
 import {
   activeSendLaneCount,
   enqueueResourceWrite,
@@ -46,21 +48,50 @@ import {
 import { optimisticDivergenceReportSink } from "../reporter";
 import type { OptimisticDivergenceReport } from "../reporter";
 
-const rowsResource = resourceDescriptor<number[]>(
-  "test.optimistic-mutation.rows",
-  z.array(z.number()),
-  [],
-);
-const rowsKey = queryKeyFor(rowsResource.key, undefined);
+const Numbers = z.array(z.number());
 
-// A dedicated resource for the causal-denial test: the watermark registry is
+const rowsValue = liveValue("test.optimistic-mutation.rows", {
+  schema: Numbers,
+});
+const rowsKey = queryKeyFor(rowsValue.key, undefined);
+
+// A dedicated value for the causal-denial test: the watermark registry is
 // module-level and monotonic, so seeding it must not leak into other tests.
-const denialResource = resourceDescriptor<number[]>(
-  "test.optimistic-mutation.denial",
-  z.array(z.number()),
-  [],
+const denialValue = liveValue("test.optimistic-mutation.denial", {
+  schema: Numbers,
+});
+const denialKey = queryKeyFor(denialValue.key, undefined);
+
+// The same holds for the tx-ack registry and the send lanes (both module-level):
+// every case that notes an ack or pins lane behaviour reads a key of its own.
+const ackRaceValue = liveValue("test.optimistic-mutation.ack-race", {
+  schema: Numbers,
+});
+const ackStandaloneValue = liveValue(
+  "test.optimistic-mutation.ack-standalone",
+  { schema: Numbers },
 );
-const denialKey = queryKeyFor(denialResource.key, undefined);
+const ackRebaseValue = liveValue("test.optimistic-mutation.ack-rebase", {
+  schema: Numbers,
+  params: ["v"],
+});
+const laneOrderValue = liveValue("test.optimistic-mutation.lane-order", {
+  schema: Numbers,
+});
+const laneWedgeValue = liveValue("test.optimistic-mutation.lane-wedge", {
+  schema: Numbers,
+});
+const laneSharedValue = liveValue("test.optimistic-mutation.lane-shared", {
+  schema: Numbers,
+});
+const laneDetachedValue = liveValue("test.optimistic-mutation.lane-detached", {
+  schema: Numbers,
+});
+const laneReclaimValue = liveValue("test.optimistic-mutation.lane-reclaim", {
+  schema: Numbers,
+});
+
+type NumbersValue = typeof rowsValue;
 
 const apply = (current: number[], n: number): number[] => [...current, n];
 const isConfirmedBy = (serverData: number[], n: number): boolean =>
@@ -112,34 +143,91 @@ function makeClient(): QueryClient {
   });
 }
 
-/**
- * `contentBased` picks the confirmation ARM, not a flag: the two arms are built
- * as distinct object literals so the args discriminated union stays correlated.
- */
-function useRows(
-  mutate: (n: number) => Promise<MutateResult>,
-  contentBased: boolean,
-  resource: typeof rowsResource = rowsResource,
-) {
-  return useOptimisticResource<number[], number>(
-    contentBased
-      ? { resource, apply, mutate, isConfirmedBy, sameTarget }
-      : { resource, apply, mutate },
-  );
-}
-
-function mountHook(
-  client: QueryClient,
-  mutate: (n: number) => Promise<MutateResult>,
-  contentBased = false,
-  resource: typeof rowsResource = rowsResource,
-) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
+function providerWrapper(client: QueryClient) {
+  return ({ children }: { children: ReactNode }) => (
     <NotificationsProvider queryClient={client}>
       {children}
     </NotificationsProvider>
   );
-  return renderHook(() => useRows(mutate, contentBased, resource), { wrapper });
+}
+
+/**
+ * The transport counts as having been ready (like `useLive`'s suite), so no
+ * cold-start HTTP prime races the hand-written `setQueryData` values. Call it
+ * once the provider has mounted — it creates the client.
+ */
+function markTransportReady(): void {
+  const notifications = getNotificationsClient();
+  if (!notifications) throw new Error("NotificationsClient not created");
+  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+}
+
+function mountPositional<R>(client: QueryClient, useHook: () => R) {
+  const rendered = renderHook(useHook, { wrapper: providerWrapper(client) });
+  markTransportReady();
+  return rendered;
+}
+
+/** Wait for the settled arm and return it. */
+async function settledOf<R extends { pending: boolean }>(result: {
+  current: R;
+}): Promise<Extract<R, { pending: false }>> {
+  await waitFor(() => expect(result.current.pending).toBe(false));
+  return result.current as Extract<R, { pending: false }>;
+}
+
+/** The settled arm, now — throws (so a `waitFor` retries) while pending. */
+function settledArm<R extends { pending: boolean }>(
+  r: R,
+): Extract<R, { pending: false }> {
+  if (r.pending) throw new Error("expected the settled arm");
+  return r as Extract<R, { pending: false }>;
+}
+
+/**
+ * `contentBased` picks the confirmation ARM, not a flag: the two arms are built
+ * as distinct object literals so the options discriminated union stays
+ * correlated.
+ */
+function rowsOptions(
+  mutate: (n: number) => Promise<MutateResult>,
+  contentBased: boolean,
+): OptimisticOptions<number[], number> {
+  return contentBased
+    ? { apply, mutate, isConfirmedBy, sameTarget }
+    : { apply, mutate };
+}
+
+function useRows(
+  mutate: (n: number) => Promise<MutateResult>,
+  contentBased: boolean,
+  value: NumbersValue = rowsValue,
+) {
+  return useOptimisticResource(value, rowsOptions(mutate, contentBased));
+}
+
+/**
+ * Mount one optimistic reader and land its base (`[]` unless given), so the
+ * case starts on the settled arm: a read has no placeholder, so `dispatch`
+ * exists only once a real value has landed. `rows()` is that arm — a base never
+ * leaves again for the same tuple, so it stays readable for the whole case.
+ */
+async function mountRows(
+  client: QueryClient,
+  mutate: (n: number) => Promise<MutateResult>,
+  {
+    contentBased = false,
+    value = rowsValue,
+  }: { contentBased?: boolean; value?: NumbersValue } = {},
+) {
+  const rendered = mountPositional(client, () =>
+    useRows(mutate, contentBased, value),
+  );
+  act(() => {
+    client.setQueryData(queryKeyFor(value.key, undefined), []);
+  });
+  await settledOf(rendered.result);
+  return { ...rendered, rows: () => settledArm(rendered.result.current) };
 }
 
 afterEach(() => {
@@ -150,71 +238,72 @@ describe("useOptimisticResource", () => {
   it("content-based: a push that lands BEFORE the response still confirms the op", async () => {
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate, true);
+    const { rows } = await mountRows(client, mutate, { contentBased: true });
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
-    expect(result.current.saving).toBe(true);
-    expect(result.current.pendingOps).toHaveLength(1);
+    expect(rows().saving).toBe(true);
+    expect(rows().pendingOps).toHaveLength(1);
 
     // The confirming push arrives first (the measured production ordering). The
     // op is still unresolved, so the push edge must NOT drop it.
     act(() => {
       client.setQueryData(rowsKey, [1, 2]);
     });
-    expect(result.current.pendingOps).toHaveLength(1);
-    expect(result.current.saving).toBe(true);
+    expect(rows().pendingOps).toHaveLength(1);
+    expect(rows().saving).toBe(true);
 
     // The HTTP response lands 1ms later. The resolve edge re-asks the cache.
     await act(async () => {
       release();
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toEqual([]);
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(rows().pendingOps).toEqual([]);
   });
 
   it("coarse: the dispatch-time generation stamp confirms at the resolve edge", async () => {
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate); // no isConfirmedBy ⇒ coarse
+    const { rows } = await mountRows(client, mutate); // no isConfirmedBy ⇒ coarse
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     // A push lands while the mutate is still in flight ⇒ dataUpdateCount bumps
     // past the op's dispatchGen.
     act(() => {
       client.setQueryData(rowsKey, [1, 2]);
     });
-    expect(result.current.pendingOps).toHaveLength(1);
+    expect(rows().pendingOps).toHaveLength(1);
 
     await act(async () => {
       release();
     });
-    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
-    expect(result.current.saving).toBe(false);
+    await waitFor(() => expect(rows().pendingOps).toEqual([]));
+    expect(rows().saving).toBe(false);
   });
 
   it("coarse: with no push since dispatch, the op stays until the next push", async () => {
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     await act(async () => {
       release();
     });
-    // Resolved but unconfirmed: no push has landed since dispatch.
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toHaveLength(1);
+    // Resolved but unconfirmed: no push has landed since dispatch (the base
+    // landed before it, so it does not count).
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(rows().pendingOps).toHaveLength(1);
 
     act(() => {
       client.setQueryData(rowsKey, [1, 2]);
     });
-    expect(result.current.pendingOps).toEqual([]);
+    expect(rows().pendingOps).toEqual([]);
   });
 
   it("a cache 'updated' event that carries NO new value confirms nothing", async () => {
@@ -225,16 +314,16 @@ describe("useOptimisticResource", () => {
     // server data at all — confirm the op.
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     await act(async () => {
       release();
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toHaveLength(1); // resolved, unconfirmed
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(rows().pendingOps).toHaveLength(1); // resolved, unconfirmed
 
     await act(async () => {
       // `refetchType: "none"` keeps this a pure `invalidate` action — no queryFn,
@@ -244,13 +333,13 @@ describe("useOptimisticResource", () => {
         refetchType: "none",
       });
     });
-    expect(result.current.pendingOps).toHaveLength(1); // still unconfirmed
+    expect(rows().pendingOps).toHaveLength(1); // still unconfirmed
 
     // ...and a real push still confirms it.
     act(() => {
       client.setQueryData(rowsKey, [1, 2]);
     });
-    expect(result.current.pendingOps).toEqual([]);
+    expect(rows().pendingOps).toEqual([]);
   });
 
   it("stamps `savedAt`, so the universal indicator leaves `idle` for `saved`", async () => {
@@ -266,7 +355,9 @@ describe("useOptimisticResource", () => {
     const handle: { dispatch?: (n: number) => string } = {};
 
     function Probe() {
-      const { dispatch } = useRows(mutate, true);
+      const rows = useRows(mutate, true);
+      // Only the settled arm can dispatch — published once the base lands.
+      const dispatch = rows.pending ? undefined : rows.dispatch;
       useEffect(() => {
         handle.dispatch = dispatch;
       }, [dispatch]);
@@ -281,6 +372,11 @@ describe("useOptimisticResource", () => {
         </SyncStatusProvider>
       </NotificationsProvider>,
     );
+    markTransportReady();
+    act(() => {
+      client.setQueryData(rowsKey, []);
+    });
+    await waitFor(() => expect(handle.dispatch).toBeDefined());
     expect(container.innerHTML).toBe(""); // idle ⇒ the cloud renders nothing
 
     act(() => {
@@ -303,15 +399,15 @@ describe("useOptimisticResource", () => {
     const mutate = vi.fn(() =>
       Promise.reject(new EndpointError(422, { message: "nope" })),
     );
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
-    await waitFor(() => expect(result.current.failed).toHaveLength(1));
-    expect(result.current.pendingOps).toHaveLength(1); // still rendered
-    expect(result.current.data).toEqual([2]); // the prediction did not revert
-    expect(result.current.saving).toBe(true); // failed ⇒ still unresolved
+    await waitFor(() => expect(rows().failed).toHaveLength(1));
+    expect(rows().pendingOps).toHaveLength(1); // still rendered
+    expect(rows().data).toEqual([2]); // the prediction did not revert
+    expect(rows().saving).toBe(true); // failed ⇒ still unresolved
   });
 
   it("retry(opId) re-fires a failed op IN PLACE (same opId, same overlay position)", async () => {
@@ -320,22 +416,22 @@ describe("useOptimisticResource", () => {
       .fn<(n: number) => Promise<MutateResult>>()
       .mockRejectedValueOnce(new EndpointError(500, {}))
       .mockResolvedValue(undefined);
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     let opId = "";
     await act(async () => {
-      opId = result.current.dispatch(2);
+      opId = rows().dispatch(2);
     });
-    await waitFor(() => expect(result.current.failed).toHaveLength(1));
-    expect(result.current.failed[0]!.opId).toBe(opId);
+    await waitFor(() => expect(rows().failed).toHaveLength(1));
+    expect(rows().failed[0]!.opId).toBe(opId);
 
     await act(async () => {
-      result.current.retry(opId);
+      rows().retry(opId);
     });
-    await waitFor(() => expect(result.current.failed).toEqual([]));
+    await waitFor(() => expect(rows().failed).toEqual([]));
     // Same op, still in the overlay under its original id, now server-acked.
-    expect(result.current.pendingOps).toEqual([{ opId, vars: 2 }]);
-    expect(result.current.saving).toBe(false);
+    expect(rows().pendingOps).toEqual([{ opId, vars: 2 }]);
+    expect(rows().saving).toBe(false);
     expect(mutate).toHaveBeenCalledTimes(2);
   });
 
@@ -344,16 +440,16 @@ describe("useOptimisticResource", () => {
     // says nothing about the op, so it is not an error state.
     const client = makeClient();
     const mutate = vi.fn(() => Promise.reject(new TypeError("fetch failed")));
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(result.current.pendingOps).toHaveLength(1); // still rendered
-    expect(result.current.data).toEqual([2]);
-    expect(result.current.failed).toEqual([]); // network ≠ durable failure
-    expect(result.current.saving).toBe(true); // ⇒ phase `syncing`
+    expect(rows().pendingOps).toHaveLength(1); // still rendered
+    expect(rows().data).toEqual([2]);
+    expect(rows().failed).toEqual([]); // network ≠ durable failure
+    expect(rows().saving).toBe(true); // ⇒ phase `syncing`
   });
 
   it("the browser `online` edge auto-retries network-failed ops", async () => {
@@ -362,23 +458,23 @@ describe("useOptimisticResource", () => {
       .fn<(n: number) => Promise<MutateResult>>()
       .mockRejectedValueOnce(new TypeError("fetch failed"))
       .mockResolvedValue(undefined);
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     let opId = "";
     await act(async () => {
-      opId = result.current.dispatch(2);
+      opId = rows().dispatch(2);
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(result.current.saving).toBe(true); // queued, syncing
+    expect(rows().saving).toBe(true); // queued, syncing
 
     // Connectivity returns: the reconnect edge re-fires the queued op in place.
     await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
+    await waitFor(() => expect(rows().saving).toBe(false));
     expect(mutate).toHaveBeenCalledTimes(2);
-    expect(result.current.pendingOps).toEqual([{ opId, vars: 2 }]); // resolved, awaiting push
-    expect(result.current.failed).toEqual([]);
+    expect(rows().pendingOps).toEqual([{ opId, vars: 2 }]); // resolved, awaiting push
+    expect(rows().failed).toEqual([]);
   });
 
   it("the reconnect drain retries network-failed ops SEQUENTIALLY in overlay order", async () => {
@@ -395,11 +491,11 @@ describe("useOptimisticResource", () => {
         releases.push(resolve);
       });
     });
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
-      result.current.dispatch(2);
-      result.current.dispatch(3);
+      rows().dispatch(2);
+      rows().dispatch(3);
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
     offline = false;
@@ -420,7 +516,7 @@ describe("useOptimisticResource", () => {
     await act(async () => {
       releases[1]!(undefined);
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
+    await waitFor(() => expect(rows().saving).toBe(false));
   });
 
   it("a network re-failure stops the drain; the next edge resumes it", async () => {
@@ -433,11 +529,11 @@ describe("useOptimisticResource", () => {
         ? Promise.reject(new TypeError("fetch failed"))
         : Promise.resolve(undefined as MutateResult),
     );
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
-      result.current.dispatch(2);
-      result.current.dispatch(3);
+      rows().dispatch(2);
+      rows().dispatch(3);
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
 
@@ -450,13 +546,13 @@ describe("useOptimisticResource", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(mutate).toHaveBeenCalledTimes(3);
     expect(mutate).toHaveBeenLastCalledWith(2);
-    expect(result.current.saving).toBe(true);
+    expect(rows().saving).toBe(true);
 
     offline = false;
     await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
+    await waitFor(() => expect(rows().saving).toBe(false));
     expect(mutate).toHaveBeenCalledTimes(5);
     expect(mutate.mock.calls.slice(3).map((c) => c[0])).toEqual([2, 3]);
   });
@@ -466,48 +562,46 @@ describe("useOptimisticResource", () => {
     // just repeat it. Only an explicit retry() re-sends.
     const client = makeClient();
     const mutate = vi.fn(() => Promise.reject(new EndpointError(422, {})));
-    const { result } = mountHook(client, mutate);
+    const { rows } = await mountRows(client, mutate);
 
     await act(async () => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
-    await waitFor(() => expect(result.current.failed).toHaveLength(1));
+    await waitFor(() => expect(rows().failed).toHaveLength(1));
 
     await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
     expect(mutate).toHaveBeenCalledTimes(1); // untouched
-    expect(result.current.failed).toHaveLength(1);
+    expect(rows().failed).toHaveLength(1);
   });
 
-  it("exact ack: an ackTx that landed BEFORE the response confirms at the resolve edge (no snapshot needed)", async () => {
+  it("exact ack: an ackTx that landed BEFORE the response confirms at the resolve edge (no snapshot reflecting the op needed)", async () => {
     // The delta-before-HTTP-response race, closed by the registry: the frame
     // carrying this commit's ackTx was noted before the mutate resolved, so the
-    // resolve edge's hasAck probe confirms immediately — even though no
-    // authoritative snapshot ever landed on this tuple.
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.ack-race",
-      z.array(z.number()),
-      [],
-    );
+    // resolve edge's hasAck probe confirms immediately — even though the only
+    // snapshot on this tuple is the pre-dispatch base, which lacks the op.
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate, true, resource);
+    const { rows } = await mountRows(client, mutate, {
+      contentBased: true,
+      value: ackRaceValue,
+    });
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     // The ack arrives first (a scoped delta / standalone ack frame noted it).
     act(() => {
-      noteResourceTxAcks(resource.key, undefined, ["77"]);
+      noteResourceTxAcks(ackRaceValue.key, undefined, ["77"]);
     });
-    expect(result.current.pendingOps).toHaveLength(1); // still unresolved — untouched
+    expect(rows().pendingOps).toHaveLength(1); // still unresolved — untouched
 
     await act(async () => {
       release({ watermark: "77" });
     });
-    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
-    expect(result.current.saving).toBe(false);
+    await waitFor(() => expect(rows().pendingOps).toEqual([]));
+    expect(rows().saving).toBe(false);
   });
 
   it("standalone ack: a registry note with NO cache event confirms a resolved op; sync-status is untouched by the ack edge", async () => {
@@ -515,35 +609,34 @@ describe("useOptimisticResource", () => {
     optimisticDivergenceReportSink.register((r) => {
       reports.push(r);
     });
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.ack-standalone",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const { result } = mountHook(client, mutate, true, resource);
+    const { rows } = await mountRows(client, mutate, {
+      contentBased: true,
+      value: ackStandaloneValue,
+    });
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     await act(async () => {
       release({ watermark: "88" });
     });
-    // Resolved with its token; no snapshot, no ack yet — it survives.
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toHaveLength(1);
+    // Resolved with its token; no snapshot since the base, no ack yet — it
+    // survives.
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(rows().pendingOps).toHaveLength(1);
 
     // The standalone ack frame: a no-value-change recompute acked the commit.
     // NO setQueryData fires — the registry subscription is the delivery channel.
     act(() => {
-      noteResourceTxAcks(resource.key, undefined, ["88"]);
+      noteResourceTxAcks(ackStandaloneValue.key, undefined, ["88"]);
     });
-    expect(result.current.pendingOps).toEqual([]);
+    expect(rows().pendingOps).toEqual([]);
     // The ack edge is not a sync-status event: nothing failed, nothing saving,
     // and an ack is a confirmation — never a divergence report.
-    expect(result.current.saving).toBe(false);
-    expect(result.current.failed).toEqual([]);
+    expect(rows().saving).toBe(false);
+    expect(rows().failed).toEqual([]);
     expect(reports).toEqual([]);
   });
 
@@ -552,54 +645,56 @@ describe("useOptimisticResource", () => {
     // at `paramsRef.current` — so after a params change, an ack noted under the
     // OLD tuple is invisible, and the op converges via Rule B on the NEW
     // tuple's watermark-carrying snapshot instead.
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.ack-rebase",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, release } = deferredMutate();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
     const { result, rerender } = renderHook(
-      ({ p }: { p: Record<string, string> }) =>
-        useOptimisticResource<number[], number>({
-          resource,
-          params: p,
-          apply,
-          mutate,
-        }),
-      { wrapper, initialProps: { p: { v: "1" } } },
+      ({ p }: { p: { v: string } }) =>
+        useOptimisticResource(ackRebaseValue, p, { apply, mutate }),
+      { wrapper: providerWrapper(client), initialProps: { p: { v: "1" } } },
     );
+    markTransportReady();
+    act(() => {
+      client.setQueryData(queryKeyFor(ackRebaseValue.key, { v: "1" }), []);
+    });
+    await settledOf(result);
 
     act(() => {
-      result.current.dispatch(2);
+      settledArm(result.current).dispatch(2);
     });
     await act(async () => {
       release({ watermark: "100" });
     });
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toHaveLength(1); // resolved, unconfirmed
+    await waitFor(() => expect(settledArm(result.current).saving).toBe(false));
+    expect(settledArm(result.current).pendingOps).toHaveLength(1); // resolved, unconfirmed
 
-    // Params re-baseline mid-flight.
+    // Params re-baseline mid-flight: pending until the new tuple's base lands.
+    // The overlay keeps its op and replays it on that base.
     rerender({ p: { v: "2" } });
+    expect(result.current.pending).toBe(true);
+    // The new tuple's base carries no watermark — it proves nothing about the
+    // commit, so the (coarse, tokened) op survives it.
+    act(() => {
+      client.setQueryData(queryKeyFor(ackRebaseValue.key, { v: "2" }), [1]);
+    });
+    const rebased = await settledOf(result);
+    expect(rebased.data).toEqual([1, 2]);
+    expect(rebased.pendingOps).toHaveLength(1);
 
     // The commit's ack lands under the OLD tuple — namespaced away: no confirm.
     act(() => {
-      noteResourceTxAcks(resource.key, { v: "1" }, ["100"]);
+      noteResourceTxAcks(ackRebaseValue.key, { v: "1" }, ["100"]);
     });
-    expect(result.current.pendingOps).toHaveLength(1);
+    expect(settledArm(result.current).pendingOps).toHaveLength(1);
 
     // The NEW tuple's first watermark-carrying snapshot (its sub-ack) is
     // causally past the commit — the coarse+token Rule B backstop confirms.
     act(() => {
-      noteResourceWatermark(resource.key, { v: "2" }, "150");
-      client.setQueryData(queryKeyFor(resource.key, { v: "2" }), [1, 2]);
+      noteResourceWatermark(ackRebaseValue.key, { v: "2" }, "150");
+      client.setQueryData(queryKeyFor(ackRebaseValue.key, { v: "2" }), [1, 2]);
     });
-    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
+    await waitFor(() =>
+      expect(settledArm(result.current).pendingOps).toEqual([]),
+    );
   });
 
   it("causal denial: a snapshot past the ack token that lacks the op drops it as superseded", async () => {
@@ -614,51 +709,50 @@ describe("useOptimisticResource", () => {
 
     const client = makeClient();
     const mutate = vi.fn(() => Promise.resolve({ watermark: "100" }));
-    const { result } = mountHook(client, mutate, true, denialResource);
+    const { rows } = await mountRows(client, mutate, {
+      contentBased: true,
+      value: denialValue,
+    });
 
     await act(async () => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
-    // Resolved with its token; no snapshot yet, so it survives the resolve edge.
-    await waitFor(() => expect(result.current.saving).toBe(false));
-    expect(result.current.pendingOps).toHaveLength(1);
+    // Resolved with its token; the base carries no watermark, so it survives
+    // the resolve edge.
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(rows().pendingOps).toHaveLength(1);
 
     // The push: registry watermark 150 > ack 100 (seeded exactly where the
     // transport writes it — immediately before the cache write), and the
     // snapshot does NOT contain the op's row ⇒ denied.
     act(() => {
-      noteResourceWatermark(denialResource.key, undefined, "150");
+      noteResourceWatermark(denialValue.key, undefined, "150");
       client.setQueryData(denialKey, [1]);
     });
-    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
-    expect(result.current.data).toEqual([1]); // rendering newer truth
+    await waitFor(() => expect(rows().pendingOps).toEqual([]));
+    expect(rows().data).toEqual([1]); // rendering newer truth
     expect(reports).toHaveLength(1);
     expect(reports[0]!.kind).toBe("superseded");
-    expect(reports[0]!.resourceKey).toBe(denialResource.key);
+    expect(reports[0]!.resourceKey).toBe(denialValue.key);
   });
 
   it("the send lane serializes DISPATCH: B's mutate waits on A's", async () => {
     // The half the primitive used to enforce on retry only. Ops are an ordered
     // fold, so their writes are an ordered stream — B may depend on A's
     // server-side effect (a second split targets the block the first created).
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.lane-order",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, calls, sent } = queuedMutate();
-    const { result } = mountHook(client, mutate, false, resource);
+    const { rows } = await mountRows(client, mutate, { value: laneOrderValue });
 
     act(() => {
-      result.current.dispatch(2);
-      result.current.dispatch(3);
+      rows().dispatch(2);
+      rows().dispatch(3);
     });
     // A departs immediately (an idle lane adds no latency); B is queued behind.
     await settleQueues();
     expect(sent()).toEqual([2]);
     // ...and the head-of-line block is invisible: both predictions render.
-    expect(result.current.data).toEqual([2, 3]);
+    expect(rows().data).toEqual([2, 3]);
 
     await act(async () => {
       calls[0]!.resolve(undefined);
@@ -669,18 +763,13 @@ describe("useOptimisticResource", () => {
   it("a durably-rejected send does NOT wedge its successors", async () => {
     // The lane advances on settle — resolve or reject alike. A rejected op is a
     // sync-status state, never a stalled queue.
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.lane-wedge",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, calls, sent } = queuedMutate();
-    const { result } = mountHook(client, mutate, false, resource);
+    const { rows } = await mountRows(client, mutate, { value: laneWedgeValue });
 
     act(() => {
-      result.current.dispatch(2);
-      result.current.dispatch(3);
+      rows().dispatch(2);
+      rows().dispatch(3);
     });
     await settleQueues();
     expect(sent()).toEqual([2]);
@@ -689,8 +778,8 @@ describe("useOptimisticResource", () => {
       calls[0]!.reject(new EndpointError(422, { message: "nope" }));
     });
     await waitFor(() => expect(sent()).toEqual([2, 3]));
-    expect(result.current.failed.map((f) => f.vars)).toEqual([2]);
-    expect(result.current.data).toEqual([2, 3]); // never-revert, both still rendered
+    expect(rows().failed.map((f) => f.vars)).toEqual([2]);
+    expect(rows().data).toEqual([2, 3]); // never-revert, both still rendered
 
     await act(async () => {
       calls[1]!.resolve(undefined);
@@ -701,31 +790,25 @@ describe("useOptimisticResource", () => {
     // The hole a per-hook ref had: two mounted consumers of one tuple are two
     // writers to ONE server-side entity, and a per-instance chain orders each of
     // them against itself only.
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.lane-shared",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, calls, sent } = queuedMutate();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
-    const { result } = renderHook(
-      () => ({
-        a: useRows(mutate, false, resource),
-        b: useRows(mutate, false, resource),
-      }),
-      { wrapper },
-    );
+    const { result } = mountPositional(client, () => ({
+      a: useRows(mutate, false, laneSharedValue),
+      b: useRows(mutate, false, laneSharedValue),
+    }));
+    act(() => {
+      client.setQueryData(queryKeyFor(laneSharedValue.key, undefined), []);
+    });
+    await waitFor(() => {
+      settledArm(result.current.a);
+      settledArm(result.current.b);
+    });
 
     act(() => {
-      result.current.a.dispatch(2);
+      settledArm(result.current.a).dispatch(2);
     });
     act(() => {
-      result.current.b.dispatch(3);
+      settledArm(result.current.b).dispatch(3);
     });
     await settleQueues();
     expect(sent()).toEqual([2]); // interleaved in dispatch order, not concurrent
@@ -744,20 +827,17 @@ describe("useOptimisticResource", () => {
     // no single tuple's overlay can predict) still has to depart in order. It
     // must resolve the lane key exactly as the hook does — a different
     // derivation would order it against nothing.
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.lane-detached",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, calls, sent } = queuedMutate();
-    const { result } = mountHook(client, mutate, false, resource);
+    const { rows } = await mountRows(client, mutate, {
+      value: laneDetachedValue,
+    });
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     let detachedRan = false;
-    void enqueueResourceWrite(resource, undefined, async () => {
+    void enqueueResourceWrite(laneDetachedValue, undefined, async () => {
       detachedRan = true;
       return Promise.resolve();
     });
@@ -773,18 +853,15 @@ describe("useOptimisticResource", () => {
   });
 
   it("an idle lane is reclaimed, so the module-level registry cannot grow unboundedly", async () => {
-    const resource = resourceDescriptor<number[]>(
-      "test.optimistic-mutation.lane-reclaim",
-      z.array(z.number()),
-      [],
-    );
     const client = makeClient();
     const { mutate, release } = deferredMutate();
     const idle = activeSendLaneCount();
-    const { result } = mountHook(client, mutate, false, resource);
+    const { rows } = await mountRows(client, mutate, {
+      value: laneReclaimValue,
+    });
 
     act(() => {
-      result.current.dispatch(2);
+      rows().dispatch(2);
     });
     expect(activeSendLaneCount()).toBe(idle + 1); // held while a send is unsettled
 
@@ -797,9 +874,9 @@ describe("useOptimisticResource", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The positional forms: a `liveValue` (plus params) or a collection's `{ ids }`
-// read. No placeholder is ever the base: `pending` until a real value lands,
-// and `dispatch` exists only on the settled arm.
+// The read forms: a `liveValue` (plus params) or a collection's `{ ids }` read.
+// No placeholder is ever the base: `pending` until a real value lands, and
+// `dispatch` exists only on the settled arm.
 // ---------------------------------------------------------------------------
 
 const numbersValue = liveValue("test.optimistic-mutation.value", {
@@ -824,35 +901,7 @@ const ranks = liveCollection("test.optimistic-mutation.ranks", {
 const setRank = (rows: RankRow[], v: { id: string; rank: string }): RankRow[] =>
   rows.map((r) => (r.id === v.id ? { ...r, rank: v.rank } : r));
 
-function providerWrapper(client: QueryClient) {
-  return ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-}
-
-/**
- * Mount like `useLive`'s suite: the transport counts as having been ready, so
- * no cold-start HTTP prime races the hand-written `setQueryData` values.
- */
-function mountPositional<R>(client: QueryClient, useHook: () => R) {
-  const rendered = renderHook(useHook, { wrapper: providerWrapper(client) });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return rendered;
-}
-
-/** Wait for the settled arm and return it. */
-async function settledOf<R extends { pending: boolean }>(result: {
-  current: R;
-}): Promise<Extract<R, { pending: false }>> {
-  await waitFor(() => expect(result.current.pending).toBe(false));
-  return result.current as Extract<R, { pending: false }>;
-}
-
-describe("useOptimisticResource — positional forms", () => {
+describe("useOptimisticResource — read forms", () => {
   it("a value is pending until its first value lands; then dispatch replays and a push confirms", async () => {
     const client = makeClient();
     const { mutate, release } = deferredMutate();

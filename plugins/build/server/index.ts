@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
@@ -13,7 +12,7 @@ import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
 import { compositionTickJob } from "./internal/composition-tick-job";
 import { reconcileDeployment } from "./internal/reconcile";
-import { buildHistoryResource } from "./internal/build-history-resource";
+import { buildHistoryServed } from "./internal/build-history-resource";
 import { buildConfig } from "../shared";
 import {
   triggerBuildEndpoint,
@@ -25,7 +24,7 @@ export default {
   contributions: [
     ConfigV2.Register({ descriptor: buildConfig }),
     TaskCategory({ id: BUILD_CATEGORY_ID, label: "Build", order: 7 }),
-    Resource.Declare(buildHistoryResource),
+    ...buildHistoryServed.declare,
     Trigger({
       on: refAdvanced.where({ refName: "refs/heads/main" }),
       do: buildRunJob,

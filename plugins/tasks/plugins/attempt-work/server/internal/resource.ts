@@ -10,10 +10,12 @@ import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";
 // git-watcher only tracks `main` + this worktree's own branch, so a notify
 // already implies a relevant ref moved — no need to inspect the refName.
 //
-// There is deliberately NO `pushesResource` dependency. The landed set is now
-// git-measured, so a ref advance is the COMPLETE refresh signal; the ledger only
-// corroborates, and its own arrival moves the signature (see `attemptWorkEtag`)
-// so a push row landing without a ref advance still invalidates on the next read.
+// There is deliberately NO `recomputeOn` edge from the pushes ledger (the
+// `pushes` collection, or the `pushes.attempts-cascade` carrier). The landed
+// set is now git-measured, so a ref advance is the COMPLETE refresh signal; the
+// ledger only corroborates, and its own arrival moves the signature (see
+// `attemptWorkEtag`) so a push row landing without a ref advance still
+// invalidates on the next read.
 export const attemptWorkServed = serveValue(attemptWork, {
   source: "db",
   recomputeOn: [refHeadServed],

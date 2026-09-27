@@ -12,32 +12,30 @@
   - Uses:
     - `conversations/conversation-view.Conversation`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/css/pin.Pin`
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.usePointResource`
 - Server:
-  - Contributes: `resource.declare` "conversation-notes"
+  - Contributes: `resource.declare` "conversation-notes:rows"
   - Uses:
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `infra/query-resource.windowQueryResource`
+    - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
-  - Exports (values):
-    - `conversationNotes`
-    - `conversationNotesResource`
-  - Resources: `conversation-notes` (keyed, point)
+  - Exports (values): `conversationNotes`
+  - Resources: `conversation-notes:rows` (keyed, point)
   - Routes:
     - `PUT /api/conversation-notes/:conversationId`
     - `DELETE /api/conversation-notes/:conversationId`
 - Shared:
   - Exports (types): `ConversationNote`
   - Exports (values):
+    - `conversationNoteRows`
     - `ConversationNoteSchema`
-    - `conversationNotesResource`
     - `deleteNote`
     - `upsertNote`
 

@@ -38,10 +38,8 @@ import {
   createResourceRuntime,
   type ResourceParams,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import {
-  compileWindowQuery,
-  type QueryDb,
-} from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   and,

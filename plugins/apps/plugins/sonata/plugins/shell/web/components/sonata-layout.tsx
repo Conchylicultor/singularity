@@ -2,10 +2,8 @@ import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { Sonata } from "../slots";
 import { SonataProvider } from "../context";
 import { CursorStoreProvider } from "../cursor-store";
-import { KeyModeStoreProvider } from "../key-mode-store";
-import { TransposeStoreProvider } from "../transpose-store";
-import { RhythmStoreProvider } from "../rhythm-store";
-import { ChordModeStoreProvider } from "../chord-mode-store";
+import { LoadedSongProvider } from "../loaded-song";
+import { SongSettingsMount } from "../song-setting-mount";
 
 /**
  * Sonata's app surface. Sonata is a pure full-surface app, so it mounts the
@@ -15,34 +13,31 @@ import { ChordModeStoreProvider } from "../chord-mode-store";
  *
  * Alongside the renderer it keeps the headless, always-mounted Sonata-scoped
  * side effects (e.g. play recording) so they observe context regardless of which
- * pane is active.
+ * pane is active, and the per-song setting observers (`Sonata.SongSetting`,
+ * mounted afresh for each loaded song).
  *
- * The cursor and key-mode scoped stores are provided HERE, wrapping
- * `SonataProvider`, so each Sonata surface (desktop window / keep-alive tab) gets
- * its own isolated playback state. They wrap from the OUTSIDE because
- * `SonataProvider`'s own body both writes the cursor (rAF transport loop) and
- * reads the key-mode flag (`baseScore` memo) — a component can't use a store's
- * hooks if it renders that store's `<Provider>` in its own JSX (the hooks would
- * resolve above the Provider). With the providers one level up, `SonataProvider`
- * and every child use the normal hooks.
+ * The cursor store and the loaded song (content + per-song settings) are
+ * provided HERE, wrapping `SonataProvider`, so each Sonata surface (desktop
+ * window / keep-alive tab) gets its own isolated playback state. They wrap from
+ * the OUTSIDE because `SonataProvider`'s own body both writes the cursor (rAF
+ * transport loop) and loads and reads the song (`setRawMap`, the `baseScore`
+ * memo) — a component can't use a store's hooks if it renders that store's
+ * `<Provider>` in its own JSX (the hooks would resolve above the Provider). With
+ * the providers one level up, `SonataProvider` and every child use the normal
+ * hooks.
  */
 export function SonataLayout() {
   return (
     <CursorStoreProvider>
-      <KeyModeStoreProvider>
-        <TransposeStoreProvider>
-          <RhythmStoreProvider>
-            <ChordModeStoreProvider>
-              <SonataProvider>
-                <div className="h-full min-h-0">
-                  <FullPane />
-                  <Sonata.Effect.Mount />
-                </div>
-              </SonataProvider>
-            </ChordModeStoreProvider>
-          </RhythmStoreProvider>
-        </TransposeStoreProvider>
-      </KeyModeStoreProvider>
+      <LoadedSongProvider>
+        <SonataProvider>
+          <div className="h-full min-h-0">
+            <FullPane />
+            <Sonata.Effect.Mount />
+            <SongSettingsMount />
+          </div>
+        </SonataProvider>
+      </LoadedSongProvider>
     </CursorStoreProvider>
   );
 }

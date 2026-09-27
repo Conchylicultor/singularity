@@ -7,8 +7,9 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 //
 // A process that runs ONE registered piece of work and exits: it needs the
 // plugin graph loaded, `register` run, contributions collected (that is how a
-// consumer finds its contributed sources and targets) and `onReadyBlocking`
-// completed (DB pool, migrations, config registry). It needs nothing else.
+// consumer finds its contributed sources and targets), the preload-declare
+// assert, and `onReadyBlocking` completed (DB pool, migrations, config
+// registry). It needs nothing else.
 //
 // It shares `../shared/boot-stages.ts` with `serve` (`../bin/index.ts`) rather
 // than re-implementing the sequence, because a second copy of a boot path that

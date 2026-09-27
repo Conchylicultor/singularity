@@ -25,9 +25,11 @@ Contributed rules run at `error`, so a false positive breaks the build. The matc
 deliberately narrow — it fires **only** when the receiver is a name-matched `db.select().from(…)`
 chain, the callback is an *all-pure* field copy (every value is `p.x`, `p.x.toISOString()`, or
 `p.x as T` — anything else, incl. `?? null`, a ternary, or any other call, is treated as a genuine
-transform and skipped), and the whole thing sits inside a `defineResource({ loader })`. It is a
-NUDGE, not a guarantee: an evasive projection is intentionally allowed to slip through rather than
-risk a false positive.
+transform and skipped), and the whole thing sits inside a resource loader — the `loader` property
+of a `defineResource({ loader })` or of network/live's `serveValue(value, { loader })` (either
+`source`). A loader passed by reference (`loader: loadRows`) is not followed. It is a NUDGE, not a
+guarantee: an evasive projection is intentionally allowed to slip through rather than risk a false
+positive.
 
 There is no `ignores` allowlist. Entity-extension side-tables were its last exception — their
 loaders had to rename the `parentId` FK to the domain key because `defineExtension` built no wire

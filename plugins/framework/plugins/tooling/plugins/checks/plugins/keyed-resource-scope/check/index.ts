@@ -12,21 +12,16 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-// The four ways a keyed `identityTable` resource can answer "which subscribed
+// The three ways a keyed `identityTable` resource can answer "which subscribed
 // tuple owns a changed row?" — the second half of `ScopePolicy`. Exactly one is
 // required; see the arm docs on `ScopePolicy` in
 // `plugins/framework/plugins/resource-runtime/core/runtime.ts`.
-const SCOPE_ARMS = [
-  "rowIdentity",
-  "membership",
-  "scopedMembership",
-  "fanOut",
-] as const;
+const SCOPE_ARMS = ["membership", "scopedMembership", "fanOut"] as const;
 
 const check: Check = {
   id: "keyed-resource-scope",
   description:
-    'A keyed live-state resource MUST be declared via a CLIENT-SHARED `keyedResourceDescriptor(...)` plus the two-arg `defineResource(descriptor, opts)` form, so `keyOf` is declared once and the server can never drift from the client. This static BACKSTOP forbids the two ways keyed-ness can be smuggled into the server without a shared descriptor: (1) the flat `mode: "keyed"` form (banned at the type level via `ServerResourceOptions` rejecting `mode:"keyed"`, so any textual `mode:"keyed"` is a type bypass — `as any`, `// @ts-expect-error`, a local wrapper), and (2) an inline `keyed:` contract literal as the FIRST argument (the sanctioned form passes an imported descriptor IDENTIFIER, so `keyed:` never appears in a real call). Both let server keyed-ness drift from the client and crash the browser ("no keyOf registered for keyed resource") with no compile-time signal. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.\n\nIt also enforces (3) the second half of `ScopePolicy`: an opts object declaring `identityTable` MUST declare exactly one of `rowIdentity` / `membership` / `scopedMembership` / `fanOut: { reason }`. `identityTable` says which RESOURCE a change belongs to; it never said which subscribed TUPLE of it, so the feed router woke every subscribed tuple — each of which re-ran its own read, found the changed row was not its own, and diffed to empty. No frame shipped, which is exactly what hid the cost: the read IS the cost. `tsc` enforces this at every hand-written call site (the four-arm `ScopePolicy` union); this check is the BACKSTOP for the opts objects built behind an `as … & ScopePolicy` cast, which `tsc` cannot see through. `fanOut` is the honest answer where fan-out is genuinely required (a composite pk the change feed emits no ids for; params keying a foreign column; a param-less single tuple) and normalizes to nothing at runtime — but its `reason` must be a real sentence about THAT resource. See research/2026-08-25-global-own-row-resource-scoping.md.',
+    'Backstop for the keyed live-state resources still declared on the old spellings. A NEW collection is a `liveCollection` served with `serveCollection` (`plugins/network/plugins/live`), which derives keyed-ness, `keyOf` and the scope policy itself — never a hand-written keyed `defineResource`. What this check guards is the old keyed forms that remain (the tree resources, and the keyed resources `serveCollection` compiles to): their keyed-ness must come from a CLIENT-SHARED keyed descriptor passed to the two-arg `defineResource(descriptor, opts)`, so `keyOf` is declared once and the server can never drift from the client. It forbids the two ways keyed-ness can be smuggled into the server without a shared descriptor: (1) the flat `mode: "keyed"` form (rejected at the type level — a flat or non-keyed `mode` is only `"push" | "invalidate"`, and a keyed contract takes no `mode` at all — so any textual `mode: "keyed"` is a type bypass: `as any`, `// @ts-expect-error`, a local wrapper), and (2) an inline `keyed:` contract literal as the FIRST argument (the sanctioned form passes an imported descriptor IDENTIFIER, so `keyed:` never appears in a real call). Both let server keyed-ness drift from the client and crash the browser ("no keyOf registered for keyed resource") with no compile-time signal. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.\n\nIt also enforces (3) the second half of `ScopePolicy`: a keyed opts object declaring `identityTable` MUST declare exactly one of `membership` / `scopedMembership` / `fanOut: { reason }`. `identityTable` says which RESOURCE a change belongs to; it never said which subscribed TUPLE of it, so the feed router woke every subscribed tuple — each of which re-ran its own read, found the changed row was not its own, and diffed to empty. No frame shipped, which is exactly what hid the cost: the read IS the cost. A tuple that names ONE row is a lookup-only `liveCollection` read by id, whose `:rows` point membership routes a change only to the tuples holding that id. `tsc` enforces this at every hand-written call site (the three-arm `ScopePolicy` union); this check is the BACKSTOP for the opts objects built behind an `as … & ScopePolicy` cast, which `tsc` cannot see through. `fanOut` is the honest answer where fan-out is genuinely required (a composite pk the change feed emits no ids for; params keying a foreign column; a param-less single tuple) and normalizes to nothing at runtime — but its `reason` must be a real sentence about THAT resource. See research/2026-08-25-global-own-row-resource-scoping.md.',
   async run() {
     const root = await getWorktreeRoot();
 
@@ -134,7 +129,7 @@ const check: Check = {
     // A field is DECLARED when the key is present in real code at the body's top
     // level, whatever its value is: `parseStringField` answers `absent` only when
     // the key is genuinely not there, and `dynamic` for the closures / object
-    // literals these four arms actually hold.
+    // literals these three arms actually hold.
     const declares = (body: string, field: string): boolean =>
       parseStringField(body, field, { depth0: true }).kind !== "absent";
 
@@ -158,11 +153,12 @@ const check: Check = {
         const line = lineAt(masked, span.identifier);
 
         // Rule 1 — flat keyed bypass. The sanctioned two-arg keyed form passes an
-        // imported descriptor and NEVER writes `mode:` textually, so any `mode:`
-        // in the call is a flat-form bypass. A literal `mode: "keyed"` is the
-        // direct offender; a NON-LITERAL `mode: SOME_VAR` cannot be proven not to
-        // resolve to "keyed" at runtime, so it is the exact smuggling vector this
-        // check's threat model anticipates and is flagged too.
+        // imported descriptor and NEVER writes `mode:` (its opts type takes
+        // none), while every non-keyed form writes a literal `"push"` /
+        // `"invalidate"`. So a literal `mode: "keyed"` is the direct offender; a
+        // NON-LITERAL `mode: SOME_VAR` cannot be proven not to resolve to "keyed"
+        // at runtime, so it is the exact smuggling vector this check's threat
+        // model anticipates and is flagged too.
         const modeField = parseStringField(block, "mode");
         if (modeField.kind === "value" && modeField.value === "keyed") {
           descriptorOffenders.push(`${rel}:${line} (flat mode:"keyed")`);
@@ -177,13 +173,14 @@ const check: Check = {
 
         // Rule 3 — the tuple-ownership arm. Only a KEYED resource is governed by
         // `ScopePolicy`, and keyed-ness comes solely from the descriptor: a keyed
-        // contract derives its mode from its own `keyOf` and so never writes
-        // `mode:` at all. A call that DOES state a literal `mode:` is therefore a
-        // `push`/`invalidate` resource (mail's label mirror, the events/threads
-        // revision ticks) whose `identityTable` only routes recompute scoping —
-        // there is no per-tuple fan-out to answer for. Read at the OPTS object's
-        // own top level (rule 1's whole-call read is the right scope for a
-        // smuggling check, the wrong one for deciding "is this keyed?").
+        // contract derives its mode from its own `keyOf`, and its opts type
+        // takes no `mode:` at all, while every non-keyed form must state one. A
+        // call that states a literal `mode:` is therefore a `push`/`invalidate`
+        // resource (the events/threads revision ticks) whose `identityTable` only
+        // routes recompute scoping — there is no per-tuple fan-out to answer
+        // for. Read at the OPTS object's own top level (rule 1's whole-call read
+        // is the right scope for a smuggling check, the wrong one for deciding
+        // "is this keyed?").
         const optsBody = secondArgObjectBody(
           block,
           masked.slice(span.open, span.close + 1),
@@ -253,7 +250,7 @@ const check: Check = {
         `Keyed \`defineResource(\` not declared through a shared descriptor in ${descriptorOffenders.length} place(s):\n    ${descriptorOffenders.join("\n    ")}`,
       );
       hints.push(
-        'A keyed live-state resource MUST be declared via a CLIENT-SHARED `keyedResourceDescriptor(key, schema, initialData, keyOf)` plus the two-arg `defineResource(descriptor, { loader, identityTable, … })` form — never the flat `mode: "keyed"` form and never an inline `keyed:` contract literal. Both smuggle keyed-ness into the server without sharing `keyOf` with the client, so the server\'s keyed-ness can drift from the client and crash the browser ("no keyOf registered for keyed resource") with no compile-time signal. Move the contract (`key`/`schema`/`keyOf`) into a shared descriptor the server can import, then pass only the DB half as `opts`. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.',
+        'Declare a new collection with `liveCollection` and serve it with `serveCollection` (`plugins/network/plugins/live/CLAUDE.md`): the declaration is the one shared contract, and keyed-ness, `keyOf` and the scope policy are derived from it. An old keyed resource that stays on `defineResource` takes its keyed-ness from the CLIENT-SHARED keyed descriptor it already has, passed to the two-arg `defineResource(descriptor, { loader, identityTable, … })` form — never the flat `mode: "keyed"` form and never an inline `keyed:` contract literal. Both smuggle keyed-ness into the server without sharing `keyOf` with the client, so the server\'s keyed-ness can drift from the client and crash the browser ("no keyOf registered for keyed resource") with no compile-time signal. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.',
       );
     }
     if (scopeArmOffenders.length > 0) {
@@ -261,7 +258,7 @@ const check: Check = {
         `\`identityTable\` without exactly one tuple-ownership arm in ${scopeArmOffenders.length} place(s):\n    ${scopeArmOffenders.join("\n    ")}`,
       );
       hints.push(
-        'An opts object declaring `identityTable` must declare exactly one of `rowIdentity: (params) => rowId` (the tuple names ONE row of the table — routing only, the owner\'s frames are unchanged), `membership` / `scopedMembership` (the tuple names a bounded window or point set), or `fanOut: { reason }` (every subscribed tuple genuinely must be woken — write the real reason for THIS resource: a composite pk the change feed emits no ids for, params keying a foreign column, a param-less single tuple). Without an arm the feed wakes every subscribed tuple, each of which re-reads its own row, finds the changed row is not its own, and diffs to empty — no frame ships, so the cost is invisible; the read IS the cost. `fanOut` changes nothing at runtime, exactly like `recompute: { kind: "full", reason }`. See research/2026-08-25-global-own-row-resource-scoping.md and the `ScopePolicy` doc in plugins/framework/plugins/resource-runtime/core/runtime.ts.',
+        'A keyed opts object declaring `identityTable` must declare exactly one of `membership` / `scopedMembership` (the tuple names a bounded window or point set) or `fanOut: { reason }` (every subscribed tuple genuinely must be woken — write the real reason for THIS resource: a composite pk the change feed emits no ids for, params keying a foreign column, a param-less single tuple). A tuple that names ONE row is a lookup-only `liveCollection` read with `useLiveRow`: its `:rows` point membership already routes a change only to the tuples holding that id. Without an arm the feed wakes every subscribed tuple, each of which re-reads its own row, finds the changed row is not its own, and diffs to empty — no frame ships, so the cost is invisible; the read IS the cost. `fanOut` changes nothing at runtime, exactly like `recompute: { kind: "full", reason }`. See research/2026-08-25-global-own-row-resource-scoping.md and the `ScopePolicy` doc in plugins/framework/plugins/resource-runtime/core/runtime.ts.',
       );
     }
 

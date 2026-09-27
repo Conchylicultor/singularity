@@ -1,12 +1,9 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   ExcludeFromBackup,
   ExcludeFromFork,
 } from "@plugins/database/plugins/admin/server";
-import { mailLabelsServerResource } from "./internal/labels-resource";
+import { mailLabelsServed } from "./internal/labels-resource";
 import {
   _mailMessages,
   _mailThreads,
@@ -32,13 +29,12 @@ export { mailDraftAttachments } from "./internal/schema-attachments";
 export { resolveMailAccountId } from "./internal/account";
 export { requireGmailToken } from "./internal/token";
 export type { GmailConnection } from "./internal/token";
-export { mailLabelsServerResource } from "./internal/labels-resource";
 
 export default {
   description:
     "Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.",
   contributions: [
-    Resource.Declare(mailLabelsServerResource),
+    ...mailLabelsServed.declare,
     // The mailbox corpus. Gmail sync is main-only, so a forked worktree neither
     // needs these rows nor would ever re-populate them — and at ~845 MB they
     // used to dominate the fork. These four exclusions were previously a

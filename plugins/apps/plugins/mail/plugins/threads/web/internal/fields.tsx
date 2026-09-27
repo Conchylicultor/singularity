@@ -1,9 +1,12 @@
 import { useMemo, type ReactNode } from "react";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import type { FieldDef, FieldValue } from "@plugins/primitives/plugins/data-view/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  FieldDef,
+  FieldValue,
+} from "@plugins/primitives/plugins/data-view/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  mailLabelsResource,
+  mailLabels,
   type MailLabel,
   type MailThread,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
@@ -35,7 +38,10 @@ function fieldValue(t: MailThread, id: string): FieldValue {
   }
 }
 
-function cellFor(id: string, type: string): ((t: MailThread) => ReactNode) | undefined {
+function cellFor(
+  id: string,
+  type: string,
+): ((t: MailThread) => ReactNode) | undefined {
   if (type === "date") {
     return (t: MailThread) => {
       const v = fieldValue(t, id);
@@ -64,12 +70,11 @@ const SYSTEM_LABEL_OPTIONS: LabelOption[] = [
   { value: "IMPORTANT", label: "Important" },
 ];
 
-// Module-level (so it is reference-stable) derived slice: the labels resource is
-// a live list, but this surface only ever wants its id→name projection. Reading
-// it through `select` narrows re-renders to a genuine name change AND is the
-// sanctioned shape for the pending fallback below.
-const selectLabelOptions = (rows: MailLabel[]): LabelOption[] =>
-  rows.map((l) => ({ value: l.id, label: l.name }));
+// One user label as a field option: its Gmail id, shown as its name.
+const labelOption = (l: MailLabel): LabelOption => ({
+  value: l.id,
+  label: l.name,
+});
 
 /**
  * The web `FieldDef[]`, derived from the shared `MAIL_THREAD_FIELDS` vocabulary
@@ -78,21 +83,21 @@ const selectLabelOptions = (rows: MailLabel[]): LabelOption[] =>
  * A hook rather than a constant because the `labels` field's `options` are live:
  * they map each Gmail label id to a friendly name, which every mailbox tab's
  * filter chip renders — so "Label_12" never reaches the screen. The user labels
- * come from `mail-core`'s labels resource.
+ * come from `mail-core`'s `mailLabels` live value.
  */
 export function useMailThreadFieldDefs(): FieldDef<MailThread>[] {
-  const userLabels = useResource(mailLabelsResource, undefined, {
-    select: selectLabelOptions,
-  });
+  const userLabels = useLive(mailLabels);
   // `options` is a display-name LOOKUP, not a data set: a label id missing from
   // it renders as its own raw id — the same thing an unsynced id already does. So
   // the pending arm is a smaller lookup table, never a fake-empty collection, and
-  // it can't produce a confidently-wrong empty state.
+  // it can't produce a confidently-wrong empty state. The result's identity only
+  // moves when the labels do (structural sharing), so the id→name projection is
+  // recomputed on a genuine label change, not on every render.
   const labelOptions = useMemo(
     () =>
       userLabels.pending
         ? SYSTEM_LABEL_OPTIONS
-        : [...SYSTEM_LABEL_OPTIONS, ...userLabels.data],
+        : [...SYSTEM_LABEL_OPTIONS, ...userLabels.data.map(labelOption)],
     [userLabels],
   );
 

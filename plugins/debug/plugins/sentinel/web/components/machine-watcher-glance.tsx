@@ -1,4 +1,4 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import {
@@ -7,7 +7,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { sentinelVitalsResource } from "../../core";
+import { sentinelVitals } from "../../core";
 import { VALUE_CLASS, STALE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,
@@ -72,7 +72,7 @@ export function MachineWatcherGlanceView({ view }: { view: VitalsView }) {
 }
 
 export function MachineWatcherGlance() {
-  const result = useResource(sentinelVitalsResource);
+  const result = useLive(sentinelVitals);
   const now = useNow(STALE_CHECK_MS);
   // Loading, or nothing readable: nothing here. The summary above already
   // carries the verdict, and the expanded detail says why there are no numbers.

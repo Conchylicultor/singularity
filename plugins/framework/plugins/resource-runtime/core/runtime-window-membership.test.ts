@@ -895,3 +895,30 @@ describe("membership — registration guards", () => {
     ).toThrow(/membership requires an identityTable/);
   });
 });
+
+// ── `ScopePolicy`: the ONE case no guard test can express ──────────
+//
+// The registration-guard tests above (and their twins in
+// `runtime-scoped-membership.test.ts`) pin every TWO-ARMS-AT-ONCE rejection,
+// each with a `@ts-expect-error` over a runtime `toThrow` — the compile-time
+// rejection AND the runtime backstop in one test. The arms' positive spellings
+// are exercised by real call sites.
+//
+// What none of them can express is an `identityTable` with NO arm: it was the
+// legal default before the tuple-ownership half of `ScopePolicy` existed, so no
+// runtime guard rejects it and no `toThrow` can be written for it. `fanOut`
+// likewise changes NOTHING at runtime — that is the point of the arm — so only
+// `tsc` can hold the requirement, and only this fixture can hold that `tsc`
+// does. `@ts-expect-error` fails if the rejection ever stops happening.
+//
+// Never called; exported only so it is not dead code.
+export function scopePolicyMissingArmFixture(
+  h: ReturnType<typeof createHarness>,
+): void {
+  const contract = { key: "fixture", schema: rowsSchema, keyed: { keyOf } };
+  // @ts-expect-error — identityTable with no membership / scopedMembership / fanOut
+  h.runtime.defineResource(contract, {
+    identityTable: "t",
+    loader: async () => [],
+  });
+}

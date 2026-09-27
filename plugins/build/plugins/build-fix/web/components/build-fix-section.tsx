@@ -1,27 +1,26 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAutoFixHigh } from "react-icons/md";
 import {
-  mapResource,
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import {
   BUILD_CATEGORY_ID,
   type BuildRun,
-  buildHistoryResource,
+  buildHistory,
 } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
-/** The run; settled `null` means it is not in the history. */
-function useBuildRun(runId: string): ResourceResult<BuildRun | null> {
-  const result = useResource(buildHistoryResource);
-  return mapResource(
-    result,
-    (runs) => runs.find((r) => r.id === runId) ?? null,
-  );
+/**
+ * The run, by id: pending, then found or determinately absent (`found: false`
+ * means this namespace has no such run). A point read, so a run older than the
+ * newest 50 the history window holds is still found.
+ */
+function useBuildRun(runId: string): LiveRowResult<BuildRun> {
+  return useLiveRow(buildHistory, runId);
 }
 
 /**
@@ -40,8 +39,8 @@ export function useBuildFailed({ runId }: { runId: string }): boolean {
   const run = useBuildRun(runId);
   // Unavailable until the run is known: offering a fix before knowing the build
   // failed would be a claim the data may not back.
-  if (run.pending || run.data === null) return false;
-  return buildStatusOf(run.data) === "failed";
+  if (run.pending || !run.found) return false;
+  return buildStatusOf(run.row) === "failed";
 }
 
 /**
@@ -52,8 +51,8 @@ export function useBuildFailed({ runId }: { runId: string }): boolean {
 export function BuildFixAction({ runId }: { runId: string }) {
   const run = useBuildRun(runId);
   // `useAvailable` already gated on a failed run; this only narrows the type.
-  if (run.pending || !run.data) return null;
-  return <BuildFixButton runId={runId} run={run.data} />;
+  if (run.pending || !run.found) return null;
+  return <BuildFixButton runId={runId} run={run.row} />;
 }
 
 function formatBuildInfo(run: BuildRun): string {

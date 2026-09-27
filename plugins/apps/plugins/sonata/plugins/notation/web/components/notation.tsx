@@ -21,6 +21,7 @@ import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Inset,
@@ -123,18 +124,24 @@ function systemForBeat(systems: SystemPlan[], beat: number): number {
 function NotationInner({ score }: NotationProps) {
   const { showChordSymbols, splitPitch, staffLayout, separateVoices } =
     useConfig(notationConfig);
-  const { seekTo, isPlaying } = useSonata();
+  const { seekTo, isPlaying, scorePending } = useSonata();
   const cursor = useCursorApi();
 
   // Drop hidden tracks (track-mixer) before engraving, and pass the visible
-  // tracks' names through so per-track staves can be labeled.
+  // tracks' names through so per-track staves can be labeled. Until the song's
+  // track views are known nothing is engraved (a hidden track must never flash
+  // in), and the surface shows the loading state below.
   const hiddenTrackIds = useHiddenTrackIds();
   const trackEntries = useTrackMixerEntries();
+  const viewPending =
+    scorePending || hiddenTrackIds.pending || trackEntries.pending;
   const visibleScore = useMemo<Score>(() => {
-    if (hiddenTrackIds.size === 0) return score;
+    if (hiddenTrackIds.pending) return { ...score, notes: [] };
+    const hidden = hiddenTrackIds.value;
+    if (hidden.size === 0) return score;
     return {
       ...score,
-      notes: score.notes.filter((n) => !hiddenTrackIds.has(n.track)),
+      notes: score.notes.filter((n) => !hidden.has(n.track)),
     };
   }, [score, hiddenTrackIds]);
   // Track metadata for `convert`: instrument key (gmProgram/instrumentHint) from
@@ -142,9 +149,13 @@ function NotationInner({ score }: NotationProps) {
   // joined with the track-mixer's display name (honors a user rename). Filtered
   // to the visible tracks so a hidden track never forms a part.
   const trackMeta = useMemo(() => {
-    const nameById = new Map(trackEntries.map((e) => [e.trackId, e.name]));
+    if (hiddenTrackIds.pending || trackEntries.pending) return [];
+    const hidden = hiddenTrackIds.value;
+    const nameById = new Map(
+      trackEntries.value.map((e) => [e.trackId, e.name]),
+    );
     return score.tracks
-      .filter((t) => !hiddenTrackIds.has(t.id))
+      .filter((t) => !hidden.has(t.id))
       .map((t) => ({
         id: t.id,
         name: nameById.get(t.id) ?? t.name,
@@ -307,6 +318,14 @@ function NotationInner({ score }: NotationProps) {
     [seekTo],
   );
 
+  if (viewPending) {
+    // The song's settings are still loading: not "no notes".
+    return (
+      <Center className="h-full w-full bg-background">
+        <Loading />
+      </Center>
+    );
+  }
   if (!hasNotes) {
     return (
       <Center className="h-full w-full bg-background">

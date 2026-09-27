@@ -132,7 +132,8 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
 
   // Per-track view-state, shared with the falling notes (color + hidden) and the
   // audio engine (muted). Memo-stable across frames, so reading it inside the
-  // per-frame `sounding` selector below is free.
+  // per-frame `sounding` selector below is free. Until the song's track views
+  // are known no key lights for playback (the score is withheld then too).
   const colorMap = useTrackColorMap();
   const hiddenIds = useHiddenTrackIds();
   const mutedIds = useMutedTrackIds();
@@ -162,9 +163,13 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   const sounding = useCursorSelector(
     (beat) => {
       const m = new Map<number, string>();
+      if (colorMap.pending || hiddenIds.pending || mutedIds.pending) return m;
+      const colors = colorMap.value;
+      const hidden = hiddenIds.value;
+      const muted = mutedIds.value;
       for (const n of noteIndex.at(beat)) {
-        if (hiddenIds.has(n.track) || mutedIds.has(n.track)) continue;
-        if (!m.has(n.pitch)) m.set(n.pitch, colorMap.get(n.track) ?? "");
+        if (hidden.has(n.track) || muted.has(n.track)) continue;
+        if (!m.has(n.pitch)) m.set(n.pitch, colors.get(n.track) ?? "");
       }
       return m;
     },

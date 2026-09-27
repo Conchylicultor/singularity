@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
@@ -38,15 +38,17 @@ export function applyPrototypeStatusChange(
 }
 
 /**
- * Every recorded status, keyed by prototype id (push). A prototype missing from
- * the map has no status recorded — `NO_PROTOTYPE_STATUS`, a legitimate answer.
- * One small record per prototype, so it is bounded by the prototype list it
- * annotates (which the gallery already holds whole). Notified by the writer
- * the moment it writes, and by the watcher on every other backend.
+ * Every recorded status, keyed by prototype id (push, served from the status
+ * store — `source: "external"`). A prototype missing from the map has no
+ * status recorded — `NO_PROTOTYPE_STATUS`, a legitimate answer once loaded, and
+ * never a stand-in before: until the map is read it is pending. One small
+ * record per prototype, so it is bounded by the prototype list it annotates
+ * (which the gallery already holds whole). Notified by the writer the moment it
+ * writes, and by the watcher on every other backend.
  */
-export const prototypeStatusesResource = resourceDescriptor<
-  Record<string, PrototypeStatus>
->("prototypes.statuses", z.record(z.string(), PrototypeStatusSchema), {});
+export const prototypeStatuses = liveValue("prototypes.statuses", {
+  schema: z.record(z.string(), PrototypeStatusSchema),
+});
 
 /** The status recorded for `name` in a statuses map. */
 export function statusOf(

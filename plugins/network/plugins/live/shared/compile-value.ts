@@ -164,7 +164,7 @@ export type ServeValueOptions<
 
 /** The runtime's two-arg options for a value, plus which factory registers it. */
 export interface CompiledValue<T, P extends Record<string, string>> {
-  options: ServerResourceOptions<T, P> & { mode: "push" | "invalidate" };
+  options: ServerResourceOptions<T, P>;
   external: boolean;
   unbounded?: { reason: string };
   /**

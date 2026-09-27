@@ -173,36 +173,38 @@ const NOT_OWNER = { ownerPlugin: false };
 
 describe("preloadedKeysIn", () => {
   test("a vocabulary owner's wrapper call is not a declaration site; the same call elsewhere throws", () => {
-    // `liveCollection` forwarding a caller's `preload: "boot"` to the window
-    // factory it wraps: a literal flag, a computed key.
+    // A factory wrapping another (`queryResourceDescriptor` over
+    // `keyedResourceDescriptor`) with a literal preload flag and a computed key.
     const src = `
-      const window = windowQueryResourceDescriptor(key, spec.row, spec.id, {
-        defaultLimit: spec.default.limit, preload: "boot",
+      const descriptor = keyedResourceDescriptor<Row[]>(key, z.array(rowSchema), [], keyOf, {
+        preload: "boot",
       });
     `;
-    expect(preloadedKeysIn(src, "live.ts", { ownerPlugin: true })).toEqual([]);
-    expect(() => preloadedKeysIn(src, "live.ts", NOT_OWNER)).toThrow(
-      /live\.ts:2: windowQueryResourceDescriptor/,
+    expect(
+      preloadedKeysIn(src, "descriptor.ts", { ownerPlugin: true }),
+    ).toEqual([]);
+    expect(() => preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toThrow(
+      /descriptor\.ts:2: keyedResourceDescriptor/,
     );
   });
 
-  test("reads a preloaded key from every descriptor factory, bounded ones included", () => {
-    // `windowQueryResourceDescriptor` is the case this scanner was blind to: it
+  test("reads a preloaded key from every descriptor factory", () => {
+    // A factory missing from the list is the case this scanner was blind to: it
     // kept its own four-name list and the bounded factories were never added, so
     // a preloaded resource under `apps/plugins/**` silently stayed deferred.
     const src = `
       export const tasksResource = keyedResourceDescriptor<T[]>(
         "tasks", S, [], k, { preload: "boot" },
       );
-      export const notificationsResource = windowQueryResourceDescriptor<N>(
-        "notifications", S, "id", { defaultLimit: 200, preload: "boot-and-keep" },
+      export const pushesResource = queryResourceDescriptor<P>(
+        "pushes", S, "id", { preload: "boot-and-keep" },
       );
       export const quietResource = resourceDescriptor<Q>("quiet", S, null);
       export const offResource = resourceDescriptor<Q>("off", S, null, { preload: "none" });
     `;
     expect(preloadedKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
       "tasks",
-      "notifications",
+      "pushes",
     ]);
   });
 
@@ -268,15 +270,15 @@ describe("preloadedKeysIn", () => {
   });
 
   test("a factory's own declaration is not a preloaded call", () => {
-    // `opts: { defaultLimit: number; preload?: ResourcePreload }` is a type
-    // position — `preload?:` is not the `preload:` field the scan reads.
+    // `opts?: { preload?: ResourcePreload }` is a type position — `preload?:` is
+    // not the `preload:` field the scan reads.
     const src = `
-      export function windowQueryResourceDescriptor<Row>(
+      export function queryResourceDescriptor<Row>(
         key: string, rowSchema: ZodParser<Row>, pkField: keyof Row & string,
-        opts: { defaultLimit: number; preload?: ResourcePreload },
-      ): WindowQueryResourceContract<Row> { return d; }
+        opts?: { preload?: ResourcePreload },
+      ): QueryResourceContract<Row> { return d; }
     `;
-    expect(preloadedKeysIn(src, "window.ts", NOT_OWNER)).toEqual([]);
+    expect(preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toEqual([]);
   });
 
   test("throws on a preloaded declaration whose key is not a literal", () => {

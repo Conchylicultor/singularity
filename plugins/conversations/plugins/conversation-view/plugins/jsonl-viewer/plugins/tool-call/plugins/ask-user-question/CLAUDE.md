@@ -69,6 +69,7 @@ lives inside the tool result, not in a message a rewind can cut at.
     - `conversations/conversation-view/rewind.useGoBackToMessage`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -85,7 +86,6 @@ lives inside the tool result, not in a message a rewind can cut at.
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.useResource`
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
     - `shell/notifications.toast`

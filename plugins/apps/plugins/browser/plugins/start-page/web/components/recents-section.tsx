@@ -1,20 +1,28 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useBrowserNav, Favicon } from "@plugins/apps/plugins/browser/plugins/shell/web";
-import { browserRecentsResource } from "@plugins/apps/plugins/browser/plugins/history/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  useBrowserNav,
+  Favicon,
+} from "@plugins/apps/plugins/browser/plugins/shell/web";
+import { browserRecents } from "@plugins/apps/plugins/browser/plugins/history/web";
 
 /**
  * The "Recent" section: rows of recently visited pages from the live
- * `browser-recents` resource (distinct-by-url, newest first). Each row shows a
+ * `browserRecents` value (distinct-by-url, newest first). Each row shows a
  * favicon, the page title, and a relative visit time; clicking navigates.
- * Rendered only once data is present and non-empty.
+ * Rendered only once data is present and non-empty (no empty heading while
+ * pending or empty) — the same narrowing the bookmarks section uses.
  */
 export function RecentsSection() {
   const { navigate } = useBrowserNav();
-  const result = useResource(browserRecentsResource);
+  const result = useLive(browserRecents);
 
   return matchResource(result, {
     pending: () => null,

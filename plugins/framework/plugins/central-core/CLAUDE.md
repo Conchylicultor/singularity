@@ -15,7 +15,8 @@ plugins/framework/plugins/central-core/
 ├── core/                 # Public API — the framework types and helpers
 │   ├── index.ts          # Barrel re-exporting all public API
 │   ├── types.ts          # CentralPluginDefinition, WsHandler, HttpHandler
-│   └── resources.ts      # defineResource, Resource, notificationsWsHandler
+│   └── resources.ts      # runtime primitives (defineResource, notificationsWsHandler) — a central
+│                         #   value is served with network/live/central's serveValue, never these
 └── bin/                  # Process entry point (gateway runs `bun bin/index.ts`)
     ├── index.ts          # Bun.serve, route tables, lifecycle, orphan watchdog
     ├── topo.ts           # topoSortPlugins (internal)

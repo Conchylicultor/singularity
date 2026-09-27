@@ -60,7 +60,7 @@ export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
 // debounce — and a safe over-approximation in the other direction: a bare `main`
 // advance now moves the merge-base and forces one worktree-tree rebuild that the
 // counter would have hit. Correctness is unaffected either way; this memo is not
-// skewed (pluginChangesResource is `mode: "push"` with no `revalidate`, so it has
+// skewed (`pluginChangesServed` is a pushed value with no `revalidate`, so it has
 // no ETag/value pair to keep in agreement) and it only needs a faithful, fresh
 // signal.
 const worktreeTreeMemo = createGitStateMemo<PluginTree>({

@@ -1,17 +1,14 @@
-import {
-  resourceDescriptor,
-  keyedResourceDescriptor,
-} from "@plugins/primitives/plugins/live-state/core";
+import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { z } from "zod";
 import {
   TaskSchema,
   TaskListItemSchema,
   PushSchema,
   ConversationSchema,
-  type Task,
   type TaskListItem,
-  type Push,
   type Conversation,
 } from "./internal/schema";
 import {
@@ -47,10 +44,15 @@ export const tasksResource = queryResourceDescriptor<TaskListItem>(
   "id",
   { preload: "boot" },
 );
-export const taskDetailResource = resourceDescriptor<
-  Task | null,
-  { id: string }
->("task-detail", TaskSchema.nullable(), null);
+// One task's full row (incl. `description`, which the lean `tasks` list omits),
+// per `{ id }`. `null` is a settled answer — no such task — never a stand-in:
+// not loaded yet is `pending`. Pushed whole on every change to what its loader
+// reads (`tasks_v`); not preloaded (a param'd value has no default tuple — it
+// loads for an open detail pane). Served in `../server/internal/resources.ts`.
+export const taskDetail = liveValue("task-detail", {
+  schema: TaskSchema.nullable(),
+  params: ["id"],
+});
 export const attemptsResource = keyedResourceDescriptor<
   AttemptWithConversations[]
 >(
@@ -60,40 +62,33 @@ export const attemptsResource = keyedResourceDescriptor<
   (r) => (r as AttemptWithConversations).id,
   { preload: "boot" },
 );
-// Global push resource — a param-less push-mode carrier whose ONLY role now is
-// the SERVER cascade: the `attempts` status invalidation (`rel(pushesResource,…)`,
-// id-based) and the commits-graph refresh (a value-aware `map` reading the whole
-// pushes value). No web consumer subscribes anymore — every attempt-scoped push
-// surface reads the bounded `pushesByAttemptResource` below instead. It is NOT
-// preloaded: nothing subscribes, so persisting/boot-shipping the full table
-// (the measured 525 KB churn) is pure waste. A window here is impossible — a
-// value-aware `map` downstream forces the loader to run on every change, and the
-// zero-subscriber cascade fans to the param-less `{}` tuple, which a windowed
-// loader cannot decode.
-export const pushesResource = resourceDescriptor<Push[]>(
-  "pushes",
-  z.array(PushSchema),
-  [],
-);
-
-// Per-attempt bounded push list — a keyed resource parametrized by `{ attemptId }`
-// so each consumer subscribes to exactly ONE attempt's pushes, bounded by that
-// attempt and CORRECT for arbitrarily old attempts. This is the source every
-// attempt-scoped push consumer reads: filtering the global `pushes` window by
-// attemptId silently dropped an old attempt's pushes once they fell outside the
-// recent global window (a wrong "No pushes yet" / a destructive drop-vs-complete
-// mis-gate). NOT preloaded — route-scoped, hydrates post-mount via its sub-ack
-// (the page-block-doc precedent). The server half is a hand-written keyed
-// `defineResource` with `identityTable: "pushes"`.
-export const pushesByAttemptResource = keyedResourceDescriptor<
-  Push[],
-  { attemptId: string }
->("pushes-by-attempt", z.array(PushSchema), [], (r) => (r as Push).id);
+// The `pushes` ledger as a live collection: one row per landed commit sha.
+// Every push surface is attempt-scoped, so it reads ONE attempt's rows —
+// `useLive(pushRows, { where: { attemptId } })` — newest first by default. A
+// filter, not a slice of a global recent window, so an arbitrarily old attempt
+// still finds its pushes (filtering the global window dropped them once they
+// fell out of it: a wrong "No pushes yet", a destructive drop-vs-complete
+// mis-gate). An attempt holds a handful of pushes (at most 5 on main), so the
+// default 100 never truncates one. Not preloaded — route-scoped.
+//
+// Named `pushRows` because `pushes` is the table handle on the server. It is
+// also the future anchor of the tree's `attempts` status edge (Resources page
+// item 3); until then that edge hangs off the server-only
+// `pushes.attempts-cascade` carrier in `../server/internal/resources.ts`.
+export const pushRows = liveCollection("pushes", {
+  row: PushSchema,
+  id: "id",
+  filterable: { attemptId: liveText() },
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  maxLimit: 500,
+});
 
 // Conversation list, decomposed into keyed delta-sync sub-resources + one scalar
-// stats resource (replaces the old aggregate `conversationsResource`). Keyed
-// resources read like push resources via `useResource` (the delta-merge is
-// invisible to consumers); the client recombines them through use-conversations.
+// stats value (`conversationsGoneStats`, below) — replacing the old aggregate
+// `conversationsResource`. Keyed resources read like push resources via
+// `useResource` (the delta-merge is invisible to consumers); the client
+// recombines them through use-conversations.
 //
 // The active/system scans are fully declarative: their server halves are
 // `queryResource`s (derived loader + scoped refill + identityTable + M5
@@ -125,11 +120,11 @@ export const conversationsGoneResource = keyedResourceDescriptor<
   (r) => (r as Conversation).id,
   { preload: "boot" },
 );
-export const conversationsGoneStatsResource = resourceDescriptor<{
-  totalGoneCount: number;
-}>(
-  "conversations-gone-stats",
-  z.object({ totalGoneCount: z.number() }),
-  { totalGoneCount: 0 },
-  { preload: "boot" },
-);
+// How many conversations have ended in all — the gone list above holds only the
+// newest RECENT_GONE_LIMIT. One scalar, pushed whole. `preload: "boot"`: the
+// boot snapshot hydrates it (and L2 persists it) alongside the lists it
+// completes, so the welcome counts paint settled.
+export const conversationsGoneStats = liveValue("conversations-gone-stats", {
+  schema: z.object({ totalGoneCount: z.number() }),
+  preload: "boot",
+});

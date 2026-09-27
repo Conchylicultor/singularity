@@ -695,6 +695,38 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     // sub-ack delivers a full value frame; nothing crashes wiring a bare contract.
     expect(h.frames.some((f) => f.key === "n")).toBe(true);
   });
+
+  // `mode` has no default: a non-keyed form must state it, and a keyed contract
+  // takes none (its mode is the contract's). tsc holds typed callers to that
+  // (each call below matches no overload); an untyped one is refused at
+  // registration instead of getting a guessed delivery.
+  test("a non-keyed form without mode, or a keyed contract with one, is refused at registration", () => {
+    const { runtime } = createHarness();
+    const noMode = { loader: () => 1 };
+    expect(() =>
+      // @ts-expect-error — a non-keyed contract's opts require `mode`
+      runtime.defineResource({ key: "no-mode", schema: z.number() }, noMode),
+    ).toThrow(/mode "push" \| "invalidate" is required for key "no-mode"/);
+    expect(() =>
+      // @ts-expect-error — the flat form requires `mode`
+      runtime.defineResource({ key: "flat", schema: z.number(), ...noMode }),
+    ).toThrow(/mode .* is required for key "flat"/);
+    const external = { key: "no-mode-external", schema: z.number() };
+    expect(() =>
+      // @ts-expect-error — a non-keyed contract's opts require `mode`
+      runtime.defineExternalResource(external, noMode),
+    ).toThrow(/is required for key "no-mode-external"/);
+    const keyedWithMode = {
+      mode: "push" as const,
+      identityTable: "row_table",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
+      loader: () => [],
+    };
+    expect(() =>
+      // @ts-expect-error — a keyed contract takes no `mode`
+      runtime.defineResource(rowsContract, keyedWithMode),
+    ).toThrow(/a keyed contract takes no mode/);
+  });
 });
 
 /**
@@ -992,5 +1024,59 @@ describe("read-set-gap warning", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("preloadedKeys — the registry's half of the preload-declare boot assert", () => {
+  test("lists exactly the registered resources that declared preload, whatever the definition form", () => {
+    const { runtime } = createHarness();
+    // Two-arg forms: the flag rides the shared descriptor (the contract).
+    runtime.defineResource(
+      { key: "value", schema: z.number(), preload: "boot" },
+      { mode: "push", loader: () => 1 },
+    );
+    runtime.defineResource(
+      {
+        key: "keyed",
+        schema: z.array(z.object({ id: z.string() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+        preload: "boot-and-keep",
+      },
+      {
+        identityTable: "keyed_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: () => [],
+      },
+    );
+    runtime.defineExternalResource(
+      { key: "external", schema: z.number(), preload: "boot" },
+      { mode: "push", loader: () => 1 },
+    );
+    // The flat external form carries it on the definition itself.
+    runtime.defineExternalResource({
+      key: "external-flat",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+      preload: "boot",
+    });
+    // Not preloaded: absent from the list.
+    runtime.defineResource({
+      key: "plain",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    runtime.defineResource(
+      { key: "plain-contract", schema: z.number() },
+      { mode: "push", loader: () => 1 },
+    );
+
+    expect(runtime.preloadedKeys().sort()).toEqual([
+      "external",
+      "external-flat",
+      "keyed",
+      "value",
+    ]);
   });
 });

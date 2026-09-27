@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
 // One row per starred page, in the `page_blocks_ext_starred` entity-extension
@@ -7,8 +7,8 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 // table = starred, so the plugin has no fields of its own; the row carries no
 // order of its own either — the Favorites view's row order lives in data-view's
 // `view-order`. `createdAt` (when the page was starred) is the WINDOW's order
-// key, and is on the wire because the compiler derives the order signature from
-// the wire row and throws at module eval if an order column is unprojected.
+// key, and is on the wire because a `sortable` column must be a row field
+// (`liveCollection` types it; `serveCollection` binds it through the row).
 export const starredPageShape = defineExtensionShape({
   key: "blockId",
   fields: {},
@@ -17,29 +17,29 @@ export const starredPageShape = defineExtensionShape({
 export const StarredPageRowSchema = starredPageShape.schema;
 export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 
-// Bounded ordered WINDOW (desc createdAt — most recently starred first), NOT a
-// point resource: the dominant consumer is `StarredField`, which needs
-// starred-ness for EVERY row the `pages-sidebar` DataView filters over. A point
-// subscription would have to name every page id, which is O(pages) — that does
-// not bound the working set, it only moves it into a params string. What is
-// bounded here is the favorites set itself, so the window bounds the right thing.
-// Mirrors the sibling `agent-origin` plugin, which contributes the same kind of
-// Set-backed field into the same `PageTree.Fields` slot.
+// The favorites, as a bounded ordered WINDOW (desc createdAt — most recently
+// starred first), NOT a lookup by id: the dominant consumer is `StarredField`,
+// which needs starred-ness for EVERY row the `pages-sidebar` DataView filters
+// over. An id-set read would have to name every page id, which is O(pages) —
+// that does not bound the working set, it only moves it into a params string.
+// What is bounded here is the favorites set itself, so the window bounds the
+// right thing. Mirrors the sibling `agent-origin` plugin, which contributes the
+// same kind of Set-backed field into the same `PageTree.Fields` slot.
 //
-// Sized above the other window resources (200/500): favorites are user-curated
-// and have no TTL, so they only accumulate. The boundary is real but far out —
-// past `maxLimit` favorites the oldest-starred page reads as unstarred (hollow
-// star, absent from Favorites).
+// Sized above the sibling's window (200/500): favorites are user-curated and
+// have no TTL, so they only accumulate. The boundary is real but far out — past
+// `maxLimit` favorites the oldest-starred page reads as unstarred (hollow star,
+// absent from Favorites).
 //
-// Rows key on `blockId` (the side-table pk — the starred page's id); the server
-// half is compiled from the extension handle in `server/internal/resource.ts`.
-// Web consumers read it
-// through `useStarredPageIds` (web/internal/use-starred-ids.ts); the wire shape
-// stays `StarredPageRow[]`.
-export const starredPagesResource =
-  windowQueryResourceDescriptor<StarredPageRow>(
-    "pages-starred",
-    StarredPageRowSchema,
-    "blockId",
-    { defaultLimit: 500 },
-  );
+// Nothing filters it (`filterable: {}`): every reader wants the whole set. Rows
+// key on `blockId` (the side-table pk — the starred page's id); the server half
+// is served from the extension handle in `server/internal/resource.ts`. Web
+// consumers read it through `useStarredPageIds` (web/internal/use-starred-ids.ts).
+export const starredPages = liveCollection("pages-starred", {
+  row: StarredPageRowSchema,
+  id: "blockId",
+  filterable: {},
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 500 },
+  maxLimit: 1000,
+});

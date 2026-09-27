@@ -1,18 +1,19 @@
-import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
-import {
-  PluginHealthReviewSchema,
-  type PluginHealthReview,
-} from "../core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { PluginHealthReviewSchema } from "../core";
 
-// Keyed query-resource contract: rows key on `id` (the review PK). The server
-// half is compiled from the drizzle declaration in `server/internal/resource.ts`;
-// the wire shape stays `PluginHealthReview[]`. The (pluginId, axis) order-by
-// columns are the immutable review identity (the unique-index conflict target),
-// so K/scoped is sound — a re-review UPDATEs commitHash/conversationId in place
-// (one scoped keyed delta) without moving the row.
-export const pluginHealthReviewsDescriptor =
-  queryResourceDescriptor<PluginHealthReview>(
-    "plugin-health-reviews",
-    PluginHealthReviewSchema,
-    "id",
-  );
+// The recorded reviews, as a live collection over `plugin_health_reviews`: a
+// bounded window (by axis, 50 / max 200) plus its `:rows` point sibling. The
+// plugin pane scopes it to one plugin with `where: { pluginId }` — the server
+// filters, so a tab never ships every plugin's reviews to count one plugin's.
+// The table holds at most one row per (pluginId, axis) — the unique-index
+// conflict target a re-review UPDATEs in place — so one plugin's window holds
+// one row per axis it was reviewed along.
+export const pluginHealthReviews = liveCollection("plugin-health-reviews", {
+  row: PluginHealthReviewSchema,
+  id: "id",
+  filterable: { pluginId: liveText() },
+  sortable: ["axis"],
+  default: { orderBy: [["axis", "asc"]], limit: 50 },
+  maxLimit: 200,
+});

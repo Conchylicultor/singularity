@@ -1,18 +1,13 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import {
-  JsonlEventSchema,
-  type JsonlEvent,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
+import { JsonlEventSchema } from "@plugins/conversations/plugins/transcript-watcher/core";
 
-export const JsonlEventsPayloadSchema = z.array(JsonlEventSchema);
-
-export interface JsonlEventsResponse {
-  events: JsonlEvent[];
-}
-
-export const jsonlEventsResource = resourceDescriptor<JsonlEvent[], { id: string }>(
-  "jsonl-events",
-  JsonlEventsPayloadSchema,
-  [],
-);
+/**
+ * One conversation's parsed transcript chain, pushed whole on every append.
+ * Not loaded yet is `pending` (a value has no placeholder) — never `[]`, which
+ * would read as a conversation that has said nothing.
+ */
+export const jsonlEvents = liveValue("jsonl-events", {
+  schema: z.array(JsonlEventSchema),
+  params: ["id"],
+});

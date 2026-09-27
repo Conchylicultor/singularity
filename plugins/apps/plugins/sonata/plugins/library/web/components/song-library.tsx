@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { MdMusicNote } from "react-icons/md";
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   DataView,
   defineDataView,
@@ -21,7 +19,7 @@ import {
   Sonata,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { songsResource, updateSong } from "../../core";
+import { songs, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
@@ -39,7 +37,7 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * the library never names MIDI (or any source). Each source's create affordance
  * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
  * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The song
- * list is reactive via the live `songsResource`.
+ * list is reactive via the live `songs` value.
  *
  * There is no bespoke card: the gallery builds the standard `DataCard` from this
  * schema, plus a `leading` music-note block. Everything the old `SongCard` drew
@@ -54,14 +52,14 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * (authored in config) over those fields rather than bespoke toolbar chips.
  */
 export function SongLibrary() {
-  const songs = useResource(songsResource);
+  const library = useLive(songs);
   const openSong = useOpenSong();
   // The background-playing song (if any) — highlights its table row and feeds
   // the now-playing footer below.
   const { currentSongId } = useSonata();
   // Write-back for inline cell editing (title / composer) in the table view.
-  // Fire-and-forget: the server's `updateSongMeta` pushes the live
-  // `songsResource`, so the edited cell settles from server truth; a failed
+  // Fire-and-forget: the server's `updateSongMeta` write recomputes the live
+  // `songs` value, so the edited cell settles from server truth; a failed
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
@@ -205,18 +203,18 @@ export function SongLibrary() {
       fill
       className="h-full"
       header={
-        songs.pending && songs.error ? (
+        library.pending && library.error ? (
           <Text
             as="div"
             variant="body"
             tone="destructive"
             className="px-xl py-lg"
           >
-            Failed to load songs: {songs.error.message}
+            Failed to load songs: {library.error.message}
           </Text>
         ) : null
       }
-      body={matchResource(songs, {
+      body={matchResource(library, {
         pending: () => renderLibrary([], true),
         // The error banner above already covers the failed-load case; keep the
         // (skeleton) chrome underneath it rather than a second error block.

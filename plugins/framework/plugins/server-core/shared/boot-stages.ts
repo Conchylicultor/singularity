@@ -6,6 +6,7 @@ import {
 // eslint-disable-next-line runtime-isolation/no-deep-own-folder-import -- the boot-mode SETTER stays off the core barrel on purpose (only the boot sequence may call it), and server-core ships no browser bundle
 import { setBootMode } from "../core/boot-mode";
 import {
+  assertPreloadedResourcesDeclared,
   collectContributions,
   profilerStart,
   recordMemoryCheckpoint,
@@ -113,6 +114,17 @@ export async function bootPluginGraph(
   // Collect declarative contributions from all plugins before onReady.
   // Consuming plugins call Token.getContributions() in their onReady.
   collectContributions(ordered);
+
+  // Every server module has registered its resources (module eval) and every
+  // `Resource.Declare` is now collected, so a preloaded resource whose plugin
+  // forgot to declare it — which would serve but silently lose boot hydration
+  // and L2 persistence — fails boot here, naming the key. In both modes, and
+  // before the ready barrier: the barrier's L2 sweep (`live-state-snapshot`,
+  // which `exec` runs too) deletes every persisted row whose key the Declare set
+  // does not list as preloaded, so it must never run on a mis-declared graph.
+  // A pure in-memory read, so it costs an `exec` child nothing, and it lands
+  // before serve's socket bind, so such a graph never accepts a connection.
+  assertPreloadedResourcesDeclared();
 
   if (spec.mode === "serve") await spec.beforeReadyBarrier(ordered);
 

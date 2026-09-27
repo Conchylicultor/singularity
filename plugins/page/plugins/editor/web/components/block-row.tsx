@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ComponentType, type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import type { Block } from "../../core";
 import type { BlockAnchorProps, BlockEditorAPI } from "../types";
@@ -144,7 +145,7 @@ export function BlockRow({
    */
   seat: RailSeat;
 }) {
-  const { focusedBlockId, makeBlockAPI } = useBlockEditor();
+  const { focusedBlockId, makeBlockAPI, loadingBelow } = useBlockEditor();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
   const selection = useSelectionControl();
@@ -377,6 +378,16 @@ export function BlockRow({
           />
         )}
       </div>
+      {/* An expanded nested page (this row is its sub-page or link row) whose
+          own rows have not landed: its region says so, one indent step in,
+          where those rows will render — never an empty expansion, which would
+          read as an empty page. A mount anchor is always a line row, so the
+          container-anchor branch above never needs this. */}
+      {loadingBelow.has(block.id) && (
+        <div style={{ paddingLeft: BLOCK_INDENT }}>
+          <Loading variant="rows" count={2} />
+        </div>
+      )}
       {dropZone && dropIndicator(dropZone)}
     </div>
   );

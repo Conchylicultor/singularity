@@ -1,4 +1,7 @@
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import {
   useAccountStatus,
@@ -6,10 +9,10 @@ import {
   currentWorktreeName,
 } from "@plugins/auth/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
+import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -39,11 +42,12 @@ export function GoogleSetupPane() {
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "auth-google");
   const storePath = reg?.storePath ?? "";
-  const metaResult = useResource(configV2SecretMetaResource, { path: storePath });
+  const metaResult = useLive(configSecretMeta, { path: storePath });
   const status = useAccountStatus("google");
   if (metaResult.pending) return <Loading />;
   const secretMeta = metaResult.data;
-  const credentialsSaved = !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
+  const credentialsSaved =
+    !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
   const connected = status?.connected;
 
   function handleProjectInput(raw: string) {
@@ -55,9 +59,17 @@ export function GoogleSetupPane() {
     setSaving(true);
     try {
       if (clientId)
-        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "clientId", value: clientId } });
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "clientId", value: clientId } },
+        );
       if (clientSecret)
-        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "clientSecret", value: clientSecret } });
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "clientSecret", value: clientSecret } },
+        );
       setClientId("");
       setClientSecret("");
     } finally {
@@ -88,9 +100,12 @@ export function GoogleSetupPane() {
   return (
     <Stack gap="xl" className="p-lg max-w-lg">
       <div>
-        <Text as="label" variant="label">GCP Project ID</Text>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under label, no flex parent to own a gap */}
-        <Input className="mt-1"
+        <Text as="label" variant="label">
+          GCP Project ID
+        </Text>
+        <Input
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under label, no flex parent to own a gap
+          className="mt-1"
           placeholder="my-project-123"
           value={projectId}
           onChange={(e) => handleProjectInput(e.target.value)}
@@ -197,7 +212,9 @@ export function GoogleSetupPane() {
                   {connecting ? "Connecting…" : "Connect with Google"}
                 </Button>
                 {connectError ? (
-                  <Text as="p" variant="caption" className="text-destructive">{connectError}</Text>
+                  <Text as="p" variant="caption" className="text-destructive">
+                    {connectError}
+                  </Text>
                 ) : null}
               </>
             )}

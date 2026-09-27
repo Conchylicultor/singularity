@@ -21,9 +21,14 @@ import type * as LiveBarrel from "@plugins/network/plugins/live/core";
 //
 // So the list is not authored free-hand. Its KEY SET is derived from the
 // barrels' own module types, filtered by return type: a factory exported from
-// either barrel and missing here is a `tsc` error at the `satisfies` below,
+// any of them and missing here is a `tsc` error at the `satisfies` below,
 // naming the missing key. Nothing about the NAME is inspected — membership in
 // the set is decided by what the function returns.
+//
+// Only what a barrel EXPORTS is a way to declare a resource. The window and
+// point factories `liveCollection` is built on are internal to `network/live`
+// (a collection is the one way to declare a bounded resource), so they are not
+// listed: a scanner sees their resources through `liveCollection`'s `mints`.
 //
 // The register markers (the server-side calls that SERVE a descriptor) cannot be
 // derived here: `query-resource/server` is a `server` barrel and runtime
@@ -127,8 +132,8 @@ export interface RegisterMarker {
 /**
  * The minimal structural shape EVERY resource descriptor has, whatever factory
  * minted it — `ResourceDescriptor<T, P>` and each of its extensions
- * (`WindowResourceDescriptor`, `PointResourceDescriptor`,
- * `{Window,Point}QueryResourceContract`) satisfy it.
+ * (`QueryResourceContract`, and a collection's window and `:rows` descriptors)
+ * satisfy it.
  *
  * Deliberately NOT `ResourceDescriptor<unknown, …>`: `schema` is a
  * `ZodParser<T>`, which is invariant in `T` (zod surfaces `T` in both parameter
@@ -192,9 +197,9 @@ type MintingFactoryName =
  * Every descriptor factory, and what the descriptor it mints is.
  *
  * `satisfies Record<MintingFactoryName, …>` is load-bearing in BOTH directions:
- * a factory exported from either barrel and missing here fails to compile with
- * the missing key named, and an entry for a factory that no longer exists fails
- * as an excess property.
+ * a factory exported from any of the barrels and missing here fails to compile
+ * with the missing key named, and an entry for a factory that no longer exists
+ * (or is no longer exported) fails as an excess property.
  */
 const PRELOAD: PreloadFlag = {
   field: "preload",
@@ -217,20 +222,6 @@ export const resourceDescriptorFactories = {
     barrel: QUERY_RESOURCE_CORE,
     preload: PRELOAD,
     mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
-  },
-  windowQueryResourceDescriptor: {
-    barrel: QUERY_RESOURCE_CORE,
-    preload: PRELOAD,
-    mints: [
-      { suffix: "", keyed: true, membership: "window", preloadable: true },
-    ],
-  },
-  pointQueryResourceDescriptor: {
-    barrel: QUERY_RESOURCE_CORE,
-    preload: PRELOAD,
-    mints: [
-      { suffix: "", keyed: true, membership: "point", preloadable: true },
-    ],
   },
   liveValue: {
     barrel: LIVE_CORE,
@@ -297,11 +288,13 @@ export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
  * from the entries' barrels, so it cannot drift from them.
  *
  * A scanner needs this to tell a DECLARATION from an IMPLEMENTATION. Inside
- * `live-state`, `query-resource` and `network/live`, a factory is called with a computed key
- * (`keyedResourceDescriptor(key, …)` inside `windowQueryResourceDescriptor`) —
- * that is the wrapper implementing the factory, not a plugin declaring a
- * resource. Everywhere else the key must be a literal at the call site, because
- * a scanner reading source text has no other way to see it.
+ * `live-state`, `query-resource` and `network/live`, a factory is called with a
+ * computed key (`keyedResourceDescriptor(key, …)` inside
+ * `queryResourceDescriptor`, or inside the window / point factories
+ * `liveCollection` mints with) — that is the wrapper implementing the factory,
+ * not a plugin declaring a resource. Everywhere else the key must be a literal
+ * at the call site, because a scanner reading source text has no other way to
+ * see it.
  */
 export const resourceVocabularyOwnerPaths: readonly string[] = [
   ...new Set(

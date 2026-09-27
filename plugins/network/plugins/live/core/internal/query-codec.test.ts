@@ -37,7 +37,7 @@ const sources = liveCollection("live-test.codec", {
 const { encode, decode } = sources.window.window;
 
 // Compile-time: the collection's window is still a limit-codec window contract,
-// so the existing compiler and window hooks accept it unchanged.
+// so the existing compiler accepts it unchanged.
 const _asContract: WindowQueryResourceContract<Row> = sources.window;
 
 describe("liveCollection", () => {

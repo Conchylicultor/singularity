@@ -37,8 +37,9 @@ export interface ResourceDescriptor<
    * Optional typed placeholder used as TanStack Query's `initialData`. It is
    * NEVER a value: it is seeded with `initialDataUpdatedAt: 0`, and
    * `useResource` reports `pending` while `dataUpdatedAt === 0`, so a consumer
-   * never reads it as data. Its one real reader is `useOptimisticResource`'s
-   * pending overlay base (which requires a descriptor that has one).
+   * never reads it as data. Nothing takes it as a base either:
+   * `useOptimisticResource` reads a declaration and stays `pending` until the
+   * first authoritative value.
    *
    * Absent (a `liveValue`) ⇒ no placeholder at all: the query simply has no
    * data until the first authoritative value, still `pending` at
@@ -91,10 +92,10 @@ export interface ResourceDescriptor<
   resident?: true;
   /**
    * Default params tuple boot paths use when a caller names none — e.g. a
-   * windowed resource's default window (`windowQueryResourceDescriptor` sets it to
-   * the encoded `defaultLimit`). Read generically by boot-snapshot on BOTH
+   * `liveCollection`'s window (its window descriptor sets it to the encoded
+   * `defaultLimit`). Read generically by boot-snapshot on BOTH
    * sides, so the server's fallback load and the client's pre-paint hydration
-   * land on the IDENTICAL `(key, paramsKey)` tuple that `useWindowResource`
+   * land on the IDENTICAL `(key, paramsKey)` tuple that a bare `useLive(c)`
    * later subscribes to. Absent ⇒ the param-less `{}` tuple (every plain
    * global resource).
    */
@@ -157,7 +158,9 @@ export function resourceDescriptor<
 }
 
 // Keyed delta-sync variant of `resourceDescriptor`. The matching server
-// resource must declare `mode: "keyed"` with the same row identity. `schema`
+// resource passes this descriptor to the two-arg `defineResource(descriptor,
+// opts)`, which derives `mode: "keyed"` from its `keyOf` — the keyed options
+// take no `mode`, so the row identity is declared here only. `schema`
 // stays `z.array(Element)`, so `T` (and every `useResource` caller) is
 // unchanged — the client merges per-row deltas into the same `T[]`. `keyOf`
 // lets the client key prior cache rows when applying a delta.

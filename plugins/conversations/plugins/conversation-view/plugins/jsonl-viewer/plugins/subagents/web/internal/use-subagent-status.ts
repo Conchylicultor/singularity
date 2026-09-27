@@ -13,7 +13,7 @@ type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
  * gating and both directions of the row ⇄ `Agent`-call join live there, so a
  * card and a list of every sub-agent can never disagree about what one of them
  * is doing. Every card in a conversation calls this on the same id, and that is
- * deliberate — `useResource` is a TanStack Query wrapper, so N callers on
+ * deliberate — `useLive` is a TanStack Query wrapper, so N callers on
  * identical params share ONE query and ONE subscription.
  */
 export function useSubagentStatus({

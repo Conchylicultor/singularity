@@ -24,7 +24,7 @@ build's run-detail already owns `r/:runId`.
 
 `releaseDetailRoute` (`core/routes.ts`) parents on the **paramless**
 `compositionsRoute`. A run is addressable by its own id alone: all three sections
-read `releaseRunResource` by `runId`, and the composition pane above supplied
+read `useLiveRow(releaseRuns, runId)`, and the composition pane above supplied
 breadcrumb position and no data at all.
 
 Parented on `comp/:id` the pane could only be opened by a caller already holding
@@ -49,8 +49,8 @@ neither did.
   composition's runs, kept live by the `release.history-revision` tick. There is
   no 50-run cap and no client-side filter: a composition's full run history is
   browsable via infinite scroll. Each run's detail pane resolves its run by id
-  through the `release.run` per-id resource, so an old run's detail resolves
-  regardless of age.
+  through the `release.runs` lookup collection (`useLiveRow`), so an old run's
+  detail resolves regardless of age.
 
 The engine itself (`@plugins/release/core` — targets, endpoints, resources) is
 top-level and untouched by this; only the Studio UI lives here.

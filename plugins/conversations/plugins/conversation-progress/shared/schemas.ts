@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -60,16 +60,23 @@ export const conversationProgressShape = defineExtensionShape({
 export const ConversationProgressSchema = conversationProgressShape.schema;
 export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;
 
-// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
-// set (`usePointResource(resource, convId)` → one row-or-null), so a progress
-// read costs O(1) instead of an O(n) `.find()` over the whole collection. Rows
-// key on `conversationId` — the extension's key, whose column is the
-// side-table's `parent_id` PK (which IS the point identity). NOT
-// preloaded: point resources hydrate post-mount (the recorded decision), and
-// the progress bar simply renders nothing for the one round-trip.
-export const conversationProgressResource =
-  pointQueryResourceDescriptor<ConversationProgress>(
-    "conversation-progress",
-    ConversationProgressSchema,
-    "conversationId",
-  );
+// The progress row of ONE conversation, read by its `conversationId`. The table
+// holds 0 or 1 row per conversation — its primary key IS the conversation — so
+// it is a lookup-only collection: no default window (nothing lists every
+// conversation's phase), minting `conversation-progress:rows` alone. A reader
+// takes its row with `useLiveRow(conversationProgressRows, conversationId)`,
+// and `found: false` is "no phase classified yet". (The server table handle is
+// `conversationProgress`, hence the `Rows` name.)
+//
+// Bounded by construction: only a mounted progress bar subscribes, a load is
+// one primary-key seek, and the `:rows` point routing schedules a phase change
+// for the one conversation whose row it named — never a sweep of the table.
+// The row id is the extension's key, whose column is the side-table's
+// `parent_id` PK.
+//
+// NOT preloaded (a lookup-only collection cannot be): the progress bar renders
+// nothing for the one round-trip.
+export const conversationProgressRows = liveCollection(
+  "conversation-progress",
+  { row: ConversationProgressSchema, id: "conversationId" },
+);

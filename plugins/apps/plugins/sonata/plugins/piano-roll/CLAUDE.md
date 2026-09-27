@@ -40,6 +40,7 @@
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):

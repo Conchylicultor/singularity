@@ -4,11 +4,7 @@ import { BookmarkStar } from "./components/bookmark-star";
 import { BookmarksBar } from "./components/bookmarks-bar";
 
 export { useBookmarks } from "./internal/use-bookmarks";
-export {
-  browserBookmarksResource,
-  BookmarkRowSchema,
-  type BookmarkRow,
-} from "../core";
+export { browserBookmarks, BookmarkRowSchema, type BookmarkRow } from "../core";
 
 export default {
   description:

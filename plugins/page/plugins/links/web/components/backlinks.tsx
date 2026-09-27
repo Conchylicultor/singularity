@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MdLink } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   DataView,
   defineDataView,
@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
-import { backlinksResource } from "../../core";
+import { pageBacklinks } from "../../core";
 import type { BacklinkRow } from "../../core";
 
 export interface BacklinksProps {
@@ -20,8 +20,8 @@ export interface BacklinksProps {
 const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
 
 // Lists the pages that link to `documentId` as a DataView (search/sort come
-// free). Subscribes to the push-based backlinksResource so it updates live as
-// edits reindex. Renders nothing when there are no backlinks — so a page without
+// free). Subscribes to the `pageBacklinks` value so it updates live as edits
+// reindex. Renders nothing when there are no backlinks — so a page without
 // inbound links shows no DataView toolbar either. Title-less on purpose: this is
 // a body, and whatever hosts it (the Pages page-detail section, whose host paints
 // the "Linked from" card) owns the heading. No coupling to the pages app or any
@@ -29,7 +29,7 @@ const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
 // `page-reference`, the same seam the reference blocks inside a page read.
 export function Backlinks({ documentId }: BacklinksProps) {
   const nav = usePageNavigation();
-  const result = useResource(backlinksResource, { pageId: documentId });
+  const result = useLive(pageBacklinks, { pageId: documentId });
 
   const fields = useMemo<FieldDef<BacklinkRow>[]>(
     () => [

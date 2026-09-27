@@ -1,9 +1,10 @@
 import { useCallback } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   configV2ConflictResource,
-  configV2ConflictMapResource,
+  configConflictLocations,
 } from "@plugins/config_v2/core";
 import type {
   ConfigV2ConflictEntry,
@@ -29,12 +30,14 @@ export function useConflict(
 // app scopes) — the aggregate that makes a scoped-only conflict both visible and
 // locatable without opening the descriptor. Gate on `pending` like useConflict.
 export function useConflictMap(): ResourceResult<ConfigV2ConflictMap> {
-  return useResource(configV2ConflictMapResource, {});
+  return useLive(configConflictLocations);
 }
 
 // One descriptor's slice of that map, as a stable accessor. `undefined` means
 // "no conflict anywhere" — and, while the resource is still pending, "we don't
-// know yet", which the badge and banner render as nothing rather than as a claim.
+// know yet", which the detail pane's scope-tab dots and conflict-elsewhere banner
+// render as nothing rather than as a claim. (The nav needs the two apart — its
+// filters read them — so it reads `useConflictMap` directly.)
 export function useConflictLocationsOf(): (
   storePath: string,
 ) => ConfigV2ConflictLocations | undefined {

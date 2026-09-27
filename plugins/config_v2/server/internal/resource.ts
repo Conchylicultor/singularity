@@ -1,13 +1,14 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   configV2ValuesSchema,
   configV2ConflictEntrySchema,
   configV2TiersSchema,
   configV2ScopesMapSchema,
-  configV2ConflictMapSchema,
-  configV2ModifiedCountsSchema,
+  configConflictLocations,
+  configModifiedCounts,
   hasConflict,
   validationIssues,
   effective,
@@ -432,22 +433,20 @@ function descriptorConflictLocations(
 // answers the detail-pane banner with, so the badge and the banner cannot
 // disagree by construction. It is a filesystem sweep, but a stat-only one for
 // every descriptor whose files haven't moved since the last derivation.
-export const configV2ConflictMapServerResource = defineExternalResource<
-  ConfigV2ConflictMap,
-  {}
->({
-  key: "config-v2.conflict-locations",
-  mode: "push",
-  schema: configV2ConflictMapSchema,
-  loader: whenRegistryReady(() => {
-    const out: ConfigV2ConflictMap = {};
-    for (const storePath of descriptorByPath.keys()) {
-      const locations = descriptorConflictLocations(storePath);
-      if (locations) out[storePath] = locations;
-    }
-    return out;
-  }),
-});
+export const configConflictLocationsServed = serveValue(
+  configConflictLocations,
+  {
+    source: "external",
+    loader: whenRegistryReady(() => {
+      const out: ConfigV2ConflictMap = {};
+      for (const storePath of descriptorByPath.keys()) {
+        const locations = descriptorConflictLocations(storePath);
+        if (locations) out[storePath] = locations;
+      }
+      return out;
+    }),
+  },
+);
 
 // Locations last PUBLISHED to subscribers, serialized — change detection for the
 // push path ONLY, never the value any loader reads. (It used to be the value,
@@ -471,7 +470,7 @@ export function refreshConflictLocations(storePath: string): void {
   if (next === prev) return;
   if (next) publishedConflictLocations.set(storePath, next);
   else publishedConflictLocations.delete(storePath);
-  configV2ConflictMapServerResource.notify({});
+  configConflictLocationsServed.notify();
 }
 
 // Per-descriptor count of BASE fields the USER LAYER supplied — the fields whose
@@ -506,13 +505,8 @@ function computeModifiedCount(storePath: string): number {
 // Cost is the stat-only sweep conflict-locations already pays on this surface: a
 // descriptor whose files haven't moved is three statSyncs, and only the
 // descriptors that actually have a user override do the diff.
-export const configV2ModifiedCountsServerResource = defineExternalResource<
-  ConfigV2ModifiedCounts,
-  {}
->({
-  key: "config-v2.modified-counts",
-  mode: "push",
-  schema: configV2ModifiedCountsSchema,
+export const configModifiedCountsServed = serveValue(configModifiedCounts, {
+  source: "external",
   loader: whenRegistryReady(() => {
     const out: ConfigV2ModifiedCounts = {};
     for (const storePath of descriptorByPath.keys()) {
@@ -541,7 +535,7 @@ export function refreshModifiedCount(storePath: string): void {
   if (count === prev) return;
   if (count > 0) publishedModifiedCounts.set(storePath, count);
   else publishedModifiedCounts.delete(storePath);
-  configV2ModifiedCountsServerResource.notify({});
+  configModifiedCountsServed.notify();
 }
 
 export function registerDescriptorPath(

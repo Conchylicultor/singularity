@@ -1,12 +1,14 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
-export const AllowFilesSchema = z.object({ allowFiles: z.array(z.string()) });
+const AllowFilesSchema = z.object({ allowFiles: z.array(z.string()) });
 export type AllowFiles = z.infer<typeof AllowFilesSchema>;
 
-// Which guard-bypass files exist at a conversation's worktree root, pushed by a
-// file watcher while someone is looking at the conversation.
-export const allowFilesResource = resourceDescriptor<
-  AllowFiles,
-  { id: string }
->("allow-files", AllowFilesSchema, { allowFiles: [] });
+// Which guard-bypass files exist at a conversation's worktree root (`id` is the
+// conversation id), pushed by a file watcher while someone is looking at the
+// conversation. Not known yet is `pending` — never an empty list, which would
+// claim no bypass is active.
+export const allowFiles = liveValue("allow-files", {
+  schema: AllowFilesSchema,
+  params: ["id"],
+});

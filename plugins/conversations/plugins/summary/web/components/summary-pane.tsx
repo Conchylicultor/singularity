@@ -76,7 +76,7 @@ function SummaryPaneInner({
       // cross-tab broadcast reaction — so it is not the reactive server I/O
       // `reactive-server-io/no-reactive-server-io` exists to catch. That rule
       // does not fire here only because `latest` reaches this component as a
-      // prop (the `useResource` read lives in the parent), so keep the
+      // prop (the `useLive` read lives in the parent), so keep the
       // reasoning even though there is no longer a directive to carry it.
       toast({
         type: "summary",

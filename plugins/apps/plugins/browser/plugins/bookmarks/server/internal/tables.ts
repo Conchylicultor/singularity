@@ -10,7 +10,7 @@ import { bookmarkFields } from "../../core";
 //
 // The table + the `BookmarkRow` wire schema both derive from the single
 // `bookmarkFields` record (core), so a column/schema drift is unrepresentable
-// and the loader returns `db.select()` rows verbatim.
+// and `serveCollection` binds every row field to its column by name.
 const browserBookmarks = defineEntity("browser_bookmarks", bookmarkFields, {
   primaryKey: "id",
   columns: {

@@ -1,6 +1,6 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import { sentinelStatusResource } from "../../core";
+import { sentinelStatus } from "../../core";
 import { machineWatcherVerdict } from "./machine-watcher-health";
 
 /**
@@ -9,5 +9,5 @@ import { machineWatcherVerdict } from "./machine-watcher-health";
  * changes only when that file does, so the hook holds no timer.
  */
 export function useMachineWatcherHealth(): HealthStatus {
-  return machineWatcherVerdict(useResource(sentinelStatusResource));
+  return machineWatcherVerdict(useLive(sentinelStatus));
 }

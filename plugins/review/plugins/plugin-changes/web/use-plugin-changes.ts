@@ -1,6 +1,6 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { pluginChangesResource } from "../shared/resources";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { pluginChanges } from "../shared/resources";
 import { getPluginChanges } from "../core";
 import type { PluginChangesResponse } from "../core";
 
@@ -15,7 +15,7 @@ export type PluginChangesResult =
 export function useWorktreePluginChanges(
   conversationId: string,
 ): PluginChangesResult {
-  const r = useResource(pluginChangesResource, { conversationId });
+  const r = useLive(pluginChanges, { conversationId });
   if (r.pending) return { data: undefined, isPending: true, error: r.error };
   // Settled: the readiness gate guarantees a value the server vouches for, so
   // the settled arm carries no `error` — it is structurally null here.

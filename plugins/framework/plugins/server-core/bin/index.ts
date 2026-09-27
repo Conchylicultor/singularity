@@ -267,8 +267,9 @@ function bindSocket(ordered: LoadedServerPlugin[]): void {
 }
 
 // ── The shared boot sequence ────────────────────────────────────
-// Load waves → register → collectContributions → [bind socket] → the
-// `onReadyBlocking` barrier. Identical to what `exec` runs, minus the bind.
+// Load waves → register → collectContributions → the preload-declare assert →
+// [bind socket] → the `onReadyBlocking` barrier. Identical to what `exec` runs,
+// minus the bind.
 const ordered = await bootPluginGraph({
   mode: "serve",
   entries: serverEntries,

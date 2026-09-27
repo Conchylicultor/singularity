@@ -6,9 +6,10 @@ metrics that often hide a *structural* issue (several slow routes bottlenecked o
 one query), so this view ranks them by **aggregate impact** (total time across all
 occurrences) rather than scattering them.
 
-Opened from the Debug sidebar ("Slow Ops"). Reads the web-safe `slowOpsResource`
-live-state handle from `@plugins/debug/plugins/slow-ops/core` (its parent plugin), so the table updates in real time
-as new slow operations are recorded.
+Reads `GET /api/slow-ops` (`listSlowOps`, from the parent plugin's `core`) with
+`useEndpoint`, refetched on every mount. It is deliberately not live: `slow_ops`
+is `ExcludeFromChangeFeed` (live-ticking a high-churn counter amplifies the
+slowness it records), so a live value over it would never update.
 
 Each row shows the operation (its `operationKind` badge + operation label), the
 occurrence **count**, the **total**, **max**, and **last** durations (ms), and the
@@ -19,7 +20,7 @@ total time) — the attribution showing which request/loader issued the slow op.
 Default sort is by **total time descending**; every numeric column is sortable.
 
 The pane is a slot-backed **2-tab host** (`tabbed-view`): the **Local** tab is
-this live per-worktree table, and the **Cluster** tab (contributed by the
+this per-worktree table, and the **Cluster** tab (contributed by the
 `cluster` sub-plugin into the `SlowOps.View` slot defined here) fans out across
 every worktree DB fork to show a cluster-wide aggregate + unified contention
 timeline.
@@ -34,15 +35,16 @@ timeline.
   - Uses:
     - `apps-core/tabs.navigate`
     - `debug/trace/pane.SlowEvents`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpoint`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 

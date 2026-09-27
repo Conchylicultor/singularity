@@ -1,4 +1,4 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Pane,
@@ -8,7 +8,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { serversRoute, serverDetailRoute } from "../core";
-import { serversResource } from "../shared";
+import { servers } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
 import { ServerDetail } from "./slots";
@@ -30,7 +30,7 @@ export const serversRootPane = Pane.define({
 });
 
 function useResolveServer({ serverId }: { serverId: string }) {
-  const result = useResource(serversResource);
+  const result = useLive(servers);
   if (serverId === NEW_SERVER_ID) return { pending: false, found: true };
   if (result.pending) return { pending: true, found: false };
   return { pending: false, found: result.data.some((s) => s.id === serverId) };
@@ -58,7 +58,7 @@ function ServersRoot() {
 function ServerDetailBody() {
   const { serverId } = serverDetailPane.useParams();
   const openPane = useOpenPane();
-  const serversResult = useResource(serversResource);
+  const serversResult = useLive(servers);
 
   if (serverId === NEW_SERVER_ID) {
     return (

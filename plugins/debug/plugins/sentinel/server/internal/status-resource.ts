@@ -1,5 +1,4 @@
 import { basename } from "node:path";
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import {
   createFileWatcher,
   type FileWatcher,
@@ -9,9 +8,10 @@ import {
   LATCH_FILENAME,
   readFreshDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
-  sentinelStatusResource,
-  sentinelVitalsResource,
+  sentinelStatus,
+  sentinelVitals,
   type SentinelStatusValue,
   type SentinelVitals,
 } from "../../core";
@@ -27,7 +27,7 @@ import {
 // watcher runs only in main, but an agent mostly looks at its own worktree's
 // health report. Every backend serves the host-global files main's watcher
 // writes, and pushes when a file changes — the file-watcher primitive, no
-// polling. External, not DB-backed, so they keep the hand `notify()`.
+// polling. External, not DB-backed, so the served values carry `notify()`.
 //
 // The pid-liveness half of the status is computed at read time, so a main that
 // died without writing `stopped` reads as not running the next time anything
@@ -41,13 +41,10 @@ export function readStatusValue(): SentinelStatusValue {
   };
 }
 
-export const sentinelStatusServerResource = defineExternalResource(
-  sentinelStatusResource,
-  {
-    mode: "push",
-    loader: () => Promise.resolve(readStatusValue()),
-  },
-);
+export const sentinelStatusServed = serveValue(sentinelStatus, {
+  source: "external",
+  loader: () => readStatusValue(),
+});
 
 /**
  * The latest reading, marked `current` only when the status file names its
@@ -68,13 +65,12 @@ export function readVitalsValue(
   return { kind: "recorded", vitals: read.vitals, current };
 }
 
-export const sentinelVitalsServerResource = defineExternalResource(
-  sentinelVitalsResource,
-  {
-    mode: "push",
-    loader: () => Promise.resolve(readVitalsValue()),
-  },
-);
+// A zero-argument wrapper: `readVitalsValue`'s optional parameters are test
+// seams, and the loader is handed the (empty) params tuple.
+export const sentinelVitalsServed = serveValue(sentinelVitals, {
+  source: "external",
+  loader: () => readVitalsValue(),
+});
 
 /**
  * Which resources a changed file feeds. Routed by name so the per-tick vitals
@@ -116,8 +112,8 @@ export async function startStatusWatcher(): Promise<void> {
         status ||= hit.status;
         vitals ||= hit.vitals;
       }
-      if (status) sentinelStatusServerResource.notify();
-      if (vitals) sentinelVitalsServerResource.notify();
+      if (status) sentinelStatusServed.notify();
+      if (vitals) sentinelVitalsServed.notify();
     },
   });
 }

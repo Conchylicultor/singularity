@@ -1,15 +1,15 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import {
   claudeCodeBlockMessage,
-  claudeCodeStatusResource,
+  claudeCodeStatus,
   type ClaudeCodeStatus,
 } from "../../core";
 import { claudeCodeVerdict } from "./claude-code-health";
 
 /** Claude Code's live status on this backend — pending until the first check lands. */
 export function useClaudeCodeStatus() {
-  return useResource(claudeCodeStatusResource);
+  return useLive(claudeCodeStatus);
 }
 
 /** The health report's Claude Code row. One subscription to a pushed scalar. */

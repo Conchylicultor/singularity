@@ -1,34 +1,31 @@
 import { useCallback, useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import {
-  rowOrderResource,
-  setRowOrder,
-  type SetRowOrderBody,
-} from "../../core";
-
-export interface RowOrderState {
-  /** `rowKey → Rank`, rank-ascending (the resource's own order). */
-  persisted: Map<string, Rank>;
-  /** True until the first push lands — the caller must NOT render a half-order. */
-  pending: boolean;
-}
+import { rowOrder, setRowOrder, type SetRowOrderBody } from "../../core";
 
 /**
- * Subscribe to one view instance's persisted row order. While pending the map is
- * empty AND `pending` is true, so the caller can distinguish "no order yet
- * loaded" from "this view has genuinely never been reordered" — the two must
- * render differently (defer vs. seed-everything).
+ * One view instance's persisted row order: `pending` until the first value
+ * lands, then the settled map. A union, so "no order loaded yet" can never be
+ * read as "this view has genuinely never been reordered" — the two must render
+ * differently (defer vs. seed-everything), and only the settled arm HAS a map.
  */
+export type RowOrderState =
+  | { pending: true }
+  | {
+      pending: false;
+      /** `rowKey → Rank`, rank-ascending (the value's own order). */
+      persisted: Map<string, Rank>;
+    };
+
+/** Subscribe to one view instance's persisted row order. */
 export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
-  const result = useResource(rowOrderResource, { dataViewId, viewId });
-  return useMemo(() => {
-    if (result.pending)
-      return { persisted: new Map<string, Rank>(), pending: true };
+  const result = useLive(rowOrder, { dataViewId, viewId });
+  return useMemo((): RowOrderState => {
+    if (result.pending) return { pending: true };
     return {
-      persisted: new Map(result.data.map((row) => [row.rowKey, row.rank])),
       pending: false,
+      persisted: new Map(result.data.map((row) => [row.rowKey, row.rank])),
     };
   }, [result]);
 }

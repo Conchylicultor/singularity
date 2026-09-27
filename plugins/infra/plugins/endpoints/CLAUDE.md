@@ -344,6 +344,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `debug/reports`
     - `debug/slow-ops`
     - `debug/slow-ops/cluster`
+    - `debug/slow-ops/pane`
     - `debug/timeline`
     - `debug/trace/engine`
     - `debug/trace/pane`

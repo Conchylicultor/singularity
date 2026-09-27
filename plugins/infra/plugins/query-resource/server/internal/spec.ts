@@ -184,7 +184,8 @@ export interface WindowOrderKey {
  * The declarative input to `compileWindowQuery` / `windowQueryResource` — the
  * bounded-membership (window / point) sibling of `QueryResourceSpec`. Exactly
  * ONE of `window` / `point` must be declared, and it must match the descriptor
- * kind (`windowQueryResourceDescriptor` / `pointQueryResourceDescriptor`).
+ * kind — a `liveCollection`'s window (`c.window`) or its `:rows` point sibling
+ * (`c.rows`), which `serveCollection` (network/live) compiles through here.
  * There is deliberately NO `limit` / `recompute` / `scopedMembership` here:
  * the bound comes from the subscription params (clamped to `maxLimit`), and
  * membership is always incremental.
@@ -230,9 +231,9 @@ export interface WindowQueryResourceSpec<
    * `limit` (the loader AND `windowIdsOf`, identically). It may instead come
    * from the descriptor (`contract.window.maxLimit`); when both are given they
    * must be equal, and at least one is required. The default limit lives ONLY
-   * on the descriptor (`windowQueryResourceDescriptor`'s `defaultLimit`) — the
-   * single source both the client hook and the boot path read; the compiler
-   * asserts `defaultLimit <= maxLimit` at module eval.
+   * on the descriptor (the `liveCollection`'s `default.limit`) — the single
+   * source both the client read and the boot path use; the compiler asserts
+   * `defaultLimit <= maxLimit` at module eval.
    */
   window?: { maxLimit?: number };
   /**

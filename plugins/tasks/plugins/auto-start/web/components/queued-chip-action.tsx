@@ -8,11 +8,10 @@ import { setAutoStart } from "@plugins/tasks/web";
 export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
   const autoStart = useTaskAutoStart(taskId);
-  // Nothing while loading; the chip appears once the task is known to be armed.
-  if (autoStart.pending) return null;
-  const queuedModel = autoStart.data?.autoStartModel ?? null;
-
-  if (!queuedModel) return null;
+  // Nothing while loading, nor for an unarmed task (no marker row): the chip
+  // appears once the task is known to be armed.
+  if (autoStart.pending || !autoStart.found) return null;
+  const queuedModel = autoStart.row.autoStartModel;
 
   const label = choiceLabel(queuedModel);
   return (

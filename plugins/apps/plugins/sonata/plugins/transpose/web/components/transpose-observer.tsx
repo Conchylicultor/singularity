@@ -1,35 +1,34 @@
 import { useEffect } from "react";
 import {
-  useSetTransposeSemitones,
-  useSonata,
+  transposeSetting,
+  useMountedSongId,
+  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { transposeResource } from "../../shared/resources";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { transposes } from "../../shared/resources";
 
 /**
- * Headless: syncs the open song's persisted transpose offset into the shell's
- * per-surface store, which the score pipeline reads to shift the whole song.
- * Mounted via `Sonata.Effect` (always inside the provider, which is itself inside
- * the transpose store provider) so it can read context and write the store.
+ * Headless observer of the `transposeSetting` (`Sonata.SongSetting`, mounted
+ * afresh for each loaded song): syncs that song's persisted transpose offset
+ * into the loaded song, whose score pipeline reads it to shift the whole song.
  *
- * This is the sole owner of "which song's offset is in force": it writes the
- * current song's value, and writes `0` when no song is open — otherwise the
- * previous song's offset would leak into the next. It waits for the resource to
- * resolve before writing, so a still-loading rollup never collapses to a false
- * `0`.
+ * It writes only a settled answer: a newly loaded song's settings start
+ * pending, so until this song's row arrives nothing renders under the previous
+ * song's offset or a stand-in `0` — and a write for a song no longer loaded is
+ * dropped. An absent row (`found: false`) IS the song's offset: `0`.
  */
 export function TransposeObserver() {
-  const { currentSongId } = useSonata();
-  const setTranspose = useSetTransposeSemitones();
-  const result = useResource(transposeResource);
+  const songId = useMountedSongId();
+  const setTranspose = useWriteSongSetting(transposeSetting);
+  const row = useLiveRow(transposes, songId);
+  // The row read reduced to the value it settles to — `undefined` while it is
+  // pending — so the effect below runs on a real change only.
+  const semitones = row.pending ? undefined : row.found ? row.row.semitones : 0;
 
   useEffect(() => {
-    if (result.pending) return; // wait for truth before touching the store
-    const semitones = currentSongId
-      ? (result.data.find((r) => r.songId === currentSongId)?.semitones ?? 0)
-      : 0;
-    setTranspose(semitones);
-  }, [result, currentSongId, setTranspose]);
+    if (semitones === undefined) return;
+    setTranspose(songId, semitones);
+  }, [songId, semitones, setTranspose]);
 
   return null;
 }

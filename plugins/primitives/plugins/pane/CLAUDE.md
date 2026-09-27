@@ -192,9 +192,9 @@ Pane.define({ …, hint: type<{ title: string }>(), useTitle: useSongTitle });
 openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title } });
 
 function useSongTitle({ songId }: { songId: string }, hint: Hint<{ title: string }>) {
-  const songs = useResource(songsResource);
+  const library = useLive(songs);
   let canonical: string | undefined;
-  if (!songs.pending) canonical = songs.data.find((s) => s.id === songId)?.title;
+  if (!library.pending) canonical = library.data.find((s) => s.id === songId)?.title;
   return hint.pick("title", canonical);   // canonical wins; hint fills the gap
 }
 ```

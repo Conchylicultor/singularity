@@ -52,10 +52,12 @@ left to learn" rather than "not loaded yet".
 rows come in. Summing no mode at all throws: 0 for every chord is a ranking
 that never moves and never fails.
 
-`IndexStatus` is also the live resource `chord.index-status`
-(`chordIndexStatusResource`): `not-requested` | `loading { phase: queued |
-downloading | building-snapshot | loading, done, total }` | `ready { scope,
-sections, windows }` | `failed { error }`. Reading it never starts work; only
+`IndexStatus` is also the live value `chord.index-status` (`chordIndexStatus`,
+a `liveValue` served with `serveValue({ source: "db" })`: the load job writes
+the state row from its own process, and the change feed pushes each commit):
+`not-requested` | `loading { phase: queued | downloading | building-snapshot |
+loading, done, total }` | `ready { scope, sections, windows }` | `failed {
+error }`. Reading it (`useLive(chordIndexStatus)`) never starts work; only
 `ensure` does.
 
 On the web, wrap a screen that needs the index in `<SongIndexGate>` (web
@@ -182,8 +184,9 @@ because it is jsonb, and Postgres orders an object's keys itself.
    leaves `failed` (or a stuck `loading`), and the next load truncates and starts
    over.
 5. **Progress reaches the browser through the change feed**: the child writes
-   `chord_index_state`, and the push resource re-reads it. The two bulk tables
-   are excluded from the change feed; nothing live reads them.
+   `chord_index_state`, and `chordIndexStatus` (a db-sourced live value) re-reads
+   it. The two bulk tables are excluded from the change feed; nothing live reads
+   them.
 
 **Scope** (`config`: `scope: auto | full | sample`, default `auto`): `auto` loads
 everything on the host singleton (main, or a release's single backend —
@@ -221,6 +224,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
   - Uses:
     - `config_v2.ConfigV2`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Inset`
@@ -228,7 +232,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
   - Exports (values): `SongIndexGate`
 - Server:
@@ -259,6 +262,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
     - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
   - Exports (values):
@@ -288,7 +292,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `integrations/hooktheory.HookpadModeSchema`
     - `integrations/hooktheory.hookpadTonicPc`
     - `integrations/hooktheory.TheorytabSectionIdSchema`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `BeatTimesAlignment`
     - `ChordFeature`
@@ -333,7 +337,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `bestModeWindows`
     - `CHORD_FEATURES`
     - `chordFeatures`
-    - `chordIndexStatusResource`
+    - `chordIndexStatus`
     - `chordOverlapsWindow`
     - `chordToken`
     - `chordTokenFromParts`

@@ -10,8 +10,9 @@ import { useMailSyncState } from "../internal/use-mail-sync";
  * tone→severity mapping the banner uses.
  */
 export function MailSyncDot() {
-  const { pending, view } = useMailSyncState();
-  if (pending || view == null) return null;
+  const sync = useMailSyncState();
+  if (sync.pending) return null;
+  const { view } = sync;
   if (view.phase !== "error" && view.phase !== "warning") return null;
   return (
     <StatusDot

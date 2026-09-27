@@ -1,8 +1,13 @@
-import { getSecret, setSecret, deleteSecret, getSecretMetadata } from "@plugins/infra/plugins/secrets/server";
+import {
+  getSecret,
+  setSecret,
+  deleteSecret,
+  getSecretMetadata,
+} from "@plugins/infra/plugins/secrets/server";
 import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/core";
 import type { FieldStorageProvider } from "@plugins/config_v2/server";
 import { getAllDescriptors } from "@plugins/config_v2/server";
-import { secretMetaServerResource } from "./resource";
+import { configSecretMetaServed } from "./resource";
 
 const NAMESPACE = "config-fields";
 
@@ -39,7 +44,7 @@ export const secretStorageProvider: FieldStorageProvider = {
       value,
     );
     const path = findStorePath(descriptorName);
-    if (path) secretMetaServerResource.notify({ path });
+    if (path) configSecretMetaServed.notify({ path });
   },
 
   async clear(descriptorName, fieldKey) {
@@ -48,6 +53,6 @@ export const secretStorageProvider: FieldStorageProvider = {
       key: secretKey(descriptorName, fieldKey),
     });
     const path = findStorePath(descriptorName);
-    if (path) secretMetaServerResource.notify({ path });
+    if (path) configSecretMetaServed.notify({ path });
   },
 };

@@ -3,17 +3,22 @@
 The **secret** type's config capability, spanning all four runtimes:
 
 - **core** — the `secretField` factory (a config_v2 `FieldDef<string>` carrying
-  the canonical `fields/` secret token, id `"secret"`) plus the live-state meta
-  resource `configV2SecretMetaResource` (id `"config-v2.secret-meta"`) and its
-  schema/type, shared by the web renderer and the server resource loader.
+  the canonical `fields/` secret token, id `"secret"`) plus the meta live value
+  `configSecretMeta` (`liveValue("config-v2.secret-meta", { params: ["path"] })`:
+  one descriptor's secret fields → `{ set, updatedAt? }`) and its `ConfigV2SecretMeta`
+  type, read by the web renderer and the auth setup wizards.
 - **web** — the password-input renderer contributed to
-  `config-v2.fields.renderer`. Shows "Configured" once set (reading the meta
-  resource), with a "Replace" affordance.
+  `config-v2.fields.renderer`. Shows "Configured" once set (`useLive(configSecretMeta,
+  { path })`; a loading line while it is pending), with a "Replace" affordance.
 - **server** — registers the encrypted `secretStorageProvider` for the
   `"secret"` field type via `registerFieldStorageProvider`. Values persist in the
   secrets store under namespace `"config-fields"`, keyed `${descriptorName}.${fieldKey}`,
-  never in plaintext config files. Declares `secretMetaServerResource` (key
-  `"config-v2.secret-meta"`) so the UI's set/not-set indicator updates live.
+  never in plaintext config files. Serves the meta value as `configSecretMetaServed`
+  (`serveValue`, `source: "external"` — the truth is the central secrets store);
+  the storage provider calls `configSecretMetaServed.notify({ path })` after every
+  save / clear, so the UI's set/not-set indicator updates live. Readers that do
+  not know their descriptor yet subscribe with `{ path: "" }`, which answers `{}`
+  (a value has no skip; the sentinel is a recorded phase-3 follow-up).
 - **central** — `readSecretConfig`, the decrypted reader consumed by auth
   providers (it guards on `field.type.id === "secret"`).
 
@@ -29,12 +34,12 @@ The **secret** type's config capability, spanning all four runtimes:
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `config_v2/fields.useLocalValue`
+    - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
@@ -46,6 +51,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `infra/secrets.getSecret`
     - `infra/secrets.getSecretMetadata`
     - `infra/secrets.setSecret`
+    - `network/live.serveValue`
   - Resources: `config-v2.secret-meta` (push)
 - Central:
   - Uses: `infra/secrets.getSecret`
@@ -53,13 +59,12 @@ The **secret** type's config capability, spanning all four runtimes:
 - Core:
   - Uses:
     - `fields/secret.secretFieldType`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ConfigV2SecretMeta`
     - `SecretFieldDef`
   - Exports (values):
-    - `configV2SecretMetaResource`
-    - `configV2SecretMetaSchema`
+    - `configSecretMeta`
     - `secretField`
 - Cross-plugin:
   - Imported by:

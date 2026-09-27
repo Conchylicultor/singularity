@@ -41,6 +41,10 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import {
+  DEFAULT_MODEL_CHOICE,
+  resolveModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { attemptConvAggSpec, attemptPushAggSpec } from "./rollup-spec";
 import { eq } from "drizzle-orm";
@@ -132,8 +136,8 @@ async function seedConversation(
 ): Promise<string> {
   const id = nextId("conv");
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, ended_at)
-    VALUES (${id}, ${attemptId}, ${status},
+    INSERT INTO conversations (id, attempt_id, status, model, ended_at)
+    VALUES (${id}, ${attemptId}, ${status}, ${resolveModel(DEFAULT_MODEL_CHOICE)},
             ${status === "done" ? sql`now()` : sql`NULL`})
   `);
   return id;

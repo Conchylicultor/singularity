@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
  * The verbs over a deployment, as the app launches them.
@@ -49,7 +50,7 @@ export const DEPLOY_LOG_CHANNEL = "deploy";
  * The state of the most recent run — `converge`, `ship` or `update` — for one
  * deployment: the **live view**.
  *
- * In-memory state projected into a live resource (the `release.previews` shape),
+ * In-memory state projected into a live value (the `release.previews` shape),
  * because that is what a live view is: progress at phase granularity, for
  * whatever is happening now. What it is NOT is the record — `deploy_runs` is
  * (see {@link DeployRunRecordSchema}), written by the same functions that write
@@ -135,18 +136,21 @@ export const DeployRunSchema = z.object({
 export type DeployRun = z.infer<typeof DeployRunSchema>;
 
 /**
- * Every deployment's most recent run, keyed by deployment id.
+ * Every deployment's most recent run, keyed by deployment id — ONE value, read
+ * whole with `useLive(deployRuns)`.
  *
- * Not DB-backed, so the bounded-working-set contract does not apply: the map
- * holds at most one entry per deployment row, and deployments are
- * `(composition × server)` pairs a human authors — the same inherently tiny,
- * domain-bounded set `deploy.deployments` itself is.
+ * Whole rather than per deployment because a reader needs every run on a
+ * server at once (`useBlockedReason` asks "is anything running on this box?").
+ * Served from process memory (`serveValue`'s external arm, in
+ * `server/internal/run-state.ts`), so no row-count bound applies: the map holds
+ * at most one entry per deployment row, written only for a row that exists.
+ *
+ * No placeholder: before the first value lands the read is `pending`, which is
+ * NOT "nothing has run" — the Deploy buttons stay blocked until it settles.
  */
-export const deployRunsResource = resourceDescriptor<Record<string, DeployRun>>(
-  "deploy.runs",
-  z.record(z.string(), DeployRunSchema),
-  {},
-);
+export const deployRuns = liveValue("deploy.runs", {
+  schema: z.record(z.string(), DeployRunSchema),
+});
 
 /**
  * One `deploy_runs` row: the **record** of a run, as the history query returns it.

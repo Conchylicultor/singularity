@@ -5,9 +5,9 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import type {
   DependsOnEntry,
   KeyedMembership,
+  KeyedServerResourceOptions,
   Resource,
   ScopePolicy,
-  ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   orderByClauses,
@@ -115,7 +115,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     guard(
       codec,
       key,
-      "spec declares `point` but the descriptor carries no point codec — declare it with pointQueryResourceDescriptor(...).",
+      "spec declares `point` but the descriptor carries no point codec — a point resource is a `liveCollection`'s `:rows` sibling (network/live): declare the collection and serve it with `serveCollection`, which compiles `c.rows` with `point: { by }`.",
     );
     guard(
       spec.orderBy === undefined && spec.signatureColumns === undefined,
@@ -168,7 +168,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       ...scopePolicy,
       ...(dependsOn ? { dependsOn } : {}),
       ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-    } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
+    } as KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
     return { serverOpts, keyField, identityTableName: tableName };
   }
 
@@ -178,7 +178,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   guard(
     codec,
     key,
-    "spec declares `window` but the descriptor carries no window codec — declare it with windowQueryResourceDescriptor(...).",
+    "spec declares `window` but the descriptor carries no window codec — a window resource is a `liveCollection` (network/live) declared with `default` and `maxLimit`: declare it there and serve it with `serveCollection`, which compiles `c.window` with `window`.",
   );
   guard(
     spec.orderBy !== undefined,
@@ -378,7 +378,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     ...scopePolicy,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-  } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
+  } as KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   return { serverOpts, keyField, identityTableName: tableName };
 }
 

@@ -1,10 +1,11 @@
 import { useMemo, type ReactElement } from "react";
 import { MdBolt } from "react-icons/md";
 import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   DataView,
   defineDataView,
@@ -19,7 +20,7 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
-  slowOpsResource,
+  listSlowOps,
   type SlowOp,
   type CallerBreakdown,
   type SlowOpMeasures,
@@ -143,13 +144,21 @@ function MeasureLines({
 const sumWaits = (waits: Record<string, number>): number =>
   Object.values(waits).reduce((a, b) => a + b, 0);
 
+// Read on every open: `slow_ops` is change-feed-excluded, so there is no live
+// read of it to subscribe to (see `listSlowOps`). `refetchOnMount: "always"`
+// overrides the app QueryClient's `staleTime: Infinity`, so reopening the tab
+// shows the aggregates as they are now, painting the previous read meanwhile.
 export function SlowOpsView() {
-  const result = useResource(slowOpsResource);
-  return (
-    <ResourceView resource={result} fallback={<Loading />}>
-      {(ops) => <SlowOpsViewInner ops={ops} />}
-    </ResourceView>
-  );
+  const ops = useEndpoint(listSlowOps, {}, { refetchOnMount: "always" });
+  if (ops.isPending) return <Loading />;
+  if (ops.isError) {
+    return (
+      <Placeholder tone="error">
+        {getEndpointErrorMessage(ops.error)}
+      </Placeholder>
+    );
+  }
+  return <SlowOpsViewInner ops={ops.data} />;
 }
 
 function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {

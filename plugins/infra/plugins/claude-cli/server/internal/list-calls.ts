@@ -6,7 +6,7 @@ import {
   type ClaudeCliCallsResult,
 } from "../../core/endpoints";
 import { _claudeCliCalls } from "./tables";
-import { RECENT_CALLS_LIMIT } from "./resources";
+import { RECENT_CALLS_LIMIT } from "../../core/resources";
 import { statusForNoCalls } from "./retention-verdict";
 
 /**

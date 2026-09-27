@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 
 // WHY a run was cut. `candidate` is packed and built for a named platform — a
 // bundle `ship` can pick; `staged` is a `--dev` run that claims no
@@ -46,16 +47,23 @@ export const ReleaseRunSchema = z.object({
 
 export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
-// Per-id detail resource: one release run resolved by id, regardless of age.
-// Exact shape of `taskDetailResource` — parameterized (not keyed), NOT
-// preloaded (the run-detail pane lives deep in Studio, not first paint). The
-// server half (`server/internal/release-run-resource.ts`) is `mode:"push"` with
-// no `identityTable`, so a status flip on that run re-pushes automatically. It
-// replaces scanning the old ambient 50-row window to resolve a run by id.
-export const releaseRunResource = resourceDescriptor<
-  ReleaseRun | null,
-  { id: string }
->("release.run", ReleaseRunSchema.nullable(), null);
+// The `release_runs` rows, read by id: a lookup-only collection (no default
+// window yet), so it mints `release.runs:rows` alone. The run-detail pane's
+// sections each read their run with `useLiveRow(releaseRuns, runId)` — any run,
+// regardless of age — and `found: false` is "no such run". The `:rows` point
+// routing sends a status flip to that run's readers alone.
+//
+// Plural on purpose: a composition-scoped window (`default` / `sortable` /
+// `filterable` by composition) can later join this SAME declaration and retire
+// the `queryReleaseHistory` keyset endpoint and the revision tick below.
+//
+// NOT preloaded (a lookup-only collection cannot be; the run-detail pane lives
+// deep in Studio, not first paint). The server projects exactly this schema's
+// keys, so `pid` — absent here — never reaches the wire.
+export const releaseRuns = liveCollection("release.runs", {
+  row: ReleaseRunSchema,
+  id: "id",
+});
 
 // Scalar invalidation tick: a cheap `{ rev }` hash the server pushes only when a
 // real change lands (new run / status flip). The composition-scoped release-history
@@ -69,9 +77,7 @@ export const releaseRunsRevisionResource = resourceDescriptor<{ rev: string }>(
   { rev: "" },
 );
 
-// In-memory preview state, keyed by runId. Truth lives in the server's preview
-// manager (an in-memory Map), not Postgres, so the server side is an external
-// resource with a callable `notify()`.
+// One running (or stopping) preview of a release run's artifact.
 export const PreviewSchema = z.object({
   runId: z.string(),
   status: z.enum(["running", "stopped"]),
@@ -81,9 +87,17 @@ export const PreviewSchema = z.object({
 
 export type Preview = z.infer<typeof PreviewSchema>;
 
-export const previewStateResource = resourceDescriptor<Record<string, Preview>>(
-  "release.previews",
-  z.record(z.string(), PreviewSchema),
-  {},
-  { preload: "boot" },
-);
+// In-memory preview state, keyed by runId. Truth lives in the server's preview
+// manager (an in-memory Map), not Postgres, so the server serves it from the
+// external arm (`releasePreviewsServed.notify()` on every start / stop / reap).
+// Bounded by the live preview processes, so no `unbounded` reason. No
+// placeholder: before the first value lands the read is `pending`, never an
+// empty record claiming "no previews".
+//
+// `preload: "boot"` is parity with the resource it replaces; its one reader is
+// a Studio pane, which is why `web/internal/register.ts` pulls this module into
+// the eager web import graph.
+export const releasePreviews = liveValue("release.previews", {
+  schema: z.record(z.string(), PreviewSchema),
+  preload: "boot",
+});

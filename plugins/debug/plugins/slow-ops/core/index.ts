@@ -1,5 +1,4 @@
 export {
-  slowOpsResource,
   slowOpFields,
   SlowOpSchema,
   CallerBreakdownSchema,
@@ -11,7 +10,7 @@ export {
   OTHER_VARIANT,
   SlowOpMarkerSchema,
   loadSeverity,
-} from "./resources";
+} from "./schema";
 export type {
   SlowOp,
   CallerBreakdown,
@@ -21,7 +20,8 @@ export type {
   VariantBreakdown,
   MeasureStat,
   SlowOpMeasures,
-} from "./resources";
+} from "./schema";
+export { listSlowOps } from "./endpoints";
 export { slowOpConfig } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS } from "./limits";
 export { SlowOpReportPayloadSchema } from "./report-payload";

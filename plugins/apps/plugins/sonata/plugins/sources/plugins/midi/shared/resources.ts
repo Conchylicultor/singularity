@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
@@ -40,9 +40,19 @@ export const songMidiShape = defineExtensionShape({
 export const SongMidiRowSchema = songMidiShape.schema;
 export type SongMidiRow = z.infer<typeof SongMidiRowSchema>;
 
-/** Reactive list of every song's MIDI data (push resource; powers card meta). */
-export const songMidiResource = resourceDescriptor<SongMidiRow[]>(
-  "sonata-song-midi",
-  z.array(SongMidiRowSchema),
-  [],
-);
+/**
+ * Every song's MIDI row — the whole `sonata_songs_ext_midi` table as one value
+ * (minus the server-only `contentHash`), recomputed and pushed whole by the DB
+ * change-feed on every import / folder reconcile. No placeholder: before the
+ * first value lands the read is `pending`.
+ *
+ * A whole-table value, not a collection, until Resources item 7: its readers
+ * are the library's Tracks / File-missing field extensions, which the library
+ * DataView sorts and filters over every song client-side. The bounded form
+ * needs joined side-table sort/filter columns on the songs collection, the host
+ * rows in data-view's `FieldExtensionProps`, and live-window paging in
+ * DataView. The server states that bound (`unbounded: { reason }`).
+ */
+export const songMidiRows = liveValue("sonata-song-midi", {
+  schema: z.array(SongMidiRowSchema),
+});

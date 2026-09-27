@@ -1,7 +1,7 @@
 export {
   conversationSummaryFields,
   ConversationSummarySchema,
-  conversationSummariesResource,
+  conversationSummaries,
   PhaseSchema,
   PHASE_VALUES,
 } from "./resources";

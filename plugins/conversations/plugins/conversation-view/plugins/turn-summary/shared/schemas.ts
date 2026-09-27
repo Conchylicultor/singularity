@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
@@ -22,23 +22,29 @@ export const turnSummaryShape = defineExtensionShape({
 export const TurnSummarySchema = turnSummaryShape.schema;
 export type TurnSummary = z.infer<typeof TurnSummarySchema>;
 
-// Bounded POINT resource. The side-table is upserted per conversation — ONE row
-// per conversation (its latest turn's summary), not one per turn — so the point
-// identity IS the side-table's pk (`conversationId`, stored as `parent_id`): one
-// subscribed id names exactly one conversation's summary.
+// ONE conversation's latest turn summary, read by the conversation's id. The
+// side-table is upserted per conversation — ONE row per conversation (its
+// latest turn's summary), not one per turn — so it is a lookup-only
+// collection: no default window (nothing lists every conversation's summary),
+// minting `turn-summaries:rows` alone. The card reads its row with
+// `useLiveRow(turnSummaryRows, conversationId)`, and `found: false` is "no
+// summary yet". (`turnSummaries` is the server's extension handle, hence
+// `…Rows`.)
 //
-// The only reader is the open conversation's card, which asks about that one
-// conversation. The change feed routes a write to a tuple iff the changed ids
-// intersect its set, so a turn completing in one conversation never re-ships
-// every conversation's summary to every tab.
+// Bounded by construction: only the open conversation's card subscribes, a
+// load is one primary-key seek, and the `:rows` point routing schedules a write
+// for the one conversation whose row it named — a turn completing in one
+// conversation never re-ships every conversation's summary to every tab.
 //
-// NOT preloaded: point resources hydrate post-mount (the recorded decision of
-// the bounded working-set contract); the card renders nothing while pending.
+// **The row id is `conversationId`, the table's primary key** (stored as
+// `parent_id`): the point membership intersects the ids a write touched — PK
+// values — with each card's id set.
 //
-// The server half is compiled from the extension handle in
-// `server/internal/resource.ts`; the wire shape is `TurnSummary[]`.
-export const turnSummariesResource = pointQueryResourceDescriptor<TurnSummary>(
-  "turn-summaries",
-  TurnSummarySchema,
-  "conversationId",
-);
+// NOT preloaded (a lookup-only collection cannot be): the card hydrates
+// post-mount via its sub-ack and renders nothing while pending.
+//
+// Served from the extension handle in `server/internal/resource.ts`.
+export const turnSummaryRows = liveCollection("turn-summaries", {
+  row: TurnSummarySchema,
+  id: "conversationId",
+});

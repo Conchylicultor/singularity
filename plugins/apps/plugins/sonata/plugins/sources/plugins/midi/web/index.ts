@@ -12,7 +12,7 @@ import { MidiFields } from "./components/midi-fields";
 // Re-export the source id so consumers can identify this source without
 // depending on its internal layout.
 export { MIDI_SOURCE_ID };
-export { useSongMidi, useSongMidiMap } from "./hooks";
+export { useSongMidiMap } from "./hooks";
 
 export default {
   description:

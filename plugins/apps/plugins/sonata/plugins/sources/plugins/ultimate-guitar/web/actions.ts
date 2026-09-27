@@ -17,7 +17,7 @@ import {
  * next reload. Mirrors `useSaveRhythm` in `rich/rhythm-controls`.
  *
  * This `PUT` also syncs the parent song's title (← `songName`); the toolbar title
- * re-renders off the library's `songsResource`, not an in-memory mirror.
+ * re-renders off the library's live `songs` value, not an in-memory mirror.
  */
 export function useSaveUltimateGuitar(): (
   songId: string,

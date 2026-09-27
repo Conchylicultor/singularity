@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   ChordTokenSchema,
   type ChordToken,
@@ -136,18 +136,15 @@ export function decodeProgressParams(
 
 /**
  * The learner's standing: per chord of `tokens`, today, and all time. Pushed
- * again whenever an answer is saved.
+ * again whenever an answer is saved. One object whose `chords` holds one entry
+ * per requested token, so the params bound it.
  *
- * The descriptor API requires an initial value; this one is never shown.
- * `useResource` seeds it at `dataUpdatedAt === 0` and answers `pending` (no
- * `.data`) until the server's first value lands, so a surface renders its
- * loading state, never these zeros.
+ * Its params are `ChordProgressParams` by construction; build them with
+ * `encodeProgressParams` (the loader refuses any other spelling). No
+ * placeholder: until the server's first value lands the read is `pending`, so a
+ * surface renders its loading state, never zeros.
  */
-export const chordProgressResource = resourceDescriptor<
-  ChordProgress,
-  ChordProgressParams
->("chord.progress", ChordProgressSchema, {
-  chords: [],
-  today: { songs: 0, answers: 0, correct: 0, totalMs: 0 },
-  allTime: { songs: 0, answers: 0, correct: 0 },
+export const chordProgress = liveValue("chord.progress", {
+  schema: ChordProgressSchema,
+  params: ["timeZone", "tokens"],
 });

@@ -49,11 +49,13 @@ function displayFor(op: WorktreeOp): OpDisplay {
 // Sidebar row indicator surfacing a worktree's in-flight long-running op (build
 // / push / check / test / e2e, or any of them queued for its lock) as a single
 // muted icon. Renders nothing when the worktree is idle, so ordinary "working"
-// rows stay unadorned.
+// rows stay unadorned — and nothing while the op map is still loading (it is
+// boot-preloaded, so that window is normally never seen): an optional row
+// adornment has no loading affordance of its own.
 export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
-  const op = useWorktreeOp(conv.id);
-  if (!op) return null;
-  const { icon: Icon, title } = displayFor(op);
+  const reading = useWorktreeOp(conv.id);
+  if (reading.pending || !reading.op) return null;
+  const { icon: Icon, title } = displayFor(reading.op);
   return (
     <WithTooltip content={title}>
       <Inline gap="none" className="text-muted-foreground">

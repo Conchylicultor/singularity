@@ -6,6 +6,8 @@ import type {
 import type { PageRow } from "@plugins/page/plugins/editor/core";
 import { useStarredPageIds } from "../internal/use-starred-ids";
 
+const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+
 /**
  * Field extension contributed into the page-tree's `PageTree.Fields` factory: a
  * render-callback component that reads this plugin's own bounded favorites
@@ -14,8 +16,8 @@ import { useStarredPageIds } from "../internal/use-starred-ids";
  * in the DataView's Filter pill for free — so the "Favorites" view is just a
  * filtered `list` view over `starred`, with no bespoke sidebar.
  *
- * The whole-set read is exactly why this resource is a bounded WINDOW rather
- * than a point resource: the field must project `starred` for every row the
+ * The whole-set read is exactly why `starredPages` is read as a bounded WINDOW
+ * rather than by id: the field must project `starred` for every row the
  * DataView filters over, and naming every page id would be O(pages). See
  * `shared/resources.ts`.
  */
@@ -26,7 +28,8 @@ export function StarredField({ render }: FieldExtensionProps<PageRow>) {
   // FavoritesSidebar did by returning null. Abstaining instead (yielding no
   // field) would leave the view's filter rule unresolvable, and `evaluateNode`
   // fail-softs an unresolvable rule to `true` — flashing EVERY page.
-  const { ids } = useStarredPageIds();
+  const starred = useStarredPageIds();
+  const ids = starred.pending ? EMPTY_IDS : starred.ids;
   const fields = useMemo<FieldDef<PageRow>[]>(
     () => [
       {

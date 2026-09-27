@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -15,18 +15,20 @@ export const agentPageShape = defineExtensionShape({
 export const AgentPageRowSchema = agentPageShape.schema;
 export type AgentPageRow = z.infer<typeof AgentPageRowSchema>;
 
-// Bounded ordered window (desc createdAt, default 200 / max 500): a DB-backed
-// collection resource must be membership-bounded (CLAUDE.md / the
-// bounded-working-set contract). The sibling `starred` plugin is the same shape
-// on a bigger window — its favorites have no TTL. The 24h TTL
-// (see server/internal/sweep.ts) keeps the live set in single digits, so the
-// 200-row window is never the binding constraint. Rows key on `blockId` (the
-// side-table PK — the marked page's id); the server half is compiled from the
-// extension handle in `server/internal/resource.ts`. Web consumers read it via
-// `useWindowResource`; the wire shape stays `AgentPageRow[]`.
-export const agentPagesResource = windowQueryResourceDescriptor<AgentPageRow>(
-  "pages-origin",
-  AgentPageRowSchema,
-  "blockId",
-  { defaultLimit: 200 },
-);
+// The marker set, as a bounded ordered window (desc createdAt, default 200 /
+// max 500): a DB-backed collection is membership-bounded by construction. The
+// sibling `starred` plugin is the same shape on a bigger window — its favorites
+// have no TTL. The 24h TTL (see server/internal/sweep.ts) keeps the live set in
+// single digits, so the 200-row window is never the binding constraint. Nothing
+// filters it (`filterable: {}`): the one reader wants the whole set. Rows key on
+// `blockId` (the side-table PK — the marked page's id); the server half is
+// served from the extension handle in `server/internal/resource.ts`. The one
+// reader is `OriginField`, via `useLive(agentPages)`.
+export const agentPages = liveCollection("pages-origin", {
+  row: AgentPageRowSchema,
+  id: "blockId",
+  filterable: {},
+  sortable: ["createdAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 200 },
+  maxLimit: 500,
+});

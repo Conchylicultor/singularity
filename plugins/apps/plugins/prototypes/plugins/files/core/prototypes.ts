@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PrototypeProblemSchema } from "./validate";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
@@ -73,25 +73,25 @@ export const PrototypeMetaSchema = z.object({
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
 
 /**
- * The list of all prototypes. Re-broadcast (push) whenever a file under
- * `prototypes/` changes, so the gallery reflects new/edited mocks live.
+ * The list of all prototypes. Served from the data dir (`source: "external"`)
+ * and re-broadcast (push) whenever a file under `prototypes/` changes, so the
+ * gallery reflects new/edited mocks live. No placeholder: until the list is
+ * read it is pending, never "no prototypes". An external array needs no
+ * stated bound — it is bounded by the folders on disk.
  */
-export const prototypesResource = resourceDescriptor<PrototypeMeta[]>(
-  "prototypes.list",
-  z.array(PrototypeMetaSchema),
-  [],
-);
+export const prototypesList = liveValue("prototypes.list", {
+  schema: z.array(PrototypeMetaSchema),
+});
 
 /**
  * A monotonically increasing version (a timestamp) bumped on every file change
  * under `prototypes/`. Open iframes append it to their `src` so an agent's edit
  * cache-busts and reloads the iframe automatically (watcher → bump → re-render).
+ * Pending until the server answers — never a stand-in `0` a frame would load.
  */
-export const prototypesVersionResource = resourceDescriptor<number>(
-  "prototypes.version",
-  z.number(),
-  0,
-);
+export const prototypesVersion = liveValue("prototypes.version", {
+  schema: z.number(),
+});
 
 /** Base path for the raw file-serving routes. */
 export const PROTOTYPES_API_BASE = "/api/prototypes";

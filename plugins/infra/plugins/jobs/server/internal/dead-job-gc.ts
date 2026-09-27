@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { DEAD_JOBS_ARCHIVE_CAP } from "../../core/resources";
 import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
 import { defineJob, type EnqueueTx } from "./registry";
 import { ownedWorkflowRunIds } from "./run-identity";
@@ -16,9 +17,9 @@ const PurgedRowSchema = z.object({
 
 // Bound on the durable archive so it can't itself accumulate unbounded.
 // Every reconcile enforces BOTH: rows older than the TTL are dropped, and the
-// archive is trimmed to the newest N rows.
+// archive is trimmed to the newest `DEAD_JOBS_ARCHIVE_CAP` rows (declared in
+// core beside the `deadJobs` collection, whose `maxLimit` it also is).
 const ARCHIVE_TTL = "30 days";
-const ARCHIVE_CAP = 2000;
 
 // Archive-then-purge permanently-failed graphile jobs. graphile-worker never
 // GCs jobs that exhausted `max_attempts`, so they sit in `_private_jobs`
@@ -80,18 +81,18 @@ export async function reconcileDeadJobs(
        WHERE archived_at < now() - (${ARCHIVE_TTL})::interval
     `);
 
-    // Bound the archive: keep only the newest ARCHIVE_CAP rows.
+    // Bound the archive: keep only the newest DEAD_JOBS_ARCHIVE_CAP rows.
     await tx.execute(sql`
       DELETE FROM dead_jobs
        WHERE id IN (
          SELECT id FROM dead_jobs
           ORDER BY archived_at DESC
-          OFFSET ${ARCHIVE_CAP}
+          OFFSET ${DEAD_JOBS_ARCHIVE_CAP}
        )
     `);
   });
 
-  // dead_jobs is public (the change-feed invalidates deadJobsResource on the
+  // dead_jobs is public (the change feed moves the dead-jobs collection on the
   // insert/delete above), but the purge from graphile_worker._private_jobs is
   // outside the feed and sends no notification → announce it.
   emitQueueActivity();

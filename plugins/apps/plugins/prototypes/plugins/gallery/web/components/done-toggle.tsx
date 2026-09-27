@@ -8,9 +8,9 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  prototypeStatusesResource,
+  prototypeStatuses,
   setPrototypeStatus,
   statusOf,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -21,7 +21,7 @@ import type { PrototypeGalleryRow } from "../slots";
 // `prototypes.statuses`, `_status/<id>.json`), toggled from the gallery card and
 // from the detail pane's header. A failed write surfaces through the endpoint
 // layer's global error toast; the checkbox keeps showing the stored value, since
-// it reads the resource the server re-broadcasts on every write.
+// it reads the live value the server re-broadcasts on every write.
 
 /** Set one prototype's Done flag. */
 export function useSetPrototypeDone(): {
@@ -69,7 +69,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
  */
 export function DoneHeaderAction() {
   const { name } = usePrototypeDetail();
-  const statuses = useResource(prototypeStatusesResource);
+  const statuses = useLive(prototypeStatuses);
   const { pending, setDone } = useSetPrototypeDone();
   if (statuses.pending) {
     return (

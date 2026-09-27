@@ -1,12 +1,9 @@
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { transposeResource, type TransposeRow } from "../../shared/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { transposes } from "../../shared/resources";
 import { songTranspose } from "./tables";
 
-export const transposeLiveResource = defineResource<TransposeRow[]>({
-  key: transposeResource.key,
-  mode: "push",
-  schema: z.array(songTranspose.schema),
-  loader: () => db.select(songTranspose.wireColumns).from(songTranspose.table),
+// Server half of the per-song offset read: the lookup-only collection served
+// from the extension entity (its wire columns — `songId` is the `parent_id` PK).
+export const transposesServed = serveCollection(transposes, {
+  from: songTranspose,
 });

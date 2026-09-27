@@ -277,6 +277,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/prototypes/compare`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
+    - `apps/sonata`
     - `apps/sonata/library`
     - `apps/sonata/look`
     - `apps/sonata/piano-roll`

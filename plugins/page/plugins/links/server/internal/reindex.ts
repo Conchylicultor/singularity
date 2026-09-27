@@ -17,7 +17,8 @@ import { _pageLinks } from "./tables";
 // 4. Diff against the existing page_links rows for this source; insert added
 //    edges, delete removed ones. Each affected target's backlinks panel
 //    refreshes automatically — the page_links insert/delete is invalidated by
-//    the L4 DB change-feed, which fans out to every dependent backlinksResource.
+//    the L4 DB change-feed, which recomputes every subscribed `pageBacklinks`
+//    tuple.
 export async function reindexPage(pageId: string): Promise<void> {
   // Built fresh each call so newly-registered extractors are always honored.
   // `getContributions()` reads the populated server registry. Typed extractors

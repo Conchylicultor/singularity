@@ -365,14 +365,27 @@ never compete with the four-segment file route.
 
 ## Live state
 
-- `prototypes.list` — the prototype list (push).
-- `prototypes.version` — a timestamp bumped when a prototype's bytes change;
+Every one is a `liveValue` declared in `core/` and served in `server/internal/`
+by `serveValue(…, { source: "external" })` — the truth is the data dir, not
+Postgres — whose `notify` the watcher (and a PUT, for its own write) calls. The
+server barrel spreads each served value's `declare` into `contributions`. None
+has a placeholder: until the server answers, a read is `pending`, never an empty
+list, a `0` version or an empty history.
+
+- `prototypes.list` (`prototypesList` / `prototypesListServed`,
+  `resources.ts`) — the prototype list (push).
+- `prototypes.version` (`prototypesVersion` / `prototypesVersionServed`,
+  `resources.ts`) — a timestamp bumped when a prototype's bytes change;
   iframes append it to their `src` so an agent's edit reloads them
   automatically.
-- `prototypes.history` — one prototype's versions + `dirty` (push, keyed by
+- `prototypes.history` (`prototypeHistory` / `prototypeHistoryServed`,
+  `history.ts`) — one prototype's versions + `dirty` (push, a value per
   `name`); see Version history.
-- `prototypes.picks` — one prototype's stored option picks (push, keyed by
-  `name`); see Option picks.
+- `prototypes.picks` (`prototypePicks` / `prototypePicksServed`, `picks.ts`) —
+  one prototype's stored option picks (push, a value per `name`); see Option
+  picks.
+- `prototypes.statuses` (`prototypeStatuses` / `prototypeStatusesServed`,
+  `status.ts`) — every recorded Done status, keyed by id (push); see Status.
 
 `onReady` starts a `createFileWatcher` over `prototypes/`, watching every
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
@@ -413,8 +426,9 @@ but its name is not a forbidden reference target. The check catches copied
 *files*, never copied *design*.
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
-`prototypesResource` / `prototypesVersionResource` / `prototypeHistoryResource`
-/ `prototypePicksResource` (descriptors), `prototypeUrl()` /
+the live values `prototypesList` / `prototypesVersion` / `prototypeHistory` /
+`prototypePicks` / `prototypeStatuses` (`liveValue` declarations, read with
+`useLive`), `prototypeUrl()` /
 `prototypeVersionUrl()`, the `listPrototypes` / `createPrototype` /
 `restorePrototypeVersion` / `setPrototypePicks` endpoints, the picks shapes
 (`StoredPicks`, `PicksChange`, `applyPicksChange`), the version shapes
@@ -463,7 +477,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/html-decode.decodeHtmlText`
     - `infra/html-decode.readHtmlAttr`
     - `network/live.liveValue`
-    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `MocksDeclaration`
     - `OptionDeclaration`
@@ -513,7 +526,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PROTOTYPE_VERSION_FILE_ROUTE`
     - `PROTOTYPE_VERSION_KINDS`
     - `PROTOTYPE_VIEWPORT_WORDS`
-    - `prototypeHistoryResource`
+    - `prototypeHistory`
     - `PrototypeHistorySchema`
     - `prototypeIdsIn`
     - `PrototypeMetaSchema`
@@ -521,11 +534,11 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypePicks`
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
-    - `prototypesResource`
+    - `prototypesList`
     - `PrototypeStatusChangeSchema`
-    - `prototypeStatusesResource`
+    - `prototypeStatuses`
     - `PrototypeStatusSchema`
-    - `prototypesVersionResource`
+    - `prototypesVersion`
     - `prototypeUrl`
     - `PrototypeVersionSchema`
     - `prototypeVersionUrl`

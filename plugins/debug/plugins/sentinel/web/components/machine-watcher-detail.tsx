@@ -1,4 +1,4 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -8,7 +8,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { sentinelVitalsResource, type SentinelVitals } from "../../core";
+import { sentinelVitals, type SentinelVitals } from "../../core";
 import { FILL_CLASS, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,
@@ -116,7 +116,7 @@ export function MachineWatcherDetailView({
 }
 
 export function MachineWatcherDetail() {
-  const result = useResource(sentinelVitalsResource);
+  const result = useLive(sentinelVitals);
   // Drives "Updated 3s ago" and notices a reading going stale between pushes.
   const now = useNow(1_000);
   if (result.pending) {

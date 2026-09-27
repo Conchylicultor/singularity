@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { ConversationArtifacts } from "./slots";
 import {
   collectArtifacts,
@@ -24,7 +24,7 @@ export function useConversationArtifacts(
   convId: string,
 ): ConversationArtifactsResult {
   const kinds = ConversationArtifacts.Kind.useContributions();
-  const events = useResource(jsonlEventsResource, { id: convId });
+  const events = useLive(jsonlEvents, { id: convId });
   return useMemo(() => collectArtifacts(kinds, events), [kinds, events]);
 }
 

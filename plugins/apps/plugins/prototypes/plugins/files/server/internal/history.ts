@@ -1,9 +1,9 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   PROTOTYPE_ENTRY_FILE,
   isPrototypeId,
-  prototypeHistoryResource as historyDescriptor,
+  prototypeHistory,
   restorePrototypeVersion,
   type PrototypeVersion,
 } from "../../core";
@@ -42,22 +42,19 @@ function store(): HistoryStore {
  * a name that is not a minted id throws — the detail pane only mounts for a
  * prototype the list vouches for, so there is no empty answer to give.
  */
-export const prototypeHistoryLiveResource = defineExternalResource(
-  historyDescriptor,
-  {
-    mode: "push",
-    loader: async ({ name }) => {
-      if (!isPrototypeId(name)) {
-        throw new Error(`prototypes.history: not a prototype id: ${name}`);
-      }
-      const read = await store().readHistory(name);
-      if (read.kind === "no-such-prototype") {
-        throw new Error(`prototypes.history: no such prototype: ${name}`);
-      }
-      return read.history;
-    },
+export const prototypeHistoryServed = serveValue(prototypeHistory, {
+  source: "external",
+  loader: async ({ name }) => {
+    if (!isPrototypeId(name)) {
+      throw new Error(`prototypes.history: not a prototype id: ${name}`);
+    }
+    const read = await store().readHistory(name);
+    if (read.kind === "no-such-prototype") {
+      throw new Error(`prototypes.history: no such prototype: ${name}`);
+    }
+    return read.history;
   },
-);
+});
 
 /**
  * Record the prototype folder as a new version, if it changed since the last

@@ -1,4 +1,4 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -14,7 +14,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { commitDetailPane } from "@plugins/code-explorer/plugins/commit-detail/web";
-import { commitsGraphResource } from "../../shared/resources";
+import { commitsGraph } from "../../shared/resources";
 
 const BRANCH_COLOR = "var(--primary)";
 const LANDED_COLOR = "#10b981"; // emerald-500 — commits pushed to main
@@ -23,14 +23,18 @@ const BEHIND_COLOR =
   "color-mix(in srgb, var(--muted-foreground) 50%, transparent)";
 
 export function CommitsGraphBody() {
-  const openPane = useOpenPane();
   const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
-  const result = useResource(commitsGraphResource, {
-    attemptId: conversation?.attemptId ?? "",
-  });
-
+  // No conversation row → no attempt to draw. Split rather than subscribe with a
+  // placeholder id: the graph is read only once the attempt id is known.
   if (!conversation) return null;
+  return <AttemptCommitsGraph attemptId={conversation.attemptId} />;
+}
+
+function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
+  const openPane = useOpenPane();
+  const result = useLive(commitsGraph, { attemptId });
+
   // A settled result no longer carries `.error` (the value it exposes is one the
   // server currently vouches for). A transient load failure surfaces as
   // `pending` with `.error` set, so the error placeholder lives inside the
@@ -74,11 +78,7 @@ export function CommitsGraphBody() {
   // The detail pane carries the worktree in its own params, so this is the only
   // place the conversation's attempt enters the picture.
   const openCommit = (sha: string) =>
-    openPane(
-      commitDetailPane,
-      { worktree: conversation.attemptId, sha },
-      { mode: "push" },
-    );
+    openPane(commitDetailPane, { worktree: attemptId, sha }, { mode: "push" });
 
   return (
     <Column

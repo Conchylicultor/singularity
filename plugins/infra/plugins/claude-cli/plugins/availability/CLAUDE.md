@@ -19,8 +19,11 @@ use, so it answers for the account they would run as.
 
 ## Freshness — no polling
 
-The answer is cached per backend and pushed as the `claude-code-status`
-resource. It is re-asked:
+The answer is cached per backend and pushed as the `claude-code-status` value
+— the `claudeCodeStatus` `liveValue` (core), served on the external arm as
+`claudeCodeStatusServed` (`server/internal/status.ts`), whose `notify()` fires
+whenever a probe's answer differs from the last one. There is no placeholder:
+until the first check lands, readers see `pending`. It is re-asked:
 
 - on first read (lazy — nothing probes at boot);
 - by the launch gate, when the last answer is not a `ready` younger than five
@@ -68,8 +71,8 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeDetail`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`
     - `primitives/setup-steps.StepNote`
@@ -83,6 +86,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
   - Uses:
     - `infra/endpoints.implement`
     - `infra/paths.resolveClaudeBin`
+    - `network/live.serveValue`
   - Exports (values):
     - `assertClaudeCodeReady`
     - `checkClaudeCode`
@@ -95,7 +99,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ClaudeCodeBlock`
     - `ClaudeCodeStatus`
@@ -104,7 +108,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `claudeCodeBlockMessage`
     - `claudeCodeFixCommands`
     - `claudeCodeProblem`
-    - `claudeCodeStatusResource`
+    - `claudeCodeStatus`
     - `ClaudeCodeStatusSchema`
     - `recheckClaudeCode`
 - Cross-plugin:

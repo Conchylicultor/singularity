@@ -1,18 +1,14 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { firstSelection } from "./path";
-import { SelectionSchema, type Selection } from "./selection";
+import { liveValue } from "@plugins/network/plugins/live/core";
+import { SelectionSchema } from "./selection";
 
 /**
- * What the learner has chosen. Pushed again on every change.
+ * What the learner has chosen, pushed again on every change. One object read
+ * from one row, so no bound to state.
  *
- * The descriptor API requires an initial value; this one is the true starting
- * point, but it is still never what a surface shows: `useResource` seeds it at
- * `dataUpdatedAt === 0` and answers `pending` until the server's first value
- * lands, so the trainer renders its loading state rather than buttons that
- * might be about to change.
+ * No placeholder: until the server's first value lands the read is `pending`,
+ * so the trainer renders its loading state rather than buttons that might be
+ * about to change.
  */
-export const chordCurriculumResource = resourceDescriptor<Selection>(
-  "chord.curriculum",
-  SelectionSchema,
-  firstSelection(),
-);
+export const chordCurriculum = liveValue("chord.curriculum", {
+  schema: SelectionSchema,
+});

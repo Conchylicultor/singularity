@@ -7,7 +7,7 @@
  * the codec-derived `idsOf`) wire those semantics correctly. The fake `db`
  * dispatches on the RENDERED SQL over a live in-memory table, so the loader,
  * the scoped refill, and `windowIdsOf` all read one consistent truth.
- * Run: `bun test plugins/infra/plugins/query-resource/server/internal/compile-window-runtime.test.ts`.
+ * Run: `./singularity test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -24,13 +24,16 @@ import {
   createResourceRuntime,
   type ResourceParams,
 } from "@plugins/framework/plugins/resource-runtime/core";
+import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import type {
+  QueryDb,
+  SelectMap,
+} from "@plugins/infra/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
-  type WindowQueryResourceContract,
-} from "@plugins/infra/plugins/query-resource/core";
-import { compileWindowQuery } from "./compile-window";
-import type { QueryDb, SelectMap } from "./spec";
+} from "../../core/internal/window-descriptor";
 
 const rowsT = pgTable("rows", {
   id: text("id").primaryKey(),

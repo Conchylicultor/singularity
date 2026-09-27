@@ -28,7 +28,12 @@ export default {
       // (the host resolves it once per mount), so it never yanks a card the user
       // has touched. Keyed on `verified`, not on holding a key — minting one is
       // the first step of the flow, not the end of it.
-      useDefaultOpen: ({ server }) => !useServerVerified(server),
+      //
+      // A verdict still loading seeds OPEN, deliberately: the seed is read
+      // once, and of the two wrong guesses, a proven server's card left open
+      // costs one click, while a card collapsed over a step that needs doing
+      // hides the only way forward.
+      useDefaultOpen: ({ server }) => useServerVerified(server) !== "verified",
       component: SshSetupSection,
     }),
   ],

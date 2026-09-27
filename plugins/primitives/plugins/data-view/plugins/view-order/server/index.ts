@@ -1,11 +1,9 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { setRowOrder } from "../core";
 import { handleSetRowOrder } from "./internal/handle-set-row-order";
-import { rowOrderLiveResource } from "./internal/resource";
+import { rowOrderServed } from "./internal/resource";
 
 export { _dataViewRowOrder } from "./internal/tables";
-export { rowOrderLiveResource } from "./internal/resource";
 export { applyRowOrder } from "./internal/handle-set-row-order";
 
 export default {
@@ -14,5 +12,5 @@ export default {
   httpRoutes: {
     [setRowOrder.route]: handleSetRowOrder,
   },
-  contributions: [Resource.Declare(rowOrderLiveResource)],
+  contributions: [...rowOrderServed.declare],
 } satisfies ServerPluginDefinition;

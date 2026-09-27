@@ -2,7 +2,7 @@
 
 Diff renderer for the resources facet in the PR review pane. Contributes a
 `DiffRenderer` that projects each plugin's resources (one `key (mode)` string
-per `defineResource`, server before central, via `resourcesToComparable` in the
+per served resource, server before central, via `resourcesToComparable` in the
 facet `core/`) so the host can diff a plugin's resources between the worktree
 and main.
 

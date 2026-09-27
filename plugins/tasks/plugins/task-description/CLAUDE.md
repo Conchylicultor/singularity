@@ -9,6 +9,7 @@
   - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
@@ -22,7 +23,6 @@
     - `primitives/inline-text.InlineText`
     - `primitives/launch.LaunchControl`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/overlay/tooltip.WithTooltip`

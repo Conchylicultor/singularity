@@ -1,11 +1,9 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { recordPlay } from "../shared/endpoints";
 import { handleRecordPlay } from "./internal/routes";
-import { playbackHistoryLiveResource } from "./internal/resource";
+import { playbackHistoryServed } from "./internal/resource";
 
 export { songPlayback } from "./internal/tables";
-export { playbackHistoryLiveResource } from "./internal/resource";
 
 export default {
   description:
@@ -13,5 +11,5 @@ export default {
   httpRoutes: {
     [recordPlay.route]: handleRecordPlay,
   },
-  contributions: [Resource.Declare(playbackHistoryLiveResource)],
+  contributions: [...playbackHistoryServed.declare],
 } satisfies ServerPluginDefinition;

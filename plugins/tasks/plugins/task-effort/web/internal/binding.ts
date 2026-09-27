@@ -26,5 +26,9 @@ export function useTaskEffortBinding(
   );
 
   if (result.pending) return { pending: true };
-  return { pending: false, value: result.data, onChange };
+  return {
+    pending: false,
+    value: result.found ? result.row.level : null,
+    onChange,
+  };
 }

@@ -1,5 +1,5 @@
 import { MdWarning, MdArrowForward } from "react-icons/md";
-import { usePointResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   CollapsibleChevron,
   useCollapsible,
@@ -10,7 +10,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { turnSummariesResource } from "../../shared";
+import { turnSummaryRows } from "../../shared";
 
 function parseBullets(text: string): string[] {
   if (!text.trim()) return [];
@@ -46,11 +46,12 @@ export function TurnSummaryCard({
 }: {
   conversation: ConversationRecord;
 }) {
-  const result = usePointResource(turnSummariesResource, conversation.id);
+  const result = useLiveRow(turnSummaryRows, conversation.id);
   const { open, toggle } = useCollapsible({ defaultOpen: true });
-  if (result.pending) return null;
-  const summary = result.data;
-  if (!summary) return null;
+  // Not loaded yet and "no summary yet" both render nothing: the card is an
+  // optional banner, and there is no stand-in summary to show in either case.
+  if (result.pending || !result.found) return null;
+  const summary = result.row;
 
   const caveats = parseBullets(summary.caveats);
   const actions = parseBullets(summary.actions);

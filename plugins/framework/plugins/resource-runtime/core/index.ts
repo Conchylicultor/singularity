@@ -9,6 +9,7 @@ export type {
   ScopePolicy,
   ResourceContract,
   ServerResourceOptions,
+  KeyedServerResourceOptions,
   ResourceMode,
   ResourceParams,
   DependsOnEntry,

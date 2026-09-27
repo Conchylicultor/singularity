@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
  * Why a render produced no picture. Every arm is a state the card renders, not
@@ -43,15 +43,17 @@ export const ThumbnailStateSchema = z.discriminatedUnion("status", [
 export type ThumbnailState = z.infer<typeof ThumbnailStateSchema>;
 
 /**
- * Thumbnail state for every prototype, keyed by directory slug. Push-based: the
- * render job notifies on completion, so a card updates itself with no polling.
- * A prototype absent from the map has no state yet (nothing has looked at it,
- * or the backend just booted) — which the card renders as its fallback cover,
- * the same as `rendering`.
+ * Thumbnail state for every prototype, keyed by directory slug. Push-based and
+ * served from the backend's in-memory map (`source: "external"`): the render
+ * job notifies on completion, so a card updates itself with no polling. A
+ * prototype absent from the LOADED map has no state yet (nothing has looked at
+ * it, or the backend just booted) — which the card renders as its fallback
+ * cover, the same as `rendering`. Before the map loads the value is pending,
+ * never an empty map standing in for it.
  */
-export const prototypeThumbnailsResource = resourceDescriptor<
-  Record<string, ThumbnailState>
->("prototypes.thumbnails", z.record(z.string(), ThumbnailStateSchema), {});
+export const prototypeThumbnails = liveValue("prototypes.thumbnails", {
+  schema: z.record(z.string(), ThumbnailStateSchema),
+});
 
 /** Base path for the cached-PNG route. */
 export const PROTOTYPE_THUMBS_BASE = "/api/prototype-thumbs";

@@ -28,9 +28,10 @@ and only referenced the second.
 
 ## Titles
 
-`prototypesResource` is a live, app-wide list re-broadcast on every file change
-under the prototypes dir, so a popover full of ids costs no requests and the
-titles follow a rename of the `<title>` live.
+`prototypesList` (`files`' live value, read with `useLive`) is an app-wide
+list re-broadcast on every file change under the prototypes dir, so a popover
+full of ids costs no requests and the titles follow a rename of the `<title>`
+live.
 
 Two states are not a title and do not pretend to be one:
 
@@ -53,9 +54,9 @@ Two states are not a title and do not pretend to be one:
     - `apps/prototypes/canvas.prototypeDetailPane`
     - `conversations/conversation-view/artifacts.ArtifactRow`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
+    - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
 

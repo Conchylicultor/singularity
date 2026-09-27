@@ -42,6 +42,7 @@ import {
   pitchLayoutConfig,
 } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   accidentalColor,
   useTrackColorMap,
@@ -51,6 +52,7 @@ import { pianoRollConfig } from "../../shared/config";
 import {
   authoredSecondsOf,
   buildNoteVisuals,
+  type NoteVisual,
   buildProjection,
   KEYBOARD_HIGH,
   KEYBOARD_LOW,
@@ -105,6 +107,9 @@ const FIT_MARGIN = 0.92;
  * HUD rather than colliding with it.
  */
 const HUD_EDGE_CLEARANCE = 16; // px
+
+/** The roll's input while the song's track views are not known: nothing drawn. */
+const NO_VISUALS: NoteVisual[] = [];
 
 /**
  * The cursor scroll layer: one `translateY` over the cursor-INVARIANT overlay
@@ -182,6 +187,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     isPlaying,
     play,
     stop,
+    scorePending,
   } = useSonata();
 
   // Seed the live zoom from the persisted global on load (and reflect a
@@ -294,8 +300,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
 
   // Per-track view-state: hidden tracks are dropped from the roll entirely;
   // every drawn note is tinted by its track's effective color (palette default
-  // or user override). Both come from the track-mixer's reactive rollup, so a
-  // toggle/recolor re-derives the visuals (and only then — not per frame).
+  // or user override). Both come from the track-mixer's per-song track views,
+  // so a toggle/recolor re-derives the visuals (and only then — not per frame).
+  // Until those are known no note is drawn (a hidden track must never flash in
+  // for the round trip), and the lane shows the loading state below.
   const colorMap = useTrackColorMap();
   const hiddenIds = useHiddenTrackIds();
 
@@ -304,17 +312,20 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // and scroll never touch it (the scene maps it to pixels with one transform).
   const visuals = useMemo(
     () =>
-      buildNoteVisuals({
-        score,
-        plane,
-        hiddenIds,
-        colorMap,
-        accidentalColor,
-        speller,
-        tempoScale,
-      }),
+      colorMap.pending || hiddenIds.pending
+        ? NO_VISUALS
+        : buildNoteVisuals({
+            score,
+            plane,
+            hiddenIds: hiddenIds.value,
+            colorMap: colorMap.value,
+            accidentalColor,
+            speller,
+            tempoScale,
+          }),
     [score, plane, hiddenIds, colorMap, speller, tempoScale],
   );
+  const viewPending = scorePending || colorMap.pending || hiddenIds.pending;
 
   // Bar markers in authored seconds (the canvas grid + bar numbers' input).
   const barMarkers = useMemo(
@@ -640,6 +651,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
                     details.
                   </Text>
                 </Stack>
+              </Center>
+            </Layer>
+          ) : viewPending ? (
+            /* The song's settings are still loading: not "no notes". */
+            <Layer decorative>
+              <Center className="h-full w-full">
+                <Loading />
               </Center>
             </Layer>
           ) : score.notes.length === 0 ? (

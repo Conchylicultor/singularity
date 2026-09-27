@@ -27,8 +27,8 @@ const SAVE_DEBOUNCE_MS = 500;
  * no-op for songs of any other source.
  *
  * The `PUT` persists `title: songName` (the one place a UG song's title is
- * written); the toolbar title re-renders off the library's `songsResource`, not an
- * in-memory mirror.
+ * written); the toolbar title re-renders off the library's live `songs` value,
+ * not an in-memory mirror.
  */
 export function UltimateGuitarPersistObserver() {
   const { sourceRaw, currentSongId, songOpenEpoch } = useSonata();

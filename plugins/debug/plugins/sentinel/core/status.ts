@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   SentinelDownStatusSchema,
   SentinelVitalsRecordSchema,
@@ -36,13 +36,12 @@ export type SentinelStatusValue = z.infer<typeof SentinelStatusValueSchema>;
 
 /**
  * A single small value (bounded by its schema), pushed when the status file or
- * the latch changes.
+ * the latch changes. No placeholder: until the first read lands the row is
+ * `pending` (unknown), never a made-up "no status recorded".
  */
-export const sentinelStatusResource = resourceDescriptor<SentinelStatusValue>(
-  "sentinel.status",
-  SentinelStatusValueSchema,
-  { watch: { kind: "none" }, duress: null },
-);
+export const sentinelStatus = liveValue("sentinel.status", {
+  schema: SentinelStatusValueSchema,
+});
 
 /**
  * The watcher's latest reading as every backend reads it from the vitals file.
@@ -66,13 +65,12 @@ export type SentinelVitals = z.infer<typeof SentinelVitalsSchema>;
 
 /**
  * One small value (~500 bytes), pushed on every tick's write — subscribed only
- * by the row's glance and detail, so only while the health report is open.
+ * by the row's glance and detail, so only while the health report is open. No
+ * placeholder: until the first read lands it is `pending`, never `none`.
  */
-export const sentinelVitalsResource = resourceDescriptor<SentinelVitals>(
-  "sentinel.vitals",
-  SentinelVitalsSchema,
-  { kind: "none" },
-);
+export const sentinelVitals = liveValue("sentinel.vitals", {
+  schema: SentinelVitalsSchema,
+});
 
 /** The `sentinel-down` report's payload. */
 export const SentinelDownPayloadSchema = SentinelDownStatusSchema.omit({

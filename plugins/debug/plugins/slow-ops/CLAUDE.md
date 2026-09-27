@@ -2,7 +2,9 @@
 
 Durable, deduped store + recorder for slow operations, fed by server `onSlowSpan`
 and the `POST /api/slow-ops/client` endpoint. Viewer: the `pane` sub-plugin
-(Debug → Slow Ops).
+(Debug → Slow Ops), which reads the whole table through `GET /api/slow-ops`
+(`listSlowOps`, in `core`). There is no live resource on purpose: `slow_ops` is
+`ExcludeFromChangeFeed`, so a live read would never update.
 
 Client `element` signals attribute to their route — they pass
 `caller: { kind: "route", label: location.pathname }`, which the recorder merges
@@ -136,7 +138,6 @@ bar).
     - `reports.Reports`
 - Server:
   - Contributes:
-    - `resource.declare` "slow-ops"
     - `ConfigV2.Register` "slow-op"
     - `report-kind` "slow-op"
     - `change-feed-exclusion` "slow_ops"
@@ -172,10 +173,10 @@ bar).
     - `readSlowOpMarkers`
     - `recordSlowOp`
     - `recordSlowOpBatch`
-    - `slowOpsResource`
   - Register: `defineJob('retention.slow_ops')`
-  - Resources: `slow-ops` (push)
-  - Routes: `POST /api/slow-ops/client`
+  - Routes:
+    - `GET /api/slow-ops`
+    - `POST /api/slow-ops/client`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -187,11 +188,11 @@ bar).
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `infra/endpoints.defineEndpoint`
     - `infra/host/contention.ContentionSnapshotSchema`
     - `infra/runtime-profiler.SPAN_MEASURES`
     - `infra/runtime-profiler.SpanMeasure`
     - `infra/runtime-profiler.WaitBreakdown`
-    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CallerBreakdown`
     - `CallerRef`
@@ -205,6 +206,7 @@ bar).
   - Exports (values):
     - `CallerBreakdownSchema`
     - `CallerRefSchema`
+    - `listSlowOps`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `OTHER_VARIANT`
@@ -215,7 +217,6 @@ bar).
     - `SlowOpReportPayloadSchema`
     - `SlowOpSampleSchema`
     - `SlowOpSchema`
-    - `slowOpsResource`
     - `VARIANT_CAP`
     - `VariantBreakdownSchema`
 - Cross-plugin:

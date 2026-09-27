@@ -16,6 +16,7 @@
     - `conversations/conversation-view/code.gitStatusBadge`
     - `conversations/conversation-view/code.useEditedFiles`
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
@@ -35,7 +36,6 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `review.ReviewSlots`
 - Server:

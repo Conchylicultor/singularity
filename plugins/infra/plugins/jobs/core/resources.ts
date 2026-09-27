@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { HoldClassSchema } from "./hold";
 
 export const JobStateSchema = z.enum([
@@ -67,14 +67,26 @@ export const JobsPayloadSchema = z.object({
 });
 export type JobsPayload = z.infer<typeof JobsPayloadSchema>;
 
-export const jobsListResource = resourceDescriptor<JobsPayload>(
-  "jobs-list",
-  JobsPayloadSchema,
-  { rows: [], counts: { pending: 0, running: 0, retrying: 0, dead: 0 } },
-);
+/**
+ * Debug → Queue's Jobs tab: the newest 500 graphile job rows, with their
+ * per-state counts. Served external (`server/internal/resources.ts`): graphile's
+ * tables sit outside the schema the change feed covers.
+ *
+ * `load: "on-demand"`: a 500-row join read by one Debug pane is kept out of the
+ * shared flush — a change sends an `invalidate`, and each open tab refetches
+ * over HTTP. No placeholder: not loaded yet is `pending`, never an empty queue.
+ */
+export const jobsList = liveValue("jobs-list", {
+  schema: JobsPayloadSchema,
+  load: "on-demand",
+});
 
 // ─── Dead-letter archive (see server/internal/dead-job-gc.ts) ──────────────
 
+// One archived row of `dead_jobs`, field for column: the `deadJobs` collection
+// binds each field to its column by name. The two timestamps are coerced Dates
+// — a `timestamp` column reads back as a `Date` through drizzle's query
+// builder, and crosses the wire as an ISO string.
 export const DeadJobRowSchema = z.object({
   id: z.string(),
   jobName: z.string(),
@@ -82,19 +94,40 @@ export const DeadJobRowSchema = z.object({
   attempts: z.number(),
   maxAttempts: z.number(),
   lastError: z.string().nullable(),
-  diedAt: z.string().nullable(),
-  archivedAt: z.string(),
+  diedAt: z.coerce.date().nullable(),
+  archivedAt: z.coerce.date(),
 });
 export type DeadJobRow = z.infer<typeof DeadJobRowSchema>;
 
+// The `GET /api/jobs/dead` endpoint's body. The live collection below carries
+// the bare rows.
 export const DeadJobsPayloadSchema = z.object({
   rows: z.array(DeadJobRowSchema),
 });
 export type DeadJobsPayload = z.infer<typeof DeadJobsPayloadSchema>;
 
-// No poll — the dead-job GC notifies this resource after each reconcile.
-export const deadJobsResource = resourceDescriptor<DeadJobsPayload>(
-  "dead-jobs",
-  DeadJobsPayloadSchema,
-  { rows: [] },
-);
+/**
+ * How many rows the dead-letter archive keeps: the dead-job GC trims
+ * `dead_jobs` to the newest this-many on every reconcile
+ * (`server/internal/dead-job-gc.ts`), and a window of the `deadJobs`
+ * collection grows to at most the same — so a fully grown window is the whole
+ * archive.
+ */
+export const DEAD_JOBS_ARCHIVE_CAP = 2000;
+
+/**
+ * Debug → Queue's Dead tab: the dead-letter archive as a live collection — a
+ * bounded window, newest archived first (200, grown to at most
+ * `DEAD_JOBS_ARCHIVE_CAP`), plus its `:rows` / `:groups` siblings. Nothing
+ * filters it yet (`filterable: {}`). No poll and no notify: `dead_jobs` is a
+ * public table, so the change feed moves every subscribed window when the
+ * dead-job GC archives or purges.
+ */
+export const deadJobs = liveCollection("dead-jobs", {
+  row: DeadJobRowSchema,
+  id: "id",
+  filterable: {},
+  sortable: ["archivedAt"],
+  default: { orderBy: [["archivedAt", "desc"]], limit: 200 },
+  maxLimit: DEAD_JOBS_ARCHIVE_CAP,
+});

@@ -69,7 +69,7 @@ cannot produce a bundle comes from `ship`, which will not find one.
 
 ## The contract lives in `core/`, not `shared/`
 
-The `servers` sibling puts its schemas / endpoints / resource descriptor in
+The `servers` sibling puts its schemas / endpoints / live declaration in
 `shared/`, which is plugin-private. This plugin's contract has a consumer outside
 the plugin — the `singularity deploy converge` / `ship` CLI — so it lives in
 `core/` instead, the same call `release/core/{endpoints,resources}.ts` makes for
@@ -78,6 +78,26 @@ the same reason. Nothing here is plugin-private, so there is no `shared/` at all
 `compositionId` / `serverId` are **create-only** (see
 `UpdateDeploymentBodySchema`): editing that pair in place would leave the old host
 converged and running an install no row describes any more.
+
+## Live reads
+
+- **`deployments`** (`core/resources.ts`) — a `liveCollection` over
+  `deploy_deployments`, served by `serveCollection` (the projection is exactly
+  `DeploymentSchema`'s keys; the change feed drives it). One deployment — the
+  pane's resolve and title, the overview, and the sibling plugins' sections — is
+  `useLiveRow(deployments, deploymentId)`, whose `found: false` is "this
+  deployment no longer exists". A server's list is `useLive(deployments, {
+  where: { serverId } })`; `serverId` is the one filterable column. The
+  timestamps are `z.coerce.date()`, so the collection projects the columns as
+  they are and the endpoints parse rows through the same schema
+  (`toDeployment`). A `Deployments.Fields` contribution gets no rows of its own
+  (data-view field extensions never do); `useDeploymentsListServerId()`
+  (`web/internal/list-server-id-context.tsx`, published by `DeploymentsBody`
+  around its `<DataView>`) hands it the same `serverId` so it can run the
+  identical `{ where: { serverId } }` query rather than guessing at the
+  collection's default window.
+- **`deployRuns`** (`core/runs.ts`) — a `liveValue`, the run map below, read
+  whole with `useLive(deployRuns)`.
 
 ## The UI launches the CLI; it does not reimplement it
 
@@ -208,8 +228,9 @@ environment.
 
 ### A run is recorded twice, and the two are not redundant
 
-- **`deploy.runs`** — the **live view**: an in-memory `Map` projected into a push
-  resource (the `release.previews` shape), bounded at one entry per deployment
+- **`deploy.runs`** — the **live view**: an in-memory `Map` served as the
+  `deployRuns` value's external arm (`deployRunsServed.notify()` on every
+  write; the `release.previews` shape), bounded at one entry per deployment
   row, carrying `phase` so a running `update` reports which leg it is on. It is
   rebuilt at boot from the ledger and never persisted, so it cannot go stale.
   Two things rebuild it, and they cover different runs: the ledger's
@@ -355,7 +376,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 
 ## Plugin reference
 
-- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
     - `DeploymentDetail.Section` ← `apps.deploy.analytics.dashboard`, `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
@@ -369,12 +390,16 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
   - Uses:
+    - `apps/deploy/health.ServerHealthRow`
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/servers.ServerDetail`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.LiveRowResult`
+    - `network/live.useLive`
+    - `network/live.useLiveRow`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
@@ -403,7 +428,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.Pane`
@@ -416,9 +440,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeploymentItemActions`
     - `Deployments`
     - `useBlockedReason`
+    - `useDeploymentsListServerId`
 - Server:
   - Contributes:
     - `resource.declare` "deploy.deployments"
+    - `resource.declare` "deploy.deployments:rows"
+    - `resource.declare` "deploy.deployments:groups"
     - `resource.declare` "deploy.runs"
     - `resource.declare` "deploy.runs-revision"
   - Uses:
@@ -437,6 +464,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
+    - `network/live.serveCollection`
+    - `network/live.serveValue`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
@@ -454,12 +483,13 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Exports (values):
     - `_deployDeployments`
     - `_deployRuns`
-    - `deploymentsServerResource`
   - Register:
     - `defineJob('retention.deploy_runs')`
     - `defineSupervisedJob('deploy.run')`
   - Resources:
-    - `deploy.deployments` (push)
+    - `deploy.deployments` (keyed, window)
+    - `deploy.deployments:groups` (push)
+    - `deploy.deployments:rows` (keyed, point)
     - `deploy.runs` (push)
     - `deploy.runs-revision` (push)
   - Routes:
@@ -474,6 +504,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Uses:
     - `apps/deploy/servers.serverDetailRoute`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
+    - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
     - `primitives/data-view.ServerFilterWireSchema`
@@ -501,12 +533,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DEPLOY_RUN_FILTERABLE`
     - `DEPLOY_RUN_SEARCHABLE`
     - `deploymentDetailRoute`
+    - `deployments`
     - `DeploymentSchema`
-    - `deploymentsResource`
     - `DeployPhaseSchema`
     - `DeployRunRecordSchema`
+    - `deployRuns`
     - `DeployRunSchema`
-    - `deployRunsResource`
     - `deployRunsRevisionResource`
     - `DeployVerbSchema`
     - `deriveInstall`

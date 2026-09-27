@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PageTree } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { OriginField } from "./components/origin-field";
 
-export { agentPagesResource, AgentPageRowSchema } from "../shared/resources";
+export { AgentPageRowSchema } from "../shared/resources";
 export type { AgentPageRow } from "../shared/resources";
 
 export default {

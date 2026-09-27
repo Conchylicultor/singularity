@@ -72,23 +72,28 @@ describe("buildDescriptorIndex", () => {
     ]);
   });
 
-  it("indexes the bounded-membership factories that used to be invisible", () => {
+  it("indexes a collection's bounded memberships, and a lookup-only one's :rows alone", () => {
     const src = `
-      export const notificationsResource = windowQueryResourceDescriptor<Notification>(
-        "notifications", NotificationSchema, "id", { defaultLimit: 200, preload: "boot" },
-      );
-      export const taskAutoStartResource = pointQueryResourceDescriptor<TaskAutoStartRow>(
-        "tasks-auto-start", TaskAutoStartRowSchema, "taskId",
-      );
+      export const notifications = liveCollection("notifications", {
+        row: NotificationSchema, id: "id", filterable: {}, sortable: ["createdAt"],
+        default: { orderBy: [["createdAt", "desc"]], limit: 200 }, maxLimit: 500,
+        preload: "boot",
+      });
+      export const taskAutoStart = liveCollection("tasks-auto-start", {
+        row: TaskAutoStartRowSchema,
+        id: "taskId",
+      });
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
-    expect(index.get("notificationsResource")?.[0]?.membership).toBe("window");
-    expect(index.get("taskAutoStartResource")?.[0]?.membership).toBe("point");
+    expect(index.get("notifications")?.[0]?.membership).toBe("window");
+    // Lookup-only (no `default:`): the window and `:groups` mints `require` it,
+    // so the declaration mints its point sibling and nothing else.
+    expect(index.get("taskAutoStart")).toEqual([
+      { key: "tasks-auto-start:rows", keyed: true, membership: "point" },
+    ]);
     // Both are keyed at runtime — membership is the only thing that tells a
     // bounded resource apart from the legacy unbounded keyed form.
-    for (const name of ["notificationsResource", "taskAutoStartResource"]) {
-      expect(index.get(name)?.[0]?.keyed).toBe(true);
-    }
+    expect(index.get("notifications")?.[0]?.keyed).toBe(true);
   });
 
   it("emits one entry per key a collection mints", () => {
@@ -185,12 +190,12 @@ describe("buildDescriptorIndex", () => {
   });
 
   it("lets the plugin that OWNS a factory call it with a computed key", () => {
-    // `windowQueryResourceDescriptor` implemented in terms of
+    // `queryResourceDescriptor` implemented in terms of
     // `keyedResourceDescriptor` — the wrapper, not a declaration.
     const src = `
-      export function windowQueryResourceDescriptor(key, rowSchema, pkField, opts) {
-        const d = keyedResourceDescriptor(key, z.array(rowSchema), [], pkKeyOf(pkField), rest);
-        return Object.assign(d, { window: { encode, decode } });
+      export function queryResourceDescriptor(key, rowSchema, pkField, opts) {
+        const descriptor = keyedResourceDescriptor(key, z.array(rowSchema), [], keyOf, opts);
+        return Object.assign(descriptor, { queryPk: pkField });
       }
     `;
     expect(() =>
@@ -278,17 +283,44 @@ describe("resolveRegisterCall", () => {
     expect(def).toEqual([{ key: "reports", mode: "invalidate" }]);
   });
 
-  it("defaults the flat form's mode to push", () => {
-    expect(
+  it("refuses a flat form with no literal mode rather than guess one", () => {
+    // The runtime has no default, so a missing mode means the text does not
+    // show it — a spread, a variable — never a push resource.
+    expect(() =>
       resolveRegisterCall(
         "defineResource",
-        `{ key: "slow-ops", loader }`,
+        `{ key: "slow-ops", ...base, loader }`,
         new Map(),
         index,
         where,
         NOTHING_IMPORTED,
       ),
-    ).toEqual([{ key: "slow-ops", mode: "push" }]);
+    ).toThrow(
+      /defineResource\(…\) serves a non-keyed resource with no literal `mode:`/,
+    );
+    expect(() =>
+      resolveRegisterCall(
+        "defineExternalResource",
+        `{ key: "slow-ops", mode: MODE, loader }`,
+        new Map(),
+        index,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toThrow(/`mode:` is not a static string literal — got `MODE`/);
+  });
+
+  it("reads a flat form's mode at its own depth, never a loader's", () => {
+    expect(
+      resolveRegisterCall(
+        "defineExternalResource",
+        `{ key: "hosts", loader: () => ({ mode: "push" }), mode: "invalidate" }`,
+        new Map(),
+        index,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toEqual([{ key: "hosts", mode: "invalidate" }]);
   });
 
   it("resolves a descriptor identifier through an import alias, keyed → keyed", () => {
@@ -460,16 +492,41 @@ describe("resolveRegisterCall", () => {
     ]);
   });
 
-  it("honours an explicit serverOpts mode over the non-keyed default", () => {
+  it("reads a non-keyed descriptor's mode from its serverOpts", () => {
     const def = resolveRegisterCall(
       "defineResource",
-      `mainAheadCountResource, { mode: "push", loader }`,
+      `mainAheadCountResource, { mode: "invalidate", loader }`,
       bound("mainAheadCountResource"),
       index,
       where,
       NOTHING_IMPORTED,
     );
-    expect(def).toEqual([{ key: "main-ahead-count", mode: "push" }]);
+    expect(def).toEqual([{ key: "main-ahead-count", mode: "invalidate" }]);
+  });
+
+  it("refuses a non-keyed descriptor whose serverOpts show no literal mode", () => {
+    // An options variable (or a spread) hides the mode from the text; the
+    // runtime requires one, so there is nothing to default to.
+    expect(() =>
+      resolveRegisterCall(
+        "defineResource",
+        `mainAheadCountResource, serverOpts`,
+        bound("mainAheadCountResource"),
+        index,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toThrow(/serves a non-keyed resource with no literal `mode:`/);
+    expect(() =>
+      resolveRegisterCall(
+        "defineResource",
+        `mainAheadCountResource, { loader: () => ({ mode: "push" }) }`,
+        bound("mainAheadCountResource"),
+        index,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toThrow(/with no literal `mode:`/);
   });
 
   it("returns nothing for an unbound identifier (generic wrapper param)", () => {
@@ -558,9 +615,10 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
       file(`
       export const tasksResource = keyedResourceDescriptor<T[]>("tasks", S, [], k);
       export const pushesResource = resourceDescriptor<P[]>("pushes", S, []);
-      export const notificationsResource = windowQueryResourceDescriptor<N>(
-        "notifications", S, "id", { defaultLimit: 200 },
-      );
+      export const notifications = liveCollection("notifications", {
+        row: S, id: "id", filterable: {}, sortable: ["createdAt"],
+        default: { orderBy: [["createdAt", "desc"]], limit: 200 }, maxLimit: 500,
+      });
     `),
     ],
     { ownerPlugin: false },
@@ -570,22 +628,24 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
     const server = file(
       `
       import { defineResource } from "@plugins/framework/plugins/server-core/core";
-      import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
+      import { serveCollection } from "@plugins/network/plugins/live/server";
       import {
         tasksResource as tasksDescriptor,
         pushesResource as pushesDescriptor,
-        notificationsResource as notificationsDescriptor,
+        notifications,
       } from "../../shared/resources";
       export const tasksResource = defineResource(tasksDescriptor, { identityTable: "tasks", loader });
-      export const pushesResource = defineResource(pushesDescriptor, { loader });
-      export const notificationsResource = windowQueryResource(notificationsDescriptor, { from, where });
-      export const prototypesResource = defineExternalResource({ key: "prototypes", loader });
+      export const pushesResource = defineResource(pushesDescriptor, { mode: "push", loader });
+      export const notificationsServed = serveCollection(notifications, { from, where });
+      export const prototypesResource = defineExternalResource({ key: "prototypes", mode: "invalidate", loader });
     `,
       "/repo/plugins/example/server/internal/resources.ts",
     );
     expect(parseRegisterCalls([server], index, NOTHING_IMPORTED)).toEqual([
       { key: "notifications", mode: "keyed", membership: "window" },
-      { key: "prototypes", mode: "push" },
+      { key: "notifications:groups", mode: "push" },
+      { key: "notifications:rows", mode: "keyed", membership: "point" },
+      { key: "prototypes", mode: "invalidate" },
       { key: "pushes", mode: "push" },
       { key: "tasks", mode: "keyed" },
     ]);

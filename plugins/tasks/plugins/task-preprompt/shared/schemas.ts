@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -14,24 +14,24 @@ export const taskPrepromptShape = defineExtensionShape({
 export const TaskPrepromptSchema = taskPrepromptShape.schema;
 export type TaskPreprompt = z.infer<typeof TaskPrepromptSchema>;
 
-// Bounded POINT resource. The selection is 1:1 with its task, so the point
-// identity IS the side-table's pk (`taskId`, stored as `parent_id`): one
-// subscribed id names exactly one task's preprompt.
+// One task's selection, read by the task's id. The selection is 1:1 with its
+// task — the side-table's primary key IS the task (`taskId`, stored as
+// `parent_id`) — so it is a lookup-only collection: no default window (nothing
+// lists every task's selection), minting `task-preprompts:rows` alone. A reader
+// asks with `useLiveRow(taskPreprompts, taskId)`, and `found: false` is "none
+// selected".
 //
 // Every consumer asks about ONE task and needs an exact answer — the launch
-// option's picker both reads and writes this row — so `point` is the right bound
-// rather than a window, which could silently render a selected preprompt as
-// "None". The change feed routes a write to a tuple iff the changed ids
-// intersect its set, so selecting one task's preprompt never sweeps the table.
+// option's picker both reads and writes this row — so a point read is the
+// right bound rather than a window, which could silently render a selected
+// preprompt as "None". The `:rows` point routing sends a write to a tuple iff
+// the changed ids intersect its set, so selecting one task's preprompt never
+// sweeps the table.
 //
-// NOT preloaded: point resources hydrate post-mount (the recorded decision of
-// the bounded working-set contract).
-//
-// The server half is compiled from the extension handle in
-// `server/internal/resource.ts`; the wire shape is `TaskPreprompt[]`.
-export const taskPrepromptsResource =
-  pointQueryResourceDescriptor<TaskPreprompt>(
-    "task-preprompts",
-    TaskPrepromptSchema,
-    "taskId",
-  );
+// NOT preloaded (a lookup-only collection cannot be): it hydrates post-mount
+// via its sub-ack. Served from the extension handle in
+// `server/internal/resource.ts`.
+export const taskPreprompts = liveCollection("task-preprompts", {
+  row: TaskPrepromptSchema,
+  id: "taskId",
+});

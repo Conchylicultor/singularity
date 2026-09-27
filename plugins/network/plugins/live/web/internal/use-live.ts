@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
-  usePointResource,
   useResource,
   type ResourceDescriptor,
   type ResourceResult,
@@ -236,52 +235,87 @@ function useCollection<Row, F, S extends string>(
   );
   const previous = useResource(descriptor, prevParams);
 
-  if (shape === null) return current as ResourceResult<Row[]>;
-
-  const loadMore = () => {
-    const next = Math.min(limit + shape.step, shape.maxLimit);
-    if (next === limit) return;
-    setGrown({ base: shape.base, from: limit, limit: next });
-  };
-
-  if (growing && !previous.pending) {
+  // The list result keeps its identity (and so does `loadMore`) until what it
+  // is built from changes, as `useResource`'s own results do between pushes:
+  // consumers memoize on it (a Set of ids built per row of a tree, say). Every
+  // input below is a primitive or one of those results — never `shape`, which
+  // `listShape` rebuilds on every render.
+  const base = shape?.base ?? null;
+  const step = shape?.step ?? 0;
+  const maxLimit = shape?.maxLimit ?? 0;
+  const loadMore = useCallback(() => {
+    const next = Math.min(limit + step, maxLimit);
+    if (base === null || next === limit) return;
+    setGrown({ base, from: limit, limit: next });
+  }, [base, limit, step, maxLimit, setGrown]);
+  const list = useMemo((): LiveListResult<unknown> => {
+    if (growing && !previous.pending) {
+      return {
+        pending: false,
+        data: previous.data as unknown[],
+        refetch: previous.refetch,
+        canGrow: false,
+        growing: true,
+        loadMore,
+      };
+    }
+    if (current.pending) return current as LiveListResult<unknown>;
+    const data = current.data as unknown[];
     return {
-      pending: false,
-      data: previous.data as unknown[],
-      refetch: previous.refetch,
-      canGrow: false,
-      growing: true,
+      ...current,
+      data,
+      canGrow: data.length === limit && limit < maxLimit,
+      growing: false,
       loadMore,
     };
-  }
-  if (current.pending) return current as LiveListResult<unknown>;
-  const data = current.data as unknown[];
-  return {
-    ...current,
-    data,
-    canGrow: data.length === limit && limit < shape.maxLimit,
-    growing: false,
-    loadMore,
-  };
+  }, [growing, previous, current, limit, maxLimit, loadMore]);
+
+  if (shape === null) return current as ResourceResult<Row[]>;
+  return list;
 }
+
+/** The one not-found answer: it carries no row, so every reader shares it. */
+const NOT_FOUND: { pending: false; found: false } = {
+  pending: false,
+  found: false,
+};
 
 /**
  * Read one row of a live collection by id: `pending`, then `found: true` with
  * the row or `found: false` when the server answered and no such row exists —
  * a determinate answer, never a spinner. Reads the `:rows` point sibling, so it
  * ignores every window filter and bound: it answers "does this row exist".
+ *
+ * A `null` id (nothing to look up yet) is `found: false` from the first render.
  */
 export function useLiveRow<Row>(
   collection: LiveRowsCollection<Row>,
-  id: string,
+  id: string | null,
 ): LiveRowResult<Row> {
-  const result = usePointResource(collection.rows, id);
-  if (result.pending) {
-    return result.stale != null
-      ? { pending: true, error: result.error, stale: result.stale }
-      : { pending: true, error: result.error };
-  }
-  return result.data === null
-    ? { pending: false, found: false }
-    : { pending: false, found: true, row: result.data };
+  // A null id reads the EMPTY id set, `{ ids: "" }`: a legal tuple, one per
+  // collection, refcounted and shared by every null reader, which the server
+  // answers with `[]` and no query. `useResource` has no skip option on
+  // purpose: a public skip would be a value skip too, and it would have to
+  // disarm the pending-mount count and the cold-start prime.
+  const idsKey = collection.rows.point.encode(id === null ? [] : [id]).ids;
+  const params = useMemo(() => ({ ids: idsKey }), [idsKey]);
+  const result = useResource(collection.rows, params);
+  const absent = id === null;
+  // The result keeps its identity until what it is built from changes, like
+  // `useLive`'s list result: consumers memoize on it. `useResource`'s own
+  // result changes only with its pending / data / error / stale, and every
+  // not-found answer is the one shared `NOT_FOUND`.
+  return useMemo((): LiveRowResult<Row> => {
+    // Determinate without the server: no id names no row.
+    if (absent) return NOT_FOUND;
+    // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
+    if (result.pending) {
+      const stale = result.stale?.[0];
+      return stale === undefined
+        ? { pending: true, error: result.error }
+        : { pending: true, error: result.error, stale };
+    }
+    const row = result.data[0];
+    return row === undefined ? NOT_FOUND : { pending: false, found: true, row };
+  }, [absent, result]);
 }

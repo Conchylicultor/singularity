@@ -22,10 +22,10 @@ import type { Push } from "../schema";
  */
 
 /**
- * The whole table, for `pushesResource` — the server-side cascade carrier that
- * maps changed push ids to their attempts. Deliberately UNGATED: its only caller
- * is a recompute triggered BY the projection's own inserts, so refreshing here
- * would be asking a write to wait on itself.
+ * The whole table: the loader of `pushesAttemptsCascade`, the server-side
+ * cascade carrier that maps changed push ids to their attempts. Deliberately
+ * UNGATED: its only caller is a recompute triggered BY the projection's own
+ * inserts, so refreshing here would be asking a write to wait on itself.
  */
 export async function listPushes(): Promise<Push[]> {
   return db.select().from(pushes).orderBy(desc(pushes.createdAt));

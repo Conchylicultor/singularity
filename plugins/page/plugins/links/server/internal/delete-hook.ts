@@ -16,8 +16,8 @@ const pageIdsAmong = (rows: readonly DeletedBlockRow[]): string[] =>
   rows.filter((r) => r.type === PAGE_BLOCK_TYPE).map((r) => r.id);
 
 // HARD delete / purge: the FK cascade wipes a deleted subtree's `page_links`
-// edges, and the L4 change-feed fans out to every dependent backlinksResource. No
-// hand-snapshot / re-push needed.
+// edges, and the L4 change-feed recomputes every subscribed `pageBacklinks`
+// tuple. No hand-snapshot / re-push needed.
 export const backlinksDeleteHook: BlockDeleteHook = {
   onDelete: () => undefined,
 };

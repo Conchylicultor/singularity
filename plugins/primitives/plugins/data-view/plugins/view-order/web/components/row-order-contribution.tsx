@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ManualOrderConfig } from "@plugins/primitives/plugins/data-view/core";
 import type { GlobalRowOrderProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -22,7 +22,7 @@ export function RowOrderContribution({
   rows,
   render,
 }: GlobalRowOrderProps): ReactNode {
-  const { persisted, pending } = useRowOrder(storageKey, viewId);
+  const order = useRowOrder(storageKey, viewId);
   const setRowOrder = useSetRowOrder();
 
   // `rowKey` is an inline arrow at the consumer's call site (new identity every
@@ -30,7 +30,7 @@ export function RowOrderContribution({
   // `useDataViewSections` — which memoizes on `manualRank`'s identity — would
   // re-sort the sections forever. `useEventCallback` gives it a stable identity
   // that always dispatches to the latest `rowKey`, so the memos below key on the
-  // data (`rows`, `persisted`) rather than on a closure's identity.
+  // data (`rows`, `order`) rather than on a closure's identity.
   //
   // Deliberately NOT `useLatestRef` (custom-columns' choice): that hands back a
   // ref, and unlike custom-columns — which only *captures* `rowKeyRef` inside
@@ -48,18 +48,22 @@ export function RowOrderContribution({
     [rows, stableRowKey],
   );
 
-  const rankByKey = useMemo(
-    () => seedRanks(orderedKeys, persisted),
-    [orderedKeys, persisted],
-  );
+  // Never render a half-order: until the first value lands there is no
+  // persisted order to seed from, so the contributor abstains (`null`) —
+  // seeding would show pure source order, and a drag would persist it as if it
+  // were the user's arrangement.
+  const config = useMemo<ManualOrderConfig<unknown> | null>(() => {
+    if (order.pending) return null;
+    const { persisted } = order;
+    const rankByKey = seedRanks(orderedKeys, persisted);
 
-  const getRank = useCallback(
-    (row: unknown): Rank | null => rankByKey.get(stableRowKey(row, 0)) ?? null,
-    [rankByKey, stableRowKey],
-  );
+    const getRank = (row: unknown): Rank | null =>
+      rankByKey.get(stableRowKey(row, 0)) ?? null;
 
-  const onMove = useCallback(
-    (id: string, dest: { targetId?: string; zone?: "before" | "after" }) => {
+    const onMove = (
+      id: string,
+      dest: { targetId?: string; zone?: "before" | "after" },
+    ) => {
       // Deliberately ignore `dest.rank`. `RankReorderProvider` computes it
       // against the RENDERED items, which under an active search is a subset of
       // the view's ordered set — a rank between two visible neighbours can land
@@ -87,17 +91,10 @@ export function RowOrderContribution({
       if (writes.length === 0) return; // legitimate no-op (onto itself / adjacent)
       // Returned so a failed write releases the DataView's pending-move overlay.
       return setRowOrder({ dataViewId: storageKey, viewId, writes });
-    },
-    [orderedKeys, persisted, setRowOrder, storageKey, viewId],
-  );
+    };
 
-  const config = useMemo<ManualOrderConfig<unknown>>(
-    () => ({ getRank, onMove }),
-    [getRank, onMove],
-  );
+    return { getRank, onMove };
+  }, [order, orderedKeys, stableRowKey, setRowOrder, storageKey, viewId]);
 
-  // Never render a half-order: before the first push `persisted` is empty, so
-  // seeding would show pure source order and a drag would persist it as if it
-  // were the user's arrangement.
-  return <>{render(pending ? null : config)}</>;
+  return <>{render(config)}</>;
 }

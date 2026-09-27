@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSonata } from "./context";
-import { useChordMode } from "./chord-mode-store";
+import { useSongSetting } from "./loaded-song";
+import { chordModeSetting } from "./score-settings";
 
 /**
  * Availability gates over the open score, shared by the `Sonata.Section` panels
@@ -64,6 +65,9 @@ export function useHasDerivedChord(): boolean {
 export function useHasVoicedChords(): boolean {
   const authored = useHasAuthoredChord();
   const anyChord = useHasChords();
-  const chordMode = useChordMode();
-  return authored || (chordMode && anyChord);
+  const chordMode = useSongSetting(chordModeSetting);
+  // Pending chord mode means the song's settings are still loading, so the
+  // score is empty and has no chords to voice either way (`scorePending`).
+  if (chordMode.pending) return false;
+  return authored || (chordMode.value && anyChord);
 }

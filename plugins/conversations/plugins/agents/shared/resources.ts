@@ -2,15 +2,12 @@
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/conversations/plugins/agents/server/api`.
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  keyedResourceDescriptor,
-  resourceDescriptor,
-} from "@plugins/primitives/plugins/live-state/core";
+import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { z } from "zod";
 import {
   AgentSchema,
   AgentLaunchWithStatusSchema,
-  type Agent,
   type AgentLaunchWithStatus,
 } from "./schemas";
 
@@ -26,12 +23,18 @@ export type AgentLaunchConversationRef = {
   status: ConversationStatus;
 };
 
-export const agentsResource = resourceDescriptor<Agent[]>(
-  "agents",
-  z.array(AgentSchema),
-  [],
-  { preload: "boot" },
-);
+// The user's agent roster — every row of `agents_v`, ordered by (rank,
+// createdAt) — as ONE value, not a collection: the Agents sidebar renders the
+// whole tree (parentId + per-parent rank), and every other reader looks one
+// agent up in it. It is hand-written, so it grows only by hand; the server
+// states that bound (`unbounded: { reason }`). `preload: "boot"`: the boot
+// snapshot hydrates it (and, being DB-backed, it is L2-persisted), so the
+// sidebar and the conversation avatars paint settled on the first frame.
+export const agentRows = liveValue("agents", {
+  schema: z.array(AgentSchema),
+  preload: "boot",
+});
+
 // Keyed delta-sync: mirrors the server resource's `mode: "keyed"` + `keyOf`.
 // Must stay in lockstep — a plain `resourceDescriptor` here crashes the client
 // the moment the server ships a row-level delta (no keyOf to merge by).

@@ -1,6 +1,6 @@
 export type { Server, SshKey } from "./schemas";
 export { ServerSchema, SshKeySchema } from "./schemas";
-export { serversResource } from "./resources";
+export { servers } from "./resources";
 export {
   listServers,
   createServer,

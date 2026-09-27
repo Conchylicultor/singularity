@@ -3,13 +3,10 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
-import {
-  BlockSchema,
-  PageRowSchema,
-  PAGE_BLOCK_TYPE,
-} from "../../core/schemas";
-import { pagesResource, blocksResource } from "../../core/resources";
+import { PageRowSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { pagesResource, pageBlocks } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { docOrderPaths } from "./page-doc-order";
 import { liveBlocks } from "./live-blocks";
@@ -126,10 +123,17 @@ export const pagesLiveResource = defineResource<PageRow[]>({
 // `page_id = <the sub-page's id>`, a different partition. So `(parent_id, rank)`
 // is one real, rendered ordering — the sidebar's page tree is a filtered
 // subsequence of it, not a separate ordering space.
-export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
-  key: blocksResource.key,
-  mode: "push",
-  schema: z.array(BlockSchema),
+//
+// A db-arm value: the loader's read-set (`page_blocks`, through the `liveBlocks`
+// subquery) is captured at the pool chokepoint, so every structural write, text
+// projection and trash/restore recomputes the subscribed pages; push drops a
+// byte-identical result.
+export const pageBlocksServed = serveValue(pageBlocks, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window",
+  },
   loader: async ({ pageId }): Promise<Block[]> => {
     const rows = await db
       .select(BLOCK_WIRE_COLUMNS)

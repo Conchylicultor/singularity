@@ -3,7 +3,10 @@
  * limits, and the module-eval misuse guards for the bounded (window / point)
  * compiler. Fake `db` renders SQL via `PgDialect` (same harness as
  * `compile.test.ts`); no live DB.
- * Run: `bun test plugins/infra/plugins/query-resource/server/internal/compile-window.test.ts`.
+ * Lives beside `serveCollection` because the window / point descriptors it
+ * compiles are minted only by `network/live`'s own factories
+ * (`core/internal/window-descriptor.ts`, internal to `liveCollection`).
+ * Run: `./singularity test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -16,14 +19,19 @@ import {
   pgTable,
   text,
 } from "drizzle-orm/pg-core";
+import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
+import {
+  windowQueryResource,
+  type QueryDb,
+  type SelectMap,
+  type WindowQueryResourceSpec,
+} from "@plugins/infra/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
-  type WindowQueryResourceContract,
-} from "@plugins/infra/plugins/query-resource/core";
-import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { compileWindowQuery, windowQueryResource } from "./compile-window";
-import type { QueryDb, SelectMap, WindowQueryResourceSpec } from "./spec";
+} from "../../core/internal/window-descriptor";
 import type {
   WindowParams,
   PointParams,

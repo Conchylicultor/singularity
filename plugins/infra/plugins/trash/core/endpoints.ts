@@ -3,7 +3,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { TrashEntrySchema } from "./schemas";
 
 // All trash entries for one source, newest-deleted first. `sourceId` comes from
-// the path. The Trash UI subscribes to the live resource; this is the HTTP twin.
+// the path. The Trash UI reads the `trashEntries` live collection; this is the
+// HTTP twin.
 export const listTrash = defineEndpoint({
   route: "GET /api/trash/:sourceId",
   response: z.array(TrashEntrySchema),

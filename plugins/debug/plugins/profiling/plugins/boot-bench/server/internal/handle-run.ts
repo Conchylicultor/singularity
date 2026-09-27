@@ -23,12 +23,12 @@ import { readSnapshotBloat, type SnapshotBloat } from "./snapshot-bloat";
 const DEFAULT_ITERATIONS = 10;
 const DEFAULT_WARMUP = 2;
 
-// commits-graph's onLastUnsubscribe evicts its per-worktree git memo via a
+// commits-graph's `whileSubscribed` stop evicts its per-worktree git memo via a
 // DETACHED promise (`void worktreeFor(id).then(evict)`), so the memo is not
 // guaranteed clear when measureSubscribeCycle returns. This fixed one-shot settle
 // gives that eviction time to land before the next (cold) iteration reads a warm
-// memo. Known footgun — a follow-up makes onLastUnsubscribe awaitable so this is
-// no longer needed; do NOT replace it with a polling loop.
+// memo. Known footgun — a follow-up makes that stop awaitable so this is no
+// longer needed; do NOT replace it with a polling loop.
 const SETTLE_MS = 150;
 
 type ProfileEntry = IterResult["runtimeProfile"]["loaders"][number];
@@ -87,10 +87,6 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     [
       "edited-files",
       fixtures.conversationId ? { id: fixtures.conversationId } : null,
-    ],
-    [
-      "commits-graph.delta",
-      fixtures.attemptId ? { attemptId: fixtures.attemptId } : null,
     ],
     [
       "commits-graph.graph",

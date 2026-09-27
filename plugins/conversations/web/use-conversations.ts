@@ -5,12 +5,13 @@ import {
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ConversationSchema,
   conversationsActiveResource,
   conversationsSystemResource,
   conversationsGoneResource,
-  conversationsGoneStatsResource,
+  conversationsGoneStats,
   RECENT_GONE_LIMIT,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
@@ -41,7 +42,7 @@ export function useConversations(): ConversationsState {
   const active = useResource(conversationsActiveResource);
   const system = useResource(conversationsSystemResource);
   const gone = useResource(conversationsGoneResource);
-  const stats = useResource(conversationsGoneStatsResource);
+  const stats = useLive(conversationsGoneStats);
   const all = useCombinedResources({ active, system, gone, stats });
   if (all.pending) return { pending: true };
   return {

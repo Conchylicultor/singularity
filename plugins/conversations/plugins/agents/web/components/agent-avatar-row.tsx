@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   Avatar,
@@ -9,7 +10,7 @@ import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import { agentLaunchesResource, agentRows } from "../../shared/resources";
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;
@@ -23,7 +24,7 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const launchesResult = useResource(agentLaunchesResource);
-  const agentsResult = useResource(agentsResource);
+  const agentsResult = useLive(agentRows);
   if (conv.kind !== "agent" || !conv.taskId) return null;
   if (launchesResult.pending || agentsResult.pending) return null;
   const launches = launchesResult.data;

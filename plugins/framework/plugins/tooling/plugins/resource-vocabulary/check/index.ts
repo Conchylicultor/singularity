@@ -20,9 +20,10 @@ import type * as LiveServerBarrel from "@plugins/network/plugins/live/server";
 // The register-marker half of the vocabulary's completeness assertion.
 //
 // The descriptor-factory half lives in `../core`, where `satisfies
-// Record<MintingFactoryName, …>` derives its key set from the two `core` barrels'
-// module types. The register markers cannot be derived there: they come from
-// `query-resource/server`, and runtime isolation grants `core -> core` only. A
+// Record<MintingFactoryName, …>` derives its key set from the `core` barrels'
+// module types (`live-state`, `query-resource`, `network/live`). The register
+// markers cannot be derived there: they come from `query-resource/server` and
+// `network/live/server`, and runtime isolation grants `core -> core` only. A
 // `check/` file has no runtime restriction (it already imports server barrels
 // across the repo), so the same derivation runs here instead.
 //
@@ -84,7 +85,7 @@ type ServingMarkerName =
 type Assert<T extends true> = T;
 
 /**
- * A register marker exported from either barrel and missing from
+ * A register marker exported from any of the three barrels and missing from
  * `resourceRegisterMarkers` is a `tsc` error here. This is how
  * `windowQueryResource` went missing for the whole bounded-membership migration:
  * it was added to `query-resource/server`, and two scanners' private name lists

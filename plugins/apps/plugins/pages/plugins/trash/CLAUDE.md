@@ -10,6 +10,8 @@
   - Uses:
     - `apps/pages/shell.Pages`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.LiveListResult`
+    - `network/live.useLive`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
@@ -21,8 +23,9 @@
     - `primitives/css/ui-kit.DialogContent`
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
+    - `primitives/cursor-pagination.InfiniteScrollFooter`
+    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 

@@ -8,12 +8,12 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { compositionDetailRoute } from "@plugins/apps/plugins/studio/plugins/compositions/core";
-import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { deployments } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
 /**
  * **Composition** — *what* this deployment builds and ships, and where that is
@@ -31,20 +31,20 @@ import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deploy
  * config, which Studio owns. So this section names the composition, states
  * enough of its shape to recognise it, and hands off.
  */
-export function CompositionSection({ deploymentId }: { deploymentId: string }): ReactNode {
-  const deployments = useResource(deploymentsResource);
+export function CompositionSection({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
+  const deployment = useLiveRow(deployments, deploymentId);
 
-  return matchResource(deployments, {
-    pending: () => <Loading variant="rows" />,
-    error: () => <Loading variant="rows" />,
-    ready: (rows) => {
-      const deployment = rows.find((d) => d.id === deploymentId);
-      if (!deployment) {
-        return <Placeholder tone="error">This deployment no longer exists.</Placeholder>;
-      }
-      return <CompositionRef name={deployment.compositionId} />;
-    },
-  });
+  if (deployment.pending) return <Loading variant="rows" />;
+  if (!deployment.found) {
+    return (
+      <Placeholder tone="error">This deployment no longer exists.</Placeholder>
+    );
+  }
+  return <CompositionRef name={deployment.row.compositionId} />;
 }
 
 /**
@@ -61,17 +61,21 @@ function CompositionRef({ name }: { name: string }): ReactNode {
   if (!item) {
     return (
       <Placeholder tone="error">
-        No composition named “{name}” in the compositions config. This deployment
-        was created against a name that has since been renamed or removed, so
-        there is nothing to build — recreate the deployment against a live
-        composition.
+        No composition named “{name}” in the compositions config. This
+        deployment was created against a name that has since been renamed or
+        removed, so there is nothing to build — recreate the deployment against
+        a live composition.
       </Placeholder>
     );
   }
   return <CompositionCard item={item} />;
 }
 
-function CompositionCard({ item }: { item: CompositionManifestItem }): ReactNode {
+function CompositionCard({
+  item,
+}: {
+  item: CompositionManifestItem;
+}): ReactNode {
   return (
     <Stack gap="md">
       <Stack gap="2xs">

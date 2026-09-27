@@ -155,6 +155,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`
+    - `apps/sonata/transpose`
     - `apps/studio/compositions`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/contributors`

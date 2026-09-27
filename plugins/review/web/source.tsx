@@ -1,11 +1,10 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 
-export type Source =
-  | { kind: "working" }
-  | { kind: "push"; pushId: string };
+export type Source = { kind: "working" } | { kind: "push"; pushId: string };
 
 export interface ReviewProps extends Record<string, unknown> {
   conversationId: string;
@@ -58,36 +57,44 @@ export function SourceTabs({
 }: {
   source: Source;
   onChange: (next: Source) => void;
-  pushGroups: PushGroup[];
+  /** One tab per push; `"pending"` while the attempt's pushes are not known. */
+  pushGroups: PushGroup[] | "pending";
 }) {
   return (
-    <Scroll axis="x" className="border-b border-border bg-background/95 px-sm py-xs backdrop-blur">
+    <Scroll
+      axis="x"
+      className="border-b border-border bg-background/95 px-sm py-xs backdrop-blur"
+    >
       <Stack direction="row" gap="xs" align="center">
-      <ToggleChip
-        active={source.kind === "working"}
-        onClick={() => onChange({ kind: "working" })}
-        title="Uncommitted changes vs. main"
-      >
-        Working tree
-      </ToggleChip>
-      {pushGroups.map((g) => (
         <ToggleChip
-          key={g.pushId}
-          active={source.kind === "push" && source.pushId === g.pushId}
-          onClick={() => onChange({ kind: "push", pushId: g.pushId })}
-          title={`${g.message} · ${formatDate(g.createdAt)}`}
+          active={source.kind === "working"}
+          onClick={() => onChange({ kind: "working" })}
+          title="Uncommitted changes vs. main"
         >
-          <span className="max-w-[24ch] truncate">{g.message}</span>
-          {g.count > 1 && (
-            <span
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap before count badge after truncated message
-              className="ml-1 text-muted-foreground tabular-nums"
-            >
-              ×{g.count}
-            </span>
-          )}
+          Working tree
         </ToggleChip>
-      ))}
+        {pushGroups === "pending" ? (
+          <Loading variant="spinner" />
+        ) : (
+          pushGroups.map((g) => (
+            <ToggleChip
+              key={g.pushId}
+              active={source.kind === "push" && source.pushId === g.pushId}
+              onClick={() => onChange({ kind: "push", pushId: g.pushId })}
+              title={`${g.message} · ${formatDate(g.createdAt)}`}
+            >
+              <span className="max-w-[24ch] truncate">{g.message}</span>
+              {g.count > 1 && (
+                <span
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap before count badge after truncated message
+                  className="ml-1 text-muted-foreground tabular-nums"
+                >
+                  ×{g.count}
+                </span>
+              )}
+            </ToggleChip>
+          ))
+        )}
       </Stack>
     </Scroll>
   );

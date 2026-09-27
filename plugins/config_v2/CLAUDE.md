@@ -269,6 +269,8 @@ ledger.
 
 Three aggregate live resources summarize all ~180 descriptors at once. They are cheap because none of them re-reads every config file per load — but they arrive at that in two *different* ways, and the difference is load-bearing.
 
+Two of them are param-less live values (`network/live`): `configConflictLocations` and `configModifiedCounts`, declared with `liveValue` in `core/internal/resource.ts` and served with `serveValue(…, { source: "external" })` in `server/internal/resource.ts` — external because their truth is the files on disk, which no change feed sees. Their push paths call `configConflictLocationsServed.notify()` / `configModifiedCountsServed.notify()`. Neither is preloaded. While one is pending the attention dots render nothing, and the config nav renders its loading state until both have landed — its Modified / Conflict fields decide which rows a filtered view (the authored "Conflicts" view) keeps, so rows shown before then would claim "no conflicts". `config-v2.scopes`, `.values`, `.conflicts` and `.tiers` stay on the old descriptors until config's own migration (Resources page item 9: the optional `scopeId` param has no `liveValue` spelling yet).
+
 **`config-v2.conflict-locations` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives, for every descriptor, WHICH scopes conflict (base and/or each on-disk app scope) through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge, its tooltip, the scope-tab dots and the detail banner can't disagree. It reports scope ids rather than a boolean on purpose: a badge that only knows "somewhere" sends the user to a detail pane that opens on a clean Base and shows nothing. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `statSync`s, not 3 read+parse+hash. `inode` is what makes it airtight — `jsoncConfigProxy.write` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
 
 The memo key comes from **the filesystem, not an event** — deliberately. `refreshConflictLocations` still runs from the watcher path, but only as a *push-latency* optimization (it diffs a "last published" snapshot and notifies on a flip); it is never the value the loader reads, so a missed watcher event can delay a push but can't produce a wrong answer.
@@ -328,6 +330,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
     - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
     - `infra/request-origin/agent-write-ledger.FileSnapshot`
+    - `network/live.serveValue`
   - Exports (types):
     - `ConfigWriteOpts`
     - `FieldStorageProvider`
@@ -368,6 +371,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `fields/list/config.ListFieldDef`
     - `fields/object/config.isObjectFieldDef`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `ConfigDescriptor`
@@ -401,15 +405,15 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `appScopeId`
     - `codeConfigProxy`
     - `computeHash`
+    - `configConflictLocations`
     - `configFileOwner`
+    - `configModifiedCounts`
     - `configSnapshot`
     - `configV2ConflictEntrySchema`
     - `configV2ConflictLocationsSchema`
-    - `configV2ConflictMapResource`
     - `configV2ConflictMapSchema`
     - `configV2ConflictResource`
     - `configV2ConflictsSchema`
-    - `configV2ModifiedCountsResource`
     - `configV2ModifiedCountsSchema`
     - `configV2Resource`
     - `configV2ScopesMapSchema`

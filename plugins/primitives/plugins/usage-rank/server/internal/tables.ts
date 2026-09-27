@@ -16,8 +16,8 @@ import {
  * FK, and the things ranked here are config items / registry entries with no DB
  * row to hang off.
  *
- * The single-column text PK is load-bearing — it IS the point resource's
- * identity (`point.by`), which the change-feed intersects against each
+ * The single-column text PK is load-bearing — it IS the `usageStats`
+ * collection's row id, which the change-feed intersects against each
  * subscribed tuple's id set.
  *
  * `score` is the frecency score as of `last_used_at`, not as of now: the upsert

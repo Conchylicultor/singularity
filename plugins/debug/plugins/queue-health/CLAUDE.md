@@ -278,16 +278,22 @@ The health report's **Job queue** row (`HealthReport.Row`, id `job-queue`) is
 this plugin's too: it owns the queue thresholds. Design:
 [`research/2026-09-11-global-job-queue-health-row.md`](../../../../research/2026-09-11-global-job-queue-health-row.md).
 
-- **`queue-health.pulse`** (`core/pulse.ts`, loader `server/internal/pulse.ts`)
-  — an external push resource: slot ledger + forfeit registry (memory) and three
-  bounded jobs queries (`queryQueuePulse`, `queryOldestWaiting`,
+- **`queue-health.pulse`** — declared `queuePulse = liveValue(…)` in
+  `core/pulse.ts` (pushed, not preloaded, no placeholder: not loaded yet is
+  `pending`), served `queuePulseServed = serveValue(queuePulse, { source:
+  "external", … })` in `server/internal/pulse.ts`, read with `useLive(queuePulse)`
+  in `useQueuePulse`. Its loader reads the slot ledger + forfeit registry (memory)
+  and three bounded jobs queries (`queryQueuePulse`, `queryOldestWaiting`,
   `queryRecentDeadJobs` over 24 h). Every array in the schema is `.max()`-bounded.
   Not boot-critical. The joins live in the pure `assemble-pulse.ts`.
 - **No poll.** Notified by `onQueueActivity` (start / complete / insert / the jobs
-  plugin's own mutations), debounced to one load per second, plus ONE timer armed
-  at the verdict's `nextChangeAt`. A wedged queue emits no events, so without the
-  timer it would stay green forever; the timer fires at the instant the answer
-  changes, not to check whether it did. Armed only while subscribed.
+  plugin's own mutations), throttled to one load per second (`throttleMs: 1000`),
+  plus ONE timer armed at the verdict's `nextChangeAt`. A wedged queue emits no
+  events, so without the timer it would stay green forever; the timer fires at the
+  instant the answer changes, not to check whether it did. Both run only while a
+  tab is subscribed: `whileSubscribed` hands them the value's `notify`, and its
+  stop removes the listener and clears the timer — a load with no subscriber (an
+  HTTP read) arms nothing.
 - **The verdict** (`core/verdict.ts`, pure, bun-tested) — per class, on the
   class's OLDEST waiting row: amber at `10 × pickupTargetMsFor(c)`, red at
   `deadlineMsFor(c)`. Also amber: a running job past the slot-hog line
@@ -363,6 +369,7 @@ them to include 1, which would put the warning on the same instant as the abort.
   - Uses:
     - `apps-core/tabs.navigate`
     - `config_v2.ConfigV2`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -374,7 +381,6 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `reports.Reports`
     - `shell/health-report.HealthReport`
@@ -417,6 +423,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `infra/jobs.RunningJobStat`
     - `infra/jobs.TOTAL_JOB_SLOTS`
     - `infra/mcp.Mcp`
+    - `network/live.serveValue`
     - `reports.recordReport`
     - `reports.ReportKind`
     - `tasks/tasks-core.getConversation`
@@ -438,7 +445,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `infra/jobs.HoldClassSchema`
     - `infra/jobs.pickupTargetMsFor`
     - `infra/jobs.TOTAL_JOB_SLOTS`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `QueueBacklogPayload`
     - `QueueClassPulse`
@@ -477,7 +484,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `queueHealthConfig`
     - `queueHealthSummaryEndpoint`
     - `QueueHealthSummarySchema`
-    - `queuePulseResource`
+    - `queuePulse`
     - `QueueRunningJobSchema`
     - `QueueSlotBlockedPayloadSchema`
     - `QueueSlotHogPayloadSchema`

@@ -14,7 +14,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
-import { previews, previewStateResource } from "./preview-state-resource";
+import { previews, releasePreviewsServed } from "./preview-state-resource";
 
 // Never collide with the dev gateway (9000) or the baked release port (9100).
 const PREVIEW_PORT_FLOOR = 9101;
@@ -110,7 +110,7 @@ export async function startPreview(runId: string): Promise<void> {
   releaseLog.publish(
     `Preview ${runId} started on ${url} (pg :${pgPort}, data: ${dataRoot})`,
   );
-  previewStateResource.notify();
+  releasePreviewsServed.notify();
 
   // Stream the launcher's output into the release log so the UI surfaces preview
   // boot progress / socket errors. Fire-and-forget: the streams close when the
@@ -157,8 +157,8 @@ function gatewayAlive(dataRoot: string): boolean {
  * Stop a running preview: tear down its entire self-contained stack (gateway,
  * backend, PgBouncer, embedded PG — all detached into their own sessions, so this
  * goes through the launcher's pidfile-based teardown rather than a process-group
- * kill), remove the data root, and flip the resource to "stopped". Idempotent — a
- * missing or already-dead preview is a no-op.
+ * kill), remove the data root, and drop it from the `release.previews` value.
+ * Idempotent — a missing or already-dead preview is a no-op.
  */
 export async function stopPreview(runId: string): Promise<void> {
   const entry = previews.get(runId);
@@ -171,7 +171,7 @@ export async function stopPreview(runId: string): Promise<void> {
   rmSync(entry.dataRoot, { recursive: true, force: true });
   previews.delete(runId);
   releaseLog.publish(`Preview ${runId} stopped`);
-  previewStateResource.notify();
+  releasePreviewsServed.notify();
 }
 
 /**
@@ -213,5 +213,5 @@ export async function reconcileOrphanPreviews(): Promise<void> {
     releaseLog.publish(`Reaped orphan preview stack at ${root}`);
   }
 
-  if (changed) previewStateResource.notify();
+  if (changed) releasePreviewsServed.notify();
 }

@@ -117,6 +117,7 @@ change when the strips did.
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.SongSetting`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
     - `apps/sonata/track-mixer.useMutedTrackIds`

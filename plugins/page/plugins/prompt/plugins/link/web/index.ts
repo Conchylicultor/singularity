@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useBlockPromptTasks, usePromptTaskLink } from "./hooks";
 export { createPromptTask } from "./internal/api";
-export type { PromptTaskLink, PromptTaskOrigin } from "../shared/schemas";
+export type { PromptTaskLink } from "../shared/schemas";
 
 export default {
   description:

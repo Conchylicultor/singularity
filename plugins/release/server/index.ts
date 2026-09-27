@@ -17,9 +17,9 @@ import { handleReleaseLogs } from "./internal/handle-logs";
 import { handleHistoryQuery } from "./internal/handle-history-query";
 import { reconcileOrphanPreviews } from "./internal/preview-manager";
 import { releaseJob } from "./internal/release-job";
-import { releaseRunResource } from "./internal/release-run-resource";
+import { releaseRunsServed } from "./internal/release-runs-resource";
 import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
-import { previewStateResource } from "./internal/preview-state-resource";
+import { releasePreviewsServed } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { enqueueRelease } from "./internal/enqueue-release";
 export type { TriggerReleaseOptions } from "./internal/enqueue-release";
@@ -39,9 +39,9 @@ export default {
   // that never lands here would start runs nothing ever closes.
   register: [releaseJob],
   contributions: [
-    Resource.Declare(releaseRunResource),
+    ...releaseRunsServed.declare,
     Resource.Declare(releaseRunsRevisionResource),
-    Resource.Declare(previewStateResource),
+    ...releasePreviewsServed.declare,
   ],
   httpRoutes: {
     [triggerReleaseEndpoint.route]: handleRelease,

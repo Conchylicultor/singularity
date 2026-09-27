@@ -1,9 +1,6 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import {
-  fieldsToZodObject,
-  type FieldsRecord,
-} from "@plugins/fields/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
@@ -13,19 +10,28 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 // One emission row. The `event_emissions` table and the `EmissionRow` wire
 // schema both derive from this single field record (via defineEntity on the
 // server), so a column/schema drift is unrepresentable and the loader returns
-// `db.select()` rows verbatim. `emittedAt` is a coerced Date on the wire.
+// `db.select()` rows verbatim (and `eventEmissions` binds them by name).
+// `emittedAt` is a coerced Date on the wire.
 export const eventEmissionFields = {
-  id:                uuidField(),
-  eventName:         textField(),
-  payload:           jsonField<Record<string, unknown>>({ schema: z.record(z.unknown()), default: {} }),
-  matchedCount:      intField(),
-  matchedTriggerIds: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
-  emittedAt:         dateField(),
+  id: uuidField(),
+  eventName: textField(),
+  payload: jsonField<Record<string, unknown>>({
+    schema: z.record(z.unknown()),
+    default: {},
+  }),
+  matchedCount: intField(),
+  matchedTriggerIds: jsonField<string[]>({
+    schema: z.array(z.string()),
+    default: [],
+  }),
+  emittedAt: dateField(),
 } satisfies FieldsRecord;
 
 export const EmissionRowSchema = fieldsToZodObject(eventEmissionFields);
 export type EmissionRow = z.infer<typeof EmissionRowSchema>;
 
+// The `GET /api/events/emissions` endpoint's body. The live collection below
+// carries the bare rows.
 export const EmissionsPayloadSchema = z.object({
   rows: z.array(EmissionRowSchema),
 });
@@ -47,19 +53,38 @@ export const TriggerRowSchema = z.object({
 });
 export type TriggerRow = z.infer<typeof TriggerRowSchema>;
 
+// The `GET /api/events/triggers` endpoint's body. The live value below carries
+// the bare array, so the db arm's bound rule sees what it is.
 export const TriggersPayloadSchema = z.object({
   rows: z.array(TriggerRowSchema),
 });
 export type TriggersPayload = z.infer<typeof TriggersPayloadSchema>;
 
-export const eventEmissionsResource = resourceDescriptor<EmissionsPayload>(
-  "event-emissions",
-  EmissionsPayloadSchema,
-  { rows: [] },
-);
+// How many emissions the log keeps: every emit() prunes `event_emissions` back
+// to the newest this-many rows (`server/internal/event.ts`), and a window of
+// the `eventEmissions` collection grows to at most the same — so a fully grown
+// window is the whole ring.
+export const EMISSIONS_CAP = 1000;
 
-export const eventTriggersResource = resourceDescriptor<TriggersPayload>(
-  "event-triggers",
-  TriggersPayloadSchema,
-  { rows: [] },
-);
+// The emit() log — Debug → Queue's Events tab — as a live collection: a
+// bounded window, newest first (200, grown to at most `EMISSIONS_CAP`), plus
+// its `:rows` / `:groups` siblings. Nothing filters it yet (`filterable: {}`).
+// Pushed: an emit's insert, and the ring's inline prune, move the subscribed
+// windows through the change feed.
+export const eventEmissions = liveCollection("event-emissions", {
+  row: EmissionRowSchema,
+  id: "id",
+  filterable: {},
+  sortable: ["emittedAt"],
+  default: { orderBy: [["emittedAt", "desc"]], limit: 200 },
+  maxLimit: EMISSIONS_CAP,
+});
+
+// Every trigger binding across every registered event, newest first — the
+// Debug → Queue pane's Triggers tab. A value, not a collection: the rows are a
+// union over one `<event>_triggers` table per event plus the computed
+// `dangling` flag, which no single-table `liveCollection` can bind. Pushed
+// whole on every write to any of those tables (the loader's read-set).
+export const eventTriggers = liveValue("event-triggers", {
+  schema: z.array(TriggerRowSchema),
+});

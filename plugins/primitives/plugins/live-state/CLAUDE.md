@@ -2,8 +2,9 @@
 
 ## No Suspense — hydrate, don't suspend
 
-Resource reads are **non-suspending** by design: `useResource` returns a
-`pending` flag and never throws a promise. There is **no `<Suspense>` boundary
+Resource reads are **non-suspending** by design: `useLive` / `useLiveRow` (and
+the `useResource` they are built on) return a `pending` flag and never throw a
+promise. There is **no `<Suspense>` boundary
 anywhere in the app** — a genuinely suspending read (`React.lazy`,
 `useSuspenseQuery`) must wrap itself in its own. To avoid a first-paint flash of
 default values, seed the cache **before render** with `hydrateResource(resource,
@@ -35,9 +36,11 @@ value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it). The
 exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
 mode): its value never rides the socket, so HTTP is its read path and it fetches on
 mount. `load` sits on the shared descriptor so server and client cannot disagree.
-`useOptimisticResource`'s legacy object form still takes a descriptor WITH one
-(its pending overlay base); its positional forms (a `liveValue`, a collection's
-`{ ids }`) have none and stay `pending` instead.
+The descriptors that still carry one (window, point, groups, tree, tick, config)
+keep it for their plain readers only: no optimistic read takes a placeholder.
+`useOptimisticResource` reads a declaration (a `liveValue`, or a collection's
+`{ ids }`), whose overlay has no base — and no `dispatch` — until a real value
+lands, so it stays `pending` instead.
 
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
@@ -345,30 +348,32 @@ upserts, membership unchanged" (`deletes` necessarily empty, no new ids), which
 keeps the id list off the wire for the common status/title flip. *Which* frames
 carry `order` is the emitter's half (`resource-runtime/CLAUDE.md`).
 
-Keyed-ness is declared in **one place** — the client descriptor — and the server
-reads it from there, so the two sides cannot drift:
+This is the wire every `liveCollection` rides: its window and `:rows`
+descriptors are keyed on the declared `id`, so a collection gets row deltas with
+nothing to declare. Keyed-ness is declared in **one place** — the client
+descriptor — and the server reads it from there, so the two sides cannot drift:
 
-- **Client/shared** — use `keyedResourceDescriptor(key, schema, initialData,
-  keyOf)` instead of `resourceDescriptor`. `schema` stays `z.array(Element)`, so
-  `T` (and every `useResource` caller) is unchanged — callers still get `T[]`.
-  The `keyOf` keys prior cache rows when merging a delta; per-row parsing goes
-  through the array schema's `.element`. A delta that arrives with no cached base
-  is dropped and a fresh full sub is forced (load-bearing guard).
-- **Server** — pass that descriptor to the two-arg
-  `defineResource(descriptor, { loader, dependsOn?, identityTable? })`; `key` /
-  `schema` / `mode: "keyed"` / `keyOf` are all derived from it and the server
-  supplies only the DB-bound half. Do **not** restate `mode`/`keyOf` —
-  `ServerResourceOptions` rejects `mode: "keyed"`, and the flat one-arg
-  `defineResource({ key, mode, schema, loader })` form is **push/invalidate-ONLY**
-  and structurally cannot be keyed. Inline `keyed:` contract literals are banned
-  by the `keyed-resource-scope` check. The first notify per pk (and every
-  `sub-ack` / HTTP fallback) still ships a full `{ value, version }` so brand-new
-  clients get a complete base; subsequent notifies ship a `delta`.
+- **Client/shared** — the descriptor carries `keyOf` (`liveCollection` sets it
+  from `id`; the tree resources, the only other keyed ones left, use
+  `keyedResourceDescriptor(key, schema, initialData, keyOf)` or
+  `queryResourceDescriptor`, which derives it from the pk). `schema` stays
+  `z.array(Element)`, so callers still get `T[]`. The `keyOf` keys prior cache
+  rows when merging a delta; per-row parsing goes through the array schema's
+  `.element`. A delta that arrives with no cached base is dropped and a fresh
+  full sub is forced (load-bearing guard).
+- **Server** — the served half takes that descriptor (`serveCollection`, or the
+  tree's `queryResource` / two-arg `defineResource(descriptor, { loader,
+  identityTable, … })`);
+  `key` / `schema` / `mode: "keyed"` / `keyOf` all come from it. Do **not**
+  restate `mode`/`keyOf` — `ServerResourceOptions` rejects `mode: "keyed"`, the
+  flat one-arg `defineResource` form structurally cannot be keyed, and inline
+  `keyed:` contract literals are banned by the `keyed-resource-scope` check. The
+  first notify per pk (and every `sub-ack` / HTTP fallback) still ships a full
+  `{ value, version }` so brand-new clients get a complete base; subsequent
+  notifies ship a `delta`.
 
   Caveat — the descriptor must live where the server can import it without a
-  plugin cycle (e.g. `agents/shared`, `tasks-core/core`). When it lives in a
-  parent umbrella the server's plugin already depends on (the `tasks/core` →
-  `tasks-core` case), relocate it down to the shared sub-plugin first.
+  plugin cycle (a `core/` or `shared/` the server's plugin already reaches).
 
 Strictly additive: `push`/`invalidate` resources are untouched.
 
@@ -394,28 +399,25 @@ already takes the rebuild path) — live in
 
 ### Bounded windows and point reads (window / point descriptors)
 
-> **DEFAULT for new collections: `liveCollection`** (`network/live`). Declare it
-> once in `core/` (`liveCollection(key, { row, id, filterable, sortable, default,
+> **A collection is a `liveCollection`** (`network/live`). Declare it once in
+> `core/` (`liveCollection(key, { row, id, filterable, sortable, default,
 > maxLimit })`), serve it with `serveCollection(c, { from })`, and read it with
 > `useLive(c, query?)` / `useLiveRow(c, id)`. It mints a window and a point resource
 > from one declaration, so a consumer asks a query (filter / order / limit, or ids)
 > and never picks the bound itself. See `plugins/network/plugins/live/CLAUDE.md` and
-> `research/2026-09-25-global-unified-live-resource-api.md`.
->
-> The lower-level window / point descriptors below (`windowQueryResourceDescriptor` /
-> `pointQueryResourceDescriptor` + `windowQueryResource`) are what it is built on;
-> existing resources declared with them migrate to `liveCollection`.
-> `keyedResourceDescriptor` over an unbounded collection is legacy pending
-> migration — don't copy existing unbounded resources as precedent. See
-> `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
+> `research/2026-09-25-global-unified-live-resource-api.md`. The window / point
+> descriptors below are its substrate, never a declaration of their own; the
+> unbounded `keyedResourceDescriptor` collections left are the tree (Resources
+> page item 3) — not precedent.
 
 The bounded working-set contract rides the SAME keyed wire — **a window is just a
 params tuple**. Live-state owns only the descriptor **types** (`core/window.ts`:
 `WindowResourceDescriptor`, `PointResourceDescriptor`, `WindowParams`,
-`PointParams`, `WindowSelector`) and the hooks below. The factories live in
-`infra/query-resource`, because the only server half that can serve a bounded
-resource is `windowQueryResource`, which needs the `queryPk` those factories
-record — there is no second, unservable way to mint one.
+`PointParams`, `WindowSelector`) — no read hook. The factories are internal to
+`network/live` (`liveCollection` calls them), because the only server half that
+can serve a bounded resource is `windowQueryResource` (`infra/query-resource`),
+which needs the `queryPk` those factories record — there is no second,
+unservable way to mint one.
 
 - A window descriptor is an ordered window; params are `{ limit: "100" }`.
 - A point descriptor is an explicit id set; params are `{ ids: "a,b" }` (sorted,
@@ -436,19 +438,11 @@ keep their paramsKey.
 factory to the encoded default window) is how boot-snapshot serves a windowed
 preloaded resource: the server's fallback loader runs at
 `resourceDescriptorByKey(key)?.defaultParams` and the client hydrates at
-`d.defaultParams` — the identical tuple a bare `useWindowResource(r)` subscribes
-to.
+`d.defaultParams` — the identical tuple a bare `useLive(c)` subscribes to.
 
-Web hooks (`web/window-hooks.ts`):
-
-- `useWindowResource(resource, { limit? })` → `ResourceResult<El[]>`, default
-  = the descriptor's default window.
-- `usePointResource(resource, id)` → `ResourceResult<El | null>` — the O(1)
-  replacement for an O(n) `.find()` over a whole-collection resource, built on
-  the select/`gate: true` mechanics below. `null` on the settled arm is
-  determinate: the server answered, the row does not exist.
-- `usePointResources(resource, ids)` — one coalesced tuple for an explicit
-  set; per-row `usePointResource` subs are the decided default.
+The only public bounded reads are `network/live`'s: `useLive(c, query?)` for a
+window (the collection's `key` resource), `useLive(c, { ids })` for an id set and
+`useLiveRow(c, id)` for one row (both on its `:rows` point resource).
 
 The server runtime half (membership routing, bounded deltas, the
 never-persisted rule) lives in
@@ -475,7 +469,7 @@ polling loop** (it mirrors React Query's own `setTimeout`-based gc).
 
 The consequence: transient observer churn — e.g. a reorderable slot rendered
 **per row** in a streaming/virtualized list — reuses the one live sub instead of
-flapping it. This is why a per-row `useResource` of a **row-invariant** value no
+flapping it. This is why a per-row `useLive` of a **row-invariant** value no
 longer needs a manual hoist (the old `ReorderHoist` provider): N rows already
 share one cache entry and one refcounted sub.
 
@@ -513,7 +507,7 @@ sanctioned exemption is `useOptimisticResource`: editors keep painting `stale`
 under an error and report it through `error` + `sync-status` rather than blanking
 the document. `ResourceStaleReadError` also lives in this channel — it is
 **thrown**, so the resource stays `pending` (retryable) instead of settling on
-its `initialData` placeholder.
+a value nobody vouched for.
 
 **The value channel — determinate.** *"The server has an answer, and the answer
 is: there is nothing to determine."* A loader branch that **cannot determine**
@@ -521,25 +515,27 @@ its value must say so in the payload, via `Resolvable<T>` from `live-state/core`
 
 ```ts
 type Resolvable<T> = { resolved: true; value: T } | { resolved: false; reason: string };
-resourceDescriptor("edited-files", resolvableSchema(z.array(EditedFileSchema)), unresolved("not loaded"))
+liveValue("edited-files", { schema: resolvableSchema(z.array(EditedFileSchema)), params: ["id"], load: "on-demand" })
 ```
 
 It settles, renders its `reason`, and stops retrying — where a throw would wedge
 the resource `pending` forever. It never returns the empty value: `[]` must mean
-*measured, and empty*. Adopters (`edited-files`, `commits-graph.{delta,graph}`)
-collapse "no worktree" and "worktree reaped mid-compute" onto one `unresolved(…)`
-via an `onWorktree` helper, with `revalidate` returning the matching
-`"no-worktree"` ETag from the **same branch** so the pair stays co-produced.
+*measured, and empty*. `edited-files` and `commits-graph.graph` collapse "no
+worktree" and "worktree reaped mid-compute" onto one `unresolved(…)` via an
+`onWorktree` helper, with `revalidate` returning the matching `"no-worktree"`
+ETag from the **same branch** so the pair stays co-produced. `attempt-work` is
+the other adopter, with one unresolved arm only — an attempt row that no longer
+exists (its standing stays measurable from the main repo without the checkout).
 Every *other* git failure still throws.
 
 The resource-payload form of the repo-wide `api-design` rule "Failure must be a
-type, not an absorbable value". Such a resource's `initialData` should be
-`unresolved("not loaded")` — a self-describing non-value rather than a lie.
+type, not an absorbable value". "Not loaded yet" is never an `unresolved(…)`: a
+`liveValue` has no placeholder, so it is `pending` until the first value.
 
 ## Readiness gates — never collapse `pending` into a default
 
-`useResource` returns a discriminated union: `.data` does not exist while
-`pending`. Do **not** defeat it with `r.pending ? [] : r.data` — that collapses
+`useLive` (like the `useResource` under it) returns a discriminated union:
+`.data` does not exist while `pending`. Do **not** defeat it with `r.pending ? [] : r.data` — that collapses
 "still loading" and "genuinely empty" into the same value, and downstream UI
 renders a confidently-wrong state (empty lists, zero counts, destructive default
 button modes) during the load window. The `live-state/no-pending-data-collapse`
@@ -563,7 +559,7 @@ Sanctioned patterns, in order of preference:
 matchResource(songs, { ready: (rows) => …, pending: () => … })
 
 // SEVERAL resources — all-or-nothing, so a view can never render from a
-// half-loaded snapshot. Accepts useResource / useOptimisticResource results
+// half-loaded snapshot. Accepts useLive / useResource / useOptimisticResource results
 // and nested combined results.
 const all = useCombinedResources({ conv, ranks, tasks });
 if (all.pending) return <Loading variant="rows" />;
@@ -583,30 +579,40 @@ warm WS load paints with zero flash) and an error `Placeholder`. Data-dependent
 disabled-neutral while pending — never a default mode, and especially never the
 destructive one.
 
-**Domain hooks keep the pending arm.** A hook that narrows a read — one row out
-of `usePointResource` / `usePointResources`, one key out of a record — returns
-`ResourceResult<T | null>`, never a bare `T | null`. A settled `null` then means
-"absent", and "not loaded yet" stays a state the caller renders. Derive with
-`mapResource(r, fn)`, which maps the settled arm and passes the pending one
-through:
+**Domain hooks keep the pending arm.** A hook that narrows a read — one row of
+a collection, one key out of a record — never returns a bare `T | null`: "not
+loaded yet" must stay a state the caller renders, apart from "absent". For one
+row, return `useLiveRow`'s result as is — its settled arms are `found: true`
+(with `row`) and `found: false` (the server answered, no such row):
 
 ```ts
-export function useTaskAutoStart(id: string): ResourceResult<Row | null> {
-  return mapResource(usePointResources(r, [id]), (rows) => rows[0] ?? null);
+export function useTaskAutoStart(
+  taskId: string,
+): LiveRowResult<TaskAutoStartRow> {
+  return useLiveRow(taskAutoStart, taskId);
 }
 ```
 
-The lint rule watches `usePointResource`, `usePointResources` and
-`useWindowResource` as well, and flags `if (r.pending) return null` in a
-value-returning function whenever the settled return can be `null` too
-(`?? null`, an optional chain, or any `usePointResource` read). A component's
-`if (r.pending) return null` before rendering JSX stays legal.
+For any other narrowing, return `ResourceResult<T | null>` derived with
+`mapResource(r, fn)`, which maps the settled arm and passes the pending one
+through, so a settled `null` means "absent".
+
+The lint rule watches `useLive` as well, and flags
+`if (r.pending) return null` in a value-returning function whenever the settled
+return can be `null` too (`?? null` or an optional chain, as in
+`r.data[0] ?? null`). A component's `if (r.pending) return null` before
+rendering JSX stays legal.
 
 **Gate restriction:** feed only whole-resource results into gates — never a
 `select` result (silent-flip caveat below). For a select-based readiness read,
 pass `gate: true` (next section).
 
 ## Slice selectors (`useResource(resource, params, { select })`)
+
+**`useResource` only** — it remains for the tree / revision-tick / config
+readers (Resources page items 3 / 7 / 9). `useLive` has no `select`: one row of a
+collection is `useLiveRow(c, id)` (a point read, so a change elsewhere never
+reaches it), and a derivation of a value is a `useMemo` over its settled data.
 
 A **point or derived read of a list resource** must not re-render on every push
 to the whole list. Pass a `select` to subscribe to a derived **slice**: the
@@ -704,14 +710,12 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `hydrateEndpoint`
     - `hydrateQuery`
     - `hydrateResource`
-    - `keyedResourceDescriptor`
     - `liveStateSocketKind`
     - `mapResource`
     - `matchResource`
     - `NotificationsProvider`
     - `pendingMountSnapshot`
     - `queryKeyFor`
-    - `resourceDescriptor`
     - `resourceDescriptorByKey`
     - `ResourceStaleReadError`
     - `ResourceView`
@@ -723,32 +727,22 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
     - `useNotificationsStatus`
-    - `usePointResource`
-    - `usePointResources`
     - `useResource`
     - `useResourceAcks`
-    - `useWindowResource`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `active-data/attempt`
     - `active-data/page-link`
     - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
     - `apps/browser/bookmarks`
-    - `apps/browser/history`
     - `apps/browser/start-page`
-    - `apps/chord/curriculum`
-    - `apps/chord/progress`
     - `apps/chord/song-index`
     - `apps/chord/trainer`
-    - `apps/deploy/analytics/dashboard`
-    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/events/event-list`
@@ -756,43 +750,19 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/events/sources`
     - `apps/events/sources/source-field`
     - `apps/mail/mail-core`
-    - `apps/mail/reading-pane`
-    - `apps/mail/sync-status`
     - `apps/mail/threads`
-    - `apps/pages/agent-origin`
-    - `apps/pages/history`
     - `apps/pages/page-author`
-    - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
-    - `apps/pages/starred`
-    - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/canvas`
-    - `apps/prototypes/files`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
-    - `apps/prototypes/thumbnails`
-    - `apps/settings/config`
     - `apps/sonata/library`
-    - `apps/sonata/playback-history`
-    - `apps/sonata/rich/chord-mode`
-    - `apps/sonata/rich/key-mode`
-    - `apps/sonata/rich/rhythm-controls`
-    - `apps/sonata/sources/midi`
-    - `apps/sonata/track-mixer`
-    - `apps/sonata/transpose`
     - `apps/studio/compositions/release`
-    - `apps/studio/compositions/release/release-artifact`
-    - `apps/studio/compositions/release/release-info`
-    - `apps/studio/compositions/release/release-logs`
     - `auth/apple-signing/setup-wizard`
-    - `auth/google/setup-wizard`
     - `build`
-    - `build/build-fix`
-    - `build/build-info`
     - `build/deployment`
-    - `build/serve-composition`
     - `code-explorer/code-api`
     - `config_v2`
     - `config_v2/settings`
@@ -800,90 +770,59 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
     - `conversations/conversation-view`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/code`
-    - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/notes`
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/recover`
     - `conversations/summary`
-    - `database/query-deadline`
-    - `debug/claude-cli-calls`
     - `debug/latency-ledger`
     - `debug/live-state-health`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/reports`
-    - `debug/sentinel`
     - `debug/slow-ops`
-    - `debug/slow-ops/pane`
-    - `fields/secret/config`
     - `framework/web-core`
     - `infra/boot-snapshot`
-    - `infra/claude-cli`
-    - `infra/claude-cli/availability`
-    - `infra/events`
     - `infra/health`
-    - `infra/jobs`
     - `infra/query-resource`
-    - `infra/trash`
     - `network/live`
-    - `page/annotations/agent-notes/authorship`
     - `page/annotations/instructions/instructions-page`
     - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`
-    - `page/prompt/link`
     - `plugin-meta/plugin-health`
-    - `primitives/data-view/custom-columns`
-    - `primitives/data-view/view-order`
     - `primitives/optimistic-mutation`
-    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `reports/live-state-stale-drop`
-    - `review`
     - `review/code-review`
-    - `review/plugin-changes`
     - `runs`
     - `stats/responsiveness`
     - `tasks`
     - `tasks/attempt-view`
     - `tasks/attempt-work`
-    - `tasks/auto-start`
     - `tasks/task-category`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-draft-form`
-    - `tasks/task-effort`
-    - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-list`
-    - `tasks/task-preprompt`
     - `tasks/tasks-core`
     - `tasks/worktree-identity`
     - `ui/theme-engine/saved-themes`

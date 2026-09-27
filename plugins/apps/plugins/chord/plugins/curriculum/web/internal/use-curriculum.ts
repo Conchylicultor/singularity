@@ -2,15 +2,13 @@ import {
   getEndpointErrorMessage,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   applyCellEndpoint,
-  chordCurriculumResource,
+  chordCurriculum,
   setBlanksEndpoint,
   setChapterStateEndpoint,
   setChordStateEndpoint,
@@ -23,12 +21,12 @@ import {
 // ── Reading and changing the selection from the browser ──────────────────────
 //
 // The selection is live (the server pushes every change), so the writes answer
-// nothing: the resource brings the new value to every open tab. A refused write
-// is a toast with the server's sentence, never a silent nothing.
+// nothing: `chordCurriculum` brings the new value to every open tab. A refused
+// write is a toast with the server's sentence, never a silent nothing.
 
 /** What the learner has chosen. `pending` until the server's first value lands. */
 export function useCurriculum(): ResourceResult<Selection> {
-  return useResource(chordCurriculumResource);
+  return useLive(chordCurriculum);
 }
 
 /** The four writes, and whether one is still out. */

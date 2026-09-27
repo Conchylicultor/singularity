@@ -1,9 +1,13 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useSongSetting,
+  useSonata,
+  type SongSetting,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
-import { trackViewResource, type TrackViewRow } from "../shared/resources";
+import type { TrackViewRow } from "../core";
 import { defaultTrackColor } from "./palette";
+import { trackViewSetting } from "./track-view-setting";
 
 /** A track row resolved for display: score metadata + effective view-state. */
 export interface TrackMixerEntry {
@@ -56,39 +60,44 @@ export interface TrackMixerEntry {
   instrumentCustomized: boolean;
 }
 
-/** Persisted overrides for the open song, keyed by trackId. */
-function useCurrentSongOverrides(): Map<string, TrackViewRow> {
-  const { currentSongId } = useSonata();
-  const result = useResource(trackViewResource);
-  // Empty map while pending is genuinely correct: tracks fall back to palette-
-  // default color, muted=false, hidden=false, volume=1 — the same defaults an
-  // unoverridden track would have at any point. Piano-roll and audio engine work
-  // correctly with these defaults while overrides are still loading.
-  //
-  // `volume` does not change that reasoning: a not-yet-loaded track reading as
-  // unity gain is the same class of default as reading as audible + visible —
-  // the track as recorded, which is what it would be with no row at all. What
-  // would break the argument is a default that is a *claim* about the user's
-  // data rather than the absence of one (a fader parked at zero, say); unity is
-  // the absence of an opinion, so a late-arriving override moves the level from
-  // "untouched" to the user's position rather than reversing a stated one.
-  return useMemo(() => {
-    const m = new Map<string, TrackViewRow>();
-    if (!currentSongId) return m;
-    if (result.pending) return m;
-    for (const r of result.data)
-      if (r.songId === currentSongId) m.set(r.trackId, r);
-    return m;
-  }, [result, currentSongId]);
+/**
+ * Derive a settled setting's value, keeping `pending` as it is. Every hook
+ * below is one such derivation of the loaded song's track views, so each
+ * reports the same state the `trackViewSetting` does.
+ */
+function mapSetting<T, U>(
+  setting: SongSetting<T>,
+  fn: (value: T) => U,
+): SongSetting<U> {
+  return setting.pending
+    ? setting
+    : { pending: false, value: fn(setting.value) };
+}
+
+/**
+ * The loaded song's persisted overrides, keyed by trackId — read from the
+ * `trackViewSetting`, which this plugin's observer settles for the loaded song.
+ * Pending until that song's rows have arrived: no track may sound or draw with
+ * a default view (a muted track audible, a hidden one drawn) or with the
+ * previous song's while they load.
+ */
+function useCurrentSongOverrides(): SongSetting<Map<string, TrackViewRow>> {
+  const views = useSongSetting(trackViewSetting);
+  return useMemo(
+    () => mapSetting(views, (rows) => new Map(rows.map((r) => [r.trackId, r]))),
+    [views],
+  );
 }
 
 /**
  * The full resolved track list for the open song — the single source the panel
  * renders and the narrower hooks below derive from. Combines `score.tracks`
  * (order → default color, plus name/instrument) with the persisted overrides
- * and a per-track note tally.
+ * and a per-track note tally. Pending while the song's overrides are, and so is
+ * every narrower hook below: each consumer (piano roll, keyboard, notation,
+ * audio engine, the panel) handles that state itself.
  */
-export function useTrackMixerEntries(): TrackMixerEntry[] {
+export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
   const { score } = useSonata();
   const overrides = useCurrentSongOverrides();
 
@@ -113,47 +122,54 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
     return { byId, byProgram, fallbackId };
   }, [instruments]);
 
-  return useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const n of score.notes) {
-      counts.set(n.track, (counts.get(n.track) ?? 0) + 1);
-    }
-    const { byId, byProgram, fallbackId } = instrumentIndex;
-    return score.tracks.map((t, i) => {
-      const row = overrides.get(t.id);
-      const name =
-        t.name?.trim() || t.instrumentHint?.trim() || `Track ${i + 1}`;
+  return useMemo(
+    () =>
+      mapSetting(overrides, (byTrack) => {
+        const counts = new Map<string, number>();
+        for (const n of score.notes) {
+          counts.set(n.track, (counts.get(n.track) ?? 0) + 1);
+        }
+        const { byId, byProgram, fallbackId } = instrumentIndex;
+        return score.tracks.map((t, i): TrackMixerEntry => {
+          const row = byTrack.get(t.id);
+          const name =
+            t.name?.trim() || t.instrumentHint?.trim() || `Track ${i + 1}`;
 
-      // Resolution precedence: (1) a non-null override that still matches a
-      // registered id, (2) the timbre matching the track's GM program, (3) the
-      // default / first instrument. Always yields a registered id (empty string
-      // only if no instruments are registered at all).
-      const overrideId =
-        row?.instrument != null && byId.has(row.instrument)
-          ? row.instrument
-          : null;
-      const programId =
-        t.gmProgram !== undefined ? (byProgram.get(t.gmProgram) ?? null) : null;
-      const instrumentId = overrideId ?? programId ?? fallbackId ?? "";
-      const instrumentLabel = byId.get(instrumentId)?.label ?? instrumentId;
+          // Resolution precedence: (1) a non-null override that still matches
+          // a registered id, (2) the timbre matching the track's GM program,
+          // (3) the default / first instrument. Always yields a registered id
+          // (empty string only if no instruments are registered at all).
+          const overrideId =
+            row?.instrument != null && byId.has(row.instrument)
+              ? row.instrument
+              : null;
+          const programId =
+            t.gmProgram !== undefined
+              ? (byProgram.get(t.gmProgram) ?? null)
+              : null;
+          const instrumentId = overrideId ?? programId ?? fallbackId ?? "";
+          const instrumentLabel = byId.get(instrumentId)?.label ?? instrumentId;
 
-      return {
-        trackId: t.id,
-        index: i,
-        name,
-        instrument: t.instrumentHint?.trim() || null,
-        instrumentId,
-        instrumentLabel,
-        noteCount: counts.get(t.id) ?? 0,
-        color: row?.color ?? defaultTrackColor(i),
-        muted: row?.muted ?? false,
-        hidden: row?.hidden ?? false,
-        volume: row?.volume ?? 1,
-        customized: row !== undefined,
-        instrumentCustomized: row?.instrument != null,
-      };
-    });
-  }, [score.tracks, score.notes, overrides, instrumentIndex]);
+          // A track with no row has no override: these are its real values.
+          return {
+            trackId: t.id,
+            index: i,
+            name,
+            instrument: t.instrumentHint?.trim() || null,
+            instrumentId,
+            instrumentLabel,
+            noteCount: counts.get(t.id) ?? 0,
+            color: row?.color ?? defaultTrackColor(i),
+            muted: row?.muted ?? false,
+            hidden: row?.hidden ?? false,
+            volume: row?.volume ?? 1,
+            customized: row !== undefined,
+            instrumentCustomized: row?.instrument != null,
+          };
+        });
+      }),
+    [score.tracks, score.notes, overrides, instrumentIndex],
+  );
 }
 
 /**
@@ -161,20 +177,27 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
  * at least one track. Drives the `Sonata.Section` `useAvailable` gate so the card
  * (title + chrome) renders nothing for closed / trackless states — replacing the
  * panel's old `return null`. Safe to call alongside the panel body:
- * `useTrackMixerEntries` is a memoized live-state/context read, not expensive per
- * call, so invoking it in both the gate and the body costs nothing extra.
+ * `useTrackMixerEntries` is a memoized store/context read, not expensive per
+ * call, so invoking it in both the gate and the body costs nothing extra. While
+ * the track views are pending the song's settings are still loading, so the
+ * score is empty and there is no card to offer yet.
  */
 export function useTrackMixerAvailable(): boolean {
   const { currentSongId } = useSonata();
   const entries = useTrackMixerEntries();
-  return currentSongId != null && entries.length > 0;
+  if (entries.pending) return false;
+  return currentSongId != null && entries.value.length > 0;
 }
 
 /** Effective color per trackId — consumed by the piano-roll note renderer. */
-export function useTrackColorMap(): Map<string, string> {
+export function useTrackColorMap(): SongSetting<Map<string, string>> {
   const entries = useTrackMixerEntries();
   return useMemo(
-    () => new Map(entries.map((e) => [e.trackId, e.color])),
+    () =>
+      mapSetting(
+        entries,
+        (all) => new Map(all.map((e) => [e.trackId, e.color])),
+      ),
     [entries],
   );
 }
@@ -184,10 +207,14 @@ export function useTrackColorMap(): Map<string, string> {
  * each track's notes to its own voice manager. The value is the effective
  * instrument (override ?? GM-program match ?? default), never the raw override.
  */
-export function useTrackInstrumentMap(): Map<string, string> {
+export function useTrackInstrumentMap(): SongSetting<Map<string, string>> {
   const entries = useTrackMixerEntries();
   return useMemo(
-    () => new Map(entries.map((e) => [e.trackId, e.instrumentId])),
+    () =>
+      mapSetting(
+        entries,
+        (all) => new Map(all.map((e) => [e.trackId, e.instrumentId])),
+      ),
     [entries],
   );
 }
@@ -201,28 +228,40 @@ export function useTrackInstrumentMap(): Map<string, string> {
  * upstream (see `useMutedTrackIds`), and a muted track keeps whatever fader
  * position it will return to when unmuted.
  */
-export function useTrackVolumeMap(): Map<string, number> {
+export function useTrackVolumeMap(): SongSetting<Map<string, number>> {
   const entries = useTrackMixerEntries();
   return useMemo(
-    () => new Map(entries.map((e) => [e.trackId, e.volume])),
+    () =>
+      mapSetting(
+        entries,
+        (all) => new Map(all.map((e) => [e.trackId, e.volume])),
+      ),
     [entries],
   );
 }
 
 /** Track ids hidden from the piano-roll. */
-export function useHiddenTrackIds(): ReadonlySet<string> {
+export function useHiddenTrackIds(): SongSetting<ReadonlySet<string>> {
   const entries = useTrackMixerEntries();
   return useMemo(
-    () => new Set(entries.filter((e) => e.hidden).map((e) => e.trackId)),
+    () =>
+      mapSetting(
+        entries,
+        (all) => new Set(all.filter((e) => e.hidden).map((e) => e.trackId)),
+      ),
     [entries],
   );
 }
 
 /** Track ids silenced in the audio scheduler. */
-export function useMutedTrackIds(): ReadonlySet<string> {
+export function useMutedTrackIds(): SongSetting<ReadonlySet<string>> {
   const entries = useTrackMixerEntries();
   return useMemo(
-    () => new Set(entries.filter((e) => e.muted).map((e) => e.trackId)),
+    () =>
+      mapSetting(
+        entries,
+        (all) => new Set(all.filter((e) => e.muted).map((e) => e.trackId)),
+      ),
     [entries],
   );
 }

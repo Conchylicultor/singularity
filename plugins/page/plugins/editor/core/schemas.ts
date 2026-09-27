@@ -91,7 +91,7 @@ export type Block = z.infer<typeof BlockSchema>;
 //
 // It is **never persisted and never written back**: no column, no migration, no
 // request body. A `docRank` is only valid against the group it was minted with,
-// and the SAME row read through `blocksResource` carries no `docRank` at all —
+// and the SAME row read through `pageBlocks` carries no `docRank` at all —
 // writing one back would give one row two conflicting `rank` values. Moves send
 // positional intent (an anchor id); the server mints the real `rank` against the
 // complete sibling set.

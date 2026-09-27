@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import { dbQueryDeadlinesResource } from "../../core";
+import { dbQueryDeadlines } from "../../core";
 import { databaseVerdict } from "./database-health";
 
 /**
@@ -22,7 +22,7 @@ import { databaseVerdict } from "./database-health";
  * next render is right.
  */
 export function useDatabaseHealth(): HealthStatus {
-  const result = useResource(dbQueryDeadlinesResource);
+  const result = useLive(dbQueryDeadlines);
   const [now, setNow] = useState(() => Date.now());
   const verdict = databaseVerdict(result, now);
   const nextChangeAt = verdict.nextChangeAt;

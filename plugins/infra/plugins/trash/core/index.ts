@@ -3,4 +3,4 @@ export type { TrashEntry, TrashOutcome } from "./schemas";
 
 export { listTrash, restoreTrash, purgeTrash } from "./endpoints";
 
-export { trashEntriesResource } from "./resources";
+export { trashEntries } from "./resources";

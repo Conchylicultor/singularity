@@ -36,16 +36,20 @@ surface at the next `resnapshotKey` (the consumer decides what a fresh context
 is: a conversation switch, a dialog open).
 
 First paint is seeded from a `persistent-draft` cache keyed by namespace,
-because the point resource is not boot-critical and hydrates one round-trip
-after mount — without the seed the strip would visibly re-sort on every open.
+because an id-set read cannot be preloaded and hydrates one round-trip after
+mount — without the seed the strip would visibly re-sort on every open.
 
 ## Bounded by construction
 
-`usageStatsResource` is a POINT resource (`point.by` = the single-column
-`usage_key` pk), so a read costs O(subscribed ids) and a write recomputes only
-the tuples containing the touched key. `usageKey(namespace, key)` is the only
-place the two halves are joined — a composite PK is not an option, since
-`point.by` must be one column.
+`usageStats` (core) is a lookup-only `liveCollection` — `{ row: UsageStatSchema,
+id: "usageKey" }`, no default window, so it mints `usage-stats:rows` alone —
+served by `serveCollection(usageStats, { from: _usageStats })`. The hook reads
+it with `useLive(usageStats, { ids })`, one tuple for the whole visible set, and
+stamps its frozen window with the same `usageStats.rows.point.encode` the read
+subscribes with. A read costs O(subscribed ids) and a write recomputes only the
+tuples containing the touched key (the `:rows` point routing).
+`usageKey(namespace, key)` is the only place the two halves are joined — a
+composite PK is not an option, since the collection's id must be one column.
 
 Growth is bounded by a nightly `defineRetention` sweep on `lastUsedAt` older
 than a year: nothing else deletes the row for a template the user removed, since
@@ -55,25 +59,23 @@ the ranked things are config entries with no parent row to cascade from.
 
 ## Plugin reference
 
-- Description: Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced point subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a bounded point resource and swept by a nightly 1-year retention job.
+- Description: Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
 - Server:
-  - Contributes: `resource.declare` "usage-stats"
+  - Contributes: `resource.declare` "usage-stats:rows"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
-    - `infra/query-resource.windowQueryResource`
     - `infra/retention.defineRetention`
+    - `network/live.serveCollection`
   - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
-  - Exports (values):
-    - `_usageStats`
-    - `usageStatsResource`
+  - Exports (values): `_usageStats`
   - Register: `defineJob('retention.usage_stats')`
-  - Resources: `usage-stats` (keyed, point)
+  - Resources: `usage-stats:rows` (keyed, point)
   - Routes: `POST /api/usage-rank/record`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/live-state.usePointResources`
+    - `network/live.useLive`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`
   - Exports (values):
@@ -82,7 +84,7 @@ the ranked things are config entries with no parent row to cascade from.
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `infra/query-resource.pointQueryResourceDescriptor`
+    - `network/live.liveCollection`
   - Exports (types):
     - `RecordUsageBody`
     - `ScorableStat`
@@ -94,8 +96,8 @@ the ranked things are config entries with no parent row to cascade from.
     - `recordUsageEndpoint`
     - `sortByUsage`
     - `usageKey`
+    - `usageStats`
     - `UsageStatSchema`
-    - `usageStatsResource`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/prompt-templates`
 

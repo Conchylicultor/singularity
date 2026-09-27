@@ -12,7 +12,7 @@ import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
-import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
+import { pagesLiveResource, pageBlocksServed } from "./internal/resources";
 import {
   restoreTrashedBlocks,
   purgeTrashedBlocks,
@@ -44,7 +44,7 @@ export { _blocks } from "./internal/tables";
 // the predicate never spelled). `_blocks` itself is for the trash machinery —
 // `page-editor/no-unfiltered-blocks-read` flags any other read of it.
 export { liveBlocks } from "./internal/live-blocks";
-export { pagesLiveResource, blocksLiveResource } from "./internal/resources";
+export { pagesLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
@@ -132,7 +132,7 @@ export default {
   ],
   contributions: [
     Resource.Declare(pagesLiveResource),
-    Resource.Declare(blocksLiveResource),
+    ...pageBlocksServed.declare,
     // `page` is owned here, not by the `sub-page` renderer: page rows are written
     // directly by turn-into-page / restorePageContent, so their validation must not
     // depend on the sub-page plugin being enabled. sub-page contributes only its web

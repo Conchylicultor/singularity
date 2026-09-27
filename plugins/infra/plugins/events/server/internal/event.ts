@@ -6,15 +6,14 @@ import {
   type PgTable,
   pgTable,
 } from "drizzle-orm/pg-core";
-import {
-  type EnqueueTx,
-} from "@plugins/infra/plugins/jobs/server";
+import { type EnqueueTx } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
-import { _event_emissions, EMISSIONS_CAP } from "./tables";
+import { EMISSIONS_CAP } from "../../core/resources";
+import { _event_emissions } from "./tables";
 
 /**
  * Drizzle node-postgres database/transaction handle, threaded through
@@ -28,7 +27,10 @@ export type EmitTx = EnqueueTx;
 // the same-named payload key) or an object with an explicit match predicate.
 export type FilterSlot<T> =
   | PgColumnBuilderBase
-  | { column: PgColumnBuilderBase; match: (col: AnyPgColumn, payload: T) => SQL };
+  | {
+      column: PgColumnBuilderBase;
+      match: (col: AnyPgColumn, payload: T) => SQL;
+    };
 
 export interface DefineTriggerEventSpec<
   T extends Record<string, unknown>,
@@ -74,9 +76,10 @@ export type EventHandle<T, F extends Record<string, unknown>> = EventSource<T> &
     where(filter: Partial<{ [K in keyof F & keyof T]: T[K] }>): EventSource<T>;
   };
 
-function isObjectSlot<T>(
-  v: FilterSlot<T>,
-): v is { column: PgColumnBuilderBase; match: (col: AnyPgColumn, payload: T) => SQL } {
+function isObjectSlot<T>(v: FilterSlot<T>): v is {
+  column: PgColumnBuilderBase;
+  match: (col: AnyPgColumn, payload: T) => SQL;
+} {
   return (
     typeof v === "object" &&
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime null guard; typeof null === "object"
@@ -90,17 +93,17 @@ function isObjectSlot<T>(
 export function defineTriggerEvent<
   T extends Record<string, unknown>,
   F extends Record<string, FilterSlot<T>> = Record<string, FilterSlot<T>>,
->(spec: DefineTriggerEventSpec<T, F>): {
+>(
+  spec: DefineTriggerEventSpec<T, F>,
+): {
   table: PgTable;
   event: EventHandle<T, F>;
 } {
   const tableName = spec.name.replace(/\./g, "_") + "_triggers";
 
   const columnBuilders: Record<string, PgColumnBuilderBase> = {};
-  const matcherBuilders: Record<
-    string,
-    (col: AnyPgColumn, payload: T) => SQL
-  > = {};
+  const matcherBuilders: Record<string, (col: AnyPgColumn, payload: T) => SQL> =
+    {};
 
   for (const key of Object.keys(spec.filters)) {
     const slot = spec.filters[key as keyof F] as FilterSlot<T>;

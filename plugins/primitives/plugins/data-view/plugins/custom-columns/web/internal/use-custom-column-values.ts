@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  customColumnValuesResource,
+  customColumnValues,
   setCustomColumnValue,
   deleteCustomColumnValues,
   type SetCustomColumnValueBody,
@@ -13,17 +13,22 @@ import {
 export type CustomColumnValueIndex = Map<string, Map<string, string>>;
 
 /**
- * Subscribe to a surface's custom-column values and index them by
- * `(rowKey, columnId)`. While the resource is still pending the index is empty —
- * cells render blank until the first push (values, not a confirmed-empty gate).
+ * A surface's custom-column values: `pending` until the first value lands, then
+ * the settled index. A union, so "not loaded yet" can never be read as "no cell
+ * has a value" — the caller decides what a cell shows meanwhile.
  */
-export function useCustomColumnValues(
-  dataViewId: string,
-): CustomColumnValueIndex {
-  const result = useResource(customColumnValuesResource, { dataViewId });
-  return useMemo(() => {
+export type CustomColumnValues =
+  { pending: true } | { pending: false; index: CustomColumnValueIndex };
+
+/**
+ * Subscribe to a surface's custom-column values and index them by
+ * `(rowKey, columnId)`.
+ */
+export function useCustomColumnValues(dataViewId: string): CustomColumnValues {
+  const result = useLive(customColumnValues, { dataViewId });
+  return useMemo((): CustomColumnValues => {
+    if (result.pending) return { pending: true };
     const index: CustomColumnValueIndex = new Map();
-    if (result.pending) return index;
     for (const row of result.data) {
       let byColumn = index.get(row.rowKey);
       if (!byColumn) {
@@ -32,7 +37,7 @@ export function useCustomColumnValues(
       }
       byColumn.set(row.columnId, row.value);
     }
-    return index;
+    return { pending: false, index };
   }, [result]);
 }
 

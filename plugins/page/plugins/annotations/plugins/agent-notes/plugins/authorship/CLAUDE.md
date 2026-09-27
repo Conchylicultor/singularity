@@ -39,26 +39,30 @@ at module eval (boot-fatal). It sits in its own module because a barrel may hold
 no statements and `tables.ts` must stay importable by drizzle-kit's schema
 loader, which cannot pull in retention's `db`/`jobs` closure.
 
-## The read is point-membership, so only an open card pays
+## The read is one value per card, so only an open card pays
 
-`agentNotesAuthorsResource` is keyed by `{ blockId }` — a FULL load is one card's
-handful of authors — copying `page-block-doc`, not the legacy unbounded
-`queryResource` collection form.
+`agentNotesAuthors` (`shared/schemas.ts`) is a `liveValue` keyed by
+`params: ["blockId"]`: each tuple is one card's handful of authors, oldest-first,
+so a FULL load never grows with the table. `agentNotesAuthorsServed`
+(`server/internal/resource.ts`) serves it on the db arm with
+`unbounded: { reason: "one card's authors — …" }` — the array is bounded by one
+block, not by a window.
 
-`identityTable` scopes recompute but delivers **no per-row scoped refill**: the
-change-feed attributes affected ids only for a single-column PK, and this key is
-composite, so a stamp arrives as FULL-for-table. Correct, and cheap (one indexed
-single-block query, written once per agent note). A surrogate `id` would buy the
-scoping back at the price of a meaningless key plus a separate unique index to
-keep `ON CONFLICT` working. Hence no `ctx.affectedIds` branch — there is never
-one to serve.
+It is a value, not a `liveCollection`, because the table has no single row id:
+the key is the composite `(block_id, conversation_id)` (migration contract §10).
+A stamp therefore recomputes every subscribed card's tuple — the change feed
+routes by read-set, with no scope policy — and push drops the unchanged ones.
+Correct, and cheap (one indexed single-block query, written once per agent
+note). A surrogate `id` would buy per-row routing back at the price of a
+meaningless key plus a separate unique index to keep `ON CONFLICT` working.
 
-`useAgentNotesAuthors` re-sorts client-side: a keyed resource merges deltas by
-key, so array order after a live update is the merge's, not the loader's
-`ORDER BY`. It also reads "not loaded yet" as "no authors" — fine for a glyph
-that turns interactive a beat late. `useAgentNotesCreator` (the earliest record,
-the [`agent-page`](../agent-page/CLAUDE.md) creator chip) keeps pending as a
-state instead: a chip that NAMES someone cannot stand in "nobody" for "unknown".
+A value is pushed whole, so the client sees the loader's `ORDER BY created_at`
+as is — no client re-sort. `useAgentNotesAuthors` returns the read's
+`ResourceResult`, pending included; the agent-notes anchor renders the card's
+plain, non-interactive name until it settles (the name is true either way, and
+only its trigger waits). `useAgentNotesCreator` (the first record, the
+[`agent-page`](../agent-page/CLAUDE.md) creator chip) keeps pending as a state
+too: a chip that NAMES someone cannot stand in "nobody" for "unknown".
 
 ## The popover, and the one thing it cannot know
 
@@ -79,7 +83,7 @@ gap in that plugin.
 
 ## Plugin reference
 
-- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover; a copied block keeps its authors.
+- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
 - Server:
   - Contributes:
     - `resource.declare` "agent-notes-authors"
@@ -87,21 +91,20 @@ gap in that plugin.
   - Uses:
     - `database.db`
     - `infra/retention.markCascadeBounded`
+    - `network/live.serveValue`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`
   - DB schema: `plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server/internal/tables.ts`
   - Exports (values):
     - `_pageBlocksAgentAuthors`
-    - `agentNotesAuthorsServerResource`
     - `recordAgentNotesAuthor`
-  - Resources: `agent-notes-authors` (keyed)
+  - Resources: `agent-notes-authors` (push, unbounded: one card's authors — the conversations that wrote into one block)
 - Web:
   - Uses:
     - `conversations/conversation-ui/row.ConversationRowById`
+    - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/relative-time.RelativeTime`
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):
@@ -116,7 +119,7 @@ gap in that plugin.
 - Shared:
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):
+    - `agentNotesAuthors`
     - `AgentNotesAuthorSchema`
-    - `agentNotesAuthorsResource`
 
 <!-- AUTOGENERATED:END -->

@@ -1,8 +1,8 @@
-// Verifies an auto-start marker reaches the UI through its bounded POINT
-// resource: open an ARMED task's detail and read back what its Auto-start
-// select settles on.
+// Verifies an auto-start marker reaches the UI through its point read (the
+// `tasks-auto-start:rows` lookup): open an ARMED task's detail and read back
+// what its Auto-start select settles on.
 //
-// A blind screenshot cannot verify this. The point resource hydrates
+// A blind screenshot cannot verify this. The point read hydrates
 // post-mount, and on a busy backend one tuple's sub-ack can trail its
 // subscription by ten seconds or more — so a fixed wait reads "Off", which is
 // ALSO the genuine not-armed rendering, and a live marker looks lost. This
@@ -34,7 +34,7 @@ const settleMs = numArg("settle", 60_000);
 const SELECT = '[aria-label="Auto-start model"]';
 const url = pathUrl(`/agents/tasks/t/${taskId}`);
 
-const r = report("auto-start point resource");
+const r = report("auto-start point read");
 console.log(`url: ${url}`);
 
 const { text, pageErrors, consoleErrors } = await withBrowser(async (h) => {
@@ -45,7 +45,7 @@ const { text, pageErrors, consoleErrors } = await withBrowser(async (h) => {
   // wait for the element before reading it.
   await page.waitForSelector(SELECT, { timeout: settleMs });
 
-  // Then wait out the point resource's post-mount round-trip.
+  // Then wait out the point read's post-mount round-trip.
   const deadline = Date.now() + settleMs;
   let seen = "";
   while (Date.now() < deadline) {

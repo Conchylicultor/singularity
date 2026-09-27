@@ -89,8 +89,9 @@ my other worktree's builds?" is a fair question to ask of a list that calls
 itself unified. The answer: a worktree DB is **forked** from main, so it inherits
 every row main had at fork time. Unscoped, the list would open on main's stale
 history and present it as this worktree's own.
-`buildHistoryResource` — the surface this replaces, and the one the build
-button's own state reads — has always carried the same predicate.
+`buildHistory` (the `build.history` collection) — the surface this replaces,
+and the one the build button's own state reads — carries the same predicate as
+its base `where`.
 
 Removing the scope is therefore not "showing more" — it is showing another
 checkout's runs under this one's name. A cross-worktree view, if it is ever

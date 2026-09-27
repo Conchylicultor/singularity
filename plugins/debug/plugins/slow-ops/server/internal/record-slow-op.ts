@@ -200,9 +200,9 @@ const slowOpShed = createShedBuffer<RecordSlowOpInput>({
 
 // THE single ingest funnel for every slow-op signal — the server span hook and
 // the client endpoint both collapse here. Upserts the deduped aggregate by
-// (operationKind, operation, worktree), merges the caller attribution, notifies
-// the live resource, and fires the per-operation report (fire-and-forget so a
-// slow report path never blocks recording). Failures propagate loudly.
+// (operationKind, operation, worktree), merges the caller attribution, and
+// fires the per-operation report (fire-and-forget so a slow report path never
+// blocks recording). Failures propagate loudly.
 //
 // A single signal is a batch of one: the server-span path and the client
 // beacon stay ONE funnel, with one code path between them.

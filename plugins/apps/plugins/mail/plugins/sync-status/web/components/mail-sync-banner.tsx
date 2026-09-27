@@ -23,10 +23,12 @@ import { useMailSyncState } from "../internal/use-mail-sync";
  * `MAIL_SYNC_REMEDIATION` map keyed by the classified error code.
  */
 export function MailSyncBanner(): ReactElement | null {
-  const { view } = useMailSyncState();
+  const sync = useMailSyncState();
 
   // Pending, or all-clear: the banner is silent (the landing shows "last synced").
-  if (!view || view.phase === "healthy" || view.phase === "idle") return null;
+  if (sync.pending) return null;
+  const { view } = sync;
+  if (view.phase === "healthy" || view.phase === "idle") return null;
 
   if (view.phase === "syncing") {
     return (
@@ -176,9 +178,7 @@ function BannerShell({
         <Fill>
           <Stack gap="2xs">
             <Text variant="label">{title}</Text>
-            {body != null ? (
-              <Text variant="caption">{body}</Text>
-            ) : null}
+            {body != null ? <Text variant="caption">{body}</Text> : null}
             {detail != null ? (
               <Text variant="caption" tone="muted">
                 {detail}

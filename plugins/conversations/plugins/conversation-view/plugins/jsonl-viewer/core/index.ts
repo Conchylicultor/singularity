@@ -1,3 +1,2 @@
-export type { JsonlEventsResponse } from "./protocol";
-export { jsonlEventsResource, JsonlEventsPayloadSchema } from "./protocol";
+export { jsonlEvents } from "./protocol";
 export { eventKey } from "./event-key";

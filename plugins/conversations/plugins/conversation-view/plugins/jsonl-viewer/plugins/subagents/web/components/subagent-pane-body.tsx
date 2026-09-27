@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { MdArticle } from "react-icons/md";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ResourceView,
-  useResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   JsonlViewer,
   TranscriptView,
@@ -27,7 +27,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import {
   subagentReport,
-  subagentTranscriptResource,
+  subagentTranscript,
   type SubagentRef,
   type SubagentReport,
   type SubagentRequestShape,
@@ -307,7 +307,7 @@ export function SubagentPaneBody({
   /** Which sub-agent: by the call that launched it, or by its own id. */
   subagent: SubagentRef;
 }) {
-  const events = useResource(jsonlEventsResource, { id: conversationId });
+  const events = useLive(jsonlEvents, { id: conversationId });
   // The parent transcript is gated HERE, so that below this line a missing
   // `Agent` event means the parent really has not recorded one — never "it has
   // not arrived yet". Everything the pane says about the sub-agent is derived
@@ -355,7 +355,7 @@ function SubagentPaneContent({
     subagent,
     parentEvents,
   );
-  const transcript = useResource(subagentTranscriptResource, {
+  const transcript = useLive(subagentTranscript, {
     id: conversationId,
     ...subagent,
   });

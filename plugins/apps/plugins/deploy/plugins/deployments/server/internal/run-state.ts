@@ -1,10 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import {
-  defineExternalResource,
-  reportServerError,
-} from "@plugins/framework/plugins/server-core/core";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type {
@@ -13,7 +11,7 @@ import type {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
-  deployRunsResource as deployRunsDescriptor,
+  deployRuns,
   DeployRunSchema,
   type DeployPhase,
   type DeployRun,
@@ -47,9 +45,9 @@ const INFLIGHT_UQ = "deploy_runs_server_inflight_uq";
  * The most recent `converge` / `ship` / `update` per deployment, in memory — the
  * LIVE view.
  *
- * `key`/`schema` come from the shared client descriptor; an external resource is
- * the right kind because the truth lives outside Postgres — which is also why it
- * keeps a callable `notify()`, the only way to push when this Map changes.
+ * Served as the `deployRuns` value's external arm: the truth lives outside
+ * Postgres, so the change feed never sees it, and `deployRunsServed.notify()`
+ * is the only way to push when this Map changes.
  *
  * The durable half is `deploy_runs`, written by the same functions below.
  * Neither replaces the other: this is progress at phase granularity for a run in
@@ -63,10 +61,10 @@ const INFLIGHT_UQ = "deploy_runs_server_inflight_uq";
  */
 const runs = new Map<string, DeployRun>();
 
-export const deployRunsServerResource = defineExternalResource(
-  deployRunsDescriptor,
-  { mode: "push", loader: () => Object.fromEntries(runs) },
-);
+export const deployRunsServed = serveValue(deployRuns, {
+  source: "external",
+  loader: () => Object.fromEntries(runs),
+});
 
 /**
  * Rebuild one run's live-view entry from its ledger row and publish it.
@@ -109,7 +107,7 @@ async function publishLiveRun(
     message: row.message,
   });
   runs.set(run.deploymentId, run);
-  deployRunsServerResource.notify();
+  deployRunsServed.notify();
   return run;
 }
 

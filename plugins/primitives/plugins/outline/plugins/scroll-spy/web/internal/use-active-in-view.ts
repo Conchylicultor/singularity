@@ -218,7 +218,7 @@ export function useActiveInView(
      *
      * A retry is REQUIRED, and cannot be keyed on the caller's props. Hosts
      * routinely publish their outline before the surface that renders it: the
-     * Pages editor mounts its rows a commit after `blocksResource` resolves, and
+     * Pages editor mounts its rows a commit after `pageBlocks` resolves, and
      * the conversation publishes its scroll element from a callback ref. In both
      * cases `ids` is already final and `resolve` never changes identity, so a
      * props-keyed retry never fires — the rail paints its dashes and no section

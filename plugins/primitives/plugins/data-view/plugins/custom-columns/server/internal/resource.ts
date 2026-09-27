@@ -1,27 +1,20 @@
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  customColumnValuesResource,
-  CustomColumnValueRowSchema,
-  type CustomColumnValueRow,
-} from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { customColumnValues } from "../../core";
 import { _dataViewCustomValues } from "./tables";
 
 /**
- * Push-mode param resource over `data_view_custom_values`, scoped by
- * `dataViewId`. A clone of `blocksLiveResource`: the loader reads the table, so
- * the L4 DB change-feed recomputes it on every write (read-set match). No
- * explicit notify, `dependsOn`, or `identityTable` is needed.
+ * Serves `customColumnValues` from `data_view_custom_values`, scoped by
+ * `dataViewId`. The loader reads the table, so the change feed recomputes the
+ * tuple on every write (read-set match) — the handlers notify nothing.
  */
-export const customColumnValuesLiveResource = defineResource<
-  CustomColumnValueRow[],
-  { dataViewId: string }
->({
-  key: customColumnValuesResource.key,
-  mode: "push",
-  schema: z.array(CustomColumnValueRowSchema),
+export const customColumnValuesServed = serveValue(customColumnValues, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits",
+  },
   loader: async ({ dataViewId }) =>
     db
       .select({

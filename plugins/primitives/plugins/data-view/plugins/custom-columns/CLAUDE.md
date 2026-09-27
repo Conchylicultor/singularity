@@ -13,9 +13,14 @@ User-defined custom columns for any DataView. Two stores:
   per-app-scopable, reactive — zero new registration machinery (mirrors
   `sortPresetsExtraFields`).
 - **Values** (per-row user data keyed by `(dataViewId, rowKey, columnId)`) live in
-  the `data_view_custom_values` DB table, surfaced by a push-mode param live
-  resource (recomputed by the L4 DB change-feed on every write) + a single
-  upsert/delete-on-empty endpoint.
+  the `data_view_custom_values` DB table, surfaced by the `customColumnValues` live
+  value (`liveValue` with `params: ["dataViewId"]`, served
+  `serveValue(…, { source: "db", unbounded })` — recomputed by the change feed on
+  every write) + a single upsert/delete-on-empty endpoint. A value, not a
+  collection: the composite key has no single id to read a row by.
+  `useCustomColumnValues` returns `pending` until it lands; meanwhile the cells
+  read as unset, because `FieldExtensionProps.render` has no pending channel and
+  dropping the columns would turn a filter on one into keep-every-row.
 
 **Dependency direction: this child imports the parent (`custom-columns → data-view`),
 never the reverse.** It contributes itself both ways instead of the host reaching
@@ -61,6 +66,7 @@ how the caller obtained it.
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/ui-kit.Input`
@@ -74,10 +80,10 @@ how the caller obtained it.
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.useResource`
   - Exports (types):
     - `CustomColumnDefsController`
     - `CustomColumnValueIndex`
+    - `CustomColumnValues`
   - Exports (values):
     - `CustomColumnsFields`
     - `useCustomColumnDefs`
@@ -92,22 +98,21 @@ how the caller obtained it.
     - `database/derived-updated-at.deriveUpdatedAt`
     - `fields/server-capabilities.resolveFieldValueTextCast`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `primitives/data-view/server-query.AugmentedColumn`
     - `primitives/data-view/server-query.DataViewServer`
     - `primitives/data-view/server-query.QueryAugmentor`
     - `primitives/data-view/server-query.QueryAugmentorContext`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
-  - Exports (values):
-    - `_dataViewCustomValues`
-    - `customColumnValuesLiveResource`
-  - Resources: `data-view-custom-values` (push)
+  - Exports (values): `_dataViewCustomValues`
+  - Resources: `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
   - Routes:
     - `POST /api/data-view/custom-values`
     - `POST /api/data-view/custom-values/delete-column`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `CustomColumnDef`
     - `CustomColumnValueRow`
@@ -116,7 +121,7 @@ how the caller obtained it.
   - Exports (values):
     - `CustomColumnDefSchema`
     - `CustomColumnValueRowSchema`
-    - `customColumnValuesResource`
+    - `customColumnValues`
     - `deleteCustomColumnValues`
     - `DeleteCustomColumnValuesBodySchema`
     - `setCustomColumnValue`

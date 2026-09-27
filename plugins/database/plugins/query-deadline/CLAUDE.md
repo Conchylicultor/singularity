@@ -93,12 +93,17 @@ edit to the default silently rewrite past reports.
 ## The ring and the `db-query-deadlines` resource
 
 The server keeps the last 20 deadline hits (`{ at, pool, phase, sql, origin,
-elapsedMs }`, oldest first, from every pool) in memory and serves them as a push-mode **external** resource — its
-truth is process memory, which the change-feed cannot observe, so it keeps a
-hand `notify()`. The bound is part of the contract: `QueryDeadlinesSchema`
-refuses a longer list, which makes the resource a schema-bounded scalar under
-the bounded working-set rule. It resets when the backend restarts; the durable
-record is the report.
+elapsedMs }`, oldest first, from every pool) in memory and serves them as the
+`dbQueryDeadlines` `liveValue` (`core/internal/resources.ts`), pushed and served
+on the **external** arm — `serveValue(dbQueryDeadlines, { source: "external" })`
+as `dbQueryDeadlinesServed` (`server/internal/resource.ts`). Its truth is
+process memory, which the change-feed cannot observe, so every hit calls
+`dbQueryDeadlinesServed.notify()`. The bound is part of the contract:
+`QueryDeadlinesSchema` refuses a longer list, which makes the value a
+schema-bounded scalar under the bounded working-set rule. It resets when the
+backend restarts; the durable record is the report. The web reads it with
+`useLive(dbQueryDeadlines)`; there is no placeholder, so the row is `unknown`
+until the first read lands.
 
 On a hit the handler first appends the durable `[deadline] pool=… phase=…` line
 to `db.jsonl` (`dbLog` from `database/server`; the connection plugin cannot
@@ -160,9 +165,9 @@ effect with no timer to fire again.
     - `Reports.KindView` → `AbandonCapSummary`
     - `HealthReport.Row` "Database"
   - Uses:
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/live-state.useResource`
     - `reports.Reports`
     - `shell/health-report.HealthReport`
 - Server:
@@ -177,6 +182,7 @@ effect with no timer to fire again.
     - `database/connection.queryDeadlineSink`
     - `database/embedded.PG_LOG_FILE`
     - `database/pgbouncer.PGBOUNCER_LOG_FILE`
+    - `network/live.serveValue`
     - `reports.recordReport`
     - `reports.ReportKind`
     - `reports.ReportRow`
@@ -188,7 +194,7 @@ effect with no timer to fire again.
   - Uses:
     - `database/connection.DB_CALL_PHASES`
     - `database/connection.DB_POOL_NAMES`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `DbAbandonCapPayload`
     - `DbQueryDeadlinePayload`
@@ -199,7 +205,7 @@ effect with no timer to fire again.
     - `DB_QUERY_DEADLINE_KIND`
     - `DbAbandonCapPayloadSchema`
     - `DbQueryDeadlinePayloadSchema`
-    - `dbQueryDeadlinesResource`
+    - `dbQueryDeadlines`
     - `QUERY_DEADLINE_RING_CAPACITY`
     - `QueryDeadlineHitSchema`
 

@@ -5,14 +5,14 @@ import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { attemptConvAggSpec, attemptPushAggSpec } from "./internal/rollup-spec";
 import {
   tasksResource,
-  taskDetailResource,
+  taskDetailServed,
   attemptsResource,
-  pushesResource,
+  pushRowsServed,
+  pushesAttemptsCascade,
   conversationsActiveResource,
   conversationsSystemResource,
   conversationsGoneResource,
-  conversationsGoneStatsResource,
-  pushesByAttemptResource,
+  conversationsGoneStatsServed,
 } from "./internal/resources";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import {
@@ -70,14 +70,10 @@ export type {
 // Resources (all owned here)
 export {
   tasksResource,
-  taskDetailResource,
   attemptsResource,
-  pushesResource,
   conversationsActiveResource,
   conversationsSystemResource,
   conversationsGoneResource,
-  conversationsGoneStatsResource,
-  pushesByAttemptResource,
 } from "./internal/resources";
 export type { AttemptWithConversations, ConversationSummary } from "../core";
 
@@ -225,14 +221,14 @@ export default {
   loadBearing: true,
   contributions: [
     Resource.Declare(tasksResource),
-    Resource.Declare(taskDetailResource),
+    ...taskDetailServed.declare,
     Resource.Declare(attemptsResource),
-    Resource.Declare(pushesResource),
-    Resource.Declare(pushesByAttemptResource),
+    ...pushRowsServed.declare,
+    Resource.Declare(pushesAttemptsCascade),
     Resource.Declare(conversationsActiveResource),
     Resource.Declare(conversationsSystemResource),
     Resource.Declare(conversationsGoneResource),
-    Resource.Declare(conversationsGoneStatsResource),
+    ...conversationsGoneStatsServed.declare,
     DerivedTable(attemptConvAggSpec),
     DerivedTable(attemptPushAggSpec),
     View({ view: attempts, identityTable: "attempts" }),

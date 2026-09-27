@@ -4,7 +4,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { RecordPlayObserver } from "./components/record-play-observer";
 import { PlaybackFields } from "./components/playback-fields";
 
-export { usePlaybackHistory, usePlaybackHistoryMap } from "./hooks";
+export { usePlaybackHistoryMap } from "./hooks";
 
 export default {
   description:

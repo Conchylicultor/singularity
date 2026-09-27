@@ -1,46 +1,47 @@
 import { useEffect } from "react";
 import {
-  useSetRhythmGroove,
-  useSonata,
+  grooveSetting,
+  useMountedSongId,
+  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { rhythmResource } from "../../shared/resources";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { rhythms } from "../../shared/resources";
 
 /**
- * Headless: syncs the open song's persisted rhythm groove into the shell's
- * per-surface store, which the score pipeline reads to re-voice the chords with
- * the groove. Mounted via `Sonata.Effect` (always inside the provider, itself
- * inside the rhythm store provider) so it can read context and write the store.
+ * Headless observer of the `grooveSetting` (`Sonata.SongSetting`, mounted
+ * afresh for each loaded song): syncs that song's persisted rhythm groove into
+ * the loaded song, whose score pipeline reads it to re-voice the chords with
+ * the groove.
  *
- * This is the sole owner of "which song's groove is in force": it writes the
- * current song's groove (rhythm necklace + figuration ids), and writes `null`
- * when no song is open, when the row is absent, or when `enabled` is false —
- * otherwise the previous song's groove would leak into the next. It waits for the
- * resource to resolve before writing, so a still-loading rollup never collapses
- * to a false default.
+ * It writes only a settled answer: a newly loaded song's settings start
+ * pending, so until this song's row arrives nothing renders under the previous
+ * song's groove or a stand-in "no groove" — and a write for a song no longer
+ * loaded is dropped. A settled `null` — an absent row, or `enabled` off — IS
+ * the song's groove: block chords.
  */
 export function RhythmObserver() {
-  const { currentSongId } = useSonata();
-  const setGroove = useSetRhythmGroove();
-  const result = useResource(rhythmResource);
+  const songId = useMountedSongId();
+  const setGroove = useWriteSongSetting(grooveSetting);
+  const row = useLiveRow(rhythms, songId);
+  // The row read reduced to what the effect needs: whether it has settled, and
+  // the row itself (the cache's own object, identity-stable until it changes) —
+  // so the effect runs on a real change only.
+  const settled = !row.pending;
+  const persisted = !row.pending && row.found ? row.row : null;
 
   useEffect(() => {
-    if (result.pending) return; // wait for truth before touching the store
-    if (!currentSongId) {
-      setGroove(null);
-      return;
-    }
-    const row = result.data.find((r) => r.songId === currentSongId);
+    if (!settled) return;
     setGroove(
-      row && row.enabled
+      songId,
+      persisted && persisted.enabled
         ? {
-            hands: { bass: row.bass, chord: row.chord },
-            bassFigurationId: row.bassPatternId,
-            chordFigurationId: row.chordPatternId,
+            hands: { bass: persisted.bass, chord: persisted.chord },
+            bassFigurationId: persisted.bassPatternId,
+            chordFigurationId: persisted.chordPatternId,
           }
         : null,
     );
-  }, [result, currentSongId, setGroove]);
+  }, [songId, settled, persisted, setGroove]);
 
   return null;
 }

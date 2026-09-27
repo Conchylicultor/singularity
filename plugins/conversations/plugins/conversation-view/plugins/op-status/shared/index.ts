@@ -1,6 +1,6 @@
 export {
   WorktreeOpSchema,
   WorktreeOpsPayloadSchema,
-  worktreeOpsResource,
+  worktreeOps,
 } from "./schemas";
 export type { WorktreeOp, WorktreeOpsPayload } from "./schemas";

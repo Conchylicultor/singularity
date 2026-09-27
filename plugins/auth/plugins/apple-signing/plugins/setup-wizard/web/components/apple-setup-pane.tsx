@@ -5,9 +5,10 @@ import {
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { configV2Resource, setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
+import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -41,9 +42,7 @@ export function AppleSetupPane() {
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
   const storePath = reg?.storePath ?? "";
-  const metaResult = useResource(configV2SecretMetaResource, {
-    path: storePath,
-  });
+  const metaResult = useLive(configSecretMeta, { path: storePath });
   const cfgResult = useResource(configV2Resource, { path: storePath });
 
   if (metaResult.pending || cfgResult.pending) return <Loading />;

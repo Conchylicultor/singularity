@@ -15,10 +15,10 @@ import { CategorySourceSchema } from "../../shared/schemas";
 // is structurally 1:1 (its sole primary key IS the parent id).
 //
 // The primary key is the derived `categoryRowId(conversationId, categoryId)`
-// rather than a composite, because the live-state point resource requires its
-// subscription key to be a SINGLE-column primary key — see shared/row-id.ts and
-// shared/schemas.ts. The unique index on the pair is the writer's guard that the
-// derived id and the logical key can never disagree.
+// rather than a composite, because the `conversationCategories` lookup
+// collection's row id must be a SINGLE-column primary key — see
+// shared/row-id.ts and shared/schemas.ts. The unique index on the pair is the
+// writer's guard that the derived id and the logical key can never disagree.
 export const _conversationCategories = deriveUpdatedAt(
   pgTable(
     "conversation_categories",

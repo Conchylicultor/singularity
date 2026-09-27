@@ -19,7 +19,8 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useGroove } from "../use-groove";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useGroove, type Groove } from "../use-groove";
 import { TrackConfig } from "./track-config";
 
 // Distinct theme tokens for the two concentric rings (outer = chords, inner = bass).
@@ -44,11 +45,24 @@ const BASS_COLOR = "var(--chart-2)";
  * (`useHasVoicedChords`) — the card is not painted at all otherwise — so this
  * body never needs a `return null`. It serves ANY chord source (chord-grid,
  * ultimate-guitar) and any MIDI song in chord mode, not just the chord grid.
+ * While the song's groove is loading it is a loading state — never the default
+ * patterns standing in for the song's own.
  */
 export function RhythmControls() {
+  const groove = useGroove();
+  if (groove.pending) return <Loading variant="rows" count={3} />;
+  return <GrooveEditor groove={groove} />;
+}
+
+/** The circle + per-hand controls over a KNOWN groove. */
+function GrooveEditor({
+  groove,
+}: {
+  groove: Extract<Groove, { pending: false }>;
+}) {
   const { score } = useSonata();
   const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
-    useGroove();
+    groove;
   const cursor = useCursorApi();
   const circleRef = useRef<RhythmCircleHandle>(null);
 

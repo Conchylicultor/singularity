@@ -39,6 +39,7 @@ export type { BootMode } from "./boot-mode";
 export {
   Resource,
   applyDbChange,
+  assertPreloadedResourcesDeclared,
   defineResource,
   defineExternalResource,
   handleResourceHttp,
@@ -69,6 +70,7 @@ export type {
   ResourceDeliveryObserver,
   ResourcePushObserver,
   ServerResourceOptions,
+  KeyedServerResourceOptions,
   ResourceMode,
   ResourceParams,
 } from "./resources";

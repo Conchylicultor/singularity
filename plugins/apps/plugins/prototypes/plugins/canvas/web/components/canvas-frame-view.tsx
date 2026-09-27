@@ -29,7 +29,7 @@ import { PrototypeFrame } from "./prototype-frame";
 export interface CanvasFrameViewProps {
   frame: CanvasFrame;
   meta: PrototypeMeta;
-  /** The live `prototypesVersionResource` value: an edit reloads live frames. */
+  /** The live `prototypesVersion` value: an edit reloads live frames. */
   cacheBust: number;
   /** The canvas-wide logical size and scale (`layoutFrames`). */
   layout: FrameLayout;

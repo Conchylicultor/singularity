@@ -1,39 +1,21 @@
 import { useMemo } from "react";
-import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  agentNotesAuthorsResource,
-  type AgentNotesAuthor,
-} from "../shared/schemas";
-
-const NO_AUTHORS: readonly AgentNotesAuthor[] = [];
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { agentNotesAuthors, type AgentNotesAuthor } from "../shared/schemas";
 
 /**
- * The conversations that wrote into one agent-notes card, oldest-first.
+ * The conversations that wrote into one agent-notes card, oldest-first — the
+ * loader's `ORDER BY created_at`, which a value delivers as is (it is pushed
+ * whole, never merged row by row).
  *
- * Sorted here rather than trusted from the loader's `ORDER BY`: a keyed resource
- * merges single-row deltas into the client's set by key, so array order after a
- * live update is the merge's, not the query's.
- *
- * Empty while the resource is still hydrating, which the caller renders exactly
- * as "no recorded author": a card whose provenance has not loaded and a card a
- * human typed by hand both have nothing to show, and a spinner in place of a
- * glyph would be noise on every card of the page. The consequence is that a
- * freshly-opened page's agent-notes glyph becomes interactive a beat after it
- * paints — the same call `useBlockPromptTasks` makes for its chips.
+ * "Not loaded yet" stays its own state: the caller decides what a card whose
+ * provenance has not arrived shows, rather than reading it as "no recorded
+ * author".
  */
 export function useAgentNotesAuthors(
   blockId: string,
-): readonly AgentNotesAuthor[] {
-  const result = useResource(agentNotesAuthorsResource, { blockId });
-  return useMemo(() => {
-    if (result.pending) return NO_AUTHORS;
-    return [...result.data].sort(
-      (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
-    );
-  }, [result]);
+): ResourceResult<AgentNotesAuthor[]> {
+  return useLive(agentNotesAuthors, { blockId });
 }
 
 /**
@@ -41,30 +23,24 @@ export function useAgentNotesAuthors(
  * the block is one an agent brings into being (an agent-authored page) — or
  * `null` once the authorship has loaded and holds nobody.
  *
- * Unlike `useAgentNotesAuthors` this keeps "not loaded yet" as its own state.
- * A glyph can afford to become interactive a beat late; a chip that NAMES the
- * creator cannot stand in "nobody" for "not known yet", since that is a claim
- * about the block that then reverses itself.
+ * "Not loaded yet" is its own state: a chip that NAMES the creator cannot stand
+ * in "nobody" for "not known yet", since that is a claim about the block that
+ * then reverses itself.
  *
- * Earliest by `createdAt`, recomputed from the whole set rather than trusted to
- * arrive first: a keyed resource merges deltas by key, so array order after a
- * live update is the merge's (see above).
+ * The first record of the value, which arrives oldest-first (see above).
  */
 export function useAgentNotesCreator(
   blockId: string,
 ): ResourceResult<AgentNotesAuthor | null> {
-  const result = useResource(agentNotesAuthorsResource, { blockId });
+  const result = useAgentNotesAuthors(blockId);
   return useMemo(() => {
     if (result.pending) {
       return { pending: true, error: result.error, refetch: result.refetch };
     }
-    let first: AgentNotesAuthor | null = null;
-    for (const author of result.data) {
-      const earlier =
-        first === null ||
-        +new Date(author.createdAt) < +new Date(first.createdAt);
-      if (earlier) first = author;
-    }
-    return { pending: false, data: first, refetch: result.refetch };
+    return {
+      pending: false,
+      data: result.data[0] ?? null,
+      refetch: result.refetch,
+    };
   }, [result]);
 }

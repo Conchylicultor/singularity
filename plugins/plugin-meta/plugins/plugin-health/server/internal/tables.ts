@@ -11,7 +11,8 @@ import { pluginHealthReviewFields } from "../../core";
 
 // The table + the `PluginHealthReview` wire schema both derive from the single
 // `pluginHealthReviewFields` record (core), so a column/schema drift is
-// unrepresentable and the loader drops its projection.
+// unrepresentable and the reviews collection binds every row field to its
+// column by name.
 const pluginHealthReviews = defineEntity(
   "plugin_health_reviews",
   pluginHealthReviewFields,

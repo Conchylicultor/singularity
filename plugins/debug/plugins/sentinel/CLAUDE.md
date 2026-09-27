@@ -103,10 +103,13 @@ worker `error` event's message (also logged to the `sentinel` channel).
   file; its later writes land only while the file still names its pid — a hot
   restart's old backend writes `stopped` after the new one wrote `starting`.
 - **Every backend** (not just main) serves that file as the `sentinel.status`
-  push resource (`status-resource.ts`), re-read on each change via the
-  `infra/file-watcher` primitive. The read adds `ownerAlive` (is the recorded
+  value — `liveValue` `sentinelStatus` in `core/status.ts`, served by
+  `serveValue(…, { source: "external" })` as `sentinelStatusServed`
+  (`status-resource.ts`), and re-read on each change via the
+  `infra/file-watcher` primitive, whose events call
+  `sentinelStatusServed.notify()`. The read adds `ownerAlive` (is the recorded
   pid alive), so a main that died without writing `stopped` reads as not
-  running.
+  running. No placeholder: until the first read lands the row is `unknown`.
 
 The web half is the health report's **Machine watcher** row: `critical` when
 `down` or the owner process is gone, `attention` (pulsing) while starting,
@@ -129,7 +132,8 @@ proto-1789664064-nr56).
   runningBackends}`. The worker writes it, not main, so a wedged main cannot
   make the row lie; a dead worker makes the file stop changing. Schema, reader
   and writer live in the `status-file` leaf.
-- **Every backend serves it as `sentinel.vitals`** (push): `none` |
+- **Every backend serves it as `sentinel.vitals`** (the `sentinelVitals`
+  `liveValue`, served external and pushed as `sentinelVitalsServed`): `none` |
   `unreadable` | `recorded {vitals, current}`, where `current` means the status
   file names that pid as the live, running watcher. The one status watcher also
   watches the duress latch dir and routes each event by file name: `status.json`
@@ -283,6 +287,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
   - Uses:
     - `config_v2.ConfigV2`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
@@ -294,7 +299,6 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.useNow`
     - `reports.Reports`
@@ -335,6 +339,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `infra/host/duress/latch.refreshDuress`
     - `infra/host/duress/latch.setDuress`
     - `infra/paths.isHostSingleton`
+    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
     - `primitives/log-channels.readChannelEntries`
     - `primitives/log-channels.readChannelJson`
@@ -353,7 +358,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `fields/bool/config.boolField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ClusterSample`
     - `ClusterSection`
@@ -371,9 +376,9 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `SENTINEL_DOWN_KIND`
     - `sentinelConfig`
     - `SentinelDownPayloadSchema`
-    - `sentinelStatusResource`
+    - `sentinelStatus`
     - `SentinelStatusValueSchema`
-    - `sentinelVitalsResource`
+    - `sentinelVitals`
     - `SentinelVitalsSchema`
 - Cross-plugin:
   - Imported by: `debug/timeline`

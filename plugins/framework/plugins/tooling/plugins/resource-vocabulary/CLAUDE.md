@@ -14,8 +14,12 @@ module types, filtered by return type:
   resource descriptor (matched on `key` + `schema`, so a `liveValue`, which has no
   `initialData`, counts) — or a collection (`{ window, rows }` of descriptors,
   i.e. `liveCollection`).
-  Add a factory to either barrel and omit it here → `tsc` fails with the missing
-  key named. Delete a factory → the stale entry fails as an excess property.
+  Add a factory to any of those barrels and omit it here → `tsc` fails with the
+  missing key named. Delete or un-export a factory → the stale entry fails as an
+  excess property. Only an EXPORTED factory is a way to declare a resource: the
+  window / point factories `liveCollection` is built on are internal to
+  `network/live`, so they are not listed — a scanner sees their resources
+  through `liveCollection`'s `mints`.
 - `check/` — the same derivation for the register markers, over `server-core/core`,
   `query-resource/server` and `network/live/server` (a served resource — including
   `serveValue`'s `ServedValue` — or a served collection `{ window, rows }` —
@@ -57,7 +61,10 @@ lookup-only and mints `k:rows` alone (it cannot preload, so the eager-tier scan
 never reads the window entry for it).
 
 Deliberately NOT rewired: `keyed-resource-scope` and `no-db-backed-notify`. Each
-names one marker on purpose, to ban one shape.
+names its markers on purpose, to ban one shape: `keyed-resource-scope` a keyed
+`defineResource` not declared through a shared descriptor (or missing its scope
+policy), `no-db-backed-notify` a `db.` read inside an external
+loader (`defineExternalResource`, or `serveValue` with `source: "external"`).
 
 `isResourceVocabularyOwner(dir)` answers what both scanners need: inside
 `live-state` / `query-resource` / `network/live` a factory call is the wrapper *implementing* it

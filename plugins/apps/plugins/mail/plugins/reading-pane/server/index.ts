@@ -1,13 +1,8 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
-import { threadMessagesServerResource } from "./internal/resource";
-
-export { threadMessagesServerResource } from "./internal/resource";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { threadMessagesServed } from "./internal/resource";
 
 export default {
   description:
-    "Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.",
-  contributions: [Resource.Declare(threadMessagesServerResource)],
+    "Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.",
+  contributions: [...threadMessagesServed.declare],
 } satisfies ServerPluginDefinition;

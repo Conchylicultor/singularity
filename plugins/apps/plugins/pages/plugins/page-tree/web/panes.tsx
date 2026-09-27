@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useRef, type ReactElement, type ReactNode } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -9,7 +10,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import {
-  blocksResource,
+  pageBlocks,
   pagesResource,
   pageData,
   textOf,
@@ -403,7 +404,7 @@ function BlockBody({
  */
 function useBlockCrumb(pageId: string, blockId: string, type: string): string {
   const label = useBlockTypeLabel(type);
-  const blocks = useResource(blocksResource, { pageId });
+  const blocks = useLive(pageBlocks, { pageId });
   if (blocks.pending) return label;
   const block = blocks.data.find((b) => b.id === blockId);
   const text = block === undefined ? "" : textOf(block).trim();

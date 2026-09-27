@@ -11,19 +11,28 @@ with the playhead.
 - **Per-song, DB-persisted** in `sonata_songs_ext_rhythm` (an `entity-extensions`
   1:1 side-table; an absent row reads as disabled). One row holds `enabled` plus
   both hands' `RhythmPattern`s as jsonb. Both patterns are remembered even while
-  disabled, so re-enabling restores the groove rather than resetting. A push
-  live-state rollup (`rhythmLiveResource`) serves every row; the observer and the
-  panel each do the per-song lookup client-side. Clones the `transpose` plugin's
+  disabled, so re-enabling restores the groove rather than resetting. It is
+  served as a lookup-only collection, `rhythms = liveCollection("sonata-rhythm",
+  { row, id: "songId" })` + `serveCollection(rhythms, { from: songRhythm })`
+  (minting `sonata-rhythm:rows` alone; the jsonb patterns bind through the
+  extension's decoded columns); the observer and `useGroove` each read the open
+  song's row with `useLiveRow(rhythms, songId)`. Clones the `transpose` plugin's
   side-table shape verbatim.
-- **The shell owns the in-memory hands**, not this plugin — the score pipeline
-  (`reVoiceChords`) lives in the load-bearing shell, which can't import a feature
-  plugin (cycle). The shell exposes a per-surface scoped store
-  (`rhythm-store.ts`, mirroring `transpose-store`); this plugin's headless
-  `RhythmObserver` (a `Sonata.Effect`) reads the open song's persisted groove
-  (gated on the resource resolving) and writes it into that store. It is the sole
-  owner of "which song's hands are in force": it writes `null` when no song is
-  open, when the row is absent, or when `enabled` is false — so one song's groove
-  never leaks into the next. Dependency arrow stays feature → shell.
+- **The shell defines the setting, this plugin registers it.** The score
+  pipeline (`reVoiceChords`) lives in the load-bearing shell, which can't import
+  a feature plugin (cycle), so the shell defines `grooveSetting` (its
+  `score-settings.ts`): a per-song setting of the loaded song, pending until its
+  groove is read, and pending again whenever another song is loaded, so one
+  song's groove never leaks into the next. This plugin registers it
+  (`Sonata.SongSetting`, with the headless `RhythmObserver`, mounted afresh for
+  each loaded song), which writes that song's settled groove: `null` (block
+  chords) when the row is absent or `enabled` is false. Dependency arrow stays
+  feature → shell.
+- **Pending is a state, in the controls too.** `useGroove()` is `pending` until
+  both the setting and the song's row have settled; the body and the header chip
+  render a loading state meanwhile, never the default patterns standing in for
+  the song's own. Once settled, an absent row is a song never configured, whose
+  patterns really are the defaults.
 - **`hasVoicedChords` gate.** The panel is a `Sonata.Section` gated exactly like
   `voicing-controls`, via the contribution's `useAvailable: useHasVoicedChords`
   (the shell's shared score gate): the shell must be voicing the song's chords —
@@ -68,22 +77,25 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
+- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
-    - `Sonata.Effect` "rhythm-sync" → `RhythmObserver`
+    - `Sonata.SongSetting` "rhythm-sync" → `RhythmObserver`
     - `Sonata.Section` "Rhythm" → `RhythmControls`
   - Uses:
     - `apps/sonata/primitives/rhythm-circle.RhythmCircle`
     - `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`
     - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
+    - `apps/sonata/shell.grooveSetting`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useHasVoicedChords`
-    - `apps/sonata/shell.useRhythmGroove`
-    - `apps/sonata/shell.useSetRhythmGroove`
+    - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
+    - `apps/sonata/shell.useSongSetting`
+    - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLiveRow`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -95,22 +107,20 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
   - Exports (types): `RhythmGroove`
   - Exports (values): `useSaveRhythm`
 - Server:
-  - Contributes: `resource.declare` "sonata-rhythm"
+  - Contributes: `resource.declare` "sonata-rhythm:rows"
   - Uses:
     - `apps/sonata/library._songs`
-    - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_rhythm`)
-  - Exports (values):
-    - `rhythmLiveResource`
-    - `songRhythm`
-  - Resources: `sonata-rhythm` (push)
+  - Exports (values): `songRhythm`
+  - Resources: `sonata-rhythm:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/rhythm`
 
 <!-- AUTOGENERATED:END -->

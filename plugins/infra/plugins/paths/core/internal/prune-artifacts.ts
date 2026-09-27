@@ -22,12 +22,13 @@ import {
  * files sharing one build id: `build-profile-<id>.json`, `build-logs-<id>.json`,
  * and `build-<id>.log`.
  *
- * Aligned with the build-history UI window (buildHistoryResource keeps the latest
- * 50 runs) so every build still listed there keeps its profile/logs readable, while
- * older builds are pruned to bound disk. Kept as a plain literal — `paths` is a leaf
- * and must not import the `build` plugin — so this is a documented soft alignment,
- * not a hard coupling: drifting from 50 only makes the oldest few history rows show
- * an empty (never a broken) profile/log, since every reader fails soft on ENOENT.
+ * Aligned with the build-history UI window (the `build.history` collection's
+ * default window holds the latest 50 runs) so every build still listed there
+ * keeps its profile/logs readable, while older builds are pruned to bound disk.
+ * Kept as a plain literal — `paths` is a leaf and must not import the `build`
+ * plugin — so this is a documented soft alignment, not a hard coupling: drifting
+ * from 50 only makes the oldest few history rows show an empty (never a broken)
+ * profile/log, since every reader fails soft on ENOENT.
  */
 export const BUILD_ARTIFACTS_RETENTION = 50;
 

@@ -16,8 +16,8 @@ import {
   configV2ServerResource,
   configV2ConflictServerResource,
   configV2ScopesServerResource,
-  configV2ConflictMapServerResource,
-  configV2ModifiedCountsServerResource,
+  configConflictLocationsServed,
+  configModifiedCountsServed,
   configV2TiersServerResource,
 } from "./internal/resource";
 import {
@@ -67,8 +67,8 @@ export default {
     Resource.Declare(configV2ServerResource),
     Resource.Declare(configV2ConflictServerResource),
     Resource.Declare(configV2ScopesServerResource),
-    Resource.Declare(configV2ConflictMapServerResource),
-    Resource.Declare(configV2ModifiedCountsServerResource),
+    ...configConflictLocationsServed.declare,
+    ...configModifiedCountsServed.declare,
     Resource.Declare(configV2TiersServerResource),
   ],
   httpRoutes: {

@@ -608,6 +608,17 @@ The layout-harness fixture is the proof surface for the rich case, because every
 production surface reachable today is made of plain actions and none of them
 exercises the premise — *a draggable widget relocates and is still draggable*.
 
+### Driving a bar occupant from another plugin's e2e script
+
+What a bar relocates depends on the viewport, so a script clicking a toolbar
+control by role breaks at whichever width moves it into the closed `⋯` panel
+(still mounted, but `display: none` + `aria-hidden`: invisible to role locators,
+unclickable). Use `reachInBar(page, control, act)` from
+`@plugins/primitives/plugins/adaptive-bar/e2e` — it runs `act` in the row, or
+after opening the `⋯` holding the control (closed again after). Read a
+relocated control's text through a CSS locator; it still matches in the closed
+panel.
+
 ---
 
 ## `core/` — the pure decision math
@@ -855,6 +866,7 @@ rendered.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/sonata`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/pane`
     - `reorder/node-types/overflow`

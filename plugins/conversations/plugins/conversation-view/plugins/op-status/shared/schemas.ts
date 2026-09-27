@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { OP_KIND_IDS } from "@plugins/infra/plugins/worktree/core";
 
 export const WorktreeOpSchema = z.object({
@@ -22,9 +22,14 @@ export type WorktreeOp = z.infer<typeof WorktreeOpSchema>;
 export const WorktreeOpsPayloadSchema = z.record(z.string(), WorktreeOpSchema);
 export type WorktreeOpsPayload = z.infer<typeof WorktreeOpsPayloadSchema>;
 
-export const worktreeOpsResource = resourceDescriptor<WorktreeOpsPayload>(
-  "worktree-ops",
-  WorktreeOpsPayloadSchema,
-  {},
-  { preload: "boot" },
-);
+// Every worktree's in-flight op, as ONE value: its truth is the op-marker
+// files on disk, not Postgres, so the server serves it from the external arm
+// (the marker watcher calls `notify()`). Bounded by the live worktrees, so no
+// `unbounded` reason. `preload: "boot"`: the boot snapshot hydrates it, so the
+// banner and the sidebar chips paint settled on the first frame. No
+// placeholder — before a value lands the read is `pending`, never an empty map
+// claiming "nothing is running".
+export const worktreeOps = liveValue("worktree-ops", {
+  schema: WorktreeOpsPayloadSchema,
+  preload: "boot",
+});

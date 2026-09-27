@@ -241,6 +241,8 @@ code, that is the bug this section exists to prevent.
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.LiveListResult`
+    - `network/live.useLive`
     - `plugin-meta/composition.useManifestActions`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
@@ -252,8 +254,6 @@ code, that is the bug this section exists to prevent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`

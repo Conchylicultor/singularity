@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -14,17 +14,24 @@ export const conversationNotesShape = defineExtensionShape({
 export const ConversationNoteSchema = conversationNotesShape.schema;
 export type ConversationNote = z.infer<typeof ConversationNoteSchema>;
 
-// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
-// (`usePointResource(resource, convId)` → one row-or-null), so a note read costs
-// O(1) instead of an O(n) lookup over the whole collection. Rows key on
-// `conversationId` — the extension's key, whose column is the side-table's
-// `parent_id` PK (which IS the point identity). NOT preloaded: point
-// resources hydrate post-mount (the recorded decision); the notes editor keeps
-// serverNote="" during that one round-trip (the pending arm) so useEditableField
-// always has a valid initial value.
-export const conversationNotesResource =
-  pointQueryResourceDescriptor<ConversationNote>(
-    "conversation-notes",
-    ConversationNoteSchema,
-    "conversationId",
-  );
+// The note of ONE conversation, read by its `conversationId`. The table holds 0
+// or 1 row per conversation — its primary key IS the conversation — so it is a
+// lookup-only collection: no default window (nothing lists every
+// conversation's note), minting `conversation-notes:rows` alone. A reader
+// takes its row with `useLiveRow(conversationNoteRows, conversationId)`, and
+// `found: false` is "this conversation has no note". (The server table handle
+// is `conversationNotes`, hence the `Rows` name.)
+//
+// Bounded by construction: only a mounted conversation subscribes, a load is
+// one primary-key seek, and the `:rows` point routing schedules a note
+// upsert / delete for the one conversation whose row it named. The row id is
+// the extension's key, whose column is the side-table's `parent_id` PK.
+//
+// NOT preloaded (a lookup-only collection cannot be): the notes editor keeps
+// serverNote="" during that one round-trip (the pending arm) so
+// useEditableField always has a valid initial value, and its consumers gate on
+// `pending`.
+export const conversationNoteRows = liveCollection("conversation-notes", {
+  row: ConversationNoteSchema,
+  id: "conversationId",
+});

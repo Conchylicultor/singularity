@@ -98,25 +98,26 @@
 
 The queue's live state is one bounded resource, not a push struct:
 
-- **`queue-ranks`** — a **bounded POINT** resource (`windowQueryResource(…, {
-  from: conversationsQueue, point: { by: conversationId } })` — the extension
-  handle is the source, so there is no `select` map to keep in sync). The sidebar subscribes by the LIVE conversation
-  id set it already tracks via `conversations-active`, so a read costs O(live)
-  (~26 rows), never O(2,726). `seedRankJob` on `conversationCreated` therefore
-  ships a single-row point delta to the tuples containing that id (structurally
-  none until it enters the live set), never a full re-select + persist. It
-  declares **`ackChannel: true`**: a reorder write that lands outside the
-  subscribed tuple or produces a net-zero diff still emits a standalone `ack`
-  frame, so the optimistic overlay confirms via **exact-ack** — the reorder
-  endpoint's returned `{ watermark }` is matched against the frame's `ackTx`
-  (scoped/point deltas carry no snapshot watermark, so this is what replaces the
-  watermark compare). Not preloaded (point resources hydrate post-mount).
+- **`queue-ranks`** (`queueRanks`) — a `liveCollection` served from the
+  extension handle (`serveCollection(queueRanks, { from: conversationsQueue })`,
+  so there is no `select` map to keep in sync). The sidebar reads its `:rows`
+  point sibling by the LIVE conversation id set it already tracks via
+  `conversations-active` (`useOptimisticResource(queueRanks, { ids }, …)`), so a
+  read costs O(live) (~26 rows), never O(2,726). `seedRankJob` on
+  `conversationCreated` therefore ships a single-row point delta to the tuples
+  containing that id (structurally none until it enters the live set), never a
+  full re-select + persist. A reorder write that lands outside the subscribed
+  tuple or nets to zero still confirms via **exact-ack**: the optimistic hook
+  asks for standalone `ack` frames on its tuple (nothing is declared), and the
+  reorder endpoint's returned `{ watermark }` is matched against the frame's
+  `ackTx` (point deltas carry no snapshot watermark, so this is what replaces
+  the watermark compare). Not preloaded (an id set has no default tuple).
   Each row carries `{ conversationId, rank, pinned }`. The pin rides the rank row
   rather than a resource of its own because it is plain user-set state: nothing
   recomputes it as conversations change status. `queue-ranks` deliberately has NO
   `dependsOn` conversations (point routing gives that structurally).
 
-The sidebar (`data-view/plugins/queue/web/use-queue-rows.ts`) wraps the rows in
+The sidebar (`data-view/plugins/queue/web/components/use-queue-rows.ts`) wraps the rows in
 the client-side `QueueData { ranks }` shape so the shared `classifyQueue` stays a
 pure function of plain data, and retains the last non-pending rows across
 live-set re-subscriptions so a re-sub never flashes a skeleton. `applyReorder`

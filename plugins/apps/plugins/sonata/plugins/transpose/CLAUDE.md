@@ -13,20 +13,29 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
   piano-roll geometry, keyboard, overlays, key readout) transposes for free — they
   need zero awareness of transpose.
 - **State is DB-persisted per song** in `sonata_songs_ext_transpose` (an
-  `entity-extensions` 1:1 side-table; an absent row reads as `0`). A push
-  live-state rollup (`transposeLiveResource`) serves all rows; the observer does
-  the per-song lookup client-side. A preferred key for a song is a stable property
-  of how the user sings it — so it survives reload and differs per song (unlike
-  the ephemeral `tempoScale`).
-- **The shell owns the in-memory offset**, not this plugin — the score pipeline
-  lives in the load-bearing shell, which can't import a feature plugin (cycle).
-  The shell exposes a per-surface scoped store (`transpose-store.ts`, mirroring
-  `key-mode-store`); this plugin's headless `TransposeObserver` (a `Sonata.Effect`)
-  reads the open song's persisted offset (gated on the resource resolving) and
-  writes it into that store. Dependency arrow stays feature → shell.
+  `entity-extensions` 1:1 side-table; an absent row reads as `0`). It is served
+  as a lookup-only collection, `transposes = liveCollection("sonata-transpose",
+  { row, id: "songId" })` + `serveCollection(transposes, { from: songTranspose })`
+  — minting `sonata-transpose:rows` alone — and the observer reads the open song's
+  row with `useLiveRow(transposes, songId)` (`found: false` is the absent row, so
+  `0`). A preferred key for a song is a stable property of how the user sings it —
+  so it survives reload and differs per song (unlike the ephemeral `tempoScale`).
+- **The shell defines the setting, this plugin registers it.** The score
+  pipeline lives in the load-bearing shell, which can't import a feature plugin
+  (cycle), so the shell defines `transposeSetting` (its `score-settings.ts`; see
+  the shell CLAUDE.md, "Per-song settings"): a per-song setting of the loaded
+  song, pending until its offset is read, and pending again whenever another
+  song is loaded. This plugin registers it — `Sonata.SongSetting({ setting:
+  transposeSetting, component: TransposeObserver })` — so the shell waits for it;
+  the headless `TransposeObserver`, mounted afresh for each loaded song, writes
+  that song's settled offset (`useWriteSongSetting`) — never a stand-in `0`
+  while the row loads, and never for a song that is no longer loaded (dropped).
+  Until every registered setting has settled the shell renders and plays nothing
+  of the song. Dependency arrow stays feature → shell.
 - **Header control, not a side panel.** `TransposeControl` (a
-  `sonataPlayerPane.Actions` contribution) is a compact `[ ⇅ − ±N st + ]` stepper next to the speed wheel. On
-  step it sets the shell store optimistically (instant re-render) and calls
+  `sonataPlayerPane.Actions` contribution) is a compact `[ ⇅ − ±N st + ]` stepper next to the speed wheel —
+  a loading placeholder while the offset is pending (a step needs a known base).
+  On step it sets the shell store optimistically (instant re-render) and calls
   `saveTranspose` to persist; the observer re-affirms on the next push. Clicking
   the readout resets to 0 (the quick "back to original key" affordance).
 
@@ -34,37 +43,39 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
 
 ## Plugin reference
 
-- Description: Per-song global transpose offset: persists a semitone shift, syncs it into the shell's score pipeline via a headless Sonata.Effect observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves the reactive rollup.
+- Description: Per-song global transpose offset: persists a semitone shift, registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
 - Web:
   - Contributes:
-    - `Sonata.Effect` "transpose-sync" → `TransposeObserver`
+    - `Sonata.SongSetting` "transpose-sync" → `TransposeObserver`
     - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
   - Uses:
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/toolbar-control.ToolbarControl`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSetTransposeSemitones`
+    - `apps/sonata/shell.transposeSetting`
+    - `apps/sonata/shell.useMountedSongId`
     - `apps/sonata/shell.useSonata`
-    - `apps/sonata/shell.useTransposeSemitones`
+    - `apps/sonata/shell.useSongSetting`
+    - `apps/sonata/shell.useWriteSongSetting`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLiveRow`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
   - Exports (values): `saveTranspose`
 - Server:
-  - Contributes: `resource.declare` "sonata-transpose"
+  - Contributes: `resource.declare` "sonata-transpose:rows"
   - Uses:
     - `apps/sonata/library._songs`
-    - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/transpose/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_transpose`)
-  - Exports (values):
-    - `songTranspose`
-    - `transposeLiveResource`
-  - Resources: `sonata-transpose` (push)
+  - Exports (values): `songTranspose`
+  - Resources: `sonata-transpose:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/transpose`
 
 <!-- AUTOGENERATED:END -->

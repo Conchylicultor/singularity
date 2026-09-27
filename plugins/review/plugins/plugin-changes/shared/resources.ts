@@ -1,7 +1,12 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { PluginChangesSchema, type PluginChangesResponse } from "../core";
+import { liveValue } from "@plugins/network/plugins/live/core";
+import { PluginChangesSchema } from "../core";
 
-export const pluginChangesResource = resourceDescriptor<
-  PluginChangesResponse,
-  { conversationId: string }
->("review.plugin-changes", PluginChangesSchema, { plugins: [] });
+// The plugins a conversation's worktree added or modified relative to `main`,
+// each with its files and raw facet data (the client diffs the facets). One
+// payload per conversation, recomputed whole. Not loaded yet is `pending` — a
+// value has no placeholder, so an unloaded review never reads as "no plugin
+// changes".
+export const pluginChanges = liveValue("review.plugin-changes", {
+  schema: PluginChangesSchema,
+  params: ["conversationId"],
+});

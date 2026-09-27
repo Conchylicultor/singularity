@@ -1,7 +1,4 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import {
   ExcludeFromBackup,
@@ -25,7 +22,7 @@ import {
   handleNextChords,
 } from "./internal/handlers";
 import { songIndexLoadJob } from "./internal/load-job";
-import { chordIndexStatusServerResource } from "./internal/status-resource";
+import { chordIndexStatusServed } from "./internal/status-resource";
 import {
   _chordIndexState,
   _chordLoopWindows,
@@ -52,7 +49,7 @@ export default {
   register: [songIndexLoadJob],
   contributions: [
     ConfigV2.Register({ descriptor: songIndexConfig }),
-    Resource.Declare(chordIndexStatusServerResource),
+    ...chordIndexStatusServed.declare,
     BackupSource({
       id: "chord-song-index",
       name: "Chord song index snapshot",

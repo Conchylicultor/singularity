@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   createPrototype,
@@ -19,16 +18,13 @@ import {
 import {
   handlePrototypeVersionFile,
   handleRestoreVersion,
-  prototypeHistoryLiveResource,
+  prototypeHistoryServed,
 } from "./internal/history";
 import { handleSetPicks, prototypePicksServed } from "./internal/picks";
+import { handleSetStatus, prototypeStatusesServed } from "./internal/status";
 import {
-  handleSetStatus,
-  prototypeStatusesLiveResource,
-} from "./internal/status";
-import {
-  prototypesResource,
-  prototypesVersionResource,
+  prototypesListServed,
+  prototypesVersionServed,
 } from "./internal/resources";
 import {
   startPrototypesWatcher,
@@ -66,11 +62,11 @@ export default {
     [setPrototypeStatus.route]: handleSetStatus,
   },
   contributions: [
-    Resource.Declare(prototypesResource),
-    Resource.Declare(prototypesVersionResource),
-    Resource.Declare(prototypeHistoryLiveResource),
+    ...prototypesListServed.declare,
+    ...prototypesVersionServed.declare,
+    ...prototypeHistoryServed.declare,
     ...prototypePicksServed.declare,
-    Resource.Declare(prototypeStatusesLiveResource),
+    ...prototypeStatusesServed.declare,
   ],
   onReady: async () => {
     await startPrototypesWatcher();

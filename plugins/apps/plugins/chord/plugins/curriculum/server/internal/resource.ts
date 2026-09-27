@@ -1,18 +1,12 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
-import { chordCurriculumResource } from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { chordCurriculum } from "../../core";
 import { loadSelection } from "./state";
 
-// What the learner has chosen, read again on every change. Invalidate: the
-// change feed carries each committed `chord_curriculum` write here, every
-// observing tab gets a version stamp and reads the value back. `mode` is
-// written out: the keyed-resource-scope check reads a call without it as the
-// keyed form.
-export const chordCurriculumServerResource = defineResource(
-  chordCurriculumResource,
-  {
-    mode: "invalidate",
-    identityTable: "chord_curriculum",
-    loader: () => loadSelection(db),
-  },
-);
+// What the learner has chosen, pushed again on every change: the change feed
+// carries each committed `chord_curriculum` write here (the loader's captured
+// read-set), and the new selection goes to every observing tab.
+export const chordCurriculumServed = serveValue(chordCurriculum, {
+  source: "db",
+  loader: () => loadSelection(db),
+});

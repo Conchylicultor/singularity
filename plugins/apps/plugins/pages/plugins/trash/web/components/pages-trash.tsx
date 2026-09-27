@@ -21,10 +21,17 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useLive,
+  type LiveListResult,
+} from "@plugins/network/plugins/live/web";
+import {
+  InfiniteScrollFooter,
+  useInfiniteScroll,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  trashEntriesResource,
+  trashEntries,
   restoreTrash,
   purgeTrash,
   type TrashEntry,
@@ -37,18 +44,24 @@ import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
  * Sidebar "Trash" trigger: a Row that opens a dialog listing the pages that have
  * been soft-deleted. Each entry can be restored or permanently deleted; the
  * permanent delete is gated behind a confirm dialog (the FK cascade fires at
- * purge, so it is irreversible). The list updates live via the push
- * `trash-entries` resource — restore/purge just mutate and the row disappears.
+ * purge, so it is irreversible). The list updates live via the `trashEntries`
+ * collection filtered to the pages source — restore/purge just mutate and the
+ * row disappears. It shows the newest-deleted window and grows it when the
+ * dialog is scrolled to its end.
  */
 export function PagesTrash() {
   const [open, setOpen] = useState(false);
   const [confirmEntry, setConfirmEntry] = useState<TrashEntry | null>(null);
-  const result = useResource(trashEntriesResource, { sourceId: PAGES_TRASH_SOURCE });
+  const result = useLive(trashEntries, {
+    where: { sourceId: PAGES_TRASH_SOURCE },
+  });
   const restore = useEndpointMutation(restoreTrash);
   const purge = useEndpointMutation(purgeTrash);
 
   const onRestore = (entry: TrashEntry) => {
-    restore.mutate({ params: { sourceId: PAGES_TRASH_SOURCE, entryId: entry.id } });
+    restore.mutate({
+      params: { sourceId: PAGES_TRASH_SOURCE, entryId: entry.id },
+    });
   };
 
   const onConfirmPurge = () => {
@@ -74,44 +87,23 @@ export function PagesTrash() {
             Deleted pages are kept for 30 days before being permanently removed.
           </DialogDescription>
           {result.pending ? (
-            <Loading />
+            result.error ? (
+              <Placeholder tone="error">
+                Couldn&apos;t load the trash: {result.error.message}
+              </Placeholder>
+            ) : (
+              <Loading />
+            )
           ) : result.data.length === 0 ? (
             <Placeholder>Trash is empty</Placeholder>
           ) : (
-            <Scroll axis="y" className="max-h-96">
-              <Stack gap="2xs">
-                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- modal trash dialog; revisit if Trash becomes a pane */}
-                {result.data.map((entry) => (
-                  <Row
-                    key={entry.id}
-                    icon={<MdDescription />}
-                    hover="muted"
-                    actionsAlwaysVisible
-                    actions={
-                      <Inline gap="xs">
-                        <Text variant="caption" tone="muted">
-                          <RelativeTime date={entry.deletedAt} />
-                        </Text>
-                        <IconButton
-                          icon={MdRestoreFromTrash}
-                          label="Restore"
-                          disabled={restore.isPending}
-                          onClick={() => onRestore(entry)}
-                        />
-                        <IconButton
-                          icon={MdDeleteForever}
-                          label="Delete permanently"
-                          disabled={purge.isPending}
-                          onClick={() => setConfirmEntry(entry)}
-                        />
-                      </Inline>
-                    }
-                  >
-                    <Text>{entry.label || "Untitled"}</Text>
-                  </Row>
-                ))}
-              </Stack>
-            </Scroll>
+            <TrashList
+              list={result}
+              restoring={restore.isPending}
+              purging={purge.isPending}
+              onRestore={onRestore}
+              onPurge={setConfirmEntry}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -152,5 +144,69 @@ export function PagesTrash() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/**
+ * The loaded window of the trash, growing by one page when its end scrolls into
+ * view. Its own component so the grow observer mounts with the dialog's
+ * content, and so sees the sentinel it watches.
+ */
+function TrashList({
+  list,
+  restoring,
+  purging,
+  onRestore,
+  onPurge,
+}: {
+  list: Extract<LiveListResult<TrashEntry>, { pending: false }>;
+  restoring: boolean;
+  purging: boolean;
+  onRestore: (entry: TrashEntry) => void;
+  onPurge: (entry: TrashEntry) => void;
+}) {
+  const scroll = useInfiniteScroll({
+    hasNextPage: list.canGrow,
+    isFetchingNextPage: list.growing,
+    isFetchNextPageError: false,
+    fetchNextPage: list.loadMore,
+    rootMargin: "200px",
+  });
+  return (
+    <Scroll axis="y" className="max-h-96">
+      <Stack gap="2xs">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- modal trash dialog; revisit if Trash becomes a pane */}
+        {list.data.map((entry) => (
+          <Row
+            key={entry.id}
+            icon={<MdDescription />}
+            hover="muted"
+            actionsAlwaysVisible
+            actions={
+              <Inline gap="xs">
+                <Text variant="caption" tone="muted">
+                  <RelativeTime date={entry.deletedAt} />
+                </Text>
+                <IconButton
+                  icon={MdRestoreFromTrash}
+                  label="Restore"
+                  disabled={restoring}
+                  onClick={() => onRestore(entry)}
+                />
+                <IconButton
+                  icon={MdDeleteForever}
+                  label="Delete permanently"
+                  disabled={purging}
+                  onClick={() => onPurge(entry)}
+                />
+              </Inline>
+            }
+          >
+            <Text>{entry.label || "Untitled"}</Text>
+          </Row>
+        ))}
+      </Stack>
+      <InfiniteScrollFooter handle={scroll} />
+    </Scroll>
   );
 }

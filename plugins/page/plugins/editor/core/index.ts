@@ -25,7 +25,7 @@ export type {
   BlockData,
 } from "./schemas";
 
-export { pagesResource, blocksResource } from "./resources";
+export { pagesResource, pageBlocks } from "./resources";
 
 export {
   listPages,

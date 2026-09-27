@@ -1,14 +1,25 @@
-import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { trackViewResource } from "../../shared/resources";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { trackViews } from "../../shared/resources";
 import { trackView } from "./tables";
 
-/** Push-mode rollup of every persisted track-view override. Selects only the
- * wire columns, so the server-only timestamps are never fetched. */
-export const trackViewLiveResource = defineResource({
-  key: trackViewResource.key,
-  mode: "push",
-  schema: z.array(trackView.schema),
-  loader: async () => db.select(trackView.wireColumns).from(trackView.table),
+/**
+ * Serves `trackViews` per `{ songId }`: that song's rows, wire columns only (the
+ * server-only timestamps are never fetched). The loader reads
+ * `sonata_track_view`, so the change feed recomputes every subscribed song on a
+ * write — the handlers notify nothing. `songId` leads the primary key, so the
+ * read is an index range.
+ */
+export const trackViewsServed = serveValue(trackViews, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one song's per-track view overrides — at most one row per track of that song",
+  },
+  loader: ({ songId }) =>
+    db
+      .select(trackView.wireColumns)
+      .from(trackView.table)
+      .where(eq(trackView.table.songId, songId)),
 });

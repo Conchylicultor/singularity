@@ -2,10 +2,13 @@ import { MdAdd, MdRemove, MdSwapVert } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  useSetTransposeSemitones,
+  transposeSetting,
+  useSongSetting,
   useSonata,
-  useTransposeSemitones,
+  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { ToolbarControl } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control/web";
@@ -25,38 +28,65 @@ function formatOffset(semitones: number): string {
  * The transpose control pinned into the Sonata player pane's header
  * (`sonataPlayerPane.Actions`),
  * beside the speed wheel: a compact `[ ⇅ − ±N st + ]` semitone stepper. Like
- * `transport-bar`'s controls it owns no score state — it reads the per-surface
- * transpose store + the open song from `useSonata`, writes the store optimistically
- * for instant re-render, and persists via `saveTranspose`. The whole control dims
+ * `transport-bar`'s controls it owns no score state — it reads the loaded song's
+ * `transposeSetting` + the open song from `useSonata`, writes the setting
+ * optimistically for instant re-render, and persists via `saveTranspose`. The whole control dims
  * when there is no song (no score span), mirroring `PlaybackControls`' `hasScore`
  * gate. The live transposed key is already shown by the key chip/readout, so this
  * stays focused on the semitone delta.
+ *
+ * Until the open song's offset is known the stepper is a loading placeholder:
+ * a step needs a known base, and a `0` shown meanwhile would be a claim about
+ * the song.
  */
 export function TransposeControl() {
-  const semitones = useTransposeSemitones();
-  const setStore = useSetTransposeSemitones();
-  const { currentSongId, score } = useSonata();
-
+  const transpose = useSongSetting(transposeSetting);
+  const { score } = useSonata();
   const hasScore = scoreEndBeat(score) > 0;
-
-  // Write the per-surface store optimistically (instant re-render of every lens +
-  // audio), then persist for this song. Clamp to the octave range.
-  const setTranspose = (next: number) => {
-    const clamped = Math.max(MIN_SEMITONES, Math.min(MAX_SEMITONES, next));
-    setStore(clamped);
-    if (currentSongId) saveTranspose(currentSongId, clamped);
-  };
 
   return (
     <ToolbarControl
       icon={<MdSwapVert className="size-3.5" />}
       tooltip="Transpose — shift the whole song by semitones"
-      disabled={!hasScore}
+      disabled={transpose.pending || !hasScore}
     >
+      {transpose.pending ? (
+        <Inset x="sm">
+          <Loading variant="block" className="h-4 w-20" />
+        </Inset>
+      ) : (
+        <TransposeStepper semitones={transpose.value} disabled={!hasScore} />
+      )}
+    </ToolbarControl>
+  );
+}
+
+/** The stepper's three segments over a KNOWN offset. */
+function TransposeStepper({
+  semitones,
+  disabled,
+}: {
+  semitones: number;
+  disabled: boolean;
+}) {
+  const setStore = useWriteSongSetting(transposeSetting);
+  const { currentSongId } = useSonata();
+
+  // Write the loaded song's setting optimistically (instant re-render of every
+  // lens + audio), then persist for this song. Clamp to the octave range.
+  const setTranspose = (next: number) => {
+    if (currentSongId === null) return;
+    const clamped = Math.max(MIN_SEMITONES, Math.min(MAX_SEMITONES, next));
+    setStore(currentSongId, clamped);
+    saveTranspose(currentSongId, clamped);
+  };
+
+  return (
+    <>
       <IconButton
         icon={MdRemove}
         label="Transpose down a semitone"
-        disabled={!hasScore || semitones <= MIN_SEMITONES}
+        disabled={disabled || semitones <= MIN_SEMITONES}
         onClick={() => setTranspose(semitones - 1)}
       />
       {/* Center readout; clicking resets to the original key (interactive only
@@ -86,9 +116,9 @@ export function TransposeControl() {
       <IconButton
         icon={MdAdd}
         label="Transpose up a semitone"
-        disabled={!hasScore || semitones >= MAX_SEMITONES}
+        disabled={disabled || semitones >= MAX_SEMITONES}
         onClick={() => setTranspose(semitones + 1)}
       />
-    </ToolbarControl>
+    </>
   );
 }

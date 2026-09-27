@@ -8,6 +8,7 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Keyboard,
   useSonataKeySkin,
@@ -63,13 +64,14 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
  *
  * Always available (a key can be established without chords), so the section has
  * no `useAvailable` gate; the keyless case stays an in-body "No key detected."
+ * (a loading state while the song's settings load — `scorePending`).
  * The per-song "Auto-detect key" toggle lives in the contribution's `actions`
  * (see `KeyReadoutActions`) so it stays reachable while the card is collapsed.
  */
 export function KeyReadout() {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
-  const { score } = useSonata();
+  const { score, scorePending } = useSonata();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
@@ -136,6 +138,10 @@ export function KeyReadout() {
 
     return { names: ordered.map((d) => d.name), lit, relative };
   }, [current, plane]);
+
+  // The song's settings are still loading (the score is withheld until they
+  // settle): not "No key detected".
+  if (scorePending) return <Loading variant="rows" count={2} />;
 
   return (
     <Stack gap="sm">

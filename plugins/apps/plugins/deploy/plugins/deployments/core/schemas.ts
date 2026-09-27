@@ -39,7 +39,13 @@ export const DeploymentSchema = z.object({
   hostnames: z.array(z.string()),
   /** The loopback port the gateway binds; Caddy proxies to it. */
   loopbackPort: z.number().int(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  /**
+   * Dates, coerced: the `deployments` live collection projects the timestamp
+   * columns as they are (a `Date` on the server), and the wire's ISO string —
+   * from the collection or an endpoint — is rebuilt into one on the client and
+   * in the CLI.
+   */
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 export type Deployment = z.infer<typeof DeploymentSchema>;

@@ -1,9 +1,7 @@
-import {
-  useNotificationsChannelStatuses,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import { queuePulseResource, type QueuePulse } from "../../core";
+import { queuePulse, type QueuePulse } from "../../core";
 
 /**
  * What the Job queue row can say about the queue right now. A union rather
@@ -31,7 +29,7 @@ export type QueuePulseRead =
  */
 export function useQueuePulse(): QueuePulseRead {
   const socket = useNotificationsChannelStatuses().worktree;
-  const result = useResource(queuePulseResource);
+  const result = useLive(queuePulse);
   if (socket === "closed" || socket === "reconnecting") {
     return { kind: "disconnected" };
   }

@@ -1,15 +1,13 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { listClaudeCliCallsFor } from "../core";
-import { claudeCliCallsResource } from "./internal/resources";
+import { claudeCliCallsServed } from "./internal/resources";
 import { handleListCallsFor } from "./internal/list-calls";
 import { _claudeCliCalls } from "./internal/tables";
 
 export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
 export type { RunClaudePrintInput } from "./internal/run-claude-print";
 export { _claudeCliCalls } from "./internal/tables";
-export { claudeCliCallsResource } from "./internal/resources";
 export { listCallsFor } from "./internal/list-calls";
 
 export default {
@@ -19,7 +17,7 @@ export default {
     [listClaudeCliCallsFor.route]: handleListCallsFor,
   },
   contributions: [
-    Resource.Declare(claudeCliCallsResource),
+    ...claudeCliCallsServed.declare,
     // Calls are looked up by `correlationId`, minted per-record in the consuming
     // domain table. Inherited rows can therefore answer a fork-local correlation
     // query with one of main's calls. The table is also trimmed to the global

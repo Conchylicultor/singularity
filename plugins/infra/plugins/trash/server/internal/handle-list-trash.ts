@@ -5,7 +5,8 @@ import { listTrash } from "../../core/endpoints";
 import { _trashEntries } from "./tables";
 
 // All trash entries for one source, newest-deleted first — the HTTP twin of the
-// `trash-entries` live resource (same query).
+// `trash-entries` collection's `sourceId`-filtered window, unwindowed (the
+// 30-day purge bounds it).
 export const handleListTrash = implement(listTrash, async ({ params }) => {
   // No cast on the way out: every column decodes to its own declared type
   // (`meta` through `parsedJson`), so the row IS a `TrashEntry`.

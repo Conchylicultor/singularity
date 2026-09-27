@@ -17,9 +17,8 @@ export function PrepromptChip() {
   const result = useConversationPreprompt(convId);
   const [open, setOpen] = useState(false);
   // Nothing while loading, nothing when no preprompt was recorded.
-  if (result.pending) return null;
-  const record = result.data;
-  if (!record) return null;
+  if (result.pending || !result.found) return null;
+  const record = result.row;
 
   return (
     <InlinePopover

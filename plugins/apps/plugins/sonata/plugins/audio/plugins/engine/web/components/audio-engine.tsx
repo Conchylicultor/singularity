@@ -3,7 +3,9 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useCursorApi,
   useSonata,
+  type SongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   SonataAudio,
   type InstrumentVoices,
@@ -42,6 +44,27 @@ interface TrackChannel {
 
 /** Fader position of a track with no persisted level: the track as recorded. */
 const UNITY_GAIN = 1;
+
+/** The audible notes while the track view is not known: none. */
+const NO_NOTES: Score["notes"] = [];
+
+/**
+ * A track's fader level. A strip exists only for a track the SETTLED track view
+ * routes (`inUseKey` is empty while it is pending, so the reconcile effect has
+ * torn every strip down), so a pending read here is a broken invariant, never a
+ * level to stand in with.
+ */
+function levelOf(
+  volumes: SongSetting<Map<string, number>>,
+  trackId: string,
+): number {
+  if (volumes.pending) {
+    throw new Error(
+      "audio engine: a channel strip was leveled before the track view settled",
+    );
+  }
+  return volumes.value.get(trackId) ?? UNITY_GAIN;
+}
 
 /**
  * Time constant (seconds) of the fader glide. A level change is applied as a
@@ -160,12 +183,21 @@ export function AudioEngine() {
   // field changes — a fader move included — so keying on the Set's identity would
   // hand the rebuild effect a fresh note array every time someone moved a level,
   // cutting every ringing note. Same hazard as tempo, same remedy.
+  //
+  // Until the open song's track view settles NOTHING is audible (`null` key):
+  // a track the user muted must never sound for the round trip it takes to
+  // learn so. The shell withholds the score meanwhile too; this is the engine's
+  // own handling of the pending arm.
   const mutedIds = useMutedTrackIds();
   const mutedKey = useMemo(
-    () => [...mutedIds].map(encodeURIComponent).sort().join(ENTRY_SEP),
+    () =>
+      mutedIds.pending
+        ? null
+        : [...mutedIds.value].map(encodeURIComponent).sort().join(ENTRY_SEP),
     [mutedIds],
   );
   const audibleNotes = useMemo(() => {
+    if (mutedKey === null) return NO_NOTES;
     if (mutedKey === "") return score.notes;
     const muted = new Set(mutedKey.split(ENTRY_SEP).map(decodeURIComponent));
     return score.notes.filter((n) => !muted.has(n.track));
@@ -195,12 +227,15 @@ export function AudioEngine() {
   // reconcile effect reads the pairs back out of it — so no churning Map has to
   // sit in any dependency list.
   const inUseKey = useMemo(() => {
+    // No strip while the track view is pending (nothing is audible either).
+    if (trackInstrumentMap.pending) return channelKey([]);
+    const instrumentOf = trackInstrumentMap.value;
     const pairs: [string, string][] = [];
     const seen = new Set<string>();
     for (const n of audibleNotes) {
       if (seen.has(n.track)) continue;
       seen.add(n.track);
-      const id = trackInstrumentMap.get(n.track);
+      const id = instrumentOf.get(n.track);
       if (id) pairs.push([n.track, id]);
     }
     return channelKey(pairs);
@@ -217,13 +252,18 @@ export function AudioEngine() {
   const trackVolumes = useTrackVolumeMap();
   const trackVolumesRef = useLatestRef(trackVolumes);
   // Content fingerprint of the levels: a fresh Map identity every render would
-  // re-fire the fader effect on every render.
+  // re-fire the fader effect on every render. `null` while pending.
   const volumeKey = useMemo(
     () =>
-      [...trackVolumes]
-        .map(([trackId, v]) => `${encodeURIComponent(trackId)}${FIELD_SEP}${v}`)
-        .sort()
-        .join(ENTRY_SEP),
+      trackVolumes.pending
+        ? null
+        : [...trackVolumes.value]
+            .map(
+              ([trackId, v]) =>
+                `${encodeURIComponent(trackId)}${FIELD_SEP}${v}`,
+            )
+            .sort()
+            .join(ENTRY_SEP),
     [trackVolumes],
   );
 
@@ -363,7 +403,7 @@ export function AudioEngine() {
         // A plain write, not a ramp: nothing has ever played through this node,
         // so there is no discontinuity for a jump to make audible. Read through
         // the ref precisely so the levels do NOT become a dep of this effect.
-        gain.gain.value = volumes.get(trackId) ?? UNITY_GAIN;
+        gain.gain.value = levelOf(volumes, trackId);
         gain.connect(master);
         const voices = contribution.createVoices(ctx, gain);
         channels.set(trackId, { gain, voices, instrumentId });
@@ -409,7 +449,7 @@ export function AudioEngine() {
       // A short glide rather than a step: the fader can move while the track is
       // sounding, and a discontinuous jump there is heard as a click.
       channel.gain.gain.setTargetAtTime(
-        volumes.get(trackId) ?? UNITY_GAIN,
+        levelOf(volumes, trackId),
         ctx.currentTime,
         FADER_GLIDE_SECONDS,
       );

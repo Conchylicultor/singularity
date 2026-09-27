@@ -1,29 +1,63 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useLive,
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
-import { serverHealthResource, type ServerHealthRow } from "../shared";
+import { serverHealthRows, type ServerHealthRow } from "../shared";
 
 /**
- * `Map<serverId, row>` off the live keyed resource. Empty while pending —
- * consumers treat a missing entry as "never checked" (status `unknown`), which
- * is exactly what a server with no probe row means.
+ * `Map<serverId, row>` for EXACTLY the given server ids, over the collection's
+ * `:rows` point sibling — no window truncates a point-set read, so a caller
+ * showing every server just passes every server's id (e.g. from
+ * `deploy/servers`'s own whole-set `servers` value) rather than reading the
+ * collection's bounded default window and hoping it covers the same rows.
+ *
+ * `pending` until the read lands — never an empty map: an absent entry means
+ * "never checked", which is a claim about the server that a read still loading
+ * cannot make. `serverIds` itself may come from a still-pending resource (the
+ * caller passes `[]` meanwhile); combine that resource's `pending` with this
+ * one's via `useCombinedResources` so the map reads pending until BOTH land.
+ * Each caller decides what its surface shows meanwhile.
  */
-export function useServerHealthMap(): ReadonlyMap<string, ServerHealthRow> {
-  const result = useResource(serverHealthResource);
-  return useMemo(() => {
-    if (result.pending) return new Map<string, ServerHealthRow>();
-    return new Map(result.data.map((r) => [r.serverId, r]));
-  }, [result]);
-}
-
-/** The last probe verdict for one server, or `undefined` if never checked. */
-export function useServerHealth(serverId: string): ServerHealthRow | undefined {
-  return useServerHealthMap().get(serverId);
+export function useServerHealthMap(
+  serverIds: readonly string[],
+): ResourceResult<ReadonlyMap<string, ServerHealthRow>> {
+  const result = useLive(serverHealthRows, { ids: serverIds });
+  return useMemo(
+    () =>
+      mapResource(result, (rows) => new Map(rows.map((r) => [r.serverId, r]))),
+    [result],
+  );
 }
 
 /**
- * Whether the server's *current* key is proven to work: the last probe
- * succeeded AND it was run against the key the server carries right now.
+ * The last probe verdict for one server: `pending` while loading, then
+ * `found: true` with the row, or `found: false` — the server has never been
+ * checked.
+ */
+export function useServerHealth(
+  serverId: string,
+): LiveRowResult<ServerHealthRow> {
+  return useLiveRow(serverHealthRows, serverId);
+}
+
+/**
+ * Whether the server's current key is proven to work — or `"pending"` while
+ * the verdict is still loading, which each caller decides for itself rather
+ * than reading it as "not verified".
+ */
+export type ServerVerification = "pending" | "verified" | "unverified";
+
+/**
+ * Whether the server's *current* key is proven to work, from a verdict already
+ * in hand (`null`: never checked): the last probe succeeded AND it was run
+ * against the key the server carries right now.
  *
  * The second half is what makes this exact with no cross-plugin write —
  * replacing the key changes `sshKey.publicKey`, the comparison fails, and every
@@ -36,11 +70,22 @@ export function useServerHealth(serverId: string): ServerHealthRow | undefined {
  * pre-`sshKey` row) compares equal, which is the honest reading — the same key
  * is still installed, we just can't name it.
  */
-export function useServerVerified(server: Server): boolean {
-  const row = useServerHealth(server.id);
+export function isKeyVerified(
+  row: ServerHealthRow | null,
+  server: Server,
+): boolean {
   return (
-    !!row &&
+    row !== null &&
     row.ok &&
     row.checkedPublicKey === (server.sshKey?.publicKey ?? null)
   );
+}
+
+/** {@link isKeyVerified} for one server, read live. */
+export function useServerVerified(server: Server): ServerVerification {
+  const health = useServerHealth(server.id);
+  if (health.pending) return "pending";
+  return isKeyVerified(health.found ? health.row : null, server)
+    ? "verified"
+    : "unverified";
 }

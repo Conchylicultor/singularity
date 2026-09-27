@@ -1,6 +1,6 @@
 /**
  * The health report's Database row, driven through its real hook with the
- * live-state read stubbed: not known yet → unknown (never green), a recent call
+ * live read stubbed: not known yet → unknown (never green), a recent call
  * with no reply on any pool → attention with a count, the latest's pool, caller
  * and clock time, and back to ok once the last hit is 10 minutes old — by ONE
  * scheduled timer, no polling.
@@ -13,8 +13,8 @@ import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 
 let resourceValue: ResourceResult<QueryDeadlines>;
 
-vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
-  useResource: () => resourceValue,
+vi.mock("@plugins/network/plugins/live/web", () => ({
+  useLive: () => resourceValue,
 }));
 
 import { useDatabaseHealth } from "../internal/use-database-health";

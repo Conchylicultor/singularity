@@ -17,6 +17,7 @@ import {
   usePendingFlush,
   useScopedUndoRedo,
 } from "@plugins/primitives/plugins/undo-redo/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -76,7 +77,11 @@ import type {
 } from "./caret-surface";
 import { useBlockHandles, useBlockOpContext } from "./internal/block-handles";
 import { scopeAdmits } from "./internal/zoom-scope";
-import { useMemoryBlockStore, type BlockStore } from "./block-store";
+import {
+  useMemoryBlockStore,
+  type BlockStore,
+  type SettledBlockStore,
+} from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
 import type { BlockEditorAPI } from "./types";
 
@@ -348,8 +353,14 @@ interface BlockEditorContextValue {
    * changes with {@link serverIds}, so a consumer re-renders on every push.
    */
   rowTruthOf: (id: string) => RowTruth;
-  /** True until the first authoritative blocks snapshot arrives. */
-  pending: boolean;
+  /**
+   * Rows below which content is still loading — an expanded nested page whose
+   * own rows have not landed (see `SettledBlockStore.loadingBelow`). The row
+   * renders a loading region under itself; nothing else changes. There is no
+   * whole-document `pending`: the provider only ever mounts on a settled store
+   * (`BlockEditorProviderGate`), so every row here is real.
+   */
+  loadingBelow: ReadonlySet<string>;
   /**
    * Optional allowlist of insertable block `type`s. When set, block-type pickers
    * (add-block menu, gutter `+`, slash menu) offer only these types. Undefined
@@ -631,7 +642,7 @@ export function useEnabledBlockTypes(): readonly string[] | undefined {
 
 /**
  * Props shared by both provider modes. `persist` picks the store: the default
- * (persistent) reads/writes `blocksResource` + the server endpoints; `false`
+ * (persistent) reads/writes `pageBlocks` + the server endpoints; `false`
  * runs a self-contained in-memory document seeded from `initialBlocks` (no
  * network, no DB rows).
  */
@@ -723,20 +734,8 @@ function MemoryProviderHost({
   );
 }
 
-// Exported for the provider hosts only (the composite server host lives in
-// composite-block-store.tsx); apps never mount it directly — use
-// `BlockEditorProvider`.
-export function BlockEditorProviderInner({
-  store,
-  pageId,
-  serverSync,
-  enabledBlockTypes,
-  caretBefore,
-  caretAfter,
-  rootId,
-  children,
-}: {
-  store: BlockStore;
+type ProviderInnerProps = {
+  store: SettledBlockStore;
   pageId: string;
   /**
    * Persistence mode: server-backed (true) vs in-memory (false). The single
@@ -755,7 +754,42 @@ export function BlockEditorProviderInner({
    */
   rootId: string | null;
   children: ReactNode;
-}) {
+};
+
+/**
+ * The gate between a store that can still be loading and the provider, whose
+ * hooks read the rows, the authoritative rows and `dispatch` unconditionally:
+ * while the store is pending it renders the editor's loading state, and it
+ * mounts the provider only with a settled store. The provider's `store` prop is
+ * the settled arm, so a store that can be pending reaches it only through here
+ * (tsc); the memory store is settled from the start.
+ *
+ * The provider — and so everything it holds (focus, the mount-scoped undo
+ * entries, the caret authority) — mounts once the page's rows land. The
+ * store is keyed by the page, so it goes back to pending only when the page
+ * itself changes, and a different page is a fresh editor.
+ */
+export function BlockEditorProviderGate({
+  store,
+  ...props
+}: Omit<ProviderInnerProps, "store"> & { store: BlockStore }) {
+  if (store.pending) return <Loading variant="rows" />;
+  return <BlockEditorProviderInner store={store} {...props} />;
+}
+
+// Exported for the provider hosts only (the composite server host lives in
+// composite-block-store.tsx, behind `BlockEditorProviderGate`); apps never mount
+// it directly — use `BlockEditorProvider`.
+export function BlockEditorProviderInner({
+  store,
+  pageId,
+  serverSync,
+  enabledBlockTypes,
+  caretBefore,
+  caretAfter,
+  rootId,
+  children,
+}: ProviderInnerProps) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [blockMenuDraftId, setBlockMenuDraftId] = useState<string | null>(null);
   // Block-type facts the pure reducer and `convertTo` cannot derive from the
@@ -783,8 +817,8 @@ export function BlockEditorProviderInner({
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
 
-  // The persistence seam. All reads (`data`/`serverData`/`pending`) and writes
-  // (`dispatch`/`move`/`bulk*`) go through it; everything else in this
+  // The persistence seam. All reads (`data`/`serverData`/`loadingBelow`) and
+  // writes (`dispatch`) go through it; everything else in this
   // provider (recording, focus, `makeBlockAPI`, the CRDT projection) is
   // storage-agnostic — the server and in-memory stores share ONE shape.
 
@@ -2075,7 +2109,7 @@ export function BlockEditorProviderInner({
         // Pure view state — deliberately NOT recorded into history (`record: false`):
         // Notion doesn't undo collapse/expand; it's not a document edit. Still flows
         // through the optimistic patch pipeline for snappiness, self-correcting on
-        // re-click via the blocksResource push.
+        // re-click via the pageBlocks push.
         commitRow(blockId, (b) => ({ ...b, expanded }), {
           label: "Toggle collapse",
           record: false,
@@ -2354,7 +2388,7 @@ export function BlockEditorProviderInner({
       blocks: store.data,
       serverIds,
       rowTruthOf,
-      pending: store.pending,
+      loadingBelow: store.loadingBelow,
       enabledBlockTypes,
       allowAttachments: serverSync,
       serverSync,
@@ -2399,7 +2433,7 @@ export function BlockEditorProviderInner({
       store.data,
       serverIds,
       rowTruthOf,
-      store.pending,
+      store.loadingBelow,
       enabledBlockTypes,
       serverSync,
       focusedBlockId,

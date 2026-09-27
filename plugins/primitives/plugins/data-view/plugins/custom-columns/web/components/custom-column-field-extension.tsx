@@ -109,8 +109,19 @@ function Inner({
           // NOT a literal — the field-type registry is the extension seam; the
           // type is dispatched through the generic cell/editor/filter slots.
           type: def.type,
+          // While the values are still pending a cell reads as unset (the
+          // codec's decode of `undefined`) — deliberately, and the least wrong
+          // option this seam allows: `FieldExtensionProps.render` has no
+          // pending channel, and abstaining (no fields) would drop the columns
+          // and leave a view's filter rule on one dangling, which
+          // `lowerFilterGroup` lowers to TRUE (every row). Same choice, same
+          // reason, as the pages `starred` field.
           value: (row) =>
-            codec.decode(values.get(rowKeyRef.current(row, 0))?.get(def.id)),
+            codec.decode(
+              values.pending
+                ? undefined
+                : values.index.get(rowKeyRef.current(row, 0))?.get(def.id),
+            ),
           onEdit: (row, next) =>
             setValue({
               dataViewId: storageKey,

@@ -1,18 +1,13 @@
 import { basename, dirname, join } from "path";
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  allowFilesResource,
-  AllowFilesSchema,
-  type AllowFiles,
-} from "../../shared";
-
-type Params = { id: string };
+import { allowFiles, type AllowFiles } from "../../shared";
 
 // Subtrees whose churn can never be a bypass file (those sit at the worktree
 // root), kept out of the watch so a build or install does not wake it.
@@ -22,11 +17,6 @@ const IGNORE = [
   "**/dist/**",
   "**/build/**",
 ];
-
-// One watcher per watched conversation, opened on the first subscriber and
-// stopped on the last. Held as a promise: `createFileWatcher` is async, and the
-// last subscriber can leave before it resolves.
-const watchers = new Map<string, Promise<FileWatcher | null>>();
 
 async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
   const conversation = await getConversation(conversationId);
@@ -43,6 +33,7 @@ async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
 
 async function watchAllowFiles(
   conversationId: string,
+  notify: () => void,
 ): Promise<FileWatcher | null> {
   const conversation = await getConversation(conversationId);
   const worktreePath = conversation?.worktreePath;
@@ -57,26 +48,30 @@ async function watchAllowFiles(
           dirname(e.path) === worktreePath &&
           BYPASS_TOKENS.includes(basename(e.path)),
       );
-      if (touched) allowFilesLiveResource.notify({ id: conversationId });
+      if (touched) notify();
     },
   });
   // A file created between the first load and the watch starting produced no
   // event; one re-read closes that gap.
-  allowFilesLiveResource.notify({ id: conversationId });
+  notify();
   return watcher;
 }
 
-export const allowFilesLiveResource = defineExternalResource({
-  key: allowFilesResource.key,
-  mode: "push",
-  schema: AllowFilesSchema,
-  loader: ({ id }: Params) => loadAllowFiles(id),
-  onFirstSubscribe({ id }: Params) {
-    if (!watchers.has(id)) watchers.set(id, watchAllowFiles(id));
-  },
-  onLastUnsubscribe({ id }: Params) {
-    const watcher = watchers.get(id);
-    watchers.delete(id);
-    void watcher?.then((w) => w?.stop());
+export const allowFilesServed = serveValue(allowFiles, {
+  source: "external",
+  loader: ({ id }) => loadAllowFiles(id),
+  // One watcher per watched conversation, for as long as it has a subscriber.
+  // The start stays SYNC: an async start is awaited on the subscribe path, so
+  // it would hold the sub-ack behind the watch opening on the worktree root.
+  // The watcher is instead held as a promise (`createFileWatcher` is async), and
+  // the stop chains on it — the last subscriber can leave before it resolves.
+  whileSubscribed: ({ id }, notify) => {
+    const watcher = watchAllowFiles(id, notify);
+    return () => {
+      void runTracked("allow-files:unwatch", async () => {
+        const w = await watcher;
+        await w?.stop();
+      });
+    };
   },
 });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 
 /**
  * One (namespace, key) usage rollup. `score` is the frecency score as of
@@ -18,18 +18,19 @@ export const UsageStatSchema = z.object({
 export type UsageStat = z.infer<typeof UsageStatSchema>;
 
 /**
- * Bounded POINT resource: a consumer subscribes by an explicit usage-key set
- * (`useUsageOrder` coalesces the visible keys into ONE tuple), so a read costs
- * O(subscribed ids) and a `recordUsage` write recomputes only the tuples whose
- * set contains the touched key — never the whole table. Rows key on `usageKey`,
- * which IS the table's single-column pk (`point.by`).
+ * Lookup-only collection over `usage_stats`: no default window (nothing lists
+ * every rollup), so it mints `usage-stats:rows` alone. A consumer reads an
+ * explicit usage-key set with `useLive(usageStats, { ids })` — `useUsageOrder`
+ * coalesces the visible keys into ONE tuple — so a read costs O(subscribed
+ * ids) and a `recordUsage` write recomputes only the tuples whose set contains
+ * the touched key (the `:rows` point routing), never the whole table. Rows key
+ * on `usageKey`, which IS the table's single-column pk.
  *
- * NOT preloaded: point resources hydrate post-mount by construction (the
- * server cannot know a client's id set at snapshot time). `useUsageOrder`
- * covers that one round-trip with its persistent-draft order cache.
+ * NOT preloaded (a lookup-only collection cannot be: the server cannot know a
+ * client's id set at snapshot time). `useUsageOrder` covers that one
+ * round-trip with its persistent-draft order cache.
  */
-export const usageStatsResource = pointQueryResourceDescriptor<UsageStat>(
-  "usage-stats",
-  UsageStatSchema,
-  "usageKey",
-);
+export const usageStats = liveCollection("usage-stats", {
+  row: UsageStatSchema,
+  id: "usageKey",
+});

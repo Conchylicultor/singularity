@@ -1,6 +1,6 @@
 export type { Deployment } from "./schemas";
 export { DeploymentSchema } from "./schemas";
-export { deploymentsResource } from "./resources";
+export { deployments } from "./resources";
 export {
   listDeployments,
   createDeployment,
@@ -29,7 +29,7 @@ export {
   DeployRunRecordSchema,
   DeployVerbSchema,
   DeployPhaseSchema,
-  deployRunsResource,
+  deployRuns,
   deployRunsRevisionResource,
 } from "./runs";
 export type {

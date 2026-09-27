@@ -1,12 +1,9 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   resolveActiveWorktreeOps,
   type WorktreeOp,
 } from "@plugins/infra/plugins/worktree/server";
-import {
-  worktreeOpsResource as worktreeOpsDescriptor,
-  type WorktreeOpsPayload,
-} from "../../shared";
+import { worktreeOps, type WorktreeOpsPayload } from "../../shared";
 
 // Per-slug precedence when a worktree somehow has more than one live marker.
 // A real worktree runs one op at a time, so this is a safety tiebreak: a push
@@ -23,25 +20,27 @@ const OP_RANK: Record<WorktreeOp, number> = {
   e2e: 1,
 };
 
-export const worktreeOpsResource = defineExternalResource(
-  worktreeOpsDescriptor,
-  {
-    mode: "push",
-    // Phases are DERIVED from the real push-lock ownership (holder file + kernel
-    // flock), not echoed from each marker's self-asserted phase — see
-    // resolveActiveWorktreeOps. This is what makes "two pushing at once" and
-    // "all waiting, none running" impossible to display.
-    loader: async () => {
-      const out: WorktreeOpsPayload = {};
-      for (const info of await resolveActiveWorktreeOps()) {
-        // At most one op per worktree slug; highest-precedence op wins if several
-        // somehow run at once (push > check > build > test, e2e).
-        const existing = out[info.slug];
-        if (!existing || OP_RANK[info.op] > OP_RANK[existing.op]) {
-          out[info.slug] = info;
-        }
+// External: the truth is the op-marker files on disk, so the only way to push a
+// change is `worktreeOpsServed.notify()`, which the plugin-lifetime marker
+// watcher (./watcher.ts) calls. The watcher is deliberately NOT a
+// `whileSubscribed`: the value is boot-preloaded, so it must stay fresh with no
+// tab subscribed.
+export const worktreeOpsServed = serveValue(worktreeOps, {
+  source: "external",
+  // Phases are DERIVED from the real push-lock ownership (holder file + kernel
+  // flock), not echoed from each marker's self-asserted phase — see
+  // resolveActiveWorktreeOps. This is what makes "two pushing at once" and
+  // "all waiting, none running" impossible to display.
+  loader: async () => {
+    const out: WorktreeOpsPayload = {};
+    for (const info of await resolveActiveWorktreeOps()) {
+      // At most one op per worktree slug; highest-precedence op wins if several
+      // somehow run at once (push > check > build > test, e2e).
+      const existing = out[info.slug];
+      if (!existing || OP_RANK[info.op] > OP_RANK[existing.op]) {
+        out[info.slug] = info;
       }
-      return out;
-    },
+    }
+    return out;
   },
-);
+});

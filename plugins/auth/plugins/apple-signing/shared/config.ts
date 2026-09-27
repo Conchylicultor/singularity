@@ -5,7 +5,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 // One config descriptor mixing secret and non-secret fields (mirrors
 // `googleAuthConfig`). Secret fields persist to the encrypted secrets store
 // (namespace `config-fields`, key `apple-signing.<field>`) and expose only
-// `{ set: boolean }` to the browser via `configV2SecretMetaResource`. Text
+// `{ set: boolean }` to the browser via the `configSecretMeta` live value. Text
 // fields persist to config_v2 JSONC and are readable in the browser.
 export const appleSigningConfig = defineConfig({
   name: "apple-signing",

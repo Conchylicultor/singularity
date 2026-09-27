@@ -28,7 +28,6 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -322,7 +321,7 @@ type BlockEditorProps = {
   rootId?: string;
 } & (
   | {
-      /** Persistent mode (default): read/write `blocksResource` + endpoints. */
+      /** Persistent mode (default): read/write `pageBlocks` + endpoints. */
       pageId: string;
       persist?: true;
     }
@@ -443,14 +442,15 @@ function BlockEditorInner({
   contentClassName?: ClassName;
   handleRef?: Ref<BlockEditorHandle>;
 }) {
-  // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
-  // (set by the effect below) tracks optimistic state — required for chained-op
-  // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
+  // `blocks` come from the provider's optimistic resource so `rowsRef` (set by
+  // the effect below) tracks optimistic state — required for chained-op intent
+  // resolution (e.g. Enter then Shift+Tab resolving against post-split). They
+  // are always real rows: the provider mounts only once they have landed
+  // (`BlockEditorProviderGate` renders the loading state until then).
   const {
     setFlatOrder,
     setRows,
     blocks,
-    pending,
     insertFirst,
     focusBlock,
     focusBlockBoundary,
@@ -478,12 +478,9 @@ function BlockEditorInner({
   // `rows` stays the FULL page — every structural op resolves against the
   // whole forest, so the prediction is the server's. Only `flat`, what renders
   // and what the caret and the selection walk, is scoped to the zoom: the root
-  // at depth 0 and what it shows below it. A root that is not in the rows once
-  // they have loaded is `gone`.
+  // at depth 0 and what it shows below it. A root that is not in the rows is
+  // `gone`.
   const { rows, flat, gone } = useMemo(() => {
-    if (pending) {
-      return { rows: [] as Block[], flat: [] as FlatBlock[], gone: false };
-    }
     const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
     const tree = buildTree(sorted);
     const view = scope.rootId === null ? tree : subtreeOf(tree, scope.rootId);
@@ -492,7 +489,7 @@ function BlockEditorInner({
       flat: view === null ? [] : flattenVisible(view, anchorTypes),
       gone: view === null,
     };
-  }, [blocks, pending, anchorTypes, scope]);
+  }, [blocks, anchorTypes, scope]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -537,9 +534,6 @@ function BlockEditorInner({
     [contributions, flat, focusBlock, focusBlockBoundary, insertFirst],
   );
 
-  if (pending) {
-    return <Loading variant="rows" />;
-  }
   if (gone) {
     return <Placeholder>This block no longer exists.</Placeholder>;
   }

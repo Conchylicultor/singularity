@@ -15,7 +15,7 @@
     - `apps/settings/shell.Settings`
     - `config_v2/settings.ConfigNav`
     - `config_v2/settings.configNavPane`
-    - `primitives/live-state.useResource`
+    - `network/live.useLive`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

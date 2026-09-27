@@ -4,11 +4,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { configV2Resource } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { Auth } from "@plugins/auth/web";
 import type { AuthProviderRowProps } from "@plugins/auth/web";
-import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
+import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
@@ -18,7 +19,7 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
   const storePath = reg?.storePath ?? "";
-  const metaResult = useResource(configV2SecretMetaResource, { path: storePath });
+  const metaResult = useLive(configSecretMeta, { path: storePath });
   const cfgResult = useResource(configV2Resource, { path: storePath });
 
   if (!provider) return null;
@@ -64,7 +65,8 @@ function Body({
 }) {
   const p12Set = !!secretMeta.p12Cert?.set;
   const ascKeySet = !!secretMeta.ascApiKey?.set;
-  const textComplete = !!cfg.signingIdentity && !!cfg.ascKeyId && !!cfg.ascIssuerId;
+  const textComplete =
+    !!cfg.signingIdentity && !!cfg.ascKeyId && !!cfg.ascIssuerId;
   const allSet = p12Set && ascKeySet && textComplete;
   const anySet =
     p12Set ||
@@ -92,7 +94,11 @@ function Body({
             {pill}
           </Stack>
           {allSet && cfg.signingIdentity ? (
-            <Text as="div" variant="body" className="text-muted-foreground truncate">
+            <Text
+              as="div"
+              variant="body"
+              className="text-muted-foreground truncate"
+            >
               {cfg.signingIdentity}
             </Text>
           ) : (

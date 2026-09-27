@@ -9,12 +9,18 @@ import { convCommitsGraphPane } from "../panes";
 export function CommitsChip() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
+  // No conversation row → no attempt to measure. Split rather than subscribe
+  // with a placeholder id: the standing is read only once the attempt id is
+  // known.
+  if (!conversation) return null;
+  return <AttemptCommitsChip attemptId={conversation.attemptId} />;
+}
+
+function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
   // The attempt's standing is the ONE fact this chip shows — ahead/behind and the
   // push count both come from it, so there is a single subscription and nothing
   // for two resources to disagree about.
-  const workResult = useLive(attemptWork, {
-    attemptId: conversation?.attemptId ?? "",
-  });
+  const workResult = useLive(attemptWork, { attemptId });
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({});
 
   if (workResult.pending) return null;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -18,9 +18,15 @@ export const transposeShape = defineExtensionShape({
 export const TransposeRowSchema = transposeShape.schema;
 export type TransposeRow = z.infer<typeof TransposeRowSchema>;
 
-/** Reactive list of every song's transpose offset (push resource). */
-export const transposeResource = resourceDescriptor<TransposeRow[]>(
-  "sonata-transpose",
-  z.array(TransposeRowSchema),
-  [],
-);
+/**
+ * The transpose offset of ONE song, read by the song's id: a lookup-only
+ * collection over the extension table (no default window — nothing lists every
+ * song's offset), minting `sonata-transpose:rows` alone. The observer reads the
+ * open song's row with `useLiveRow(transposes, songId)`; `found: false` is an
+ * absent row, i.e. `0`. The `:rows` point routing sends a write to the one song
+ * it touched, and only a tab that has that song open subscribes to it.
+ */
+export const transposes = liveCollection("sonata-transpose", {
+  row: TransposeRowSchema,
+  id: "songId",
+});

@@ -10,11 +10,11 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {
   deleteDeployment,
-  deployRunsResource,
+  deployRuns,
   runDeployment,
   type Deployment,
 } from "../../core";
@@ -31,7 +31,8 @@ export const DeploymentItemActions = defineItemActions<Deployment>();
  * Two kinds of reason, and both are facts this app already holds: a run is
  * already in flight on the box, or the probe has not established a platform for
  * it (never checked / last check failed / reported something no release targets —
- * spelled out separately rather than folded into one null test).
+ * spelled out separately rather than folded into one null test). Until both
+ * facts have loaded, that is the reason: a launch is never offered on a guess.
  *
  * The probe ones deliberately MIRROR the CLI's own refusals rather than replacing
  * them: the platform a deploy needs is discovered by that probe, so a button that
@@ -43,13 +44,16 @@ export const DeploymentItemActions = defineItemActions<Deployment>();
  * pane's primary action must never disagree about why something is blocked.
  */
 export function useBlockedReason(deployment: Deployment): string | null {
-  const runsResult = useResource(deployRunsResource);
+  const runsResult = useLive(deployRuns);
   const health = useServerHealth(deployment.serverId);
 
   // Gated, not collapsed to an empty map: until the run state has arrived we do
   // not know whether something is already running on this box, and launching a
   // second converge into that gap is exactly what the exclusivity rule forbids.
   if (runsResult.pending) return "Loading deploy state…";
+  // Gated, not read as "never verified": a server whose verdict has not loaded
+  // may well be verified, and saying otherwise sends the user to re-verify it.
+  if (health.pending) return "Loading server health…";
 
   const busy = runningOnServer(runsResult.data, deployment.serverId);
   if (busy) {
@@ -60,13 +64,13 @@ export function useBlockedReason(deployment: Deployment): string | null {
       ? `The ${busy.verb} of this deployment is still running.`
       : `The ${busy.verb} of "${busy.compositionId}" is running on this server.`;
   }
-  if (!health) {
+  if (!health.found) {
     return "This server has never been verified — run Verify connection first.";
   }
-  if (!health.ok) {
+  if (!health.row.ok) {
     return "This server failed its last reachability check — run Verify connection again.";
   }
-  if (!health.platform) {
+  if (!health.row.platform) {
     return "This server reported a platform no release targets, so no bundle can be built for it.";
   }
   return null;

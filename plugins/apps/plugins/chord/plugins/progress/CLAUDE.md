@@ -17,7 +17,7 @@ const params = encodeProgressParams({
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   tokens: unlocked,
 });
-const progress = useResource(chordProgressResource, params);
+const progress = useLive(chordProgress, params);
 
 // The rule, for anyone who needs it on the client too.
 chordMastery(answersMostRecentFirst) → { answers, correct, accuracy, medianMs, mastered }
@@ -48,13 +48,13 @@ each chord's last 20 answers; the panel shows what comes back.
 
 ## `chord.progress`
 
-A plain `resourceDescriptor` with params `{ timeZone, tokens }`. `tokens` is
-the chord set sorted (plain string order), deduplicated and joined by commas,
-so one set is one subscription. Build params only with
-`encodeProgressParams`: `decodeProgressParams` (which the loader runs) throws
-on an unknown time zone, on a malformed token, and on any other spelling of
-the set. `chords` comes back in that sorted order; a panel that wants its own
-order sorts it itself.
+`chordProgress`, a `liveValue` with `params: ["timeZone", "tokens"]` (so its
+params are `ChordProgressParams`: two strings). `tokens` is the chord set
+sorted (plain string order), deduplicated and joined by commas, so one set is
+one subscription. Build params only with `encodeProgressParams`:
+`decodeProgressParams` (which the loader runs) throws on an unknown time zone,
+on a malformed token, and on any other spelling of the set. `chords` comes back
+in that sorted order; a panel that wants its own order sorts it itself.
 
 - **Per chord**: one lateral index scan of `(token, answered_at desc,
   position desc)`, `LIMIT 20` per token.
@@ -66,10 +66,12 @@ order sorts it itself.
 - **All time**: plain counts, which grow with the history. At one learner's
   scale that is small; revisit with a rollup if it ever is not.
 
-Server: `mode: "invalidate"`, `identityTable: "chord_answers"`. A round is
-always written in the same transaction as its answers, so an answer insert is
-what the change feed routes here. The initial value the descriptor requires is
-never shown: `useResource` answers `pending` until the server's first value.
+Server: `serveValue({ source: "db" })`. The change feed routes every committed
+write to the tables the loader read (`chord_answers`, `chord_rounds`) here,
+and each subscribed (time zone, chord set) tuple is recomputed and pushed. One
+object whose `chords` holds one entry per requested token, so the params bound
+it. There is no placeholder: `useLive` answers `pending` until the server's
+first value.
 
 ## Tables
 
@@ -108,8 +110,9 @@ that are real.
     - `database.db`
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/chord/plugins/progress/server/internal/tables.ts`
-  - Resources: `chord.progress` (invalidate)
+  - Resources: `chord.progress` (push)
   - Routes: `POST /api/chord/rounds`
 - Core:
   - Uses:
@@ -121,7 +124,7 @@ that are real.
     - `apps/chord/song-index.LOOP_SHAPE_IDS`
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.TheorytabSectionIdSchema`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ChordAnswerSample`
     - `ChordMastery`
@@ -134,7 +137,7 @@ that are real.
     - `RoundAnswer`
   - Exports (values):
     - `chordMastery`
-    - `chordProgressResource`
+    - `chordProgress`
     - `ChordProgressSchema`
     - `ChordStandingSchema`
     - `decodeProgressParams`

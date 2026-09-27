@@ -41,18 +41,17 @@ export {
 } from "./schemas";
 export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 
-// Client/shared live-state descriptors (single source of truth for key/schema/
+// Client/shared live-state declarations (single source of truth for key/schema/
 // keyed-ness; the server resources are built from these). See ./resources.ts.
 export {
   tasksResource,
-  taskDetailResource,
+  taskDetail,
   attemptsResource,
-  pushesResource,
-  pushesByAttemptResource,
+  pushRows,
   conversationsActiveResource,
   conversationsSystemResource,
   conversationsGoneResource,
-  conversationsGoneStatsResource,
+  conversationsGoneStats,
   RECENT_GONE_LIMIT,
 } from "./resources";
 

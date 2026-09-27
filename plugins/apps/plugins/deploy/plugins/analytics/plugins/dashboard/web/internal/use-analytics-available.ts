@@ -1,10 +1,10 @@
 import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import { useCompositionIncludes } from "@plugins/plugin-meta/plugins/composition/web";
 import {
-  deploymentsResource,
+  deployments,
   type Deployment,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { COLLECT_PLUGIN_ID } from "./collect-plugin-id";
@@ -14,7 +14,7 @@ import { COLLECT_PLUGIN_ID } from "./collect-plugin-id";
  * closure of the composition it ships — whether it includes the collect plugin
  * — never from the composition's name.
  *
- * - `pending` — the deployment list or the plugin graph is still loading.
+ * - `pending` — the deployment row or the plugin graph is still loading.
  * - `no` — it does not ship collect, or there is nothing to ask about (the
  *   deployment is gone, or its composition name no longer resolves — the
  *   overview and composition sections already say so).
@@ -25,21 +25,16 @@ type DeploymentComposition =
   { kind: "pending" } | { kind: "gone" } | { kind: "named"; name: string };
 
 function compositionOf(
-  deployments: ResourceResult<Deployment[]>,
-  deploymentId: string,
+  deployment: LiveRowResult<Deployment>,
 ): DeploymentComposition {
-  if (deployments.pending) return { kind: "pending" };
-  const deployment = deployments.data.find((d) => d.id === deploymentId);
-  return deployment
-    ? { kind: "named", name: deployment.compositionId }
+  if (deployment.pending) return { kind: "pending" };
+  return deployment.found
+    ? { kind: "named", name: deployment.row.compositionId }
     : { kind: "gone" };
 }
 
 export function useShipsAnalytics(deploymentId: string): ShipsAnalytics {
-  const composition = compositionOf(
-    useResource(deploymentsResource),
-    deploymentId,
-  );
+  const composition = compositionOf(useLiveRow(deployments, deploymentId));
   const inclusion = useCompositionIncludes(
     composition.kind === "named" ? composition.name : null,
     COLLECT_PLUGIN_ID,

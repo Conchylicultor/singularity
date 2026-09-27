@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { MdDescription } from "react-icons/md";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { getVersion } from "@plugins/history/plugins/engine/core";
-import { blocksResource } from "@plugins/page/plugins/editor/core";
+import { pageBlocks } from "@plugins/page/plugins/editor/core";
 import { BLOCK_INSET, PageIcon } from "@plugins/page/plugins/editor/web";
 import { ReadOnlyBlocks } from "@plugins/page/plugins/read-only-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -39,7 +39,7 @@ export function PageVersionPreview({
     entityId: pageId,
     versionId,
   });
-  const current = useResource(blocksResource, { pageId });
+  const current = useLive(pageBlocks, { pageId });
 
   const snap = version.data?.snapshot as PageSnapshot | undefined;
 

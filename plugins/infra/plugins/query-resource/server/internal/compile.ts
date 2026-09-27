@@ -3,10 +3,10 @@ import { db as realDb } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import type {
   DependsOnEntry,
+  KeyedServerResourceOptions,
   Resource,
   ResourceParams,
   ScopePolicy,
-  ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import type { QueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
 import { resolveIdentity } from "./identity";
@@ -15,7 +15,7 @@ import type { Edge, QueryDb, QueryResourceSpec, QueryStep } from "./spec";
 
 /** The compiled server half of a query-resource, ready for `defineResource`. */
 export interface CompiledQuery<Row, P extends ResourceParams> {
-  serverOpts: ServerResourceOptions<Row[], P> & ScopePolicy<P>;
+  serverOpts: KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   keyField: string;
   /** The base table the identity scopes to, or `null` under `recompute: full`. */
   identityTableName: string | null;
@@ -145,8 +145,8 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   // declared (it IS a membership, so the runtime routes by it), and otherwise the
   // answer is honestly `fanOut` — a plain `queryResource`'s params tuple selects
   // a whole compiled query, not one identity row, so a changed id cannot be
-  // compared against it. (Deriving `rowIdentity` for the narrow case where the
-  // spec's `where` is exactly `eq(pk, params.X)` is a separate, larger idea.)
+  // compared against it. (A tuple naming ONE row is a lookup-only
+  // `liveCollection`'s `:rows` point read, which routes by membership.)
   //
   // Annotated, not cast: the `as` on `serverOpts` below launders the spreads and
   // would hide a missing arm from `tsc` entirely, so the policy is built as its
@@ -170,7 +170,7 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
     ...scopePolicy,
-  } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
+  } as KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
 
   return { serverOpts, keyField, identityTableName: scoped ? tableName : null };
 }

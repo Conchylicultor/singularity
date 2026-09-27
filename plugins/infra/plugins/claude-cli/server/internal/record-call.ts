@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _claudeCliCalls } from "./tables";
-import { RECENT_CALLS_LIMIT } from "./resources";
+import { RECENT_CALLS_LIMIT } from "../../core/resources";
 
 export interface RecordCallInput {
   model: ConversationModel;
@@ -19,7 +19,9 @@ export interface RecordCallInput {
 // Records a single claude-cli call. Swallows its own errors — recording must
 // never affect the calling path. Trims the table to the most recent N rows
 // after every insert (cheap with the createdAt index).
-export async function recordClaudeCliCall(input: RecordCallInput): Promise<void> {
+export async function recordClaudeCliCall(
+  input: RecordCallInput,
+): Promise<void> {
   try {
     await db.insert(_claudeCliCalls).values({
       model: input.model,
@@ -40,7 +42,7 @@ export async function recordClaudeCliCall(input: RecordCallInput): Promise<void>
         LIMIT ${RECENT_CALLS_LIMIT}
       )
     `);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn("[claude-cli] failed to record call:", err);
   }

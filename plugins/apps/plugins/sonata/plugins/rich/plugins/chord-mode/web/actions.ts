@@ -11,10 +11,10 @@ import { setChordModeEndpoint } from "../shared/endpoints";
  * Passing no `onError` opts into the global error toast, so the user learns the
  * mode did not save instead of silently losing it on the next reload.
  *
- * The write is still *optimistic*: the toggle sets the shell's per-surface store
- * first (instant re-voicing), and `chordModeResource`'s live-state push
+ * The write is still *optimistic*: the toggle writes the loaded song's
+ * `chordModeSetting` first (instant re-voicing), and the `chordModes` row push
  * re-affirms server truth through the observer. Named `save*` (not `set*`) to
- * stay distinct from that in-memory store setter (`useSetChordMode()`).
+ * stay distinct from that in-memory write (`useWriteSongSetting`).
  */
 export function useSaveChordMode(): (songId: string, enabled: boolean) => void {
   const { mutate } = useEndpointMutation(setChordModeEndpoint);

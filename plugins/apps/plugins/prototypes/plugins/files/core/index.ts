@@ -2,8 +2,8 @@ export {
   PrototypeMetaSchema,
   MocksDeclarationSchema,
   PrototypeOptionSchema,
-  prototypesResource,
-  prototypesVersionResource,
+  prototypesList,
+  prototypesVersion,
   PROTOTYPES_API_BASE,
   PROTOTYPE_FILE_ROUTE,
   PROTOTYPE_ASSET_ROUTE,
@@ -18,7 +18,7 @@ export {
   PROTOTYPE_VERSION_KINDS,
   PrototypeVersionSchema,
   PrototypeHistorySchema,
-  prototypeHistoryResource,
+  prototypeHistory,
   restorePrototypeVersion,
 } from "./history";
 export type {
@@ -77,7 +77,7 @@ export {
   PrototypeStatusChangeSchema,
   NO_PROTOTYPE_STATUS,
   applyPrototypeStatusChange,
-  prototypeStatusesResource,
+  prototypeStatuses,
   statusOf,
   setPrototypeStatus,
 } from "./status";

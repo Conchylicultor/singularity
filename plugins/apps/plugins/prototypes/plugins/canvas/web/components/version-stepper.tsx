@@ -15,12 +15,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  prototypeHistoryResource,
+  prototypeHistory,
   restorePrototypeVersion,
   type PrototypeHistory,
   type PrototypeVersion,
@@ -51,7 +49,7 @@ export interface VersionStepperProps {
  * that is really "not loaded yet".
  */
 export function VersionStepper(props: VersionStepperProps): ReactElement {
-  const history = useResource(prototypeHistoryResource, { name: props.name });
+  const history = useLive(prototypeHistory, { name: props.name });
   return (
     <ControlSizeProvider size="xs">
       {matchResource(history, {

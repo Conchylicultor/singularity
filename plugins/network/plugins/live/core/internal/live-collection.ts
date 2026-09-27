@@ -5,11 +5,9 @@ import {
   type ResourceDescriptor,
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
-import {
-  pointQueryResourceDescriptor,
-  windowQueryResourceDescriptor,
-  type PointQueryResourceContract,
-  type WindowQueryResourceContract,
+import type {
+  PointQueryResourceContract,
+  WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
   LIST_MAX,
@@ -30,6 +28,10 @@ import {
   type LiveWindowParams,
 } from "./query";
 import { createLiveQueryCodec } from "./query-codec";
+import {
+  pointQueryResourceDescriptor,
+  windowQueryResourceDescriptor,
+} from "./window-descriptor";
 
 /** The window descriptor's codec: the query ⇄ wire-params pair, plus the bounds it enforces. */
 export interface LiveWindowCodec<F, S extends string> {
@@ -48,7 +50,7 @@ export interface LiveWindowCodec<F, S extends string> {
  * The window half of a collection: a `WindowQueryResourceContract` over the
  * query codec's params and selector, whose `window` codec is the richer query
  * codec (decode yields `{ limit, where, orderBy }`, not just `limit`) — so the
- * existing `windowQueryResource` compiler and window hooks accept it unchanged.
+ * existing `windowQueryResource` compiler accepts it unchanged.
  */
 export type LiveWindowDescriptor<Row, F, S extends string> = Omit<
   WindowQueryResourceContract<Row, LiveWindowParams, LiveQuery<F, S>>,
@@ -276,7 +278,7 @@ function fullCollection<Row, F, S extends string>(
     encode: codec.encode,
     decode: codec.decode,
   };
-  // Built on the existing factory (descriptor registration, keyed `keyOf`,
+  // Built on the window factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The
   // default window encodes to the same `{ limit }` bytes either way.
   // Only the window is ever preloaded: `:rows` and `:groups` have no default

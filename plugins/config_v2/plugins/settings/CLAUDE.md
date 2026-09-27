@@ -87,6 +87,7 @@ contributor that hands a conflict to an agent.
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

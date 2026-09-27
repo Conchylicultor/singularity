@@ -15,6 +15,7 @@
     - `auth.Auth`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`

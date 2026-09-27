@@ -14,17 +14,14 @@ export {
   useServerHealth,
   useServerVerified,
 } from "./hooks";
+export type { ServerVerification } from "./hooks";
 export { VerifyConnectionBody } from "./components/verify-connection";
 export {
   ServerStatusBadge,
   serverStatus,
 } from "./components/server-status-badge";
 export type { ServerStatus } from "./components/server-status-badge";
-export {
-  serverHealthResource,
-  checkServerSsh,
-  forgetServerHostKey,
-} from "../shared";
+export { checkServerSsh, forgetServerHostKey } from "../shared";
 export type { ServerHealthRow, SshCheckResult } from "../shared";
 
 export default {

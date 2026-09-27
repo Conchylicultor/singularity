@@ -1,12 +1,10 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { agentOriginCreateHook } from "./internal/create-hook";
-import { agentPagesServerResource } from "./internal/resource";
+import { agentPagesServed } from "./internal/resource";
 import { agentPagesSweep } from "./internal/sweep";
 
 export { pageBlocksOrigin } from "./internal/tables";
-export { agentPagesServerResource } from "./internal/resource";
 
 export default {
   description:
@@ -15,7 +13,7 @@ export default {
   // startup, so no onReady enqueue is needed.
   register: [agentPagesSweep],
   contributions: [
-    Resource.Declare(agentPagesServerResource),
+    ...agentPagesServed.declare,
     // Stamps the marker after the block row lands. The editor dispatches this
     // generically and never names this plugin — which is the whole reason the
     // hook exists (an inline stamp would make the editor import us back, a cycle).

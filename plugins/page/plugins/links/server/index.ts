@@ -1,9 +1,15 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
+import {
+  blocksChanged,
+  BlockLifecycle,
+} from "@plugins/page/plugins/editor/server";
 import { reindexLinksJob } from "./internal/reindex-job";
-import { backlinksResource, pageLinksLiveResource } from "./internal/resources";
+import {
+  pageBacklinksServed,
+  pageLinksLiveResource,
+} from "./internal/resources";
 import {
   backlinksDeleteHook,
   backlinksTrashHook,
@@ -12,7 +18,7 @@ import {
 
 export { PageLinks } from "./internal/extractor";
 export type { PageLinkExtractor } from "./internal/extractor";
-export { backlinksResource, pageLinksLiveResource } from "./internal/resources";
+export { pageLinksLiveResource } from "./internal/resources";
 export { reindexPage } from "./internal/reindex";
 
 export default {
@@ -20,13 +26,18 @@ export default {
     "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
   register: [reindexLinksJob],
   contributions: [
-    Resource.Declare(backlinksResource),
+    ...pageBacklinksServed.declare,
     Resource.Declare(pageLinksLiveResource),
     // Reindex a page's outgoing links whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin's syncTriggerContributions makes
     // it idempotent across reboots. Match-any on pageId — the per-emit pageId
     // reaches the job via the event payload.
-    Trigger({ on: blocksChanged, do: reindexLinksJob, with: {}, oneShot: false }),
+    Trigger({
+      on: blocksChanged,
+      do: reindexLinksJob,
+      with: {},
+      oneShot: false,
+    }),
     // Re-push the backlinks panels of pages a deleted subtree linked to: the FK
     // cascade wipes those page_links edges without going through the reindexer.
     BlockLifecycle.OnDelete(backlinksDeleteHook),

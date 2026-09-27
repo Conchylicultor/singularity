@@ -1,17 +1,14 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
-import { deploymentDetailRoute, deploymentsResource } from "../core";
+import { deploymentDetailRoute, deployments } from "../core";
 import { DeploymentDetail } from "./slots";
 
 function useResolveDeployment({ deploymentId }: { deploymentId: string }) {
-  const result = useResource(deploymentsResource);
-  if (result.pending) return { pending: true, found: false };
-  return {
-    pending: false,
-    found: result.data.some((d) => d.id === deploymentId),
-  };
+  const row = useLiveRow(deployments, deploymentId);
+  if (row.pending) return { pending: true, found: false };
+  return { pending: false, found: row.found };
 }
 
 /** The deployment's composition — the only name a person recognises it by. */
@@ -20,9 +17,8 @@ function useDeploymentTitle({
 }: {
   deploymentId: string;
 }): string | undefined {
-  const result = useResource(deploymentsResource);
-  if (result.pending) return undefined;
-  return result.data.find((d) => d.id === deploymentId)?.compositionId;
+  const row = useLiveRow(deployments, deploymentId);
+  return !row.pending && row.found ? row.row.compositionId : undefined;
 }
 
 /**

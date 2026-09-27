@@ -32,7 +32,7 @@ the original bug.
 
 Reading it:
 
-- `queryRunningJobs()` and the `jobs-list` resource expose `alive` per locked row
+- `queryRunningJobs()` and the `jobs-list` value expose `alive` per locked row
   (Debug → Queue shows a **no worker** badge). `false` = owner died, or dispatch is
   inside the sub-second acquisition window — never "has been running a while".
 - The `pg_locks` key encoding lives once, as `jobLockHeldExpr` in
@@ -416,8 +416,13 @@ max. A class with no samples reads `count: 0` with `null` percentiles, never
 event, on `jobs:insert` (heard on the legacy runner only, because each runner
 has its own LISTEN client), and on this plugin's own mutations that send no
 notification: retry, cancel, `abortDurableRun`, the resume timeout delete, the
-stuck-lock reclaim and dead-job GC. `jobs-list` reloads on it, debounced to one
-reload per second, instead of polling. **A new raw write to graphile's tables
+stuck-lock reclaim and dead-job GC. `jobs-list` reloads on it, throttled to one
+reload per second, instead of polling: `jobsList` (`core/resources.ts`) is a
+`liveValue` declared `load: "on-demand"` (a 500-row join read by one Debug pane,
+kept out of the shared flush — tabs refetch over HTTP on each invalidate), and
+`jobsListServed` serves it external with `throttleMs: 1000` and
+`whileSubscribed: (_p, notify) => onQueueActivity(notify)`, so it listens only
+while a tab is subscribed. **A new raw write to graphile's tables
 must call `emitQueueActivity()`**, or every queue reader goes stale until the
 next unrelated event.
 
@@ -427,6 +432,19 @@ The database side of the same picture is `queryQueuePulse()`,
 (`waitingForSlotPredicate`), because a lane waits by design. A row locked in the
 database but absent from the ledger is held by a dead worker. The stuck-lock
 sweeper will reclaim it.
+
+**The dead-letter archive is a live collection.** `deadJobs`
+(`core/resources.ts`, key `dead-jobs`) is a `liveCollection` over `dead_jobs`:
+newest archived first, 200 rows by default, grown up to
+`DEAD_JOBS_ARCHIVE_CAP` (2000) — the same constant the dead-job GC trims the
+archive to, so a fully grown window is the whole archive. `deadJobsServed`
+serves it with
+`serveCollection(deadJobs, { from: _deadJobs })`, every row field bound to its
+column by name (the two timestamps are `Date`s). Debug → Queue's Dead tab reads
+`useLive(deadJobs)` and grows the window at the scroll end. `dead_jobs` is a
+public table, so the change feed moves every subscribed window on the GC's
+archive and purge; nothing notifies it. `GET /api/jobs/dead` serves the same
+rows wrapped as `{ rows }` (`DeadJobsPayloadSchema`).
 
 ## Connections: every one carries the deadline
 
@@ -471,6 +489,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Contributes:
     - `resource.declare` "jobs-list"
     - `resource.declare` "dead-jobs"
+    - `resource.declare` "dead-jobs:rows"
+    - `resource.declare` "dead-jobs:groups"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
     - `database.db`
@@ -483,6 +503,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `network/live.serveCollection`
+    - `network/live.serveValue`
     - `primitives/log-channels.Log`
   - DB schema:
     - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
@@ -518,7 +540,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `ALL_JOB_TASKS`
     - `ceilingMsFor`
     - `DEAD_ERROR_PREVIEW_CHARS`
-    - `deadJobsResource`
     - `deadlineMsFor`
     - `DEFAULT_MAX_ATTEMPTS`
     - `defineJob`
@@ -538,7 +559,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JOB_SLOT_FLOOR_KIND`
     - `JobDeadlineExceededError`
     - `jobDeadlineSink`
-    - `jobsListResource`
     - `LEGACY_JOB_TASK`
     - `NonRetryableError`
     - `onQueueActivity`
@@ -566,7 +586,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `defineJob('jobs.resume')`
     - `defineJob('jobs.dead-gc')`
   - Resources:
-    - `dead-jobs` (invalidate)
+    - `dead-jobs` (keyed, window)
+    - `dead-jobs:groups` (push)
+    - `dead-jobs:rows` (keyed, point)
     - `jobs-list` (invalidate)
   - Routes:
     - `GET /api/jobs`
@@ -576,7 +598,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveCollection`
+    - `network/live.liveValue`
   - Exports (types):
     - `DeadJobRow`
     - `DeadJobsPayload`
@@ -590,15 +613,15 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `ALL_JOB_TASKS`
     - `cancelJob`
     - `DeadJobRowSchema`
+    - `deadJobs`
     - `DeadJobsPayloadSchema`
-    - `deadJobsResource`
     - `deadlineMsFor`
     - `HOLD_CLASSES`
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
     - `JobRowSchema`
-    - `jobsListResource`
+    - `jobsList`
     - `JobsPayloadSchema`
     - `JobStateSchema`
     - `LEGACY_JOB_TASK`

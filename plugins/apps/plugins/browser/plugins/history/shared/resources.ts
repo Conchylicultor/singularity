@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
 // One row per distinct recently-visited URL, newest first. `visitedAt` is the
 // most recent visit time; it serializes to ISO over the wire and `z.coerce.date`
@@ -11,8 +11,11 @@ export const BrowserRecentSchema = z.object({
 });
 export type BrowserRecent = z.infer<typeof BrowserRecentSchema>;
 
-export const browserRecentsResource = resourceDescriptor<BrowserRecent[]>(
-  "browser-recents",
-  z.array(BrowserRecentSchema),
-  [],
-);
+// The start page's "Recent" list, as ONE value rather than a collection: it is
+// a derivation (the latest visit per distinct url, then the newest 12 of
+// those), not rows of one table, so there is no row set to window. The server
+// caps it with the loader's LIMIT and states that bound (`unbounded: { reason
+// }`). No placeholder: before the first value lands the read is `pending`.
+export const browserRecents = liveValue("browser-recents", {
+  schema: z.array(BrowserRecentSchema),
+});

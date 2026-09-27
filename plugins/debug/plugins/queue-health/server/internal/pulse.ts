@@ -1,4 +1,4 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { getConfig } from "@plugins/config_v2/server";
 import {
   PICKUP_WINDOW_MS,
@@ -15,16 +15,17 @@ import {
   PULSE_DEAD_WINDOW_MS,
   PULSE_WAITING_LIMIT,
   queueHealthConfig,
-  queuePulseResource as queuePulseDescriptor,
+  queuePulse,
   type QueuePulse,
 } from "../../core";
 import { assemblePulse } from "./assemble-pulse";
 
-// The health report's Job queue row, as a live resource.
+// The health report's Job queue row, as a live value.
 //
 // PUSH-BASED, with no poll. Graphile's tables live outside the schema the DB
-// change feed covers, so the feed never invalidates this; it is an external
-// resource, notified by two things:
+// change feed covers, so the feed never invalidates this; it is served external
+// (`source: "external"`), and notified — only while a tab is subscribed, since
+// `whileSubscribed` is what hands out `notify` — by two things:
 //
 // - the jobs plugin's queue-activity signal (`onQueueActivity`): a job started
 //   or finished in this backend, a row was inserted, or the jobs plugin itself
@@ -36,21 +37,22 @@ import { assemblePulse } from "./assemble-pulse";
 //   deadline, not a poll: it fires at the instant the answer changes, and each
 //   load re-arms it.
 //
-// `debounceMs` is the runtime's fixed-window flush, so a burst of activity (a
-// fan-out enqueue, a queue draining) costs one load per second.
+// `throttleMs`: a burst of activity (a fan-out enqueue, a queue draining) costs
+// one load per second.
 //
-// The loader is a NAMED function outside the `defineExternalResource(...)`
-// call on purpose: `no-db-backed-notify` flags a `db.` inside that call, and
-// this resource reads the database only through the jobs plugin's
-// introspection API. Deaths need nothing extra: graphile emits `job:complete`
-// after writing a final failure, and the dead-job GC that moves rows into the
-// `dead_jobs` archive announces activity itself.
+// The loader reads the database only through the jobs plugin's introspection
+// API (`no-db-backed-notify` flags a `db.` inside an external `serveValue`
+// call). Deaths need nothing extra: graphile emits `job:complete` after writing
+// a final failure, and the dead-job GC that moves rows into the `dead_jobs`
+// archive announces activity itself.
 
 // setTimeout's largest delay; anything longer fires immediately in Bun/Node.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
-let subscribed = false;
-let stopActivity: (() => void) | undefined;
+// The subscribed tuple's `notify`, set for exactly as long as a tab is
+// subscribed (`whileSubscribed` below). The value is param-less, so there is at
+// most one.
+let pulseNotify: (() => void) | undefined;
 let changeTimer: ReturnType<typeof setTimeout> | undefined;
 
 function clearChangeTimer(): void {
@@ -62,11 +64,12 @@ function clearChangeTimer(): void {
 // load with no subscriber (an HTTP read) must not leave a timer behind.
 function armChangeTimer(at: number | null): void {
   clearChangeTimer();
-  if (!subscribed || at === null) return;
+  const notify = pulseNotify;
+  if (notify === undefined || at === null) return;
   const delay = Math.min(Math.max(0, at - Date.now()), MAX_TIMEOUT_MS);
   changeTimer = setTimeout(() => {
     changeTimer = undefined;
-    queuePulseResource.notify();
+    notify();
   }, delay);
 }
 
@@ -98,18 +101,19 @@ async function loadQueuePulse(): Promise<QueuePulse> {
   return pulse;
 }
 
-export const queuePulseResource = defineExternalResource(queuePulseDescriptor, {
-  mode: "push",
-  debounceMs: 1000,
+// The runtime starts `whileSubscribed` before the first subscriber's load, so
+// that load already sees `pulseNotify` and arms its timer.
+export const queuePulseServed = serveValue(queuePulse, {
+  source: "external",
   loader: loadQueuePulse,
-  onFirstSubscribe: () => {
-    subscribed = true;
-    stopActivity = onQueueActivity(() => queuePulseResource.notify());
-  },
-  onLastUnsubscribe: () => {
-    subscribed = false;
-    stopActivity?.();
-    stopActivity = undefined;
-    clearChangeTimer();
+  throttleMs: 1000,
+  whileSubscribed: (_params, notify) => {
+    pulseNotify = notify;
+    const stopActivity = onQueueActivity(notify);
+    return () => {
+      pulseNotify = undefined;
+      stopActivity();
+      clearChangeTimer();
+    };
   },
 });

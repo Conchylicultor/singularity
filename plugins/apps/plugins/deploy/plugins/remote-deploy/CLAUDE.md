@@ -97,6 +97,11 @@ this feature. A field extension mounts once per surface but the answer is per
 into a map that `value` reads synchronously, so filter/group/sort agree with the
 chips instead of trailing them by a render.
 
+`ReleaseField` reads `useDeploymentsListServerId()` and the identical
+`useLive(deployments, { where: { serverId } })` query `DeploymentsBody` itself
+subscribes to — never the collection's default window, which is not
+guaranteed to hold every row of the server the list happens to be showing.
+
 ## What this still does not claim
 
 Nothing local ever runs the bytes that ship (a `linux-x64` binary cannot execute
@@ -120,10 +125,14 @@ remote health gate.
     - `apps/deploy/deployments.DeploymentDetail`
     - `apps/deploy/deployments.Deployments`
     - `apps/deploy/deployments.useBlockedReason`
+    - `apps/deploy/deployments.useDeploymentsListServerId`
+    - `apps/deploy/health.ServerHealthRow`
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/health.useServerHealthMap`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/cluster.Cluster`
@@ -134,8 +143,6 @@ remote health gate.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`

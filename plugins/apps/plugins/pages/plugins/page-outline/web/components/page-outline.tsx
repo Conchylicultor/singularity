@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  blocksResource,
   inDocumentOrder,
+  pageBlocks,
   plainOf,
   toNodes,
   type Block,
@@ -14,9 +14,6 @@ import {
   Editor,
 } from "@plugins/page/plugins/editor/web";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
-
-/** Stable empty value, so a pending read never re-renders on a fresh `[]`. */
-const NO_BLOCKS: Block[] = [];
 
 /** A block type that declares itself a heading, plus the handle that reads its text. */
 interface HeadingType {
@@ -64,10 +61,13 @@ export function PageOutline({ pageId }: { pageId: string }) {
   // every heading to the OTHER editor's rows — and a background tab's rows are
   // `display:none`, so their rects are all zero and the rail simply dies.
   const content = blockContentScope.useRoot();
-  const result = useResource(blocksResource, { pageId });
-  const blocks = result.pending ? (result.stale ?? NO_BLOCKS) : result.data;
+  const result = useLive(pageBlocks, { pageId });
+  // The last value keeps painting through a transient error; a page never
+  // loaded has no outline yet — `null`, not an empty one.
+  const blocks = result.pending ? result.stale : result.data;
 
   const entries = useMemo(() => {
+    if (blocks === undefined) return null;
     const headings = new Map<string, Block>();
     for (const b of blocks) if (headingTypes.has(b.type)) headings.set(b.id, b);
     // `inDocumentOrder`, NOT `flattenVisible`: the outline is a map of the
@@ -98,6 +98,9 @@ export function PageOutline({ pageId }: { pageId: string }) {
     [content],
   );
 
+  // Not known yet renders nothing — the rail is an overlay, and a rail of no
+  // dashes would claim the page has no headings.
+  if (entries === null) return null;
   return (
     <OutlineRail entries={entries} resolve={resolve} label="Page outline" />
   );

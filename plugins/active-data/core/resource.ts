@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
 export const ActiveDataBindingSchema = z.object({
   messageId: z.string(),
@@ -14,7 +14,13 @@ export type ActiveDataBindingsPayload = z.infer<
   typeof ActiveDataBindingsPayloadSchema
 >;
 
-export const activeDataBindingsResource = resourceDescriptor<
-  ActiveDataBindingsPayload,
-  { conversationId: string }
->("active-data.bindings", ActiveDataBindingsPayloadSchema, []);
+// One conversation's widget bindings, pushed whole: every widget of the
+// conversation reads the same `{ conversationId }` tuple and picks its own row
+// by `(messageId, tag, occurrenceIndex)`. A value, not a collection: the table's
+// primary key is that composite, so there is no single id a `:rows` read could
+// key on. The server states the bound (`unbounded: { reason }`). No
+// placeholder: before the first value lands the read is `pending`.
+export const activeDataBindings = liveValue("active-data.bindings", {
+  schema: ActiveDataBindingsPayloadSchema,
+  params: ["conversationId"],
+});

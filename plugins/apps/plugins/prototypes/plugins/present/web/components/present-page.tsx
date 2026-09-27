@@ -1,15 +1,13 @@
 import type { ReactElement, ReactNode } from "react";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import {
-  prototypeHistoryResource,
+  prototypeHistory,
   type PrototypeVersion,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -46,7 +44,7 @@ function VersionPresentPage({
   sha: string;
   picks: StoredPicks | undefined;
 }): ReactNode {
-  const history = useResource(prototypeHistoryResource, { name });
+  const history = useLive(prototypeHistory, { name });
   return matchResource(history, {
     pending: () => <Loading variant="block" />,
     ready: (h) => {

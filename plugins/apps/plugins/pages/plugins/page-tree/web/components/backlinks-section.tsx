@@ -1,6 +1,6 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Backlinks } from "@plugins/page/plugins/links/web";
-import { backlinksResource } from "@plugins/page/plugins/links/core";
+import { pageBacklinks } from "@plugins/page/plugins/links/core";
 
 // "Linked from" section contributed into PageDetail.Section. The slot passes
 // `{ pageId }` and owns the card + title. Navigation is not passed down: the
@@ -16,8 +16,13 @@ export function BacklinksSection({ pageId }: { pageId: string }) {
  * at all. This has to be a gate rather than a `return null` in the body — the
  * host owns the chrome, so a null body would leave an empty "Linked from" card
  * on every page in the app.
+ *
+ * While the value is still pending the card is not painted either: the gate is
+ * a boolean the host resolves before painting, and no card is the one answer
+ * that claims nothing about the page — the card appears once the backlinks
+ * settle non-empty, never an empty card that then fills.
  */
 export function useHasBacklinks({ pageId }: { pageId: string }): boolean {
-  const result = useResource(backlinksResource, { pageId });
+  const result = useLive(pageBacklinks, { pageId });
   return !result.pending && result.data.length > 0;
 }

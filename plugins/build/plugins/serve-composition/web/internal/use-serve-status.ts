@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import { buildHistoryResource, type BuildRun } from "@plugins/build/core";
+  useLive,
+  type LiveListResult,
+} from "@plugins/network/plugins/live/web";
+import { buildHistory, type BuildRun } from "@plugins/build/core";
 import {
   asNamespace,
   namespaceHost,
@@ -55,13 +55,12 @@ export type ServeStatus =
  * would have missed the sweep. Both are gone: a serve is now its own build, so
  * the runs that touch this composition are exactly the ones that name it.
  *
- * Derived from the whole result rather than through a `select`, because the
- * selector would have to close over `composition` and an unstable selector
- * re-subscribes on every render. `build.history` pushes only when a build starts
- * or ends, so folding the list here is not a hot path.
+ * Folded here over the whole default window — the same tuple the Build button
+ * reads. `build.history` pushes only when a build starts or ends, so folding it
+ * on every render is not a hot path.
  */
 function buildSignature(
-  result: ResourceResult<BuildRun[]>,
+  result: LiveListResult<BuildRun>,
   composition: string,
 ): string | null {
   // `null` is genuine absence the caller must handle, not an empty default: the
@@ -101,7 +100,7 @@ export function useServeStatus(composition: string): ServeStatus {
     { query: { composition } },
   );
 
-  const runsResult = useResource(buildHistoryResource);
+  const runsResult = useLive(buildHistory);
   const signature = buildSignature(runsResult, composition);
 
   // The first settled signature is RECORDED, not acted on: the query already

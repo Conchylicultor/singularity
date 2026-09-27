@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
 import {
   SPAN_MEASURES,
@@ -128,12 +127,6 @@ export const slowOpFields = {
 
 export const SlowOpSchema = fieldsToZodObject(slowOpFields);
 export type SlowOp = z.infer<typeof SlowOpSchema>;
-
-export const slowOpsResource = resourceDescriptor<SlowOp[]>(
-  "slow-ops",
-  z.array(SlowOpSchema),
-  [],
-);
 
 // The web-safe overlay shape for the health-monitor charts: a slim projection of
 // a sample (no full contention snapshot), published one-per-recorded-slow-op to

@@ -5,10 +5,10 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *
  * Tripwire for a specific class of bug: a client `useEffect` / `useLayoutEffect`
  * that performs server I/O (toast/fetch/endpoint/query mutations) while reacting
- * to SHARED SERVER STATE. Live-state pushes (useResource / subscribeWsStatus /
- * useEndpoint resources) fan out to EVERY open browser tab, so an effect that
- * reacts to such a value and calls a write/IO fires N times — once per tab —
- * duplicating the I/O.
+ * to SHARED SERVER STATE. Live-state pushes (useLive / useLiveRow / useResource /
+ * subscribeWsStatus / useEndpoint resources) fan out to EVERY open browser tab,
+ * so an effect that reacts to such a value and calls a write/IO fires N times —
+ * once per tab — duplicating the I/O.
  *
  * This is a NUDGE, not a guarantee. It is intentionally evadable by indirection,
  * and that is accepted. The detection deliberately favors FALSE NEGATIVES over
@@ -25,7 +25,8 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *       the effect's dependency array (or, if there is no dep array, the callback
  *       body) references at least one binding whose initializer is — directly or
  *       transitively through other local bindings — a call to a "shared-state hook":
- *       useResource | subscribeWsStatus | useEndpoint | any use*Resource(s) hook.
+ *       useLive | useLiveRow | useResource | subscribeWsStatus | useEndpoint |
+ *       any use*Resource(s) hook.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -42,8 +43,15 @@ const SERVER_IO_NAMES = new Set([
   "mutateAsync",
 ]);
 
-/** Hook names whose result is (or carries) shared, cross-tab server state. */
+/**
+ * Hook names whose result is (or carries) shared, cross-tab server state.
+ * `useLive` / `useLiveRow` are network/live's reads (a value, a collection
+ * window, a grouping, an id set, one row); neither ends in `Resource`, so the
+ * naming convention below cannot catch them.
+ */
 const SHARED_STATE_HOOK_NAMES = new Set([
+  "useLive",
+  "useLiveRow",
   "useResource",
   "subscribeWsStatus",
   "useEndpoint",
@@ -65,7 +73,10 @@ function isSharedStateHookName(name: string): boolean {
 function calleeName(node: TSESTree.CallExpression): string | null {
   const callee = node.callee;
   if (callee.type === "Identifier") return callee.name;
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier"
+  ) {
     return callee.property.name;
   }
   return null;
@@ -105,7 +116,12 @@ function collectIdentifierNames(node: TSESTree.Node, out: Set<string>): void {
       out.add(rec.name);
     }
     for (const key of Object.keys(rec)) {
-      if (key === "parent" || key === "type" || key === "loc" || key === "range") {
+      if (
+        key === "parent" ||
+        key === "type" ||
+        key === "loc" ||
+        key === "range"
+      ) {
         continue;
       }
       visit(rec[key]);
@@ -119,9 +135,7 @@ function collectIdentifierNames(node: TSESTree.Node, out: Set<string>): void {
  * (where local `const`/`let`/`var` bindings live). Returns the body block we can
  * scan for VariableDeclarations.
  */
-function enclosingStatements(
-  node: TSESTree.Node,
-): TSESTree.Statement[] | null {
+function enclosingStatements(node: TSESTree.Node): TSESTree.Statement[] | null {
   let cur: TSESTree.Node | undefined = node.parent;
   while (cur) {
     if (
@@ -178,7 +192,12 @@ function initializerCallsSharedStateHook(expr: TSESTree.Node): boolean {
       }
     }
     for (const key of Object.keys(rec)) {
-      if (key === "parent" || key === "type" || key === "loc" || key === "range") {
+      if (
+        key === "parent" ||
+        key === "type" ||
+        key === "loc" ||
+        key === "range"
+      ) {
         continue;
       }
       visit(rec[key]);
@@ -232,9 +251,7 @@ function computeTaintedBindings(
  * effect "reacts to": the dep-array entries if a dep array is present, else
  * every identifier referenced in the callback body.
  */
-function effectReactiveNames(
-  effectCall: TSESTree.CallExpression,
-): Set<string> {
+function effectReactiveNames(effectCall: TSESTree.CallExpression): Set<string> {
   const names = new Set<string>();
   const callback = effectCall.arguments[0];
   const deps = effectCall.arguments[1];

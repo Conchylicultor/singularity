@@ -14,20 +14,23 @@
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
     - `infra/claude-cli.ClaudeCliCallDetail`
+    - `network/live.LiveListResult`
+    - `network/live.useLive`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/cursor-pagination.InfiniteScrollFooter`
+    - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/filter-chips.FilterChip`
     - `primitives/filter-chips.FilterGroup`
     - `primitives/filter-chips.useChipFilter`
-    - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`

@@ -14,8 +14,8 @@ import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import {
   createResourceRuntime,
   type ResourceParams,
+  type KeyedServerResourceOptions,
   type ScopePolicy,
-  type ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { compileEdges, compileQuery } from "./compile";
 import { rel } from "./rel";
@@ -165,7 +165,7 @@ function register(
       }
       return inner(p, ctx);
     },
-  } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
+  } as KeyedServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
   return runtime.defineResource(keyed(key), wrapped);
 }
 
@@ -481,7 +481,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
         if (subscribed) bIds.push(ctx?.affectedIds);
         return ctx ? [{ id: "at1", n: 2 }] : [{ id: "at1", n: 1 }];
       },
-    } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy);
+    } as KeyedServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy);
     const cLoads: boolean[] = [];
     const cIds: (readonly string[] | undefined)[] = [];
     register(
@@ -655,7 +655,7 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
           return innerOrderOf(p);
         },
       },
-    } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
+    } as KeyedServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
     return runtime.defineResource(keyed(key), wrapped);
   }
 

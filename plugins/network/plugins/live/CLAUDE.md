@@ -34,7 +34,7 @@ useLive(eventSources, { where: or({ column: "status", op: "eq", operand: "error"
                                   { column: "enabled", op: "eq", operand: false }) }); // a Filter tree
 useLive(eventSources, { groupBy: "status", where: { enabled: true } }); // values + counts
 useLive(eventSources, { ids: visibleIds });                           // point set
-useLiveRow(eventSources, sourceId);                                   // one row
+useLiveRow(eventSources, sourceId);                                   // one row (a null id: not found)
 ```
 
 - **Declare.** The key is a positional string literal (the build scanners read it).
@@ -135,14 +135,21 @@ useLiveRow(eventSources, sourceId);                                   // one row
   - An `{ ids }` query reads the point sibling: `ResourceResult<Row[]>`, no
     paging fields.
   - Every query is identified by its canonical encoding, so inline object
-    literals are fine.
-- **Read — `useLiveRow(c, id)`.** `{ pending: true; error; stale? } |
-  { pending: false; found: true; row } | { pending: false; found: false }`.
-  A point read: it ignores every client filter and window bound (the base
-  `where` still applies — a row outside the collection is not found), so
+    literals are fine. A list result (and its `loadMore`) keeps its identity
+    until its rows, state or limit change, so a consumer may memoize on it.
+- **Read — `useLiveRow(c, id: string | null)`.** `{ pending: true; error;
+  stale? } | { pending: false; found: true; row } | { pending: false; found:
+  false }`. A point read: it ignores every client filter and window bound (the
+  base `where` still applies — a row outside the collection is not found), so
   `found: false` means the row is not in the collection — never "outside the
-  window". A nullable id is not supported yet (it needs an `enabled` option on
-  `useResource`).
+  window".
+  - **A `null` id** (nothing to look up yet) is `{ pending: false, found:
+    false }` from the FIRST render. It still reads a tuple — the empty id set
+    `{ ids: "" }`, one per collection, shared by every null reader, answered
+    with `[]` and no query — so it counts as a pending mount until that `[]`
+    lands. `useResource` has deliberately no skip option: a public skip would
+    skip values too, and would have to disarm the pending-mount count and the
+    cold-start prime.
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
@@ -259,6 +266,29 @@ useLive(taskDetail, { id });             // params required iff declared
   placeholder makes no HTTP fetch on mount — the WS sub-ack fills it (the
   query stays disabled until a value lands; `refetch()` still works).
 
+## Old spellings — lint `no-legacy-resource-spelling`
+
+Contributed by `lint/` (repo-wide). It flags every import of an old spelling
+from the barrel that exports it — named or aliased, `export { … } from`, or a
+read off the barrel's module object (a namespace import or an awaited
+`import()`, by member or by destructuring, resolved through scope):
+`resourceDescriptor`,
+`keyedResourceDescriptor`, `queryResourceDescriptor`,
+`windowQueryResourceDescriptor`, `pointQueryResourceDescriptor`,
+`defineResource`, `defineExternalResource`, `queryResource`,
+`windowQueryResource`, `useResource` — and `usePointResource(s)` and
+`useWindowResource`, deleted (at the phase-3 Wave 3 and Wave 4 barriers), and
+`windowQueryResourceDescriptor` / `pointQueryResourceDescriptor`, now internal
+to `network/live` (`core/internal/window-descriptor.ts`, Wave 7) — still
+listed so a stale import is told its replacement, not only tsc's "no exported
+member". Its `ignores` list is the
+burndown inventory: the substrate globs plus every file not migrated yet,
+grouped under the wave or item that removes it
+(`research/2026-09-27-global-live-resources-phase3-bulk-migration.md`).
+**Never add an entry for new code** — declare it with `liveValue` /
+`liveCollection`. A migration must delete its files from the list:
+`lint/index.test.ts` fails on a listed file that no longer imports one.
+
 ## Internals
 
 - `core/` (browser-safe): `liveCollection(key, { row, id, filterable, sortable, default, maxLimit, preload? })`
@@ -313,7 +343,6 @@ useLive(taskDetail, { id });             // params required iff declared
   - Uses:
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.usePointResource`
     - `primitives/live-state.useResource`
   - Exports (types):
     - `LiveIdsQuery`
@@ -355,20 +384,20 @@ useLive(taskDetail, { id });             // params required iff declared
     - `serveValue`
 - Core:
   - Uses:
-    - `infra/query-resource.PointQueryResourceContract`
-    - `infra/query-resource.pointQueryResourceDescriptor`
-    - `infra/query-resource.WindowQueryResourceContract`
-    - `infra/query-resource.windowQueryResourceDescriptor`
     - `network/live/filter.decodeFilter`
     - `network/live/filter.encodeFilter`
     - `network/live/filter.Filter`
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
+    - `primitives/live-state.keyedResourceDescriptor`
+    - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
     - `primitives/live-state.resourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourcePreload`
+    - `primitives/live-state.WindowParams`
+    - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `LiveCentralValueSpec`
     - `LiveCollection`
@@ -410,23 +439,118 @@ useLive(taskDetail, { id });             // params required iff declared
     - `liveValue`
 - Cross-plugin:
   - Imported by:
+    - `active-data`
+    - `active-data/prototype`
+    - `apps/browser/bookmarks`
+    - `apps/browser/history`
+    - `apps/browser/start-page`
+    - `apps/chord/curriculum`
+    - `apps/chord/progress`
+    - `apps/chord/song-index`
+    - `apps/chord/trainer`
+    - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/composition`
+    - `apps/deploy/deployments`
+    - `apps/deploy/health`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
+    - `apps/deploy/servers`
     - `apps/events/events-core`
     - `apps/events/sources/source-field`
+    - `apps/mail/mail-core`
+    - `apps/mail/reading-pane`
+    - `apps/mail/sync`
+    - `apps/mail/sync-status`
+    - `apps/mail/threads`
+    - `apps/pages/agent-origin`
+    - `apps/pages/history`
+    - `apps/pages/page-outline`
+    - `apps/pages/page-tree`
+    - `apps/pages/starred`
+    - `apps/pages/trash`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/files`
+    - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
+    - `apps/prototypes/thumbnails`
+    - `apps/settings/config`
+    - `apps/sonata/library`
+    - `apps/sonata/playback-history`
+    - `apps/sonata/rich/chord-mode`
+    - `apps/sonata/rich/key-mode`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/sources/midi`
+    - `apps/sonata/track-mixer`
+    - `apps/sonata/transpose`
+    - `apps/studio/compositions/release/release-artifact`
+    - `apps/studio/compositions/release/release-info`
+    - `apps/studio/compositions/release/release-logs`
     - `auth`
+    - `auth/apple-signing/setup-wizard`
+    - `auth/google/setup-wizard`
     - `build`
+    - `build/build-fix`
+    - `build/build-info`
     - `build/deployment`
+    - `build/serve-composition`
+    - `config_v2`
+    - `config_v2/settings`
+    - `conversations`
+    - `conversations/agents`
+    - `conversations/conversation-category`
+    - `conversations/conversation-preprompt`
+    - `conversations/conversation-progress`
+    - `conversations/conversation-view/allow-monitor`
+    - `conversations/conversation-view/artifacts`
+    - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/drop-and-exit`
+    - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/event-counter`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/notes`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
+    - `conversations/summary`
+    - `database/query-deadline`
+    - `debug/claude-cli-calls`
+    - `debug/queue`
+    - `debug/queue-health`
+    - `debug/sentinel`
+    - `fields/secret/config`
+    - `infra/claude-cli`
+    - `infra/claude-cli/availability`
+    - `infra/events`
     - `infra/git/git-watcher`
+    - `infra/jobs`
+    - `infra/trash`
+    - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/editor-collab`
+    - `page/links`
+    - `page/prompt/link`
+    - `plugin-meta/plugin-health`
+    - `primitives/data-view/custom-columns`
+    - `primitives/data-view/view-order`
+    - `primitives/usage-rank`
+    - `release`
+    - `review`
+    - `review/code-review`
+    - `review/plugin-changes`
     - `shell/notifications`
     - `tasks/attempt-work`
+    - `tasks/auto-start`
+    - `tasks/task-description`
+    - `tasks/task-effort`
+    - `tasks/task-events`
+    - `tasks/task-preprompt`
+    - `tasks/tasks-core`
 - Central:
   - Exports (types): `CentralServedValue`
   - Exports (values): `serveValue`

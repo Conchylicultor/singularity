@@ -1,10 +1,10 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { resetTrackView, upsertTrackView } from "../shared/endpoints";
-import { trackViewResource } from "../shared/resources";
+import { trackViews } from "../shared/resources";
 
 // Fire-and-forget writes: the UI never reads the response — state refreshes via
-// the live-state push that `notify()` emits server-side. `void` keeps the
+// the `trackViews` push the write's commit triggers. `void` keeps the
 // no-floating-promises rule satisfied while a genuine network failure still
 // surfaces loudly as an unhandled rejection (reported by the crashes plugin).
 //
@@ -20,15 +20,16 @@ import { trackViewResource } from "../shared/resources";
 // mode's whole-arrangement flip interleave with a toggle the user made at the
 // same moment.
 //
-// `enqueueResourceWrite` puts each write on the resource's send lane, which
-// departs them strictly in the order they were issued. One lane covers every
-// track-view write, because the resource has no params: that serializes writes
-// across tracks too, which costs a little head-of-line latency and buys the
-// guarantee that nothing here can reorder.
+// `enqueueResourceWrite` puts each write on the song's send lane — the
+// `trackViews` `{ songId }` tuple — which departs them strictly in the order
+// they were issued. One lane covers every track-view write for that song: that
+// serializes writes across its tracks too, which costs a little head-of-line
+// latency and buys the guarantee that nothing here can reorder. Writes for
+// different songs touch different rows, so they need no order between them.
 
-/** Issue one track-view write on the resource's ordered send lane. */
-function send(write: () => Promise<unknown>): void {
-  void enqueueResourceWrite(trackViewResource, undefined, write);
+/** Issue one track-view write on the song's ordered send lane. */
+function send(songId: string, write: () => Promise<unknown>): void {
+  void enqueueResourceWrite(trackViews, { songId }, write);
 }
 
 export function setTrackColor(
@@ -36,7 +37,7 @@ export function setTrackColor(
   trackId: string,
   color: string | null,
 ): void {
-  send(() =>
+  send(songId, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -50,7 +51,7 @@ export function setTrackInstrument(
   trackId: string,
   instrumentId: string | null,
 ): void {
-  send(() =>
+  send(songId, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -64,7 +65,7 @@ export function setTrackMuted(
   trackId: string,
   muted: boolean,
 ): void {
-  send(() =>
+  send(songId, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -78,7 +79,7 @@ export function setTrackHidden(
   trackId: string,
   hidden: boolean,
 ): void {
-  send(() =>
+  send(songId, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -98,7 +99,7 @@ export function setTrackVolume(
   trackId: string,
   volume: number,
 ): void {
-  send(() =>
+  send(songId, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -130,7 +131,7 @@ export function setTracksActive(
   trackIds: readonly string[],
   active: boolean,
 ): Promise<void> {
-  return enqueueResourceWrite(trackViewResource, undefined, () =>
+  return enqueueResourceWrite(trackViews, { songId }, () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },
@@ -140,5 +141,5 @@ export function setTracksActive(
 }
 
 export function resetTrackViews(songId: string): void {
-  send(() => fetchEndpoint(resetTrackView, { songId }));
+  send(songId, () => fetchEndpoint(resetTrackView, { songId }));
 }

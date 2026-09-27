@@ -5,10 +5,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect } from "react";
-import {
-  useResource,
-  useNotificationsChannelStatuses,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { MdOpenInFull, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -17,13 +15,9 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { buildRoute } from "@plugins/build/core";
+import { buildHistory, buildRoute } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
-import {
-  buildHistoryResource,
-  isMainCompositionBuild,
-  type BuildRun,
-} from "../../shared";
+import { isMainCompositionBuild, type BuildRun } from "../../shared";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
 import { ReloadSegment } from "./reload-segment";
 import { BuildPopoverContent } from "./build-popover-content";
@@ -210,10 +204,10 @@ export function BuildButton() {
   // that gap is what separates "Server restarting…" from "Building…".
   const { worktree: wsStatus } = useNotificationsChannelStatuses();
 
-  // --- Build history ---
-  const historyResult = useResource(buildHistoryResource);
+  // --- Build history (the default window, newest first; preloaded) ---
+  const historyResult = useLive(buildHistory);
 
-  // Render the neutral wrench, inert, while the history resource is still
+  // Render the neutral wrench, inert, while the build history is still
   // loading — no fake "idle" status and no misleading useEffect trace before
   // data arrives. The popover needs the history, so it cannot open yet.
   if (historyResult.pending) {

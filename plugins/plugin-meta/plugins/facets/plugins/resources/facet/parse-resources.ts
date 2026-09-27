@@ -21,12 +21,13 @@ import {
 import type { ResourceDef, ResourceFacetData } from "../core";
 
 // A resource's identity (`key`), keyed-ness and bounded membership are declared
-// at a DESCRIPTOR FACTORY call — `resourceDescriptor("key", …)` (push),
-// `windowQueryResourceDescriptor` (bounded window), … — which lives in a
-// plugin's `core/` or `shared/`. The resource is SERVED where a REGISTER call
-// references that descriptor: `defineResource(descriptor, opts)` /
-// `windowQueryResource(descriptor, spec)` (in `server/` or `central/`). The
-// legacy flat form `defineResource({ key, mode })` inlines the key at the
+// at a DESCRIPTOR FACTORY call — `liveValue("key", …)`, `liveCollection("key",
+// …)` (a bounded window, its `:rows` point sibling and `:groups`), the old
+// `resourceDescriptor("key", …)`, … — which lives in a plugin's `core/` or
+// `shared/`. The resource is SERVED where a REGISTER call references that
+// descriptor: `serveValue(value, opts)` / `serveCollection(collection, opts)`,
+// or the old `defineResource(descriptor, opts)` (in `server/` or `central/`).
+// The legacy flat form `defineResource({ key, mode })` inlines the key at the
 // register site, as a literal or as `<descriptor>.key`. The key is resolved
 // across files the way the `routes` facet resolves `[endpoint.route]` computed
 // keys: an extract-time
@@ -108,8 +109,9 @@ export type ImportedDescriptorResolver = (
  *
  * THROWS on a `const x = <factory>(…)` whose key is not a static string literal,
  * unless the plugin owns the factory (see `isResourceVocabularyOwner`: inside
- * `live-state` / `query-resource` a factory call is the wrapper IMPLEMENTING it,
- * called with a computed key, not a plugin declaring a resource). A call not
+ * `live-state` / `query-resource` / `network/live` a factory call is the
+ * wrapper IMPLEMENTING it, called with a computed key, not a plugin declaring a
+ * resource). A call not
  * bound to a `const` is skipped rather than raised — it is a wrapper's internal
  * use or a `return` expression, with no name for a register call to reference;
  * if a register call somehow does reference it, that call raises instead.
@@ -280,10 +282,12 @@ export function parseFileBindings(src: string): FileBindings {
  *
  * THROWS on everything else it cannot read: an identifier that IS bound in the
  * file but resolves to no descriptor (what a descriptor minted by an unknown
- * factory looks like from here), and a flat `key:` that is neither a literal nor
- * `<identifier>.key` (an interpolated template, a call, a bare constant). Both
- * used to disappear silently — the flat branch dropped 14 real resources from
- * docs/plugins-details.md before it resolved `X.key`.
+ * factory looks like from here), a flat `key:` that is neither a literal nor
+ * `<identifier>.key` (an interpolated template, a call, a bare constant), and a
+ * resolved non-keyed resource whose old form shows no literal `mode:` (see
+ * {@link literalMode}). The first two used to disappear silently — the flat
+ * branch dropped 14 real resources from docs/plugins-details.md before it
+ * resolved `X.key`.
  */
 export function resolveRegisterCall(
   marker: string,
@@ -294,14 +298,14 @@ export function resolveRegisterCall(
   resolveImported: ImportedDescriptorResolver,
 ): ResourceDef[] {
   const head = stripLeadingTrivia(argsText);
-  const modeField = parseStringField(argsText, "mode");
   if (head.startsWith("{")) {
-    // Flat inline object form: key + optional mode live in the object literal.
+    // Flat inline object form: the key and the mode live in the object literal.
     const keyField = parseStringField(argsText, "key");
     if (keyField.kind === "absent") return [];
     if (keyField.kind === "value") {
-      const mode = modeField.kind === "value" ? modeField.value : "push";
-      return [{ key: keyField.value, mode }];
+      return [
+        { key: keyField.value, mode: literalMode(marker, argsText, where) },
+      ];
     }
     const member = /^([A-Za-z_$][\w$]*)\.key$/.exec(keyField.expr.trim());
     if (!member) {
@@ -327,10 +331,11 @@ export function resolveRegisterCall(
       where,
       resolveImported,
     );
+    if (infos === null) return [];
     // The flat form's literal `mode:` is what the runtime serves; the
     // descriptor only supplies the key (and bounded membership, if any).
-    const mode = modeField.kind === "value" ? modeField.value : "push";
-    return (infos ?? []).map((info) =>
+    const mode = literalMode(marker, argsText, where);
+    return infos.map((info) =>
       info.membership
         ? { key: info.key, mode, membership: info.membership }
         : { key: info.key, mode },
@@ -347,24 +352,60 @@ export function resolveRegisterCall(
     where,
     resolveImported,
   );
+  if (infos === null) return [];
   if (marker === "serveValue") {
-    return (infos ?? []).map((info) => servedValueDef(info, argsText, where));
+    return infos.map((info) => servedValueDef(info, argsText, where));
   }
-  // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
-  // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
-  // non-literal `mode:` is the runtime-value case the descriptor already resolves,
-  // so `absent`/`dynamic` both fall through to the descriptor-implied default.
-  return (infos ?? []).map((info) => {
-    const mode =
-      modeField.kind === "value"
-        ? modeField.value
-        : info.keyed
-          ? "keyed"
-          : "push";
+  // A keyed descriptor fixes the mode — the runtime serves it `keyed` whatever
+  // the options say, and the keyed options take no `mode:`. `serveCollection`
+  // serves its one non-keyed mint (`:groups`) as a push value, by
+  // construction. Every other non-keyed resource is an old form serving a
+  // plain descriptor, whose options must spell the mode.
+  return infos.map((info) => {
+    const mode = info.keyed
+      ? "keyed"
+      : marker === "serveCollection"
+        ? "push"
+        : literalMode(marker, argsText, where);
     return info.membership
       ? { key: info.key, mode, membership: info.membership }
       : { key: info.key, mode };
   });
+}
+
+/**
+ * The literal `mode:` an old register form (`defineResource` /
+ * `defineExternalResource`) serves a non-keyed resource with, read at its
+ * options object's own depth — the flat form's one object, or the two-arg
+ * form's second argument (the first argument is an identifier, so the first
+ * `{` opens it) — so a loader's own object literal is never mistaken for it.
+ *
+ * The runtime has no default: a non-keyed old form without `mode` does not
+ * compile. So a missing one here means the text does not SHOW it (an options
+ * variable, a spread) — and this THROWS rather than guess, as it does on a
+ * non-literal one: the mode decides what the docs say the resource is.
+ */
+function literalMode(
+  marker: string,
+  argsText: string,
+  where: { file: string; line: number },
+): string {
+  const masked = maskSource(argsText);
+  const body = objectBodyAt(argsText, masked, masked.indexOf("{"));
+  const field =
+    body === null
+      ? ({ kind: "absent" } as const)
+      : parseStringField(body, "mode", { depth0: true });
+  if (field.kind === "value") return field.value;
+  throw new Error(
+    `${where.file}:${where.line}: ${marker}(…) serves a non-keyed resource ` +
+      (field.kind === "dynamic"
+        ? `whose \`mode:\` is not a static string literal — got \`${field.expr}\`. `
+        : "with no literal `mode:` in its options object. ") +
+      "The docs facet reads the delivery mode from source text, and the runtime " +
+      'has no default — write `mode: "push"` or `mode: "invalidate"` as a literal ' +
+      "in the options object at the call site.",
+  );
 }
 
 /**

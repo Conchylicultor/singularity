@@ -1,4 +1,5 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Steps,
   Step,
@@ -34,10 +35,16 @@ import { InstallKeyStep } from "./install-key-step";
  * `health`. The header is the one region visible both collapsed and expanded, so
  * it is the real status line; a step that reprinted the fingerprint would
  * recreate the two-places-disagree bug at a new pair of locations.
+ *
+ * Loading until the verdict lands: every step after the key takes its state
+ * from it, and "active" shown for a server already proven would ask the user
+ * to redo work that is done.
  */
 export function SshSetupSection({ server }: { server: Server }) {
-  const verified = useServerVerified(server);
+  const verification = useServerVerified(server);
   const { url, provider } = useSshProvider(server);
+  if (verification === "pending") return <Loading variant="rows" />;
+  const verified = verification === "verified";
 
   const key = server.sshKey;
   const ConsoleInstructions = provider?.ConsoleInstructions;

@@ -21,9 +21,9 @@ export {
   configV2ScopesResource,
   configV2ConflictLocationsSchema,
   configV2ConflictMapSchema,
-  configV2ConflictMapResource,
+  configConflictLocations,
   configV2ModifiedCountsSchema,
-  configV2ModifiedCountsResource,
+  configModifiedCounts,
 } from "./internal/resource";
 export type {
   ConfigV2Values,

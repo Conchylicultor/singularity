@@ -1,14 +1,22 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   FieldDef,
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useServerHealthMap } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {
-  deploymentsResource,
+  deployments,
   type Deployment,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { useDeploymentsListServerId } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import type { PlatformTag } from "@plugins/release/core";
 import { RELEASE_STATE_OPTIONS } from "../../core";
 import { useReleaseInfo, type ReleaseInfo } from "../internal/use-release-info";
@@ -22,19 +30,34 @@ import { ReleaseChip } from "./release-chip";
  * and group-by for free — *what on this box is stale?* is then a question the
  * generic DataView chrome already answers.
  *
+ * A field extension is handed no host rows, so it cannot simply read the
+ * `deployments` collection's default window and hope that lines up with what
+ * the host list shows — past the window's rank cutoff it wouldn't. Instead it
+ * reads `useDeploymentsListServerId()` (published by `DeploymentsBody`) and
+ * asks the SAME `useLive(deployments, { where: { serverId } })` query the host
+ * list itself subscribes to, so the two share one subscription and can never
+ * disagree about which rows exist.
+ *
  * **Why the probes.** A field extension mounts once for the whole surface, but
  * the answer is per `(composition, platform)` — one query per row. Hooks cannot
  * be called in a loop, so each pair is asked by its own headless component and
  * folded back into one map. `value` then reads the map synchronously, which is
  * what makes filter/group/sort agree with the chips instead of trailing them.
  */
-export function ReleaseField({ render }: FieldExtensionProps<Deployment>): ReactNode {
-  const deployments = useResource(deploymentsResource);
-  const [infos, setInfos] = useState<ReadonlyMap<string, ReleaseInfo>>(new Map());
+export function ReleaseField({
+  render,
+}: FieldExtensionProps<Deployment>): ReactNode {
+  const serverId = useDeploymentsListServerId();
+  const rows = useLive(deployments, { where: { serverId } });
+  const [infos, setInfos] = useState<ReadonlyMap<string, ReleaseInfo>>(
+    new Map(),
+  );
 
   const onResolve = useCallback((deploymentId: string, info: ReleaseInfo) => {
     setInfos((prev) =>
-      prev.get(deploymentId) === info ? prev : new Map(prev).set(deploymentId, info),
+      prev.get(deploymentId) === info
+        ? prev
+        : new Map(prev).set(deploymentId, info),
     );
   }, []);
 
@@ -55,12 +78,14 @@ export function ReleaseField({ render }: FieldExtensionProps<Deployment>): React
 
   return (
     <>
-      {matchResource(deployments, {
+      {matchResource(rows, {
         // Nothing to probe until the rows land, and nothing to fake: the column
         // simply has no answers yet, which `value: null` already says.
         pending: () => null,
         error: () => null,
-        ready: (rows) => <CandidateProbes rows={rows} onResolve={onResolve} />,
+        ready: (loaded) => (
+          <CandidateProbes rows={loaded} onResolve={onResolve} />
+        ),
       })}
       {render(fields)}
     </>
@@ -71,7 +96,8 @@ export function ReleaseField({ render }: FieldExtensionProps<Deployment>): React
  * One probe per row that has a platform to ask about. A server with no verified
  * platform has no candidate question at all — its rows carry no probe and their
  * cell renders nothing, the honest reading of "we have not discovered what this
- * box accepts".
+ * box accepts". Until the verdicts load there is no question to ask yet either:
+ * no probe, and the column still has no answers.
  */
 function CandidateProbes({
   rows,
@@ -80,11 +106,19 @@ function CandidateProbes({
   rows: readonly Deployment[];
   onResolve: (deploymentId: string, info: ReleaseInfo) => void;
 }): ReactNode {
-  const healthMap = useServerHealthMap();
+  // Exactly the servers these rows belong to (today, one — `rows` is already
+  // scoped to a single server's list — but this asks the question generically
+  // rather than assuming that scope).
+  const serverIds = useMemo(
+    () => Array.from(new Set(rows.map((d) => d.serverId))),
+    [rows],
+  );
+  const health = useServerHealthMap(serverIds);
+  if (health.pending) return null;
   return (
     <>
       {rows.map((d) => {
-        const platform = healthMap.get(d.serverId)?.platform ?? null;
+        const platform = health.data.get(d.serverId)?.platform ?? null;
         if (!platform) return null;
         return (
           <CandidateProbe

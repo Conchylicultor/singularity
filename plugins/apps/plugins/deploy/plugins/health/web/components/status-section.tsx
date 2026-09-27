@@ -1,6 +1,7 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { useServerHealth } from "../hooks";
 import { ServerStatusBadge, serverStatus } from "./server-status-badge";
@@ -13,23 +14,33 @@ import { ServerStatusBadge, serverStatus } from "./server-status-badge";
  * It is contributed rather than read off the server row because the registry
  * owns a server's identity, not its liveness: the verdict lives in this
  * plugin's side-table and only a real probe can write it.
+ *
+ * Nothing while the verdict loads: `Unknown` is what a server that was never
+ * checked reads as, which a read still loading cannot claim.
  */
 export function ServerStatusSummary({ server }: { server: Server }) {
-  const row = useServerHealth(server.id);
-  return <ServerStatusBadge status={serverStatus(row)} />;
+  const health = useServerHealth(server.id);
+  if (health.pending) return null;
+  return (
+    <ServerStatusBadge
+      status={serverStatus(health.found ? health.row : undefined)}
+    />
+  );
 }
 
 /** What the last probe actually found: when it ran, why it failed, what it is. */
 export function ServerStatusSection({ server }: { server: Server }) {
-  const row = useServerHealth(server.id);
+  const health = useServerHealth(server.id);
 
-  if (!row) {
+  if (health.pending) return <Loading />;
+  if (!health.found) {
     return (
       <Text as="p" variant="body" className="text-muted-foreground">
         Never checked — run the SSH connection test below.
       </Text>
     );
   }
+  const row = health.row;
 
   return (
     <Stack gap="xs">

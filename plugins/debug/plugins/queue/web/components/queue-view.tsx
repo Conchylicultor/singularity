@@ -14,37 +14,42 @@ import {
 } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+  useLive,
+  type LiveListResult,
+  type LivePaging,
+} from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  InfiniteScrollFooter,
+  useInfiniteScroll,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import {
   FilterChip,
   useChipFilter,
 } from "@plugins/primitives/plugins/filter-chips/web";
 import {
-  jobsListResource,
-  deadJobsResource,
+  jobsList,
+  deadJobs,
   retryJob,
   cancelJob,
   type JobRow,
   type JobState,
   type JobsPayload,
   type DeadJobRow,
-  type DeadJobsPayload,
 } from "@plugins/infra/plugins/jobs/core";
 import {
-  eventEmissionsResource,
-  eventTriggersResource,
+  eventEmissions,
+  eventTriggers,
   patchTriggerEndpoint,
   deleteTriggerEndpoint,
   type EmissionRow,
   type TriggerRow,
-  type TriggersPayload,
 } from "@plugins/infra/plugins/events/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
@@ -130,6 +135,33 @@ function truncate(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
 
+/** A window read's settled arm: its rows plus the paging handles. */
+type SettledList<Row> = Extract<LiveListResult<Row>, { pending: false }>;
+
+/** A window read that has not settled: its load error, else the loading state. */
+function PendingList({ error }: { error: Error | null }) {
+  return error ? (
+    <Placeholder tone="error">{error.message}</Placeholder>
+  ) : (
+    <Loading />
+  );
+}
+
+/**
+ * Grows a window by one page when the footer's sentinel scrolls into view, up
+ * to the declaration's `maxLimit`. Called by the component that renders the
+ * rows, so the observer mounts with the sentinel it watches.
+ */
+function useGrowOnScroll(list: LivePaging) {
+  return useInfiniteScroll({
+    hasNextPage: list.canGrow,
+    isFetchingNextPage: list.growing,
+    isFetchNextPageError: false,
+    fetchNextPage: list.loadMore,
+    rootMargin: "200px",
+  });
+}
+
 // ─── Jobs tab ────────────────────────────────────────────────────────────
 
 const STATE_STYLES: Record<JobState, string> = {
@@ -140,7 +172,7 @@ const STATE_STYLES: Record<JobState, string> = {
 };
 
 function JobsTab() {
-  const jobsResult = useResource(jobsListResource);
+  const jobsResult = useLive(jobsList);
   const { refetch } = jobsResult;
   return (
     <ResourceView resource={jobsResult} fallback={<Loading />}>
@@ -437,23 +469,15 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
 // ─── Dead tab ──────────────────────────────────────────────────────────────
 
 function DeadTab() {
-  const deadResult = useResource(deadJobsResource);
-  const { refetch } = deadResult;
-  return (
-    <ResourceView resource={deadResult} fallback={<Loading />}>
-      {(data) => <DeadTabInner data={data} refetch={refetch} />}
-    </ResourceView>
-  );
+  const dead = useLive(deadJobs);
+  if (dead.pending) return <PendingList error={dead.error} />;
+  return <DeadTabInner dead={dead} />;
 }
 
-function DeadTabInner({
-  data,
-  refetch,
-}: {
-  data: DeadJobsPayload;
-  refetch: () => Promise<unknown>;
-}) {
+function DeadTabInner({ dead }: { dead: SettledList<DeadJobRow> }) {
   const [selected, setSelected] = useState<DeadJobRow | null>(null);
+  const scroll = useGrowOnScroll(dead);
+  const rows = dead.data;
   return (
     <Stack gap="none" className="h-full">
       <Stack
@@ -467,12 +491,12 @@ function DeadTabInner({
           hourly).
         </Text>
         <Fill />
-        <Button variant="ghost" onClick={() => refetch()}>
+        <Button variant="ghost" onClick={() => dead.refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </Stack>
       <Scroll axis="both" fill>
-        {data.rows.length === 0 ? (
+        {rows.length === 0 ? (
           <Empty>
             No dead jobs. Permanently-failed jobs are archived here.
           </Empty>
@@ -490,7 +514,7 @@ function DeadTabInner({
               </tr>
             </Sticky>
             <tbody>
-              {data.rows.map((r) => (
+              {rows.map((r) => (
                 <tr
                   key={r.id}
                   className="cursor-pointer border-b hover:bg-accent/30"
@@ -517,6 +541,7 @@ function DeadTabInner({
             </tbody>
           </table>
         )}
+        <InfiniteScrollFooter handle={scroll} />
       </Scroll>
       {selected && (
         <DeadJobDrawer job={selected} onClose={() => setSelected(null)} />
@@ -588,12 +613,19 @@ function DeadJobDrawer({
 // ─── Events tab ──────────────────────────────────────────────────────────
 
 function EventsTab() {
-  const emissionsResult = useResource(eventEmissionsResource);
-  const { refetch } = emissionsResult;
-  const [selected, setSelected] = useState<EmissionRow | null>(null);
+  const emissions = useLive(eventEmissions);
+  if (emissions.pending) return <PendingList error={emissions.error} />;
+  return <EventsTabInner emissions={emissions} />;
+}
 
-  if (emissionsResult.pending) return <Loading />;
-  const rows = emissionsResult.data.rows;
+function EventsTabInner({
+  emissions,
+}: {
+  emissions: SettledList<EmissionRow>;
+}) {
+  const [selected, setSelected] = useState<EmissionRow | null>(null);
+  const scroll = useGrowOnScroll(emissions);
+  const rows = emissions.data;
 
   return (
     <Stack gap="none" className="h-full">
@@ -607,7 +639,7 @@ function EventsTab() {
           Capped ring-buffer of last ~1000 emit() calls.
         </Text>
         <Fill />
-        <Button variant="ghost" onClick={() => refetch()}>
+        <Button variant="ghost" onClick={() => emissions.refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </Stack>
@@ -661,6 +693,7 @@ function EventsTab() {
             </tbody>
           </table>
         )}
+        <InfiniteScrollFooter handle={scroll} />
       </Scroll>
       {selected && (
         <EmissionDrawer emission={selected} onClose={() => setSelected(null)} />
@@ -724,39 +757,39 @@ function EmissionDrawer({
 // ─── Triggers tab ────────────────────────────────────────────────────────
 
 function TriggersTab() {
-  const triggersResult = useResource(eventTriggersResource);
+  const triggersResult = useLive(eventTriggers);
   const { refetch } = triggersResult;
   return (
     <ResourceView resource={triggersResult} fallback={<Loading />}>
-      {(data) => <TriggersTabInner data={data} refetch={refetch} />}
+      {(rows) => <TriggersTabInner rows={rows} refetch={refetch} />}
     </ResourceView>
   );
 }
 
 function TriggersTabInner({
-  data,
+  rows,
   refetch,
 }: {
-  data: TriggersPayload;
+  rows: TriggerRow[];
   refetch: () => Promise<unknown>;
 }) {
   const [danglingOnly, setDanglingOnly] = useState(false);
 
   const danglingCount = useMemo(
-    () => data.rows.filter((r) => r.dangling).length,
-    [data],
+    () => rows.filter((r) => r.dangling).length,
+    [rows],
   );
 
   const grouped = useMemo(() => {
     const map = new Map<string, TriggerRow[]>();
-    for (const r of data.rows) {
+    for (const r of rows) {
       if (danglingOnly && !r.dangling) continue;
       const list = map.get(r.eventName) ?? [];
       list.push(r);
       map.set(r.eventName, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [data, danglingOnly]);
+  }, [rows, danglingOnly]);
 
   async function toggle(id: string, enabled: boolean) {
     try {

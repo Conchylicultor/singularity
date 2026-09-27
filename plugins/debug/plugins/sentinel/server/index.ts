@@ -1,7 +1,4 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/server";
 import { sentinelConfig } from "../core";
@@ -10,8 +7,8 @@ import { fleetFlightsClass } from "./internal/fleet-flights";
 import { duressEpisodeKind } from "./internal/duress-episode-kind";
 import { sentinelDownKind } from "./internal/sentinel-down-kind";
 import {
-  sentinelStatusServerResource,
-  sentinelVitalsServerResource,
+  sentinelStatusServed,
+  sentinelVitalsServed,
   startStatusWatcher,
   stopStatusWatcher,
 } from "./internal/status-resource";
@@ -27,8 +24,8 @@ export default {
     fleetFlightsClass.contribution,
     duressEpisodeKind,
     sentinelDownKind,
-    Resource.Declare(sentinelStatusServerResource),
-    Resource.Declare(sentinelVitalsServerResource),
+    ...sentinelStatusServed.declare,
+    ...sentinelVitalsServed.declare,
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
   // The status watcher runs on EVERY backend (each serves the Machine watcher

@@ -1,12 +1,10 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { deleteSong, updateSong } from "../core/endpoints";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { handleUpdateSong } from "./internal/handle-update-song";
-import { songsLiveResource } from "./internal/resources";
+import { songsServed } from "./internal/resources";
 
 export { _songs } from "./internal/tables";
-export { songsLiveResource } from "./internal/resources";
 export { createSongRow } from "./internal/create-song-row";
 export type { CreateSongRowInput } from "./internal/create-song-row";
 export { updateSongMeta } from "./internal/update-song-meta";
@@ -24,7 +22,5 @@ export default {
     [deleteSong.route]: handleDeleteSong,
     [updateSong.route]: handleUpdateSong,
   },
-  contributions: [
-    Resource.Declare(songsLiveResource),
-  ],
+  contributions: [...songsServed.declare],
 } satisfies ServerPluginDefinition;

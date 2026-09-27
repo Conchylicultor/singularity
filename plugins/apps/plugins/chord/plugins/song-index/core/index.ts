@@ -87,7 +87,7 @@ export {
   IndexPhaseSchema,
   IndexStatusSchema,
 } from "./index-status";
-export { chordIndexStatusResource } from "./resources";
+export { chordIndexStatus } from "./resources";
 export type { IndexLoadPhase, IndexPhase, IndexStatus } from "./index-status";
 export {
   CountLoopsInSetBodySchema,

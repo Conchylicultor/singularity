@@ -14,9 +14,9 @@ import { _trashEntries } from "./tables";
  *
  * Action-before-delete ordering is deliberate: if `restore`/`purge` throws, the
  * entry row survives and the operation is retryable; deleting first would
- * strand the domain rows with no handle to them. The live `trash-entries`
- * resource needs no hand-notify — the L4 change-feed on `trash_entries` pushes
- * the recompute when the row insert/delete commits.
+ * strand the domain rows with no handle to them. The `trashEntries` live
+ * collection needs no hand-notify — the L4 change-feed on `trash_entries`
+ * moves its windows when the row insert/delete commits.
  *
  * `dbx` is any drizzle executor (global handle, tx, or a test fixture's
  * throwaway DB) so the lifecycle is testable against a real scratch database.

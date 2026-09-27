@@ -6,7 +6,7 @@ import {
   type Hint,
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Sonata,
@@ -18,7 +18,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { songsResource } from "../core";
+import { songs } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
@@ -54,42 +54,42 @@ function SonataLibraryBody(): ReactElement {
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `useTitle`
- * (the browser-tab / tab-strip label before `songsResource` settles) — it is
- * NOT a data source: the header title and every consumer read the canonical
- * row from `songsResource`. `resolve` hydrates every source for the song on
+ * (the browser-tab / tab-strip label before the live `songs` value settles) —
+ * it is NOT a data source: the header title and every consumer read the
+ * canonical row from `songs`. `resolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
 export const sonataPlayerPane = Pane.define({
   route: defineRoute({ id: "sonata-player", segment: "song/:songId" }),
   app: sonataApp,
   // Display-only optimistic label for `useTitle` (tab/document title) before the
-  // songs resource settles. Structurally unwritable: `Hint.pick` hands it back
+  // `songs` value settles. Structurally unwritable: `Hint.pick` hands it back
   // only alongside the canonical value, and it is never persisted. The title is
-  // library-owned (`songsResource`); the shell keeps no mirror.
+  // library-owned (`songs`); the shell keeps no mirror.
   hint: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
-  // Tab/document title: the canonical song name from the global songs resource
+  // Tab/document title: the canonical song name from the live `songs` value
   // (reflects renames), falling back to the optimistic hint carried at open time
-  // while the resource loads. Self-contained — `useSonata()` context is
+  // while it loads. Self-contained — `useSonata()` context is
   // unavailable at the tab-surface level where this runs.
   useTitle: useSongTitle,
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });
 
-/** Canonical song title from the global resource, or the optimistic open hint. */
+/** Canonical song title from the live `songs` value, or the optimistic open hint. */
 function useSongTitle(
   { songId }: { songId: string },
   hint: Hint<{ title: string }>,
 ): string | undefined {
-  const songs = useResource(songsResource);
-  // `canonical` stays `undefined` until the resource settles — precisely what
+  const library = useLive(songs);
+  // `canonical` stays `undefined` until the value settles — precisely what
   // `pick` reads as "not known yet", so the hint shows through in the meantime
   // and is superseded the instant the real row (and any rename) arrives.
   let canonical: string | undefined;
-  if (!songs.pending)
-    canonical = songs.data.find((s) => s.id === songId)?.title;
+  if (!library.pending)
+    canonical = library.data.find((s) => s.id === songId)?.title;
   return hint.pick("title", canonical);
 }
 
@@ -101,14 +101,14 @@ function useSongTitle(
  * `undefined` and is skipped.
  */
 function useSonataPlayerResolve({ songId }: { songId: string }) {
-  const songsResult = useResource(songsResource);
+  const library = useLive(songs);
   const sources = Library.Source.useContributions();
   const { setRawMap } = useSonata();
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    /* eslint-disable react-hooks/set-state-in-effect -- async hydration with cancellation flag: fans out over the dynamic plugin-contributed Library.Source registry (Promise.all of per-source hydrate), so a single useResource/useEndpoint cannot express it; setHydratedFor(null) resets the settle gate before the await and setRawMap/setHydratedFor(songId) commit only after the cancel guard, which is genuinely stateful (no derive-in-render equivalent). */
+    /* eslint-disable react-hooks/set-state-in-effect -- async hydration with cancellation flag: fans out over the dynamic plugin-contributed Library.Source registry (Promise.all of per-source hydrate), so a single useLive/useEndpoint cannot express it; setHydratedFor(null) resets the settle gate before the await and setRawMap/setHydratedFor(songId) commit only after the cancel guard, which is genuinely stateful (no derive-in-render equivalent). */
     setHydratedFor(null);
     void (async () => {
       const rawMap: Record<string, unknown> = {};
@@ -119,7 +119,9 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
         }),
       );
       if (cancelled) return;
-      setRawMap(rawMap);
+      // The song id travels WITH its content: loading it hands the song's
+      // settings over in the same write (see `setRawMap`).
+      setRawMap(songId, rawMap);
       setHydratedFor(songId);
     })();
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -129,14 +131,14 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
   }, [songId, sources, setRawMap]);
 
   const hydrated = hydratedFor === songId;
-  // `found` is gated by `hydrated` (requires the effect above to complete), so
-  // the resource is guaranteed settled by the time `found` can be true. Reading
-  // `.data` only when not pending avoids the collapse.
-  const found =
-    hydrated &&
-    !songsResult.pending &&
-    songsResult.data.some((s) => s.id === songId);
-  return { pending: !hydrated, found };
+  // Not known yet until BOTH the hydration effect above has completed and the
+  // `songs` value has settled — a pending library is never read as "no such
+  // song" (a not-found flash on a deep link whose hydration beat the value).
+  if (!hydrated || library.pending) return { pending: true, found: false };
+  return {
+    pending: false,
+    found: library.data.some((s) => s.id === songId),
+  };
 }
 
 /**
@@ -161,7 +163,7 @@ function SonataPlayerSurface(): ReactElement {
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
   // Clear on unmount so library-state effects don't mis-attribute playback. Only
-  // the bare id is marked open: the title is library-owned (`songsResource`), so
+  // the bare id is marked open: the title is library-owned (`songs`), so
   // there is nothing to seed here.
   useEffect(() => {
     setCurrentSong(songId);

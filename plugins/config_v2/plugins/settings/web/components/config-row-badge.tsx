@@ -32,7 +32,9 @@ export function ConfigRowBadge({
   conflict,
   source,
 }: {
-  modifiedCount: number;
+  /** `undefined` while the counts are not known yet — no count is painted. */
+  modifiedCount: number | undefined;
+  /** `undefined` when there is no conflict, or while that is not known yet. */
   conflict: ConfigV2ConflictLocations | undefined;
   source?: ConfigSource;
 }) {
@@ -52,7 +54,7 @@ export function ConfigRowBadge({
         <MdWarning className="size-4" />
       </Inline>
     </WithTooltip>
-  ) : modifiedCount > 0 ? (
+  ) : modifiedCount !== undefined && modifiedCount > 0 ? (
     // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
     <Center className="ml-2 size-5 rounded-full bg-primary text-3xs font-medium text-primary-foreground">
       {modifiedCount}

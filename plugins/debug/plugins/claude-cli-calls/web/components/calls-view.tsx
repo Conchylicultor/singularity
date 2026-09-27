@@ -1,19 +1,25 @@
-import { useMemo } from "react";
 import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+  useLive,
+  type LiveListResult,
+} from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   FilterChip,
   FilterGroup,
   useChipFilter,
 } from "@plugins/primitives/plugins/filter-chips/web";
-import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/core";
+import {
+  InfiniteScrollFooter,
+  useInfiniteScroll,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
+import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import {
+  ConversationModelSchema,
   MODEL_TIERS,
   MODEL_REGISTRY,
+  type ConversationModel,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -25,39 +31,30 @@ import { CallRow } from "./call-row";
 
 type ModelFilter = "all" | ModelTier;
 
-function callMatchesTier(call: ClaudeCliCall, tier: ModelTier): boolean {
-  const meta = MODEL_REGISTRY[call.model as keyof typeof MODEL_REGISTRY];
-  return meta?.family === tier;
+/**
+ * A tier's concrete model ids. The tier is not a column, so the tier chip is
+ * an `in` over these — the server filters, and a tier's calls older than the
+ * loaded window are still found.
+ */
+function modelsOfTier(tier: ModelTier): ConversationModel[] {
+  return ConversationModelSchema.options.filter(
+    (id) => MODEL_REGISTRY[id].family === tier,
+  );
 }
 
 export function CallsView() {
-  const result = useResource(claudeCliCallsResource);
-  return (
-    <ResourceView resource={result} fallback={<Loading />}>
-      {(calls) => <CallsViewInner calls={calls} />}
-    </ResourceView>
-  );
-}
-
-function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
   const modelChip = useChipFilter<ModelFilter>("all");
   const sourceChip = useChipFilter<string>("all");
-
-  const sources = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of calls) set.add(c.sourceName);
-    return Array.from(set).sort();
-  }, [calls]);
-
-  const visible = useMemo(
-    () =>
-      calls.filter(
-        (c) =>
-          (modelChip.value === "all" || callMatchesTier(c, modelChip.value)) &&
-          sourceChip.matches(c.sourceName),
-      ),
-    [calls, modelChip, sourceChip],
-  );
+  const filtered = modelChip.value !== "all" || sourceChip.value !== "all";
+  const calls = useLive(claudeCliCalls, {
+    where: {
+      sourceName: sourceChip.value === "all" ? undefined : sourceChip.value,
+      model:
+        modelChip.value === "all"
+          ? undefined
+          : { in: modelsOfTier(modelChip.value) },
+    },
+  });
 
   return (
     <Stack gap="none" className="h-full">
@@ -85,53 +82,115 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
             </FilterChip>
           ))}
         </FilterGroup>
-        {sources.length > 0 && (
-          <FilterGroup label="Source">
-            <FilterChip
-              active={sourceChip.value === "all"}
-              onClick={() => sourceChip.setValue("all")}
-            >
-              all
-            </FilterChip>
-            {sources.map((s) => (
-              <FilterChip
-                key={s}
-                active={sourceChip.value === s}
-                onClick={() => sourceChip.setValue(s)}
-              >
-                {s}
-              </FilterChip>
-            ))}
-          </FilterGroup>
-        )}
+        <SourceChips value={sourceChip.value} onPick={sourceChip.setValue} />
         {/* An empty Fill absorbs the slack, so the count sits flush right. */}
         <Fill />
-        <Text
-          as="div"
-          variant="caption"
-          className="text-muted-foreground tabular-nums"
-        >
-          {visible.length}
-          {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
-        </Text>
+        {!calls.pending && (
+          <Text
+            as="div"
+            variant="caption"
+            className="text-muted-foreground tabular-nums"
+          >
+            {calls.data.length}
+            {calls.canGrow ? "+" : ""} calls
+          </Text>
+        )}
       </Stack>
       <Scroll axis="both" fill>
-        {visible.length === 0 ? (
+        {calls.pending ? (
+          calls.error ? (
+            <Placeholder tone="error">{calls.error.message}</Placeholder>
+          ) : (
+            <Loading />
+          )
+        ) : calls.data.length === 0 ? (
           <Center className="h-full">
             <Text as="div" variant="body" className="text-muted-foreground">
-              {calls.length === 0
-                ? "No claude --print calls recorded yet."
-                : "No calls match the current filter."}
+              {filtered
+                ? "No calls match the current filter."
+                : "No claude --print calls recorded yet."}
             </Text>
           </Center>
         ) : (
-          <ul className="divide-y">
-            {visible.map((c: ClaudeCliCall) => (
-              <CallRow key={c.id} call={c} />
-            ))}
-          </ul>
+          <CallList list={calls} />
         )}
       </Scroll>
     </Stack>
+  );
+}
+
+/**
+ * The loaded window of calls, growing by one page when its end scrolls into
+ * view — up to the whole log (`RECENT_CALLS_LIMIT`).
+ */
+function CallList({
+  list,
+}: {
+  list: Extract<LiveListResult<ClaudeCliCall>, { pending: false }>;
+}) {
+  const scroll = useInfiniteScroll({
+    hasNextPage: list.canGrow,
+    isFetchingNextPage: list.growing,
+    isFetchNextPageError: false,
+    fetchNextPage: list.loadMore,
+    rootMargin: "200px",
+  });
+  return (
+    <>
+      <ul className="divide-y">
+        {list.data.map((c) => (
+          <CallRow key={c.id} call={c} />
+        ))}
+      </ul>
+      <InfiniteScrollFooter handle={scroll} />
+    </>
+  );
+}
+
+/**
+ * One chip per source across the whole log (not the loaded window), with its
+ * count: a `groupBy` grouping, deliberately unfiltered so every chip stays
+ * visible while one is picked.
+ */
+function SourceChips({
+  value,
+  onPick,
+}: {
+  value: string;
+  onPick: (source: string) => void;
+}) {
+  const sources = useLive(claudeCliCalls, { groupBy: "sourceName" });
+  if (sources.pending) {
+    return sources.error ? (
+      <Placeholder tone="error">{sources.error.message}</Placeholder>
+    ) : (
+      <Loading variant="spinner" />
+    );
+  }
+  // `source_name` is NOT NULL, so no NULL group ever comes back.
+  const chips = sources.data.filter(
+    (g): g is { value: string; count: number } => g.value !== null,
+  );
+  if (chips.length === 0) return null;
+  return (
+    <FilterGroup label="Source">
+      <FilterChip active={value === "all"} onClick={() => onPick("all")}>
+        all
+      </FilterChip>
+      {chips.map((g) => (
+        <FilterChip
+          key={g.value}
+          active={value === g.value}
+          onClick={() => onPick(g.value)}
+        >
+          {g.value} <span className="opacity-60">{g.count}</span>
+        </FilterChip>
+      ))}
+      {(sources.canGrow || sources.growing) && (
+        <FilterChip active={false} onClick={sources.loadMore}>
+          {sources.growing ? "Loading…" : "More"}
+        </FilterChip>
+      )}
+    </FilterGroup>
   );
 }

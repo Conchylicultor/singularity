@@ -22,7 +22,7 @@ import {
 } from "@plugins/integrations/plugins/hooktheory/core";
 // Straight from the core modules rather than the core barrel: drizzle-kit loads
 // this file on its own, and the barrel also carries the endpoint contracts and
-// the live-state descriptor.
+// the live value's declaration.
 import { AlignmentSchema } from "../../core/beat-time";
 import { IndexPhaseSchema } from "../../core/index-status";
 import { LOOP_SHAPE_IDS } from "../../core/loop-shapes";

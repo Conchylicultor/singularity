@@ -21,7 +21,7 @@ export {
 } from "./summary";
 export type { QueueHealthSummary } from "./summary";
 export {
-  queuePulseResource,
+  queuePulse,
   QueueClassPulseSchema,
   QueueRunningJobSchema,
   QueueWaitingJobSchema,

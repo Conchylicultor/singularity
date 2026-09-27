@@ -11,12 +11,12 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   RELEASE_LOG_CHANNEL,
   releaseLogsEndpoint,
-  releaseRunResource,
+  releaseRuns,
   type ReleaseLogLine,
 } from "@plugins/release/core";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -25,15 +25,14 @@ import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/w
 const monoLogClass = textVariantClass("code");
 
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
-  const result = useResource(releaseRunResource, { id: runId });
+  const result = useLiveRow(releaseRuns, runId);
 
   // Live runs stream over `/ws/logs`; finished runs read the persisted fallback.
-  // While the resource is still pending we optimistically show the live stream
+  // While the row is still pending we optimistically show the live stream
   // (gate on `.pending` with an early return rather than collapsing it into a
   // fake-empty default — keeps "loading" distinct from "genuinely finished").
   if (result.pending) return <LiveLogs />;
-  const run = result.data;
-  if (run?.status === "running") return <LiveLogs />;
+  if (result.found && result.row.status === "running") return <LiveLogs />;
   return <PersistedLogs runId={runId} />;
 }
 

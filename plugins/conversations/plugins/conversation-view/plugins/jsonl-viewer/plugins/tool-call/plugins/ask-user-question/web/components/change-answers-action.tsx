@@ -5,10 +5,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
 import { restoreAnswerDraft } from "./answer-draft";
@@ -36,7 +36,7 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
 
 function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   const { convId } = conversationPane.useParams();
-  const eventsResult = useResource(jsonlEventsResource, { id: convId });
+  const eventsResult = useLive(jsonlEvents, { id: convId });
   if (eventsResult.pending) return null;
   // Only an answer sent from here is a message a rewind can cut at; one given
   // in the terminal lives inside the tool result.

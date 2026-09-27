@@ -15,6 +15,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `conversations/model-provider.familyClass`
+    - `network/live.useLive`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
@@ -31,7 +32,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/pane.defineRoute`

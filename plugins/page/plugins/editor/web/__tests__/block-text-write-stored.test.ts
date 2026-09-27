@@ -30,7 +30,6 @@ vi.mock("@plugins/primitives/plugins/networking/web", () => ({
 
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
-  useResource: vi.fn(() => ({ pending: true, data: [] })),
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
   useLiveRow: vi.fn(() => ({ pending: true, error: null })),

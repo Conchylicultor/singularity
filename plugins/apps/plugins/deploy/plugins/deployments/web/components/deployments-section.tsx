@@ -9,21 +9,26 @@ import {
 import {
   matchResource,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  useServerHealth,
+  type ServerHealthRow,
+} from "@plugins/apps/plugins/deploy/plugins/health/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
-  deploymentsResource,
-  deployRunsResource,
+  deployments,
+  deployRuns,
   type Deployment,
   type DeployRun,
 } from "../../core";
 import { RUN_STATE_OPTIONS, runStateOf } from "../internal/deploy-runs";
+import { DeploymentsListServerIdProvider } from "../internal/list-server-id-context";
 import { deploymentDetailPane } from "../panes";
 import { Deployments } from "../slots";
 import { DeploymentItemActions } from "./deployment-item-actions";
@@ -42,10 +47,11 @@ const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
  * last run, and (contributed) the release state; the record's editable fields and
  * the derived install names live in the row's own pane, one click away.
  *
- * The two resources are gated together (`useCombinedResources`), so the list and
- * the run chips can never render from a half-loaded snapshot — a deployment
- * showing "not run" only because the run map had not arrived would be exactly
- * the wrong-state-while-loading bug.
+ * The list reads this server's rows of the `deployments` collection (`where:
+ * { serverId }`), and it is gated together with the run map
+ * (`useCombinedResources`), so the list and the run chips can never render from
+ * a half-loaded snapshot — a deployment showing "not run" only because the run
+ * map had not arrived would be exactly the wrong-state-while-loading bug.
  *
  * Contributed as a `ServerDetail` section, so the card, its "Deployments" title
  * and its collapse state all belong to the host.
@@ -65,8 +71,8 @@ export function DeploymentsSection({
 }): ReactElement {
   const serverId = server.id;
   const loaded = useCombinedResources({
-    deployments: useResource(deploymentsResource),
-    runs: useResource(deployRunsResource),
+    rows: useLive(deployments, { where: { serverId } }),
+    runs: useLive(deployRuns),
   });
   const health = useServerHealth(serverId);
 
@@ -75,11 +81,7 @@ export function DeploymentsSection({
     // section's card body, generically, so a DataView dropped into one is
     // correctly inset with zero per-section code.
     <Stack gap="md">
-      <Text as="p" variant="caption" tone="muted">
-        {health?.ok && health.platform
-          ? `This server accepts ${health.platform} bundles.`
-          : "This server has no verified platform yet — run Verify connection above; the platform a deploy needs is discovered by that probe."}
-      </Text>
+      <PlatformCaption health={health} />
       {matchResource(loaded, {
         // The DataView owns the loading render (its own skeleton) and keeps its
         // chrome stable, so the "nothing is deployed" empty state always means
@@ -90,16 +92,37 @@ export function DeploymentsSection({
         error: () => (
           <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />
         ),
-        ready: ({ deployments, runs }) => (
+        ready: ({ rows, runs }) => (
           <DeploymentsBody
             serverId={serverId}
-            rows={deployments.filter((d) => d.serverId === serverId)}
+            rows={rows}
             runs={runs}
             loading={false}
           />
         ),
       })}
     </Stack>
+  );
+}
+
+/**
+ * Which bundles this server takes, as its last probe found. Loading while the
+ * verdict loads — "no verified platform yet" is a claim about the server, and
+ * a read still in flight cannot make it.
+ */
+function PlatformCaption({
+  health,
+}: {
+  health: LiveRowResult<ServerHealthRow>;
+}): ReactNode {
+  if (health.pending) return <Loading />;
+  const platform = health.found && health.row.ok ? health.row.platform : null;
+  return (
+    <Text as="p" variant="caption" tone="muted">
+      {platform
+        ? `This server accepts ${platform} bundles.`
+        : "This server has no verified platform yet — run Verify connection above; the platform a deploy needs is discovered by that probe."}
+    </Text>
   );
 }
 
@@ -168,7 +191,11 @@ function DeploymentsBody({
   ];
 
   return (
-    <>
+    // Every `Deployments.Fields` contribution (the `Release` column) is
+    // handed no rows of its own — this is how it learns which server's list
+    // it is inside, so it can ask the SAME `{ where: { serverId } }` question
+    // this component just did, instead of probing the whole collection.
+    <DeploymentsListServerIdProvider serverId={serverId}>
       <RunFailureNotice
         runs={Object.values(runs).filter((r) => r.serverId === serverId)}
       />
@@ -193,6 +220,6 @@ function DeploymentsBody({
         }
         emptyState="Nothing is deployed on this server yet."
       />
-    </>
+    </DeploymentsListServerIdProvider>
   );
 }

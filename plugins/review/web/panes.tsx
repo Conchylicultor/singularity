@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Pane,
   PaneChrome,
@@ -7,10 +7,10 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { Review } from "./slots";
 import { type Source, SourceTabs, groupPushes } from "./source";
 
@@ -31,30 +31,52 @@ function ConvReviewBody() {
   const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 
-  // Per-attempt bounded sub — correct for arbitrarily old attempts, unlike
-  // filtering the global recent-push window (which dropped an old attempt's pushes).
-  const pushesQ = useResource(pushesByAttemptResource, {
-    attemptId: conversation?.attemptId ?? "",
-  });
-  const pushGroups = useMemo(() => {
-    if (pushesQ.pending || !conversation) return [];
-    return groupPushes(pushesQ.data);
-  }, [pushesQ, conversation]);
-
   if (!convId) return null;
 
   return (
     <PaneChrome pane={convReviewPane} title="Review">
       <Stack gap="none" className="h-full">
-        <SourceTabs
-          source={source}
-          onChange={setSource}
-          pushGroups={pushGroups}
-        />
+        {conversation ? (
+          <AttemptSourceTabs
+            attemptId={conversation.attemptId}
+            source={source}
+            onChange={setSource}
+          />
+        ) : (
+          // The conversation (and so its attempt) is not known yet: its push
+          // tabs are too.
+          <SourceTabs
+            source={source}
+            onChange={setSource}
+            pushGroups="pending"
+          />
+        )}
         <Scroll axis="both" fill>
           <Review.Host conversationId={convId} source={source} />
         </Scroll>
       </Stack>
     </PaneChrome>
+  );
+}
+
+// The source tabs once the attempt is known: one tab per push of THIS attempt,
+// read from the `pushes` collection filtered to it (a filter, not a slice of a
+// global recent window, so an arbitrarily old attempt keeps its pushes).
+function AttemptSourceTabs({
+  attemptId,
+  source,
+  onChange,
+}: {
+  attemptId: string;
+  source: Source;
+  onChange: (next: Source) => void;
+}) {
+  const pushesQ = useLive(pushRows, { where: { attemptId } });
+  return (
+    <SourceTabs
+      source={source}
+      onChange={onChange}
+      pushGroups={pushesQ.pending ? "pending" : groupPushes(pushesQ.data)}
+    />
   );
 }

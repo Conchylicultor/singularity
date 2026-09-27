@@ -1,10 +1,7 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { recheckClaudeCode } from "../core";
 import { handleRecheck } from "./internal/handle-recheck";
-import { claudeCodeStatusServerResource } from "./internal/status";
+import { claudeCodeStatusServed } from "./internal/status";
 
 export {
   assertClaudeCodeReady,
@@ -21,5 +18,5 @@ export default {
   httpRoutes: {
     [recheckClaudeCode.route]: handleRecheck,
   },
-  contributions: [Resource.Declare(claudeCodeStatusServerResource)],
+  contributions: [...claudeCodeStatusServed.declare],
 } satisfies ServerPluginDefinition;

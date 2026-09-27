@@ -81,6 +81,8 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `apps/deploy/deployments.DeploymentDetail`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `network/live.LiveRowResult`
+    - `network/live.useLiveRow`
     - `plugin-meta/composition.useCompositionIncludes`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
@@ -100,8 +102,6 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 - Server:

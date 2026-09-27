@@ -24,8 +24,8 @@ function useOriginPage(
   const pagesResult = useResource(pagesResource);
 
   if (origin.pending || pagesResult.pending) return null;
-  if (!origin.data) return null;
-  const { pageId } = origin.data;
+  if (!origin.found) return null;
+  const { pageId } = origin.row;
 
   const page = pagesResult.data.find((row) => row.id === pageId);
   if (!page) return null;

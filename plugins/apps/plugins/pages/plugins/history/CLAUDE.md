@@ -11,6 +11,7 @@
     - `apps/pages/page-tree.PageDetail`
     - `history/dialog.VersionHistoryDialog`
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `page/editor.BLOCK_INSET`
     - `page/editor.PageIcon`
     - `page/read-only-view.ReadOnlyBlocks`
@@ -20,7 +21,6 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
 - Server:
   - Contributes:

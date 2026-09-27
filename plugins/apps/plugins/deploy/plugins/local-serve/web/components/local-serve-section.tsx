@@ -3,17 +3,14 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import {
   ServeTargetPanel,
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
-import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { deployments } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 
 /**
  * **Test locally** — the composition served on the shared gateway, next to the
@@ -29,23 +26,15 @@ export function LocalServeSection({
 }: {
   deploymentId: string;
 }): ReactNode {
-  const deployments = useResource(deploymentsResource);
+  const deployment = useLiveRow(deployments, deploymentId);
 
-  return matchResource(deployments, {
-    pending: () => <Loading variant="rows" />,
-    error: () => <Loading variant="rows" />,
-    ready: (rows) => {
-      const deployment = rows.find((d) => d.id === deploymentId);
-      if (!deployment) {
-        return (
-          <Placeholder tone="error">
-            This deployment no longer exists.
-          </Placeholder>
-        );
-      }
-      return <LocalServe composition={deployment.compositionId} />;
-    },
-  });
+  if (deployment.pending) return <Loading variant="rows" />;
+  if (!deployment.found) {
+    return (
+      <Placeholder tone="error">This deployment no longer exists.</Placeholder>
+    );
+  }
+  return <LocalServe composition={deployment.row.compositionId} />;
 }
 
 function LocalServe({ composition }: { composition: string }): ReactNode {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   JsonlEventSchema,
   type JsonlEvent,
@@ -291,13 +291,14 @@ export type SubagentTranscriptEvents = JsonlEvent[];
 
 /**
  * Every sub-agent of one conversation, in start order. ONE subscription serves
- * every card in the conversation — `useResource` is a TanStack Query wrapper, so
- * N cards on identical params share one query and one subscription.
+ * every card in the conversation — `useLive` is a TanStack Query wrapper, so N
+ * cards on identical params share one query and one subscription. Not loaded
+ * yet is `pending` (a value has no placeholder), never an empty list.
  */
-export const subagentActivityResource = resourceDescriptor<
-  SubagentActivityRow[],
-  { id: string }
->("subagent-activity", SubagentActivityPayloadSchema, []);
+export const subagentActivity = liveValue("subagent-activity", {
+  schema: SubagentActivityPayloadSchema,
+  params: ["id"],
+});
 
 /**
  * Which sub-agent a surface means — by one of its TWO keys, because the
@@ -322,10 +323,13 @@ export const SubagentRefSchema = z.object({
 export type SubagentRef = z.infer<typeof SubagentRefSchema>;
 
 /**
- * One sub-agent's transcript, keyed by whichever {@link SubagentRef} the
- * opening surface holds; the server resolves it to a file.
+ * One sub-agent's transcript, keyed by the parent conversation plus whichever
+ * {@link SubagentRef} the opening surface holds (spread flat: `{ id, by, key }`);
+ * the server re-parses the ref and resolves it to a file. Not loaded yet is
+ * `pending` — never `unlinked`, which is a settled answer ("no file claims this
+ * card yet"), not a stand-in.
  */
-export const subagentTranscriptResource = resourceDescriptor<
-  SubagentTranscript,
-  { id: string } & SubagentRef
->("subagent-transcript", SubagentTranscriptSchema, { kind: "unlinked" });
+export const subagentTranscript = liveValue("subagent-transcript", {
+  schema: SubagentTranscriptSchema,
+  params: ["id", "by", "key"],
+});

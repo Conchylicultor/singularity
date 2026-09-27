@@ -101,8 +101,14 @@ if (value?.taskId) return <TaskChip taskId={value.taskId} />;
 
 Behavior:
 
-- One push resource per conversation, so all widgets in a conversation share
-  one subscription.
+- One live value per conversation — `activeDataBindings`
+  (`liveValue("active-data.bindings", { params: ["conversationId"] })` in
+  `core/resource.ts`, served by `serveValue(…, { source: "db", unbounded })` in
+  `server/internal/resource.ts`) — so all widgets in a conversation share one
+  subscription, each picking its own row by
+  `(messageId, tag, occurrenceIndex)`. A value, not a collection: that
+  composite is the table's key, so there is no single id to read a row by. The
+  change feed pushes it on every write; the routes notify nothing.
 - `set` upserts via `PUT /api/active-data/bindings/...`; `clear` deletes.
 - When `messageId` is absent (legacy logs), `enabled` is `false` and `set` /
   `clear` no-op — the widget falls back to non-persistent React state.
@@ -121,13 +127,13 @@ Behavior:
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `page/editor.blockTextTokenExtension`
     - `page/editor.registerBlockTextExtensionSource`
     - `primitives/inline-text.InlineTextWalker`
     - `primitives/inline-text.InlineTextWalkerContext`
     - `primitives/inline-text.InlineTextWalkerSlot`
     - `primitives/inline-text.useInlineTextWalker`
-    - `primitives/live-state.useResource`
     - `primitives/markdown.InlineCode`
     - `primitives/markdown.MarkdownEnhancement`
     - `primitives/markdown.MarkdownEnhancementContext`
@@ -165,27 +171,26 @@ Behavior:
     - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
-  - Exports (values):
-    - `_activeDataBindings`
-    - `activeDataBindingsResource`
-  - Resources: `active-data.bindings` (push)
+  - Exports (values): `_activeDataBindings`
+  - Resources: `active-data.bindings` (push, unbounded: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
   - Routes:
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
   - Exports (types):
     - `ActiveDataBinding`
     - `ActiveDataBindingsPayload`
     - `PutBindingBody`
   - Exports (values):
+    - `activeDataBindings`
     - `ActiveDataBindingSchema`
     - `ActiveDataBindingsPayloadSchema`
-    - `activeDataBindingsResource`
     - `deleteBinding`
     - `inlineBoundary`
     - `putBinding`

@@ -20,8 +20,8 @@ export {
   SubagentRefSchema,
   describedSubagent,
   agentCallJoin,
-  subagentActivityResource,
-  subagentTranscriptResource,
+  subagentActivity,
+  subagentTranscript,
 } from "./protocol";
 export { AGENT_TOOL_NAME, agentCallsIn, agentCallForSubagent } from "./join";
 export { classifyLastStep, lastStepOfLines, formatLastStep } from "./last-step";

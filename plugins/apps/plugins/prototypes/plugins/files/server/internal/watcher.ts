@@ -5,15 +5,12 @@ import {
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isPrototypeId } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import {
-  adoptPrototypeHistories,
-  prototypeHistoryLiveResource,
-} from "./history";
+import { adoptPrototypeHistories, prototypeHistoryServed } from "./history";
 import { prototypePicksServed } from "./picks";
-import { prototypeStatusesLiveResource } from "./status";
+import { prototypeStatusesServed } from "./status";
 import {
-  prototypesResource,
-  prototypesVersionResource,
+  prototypesListServed,
+  prototypesVersionServed,
   bumpPrototypesVersion,
 } from "./resources";
 import { changedPrototypes, readPrototypesSignature } from "./signature";
@@ -62,8 +59,8 @@ async function refreshOnce(): Promise<void> {
   lastSignature = signature;
 
   bumpPrototypesVersion();
-  prototypesResource.notify();
-  prototypesVersionResource.notify();
+  prototypesListServed.notify();
+  prototypesVersionServed.notify();
   for (const name of changed) notifyHistory(name);
   for (const listener of listeners) listener();
 
@@ -75,7 +72,7 @@ async function refreshOnce(): Promise<void> {
 
 /** Re-read one prototype's history, for whoever is subscribed to it. */
 function notifyHistory(name: string): void {
-  if (isPrototypeId(name)) prototypeHistoryLiveResource.notify({ name });
+  if (isPrototypeId(name)) prototypeHistoryServed.notify({ name });
 }
 
 // Single-flight with a trailing re-run: a signature read is async, so two
@@ -123,7 +120,7 @@ function onTreeEvents(paths: string[]): void {
   }
   for (const id of recorded) notifyHistory(id);
   for (const name of picked) prototypePicksServed.notify({ name });
-  if (statusMoved) prototypeStatusesLiveResource.notify();
+  if (statusMoved) prototypeStatusesServed.notify();
   if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
 }
 

@@ -1,9 +1,9 @@
 import { useMemo, type ReactElement } from "react";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
-  prototypeHistoryResource,
+  prototypeHistory,
   type PrototypeHistory,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
@@ -25,7 +25,7 @@ import {
  */
 export function CanvasShortcuts(): ReactElement | null {
   const { name } = usePrototypeDetail();
-  const history = useResource(prototypeHistoryResource, { name });
+  const history = useLive(prototypeHistory, { name });
   // Until the history is known the keys are not registered — there is nowhere
   // to step yet.
   if (history.pending) return null;

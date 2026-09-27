@@ -7,8 +7,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { AnswerForm } from "./answer-form";
 import { OptionBody, OptionRow } from "./option-row";
@@ -64,7 +64,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const questions = Array.isArray(input?.questions) ? input.questions : [];
 
   const { convId } = conversationPane.useParams();
-  const eventsResult = useResource(jsonlEventsResource, { id: convId });
+  const eventsResult = useLive(jsonlEvents, { id: convId });
 
   if (eventsResult.pending) return null;
 

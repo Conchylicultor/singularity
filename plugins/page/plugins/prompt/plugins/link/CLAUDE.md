@@ -10,9 +10,9 @@ block renderer into its closure.
 
 `tasks_ext_prompt_block` is an entity extension on `tasks` (1:1, FK CASCADE on
 task delete) holding `{ pageId, blockId }`. The block does **not** store task ids
-in its `data`; it derives its tasks by subscribing to a live resource keyed by
-`blockId`. One direction of truth, so a deleted task disappears from the block
-automatically and the two can never drift.
+in its `data`; it derives its tasks by reading the live link collection filtered
+on its `blockId`. One direction of truth, so a deleted task disappears from the
+block automatically and the two can never drift.
 
 ## Why no FK on `blockId`
 
@@ -21,63 +21,62 @@ automatically and the two can never drift.
 originating block: a CASCADE would destroy the task when the block is deleted,
 and a SET NULL would silently lose the provenance. The consequence is a
 possibly-dangling `blockId`, which both readers already handle naturally (the
-block-side query returns nothing; the task-side origin section renders nothing).
+block-side window returns nothing; the task-side origin section renders nothing).
 
-## Why the block-keyed resource is hand-written
+## One collection, two reads
 
-`blockPromptTasksResource` keys on `block_id` — a **foreign** column, not the
-identity pk (the `taskId` key, stored as `parent_id`). `windowQueryResource`'s `point`
-membership requires `by` to be the identity pk, so it cannot express this read.
-The sanctioned shape for a foreign-column-keyed resource is the hand-written
-`defineResource(descriptor, { identityTable, loader })` with the
-`ctx?.affectedIds` scoped-refill branch, copied from `pushesByAttemptResource`.
-It stays bounded: a FULL load is one block's launched tasks.
+`promptBlockTasks` (`shared/schemas.ts`) is a `liveCollection` over the
+extension table, served by `serveCollection(promptBlockTasks, { from:
+promptBlock })` — the extension entity's wire columns, so the row is
+`{ taskId, pageId, blockId, createdAt }` with no projection to drift from the
+table. Each of the link's two questions is one read of it:
 
-The reverse `WHERE block_id = X` lookup is indexed, declared through
-`defineExtension`'s `indexes` option as `(block_id, created_at)` — the extension
-table's only other index, since the pk's implicit btree covers `parent_id` alone.
-That column pair is what makes one index serve both of the resource's reads: the
-FULL load filters on `block_id` and returns oldest-first, so an ordered index
-scan can satisfy the `ORDER BY` without a sort, and the scoped refill
-(`block_id = X AND parent_id IN (…)`) seeks on the same leading column. Which
-plan the planner picks is its own call — while the table is small it may prefer
-a bitmap scan plus a sort, and the trailing column costs nothing either way.
+- **Block side** — "which tasks did this block launch?" — is the window
+  `useLive(promptBlockTasks, { where: { blockId } })`, newest first (default 50,
+  max 200: a block's launches are a handful, so the newest never fall out).
+- **Task side** — "which page did this task come from?" — is the `:rows` point
+  read `useLiveRow(promptBlockTasks, taskId)`; `found: false` is "not launched
+  from a prompt block". (This replaced a separate whole-table keyed resource.)
 
-The second, task-keyed read (`promptTaskOriginsResource`) is a plain
-`queryResource` — bounded by the domain (at most one row per task, co-bounded
-with the already boot-critical unbounded-legacy `tasks` resource).
+**The id is `taskId`**, the table's primary key (stored as `parent_id`), and
+`blockId` is a filterable column. The point membership intersects the PK values
+a write touched with each reader's id set, so an id that is not the PK would
+name ids no write ever reports.
 
-Both reads send the same wire row, `{ taskId, pageId, blockId, createdAt }`: the
-extension's shape (`promptBlockShape`, in `shared/schemas.ts`) declares it once,
-and each loader selects the handle's `wireColumns`, so there is no projection to
-drift from the table.
+The `WHERE block_id = X` window is indexed, declared through `defineExtension`'s
+`indexes` option as `(block_id, created_at)` — the extension table's only other
+index, since the pk's implicit btree covers `parent_id` alone (which is what the
+task-side point read seeks on). The leading column makes the block-side window
+a seek to one block's handful of rows; ordering those (`created_at DESC NULLS
+LAST`, then the pk) is a trivial top-N sort, and the trailing column costs
+nothing. Which plan the planner picks is its own call.
 
 ## Public API
 
 `web/` is the only cross-plugin surface:
 
-- `useBlockPromptTasks(blockId)` → `readonly PromptTaskLink[]` (oldest-first)
-- `usePromptTaskLink(taskId)` → `PromptTaskOrigin | null`
+- `useBlockPromptTasks(blockId)` → `LiveListResult<PromptTaskLink>` (newest-first)
+- `usePromptTaskLink(taskId)` → `LiveRowResult<PromptTaskLink>`
 - `createPromptTask({ pageId, blockId, prompt })` → `{ taskId }`
 
-`shared/` is plugin-private (boundary rule R10) — the resource descriptors and
-endpoint contract are consumed by this plugin's own `web` and `server` only.
+`shared/` is plugin-private (boundary rule R10) — the collection declaration
+and endpoint contract are consumed by this plugin's own `web` and `server` only.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the block-keyed and task-keyed live reads over it, the create-task endpoint, and the Pages task category.
+- Description: Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the live link collection over it (block-side window, task-side row lookup), the create-task endpoint, and the Pages task category.
 - Server:
   - Contributes:
     - `resource.declare` "prompt-block-tasks"
-    - `resource.declare` "prompt-task-origins"
+    - `resource.declare` "prompt-block-tasks:rows"
+    - `resource.declare` "prompt-block-tasks:groups"
     - `taskCategory` "pages"
   - Uses:
-    - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `infra/query-resource.queryResource`
+    - `network/live.serveCollection`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
     - `tasks/task-title.scheduleTaskTitleUpdate`
@@ -87,25 +86,23 @@ endpoint contract are consumed by this plugin's own `web` and `server` only.
   - DB schema: `plugins/page/plugins/prompt/plugins/link/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_prompt_block`)
   - Exports (values):
-    - `blockPromptTasksServerResource`
     - `createTaskFromPromptBlock`
     - `getPromptTaskOrigin`
     - `PAGES_CATEGORY_ID`
     - `promptBlock`
-    - `promptTaskOriginsServerResource`
   - Resources:
-    - `prompt-block-tasks` (keyed)
-    - `prompt-task-origins` (keyed)
+    - `prompt-block-tasks` (keyed, window)
+    - `prompt-block-tasks:groups` (push)
+    - `prompt-block-tasks:rows` (keyed, point)
   - Routes: `POST /api/prompt-blocks/tasks`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
-  - Exports (types):
-    - `PromptTaskLink`
-    - `PromptTaskOrigin`
+    - `network/live.LiveListResult`
+    - `network/live.LiveRowResult`
+    - `network/live.useLive`
+    - `network/live.useLiveRow`
+  - Exports (types): `PromptTaskLink`
   - Exports (values):
     - `createPromptTask`
     - `useBlockPromptTasks`
@@ -119,12 +116,9 @@ endpoint contract are consumed by this plugin's own `web` and `server` only.
   - Exports (types):
     - `CreatePromptBlockTaskBody`
     - `PromptTaskLink`
-    - `PromptTaskOrigin`
   - Exports (values):
-    - `blockPromptTasksResource`
     - `createPromptBlockTask`
+    - `promptBlockTasks`
     - `PromptTaskLinkSchema`
-    - `PromptTaskOriginSchema`
-    - `promptTaskOriginsResource`
 
 <!-- AUTOGENERATED:END -->

@@ -17,7 +17,7 @@ See
 
 - **Never write `docRank` back** — no column, no migration, never in a request
   body. It is valid only against the group it was minted with, and the same row
-  read through `blocksResource` carries none, so persisting it would give one row
+  read through `pageBlocks` carries none, so persisting it would give one row
   two conflicting ranks. `rank` stays the storage key; moves send **positional
   intent** (an anchor id) and the server mints the rank against the full sibling set.
 - **Membership is never a function of the traversal.** The loader's driving
@@ -3373,6 +3373,20 @@ the whole document lives in React state and is discarded on unmount.
   the SAME pure reducers/forest helpers as `useServerBlockStore`, so op/patch/insert
   semantics are byte-identical to the server. In memory `serverData === data`
   (every row is authoritative from the start, so the doc-init FK gate is inert).
+- **A store is `pending`, then settled — and the provider only sees settled.**
+  `BlockStore` is `{ pending: true } | SettledBlockStore`; only the settled arm has
+  rows and `dispatch`. The server feed is the positional
+  `useOptimisticResource(pageBlocks, { pageId }, …)` read, so there is no `[]`
+  placeholder document an op could be folded onto. `BlockEditorProviderInner`
+  takes a `SettledBlockStore` (tsc), and `BlockEditorProviderGate` is the one
+  place that tells them apart: it renders the editor's loading state while the
+  store is pending and mounts the provider once the base page's rows land, so
+  every provider hook reads real rows and the context has no whole-document
+  `pending`. In the composite (inline nested pages), an expanded child page
+  whose own feed is still pending contributes NO rows — never an empty list —
+  and its anchor row is named in `loadingBelow`, where `BlockRow` renders a
+  loading region; an op routed to such a page throws (its rows are not on
+  screen), and an undo patch for it takes the detached-persist path.
 - **The store owns rank authority.** `move` takes positional intent
   (`zone`/`targetId`) plus the provider's `computeDrop` rank PREDICTION. The server
   store ships only the intent — no caller may hand the server a rank, because
@@ -4017,6 +4031,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `infra/trash._trashEntries`
     - `infra/trash.defineTrashSource`
     - `infra/trash.recordTrashEntry`
+    - `network/live.serveValue`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
@@ -4045,7 +4060,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockLifecycle`
     - `blocksChanged`
     - `BlockSchema`
-    - `blocksLiveResource`
     - `blockTextProtectedSpans`
     - `blockTextServerExtensions`
     - `blockTextServerNodes`
@@ -4065,7 +4079,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTrashSource('pages')`
     - `defineTrashSource('page-blocks')`
   - Resources:
-    - `page-blocks` (push)
+    - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
     - `pages` (push)
   - Routes:
     - `GET /api/pages`
@@ -4083,6 +4097,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
+    - `network/live.liveValue`
     - `primitives/collab-doc.readYDoc`
     - `primitives/collab-doc.yDocContent`
     - `primitives/collab-doc.yDocFromLexical`
@@ -4157,7 +4172,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockPatchSchema`
     - `BlockSchema`
     - `blockSelectionRoots`
-    - `blocksResource`
     - `canIndent`
     - `canOutdent`
     - `changedFields`
@@ -4203,6 +4217,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `pageBlockAuthor`
     - `pageBlockHandle`
     - `pageBlockMarkdown`
+    - `pageBlocks`
     - `PageCoverSchema`
     - `pageData`
     - `PageDataSchema`

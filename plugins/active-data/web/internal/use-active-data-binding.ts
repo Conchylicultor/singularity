@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from "react";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   fetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
-  activeDataBindingsResource,
+  activeDataBindings,
   putBinding,
   deleteBinding,
 } from "@plugins/active-data/core";
@@ -49,8 +49,12 @@ export function useActiveDataBinding<T>(
   schema: ZodParser<T>,
 ): ActiveDataBindingHandle<T> {
   const identity = useActiveDataIdentity();
-  const resource = useResource(
-    activeDataBindingsResource,
+  // Without an identity there is no conversation to read, but the hook must
+  // still run: it subscribes the dead `{ conversationId: "" }` tuple, and the
+  // handle below reports `pending` for as long as `identity` is null. (A value
+  // read has no skip spelling yet — the value-params sentinel follow-up.)
+  const resource = useLive(
+    activeDataBindings,
     identity
       ? { conversationId: identity.conversationId }
       : { conversationId: "" },

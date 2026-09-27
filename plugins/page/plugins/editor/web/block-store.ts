@@ -4,7 +4,7 @@
 //
 // Two implementations share one shape:
 //   - `useServerBlockStore`  — the persistent path: the
-//     `useOptimisticResource(blocksResource, …)` overlay, and nothing else.
+//     `useOptimisticResource(pageBlocks, { pageId }, …)` overlay, and nothing else.
 //   - `useMemoryBlockStore`  — an authoritative in-memory `useState<Block[]>`,
 //     the source of truth itself (no overlay, no confirmation, no network). Its
 //     writes reuse the SAME pure helpers as the server (`applyOverlayOp`, the
@@ -19,7 +19,7 @@ import {
 import {
   applyBlockOpEndpoint,
   patchBlocks,
-  blocksResource,
+  pageBlocks,
   type Block,
 } from "../core";
 import {
@@ -30,6 +30,16 @@ import {
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
 import { useBlockOpContext } from "./internal/block-handles";
+
+/**
+ * A store is `pending` until its first authoritative rows land, and only then
+ * {@link SettledBlockStore} — the one arm with rows and a `dispatch`. There is
+ * no placeholder document: an op can never be folded onto rows nobody has
+ * seen, and the provider (whose hooks read the rows unconditionally) takes the
+ * settled arm only, so it cannot be mounted on a pending store (a tsc error).
+ * `BlockEditorProviderGate` is the one place that tells the two apart.
+ */
+export type BlockStore = { pending: true } | SettledBlockStore;
 
 /**
  * The full read/write surface the provider needs. Recording for undo stays in
@@ -45,7 +55,8 @@ import { useBlockOpContext } from "./internal/block-handles";
  * without joining the page's write order. A new member here would be a claim
  * that some mutation is not expressible as an op; there are none left.
  */
-export interface BlockStore {
+export interface SettledBlockStore {
+  pending: false;
   /** Current document rows (server truth + overlay, or the in-memory truth). */
   data: Block[];
   /**
@@ -56,14 +67,26 @@ export interface BlockStore {
    * every row is authoritative from the start, so `serverData === data`.
    */
   serverData: Block[];
-  /** True until the first authoritative snapshot arrives (memory: never). */
-  pending: boolean;
+  /**
+   * Rows below which content is still LOADING: the anchor (sub-page or
+   * page-link row) of an expanded nested page whose own feed has not landed yet
+   * (the composite store, `composite-block-store.tsx`). Such a page contributes
+   * no rows — not an empty list of them — and the editor renders a loading
+   * region under its anchor instead. Empty for a single page and in memory.
+   */
+  loadingBelow: ReadonlySet<string>;
   /** Apply a structural op / undo-redo patch through the overlay pipeline. */
   dispatch: (v: BlockOverlayOp) => void;
 }
 
+/** The pending arm, shared: it carries nothing, so one object serves every store. */
+export const PENDING_BLOCK_STORE: BlockStore = { pending: true };
+
+/** No row has anything loading below it (a single page; memory). */
+export const NOTHING_LOADING: ReadonlySet<string> = new Set();
+
 // ---------------------------------------------------------------------------
-// Server-backed store (the persistent path — extracted verbatim).
+// Server-backed store (the persistent path).
 // ---------------------------------------------------------------------------
 
 export function useServerBlockStore(pageId: string): BlockStore {
@@ -82,13 +105,7 @@ export function useServerBlockStore(pageId: string): BlockStore {
     (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, opCtx),
     [opCtx],
   );
-  const optimistic = useOptimisticResource<
-    Block[],
-    BlockOverlayOp,
-    { pageId: string }
-  >({
-    resource: blocksResource,
-    params,
+  const optimistic = useOptimisticResource(pageBlocks, params, {
     apply,
     // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
     // generic `patch` endpoint. Both flow through this one instance so the
@@ -121,17 +138,22 @@ export function useServerBlockStore(pageId: string): BlockStore {
     describeOp: (v) => (v.tag === "patch" ? "patch" : v.op.kind),
   });
 
-  const dispatch = useCallback(
-    (v: BlockOverlayOp) => optimistic.dispatch(v),
-    [optimistic],
-  );
-
-  return {
-    data: optimistic.data,
-    serverData: optimistic.serverData,
-    pending: optimistic.pending,
-    dispatch,
-  };
+  // Reference-stable per settled render (the hook memoizes its result), so the
+  // composite's per-feed snapshot only moves when the rows do.
+  return useMemo<BlockStore>(() => {
+    if (optimistic.pending) return PENDING_BLOCK_STORE;
+    const { data, serverData, dispatch } = optimistic;
+    return {
+      pending: false,
+      data,
+      serverData,
+      loadingBelow: NOTHING_LOADING,
+      // The hook's dispatch returns the minted op id; the seam's is fire-and-forget.
+      dispatch: (v) => {
+        dispatch(v);
+      },
+    };
+  }, [optimistic]);
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +167,7 @@ export function useMemoryBlockStore({
   initialBlocks,
 }: {
   initialBlocks: Block[];
-}): BlockStore {
+}): SettledBlockStore {
   const [rows, setRowsState] = useState<Block[]>(initialBlocks);
   // The authoritative rows are also mirrored into a ref updated synchronously by
   // every write, so writes chained within one event compose against the latest
@@ -174,12 +196,16 @@ export function useMemoryBlockStore({
     [commit, opCtx],
   );
 
-  return {
-    data: rows,
-    // Every in-memory row is authoritative from the start (no overlay), so the
-    // doc-init FK gate is a no-op — `serverIds` covers all blocks.
-    serverData: rows,
-    pending: false,
-    dispatch,
-  };
+  return useMemo<SettledBlockStore>(
+    () => ({
+      pending: false,
+      data: rows,
+      // Every in-memory row is authoritative from the start (no overlay), so the
+      // doc-init FK gate is a no-op — `serverIds` covers all blocks.
+      serverData: rows,
+      loadingBelow: NOTHING_LOADING,
+      dispatch,
+    }),
+    [rows, dispatch],
+  );
 }

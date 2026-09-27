@@ -8,12 +8,13 @@
 - Web:
   - Contributes: `Browser.StartPage` "Start page" → `StartPage`
   - Uses:
-    - `apps/browser/bookmarks.browserBookmarksResource`
-    - `apps/browser/history.browserRecentsResource`
+    - `apps/browser/bookmarks.browserBookmarks`
+    - `apps/browser/history.browserRecents`
     - `apps/browser/omnibox.normalizeInput`
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.Favicon`
     - `apps/browser/shell.useBrowserNav`
+    - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
     - `primitives/css/row.Row`
@@ -21,10 +22,10 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
 

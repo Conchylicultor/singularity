@@ -276,7 +276,12 @@ existing plugins move under it later with `./singularity plugin move`.
    - Push is the default. `load: "on-demand"` replaces `mode: "invalidate"`.
    - A db value with an array schema requires `unbounded: { reason }` in the type.
    - Replace `bootCritical` / `resident` with `preload: none | boot | boot-and-keep`.
-3. **Bulk migration, plugin by plugin.** The 11 bounded resources and the unbounded
+3. **Bulk migration, plugin by plugin.** ✅ **Done (2026-09-27)** — see
+   `research/2026-09-27-global-live-resources-phase3-bulk-migration.md` (75 resources; the old
+   spellings remain only for the tree / revision-tick / config resources, enforced by the
+   `live/no-legacy-resource-spelling` lint; `mode` is required, so the invalidate default is gone;
+   the window/point descriptor factories are internal to `network/live`).
+   The 11 bounded resources and the unbounded
    `queryResource` collections go to `liveCollection`. The ~80 `resourceDescriptor` values go
    to `liveValue`, mechanically. Hand-written keyed collections get required filter columns.
    Delete each old factory once it has no callers. `resource-vocabulary` shrinks with it.

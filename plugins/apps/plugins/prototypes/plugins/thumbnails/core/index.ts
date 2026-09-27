@@ -1,7 +1,7 @@
 export {
   ThumbnailFailureKindSchema,
   ThumbnailStateSchema,
-  prototypeThumbnailsResource,
+  prototypeThumbnails,
   PROTOTYPE_THUMBS_BASE,
   PROTOTYPE_THUMB_ROUTE,
   prototypeThumbnailUrl,

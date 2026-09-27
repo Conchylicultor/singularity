@@ -12,10 +12,10 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useContext, useState } from "react";
 import { MdCheck } from "react-icons/md";
-import { configV2SecretMetaResource } from "../../core";
+import { configSecretMeta } from "../../core";
 
 /**
  * The one field type whose CONTROL has two states — and now that is all it has:
@@ -33,8 +33,8 @@ const SecretRenderer = defineFieldShape({
     const [editing, setEditing] = useState(false);
     const { local, setLocal, focus } = useLocalValue(value);
 
-    const metaResult = useResource(
-      configV2SecretMetaResource,
+    const metaResult = useLive(
+      configSecretMeta,
       ctx ? { path: ctx.storePath } : { path: "" },
     );
 

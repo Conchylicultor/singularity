@@ -1,36 +1,35 @@
 import { useEffect } from "react";
 import {
-  useSetKeyAutoDetect,
-  useSonata,
+  keyAutoDetectSetting,
+  useMountedSongId,
+  useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { keyAutoDetectResource } from "../../shared/resources";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { keyAutoDetects } from "../../shared/resources";
 
 /**
- * Headless: syncs the open song's persisted key-auto-detect setting into the
- * shell's per-surface store, which the score pipeline reads to decide whether to
- * override the authored key with inference. Mounted via `Sonata.Effect` (always
- * inside the provider, which is itself inside the key-mode store provider) so it
- * can read context and write the store.
+ * Headless observer of the `keyAutoDetectSetting` (`Sonata.SongSetting`,
+ * mounted afresh for each loaded song): syncs that song's persisted
+ * key-auto-detect setting into the loaded song, whose score pipeline reads it
+ * to decide whether to override the authored key with inference.
  *
- * This is the sole owner of "which song's setting is in force": it writes the
- * current song's value, and writes `false` when no song is open — otherwise the
- * previous song's override would leak into the next. It waits for the resource to
- * resolve before writing, so a still-loading rollup never collapses to a false
- * "off".
+ * It writes only a settled answer: a newly loaded song's settings start
+ * pending, so until this song's row arrives nothing renders under the previous
+ * song's setting or a stand-in "off" — and a write for a song no longer loaded
+ * is dropped. An absent row (`found: false`) IS the song's setting: off.
  */
 export function KeyModeObserver() {
-  const { currentSongId } = useSonata();
-  const setKeyAutoDetect = useSetKeyAutoDetect();
-  const result = useResource(keyAutoDetectResource);
+  const songId = useMountedSongId();
+  const setKeyAutoDetect = useWriteSongSetting(keyAutoDetectSetting);
+  const row = useLiveRow(keyAutoDetects, songId);
+  // The row read reduced to the value it settles to — `undefined` while it is
+  // pending — so the effect below runs on a real change only.
+  const enabled = row.pending ? undefined : row.found && row.row.enabled;
 
   useEffect(() => {
-    if (result.pending) return; // wait for truth before touching the store
-    const enabled = currentSongId
-      ? (result.data.find((r) => r.songId === currentSongId)?.enabled ?? false)
-      : false;
-    setKeyAutoDetect(enabled);
-  }, [result, currentSongId, setKeyAutoDetect]);
+    if (enabled === undefined) return;
+    setKeyAutoDetect(songId, enabled);
+  }, [songId, enabled, setKeyAutoDetect]);
 
   return null;
 }

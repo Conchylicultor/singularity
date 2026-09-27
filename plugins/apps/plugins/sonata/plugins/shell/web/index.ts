@@ -27,26 +27,19 @@ export {
   type CursorStore,
 } from "./cursor-store";
 export {
-  KeyModeStoreProvider,
-  useKeyAutoDetect,
-  useSetKeyAutoDetect,
-} from "./key-mode-store";
+  defineSongSetting,
+  type SongSetting,
+  type SongSettingKey,
+} from "./song-setting";
+export { useSongSetting, useWriteSongSetting } from "./loaded-song";
+export { useMountedSongId } from "./song-setting-mount";
 export {
-  TransposeStoreProvider,
-  useTransposeSemitones,
-  useSetTransposeSemitones,
-} from "./transpose-store";
-export {
-  RhythmStoreProvider,
-  useRhythmGroove,
-  useSetRhythmGroove,
+  transposeSetting,
+  keyAutoDetectSetting,
+  chordModeSetting,
+  grooveSetting,
   type RhythmGroove,
-} from "./rhythm-store";
-export {
-  ChordModeStoreProvider,
-  useChordMode,
-  useSetChordMode,
-} from "./chord-mode-store";
+} from "./score-settings";
 export {
   LaneInsetsProvider,
   useLaneInsets,

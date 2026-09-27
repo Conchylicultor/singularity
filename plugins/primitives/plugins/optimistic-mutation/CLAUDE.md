@@ -1,8 +1,9 @@
 # optimistic-mutation
 
 Reusable optimistic-mutation primitive layered on top of `live-state`. It gives
-any `useResource`-backed surface immediate, snap-free optimistic updates that
-reconcile cleanly with the authoritative WebSocket push.
+any surface reading a `liveValue` (or a `liveCollection`'s id set) immediate,
+snap-free optimistic updates that reconcile cleanly with the authoritative
+WebSocket push.
 
 ## Model: overlay / replay — and never-revert
 
@@ -141,11 +142,12 @@ picks.dispatch(change);                  // the settled arm: data, serverData, e
   rendered from (the queue keeps its last display together with its
   `dispatch`); a caller whose params name a different entity keys the
   component by it, so the overlay starts fresh (the prototype canvas).
-- **Legacy form**: `useOptimisticResource({ resource, params, ...options })`
-  over a `ResourceDescriptor & { initialData }` — the placeholder is the base
-  until the first push, `pending` is a boolean and `dispatch` is always there.
-  Kept only for the page editor's blocks (`page/editor/web/block-store.ts`)
-  until they migrate; a `liveValue` does not fit it (no `initialData`, tsc).
+- **There is no object form.** The old `useOptimisticResource({ resource,
+  params, ...options })` over a `ResourceDescriptor & { initialData }` (the
+  placeholder was the base until the first push, and `dispatch` always existed)
+  is gone; its last caller, the page editor's blocks, reads `pageBlocks`
+  positionally. The read is always a declaration, so nothing can hand the
+  overlay a stand-in base.
 - **Every optimistic reader asks for acks** on its tuple (`useResourceAcks` —
   see *Exact-ack confirmation* below): nothing to declare, nothing to forget.
 
@@ -178,11 +180,11 @@ picks.dispatch(change);                  // the settled arm: data, serverData, e
   committed first" — the ordering rule doesn't; it only makes the retried op
   block its same-target juniors until it settles, which is correct either way.
 - `serverData` is the raw authoritative overlay base — server truth with NO
-  pending ops applied (the legacy form's `resource.initialData` until the first
-  push; the positional forms are `pending` instead). For
-  consumers that must distinguish "the server has really absorbed this row" from
-  the prediction — e.g. the page editor gates a block's content-doc seed (an
-  FK-dependent write) on the block id appearing here, never in overlaid `data`.
+  pending ops applied (there is none before the first value: the result is
+  `pending` instead). For consumers that must distinguish "the server has
+  really absorbed this row" from the prediction — e.g. the page editor gates a
+  block's content-doc seed (an FK-dependent write) on the block id appearing
+  here, never in overlaid `data`.
 - **Forced sync-status reporting:** the hook calls `useReportSync` internally
   (`@plugins/primitives/plugins/sync-status/web`) with
   `phase = failed.length ? "error" : saving ? "syncing" : "idle"`, the `label`, a
@@ -245,19 +247,21 @@ picks.dispatch(change);                  // the settled arm: data, serverData, e
 
   **Only an authoritative snapshot may confirm.** Both edges are gated on one, and
   neither a placeholder `initialData` nor "the cache emitted an event" qualifies
-  (the gate stays for every form: a collection's `:rows` query still seeds its
-  `[]` placeholder into the cache, even though no form takes it as a base):
+  (the gate stays although no form takes a placeholder as its base: a
+  collection's `:rows` query still seeds its `[]` placeholder into the cache,
+  and a params re-baseline can resolve an op before the new tuple's base
+  lands):
   - The QueryCache emits `"updated"` for **every** query action (`fetch`,
     `error`, `invalidate`, `setState`), none of which touch `state.data`. Only
     `success` bumps `dataUpdateCount`, so the push edge ignores any event that
     doesn't increase it — ungated, a bare `invalidateQueries` would coarse-confirm
     every resolved op and charge each a divergence miss for a snapshot that never
     arrived.
-  - Before the first push, `state.data` is `resource.initialData` (a placeholder,
-    `dataUpdatedAt === 0`). The resolve edge passes `undefined` rather than the
-    placeholder, because `isConfirmedBy` would accept it (an empty base vacuously
-    "reflects" a remove, and `isPatchReflected` treats an update naming
-    a missing row as absorbed), dropping the op against data never sent.
+  - Before the first push, `state.data` is the descriptor's placeholder if it
+    has one (`dataUpdatedAt === 0`). The resolve edge passes `undefined` rather
+    than the placeholder, because `isConfirmedBy` would accept it (an empty base
+    vacuously "reflects" a remove, and `isPatchReflected` treats an update
+    naming a missing row as absorbed), dropping the op against data never sent.
 
   **Tokenless-coarse soundness.** `gen > dispatchGen` proves *a* push landed
   after dispatch, not that it carries our commit. In the rare bad ordering (a
@@ -462,15 +466,15 @@ skips the state write. Unit-tested in `overlay.test.ts` (`bun test`) — where n
 lifecycle coverage belongs.
 
 The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell —
-`resolveForm` turns any of the forms into (descriptor, params, options,
-placeholder) with no hooks, so every form runs the same one core hook: the
-`pending` state (mirrored in a commit-time ref, because a functional `setState`
+`resolveForm` turns any of the read forms into (descriptor, params, options)
+with no hooks, so every form runs the same one core hook: the `pending` state
+(mirrored in a commit-time ref, because a functional `setState`
 updater cannot yield the report lists without becoming effectful), the cache
 subscription, the reconnect auto-retry subscription, the `savedAt` stamp, and the
 sink emits. Its wiring — `dataUpdateCount` stamp, push-before-resolve ordering,
 keep-rendered failures, `online` auto-retry, registry-watermark denial, send-lane
 ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
-(`bun run test:dom plugins/primitives/plugins/optimistic-mutation`).
+(`./singularity test plugins/primitives/plugins/optimistic-mutation`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -495,8 +499,6 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `OptimisticOptions`
     - `OptimisticResult`
     - `OptimisticSettled`
-    - `UseOptimisticResourceArgs`
-    - `UseOptimisticResourceResult`
   - Exports (values):
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`

@@ -35,15 +35,17 @@ Shared backend hosting plugin routes in a single Bun process.
 
 Level-triggered server-to-client state synchronization.
 
-- **Resource** — named piece of server state with a loader (`defineResource({ key, mode, loader })`).
-- **Push mode** — new value is sent inline on the socket; use for small, same-for-all-subscribers values.
-- **Invalidate mode** — only a version stamp is sent; each tab re-fetches via HTTP on its own cadence.
+- **Live value** — one payload per params tuple, declared once (`liveValue(key, { schema, params? })`) and served with a loader (`serveValue(value, { source, loader })`).
+- **Live collection** — a table's rows, declared once (`liveCollection(key, { row, id, filterable, sortable, default, maxLimit })`) and served from the table (`serveCollection(c, { from })`); every read is a bounded window, a grouping or an id set.
+- **Push / on-demand delivery** — by default the new value is sent inline on the socket; a value declared `load: "on-demand"` sends only a version stamp and each tab re-fetches over HTTP.
 - **Notifications WebSocket** — single `/ws/notifications` socket multiplexes all resource subscriptions.
 - **Notifications client** — leader-elected, cross-tab-shared client that owns the socket and writes into TanStack Query.
-- **`useResource` hook** — client-side consumer; wraps TanStack Query with automatic reconnect and cross-tab sync.
+- **`useLive` / `useLiveRow` hooks** — client-side consumers (a value, a collection query, one row); pending until the server answers, with automatic reconnect and cross-tab sync.
+- **Resource runtime** — what both compile to: `defineResource` on the server, `useResource` on the client (TanStack Query), also used directly by the few resources not yet on the unified API.
 - **HTTP fallback** — every resource is also reachable at `GET /api/resources/:key/...` for curl, SSR, or WS-down scenarios.
-- **Derived resources (`dependsOn`)** — upstream notifications cascade to downstream resources with param mapping and cycle detection.
-- **Sub-lifecycle hooks** — `onFirstSubscribe` / `onLastUnsubscribe` fire on global 0↔N refcount transitions per params tuple.
+- **Change routing** — a `source: "db"` loader's read-set is captured at the DB pool, so any commit to a table it read recomputes it; an external value calls `notify()`.
+- **Derived values (`recomputeOn`)** — an upstream value's change recomputes a downstream one, with param mapping (the runtime's `dependsOn` DAG, with cycle detection).
+- **`whileSubscribed`** — starts something (a watcher) while a params tuple has a subscriber and stops it on the last unsubscribe (the runtime's 0↔N refcount hooks).
 - **Stream** — append-only firehose (terminal output, log tails) delivered on a dedicated WS route; distinct from resources.
 
 ## Database

@@ -7,7 +7,7 @@ import { classifyMailSyncError } from "./classify-error";
 
 // Persist sync failures + clear-and-restart on a manual retry. Writing the error
 // onto `mail_sync_state` makes it survive a restart and (via the DB change-feed)
-// pushes it live to the UI through `mailSyncStateServerResource`.
+// pushes it live to the UI through `mailSyncStateServed`.
 
 /**
  * Classify `err` and record it onto the account's sync_state row (upserting the

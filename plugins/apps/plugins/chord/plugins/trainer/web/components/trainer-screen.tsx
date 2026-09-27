@@ -27,7 +27,7 @@ import {
 } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import { useCurriculum } from "@plugins/apps/plugins/chord/plugins/curriculum/web";
 import {
-  chordProgressResource,
+  chordProgress,
   encodeProgressParams,
   recordRoundEndpoint,
 } from "@plugins/apps/plugins/chord/plugins/progress/core";
@@ -39,10 +39,8 @@ import {
   type YouTubePlayerController,
 } from "@plugins/integrations/plugins/youtube/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -152,7 +150,7 @@ function TrainerBody({ selection }: { selection: Selection }) {
       }),
     [unlocked],
   );
-  const progress = useResource(chordProgressResource, progressParams);
+  const progress = useLive(chordProgress, progressParams);
   const queue = useLoopQueue({
     unlocked,
     practised,

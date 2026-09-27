@@ -1,10 +1,13 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -21,7 +24,7 @@ interface WorkflowInput {
 export function WorkflowNodePaneBody() {
   const convId = conversationPane.useRouteEntry()?.params.convId;
 
-  const eventsResult = useResource(jsonlEventsResource, { id: convId ?? "" });
+  const eventsResult = useLive(jsonlEvents, { id: convId ?? "" });
 
   if (eventsResult.pending) {
     return (
@@ -58,11 +61,7 @@ function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
         ) : (
           <>
             <Cluster gap="xs" className="text-2xs">
-              {node.phase && (
-                <Badge variant="muted">
-                  {node.phase}
-                </Badge>
-              )}
+              {node.phase && <Badge variant="muted">{node.phase}</Badge>}
               {node.model && (
                 <Badge variant="muted" className="font-mono">
                   {modelDisplayLabel(node.model)}
@@ -73,11 +72,7 @@ function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
                   {formatStatusLabel(node.agentType)}
                 </Badge>
               )}
-              {node.hasSchema && (
-                <Badge variant="muted">
-                  Schema
-                </Badge>
-              )}
+              {node.hasSchema && <Badge variant="muted">Schema</Badge>}
             </Cluster>
             {node.deps.length > 0 && (
               <div className="text-2xs text-muted-foreground">

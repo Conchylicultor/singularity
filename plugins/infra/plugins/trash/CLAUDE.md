@@ -38,9 +38,13 @@ sub-page cascade wipe — see
   restored/purged) entry is a typed `404`, never a silent no-op; an
   unregistered source id is a LOUD throw (config error). Action-before-delete
   ordering makes both retryable: a failing `restore`/`purge` leaves the entry.
-- **`trash-entries` live resource** — push, param-scoped by `sourceId`. No
-  hand-notify anywhere: the L4 change-feed on `trash_entries` pushes every
-  mutation, in-process or not.
+- **`trashEntries` live collection** (`core/resources.ts`, key
+  `trash-entries`) — the ledger as a bounded window, newest-deleted first (100,
+  grown to at most 500), `filterable: { sourceId }`; a source's trash is
+  `useLive(trashEntries, { where: { sourceId } })`. Served by
+  `serveCollection(trashEntries, { from: _trashEntries })`. No hand-notify
+  anywhere: the L4 change-feed on `trash_entries` moves every subscribed window
+  on every mutation, in-process or not.
 - **`trashPurge`** — `defineRetention` over `deletedAt` (30 days,
   `perWorktree`), using retention's `beforeDelete` seam to run each source's
   `purge` over its expired entries before the ledger sweep. This is the ONE
@@ -118,15 +122,19 @@ bun test plugins/infra/plugins/trash
 
 ## Plugin reference
 
-- Description: Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
+- Description: Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source), and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
 - Server:
-  - Contributes: `resource.declare` "trash-entries"
+  - Contributes:
+    - `resource.declare` "trash-entries"
+    - `resource.declare` "trash-entries:rows"
+    - `resource.declare` "trash-entries:groups"
   - Uses:
     - `database.db`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/retention.defineRetention`
+    - `network/live.serveCollection`
   - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
   - Exports (types):
     - `TrashExecutor`
@@ -137,7 +145,10 @@ bun test plugins/infra/plugins/trash
     - `getTrashSource`
     - `recordTrashEntry`
   - Register: `defineJob('retention.trash_entries')`
-  - Resources: `trash-entries` (push)
+  - Resources:
+    - `trash-entries` (keyed, window)
+    - `trash-entries:groups` (push)
+    - `trash-entries:rows` (keyed, point)
   - Routes:
     - `GET /api/trash/:sourceId`
     - `POST /api/trash/:sourceId/:entryId/restore`
@@ -153,7 +164,8 @@ bun test plugins/infra/plugins/trash
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `TrashEntry`
     - `TrashOutcome`
@@ -161,7 +173,7 @@ bun test plugins/infra/plugins/trash
     - `listTrash`
     - `purgeTrash`
     - `restoreTrash`
-    - `trashEntriesResource`
+    - `trashEntries`
     - `TrashEntrySchema`
     - `TrashOutcomeSchema`
 - Cross-plugin:

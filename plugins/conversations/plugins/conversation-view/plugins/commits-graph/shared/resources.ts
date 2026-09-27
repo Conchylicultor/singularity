@@ -1,13 +1,10 @@
-import {
-  resourceDescriptor,
-  unresolved,
-} from "@plugins/primitives/plugins/live-state/core";
-import {
-  CommitsGraphPayloadSchema,
-  type CommitsGraphPayload,
-} from "./protocol";
+import { liveValue } from "@plugins/network/plugins/live/core";
+import { CommitsGraphPayloadSchema } from "./protocol";
 
-export const commitsGraphResource = resourceDescriptor<
-  CommitsGraphPayload,
-  { attemptId: string }
->("commits-graph.graph", CommitsGraphPayloadSchema, unresolved("not loaded"));
+// The commit rows of one attempt's branch against `main`. The payload is a
+// `Resolvable<CommitsGraph>`: an attempt whose worktree is gone is a settled
+// `{ resolved: false, reason }`. Not loaded yet is `pending`.
+export const commitsGraph = liveValue("commits-graph.graph", {
+  schema: CommitsGraphPayloadSchema,
+  params: ["attemptId"],
+});

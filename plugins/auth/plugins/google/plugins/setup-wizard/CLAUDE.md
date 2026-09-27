@@ -15,11 +15,11 @@
     - `auth.useAccountStatus`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

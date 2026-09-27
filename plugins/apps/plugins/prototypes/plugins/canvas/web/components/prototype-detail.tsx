@@ -3,8 +3,8 @@ import { MdWarning } from "react-icons/md";
 import {
   matchResource,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -15,8 +15,8 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
-  prototypesResource,
-  prototypesVersionResource,
+  prototypesList,
+  prototypesVersion,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "../panes";
@@ -53,7 +53,7 @@ export function PrototypeDetail(): ReactElement {
  * only true thing left to say).
  */
 function PrototypeTitle({ name }: { name: string }): ReactNode {
-  const result = useResource(prototypesResource);
+  const result = useLive(prototypesList);
   const unknown = <span className="font-mono">{name}</span>;
   return matchResource(result, {
     pending: () => <Loading variant="text" />,
@@ -72,8 +72,8 @@ function PrototypeTitle({ name }: { name: string }): ReactNode {
 function CanvasBody(): ReactNode {
   const { name } = usePrototypeDetail();
   const gate = useCombinedResources({
-    rows: useResource(prototypesResource),
-    version: useResource(prototypesVersionResource),
+    rows: useLive(prototypesList),
+    version: useLive(prototypesVersion),
   });
   return matchResource(gate, {
     pending: () => <Loading variant="block" />,

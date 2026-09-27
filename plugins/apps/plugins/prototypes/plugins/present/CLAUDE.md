@@ -116,6 +116,7 @@ Exit: closing the tab is how you leave.
     - `apps/prototypes/canvas.usePrototypeDetail`
     - `apps/prototypes/canvas.useWindowSize`
     - `apps/prototypes/canvas.VersionStepper`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/pin.Pin`
@@ -138,7 +139,6 @@ Exit: closing the tab is how you leave.
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`

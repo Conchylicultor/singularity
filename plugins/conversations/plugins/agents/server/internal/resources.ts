@@ -1,6 +1,7 @@
 import { asc, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { withRank } from "@plugins/primitives/plugins/rank/server";
 import {
   compileEdges,
@@ -20,13 +21,19 @@ import type { Agent, AgentLaunchWithStatus } from "./schema";
 // (loader + cascade), so the keyed contract here can't drift from the client
 // (the missing-`keyOf` crash that motivated this).
 import {
-  agentsResource as agentsDescriptor,
+  agentRows,
   agentLaunchesResource as agentLaunchesDescriptor,
   type AgentLaunchConversationRef,
 } from "../../shared/resources";
 
-export const agentsResource = defineResource(agentsDescriptor, {
-  mode: "push",
+// The whole roster, recomputed and pushed whole on every write to `agents` (the
+// loader's captured read-set routes it here).
+export const agentRowsServed = serveValue(agentRows, {
+  source: "db",
+  unbounded: {
+    reason:
+      "the user's hand-written agent roster (agents_v) — the Agents sidebar renders the whole tree; grows only by hand",
+  },
   loader: async (): Promise<Agent[]> => {
     const rows = await db
       .select()

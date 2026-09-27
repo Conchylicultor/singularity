@@ -1,10 +1,10 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { SubagentActivityRow } from "../../core";
-import { subagentActivityResource as descriptor } from "../../core";
+import { subagentActivity } from "../../core";
 import {
   evictConversationJoin,
   evictSubagentActivity,
@@ -13,21 +13,19 @@ import {
 } from "./caches";
 import { resolveActivityTargets, scanActivity } from "./activity-scan";
 
-type Params = { id: string };
-
-const unsubscribes = new Map<string, () => void>();
-
-export const subagentActivityResource = defineExternalResource(descriptor, {
-  // `push` is a delivery choice: the payload is a handful of small rows, the
-  // same for every subscriber, and observed by every card in the conversation
-  // the moment it changes. Correctness does not rest on it — the ETag and the
-  // value come from one memo, so this resource is sound under `invalidate` too.
-  mode: "push",
-  loader: ({ id }: Params) => subagentActivityMemo.get(id),
-  revalidate: ({ id }: Params): Promise<string> =>
-    subagentActivityMemo.signature(id),
-  onFirstSubscribe({ id }: Params) {
-    if (unsubscribes.has(id)) return;
+// Pushed (the declaration's default) as a delivery choice: the payload is a
+// handful of small rows, the same for every subscriber, and observed by every
+// card in the conversation the moment it changes. Correctness does not rest on
+// it — the ETag and the value come from one memo, so this value is sound under
+// `load: "on-demand"` too.
+export const subagentActivityServed = serveValue(subagentActivity, {
+  source: "external",
+  loader: ({ id }) => subagentActivityMemo.get(id),
+  revalidate: ({ id }) => subagentActivityMemo.signature(id),
+  // Watch the conversation's `subagents/` directories while a card is on
+  // screen. The start is synchronous (`watchPaths` hands back its unsubscribe
+  // at once), so the sub-ack is never held behind it.
+  whileSubscribed: ({ id }, notify) => {
     const unsub = watchPaths<SubagentActivityRow[]>(
       {
         key: `subagent-activity:${id}`,
@@ -49,18 +47,17 @@ export const subagentActivityResource = defineExternalResource(descriptor, {
         // Prime BEFORE notify: the room holds both halves of the pair, so the
         // loader the `notify` schedules is a memo hit instead of a second scan.
         primeSubagentActivity(id, signature, value);
-        subagentActivityResource.notify({ id });
+        notify();
       },
     );
-    unsubscribes.set(id, unsub);
-  },
-  onLastUnsubscribe({ id }: Params) {
-    unsubscribes.get(id)?.();
-    unsubscribes.delete(id);
-    // Pure lifecycle cleanup. A late prime landing across this evict is harmless:
-    // the entry it resurrects carries its own signature, and any reader probes the
-    // CURRENT one, so a surviving entry is served only if it still matches disk.
-    evictSubagentActivity(id);
-    evictConversationJoin(id);
+    return () => {
+      unsub();
+      // Pure lifecycle cleanup. A late prime landing across this evict is
+      // harmless: the entry it resurrects carries its own signature, and any
+      // reader probes the CURRENT one, so a surviving entry is served only if it
+      // still matches disk.
+      evictSubagentActivity(id);
+      evictConversationJoin(id);
+    };
   },
 });

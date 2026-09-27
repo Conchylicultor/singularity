@@ -3,7 +3,7 @@
 The Prototypes app's gallery: the list of every prototype, and New prototype.
 
 - **Gallery pane** (`/prototypes`, no chrome) — a `DataView` gallery over the
-  live `prototypesResource`. Each card shows the prototype's `<title>` + blurb
+  live `prototypesList` value. Each card shows the prototype's `<title>` + blurb
   over its rendered screenshot (`thumbnails`' `<PrototypeThumbnail>`; `name`
   stays the row key and the URL param — it is the directory name, which is a
   minted id); activating one pushes the detail pane (the `canvas` plugin). A
@@ -13,13 +13,13 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   thumbnail falls back to before its picture exists, or when rendering it
   failed. This pane owns the stand-in; `thumbnails` owns the picture.
 
-  **Both resources are subscribed here, together** (`useCombinedResources` over
-  `prototypesResource` + `usePrototypeThumbnails()`), and the cards wait for
-  both. A resource primes over HTTP when its first subscriber mounts, so
-  subscribing to the thumbnails down inside a card would put that request
-  strictly after the list had painted — a guaranteed swatch-then-screenshot
-  swap on every load. Side by side they prime in parallel, and the cover is
-  right the first time it is painted.
+  **Both values are subscribed here, together** (`useCombinedResources` over
+  `useLive(prototypesList)` + `usePrototypeThumbnails()`), and the cards wait
+  for both. A value is filled by its subscription's first answer, asked for
+  when its first subscriber mounts, so subscribing to the thumbnails down
+  inside a card would put that ask strictly after the list had painted — a
+  guaranteed swatch-then-screenshot swap on every load. Side by side they are
+  answered in parallel, and the cover is right the first time it is painted.
   **Done.** A third resource joins them: `files`' `prototypes.statuses`. The
   gallery maps it onto the rows (`PrototypeGalleryRow = PrototypeMeta & { done }`)
   so everything reads one value: a hidden `status` field (the gallery groups by
@@ -101,6 +101,7 @@ honest — the prototype does exist — and it self-corrects.
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
@@ -114,7 +115,6 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

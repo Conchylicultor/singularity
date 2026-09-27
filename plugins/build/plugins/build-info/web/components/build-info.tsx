@@ -1,7 +1,7 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { buildHistoryResource, type BuildRun } from "@plugins/build/core";
+import { buildHistory, type BuildRun } from "@plugins/build/core";
 import { BuildStatusBadge } from "@plugins/build/plugins/build-status/web";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import {
@@ -54,7 +54,7 @@ function Row({
  * `interrupted` (its owner was hard-killed).
  *
  * Its own component so the endpoint hook is not called from `BuildInfo`, which
- * returns early while the run list loads. The fetch is gated on the status, so
+ * returns early while the run loads. The fetch is gated on the status, so
  * the overwhelmingly common healthy run costs no request.
  *
  * It renders nothing only when there is genuinely nothing to say — for any
@@ -96,17 +96,19 @@ function TerminationDetail({ run }: { run: BuildRun }) {
 }
 
 export function BuildInfo({ runId }: { runId: string }) {
-  const result = useResource(buildHistoryResource);
+  // One row of the history by id — the point read, so a run older than the
+  // newest 50 the window holds is still found. `found: false` means this
+  // namespace has no such run.
+  const result = useLiveRow(buildHistory, runId);
   if (result.pending) return <Loading />;
-  const run = result.data.find((r) => r.id === runId);
-
-  if (!run) {
+  if (!result.found) {
     return (
       <Text as="p" variant="caption" className="text-muted-foreground">
         Run not found
       </Text>
     );
   }
+  const run = result.row;
 
   return (
     <Stack gap="md">

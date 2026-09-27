@@ -11,13 +11,13 @@
     - `build.BuildDetailSlots`
     - `build/build-status.BuildStatusBadge`
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 

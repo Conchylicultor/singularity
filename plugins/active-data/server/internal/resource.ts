@@ -1,19 +1,18 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  ActiveDataBindingsPayloadSchema,
-  type ActiveDataBindingsPayload,
-} from "../../core/resource";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { activeDataBindings } from "../../core/resource";
 import { _activeDataBindings } from "./tables";
 
-export const activeDataBindingsResource = defineResource<
-  ActiveDataBindingsPayload,
-  { conversationId: string }
->({
-  key: "active-data.bindings",
-  mode: "push",
-  schema: ActiveDataBindingsPayloadSchema,
+// Push over `active_data_bindings`: the loader reads the table, so the change
+// feed recomputes (and pushes) the tuple on every PUT / DELETE of a binding —
+// the routes notify nothing.
+export const activeDataBindingsServed = serveValue(activeDataBindings, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits",
+  },
   loader: async ({ conversationId }) =>
     db
       .select({

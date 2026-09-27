@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -8,7 +8,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
-  deploymentsResource,
+  deployments,
   deriveInstall,
   updateDeployment,
   type Deployment,
@@ -28,14 +28,14 @@ export function DeploymentOverview({
 }: {
   deploymentId: string;
 }): ReactNode {
-  const result = useResource(deploymentsResource);
-  if (result.pending) return <Loading variant="rows" />;
-
-  const deployment = result.data.find((d) => d.id === deploymentId);
-  if (!deployment) {
-    return <Placeholder tone="error">This deployment no longer exists.</Placeholder>;
+  const deployment = useLiveRow(deployments, deploymentId);
+  if (deployment.pending) return <Loading variant="rows" />;
+  if (!deployment.found) {
+    return (
+      <Placeholder tone="error">This deployment no longer exists.</Placeholder>
+    );
   }
-  return <OverviewBody deployment={deployment} />;
+  return <OverviewBody deployment={deployment.row} />;
 }
 
 function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
@@ -121,7 +121,13 @@ function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
   );
 }
 
-function DerivedValue({ label, value }: { label: string; value: string }): ReactNode {
+function DerivedValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): ReactNode {
   return (
     <Stack gap="2xs">
       <Text as="span" variant="caption" tone="muted">

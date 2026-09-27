@@ -2,7 +2,12 @@ import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  inputKeyed?: boolean;
+  run(): Promise<CheckResult>;
+};
 
 const CAST_PATTERN =
   "(\\b[a-z][a-zA-Z]*[Dd]ata\\b as [A-Z]|\\([^)]*[Dd]ata[^)]*\\?\\?[^)]*\\) as [A-Z])";
@@ -12,7 +17,7 @@ const check: Check = {
   // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
   inputKeyed: true,
   description:
-    "useResource is generic — casting its `data` result hides type mismatches and is never necessary",
+    "useLive / useResource are generic — casting their `data` result hides type mismatches and is never necessary",
   async run() {
     const root = await getWorktreeRoot();
     // strings: true — this detects a code construct (an `as T` cast) that must
@@ -30,10 +35,10 @@ const check: Check = {
 
     return {
       ok: false,
-      message: `\`as\` cast on useResource data found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
+      message: `\`as\` cast on live-resource data found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "useResource<T> infers T from the ResourceDescriptor — the cast is unnecessary. " +
-        "If the inferred type does not match what you need, the resource definition itself must be fixed. " +
+        "useLive infers T from the declaration (a `liveValue`'s schema, a `liveCollection`'s row) — the cast is unnecessary. " +
+        "If the inferred type does not match what you need, the declaration itself must be fixed. " +
         "If you believe you have a legitimate use-case, report the resource name and expected type to the user before writing any workaround.",
     };
   },

@@ -7,8 +7,8 @@ import {
 import {
   matchResource,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -18,8 +18,8 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
 import {
-  prototypeStatusesResource,
-  prototypesResource,
+  prototypeStatuses,
+  prototypesList,
   statusOf,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -81,18 +81,18 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
  */
 export function PrototypeGallery() {
   // Both subscriptions are taken HERE, side by side, and the cards wait for
-  // both. A resource primes over HTTP when its first subscriber mounts, so a
-  // card that subscribed to its own thumbnail could not start that request
-  // until the list had already painted — every load showed the stand-in swatch
-  // for one round trip and then swapped in the picture. Asking for both at once
-  // costs no extra wait (they prime in parallel) and the cover is right the
-  // first time it is painted.
+  // both. A value is filled by its subscription's first answer, asked for when
+  // its first subscriber mounts, so a card that subscribed to its own thumbnail
+  // could not ask until the list had already painted — every load showed the
+  // stand-in swatch for one round trip and then swapped in the picture. Asking
+  // for both at once costs no extra wait (they are answered in parallel) and
+  // the cover is right the first time it is painted.
   const result = useCombinedResources({
-    prototypes: useResource(prototypesResource),
+    prototypes: useLive(prototypesList),
     thumbnails: usePrototypeThumbnails(),
     // Whether each prototype is marked Done — joined onto the rows below, and
     // awaited with the list so a Done card never paints as not done first.
-    statuses: useResource(prototypeStatusesResource),
+    statuses: useLive(prototypeStatuses),
   });
   const openPane = useOpenPane();
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;

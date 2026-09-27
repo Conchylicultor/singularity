@@ -80,10 +80,10 @@ export const _buildRuns = pgTable(
     // Supports every NAMESPACE-SCOPED ordered read of this table — four of
     // them, not one:
     //
-    //   - `buildHistoryResource` (build/server) — the preloaded
-    //     `WHERE namespace = ? ORDER BY started_at DESC LIMIT 50` the build
-    //     BUTTON's own state derives from, on every page load. Without this it
-    //     is a scan plus a sort on the boot path.
+    //   - `buildHistory`'s window (build/server) — the preloaded
+    //     `WHERE namespace = ? ORDER BY started_at DESC, id ASC LIMIT 50` the
+    //     build BUTTON's own state derives from, on every page load. Without
+    //     this it is a scan plus a sort on the boot path.
     //   - `lastMainAttempt` and `lastCompositionAttempt` (wants-build.ts) — the
     //     same scoped shape at LIMIT 1, covered by the same index for free.
     //     Their extra predicates (targets, finished_at) filter after the walk.
@@ -94,10 +94,11 @@ export const _buildRuns = pgTable(
     //
     // `id` is NOT padding — do not trim this to `(namespace, started_at desc)`.
     // The fourth reader is a keyset seek, and a keyset seek's tiebreak is part
-    // of its ordering: `(namespace, started_at desc)` cannot serve
-    // `ORDER BY started_at DESC, id ASC`, and every page of the merged runs list
-    // falls back to a sort. The first three readers do not tiebreak on `id`,
-    // which is exactly why the tail looks trimmable if you only count them.
+    // of its ordering — as is a live window's pk tiebreak, for the first:
+    // `(namespace, started_at desc)` cannot serve
+    // `ORDER BY started_at DESC, id ASC`, and both would fall back to a sort.
+    // Only the two LIMIT 1 reads do not tiebreak on `id`, which is exactly why
+    // the tail looks trimmable if you only count them.
     //
     // There is deliberately NO unscoped `(started_at desc, id)` twin: the arm's
     // `where` is unconditional, so nothing orders this table without a namespace

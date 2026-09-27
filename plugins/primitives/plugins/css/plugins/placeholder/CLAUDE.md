@@ -51,14 +51,17 @@
     - `conversations/conversation-view/commits-graph`
     - `conversations/recover`
     - `debug/boot-profile`
+    - `debug/claude-cli-calls`
     - `debug/health-monitor`
     - `debug/heap-snapshot`
     - `debug/live-state-churn/emit`
     - `debug/profiling/build`
     - `debug/profiling/ops`
+    - `debug/queue`
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/slow-ops/cluster`
+    - `debug/slow-ops/pane`
     - `debug/timeline`
     - `debug/trace/boot`
     - `debug/trace/client-boot`

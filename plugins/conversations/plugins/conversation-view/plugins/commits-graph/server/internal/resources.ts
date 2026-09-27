@@ -1,4 +1,4 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import {
@@ -11,14 +11,9 @@ import {
   probeHeadMain,
   readLandedShas,
 } from "@plugins/tasks/plugins/attempt-work/server";
-import {
-  CommitsGraphPayloadSchema,
-  type CommitsGraphPayload,
-} from "../../shared/protocol";
+import { commitsGraph } from "../../shared/resources";
 import { computeGraph, evictWorktree } from "./compute-graph";
 import { graphEtag } from "./etag";
-
-type Params = { attemptId: string };
 
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttempt(attemptId);
@@ -47,9 +42,10 @@ async function onWorktree<T>(
   }
 }
 
-// `onLastUnsubscribe` is sync while `worktreeFor` is async, so drop the cache
-// entry fire-and-forget. Dropping a still-referenced entry is harmless — it just
-// forces a cheap cold re-probe on the next read — so no coordination is needed.
+// The `whileSubscribed` stop is sync while `worktreeFor` is async, so drop the
+// cache entry fire-and-forget. Dropping a still-referenced entry is harmless — it
+// just forces a cheap cold re-probe on the next read — so no coordination is
+// needed.
 function evictWorktreeFor(attemptId: string): void {
   void runTracked("commits-graph:evict", () =>
     worktreeFor(attemptId).then((wt) => {
@@ -58,41 +54,21 @@ function evictWorktreeFor(attemptId: string): void {
   );
 }
 
-// AttemptIds with a live pane subscriber, tracked via the sub-lifecycle hooks. A
-// git ref advance (local commit / rebase / sync-to-head, or main moving) changes
-// the graph of every visible attempt, so any refHeadServed notify fans out to
-// exactly the attempts currently on screen. git-watcher only tracks `main` + this
-// worktree's own branch, so a notify already implies a relevant ref moved — no
-// need to inspect the refName.
-const activeGraphAttempts = new Set<string>();
-
-function activeAttemptParams(active: ReadonlySet<string>): () => Params[] {
-  return () => [...active].map((attemptId) => ({ attemptId }));
-}
-
-export const commitsGraphResource = defineResource({
-  key: "commits-graph.graph",
-  mode: "push",
-  schema: CommitsGraphPayloadSchema,
-  // A `main` or branch advance is the COMPLETE refresh signal. The landed set is
-  // derived from `main`'s own history (attempt-work greps the
-  // Singularity-Conversation trailers), so a commit can only join it by landing on
-  // `main` — which git-watcher reports. There is deliberately no `pushesResource`
-  // dependency: the graph no longer reads the ledger at all.
-  dependsOn: [
-    {
-      resource: refHeadServed,
-      map: activeAttemptParams(activeGraphAttempts),
-    },
-  ],
-  onFirstSubscribe: ({ attemptId }: Params) => {
-    activeGraphAttempts.add(attemptId);
-  },
-  onLastUnsubscribe: ({ attemptId }: Params) => {
-    activeGraphAttempts.delete(attemptId);
-    evictWorktreeFor(attemptId);
-  },
-  loader: ({ attemptId }: Params): Promise<CommitsGraphPayload> =>
+// A db-arm value: the loader's DB read (the attempt row's worktree path) is
+// captured by the change feed, and a git ref advance (local commit / rebase /
+// sync-to-head, or main moving) changes the graph of every visible attempt.
+export const commitsGraphServed = serveValue(commitsGraph, {
+  source: "db",
+  // A `main` or branch advance is the COMPLETE refresh signal, and the bare form
+  // recomputes every subscribed attempt — exactly the panes on screen. The landed
+  // set is derived from `main`'s own history (attempt-work greps the
+  // Singularity-Conversation trailers), so a commit can only join it by landing
+  // on `main` — which git-watcher reports. There is deliberately no pushes
+  // dependency: the graph does not read the ledger at all. git-watcher only
+  // tracks `main` + this worktree's own branch, so a notify already implies a
+  // relevant ref moved — no need to inspect the refName.
+  recomputeOn: [refHeadServed],
+  loader: ({ attemptId }) =>
     onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) =>
       // `readLandedShas` THROWS on an unmeasurable standing rather than returning
       // `[]` (which would be indistinguishable from "this attempt landed
@@ -112,9 +88,14 @@ export const commitsGraphResource = defineResource({
   // from the SAME `onWorktree` branch, honest ("unknown") rather than an empty
   // graph stand-in. Cost: 1–2 ungated `rev-parse`, vs. the loader's additional
   // `merge-base` and up-to-250-commit `git log`s.
-  revalidate: ({ attemptId }: Params): Promise<string> =>
+  revalidate: ({ attemptId }) =>
     onWorktree(attemptId, "no-worktree", async (wt) => {
       const { headSha, mainSha } = await probeHeadMain(wt);
       return graphEtag(headSha, mainSha);
     }),
+  // Drop the worktree's git memo once nobody watches the attempt.
+  whileSubscribed:
+    ({ attemptId }) =>
+    () =>
+      evictWorktreeFor(attemptId),
 });

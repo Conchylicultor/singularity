@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 
 // One authorship record: a conversation that wrote into an agent-notes card,
 // and when it first did. `conversationId` may DANGLE — the record outlives the
@@ -12,26 +12,19 @@ export const AgentNotesAuthorSchema = z.object({
 });
 export type AgentNotesAuthor = z.infer<typeof AgentNotesAuthorSchema>;
 
-// The authors of ONE agent-notes card, oldest-first.
+// The authors of ONE agent-notes card, oldest-first — a value per `{ blockId }`,
+// pushed whole in the loader's order.
 //
-// Keyed with `{ blockId }` params — POINT membership, so the working set is
-// bounded by construction: only a MOUNTED card subscribes, and a FULL load is
-// that one card's handful of authors. It never grows with the collection, so
-// this is not the legacy unbounded `queryResource` collection shape (see the
-// bounded-working-set contract in the root CLAUDE.md); `page-block-doc` is the
-// precedent it copies.
+// Bounded by construction: only a MOUNTED card subscribes, and each tuple is
+// that one card's handful of authors — it never grows with the table. A value
+// rather than a collection: the table's key is the composite
+// `(block_id, conversation_id)`, so there is no single row id to look rows up
+// by (migration contract §10).
 //
-// NOT preloaded: the anchor mounts route-scoped with the page, so it hydrates
-// post-mount via its sub-ack — same call `prompt-block-tasks` makes.
-//
-// Rows key on `conversationId`, which is unique within one block by the
-// underlying composite primary key.
-export const agentNotesAuthorsResource = keyedResourceDescriptor<
-  AgentNotesAuthor[],
-  { blockId: string }
->(
-  "agent-notes-authors",
-  z.array(AgentNotesAuthorSchema),
-  [],
-  (row) => (row as AgentNotesAuthor).conversationId,
-);
+// NOT preloaded (a param'd value has no default tuple): the anchor mounts
+// route-scoped with the page, so it hydrates post-mount via its sub-ack — same
+// call `prompt-block-tasks` makes.
+export const agentNotesAuthors = liveValue("agent-notes-authors", {
+  schema: z.array(AgentNotesAuthorSchema),
+  params: ["blockId"],
+});

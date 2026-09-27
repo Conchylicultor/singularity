@@ -1,22 +1,17 @@
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { turnSummariesResource as turnSummariesDescriptor } from "../../shared";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { turnSummaryRows } from "../../shared";
 import { turnSummaries } from "./tables";
 
-// Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`), and the change feed routes a write to a tuple iff
-// the changed row ids intersect its set — so a new summary for one conversation
-// never recomputes the whole table.
+// Server half of the per-conversation summary read: the lookup-only collection
+// served from the extension entity (its wire columns — `conversationId` is the
+// `parent_id` PK). The loader reads only the subscribed id set (`WHERE
+// parent_id IN (ids)`), and the `:rows` point routing schedules a new summary
+// for one conversation on that conversation's tuple alone, instead of
+// recomputing the whole table.
 //
-// `point.by` IS the identity pk (an entity extension's pk is its
-// `conversationId` key), so one subscribed id names exactly one conversation's
-// summary. No orderBy — point sets are unordered.
-//
-// No `select`: the extension is an entity, so the projection is its wire
-// columns — a column added to the shape reaches the wire with no loader change.
-export const turnSummariesResource = windowQueryResource(
-  turnSummariesDescriptor,
-  {
-    from: turnSummaries,
-    point: { by: turnSummaries.table.conversationId },
-  },
-);
+// The projection is exactly `TurnSummarySchema`'s keys, bound by name to the
+// extension's wire columns — a field added to the shape reaches the wire with
+// no loader change.
+export const turnSummaryRowsServed = serveCollection(turnSummaryRows, {
+  from: turnSummaries,
+});

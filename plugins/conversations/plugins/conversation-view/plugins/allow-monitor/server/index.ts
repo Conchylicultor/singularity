@@ -1,7 +1,6 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { allowFilesLiveResource } from "./internal/allow-files-resource";
+import { allowFilesServed } from "./internal/allow-files-resource";
 
 export default {
-  contributions: [Resource.Declare(allowFilesLiveResource)],
+  contributions: [...allowFilesServed.declare],
 } satisfies ServerPluginDefinition;

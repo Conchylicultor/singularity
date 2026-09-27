@@ -6,7 +6,4 @@ export {
   claudeCodeBlockMessage,
 } from "./internal/status";
 export type { ClaudeCodeStatus, ClaudeCodeBlock } from "./internal/status";
-export {
-  claudeCodeStatusResource,
-  recheckClaudeCode,
-} from "./internal/resources";
+export { claudeCodeStatus, recheckClaudeCode } from "./internal/resources";

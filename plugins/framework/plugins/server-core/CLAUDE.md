@@ -8,7 +8,7 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 
 1. `bin/index.ts` starts `Bun.serve({ unix })` on the per-worktree Unix socket the gateway hands it as `--socket <path>` (e.g. `~/.singularity/sockets/<name>.sock`), read by `readServingSocket()` (`infra/runtime-identity`). The backend errors out if it was given no socket — there is no standalone dev mode.
 2. Each plugin declares its routes via a `ServerPluginDefinition` (`core/types.ts`). At startup the entry point flattens them into two lookup tables: `httpRoutes` (`"METHOD /path"` → handler) and `wsRoutes` (`"/path"` → `WsHandler`).
-3. Plugins also declare live-state via `resources` (see `defineResource` below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./singularity check no-raw-sse`).
+3. Plugins also serve live state (see "Live state" below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./singularity check no-raw-sse`).
 
 ## Boot modes: `serve` and `exec`
 
@@ -22,16 +22,27 @@ there, not in a composition root, unless it is genuinely serve-only.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves, `register`,
-  `collectContributions` and the `onReadyBlocking` barrier, and nothing else.
+  `collectContributions`, the preload-declare assert and the `onReadyBlocking`
+  barrier, and nothing else.
 
 | phase                                          | `serve` | `exec` |
 | ---------------------------------------------- | ------- | ------ |
 | load waves, `register`, `collectContributions` | yes     | yes    |
+| preload-declare assert                         | yes     | yes    |
 | socket bind                                    | yes     | no     |
 | `onReadyBlocking`                              | yes     | yes    |
 | `markServerReady()`                            | yes     | no     |
 | `onReady` / `onAllReady` / `drainWarmups`      | yes     | no     |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     |
+
+The **preload-declare assert** (`assertPreloadedResourcesDeclared`,
+`core/resources.ts`) throws when a resource registered with `preload` has no
+`Resource.Declare` contribution carrying it, naming every such key. The boot
+snapshot and the L2 persist set read `preload` off the Declare set only, so a
+forgotten `...served.declare` would otherwise serve but silently lose boot
+hydration and persistence — and the barrier's L2 sweep, which `exec` runs too,
+would delete the key's persisted row. That is why it runs in both modes and
+before the barrier.
 
 ### Both modes declare their namespace FIRST
 
@@ -136,45 +147,25 @@ The type is intentionally flat — no base classes. A plugin is a data object wi
 
 **Barrier fatality is not gated on `loadBearing`.** A throw in _any_ plugin's `onReadyBlocking` aborts boot — the barrier's contract is "this completes before we serve", so failing to complete is fatal by definition; gating it on `loadBearing` would promote degraded backends behind a green `/api/health/ready`. If blocking work is genuinely optional-for-correctness (failure should _degrade_, not crash), catch the error **inside** the hook and continue — pattern: `plugins/database/plugins/live-state-snapshot/server/internal/boot-init.ts`. `loadBearing` still gates the post-serving `onReady` / `onAllReady` phases, where killing a live backend is reserved for critical plugins.
 
-### `defineResource` — live state
+### Live state
 
-Live state (anything a client wants kept in sync with server truth) is declared via `defineResource`, never by hand-rolled WS or SSE:
-
-```typescript
-// plugins/tasks/server/internal/tasks-resource.ts
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-
-export const tasksResource = defineResource({
-  key: "tasks",
-  mode: "push", // or "invalidate"
-  loader: async () => loadTasks(),
-});
-```
-
-Mount via `resources: [tasksResource]` on the `ServerPluginDefinition`. The core auto-registers:
-
-- `GET /api/resources/tasks/...` (HTTP fallback for WS-down / curl / SSR)
-- A subscription entry on the shared `GET /ws/notifications` socket
-
-Call `tasksResource.notify()` from mutation handlers / pollers when server state changes.
-
-**`push` vs `invalidate`.** Both deliver level state (never deltas). `push` sends the new value inline over the WS (one computation, N tabs). `invalidate` sends only a version stamp; each observing tab fires its own GET. Use `push` when the value is small (< ~4KB), the same for every subscriber, and almost always observed when notifications fire. Otherwise `invalidate`. See `research/2026-04-15-global-sse-lifecycle-mental-model-v3.md` §5 for the full decision rule.
-
-On the client, plugins consume resources with `useResource` from `@plugins/primitives/plugins/live-state/web` — see `plugins/framework/plugins/web-sdk/CLAUDE.md`. No manual reconnect / reconcile code; TanStack Query + the leader-elected `NotificationsClient` handle it.
-
-**Two-arg form — derive the contract from the client descriptor.** When a resource already has a client `ResourceDescriptor` (it's consumed by `useResource`), prefer `defineResource(descriptor, serverOpts)` over restating `key`/`schema`/`mode`/`keyOf` inline:
+Live state (anything a client wants kept in sync with server truth) is never hand-rolled WS or SSE. A plugin declares it once in `core/` with `network/live`'s `liveValue` / `liveCollection`, serves it from `server/` with `serveValue` / `serveCollection`, and spreads the served object's `declare` into its `contributions` (see [`plugins/network/plugins/live/CLAUDE.md`](../../../network/plugins/live/CLAUDE.md)):
 
 ```typescript
-import { agentLaunchesResource as descriptor } from "../../shared/resources";
-
-export const agentLaunchesResource = defineResource(descriptor, {
-  loader: async (_p, ctx) => loadLaunches(ctx?.affectedIds),
-  identityTable: "agent_launches",
-  // mode/keyOf are NOT restated — they come from the descriptor.
-});
+// server/internal/resource.ts
+export const unreadServed = serveValue(notificationsUnread, { source: "db", loader: countUnread });
+// server/index.ts
+contributions: [...unreadServed.declare],
 ```
 
-`key`, `schema`, and keyed-ness (`mode: "keyed"` + `keyOf`) are read from the descriptor; `serverOpts` (`ServerResourceOptions`) carries only the DB half (`loader`, `dependsOn`, `identityTable`, `debounceMs`, `mode` for push-vs-invalidate on a _non_-keyed descriptor). `ServerResourceOptions.mode` excludes `"keyed"`, so keyed-ness can only come from the descriptor — a server that says keyed and a client descriptor missing its `keyOf` can no longer drift. The flat one-arg form stays for resources with no shared descriptor (server-only state), but is **push/invalidate-only**: a keyed resource has no way to share `keyOf` with the client and MUST use the two-arg form. Requires the server to import the descriptor without a plugin cycle — see the keyed-sync section in `plugins/primitives/plugins/live-state/CLAUDE.md`.
+Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive` / `useLiveRow`.
+
+**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. A plugin calls them directly only for the resources not yet on the unified API — the tasks / conversations / pages tree, the revision ticks and config (Resources page items 3 / 7 / 9), declared with `resourceDescriptor` / `keyedResourceDescriptor` / `queryResourceDescriptor` (the tree also serves through `infra/query-resource`'s `queryResource`) — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those old forms:
+
+- A resource registers when `defineResource` runs; `Resource.Declare(resource)` in `contributions` is its declaration (what `...served.declare` spreads).
+- **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.
+- The two-arg form `defineResource(descriptor, serverOpts)` reads `key`, `schema` and keyed-ness (`mode: "keyed"` + `keyOf`) from the client descriptor; a keyed descriptor takes `KeyedServerResourceOptions`, which has no `mode`, and `ServerResourceOptions.mode` excludes `"keyed"`, so a keyed resource cannot drift from its client. The flat one-arg form is push/invalidate only.
+- A DB-backed resource has no `notify()` (the change feed routes commits by the loader's read-set); `defineExternalResource` is the only way to get one.
 
 ### Handlers
 
@@ -264,6 +255,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `DependsOnEntry`
     - `ExternalResource`
     - `HttpHandler`
+    - `KeyedServerResourceOptions`
     - `LiveStateSnapshotHooks`
     - `LoadedServerPlugin`
     - `LoaderAggregateView`
@@ -293,6 +285,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `WsHandler`
   - Exports (values):
     - `applyDbChange`
+    - `assertPreloadedResourcesDeclared`
     - `boundedMembershipKeys`
     - `collectContributions`
     - `defineExternalResource`

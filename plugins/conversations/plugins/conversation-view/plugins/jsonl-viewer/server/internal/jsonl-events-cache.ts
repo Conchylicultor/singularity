@@ -6,7 +6,7 @@ import {
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
-// ONE module-level memo, shared between the resource (jsonl-events-resource.ts —
+// ONE module-level memo, shared between the served value (jsonl-events-resource.ts —
 // BOTH its `revalidate` and its `loader`) and the transcript watcher (the
 // authoritative READER of the session chain, which primes through `watchTranscript`).
 //
@@ -20,15 +20,15 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 // loader returned a module-level `cachedEvents` map written by the watcher's callback
 // (fresh only AFTER the watcher fired). A read landing between a transcript append and
 // that callback shipped a stale value stamped with an already-current ETag — the exact
-// edited-files defect. It was non-fatal ONLY because this resource is `mode: "push"`:
-// its frames carry the value, so a skewed sub-ack is superseded by the next push. The
-// resource's soundness rested entirely on a mode choice recorded nowhere near it, and
-// switching to `invalidate` (a few bytes per frame instead of the whole event array)
-// would have silently reintroduced a permanent stale pin.
+// edited-files defect. It was non-fatal ONLY because this value is pushed: its frames
+// carry the value, so a skewed sub-ack is superseded by the next push. The value's
+// soundness rested entirely on a delivery choice recorded nowhere near it, and
+// switching to `load: "on-demand"` (a few bytes per frame instead of the whole event
+// array) would have silently reintroduced a permanent stale pin.
 //
 // `createSignedMemo` binds signature and compute at construction: `memo.signature`
 // feeds `revalidate`, `memo.get` feeds the `loader`, and they cannot drift because
-// there is nothing to pass. The mode is now a delivery choice, irrelevant to
+// there is nothing to pass. Push vs on-demand is now a delivery choice, irrelevant to
 // correctness.
 //
 // Both halves resolve the chain first. A session switch landing between the memo's

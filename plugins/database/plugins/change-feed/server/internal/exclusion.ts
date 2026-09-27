@@ -30,9 +30,10 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // resource may declare an `identityTable` on an excluded table. Scoped delivery
 // fires only on `origin === identityTable`, which an excluded (trigger-less) table
 // can never produce — so the policy would be dead config that silently degrades
-// the resource to hydrate-on-mount. A resource that reads an excluded table must
-// be a plain push resource (no identityTable), like slowOpsResource — or an
-// endpoint read refreshed by an in-process revision tick, like `reports.revision`.
+// the resource to hydrate-on-mount. A surface that reads an excluded table should
+// be an endpoint read on open, like the Slow Ops pane's `listSlowOps` (a live
+// value over it would never update), or an endpoint read refreshed by an
+// in-process revision tick, like `reports.revision`.
 export const ExcludeFromChangeFeed = defineServerContribution<{
   table: PgTable;
   reason: string;

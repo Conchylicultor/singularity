@@ -1,16 +1,13 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { conversationNotesResource } from "./internal/resource";
+import { conversationNoteRowsServed } from "./internal/resource";
 import { handleUpsertNote, handleDeleteNote } from "./internal/routes";
 import { upsertNote, deleteNote } from "../shared/endpoints";
 
 export { conversationNotes } from "./internal/tables";
-export { conversationNotesResource } from "./internal/resource";
 
 export default {
-  description:
-    "Per-conversation free-form notes, auto-saved to the server.",
-  contributions: [Resource.Declare(conversationNotesResource)],
+  description: "Per-conversation free-form notes, auto-saved to the server.",
+  contributions: [...conversationNoteRowsServed.declare],
   httpRoutes: {
     [upsertNote.route]: handleUpsertNote,
     [deleteNote.route]: handleDeleteNote,

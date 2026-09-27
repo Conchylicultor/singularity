@@ -8,20 +8,16 @@
 - Web:
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
+    - `network/live.LiveRowResult`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.usePointResources`
     - `tasks.setAutoStart`
     - `tasks/task-list.Tasks`
   - Exports (types): `TaskAutoStartRow`
-  - Exports (values):
-    - `taskAutoStartResource`
-    - `TaskAutoStartRowSchema`
-    - `useTaskAutoStart`
+  - Exports (values): `useTaskAutoStart`
 - Server:
   - Contributes:
-    - `resource.declare` "tasks-auto-start"
+    - `resource.declare` "tasks-auto-start:rows"
     - `trigger` "tasks.auto-start-cancel-on-drop"
   - Uses:
     - `database.db`
@@ -29,8 +25,8 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/query-resource.windowQueryResource`
     - `infra/warmup.defineWarmup`
+    - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
@@ -40,11 +36,10 @@
     - `getTaskAutoStart`
     - `listArmedTaskIds`
     - `setTaskAutoStart`
-    - `tasksAutoStartResource`
   - Register:
     - `defineJob('tasks.auto-start-cancel-on-drop')`
     - `defineWarmup('tasks.auto-start-dropped-sweep')`
-  - Resources: `tasks-auto-start` (keyed, point)
+  - Resources: `tasks-auto-start:rows` (keyed, point)
 - Cross-plugin:
   - Imported by:
     - `conversations`

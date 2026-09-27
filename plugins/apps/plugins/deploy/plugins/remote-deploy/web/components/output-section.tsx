@@ -3,17 +3,15 @@ import { MdBuild, MdCloudUpload } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
-import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useActiveViewId,
   ViewSwitcher,
 } from "@plugins/primitives/plugins/view-switcher/web";
 import {
   DEPLOY_LOG_CHANNEL,
-  deployRunsResource,
+  deployRuns,
   type DeployRun,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { RELEASE_LOG_CHANNEL } from "@plugins/release/core";
@@ -31,13 +29,15 @@ const CHANNELS = [
     id: DEPLOY_LOG_CHANNEL,
     title: "Deploy",
     icon: MdCloudUpload,
-    scope: "Converge / ship output for this server. One run at a time — a run is exclusive per server.",
+    scope:
+      "Converge / ship output for this server. One run at a time — a run is exclusive per server.",
   },
   {
     id: RELEASE_LOG_CHANNEL,
     title: "Build",
     icon: MdBuild,
-    scope: "Release builds in this worktree, across ALL compositions — not just this one.",
+    scope:
+      "Release builds in this worktree, across ALL compositions — not just this one.",
   },
 ] as const;
 
@@ -74,21 +74,29 @@ function followedChannel(
  * for the longest part of the run, and the user would have to know the channel
  * topology to find the output.
  */
-export function OutputSection({ deploymentId }: { deploymentId: string }): ReactNode {
+export function OutputSection({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
   const { activeViewId, setActiveView } = useActiveViewId(STORAGE_KEY);
   // Once the user picks a tab they own the choice for the rest of this mount: a
   // surface that kept yanking the view back would be unusable for anyone
   // deliberately watching the other channel.
   const [userPicked, setUserPicked] = useState(false);
 
-  const followed = followedChannel(useResource(deployRunsResource), deploymentId);
+  const followed = followedChannel(useLive(deployRuns), deploymentId);
   const activeId = !userPicked && followed !== null ? followed : activeViewId;
   const active = CHANNELS.find((c) => c.id === activeId) ?? CHANNELS[0];
 
   return (
     <Stack gap="xs">
       <ViewSwitcher
-        options={CHANNELS.map((c) => ({ id: c.id, title: c.title, icon: c.icon }))}
+        options={CHANNELS.map((c) => ({
+          id: c.id,
+          title: c.title,
+          icon: c.icon,
+        }))}
         activeId={active.id}
         onSelect={(id) => {
           setUserPicked(true);

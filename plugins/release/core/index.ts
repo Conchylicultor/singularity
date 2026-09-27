@@ -49,9 +49,9 @@ export {
 export type { ReleaseCandidateResponse } from "./candidate";
 export {
   ReleaseRunSchema,
-  releaseRunResource,
+  releaseRuns,
   releaseRunsRevisionResource,
   PreviewSchema,
-  previewStateResource,
+  releasePreviews,
 } from "./resources";
 export type { ReleaseRun, Preview } from "./resources";

@@ -1763,7 +1763,8 @@ export class NotificationsClient {
     if (!keyOf) {
       throw new Error(
         `[notifications] no keyOf registered for keyed resource key="${key}". ` +
-          `Use keyedResourceDescriptor so observe() registers the row identity.`,
+          `Declare it with liveCollection (its descriptors carry keyOf) so ` +
+          `observe() registers the row identity.`,
       );
     }
     // Parse each upsert row individually via the array schema's element — never

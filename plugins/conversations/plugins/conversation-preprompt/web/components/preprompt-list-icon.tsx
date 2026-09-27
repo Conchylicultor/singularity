@@ -12,9 +12,8 @@ import { PrepromptIcon } from "./preprompt-icon";
 export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
   const result = useConversationPreprompt(conv.id);
   // Nothing while loading, nothing when no preprompt was recorded.
-  if (result.pending) return null;
-  const record = result.data;
-  if (!record) return null;
+  if (result.pending || !result.found) return null;
+  const record = result.row;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>
       <Inline as="span" gap="none" className="text-muted-foreground">

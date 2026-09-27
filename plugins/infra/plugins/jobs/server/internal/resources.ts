@@ -3,12 +3,12 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
-  defineResource,
-  defineExternalResource,
-} from "@plugins/framework/plugins/server-core/core";
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import {
-  DeadJobsPayloadSchema,
-  JobsPayloadSchema,
+  deadJobs,
+  jobsList,
   type DeadJobsPayload,
   type JobsPayload,
   type JobState,
@@ -114,8 +114,9 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
 
   // No date conversion: drizzle already handed these back as strings (see the
   // schema header), and the parse has established that. `loadDeadJobsList` below
-  // DOES convert, because it reads through drizzle's typed query builder, which
-  // maps its `timestamp` columns to `Date` — a third behaviour again.
+  // reads through drizzle's typed query builder instead, which maps its
+  // `timestamp` columns to `Date` — a third behaviour again, and the one
+  // `DeadJobRowSchema` declares.
   const rows = raw.map((r) => ({
     id: r.id,
     jobName: r.payload.jobName ?? "(unknown)",
@@ -144,68 +145,47 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
   return { rows, counts };
 }
 
+// The `GET /api/jobs/dead` read. Rows verbatim: `DeadJobRowSchema` is the
+// table's columns, timestamps as `Date`. Debug → Queue reads the `dead-jobs`
+// collection instead (`deadJobsServed` below).
 export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
   const rows = await db
     .select()
     .from(_deadJobs)
     .orderBy(desc(_deadJobs.archivedAt))
     .limit(limit);
-  return {
-    rows: rows.map((r) => ({
-      id: r.id,
-      jobName: r.jobName,
-      input: r.input ?? null,
-      attempts: r.attempts,
-      maxAttempts: r.maxAttempts,
-      lastError: r.lastError,
-      diedAt: r.diedAt instanceof Date ? r.diedAt.toISOString() : r.diedAt,
-      archivedAt:
-        r.archivedAt instanceof Date
-          ? r.archivedAt.toISOString()
-          : String(r.archivedAt),
-    })),
-  };
+  return { rows };
 }
 
-// No poll — notified by reconcileDeadJobs after each archive/purge.
-export const deadJobsResource = defineResource({
-  key: "dead-jobs",
-  mode: "invalidate",
-  schema: DeadJobsPayloadSchema,
-  loader: async (): Promise<DeadJobsPayload> => loadDeadJobsList(2000),
-});
-
-let stopListening: (() => void) | undefined;
+// The dead-letter archive over `dead_jobs`: its window (newest archived first)
+// and its `:rows` / `:groups` siblings, every column bound by name. No poll and
+// no notify — the change feed covers `dead_jobs`, so the GC's archive insert
+// and its TTL / cap purge move every subscribed window. A row is written once
+// and never updated, so `archivedAt` never re-sorts one.
+export const deadJobsServed = serveCollection(deadJobs, { from: _deadJobs });
 
 // `jobs-list` reads the `graphile_worker.*` job tables, which live OUTSIDE the
 // public schema the L4 DB change-feed triggers cover (the feed deliberately
 // excludes the graphile_worker schema) — so the feed can NEVER invalidate this
-// resource. It is therefore an explicit-source resource (`defineExternalResource`,
-// the only factory that exposes `notify`), driven by the slot ledger's queue
-// activity signal (slot-ledger.ts): graphile's own `job:start` / `job:complete`
-// events on every runner, its `jobs:insert` notification, and this plugin's own
-// mutations that send none (retry, cancel, dead-job GC, the stuck-lock reclaim).
+// value. It is therefore served external (`source: "external"`, the arm with a
+// `notify`), driven by the slot ledger's queue activity signal (slot-ledger.ts):
+// graphile's own `job:start` / `job:complete` events on every runner, its
+// `jobs:insert` notification, and this plugin's own mutations that send none
+// (retry, cancel, dead-job GC, the stuck-lock reclaim). It listens only while a
+// tab is subscribed: `whileSubscribed` hands the signal this value's `notify`,
+// and the listener's remover is the stop.
 //
 // It used to re-read up to 500 rows every 3 s while observed, because those
 // lifecycle transitions happened "inside a runner we can't hook". We can: we
 // create the runners, and each has its own event emitter.
 //
-// `debounceMs` is the runtime's fixed-window debounce: a burst of activity (a
-// fan-out enqueue, a queue draining) costs one reload per second, not one per
-// event. Inserts are heard from any process (they arrive over LISTEN); what
-// this cannot see is a job started or finished by runners in ANOTHER process
-// against the same database.
-export const jobsListResource = defineExternalResource({
-  key: "jobs-list",
-  mode: "invalidate",
-  schema: JobsPayloadSchema,
-  loader: async (): Promise<JobsPayload> => loadJobsList(500),
-  debounceMs: 1000,
-  onFirstSubscribe: () => {
-    stopListening = onQueueActivity(() => jobsListResource.notify());
-  },
-  onLastUnsubscribe: () => {
-    stopListening?.();
-    stopListening = undefined;
-  },
+// `throttleMs`: a burst of activity (a fan-out enqueue, a queue draining) costs
+// one reload per second, not one per event. Inserts are heard from any process
+// (they arrive over LISTEN); what this cannot see is a job started or finished
+// by runners in ANOTHER process against the same database.
+export const jobsListServed = serveValue(jobsList, {
+  source: "external",
+  loader: () => loadJobsList(500),
+  throttleMs: 1000,
+  whileSubscribed: (_params, notify) => onQueueActivity(notify),
 });

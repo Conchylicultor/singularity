@@ -27,18 +27,19 @@ extra trailing guard (unlike `page-link`'s) because its suffix is a fixed `{4}`
 and its digits must be followed by `-`, so it cannot backtrack into a shorter
 match to satisfy the boundary lookahead.
 
-**Resolution is free.** `prototypesResource` is a live, app-wide list
-re-broadcast on every file change under the prototypes dir, so a transcript full
-of ids costs no requests and a chip's label follows a `<title>` edit live.
+**Resolution is free.** `prototypesList` (`files`' live value, read with
+`useLive`) is an app-wide list re-broadcast on every file change under the
+prototypes dir, so a transcript full of ids costs no requests and a chip's label
+follows a `<title>` edit live.
 
 Every arm that is not a resolved prototype — still loading, failed to load, or
 no such folder — renders the raw id as plain text. That is `page-link`'s
 behaviour rather than `attempt`'s, and an opaque id leaves no other honest
 option: there is nothing to show about `proto-1786877040-w2vi` except its title,
 so a chip that opens nothing would be worse than the text the model wrote.
-(Making `prototypesResource` `resident: true` would close the pending window
-outright, at the price of pulling a niche app's list into every app's boot
-snapshot — not worth it for a brief flash of the raw id.)
+(Declaring `prototypesList` with `preload: "boot"` would close the pending
+window outright, at the price of pulling a niche app's list into every app's
+boot snapshot — not worth it for a brief flash of the raw id.)
 
 The label is `PrototypeMeta.title` with nothing on top: a prototype with no
 `<title>` of its own already reads `UNTITLED_PROTOTYPE` by the time the list
@@ -59,9 +60,9 @@ conversation.
   - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
   - Uses:
     - `apps/prototypes/canvas.prototypeDetailPane`
+    - `network/live.useLive`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`

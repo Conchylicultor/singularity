@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -6,23 +7,30 @@ import {
   queryResource,
   rel,
 } from "@plugins/infra/plugins/query-resource/server";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import { withRank } from "@plugins/primitives/plugins/rank/server";
 import { _attempts, _conversations, pushes } from "./tables";
 import { attempts, conversations, tasks } from "./views";
-import type { TaskListItem } from "./schema";
+import { PushSchema, type TaskListItem } from "./schema";
 // `key` / `schema` / keyed-ness come from the shared client descriptors — the
 // single source of truth both runtimes read. The server adds only the DB half
 // (loader + cascade), so these keyed contracts can't drift from the client.
+// The two plain values (`taskDetail`, `conversationsGoneStats`) are `liveValue`
+// declarations served with `serveValue`, and the `pushRows` collection is
+// served with `serveCollection` — both read key / schema / params off the
+// declaration itself.
 import {
   tasksResource as tasksDescriptor,
-  taskDetailResource as taskDetailDescriptor,
+  taskDetail,
   attemptsResource as attemptsDescriptor,
-  pushesResource as pushesDescriptor,
-  pushesByAttemptResource as pushesByAttemptDescriptor,
+  pushRows,
   conversationsActiveResource as conversationsActiveDescriptor,
   conversationsSystemResource as conversationsSystemDescriptor,
   conversationsGoneResource as conversationsGoneDescriptor,
-  conversationsGoneStatsResource as conversationsGoneStatsDescriptor,
+  conversationsGoneStats,
   RECENT_GONE_LIMIT,
 } from "../../core";
 import type {
@@ -36,6 +44,7 @@ import {
   listConversationSummariesByAttempt,
   listGoneConversations,
 } from "./queries/conversations";
+import { listPushes } from "./queries/pushes";
 
 // The old aggregate `conversationsLiveResource` is decomposed into four keyed
 // delta-sync sub-resources (+ one scalar stats resource). A single conversation
@@ -117,19 +126,29 @@ export const conversationsGoneResource = defineResource(
   },
 );
 
-export const conversationsGoneStatsResource = defineResource(
-  conversationsGoneStatsDescriptor,
-  {
-    mode: "push",
-    loader: async () => ({ totalGoneCount: await countGoneConversations() }),
-  },
-);
+// The ended-conversation total (the gone window above holds only the newest
+// RECENT_GONE_LIMIT). A db value: its read-set is `conversations_v`, so every
+// conversation write recomputes it, and push mode drops the identical results.
+export const conversationsGoneStatsServed = serveValue(conversationsGoneStats, {
+  source: "db",
+  loader: async () => ({ totalGoneCount: await countGoneConversations() }),
+});
 
-// Global push-mode carrier for the SERVER cascade only: the `attempts` status
-// invalidation edge below (`rel(pushesResource, …)`) maps changed push ids to
-// their attempt ids, which needs a loader that reads the whole table. No web
-// subscriber — attempt-scoped surfaces read `pushesByAttemptResource`. Not
-// preloaded (descriptor) ⇒ no L2 persist and no boot payload.
+// The `pushes` collection (declared in core as `pushRows`): its window —
+// filterable by `attemptId`, newest first — and its `:rows` point sibling, over
+// the `pushes` table (all seven columns are row fields, so every one is on the
+// wire). A push change reaches each subscribed attempt window through window
+// membership — at most one bounded ids query per tuple — and
+// `pushes_attempt_id_idx` backs the per-attempt read.
+export const pushRowsServed = serveCollection(pushRows, { from: pushes });
+
+// Server-only push-mode carrier for the tree's `attempts` status edge below
+// (`rel(pushesAttemptsCascade, …)`), which maps changed push ids to their
+// attempt ids and needs a loader that reads the whole table. No web
+// subscriber and no client declaration — every push surface reads the
+// `pushRows` collection above, which is also the edge's future anchor
+// (Resources page item 3, when the tree migrates). Not preloaded ⇒ no L2
+// persist and no boot payload.
 //
 // commits-graph used to be the other downstream, and the reason this stayed
 // param-less: its `map` was value-aware. It no longer subscribes — its landed set
@@ -142,45 +161,12 @@ export const conversationsGoneStatsResource = defineResource(
 // ../push-ledger/), re-derived in-process the instant the ref advances and
 // guaranteed on read, so `attempts_v.status` no longer depends on a background
 // job's liveness.
-export const pushesResource = defineResource(pushesDescriptor, {
+export const pushesAttemptsCascade = defineResource({
+  key: "pushes.attempts-cascade",
   mode: "push",
-  loader: async () => db.select().from(pushes).orderBy(desc(pushes.createdAt)),
+  schema: z.array(PushSchema),
+  loader: listPushes,
 });
-
-// Per-attempt bounded push list (keyed, params `{ attemptId }`, identityTable
-// "pushes"). Hand-written like page-block-doc: the identityTable scopes recompute,
-// and a push change is delivered to every subscribed attempt tuple — the scoped
-// refill (`WHERE attempt_id = X AND id IN affectedIds`) returns the row only for
-// the owning attempt, so other tuples no-op. FULL load = one attempt's pushes
-// (bounded), desc(createdAt) to match the former global order. Correct for
-// arbitrarily old attempts; it queries by attemptId directly, never a global
-// window. This is what every attempt-scoped push consumer subscribes to.
-export const pushesByAttemptResource = defineResource(
-  pushesByAttemptDescriptor,
-  {
-    identityTable: "pushes",
-    fanOut: {
-      reason:
-        "the params key `attempt_id`, a FOREIGN column — the ids the change feed emits are `pushes.id`, so a changed id cannot be compared against a tuple's attemptId; the scoped refill (`WHERE attempt_id = X AND id IN affectedIds`) returns the row only for the owning attempt, so what fans out is the call count, not the payload",
-    },
-    loader: async ({ attemptId }, ctx) =>
-      ctx?.affectedIds
-        ? db
-            .select()
-            .from(pushes)
-            .where(
-              and(
-                eq(pushes.attemptId, attemptId),
-                inArray(pushes.id, [...ctx.affectedIds]),
-              ),
-            )
-        : db
-            .select()
-            .from(pushes)
-            .where(eq(pushes.attemptId, attemptId))
-            .orderBy(desc(pushes.createdAt)),
-  },
-);
 
 export const attemptsResource = defineResource(attemptsDescriptor, {
   // A direct `attempts` change scopes to that attempt id; conversation and push
@@ -225,10 +211,14 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
     // completed) and finished_at. Previously `attempts_v` referenced `pushes`
     // directly, so a push change routed to it through the view→base-table graph;
     // now `attempts_v` reads the `attempt_push_agg` rollup (feed-exempt, no NOTIFY),
-    // so this explicit edge carries the invalidation. `pushesResource`'s loader
-    // reads the whole `pushes` table, so the L4 feed delivers every push change
-    // here scoped to its id; the hop maps push ids → their attempt ids.
-    rel(pushesResource, { via: pushes, from: pushes.id, to: pushes.attemptId }),
+    // so this explicit edge carries the invalidation. `pushesAttemptsCascade`'s
+    // loader reads the whole `pushes` table, so the L4 feed delivers every push
+    // change here scoped to its id; the hop maps push ids → their attempt ids.
+    rel(pushesAttemptsCascade, {
+      via: pushes,
+      from: pushes.id,
+      to: pushes.attemptId,
+    }),
   ]),
   loader: async (_params, ctx): Promise<AttemptWithConversations[]> => {
     const ids = ctx?.affectedIds;
@@ -266,7 +256,7 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
 // List payload: every `tasks_v` column EXCEPT `description`. Pushed to every tab
 // on each cascade fire, so it carries only what the list renders — dropping
 // `description` removes ~60% of the payload. The detail pane reads the full row
-// (incl. description) from `taskDetailResource` below.
+// (incl. description) from the `taskDetail` value below.
 //
 // Fully declarative via `queryResource`: the compiler derives the FULL loader,
 // the Layer-2 scoped refill (`WHERE id IN (…)`), the `identityTable: "tasks"`
@@ -323,13 +313,14 @@ export const tasksResource = queryResource(tasksDescriptor, {
   ],
 });
 
-// Per-id detail resource: the full task row (incl. `description`). Only loads
-// for an open detail pane (parametrized by id) and re-pushes when that one task
-// is mutated — so the bulk list stays lean while the description editor remains
-// live across tabs/agents. The list resource stays authoritative for derived
-// fields (status/finishedAt); this exists to supply `description`.
-export const taskDetailResource = defineResource(taskDetailDescriptor, {
-  mode: "push",
+// Per-id detail value: the full task row (incl. `description`), or `null` when
+// no such task exists. Only loads for an open detail pane (params `{ id }`) and
+// re-pushes when what it read changes — so the bulk list stays lean while the
+// description editor remains live across tabs/agents. The list resource stays
+// authoritative for derived fields (status/finishedAt); this exists to supply
+// `description`. A db value over one row (not an array), so no `unbounded`.
+export const taskDetailServed = serveValue(taskDetail, {
+  source: "db",
   loader: async ({ id }) => {
     const [row] = await db
       .select()

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -18,9 +18,14 @@ export const keyAutoDetectShape = defineExtensionShape({
 export const KeyAutoDetectRowSchema = keyAutoDetectShape.schema;
 export type KeyAutoDetectRow = z.infer<typeof KeyAutoDetectRowSchema>;
 
-/** Reactive list of every song's key-auto-detect setting (push resource). */
-export const keyAutoDetectResource = resourceDescriptor<KeyAutoDetectRow[]>(
-  "sonata-key-auto-detect",
-  z.array(KeyAutoDetectRowSchema),
-  [],
-);
+/**
+ * The key-auto-detect setting of ONE song, read by the song's id: a lookup-only
+ * collection over the extension table (nothing lists every song's setting),
+ * minting `sonata-key-auto-detect:rows` alone. The observer reads the open
+ * song's row with `useLiveRow(keyAutoDetects, songId)`; `found: false` is an
+ * absent row, i.e. `false`.
+ */
+export const keyAutoDetects = liveCollection("sonata-key-auto-detect", {
+  row: KeyAutoDetectRowSchema,
+  id: "songId",
+});

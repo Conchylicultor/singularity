@@ -13,6 +13,7 @@ import {
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
@@ -31,7 +32,7 @@ import {
 } from "@plugins/conversations/plugins/agents/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import { agentLaunchesResource, agentRows } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
@@ -59,7 +60,7 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
-  const agentsResult = useResource(agentsResource);
+  const agentsResult = useLive(agentRows);
   return (
     <ResourceView resource={agentsResult} fallback={<Loading variant="text" />}>
       {(agents) => {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   DB_CALL_PHASES,
   DB_POOL_NAMES,
@@ -45,11 +45,10 @@ export type QueryDeadlines = z.infer<typeof QueryDeadlinesSchema>;
 /**
  * The last {@link QUERY_DEADLINE_RING_CAPACITY} query-deadline hits on this
  * backend, pushed on every hit. In-memory on the server (it resets when the
- * backend restarts; the durable record is the report), so it is an external
- * push resource with a hand `notify()`.
+ * backend restarts; the durable record is the report), so it is served
+ * external, and every hit calls its `notify()`. No placeholder: until the
+ * first read lands the Database row is `unknown`, never an empty ring.
  */
-export const dbQueryDeadlinesResource = resourceDescriptor<QueryDeadlines>(
-  "db-query-deadlines",
-  QueryDeadlinesSchema,
-  { hits: [] },
-);
+export const dbQueryDeadlines = liveValue("db-query-deadlines", {
+  schema: QueryDeadlinesSchema,
+});

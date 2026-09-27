@@ -1,8 +1,5 @@
 export {
   ConversationPrepromptSchema,
-  conversationPrepromptsResource,
+  conversationPrepromptRows,
 } from "./schemas";
-export type {
-  ConversationPreprompt,
-  PrepromptIcon,
-} from "./schemas";
+export type { ConversationPreprompt, PrepromptIcon } from "./schemas";

@@ -1,22 +1,13 @@
-import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { taskAutoStartResource as taskAutoStartDescriptor } from "../../shared/resources";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { taskAutoStart } from "../../shared/resources";
 import { tasksAutoStart } from "./tables";
 
-// Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`), and the change feed routes a write to a tuple iff
-// the changed row ids intersect its set — so arming, disarming, claiming or
-// sweeping one task's marker never recomputes the whole table.
-//
-// `point.by` IS the identity pk (an entity extension's pk is its `taskId` key),
-// so one subscribed id names exactly one task's marker. No orderBy — point sets
-// are unordered; callers index by task id.
-//
-// No `select`: the extension is an entity, so the projection is its wire
-// columns (createdAt/updatedAt stay off the wire).
-export const tasksAutoStartResource = windowQueryResource(
-  taskAutoStartDescriptor,
-  {
-    from: tasksAutoStart,
-    point: { by: tasksAutoStart.table.taskId },
-  },
-);
+// Server half of the per-task marker read: the lookup-only collection served
+// from the extension entity (`taskId` is its `parent_id` PK; the projection is
+// exactly the row schema, so createdAt/updatedAt stay off the wire). The loader
+// reads only the subscribed id set, and the `:rows` point routing schedules an
+// arm, disarm, claim or sweep of one task's marker for that task's tuple alone,
+// never recomputing the whole table.
+export const taskAutoStartServed = serveCollection(taskAutoStart, {
+  from: tasksAutoStart,
+});

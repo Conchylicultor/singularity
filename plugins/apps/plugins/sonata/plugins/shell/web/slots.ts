@@ -18,6 +18,7 @@ import type {
   Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { NoDisplay } from "./components/no-display";
+import type { SongSettingKey } from "./song-setting";
 
 /** Icon component convention used across the platform (react-icons/md style). */
 type IconType = ComponentType<{ className?: string }>;
@@ -209,6 +210,18 @@ export const Sonata = {
   // playback state) and run effects (e.g. recording a play, scrobbling). Mounted
   // once inside SonataProvider so contributors can `useSonata()`.
   Effect: defineMountSlot({
+    docLabel: (p) => p.id,
+  }),
+
+  // SONG SETTING — the registry of per-song settings: each contribution pairs a
+  // setting (`setting`, a `defineSongSetting` key) with the headless observer
+  // (`component`) that settles it for the loaded song. The shell mounts every
+  // observer while a song is loaded, afresh for each song it loads (keyed on the
+  // load), so an observer reads the non-null `useMountedSongId()` and starts from
+  // that song's own state. The score waits on exactly the settings registered
+  // here — read generically, so the shell names no feature, and a composition
+  // without one of them never waits on it. One contribution per setting.
+  SongSetting: defineMountSlot<{ setting: SongSettingKey<unknown> }>({
     docLabel: (p) => p.id,
   }),
 

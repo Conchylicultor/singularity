@@ -20,11 +20,14 @@ const live = vi.hoisted(() => ({
   result: undefined as unknown,
 }));
 
+vi.mock("@plugins/network/plugins/live/web", () => ({
+  useLive: () => live.result,
+}));
+
 vi.mock(
   "@plugins/primitives/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<typeof LiveStateWeb>()),
-    useResource: () => live.result,
     useNotificationsChannelStatuses: () => ({
       worktree: live.socket,
       central: "open",

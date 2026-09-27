@@ -11,7 +11,7 @@ export {
   type MailSyncErrorCode,
   MAX_CONSECUTIVE_RESYNCS,
 } from "./internal/enums";
-export { mailSyncStateResource, mailLabelsResource } from "./internal/resources";
+export { mailSyncState, mailLabels } from "./internal/resources";
 export {
   type MailSyncPhase,
   type MailSyncView,

@@ -5,7 +5,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
-import { worktreeOpsResource } from "./resource";
+import { worktreeOpsServed } from "./resource";
 
 let watcher: FileWatcher | null = null;
 let started = false;
@@ -35,11 +35,11 @@ export async function startOpWatcher(): Promise<void> {
     extensions: [".json"],
     // Notify only when a real op marker changed — never on build-artifact churn.
     onChange: (events) => {
-      if (events.some((e) => isOpMarker(e.path))) worktreeOpsResource.notify();
+      if (events.some((e) => isOpMarker(e.path))) worktreeOpsServed.notify();
     },
     // Fires unconditionally: a rare (30s) watcher-reliability backstop for events
     // parcel may drop, not a change poll.
-    onReconcile: () => worktreeOpsResource.notify(),
+    onReconcile: () => worktreeOpsServed.notify(),
   });
 }
 

@@ -118,24 +118,24 @@ support (I6). The attempt statuses say how the session ended; the task's
 
 ## Cascade
 
-Resources form a DAG via `dependsOn`. One upstream `notify()` cascades through in a single microtask flush:
+Resources form a DAG via `dependsOn` (`tasks-core/server/internal/resources.ts`). The DB change feed routes each commit to the resources that read the changed table, and the cascade runs in one flush:
 
 ```
-recentConversationsResource
-  ↑ notified by: runtime poller on status change, handlers on create/delete
-  ↓ feeds: attemptsResource
+conversationsActiveResource   (key conversations-active)
+  ↑ changed by: any conversations write
+  ↓ feeds: attemptsResource   (conversation id → its attempt)
 
-pushesResource
-  ↑ notified by: push-watcher
-  ↓ feeds: attemptsResource
+pushesAttemptsCascade         (key pushes.attempts-cascade — server-only carrier)
+  ↑ changed by: any pushes write (the push ledger)
+  ↓ feeds: attemptsResource   (push id → its attempt)
 
-attemptsResource        (loader: SELECT * FROM attempts_v)
-  ↓ feeds: tasksResource
+attemptsResource              (loader: SELECT * FROM attempts_v)
+  ↓ feeds: tasksResource      (attempt id → its task)
 
-tasksResource           (loader: SELECT * FROM tasks_v)
+tasksResource                 (loader: SELECT * FROM tasks_v)
 ```
 
-A conversation going `gone` → `recentConversationsResource.notify()` → `attemptsResource` re-loads (attempt flips `in_progress → dormant` or `pushed → completed`) → `tasksResource` re-loads (task flips to `attempted` or `done`). Every badge downstream updates from one trigger.
+A conversation going `gone` → `conversations-active` recomputes → `attemptsResource` re-loads that attempt (it flips `in_progress → dormant` or `pushed → completed`) → `tasksResource` re-loads that task (it flips to `attempted` or `done`). Every badge downstream updates from one commit. The push surfaces themselves read the `pushes` `liveCollection` (`pushRows`), not the carrier.
 
 ## Schema layout
 

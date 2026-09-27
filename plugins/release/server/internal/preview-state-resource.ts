@@ -1,12 +1,9 @@
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-// `key` / `schema` are the shared client descriptor's; an external resource's
-// truth lives outside Postgres (an in-memory Map here), so it keeps a callable
-// `notify()` — the only way to push when the in-memory state changes.
-import { previewStateResource as previewStateDescriptor, type Preview } from "../../core/resources";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { releasePreviews, type Preview } from "../../core/resources";
 
 // The in-memory preview registry, keyed by runId. The server projects this into
-// the `release.previews` resource payload (a `Record<runId, Preview>`); the
-// preview manager mutates it and calls `previewStateResource.notify()`.
+// the `release.previews` value (a `Record<runId, Preview>`); the preview
+// manager mutates it and calls `releasePreviewsServed.notify()`.
 export interface PreviewEntry {
   runId: string;
   pid: number;
@@ -29,7 +26,9 @@ function snapshot(): Record<string, Preview> {
   return out;
 }
 
-export const previewStateResource = defineExternalResource(previewStateDescriptor, {
-  mode: "push",
+// External: the truth is the in-memory Map above, not Postgres, so the only
+// way to push a change is the served value's own `notify()`.
+export const releasePreviewsServed = serveValue(releasePreviews, {
+  source: "external",
   loader: () => snapshot(),
 });

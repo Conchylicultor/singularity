@@ -13,6 +13,7 @@
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.useConversationOpener`
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -21,7 +22,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `tasks/attempt-status.AttemptStatusBadge`
     - `tasks/task-detail.TaskDetailSlots`

@@ -3,14 +3,14 @@ import type {
   FieldDef,
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { useWindowResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { PageRow } from "@plugins/page/plugins/editor/core";
-import { agentPagesResource } from "../../shared/resources";
+import { agentPages } from "../../shared/resources";
 
 /**
  * Field extension contributed into the page-tree's `PageTree.Fields` factory: a
- * render-callback component that reads this plugin's own live agent-pages
- * resource into a `Set<string>` and yields one `origin` enum `FieldDef<PageRow>`
+ * render-callback component that reads this plugin's own live `agentPages`
+ * window into a `Set<string>` and yields one `origin` enum `FieldDef<PageRow>`
  * closed over the set. That makes `origin` a group/filter dimension of the one
  * `pages-sidebar` DataView — the `[Agent]` section is just `groupBy: "origin"`
  * authored in that view's config, with no bespoke sidebar.
@@ -20,7 +20,7 @@ export function OriginField({ render }: FieldExtensionProps<PageRow>) {
   // "user", so the tree renders exactly as it did before this plugin existed
   // until the resource settles — never a flash of pages under `Agent` and never
   // an unresolvable rule.
-  const result = useWindowResource(agentPagesResource);
+  const result = useLive(agentPages);
   const agentIds = useMemo(() => {
     if (result.pending) return new Set<string>();
     return new Set(result.data.map((r) => r.blockId));

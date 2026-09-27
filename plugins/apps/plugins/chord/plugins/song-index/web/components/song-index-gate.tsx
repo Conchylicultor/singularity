@@ -1,9 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -14,7 +12,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  chordIndexStatusResource,
+  chordIndexStatus,
   ensureChordIndexEndpoint,
   type IndexStatus,
 } from "../../core";
@@ -39,7 +37,7 @@ export function SongIndexGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     mutate({});
   }, [mutate]);
-  const status = useResource(chordIndexStatusResource);
+  const status = useLive(chordIndexStatus);
   const retry = () => mutate({});
 
   if (ensure.isError) {

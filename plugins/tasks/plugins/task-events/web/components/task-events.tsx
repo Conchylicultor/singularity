@@ -1,12 +1,12 @@
 import { MdOpenInNew } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { getRepoInfo } from "@plugins/tasks/core";
-import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushRows } from "@plugins/tasks/plugins/tasks-core/core";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
@@ -82,9 +82,13 @@ function PushRow({
   );
 }
 
-// One attempt's pushes, subscribed per-attempt (bounded, correct for arbitrarily
-// old attempts). Rendered once per attempt so a task's push history is grouped by
-// attempt (attempts already sorted newest-first; pushes within an attempt too).
+// One attempt's pushes: the `pushes` collection filtered to this attempt (a
+// filter, not a slice of a global window, so it is correct for arbitrarily old
+// attempts). Rendered once per attempt so a task's push history is grouped by
+// attempt — attempts arrive newest-first, and the collection's default order is
+// `createdAt` desc, so pushes within an attempt do too. Renders nothing until
+// the rows are known: the parent already showed its loading state for the
+// attempts, and an attempt's pushes land a round trip later.
 function AttemptPushList({
   attemptId,
   githubBase,
@@ -92,14 +96,11 @@ function AttemptPushList({
   attemptId: string;
   githubBase: string | null;
 }) {
-  const pushesQ = useResource(pushesByAttemptResource, { attemptId });
+  const pushesQ = useLive(pushRows, { where: { attemptId } });
   if (pushesQ.pending) return null;
-  const pushes = [...pushesQ.data].sort(
-    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-  );
   return (
     <>
-      {pushes.map((push) => (
+      {pushesQ.data.map((push) => (
         <PushRow key={push.id} push={push} githubBase={githubBase} />
       ))}
     </>

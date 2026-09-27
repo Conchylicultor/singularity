@@ -6,14 +6,15 @@ import {
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
 import { liveBlocks } from "@plugins/page/plugins/editor/server";
-import { BacklinkRowSchema, PageLinkEdgeSchema } from "../../core/schemas";
+import { PageLinkEdgeSchema } from "../../core/schemas";
 import {
-  backlinksResource as backlinksDescriptor,
+  pageBacklinks,
   pageLinksResource as pageLinksDescriptor,
 } from "../../core/resources";
-import type { BacklinkRow, PageLinkEdge } from "../../core/schemas";
+import type { PageLinkEdge } from "../../core/schemas";
 import { _pageLinks } from "./tables";
 
 // `data->>'title'` / `data->'iconSvgNodes'`: the source page's title and icon
@@ -30,15 +31,17 @@ const iconSvgNodesExpr = sql`${liveBlocks.data} -> 'iconSvgNodes'`.mapWith(
   nullable(parsed(z.array(SvgNodeSchema), "backlinks.iconSvgNodes")),
 );
 
-// Push resource: lists the source pages that link TO `pageId`, ordered by
-// title. Notified by the reindexer for every affected target.
-export const backlinksResource = defineResource<
-  BacklinkRow[],
-  { pageId: string }
->({
-  key: backlinksDescriptor.key,
-  mode: "push",
-  schema: z.array(BacklinkRowSchema),
+// The source pages that link TO `pageId`, ordered by title. A db-arm value: the
+// loader's read-set (`page_links` and `page_blocks`) is captured at the pool
+// chokepoint, so every edge write — the reindexer's insert/delete, the trash
+// hook's drop, an FK cascade — and every source page's title / icon edit
+// recomputes the subscribed tuples; push drops a byte-identical result.
+export const pageBacklinksServed = serveValue(pageBacklinks, {
+  source: "db",
+  unbounded: {
+    reason:
+      "the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table",
+  },
   loader: async ({ pageId }) =>
     db
       .select({
@@ -51,7 +54,10 @@ export const backlinksResource = defineResource<
       // join is what makes that a fact rather than a race.
       .innerJoin(liveBlocks, eq(_pageLinks.sourcePageId, liveBlocks.id))
       .where(eq(_pageLinks.targetPageId, pageId))
-      .orderBy(asc(titleExpr)),
+      // The id breaks a title tie (every "Untitled" source): push compares
+      // bytes, so two recomputes over the same rows must not come back in two
+      // orders.
+      .orderBy(asc(titleExpr), asc(liveBlocks.id)),
 });
 
 // Push resource: the full (source → target) edge list. Every write to

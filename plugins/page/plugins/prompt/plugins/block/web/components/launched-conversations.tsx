@@ -21,7 +21,18 @@ import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/w
  */
 export function LaunchedConversations({ blockId }: { blockId: string }) {
   const links = useBlockPromptTasks(blockId);
-  const convs = useTaskConversations(links.map((link) => link.taskId));
+
+  // Still loading renders nothing, as a block with no launches does: this is a
+  // chip row beside the launch button, where a spinner in place of zero to
+  // three chips would be noise. The join below runs only once the set of tasks
+  // is known.
+  if (links.pending || links.data.length === 0) return null;
+
+  return <LaunchedChips taskIds={links.data.map((link) => link.taskId)} />;
+}
+
+function LaunchedChips({ taskIds }: { taskIds: readonly string[] }) {
+  const convs = useTaskConversations(taskIds);
 
   if (convs.pending || convs.data.length === 0) return null;
 

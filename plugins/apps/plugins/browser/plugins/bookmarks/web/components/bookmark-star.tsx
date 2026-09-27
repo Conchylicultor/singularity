@@ -1,29 +1,39 @@
 import { MdStar, MdStarBorder } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
-import { useBookmarks } from "../internal/use-bookmarks";
+import { useBookmarkToggle } from "../internal/use-bookmarks";
 import { hostOf } from "../internal/host-of";
 
 /**
  * Star toggle for the chrome bar's trailing actions. Filled when the current
- * URL is bookmarked, outline otherwise. Disabled on the start page.
+ * URL is bookmarked, outline otherwise. Disabled on the start page, where
+ * there is no URL to look up (so nothing is read).
  */
 export function BookmarkStar() {
   const { current } = useBrowserNav();
-  const { isBookmarked, toggle } = useBookmarks();
-  const bookmarked = current !== "" && isBookmarked(current);
+  if (current === "") {
+    return <IconButton icon={MdStarBorder} label="Add bookmark" disabled />;
+  }
+  return <UrlBookmarkStar url={current} />;
+}
 
+/**
+ * The star for one url. Disabled until the url's bookmark is known, rather
+ * than claiming "not bookmarked" — and a click then could add a duplicate.
+ */
+function UrlBookmarkStar({ url }: { url: string }) {
+  const state = useBookmarkToggle(url);
+  if (state.pending) {
+    return <IconButton icon={MdStarBorder} label="Add bookmark" disabled />;
+  }
+  const { bookmarked, toggle } = state;
   return (
     <IconButton
       icon={bookmarked ? MdStar : MdStarBorder}
       label={bookmarked ? "Remove bookmark" : "Add bookmark"}
       tooltip={bookmarked ? "Remove bookmark" : "Add bookmark"}
-      disabled={current === ""}
-      onClick={() => {
-        if (current !== "") {
-          void toggle(current, hostOf(current));
-        }
-      }}
+      aria-pressed={bookmarked}
+      onClick={() => toggle(hostOf(url))}
     />
   );
 }

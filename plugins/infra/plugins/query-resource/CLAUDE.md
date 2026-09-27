@@ -1,27 +1,48 @@
 # query-resource
 
-A declarative SQL-query → keyed-live-state compiler: ONE constrained drizzle
-declaration derives the FULL loader, the Layer-2 scoped loader, the `identityTable`
-(hand-authored elsewhere, and free to drift from what the loader actually reads), and
-the client keyField — producing exactly the object the existing two-arg
-`defineResource(descriptor, ServerResourceOptions & ScopePolicy)` already accepts.
-**Zero changes to `resource-runtime`.**
+The SQL compiler under `network/live`'s live-resource API. **It is not a way to
+declare a resource.** A new collection is a `liveCollection` served by
+`serveCollection`, and a new value is a `liveValue` served by `serveValue` —
+see `plugins/network/plugins/live/CLAUDE.md`. What lives here is what those
+compile to, plus the last resources that have not moved:
+
+- **`windowQueryResource`** — the bounded (window / point) compiler.
+  `serveCollection` runs every collection's window and `:rows` sibling through
+  it (see *Bounded membership* below).
+- **`queryResource`** + **`queryResourceDescriptor`** — the unbounded keyed
+  form. Only the task tree's resources still use it (`tasks`,
+  `conversations-active` / `-system`, and `task-categories`, bounded by
+  `tasks`). They wait for the design for loading part of a tree
+  (`research/2026-09-25-global-unified-live-resource-api.md`, *Phases after the
+  proof*). `rel()` / `compileEdges` derive that tree's cascade edges.
+
+`query-resource` never imports `network/live` — the dependency runs the other
+way, test files included.
+
+Both compilers take ONE constrained drizzle declaration and derive the FULL
+loader, the Layer-2 scoped loader, the `identityTable` (hand-authored elsewhere,
+and free to drift from what the loader actually reads), and the client keyField
+— producing exactly the object the two-arg keyed
+`defineResource(descriptor, KeyedServerResourceOptions & ScopePolicy)` already
+accepts (a keyed contract takes no `mode`). **Zero changes to
+`resource-runtime`.**
+
+The tree resources are declared like this — kept for them, **not** a precedent
+for new work:
 
 ```ts
-// shared/core (web-safe descriptor — NO drizzle):
-export const browserBookmarksResource = queryResourceDescriptor(
-  "browser-bookmarks", BookmarkRowSchema, "id");
+// shared/ (web-safe descriptor — NO drizzle):
+export const taskCategoriesResource = queryResourceDescriptor(
+  "task-categories", TaskCategoryRowSchema, "taskId", { preload: "boot" });
 
 // server:
-export const browserBookmarksServerResource = queryResource(browserBookmarksResource, {
-  from: _browserBookmarks,                   // PgTable | PgView | Entity
-  orderBy: asc(_browserBookmarks.createdAt),
-  scopedMembership: true,                    // INSERT/DELETE ship incremental deltas (§ scopedMembership)
+export const taskCategoriesServerResource = queryResource(taskCategoriesResource, {
+  from: tasksCategory,                       // PgTable | PgView | Entity
+  // scopedMembership: true,                 — INSERT/DELETE ship incremental deltas (§ scopedMembership)
 });
 ```
 
 > `where` (and mutable-column filtering) is covered in the RULE section below.
-> The former `notifications` example moved to `windowQueryResource` (last section).
 
 ## What it derives
 
@@ -32,7 +53,7 @@ export const browserBookmarksServerResource = queryResource(browserBookmarksReso
    view has no PK metadata and its identity base cannot be derived at module eval
    — before the boot-time contribution collection that populates
    `relationIdentityBase`. A composite / missing PK with no `identity.pk` override
-   throws; such a resource stays on a plain push `defineResource`.
+   throws; such a payload is a pushed `liveValue` (`network/live`) instead.
 2. **keyField.** The wire field the client `keyOf` reads: the projection key whose
    column matches the pk (matched by DB column *name*, so an aliased projection
    `{ conversationId: table.parentId }` keys on the alias), else the pk's JS
@@ -51,8 +72,8 @@ The compiler emits **keyed resources only**: a push loader that ignored
 `ctx.affectedIds` would broadcast a partial (scoped) array as the whole value,
 corrupting every subscriber's snapshot. Keyed-ness comes solely from the client
 descriptor (`queryResourceDescriptor` → `keyedResourceDescriptor`), so the scope
-policy is mandatory by construction; push/invalidate resources keep plain
-`defineResource`.
+policy is mandatory by construction. A pushed or on-demand payload is a
+`liveValue` served by `serveValue` (`network/live`).
 
 ## The `recompute: {full}` escape hatch (K/full)
 
@@ -108,45 +129,41 @@ throw in `compileQuery`. Absent ⇒ byte-identical to pre-M5. Design:
 
 ## Bounded membership: `windowQueryResource` (window / point)
 
-> **DEFAULT for new collections: `liveCollection` + `serveCollection`** (`network/live`),
-> which compile down to the two `windowQueryResource` calls below (a window with
-> per-params `where` / `orderBy`, and a `:rows` point sibling) — reach for
-> `windowQueryResource` directly only for what `serveCollection` cannot express yet
-> (a hand-written loader, a projection). See `plugins/network/plugins/live/CLAUDE.md`.
->
-> A NEW DB-backed collection resource is bounded — declared with
-> `windowQueryResource` (window or point membership) — the unbounded `queryResource` form and
-> hand-written unbounded keyed/push collections above are **legacy pending migration**; do not
-> use them as precedent for new work. Reach for plain `queryResource` only for a set that is
-> provably small and bounded by the domain itself (and say why in a comment). Migration state +
-> rationale: `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
+`serveCollection` (`network/live`) compiles every collection through here, and
+a bounded resource is declared and served only that way: the two descriptor
+kinds this compiler takes are minted by `liveCollection` alone (their factories
+are internal to `network/live`). This plugin keeps just the contract TYPES the
+compiler consumes — `WindowQueryResourceContract` / `PointQueryResourceContract`
+in `core/`. The compiler's tests therefore live beside `serveCollection`, in
+`network/live/server/internal/` (`compile-window.test.ts`,
+`compile-window-runtime.test.ts`), and reach `compileWindowQuery` through this
+plugin's `server/testing` barrel; a test here importing `network/live` would
+close an import cycle.
 
 The bounded-working-set sibling of `queryResource`: the subscription's params tuple
 names a **bounded selector**, so a change costs O(changed) + O(window), never
 O(collection), and the value is never the whole table. Two kinds, one compiler —
-exactly ONE of `window` / `point` per spec, matching the descriptor factory:
+exactly ONE of `window` / `point` per spec, matching the descriptor kind. What
+`serveCollection` derives for a collection `c` over a table (never written by
+hand):
 
 ```ts
-// shared/core — the descriptor carries the selector CODEC both sides share:
-export const pushesResource = windowQueryResourceDescriptor(
-  "pushes", PushSchema, "id", { defaultLimit: 100, preload: "boot" });
-export const categoriesResource = pointQueryResourceDescriptor(
-  "conversation-categories", CategorySchema, "conversationId");
-
-// server:
-windowQueryResource(pushesResource, {
-  from: pushes,
-  orderBy: { col: pushes.createdAt, dir: "desc" },  // order-column updates re-derive the window (cost note below)
-  window: { maxLimit: 500 },
+windowQueryResource(c.window, {
+  from: table,
+  select,                                    // exactly the row schema's keys
+  where: (params) => and(base, filterSql(decoded.where)),
+  orderBy: (params) => decoded.orderBy,      // { col, dir, nullable }[], per tuple
+  signatureColumns,                          // every sortable column
+  window: {},                                // maxLimit rides the descriptor's codec
 });
-windowQueryResource(categoriesResource, {
-  from: categories,
-  select: { conversationId: categories.parentId, /* … */ },
-  point: { by: categories.parentId },               // IS the identity pk
+windowQueryResource(c.rows, {
+  from: table,
+  select,
+  where: base,                               // the collection's base membership, if any
+  point: { by: table.id },                   // IS the identity pk
 });
-
-// web: useWindowResource(pushesResource) → El[] at the default window;
-//      usePointResource(categoriesResource, convId) → El | null, O(1), no .find()
+// web: useLive(c) → Row[] at the default window; useLiveRow(c, id) → pending /
+//      found / not found, O(1), no .find(); useLive(c, { ids }) → Row[] for a set.
 ```
 
 What the compiler derives per kind:
@@ -196,8 +213,8 @@ Structural differences from `queryResource`: no `limit` / `recompute` /
 `scopedMembership` fields exist on the spec (the bound comes from the params;
 membership is always incremental); bounded resources are never L2-persisted
 (runtime-enforced), so a preloaded window loads via boot-snapshot's
-fallback loader at the descriptor's `defaultParams` — the identical tuple
-`useWindowResource` subscribes to. `defaultLimit` lives ONLY on the descriptor
+fallback loader at the descriptor's `defaultParams` — the identical tuple a
+bare `useLive(c)` subscribes to. `defaultLimit` lives ONLY on the descriptor
 (the client default and the boot default must be one number); the spec carries
 at most `maxLimit`. Every misuse (window+point, missing `orderBy`,
 `defaultLimit > maxLimit`, spec/descriptor `maxLimit` disagreement, a function
@@ -256,10 +273,14 @@ importing `db` never touches a worktree — no test env shim needed.
 
 ## Boundaries
 
-- `core/` — `queryResourceDescriptor` + the `QueryResourceContract` type. Web-safe:
+- `core/` — `queryResourceDescriptor` + the contract types (`QueryResourceContract`,
+  `WindowQueryResourceContract`, `PointQueryResourceContract`). Web-safe:
   **no drizzle** (bundled into the browser).
-- `server/` — `queryResource`, `compileQuery`, `rel`, and the spec types. Owns all
-  drizzle usage and the `identityTable`/keyField derivation.
+- `server/` — `queryResource`, `windowQueryResource`, `compileQuery`,
+  `compileEdges`, `rel`, and the spec types. Owns all drizzle usage and the
+  `identityTable`/keyField derivation. `server/testing` publishes
+  `compileWindowQuery` (the bounded compiler without registering) for
+  `network/live`'s tests.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -285,14 +306,12 @@ importing `db` never touches a worktree — no test env shim needed.
   - Exports (values):
     - `compileEdges`
     - `compileQuery`
-    - `compileWindowQuery`
     - `queryResource`
     - `rel`
     - `windowQueryResource`
 - Core:
   - Uses:
     - `primitives/live-state.keyedResourceDescriptor`
-    - `primitives/live-state.PointParams`
     - `primitives/live-state.PointResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourcePreload`
@@ -303,32 +322,15 @@ importing `db` never touches a worktree — no test env shim needed.
     - `PointQueryResourceContract`
     - `QueryResourceContract`
     - `WindowQueryResourceContract`
-  - Exports (values):
-    - `pointQueryResourceDescriptor`
-    - `queryResourceDescriptor`
-    - `windowQueryResourceDescriptor`
+  - Exports (values): `queryResourceDescriptor`
 - Cross-plugin:
   - Imported by:
-    - `apps/browser/bookmarks`
-    - `apps/deploy/health`
-    - `apps/mail/reading-pane`
-    - `apps/pages/agent-origin`
-    - `apps/pages/starred`
-    - `build`
     - `conversations/agents`
-    - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-view/notes`
-    - `conversations/conversation-view/turn-summary`
     - `network/live`
-    - `page/prompt/link`
-    - `plugin-meta/plugin-health`
-    - `primitives/usage-rank`
-    - `tasks/auto-start`
     - `tasks/task-category`
-    - `tasks/task-effort`
-    - `tasks/task-preprompt`
     - `tasks/tasks-core`
+- Test helpers:
+  - Server: `@plugins/infra/plugins/query-resource/server/testing`
+    - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
 
 <!-- AUTOGENERATED:END -->

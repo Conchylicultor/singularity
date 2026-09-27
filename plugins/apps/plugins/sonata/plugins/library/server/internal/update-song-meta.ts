@@ -16,10 +16,12 @@ export interface UpdateSongMetaInput {
  * source persisting an edit syncs the parent row through here (recomputed
  * duration/endBeat, an edited title) rather than poking the table directly.
  *
- * Only the provided fields are written; pushes the reactive `songsResource` so
- * the gallery (length, title) updates live.
+ * Only the provided fields are written; the change-feed recomputes the live
+ * `songs` value, so the gallery (length, title) updates live.
  */
-export async function updateSongMeta(input: UpdateSongMetaInput): Promise<void> {
+export async function updateSongMeta(
+  input: UpdateSongMetaInput,
+): Promise<void> {
   const patch: Partial<typeof _songs.$inferInsert> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.composer !== undefined) patch.composer = input.composer;

@@ -1,5 +1,5 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { configV2ConflictMapResource } from "@plugins/config_v2/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { configConflictLocations } from "@plugins/config_v2/core";
 
 /**
  * Attention dot for config conflicts, reading the aggregate conflict-locations
@@ -8,7 +8,7 @@ import { configV2ConflictMapResource } from "@plugins/config_v2/core";
  * opening Settings) and as the badge on the Config sidebar entry's icon.
  */
 export function ConfigConflictDot() {
-  const result = useResource(configV2ConflictMapResource);
+  const result = useLive(configConflictLocations);
   const hasConflicts = !result.pending && Object.keys(result.data).length > 0;
   if (!hasConflicts) return null;
   return <span className="block size-2 rounded-full bg-warning" />;

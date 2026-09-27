@@ -5,6 +5,7 @@ import type {
   ResourceDefinition as RtDef,
   ResourceContract as RtContract,
   ServerResourceOptions as RtServerOpts,
+  KeyedServerResourceOptions as RtKeyedServerOpts,
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
@@ -30,7 +31,7 @@ import { reportServerError, type ServerErrorReport } from "./error-reporter";
 // See research/2026-04-15-global-sse-lifecycle-mental-model-v3.md and
 // research/2026-06-08-global-unify-live-state-resource-runtime.md.
 //
-// A plugin calls defineResource({key, loader, schema, mode?}). The server exposes:
+// A plugin calls defineResource({key, loader, schema, mode}). The server exposes:
 //   GET /api/resources/:key                      — HTTP fallback
 //   WS  /ws/notifications                        — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
@@ -55,6 +56,9 @@ export type ResourceDefinition<
 // browser-safe shared descriptor (key/schema/keyed), `serverOpts` the DB half.
 // Lets a keyed resource declare its keyed-ness in ONE place — the client
 // descriptor — instead of restating `mode`/`keyOf` on the server and drifting.
+// The DB half comes in two variants: `ServerResourceOptions` for a non-keyed
+// contract (`mode: "push" | "invalidate"` required — there is no default) and
+// `KeyedServerResourceOptions` for a keyed one (no `mode`: it is the contract's).
 export type ResourceContract<
   T,
   P extends ResourceParams = ResourceParams,
@@ -63,6 +67,10 @@ export type ServerResourceOptions<
   T,
   P extends ResourceParams = ResourceParams,
 > = RtServerOpts<T, P>;
+export type KeyedServerResourceOptions<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtKeyedServerOpts<T, P>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
   RtDep<P>;
 // The shared L4 change-feed contract (see resource-runtime/core). The DB
@@ -382,3 +390,50 @@ export const {
   // L2 boot seed: restore a persisted alias's in-memory diff base before catch-up.
   seedPersistedSnapshot,
 } = runtime;
+
+// ── Boot assert: every registered preloaded resource is declared ────────────
+// `preload` reaches its consumers ONLY through `Resource.Declare`: the boot
+// snapshot's key set and the L2 persist set both read it off the contribution
+// set (never the runtime registry — collection-consumer separation). So a
+// resource registered with `preload` whose plugin forgot its Declare (a
+// `liveValue` / `liveCollection` served without `...served.declare` in
+// `contributions`) still serves, and silently loses boot hydration and L2
+// persistence — nothing else notices. The shared boot sequence
+// (`../shared/boot-stages.ts`) runs this right after `collectContributions`,
+// once every server module has registered its resources, in both boot modes.
+
+/**
+ * The registered preloaded keys that no `Resource.Declare` contribution carries
+ * AS preloaded, sorted. A Declare whose payload lost the flag counts as missing:
+ * the consumers filter on it exactly as this does.
+ */
+export function undeclaredPreloadedKeys(
+  preloaded: readonly string[],
+  declared: readonly ResourceDeclarePayload[],
+): string[] {
+  const declaredPreloaded = new Set(
+    declared.filter((c) => c.preload !== undefined).map((c) => c.key),
+  );
+  return preloaded.filter((key) => !declaredPreloaded.has(key)).sort();
+}
+
+/**
+ * Throw when a resource registered with `preload` has no preloaded
+ * `Resource.Declare` contribution, naming every such key. Must run after
+ * `collectContributions`: before it, reading the Declare set throws.
+ */
+export function assertPreloadedResourcesDeclared(): void {
+  const undeclared = undeclaredPreloadedKeys(
+    runtime.preloadedKeys(),
+    Resource.Declare.getContributions(),
+  );
+  if (undeclared.length === 0) return;
+  throw new Error(
+    `[resources] ${undeclared.length} preloaded resource(s) registered without a Resource.Declare contribution: ` +
+      `${undeclared.map((key) => `"${key}"`).join(", ")}. ` +
+      `The boot snapshot and the L2 persist set find preloaded resources only through Resource.Declare, ` +
+      `so each would still serve but silently lose its boot hydration and persistence. ` +
+      "Spread `...served.declare` into the owning plugin's `contributions` " +
+      "(`Resource.Declare(resource)` for a resource still defined with defineResource / queryResource).",
+  );
+}

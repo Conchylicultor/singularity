@@ -75,32 +75,33 @@ Each extension names its parent key (`songId`, `conversationId`, `taskId`, `bloc
 
 ### Loaders
 
-A side table holds one row per parent, and a reader almost always wants the row of the ONE parent on screen. So the default is a **point resource**: the client subscribes to the ids it draws, and a write to another parent's row never reaches it. The reference is `conversations/conversation-progress`:
+A side table holds one row per parent, and a reader almost always wants the row of the ONE parent on screen. So the default is a **lookup-only `liveCollection`** (`network/live`): the client subscribes to the ids it draws, and a write to another parent's row never reaches it. The reference is `conversations/conversation-progress`:
 
 ```ts
-// shared/ — the descriptor, keyed on the shape's key
-export const progressResource = pointQueryResourceDescriptor<Progress>(
-  "conversation-progress", ProgressSchema, "conversationId");
+// shared/ — the declaration, keyed on the shape's key
+export const conversationProgressRows = liveCollection(
+  "conversation-progress",
+  { row: ConversationProgressSchema, id: "conversationId" },
+);
 
-// server/internal/resource.ts
-export const progressLiveResource = windowQueryResource(progressResource, {
-  from: conversationProgress,                          // no `select`: wireColumns + the PK identity are derived
-  point: { by: conversationProgress.table.conversationId },
-});
+// server/internal/resource.ts — no `select`: the projection is the row schema
+export const conversationProgressRowsServed = serveCollection(
+  conversationProgressRows,
+  { from: conversationProgress },
+);
 
 // web — no whole-table read, no `.find(id)`
-const progress = usePointResource(progressResource, conversationId);
+const progress = useLiveRow(conversationProgressRows, conversationId);
 ```
 
 Because the handle is an entity, no form has a row projection left to write:
 
-| Resource form | Loader |
+| Collection form | Serve |
 |---|---|
-| **point** `windowQueryResource` (default) | `from: ext`, **no `select`** — query-resource defaults the projection to `wireColumns` and the identity to the single PK — and `point: { by: ext.table.<key> }` |
-| push `defineResource` over the whole table — **legacy, do not copy** | `schema: z.array(ext.schema)`, `loader: () => db.select(ext.wireColumns).from(ext.table)` |
-| push resource folding rows into a `Record` — **legacy, do not copy** | `db.select(ext.wireColumns)`, then the fold; each value's schema is `ext.schema` |
+| **lookup-only** `liveCollection(key, { row, id })` (default) | `serveCollection(c, { from: ext })`, **no `select`** — the entity is an `EntitySource`, its row fields bind to its columns by name |
+| windowed `liveCollection` (a reader lists rows — `pages-starred`) | the same, plus the declaration's `filterable` / `sortable` / `default` / `maxLimit` |
 
-The two push forms re-send every parent's row to every subscriber on any write, and make each reader pick its one row with `.find(id)`. The Sonata per-song settings, `task-efforts` and `task-preprompts` still use them: they are on the legacy list awaiting migration (`research/2026-07-18-global-bounded-working-set-resource-contract.md`), not precedent. A reader that needs every parent's row — typically to sort the parent list by an extension column — is an open design question in the live-resources redesign, not a reason to reach for a push form.
+The old push forms (`defineResource` over the whole table, or a fold into a `Record`) re-sent every parent's row to every subscriber on any write and made each reader `.find(id)` its one row; the last of them (Sonata's per-song settings) are lookup collections now, and `no-legacy-resource-spelling` rejects the spelling. A reader that needs every parent's row — typically to sort the parent list by an extension column — waits on joined side-table sort columns (Resources page item 7), not a reason for an unbounded value.
 
 A `select: { conversationId: t.parentId, … }` map or a `.map((r) => ({ songId: r.parentId, … }))` is the hand-rolled projection `no-hand-rolled-entity-projection` bans: a column added to the table silently misses the wire.
 
@@ -134,12 +135,12 @@ Derived, never written: every side-table gets the derived-`updatedAt` trigger of
 ## Wire-up
 
 Each consumer plugin owns its own:
-- `shared/resources.ts` (or `core/` when another plugin reads the row) — `defineExtensionShape(...)`, the row schema (`= shape.schema`) and the `resourceDescriptor(...)` for the web client
+- `shared/resources.ts` (or `core/` when another plugin reads the row) — `defineExtensionShape(...)`, the row schema (`= shape.schema`) and the `liveCollection(...)` declaration
 - `server/internal/tables.ts` — `defineExtension(parent, name, shape, meta?)`, plus the `.table` re-export
-- `server/internal/resource.ts` — the live-state resource, in one of the loader forms above
+- `server/internal/resource.ts` — `serveCollection(c, { from: ext })`, in one of the forms above
 - `shared/endpoints.ts` (or `core/`) — `defineEndpoint(...)` for the `POST /api/<feature>/:id` mutation
-- `server/index.ts` — registers the resource and wires the mutation via `implement(...)`
-- `web/components/...` — `useResource(...)` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
+- `server/index.ts` — spreads `...served.declare` into `contributions` and wires the mutation via `implement(...)`
+- `web/components/...` — `useLiveRow(c, parentId)` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
 
 The parent plugin doesn't change. `sonata/transpose` is the reference consumer.
 

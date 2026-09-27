@@ -1,9 +1,6 @@
-import {
-  Resource,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { abandonCapKind, queryDeadlineKind } from "./internal/kinds";
-import { dbQueryDeadlinesServerResource } from "./internal/resource";
+import { dbQueryDeadlinesServed } from "./internal/resource";
 import {
   registerQueryDeadlineReports,
   unregisterQueryDeadlineReports,
@@ -17,7 +14,7 @@ export default {
   contributions: [
     queryDeadlineKind,
     abandonCapKind,
-    Resource.Declare(dbQueryDeadlinesServerResource),
+    ...dbQueryDeadlinesServed.declare,
   ],
   onReady: () => {
     registerQueryDeadlineReports();

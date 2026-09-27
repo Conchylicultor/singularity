@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import type { AvatarSpec, SvgNode } from "@plugins/fields/plugins/avatar/core";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -57,16 +57,22 @@ export const conversationPrepromptShape = defineExtensionShape({
 export const ConversationPrepromptSchema = conversationPrepromptShape.schema;
 export type ConversationPreprompt = z.infer<typeof ConversationPrepromptSchema>;
 
-// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
-// set (`usePointResource(resource, convId)` → one row-or-null), so a preprompt
-// read costs O(1) instead of an O(n) lookup over the whole `{convId → row}`
-// record. Rows key on `conversationId` — the extension's key, whose column is
-// the side-table's `parent_id` PK (which IS the point identity).
-// NOT preloaded: point resources hydrate post-mount (the recorded decision),
-// and the chip/sidebar icons stay unrendered for the one round-trip.
-export const conversationPrepromptsResource =
-  pointQueryResourceDescriptor<ConversationPreprompt>(
-    "conversation-preprompts",
-    ConversationPrepromptSchema,
-    "conversationId",
-  );
+// The launch-time preprompt snapshot of ONE conversation, read by its
+// `conversationId`. The table holds 0 or 1 row per conversation — its primary
+// key IS the conversation — so it is a lookup-only collection: no default
+// window (nothing lists every conversation's snapshot), minting
+// `conversation-preprompts:rows` alone. A reader takes its row with
+// `useLiveRow(conversationPrepromptRows, conversationId)`, and `found: false`
+// is "launched without a preprompt".
+//
+// Bounded by construction: only a mounted chip / sidebar row subscribes, a
+// load is one primary-key seek, and the `:rows` point routing schedules a
+// write for the one conversation whose row it named. The row id is the
+// extension's key, whose column is the side-table's `parent_id` PK.
+//
+// NOT preloaded (a lookup-only collection cannot be): the chip and the sidebar
+// icons stay unrendered for the one round-trip.
+export const conversationPrepromptRows = liveCollection(
+  "conversation-preprompts",
+  { row: ConversationPrepromptSchema, id: "conversationId" },
+);

@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleList } from "./internal/handle-list";
 import { handleGet } from "./internal/handle-get";
@@ -8,7 +7,7 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGenerateKeypair } from "./internal/handle-generate-keypair";
 import { handleImportKeypair } from "./internal/handle-import-keypair";
 import { backfillSshPublicKeys } from "./internal/backfill-ssh-public-keys";
-import { serversResource } from "./internal/resources";
+import { serversServed } from "./internal/resources";
 import {
   listServers,
   createServer,
@@ -20,7 +19,6 @@ import {
 } from "../shared/endpoints";
 
 export { _deployServers } from "./internal/tables";
-export { serversResource } from "./internal/resources";
 export { getServerSshPrivateKey } from "./internal/ssh-secret";
 
 export default {
@@ -34,7 +32,7 @@ export default {
     [generateSshKeypair.route]: handleGenerateKeypair,
     [importSshPrivateKey.route]: handleImportKeypair,
   },
-  contributions: [Resource.Declare(serversResource)],
+  contributions: [...serversServed.declare],
   onReady: async () => {
     await backfillSshPublicKeys();
   },

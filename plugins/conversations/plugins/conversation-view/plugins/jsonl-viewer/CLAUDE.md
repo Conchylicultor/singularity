@@ -2,21 +2,30 @@
 
 ## `jsonl-events`: the ETag and the value share one authority
 
-`revalidate` and `loader` are the two **bound halves of one `createSignedMemo`**
+`jsonlEvents` (`core/protocol.ts`) is a `liveValue` keyed `{ id }` — one
+conversation's parsed transcript chain — read with `useLive(jsonlEvents, { id })`.
+Not loaded yet is `pending`; there is no `[]` placeholder that would read as a
+conversation that has said nothing. `jsonlEventsServed`
+(`server/internal/jsonl-events-resource.ts`) serves it on the external arm.
+
+Its `revalidate` and `loader` are the two **bound halves of one `createSignedMemo`**
 (`jsonl-events-cache.ts`): `memo.signature` feeds the former, `memo.get` the latter,
 over the same `transcriptChainSignature ∘ resolve` and `readJsonlEventsFromChain ∘
 resolve`. They cannot drift, because there is nothing to pass.
 
-Consequently **`mode: "push"` is a delivery choice, not a correctness crutch.** It
-was once the latter: `revalidate` `lstat`ed the chain (instantly fresh) while the
-loader returned a watcher-populated `cachedEvents` map (fresh only after the watcher
-fired), so a read landing in between shipped a stale value under a current ETag. Only
-value-carrying `update` frames masked it. Switching to `invalidate` — whose frames are
-a few bytes where `push` re-ships the entire event array — would have silently
-reintroduced a permanent stale pin. It is now a purely size-driven decision.
+Consequently **push delivery (the declaration's default) is a delivery choice, not
+a correctness crutch.** It was once the latter: `revalidate` `lstat`ed the chain
+(instantly fresh) while the loader returned a watcher-populated `cachedEvents` map
+(fresh only after the watcher fired), so a read landing in between shipped a stale
+value under a current ETag. Only value-carrying `update` frames masked it. Switching
+to `load: "on-demand"` — whose frames are a few bytes where push re-ships the entire
+event array — would have silently reintroduced a permanent stale pin. It is now a
+purely size-driven decision.
 
-The transcript watcher primes the memo from its `{ events, signature }` snapshot, so
-the full chain read stays off the read path. See
+The transcript watcher runs for as long as the tuple has a subscriber
+(`whileSubscribed`: a synchronous `watchTranscript` start, a stop that unsubscribes
+and evicts the memo). It primes the memo from its `{ events, signature }` snapshot
+before calling `notify`, so the full chain read stays off the read path. See
 `research/2026-07-10-conversations-jsonl-events-shared-authority.md`.
 
 ## Rules for `EventRenderer` contributors
@@ -123,6 +132,7 @@ back.
     - `conversations/conversation-view/pending-turn.PendingTurnCard`
     - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
     - `conversations/conversation-view/pending-turn.usePendingTurns`
+    - `network/live.useLive`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -137,7 +147,6 @@ back.
     - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/popover.InlinePopover`
@@ -176,17 +185,15 @@ back.
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `conversations/transcript-watcher.watchTranscript`
     - `infra/git/git-read-cache.createSignedMemo`
+    - `network/live.serveValue`
   - Resources: `jsonl-events` (push)
 - Core:
   - Uses:
-    - `conversations/transcript-watcher.JsonlEvent`
     - `conversations/transcript-watcher.JsonlEventSchema`
-    - `primitives/live-state.resourceDescriptor`
-  - Exports (types): `JsonlEventsResponse`
+    - `network/live.liveValue`
   - Exports (values):
     - `eventKey`
-    - `JsonlEventsPayloadSchema`
-    - `jsonlEventsResource`
+    - `jsonlEvents`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view`

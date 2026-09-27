@@ -1,11 +1,11 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function EventCounter() {
   const { convId } = conversationPane.useParams();
-  const result = useResource(jsonlEventsResource, { id: convId });
+  const result = useLive(jsonlEvents, { id: convId });
 
   if (result.pending) return null;
 

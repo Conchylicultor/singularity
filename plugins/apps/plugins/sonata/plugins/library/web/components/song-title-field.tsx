@@ -29,7 +29,7 @@ const CONTROL_HEIGHT: Record<ControlSize, string> = {
  * (`<PaneChrome title={<SongTitle/>}>`), not a header contribution: a pane
  * already contributes exactly one `title` item into its own header, and this is
  * the value that item paints. The song title has exactly ONE client-side owner — the library's
- * `songsResource` — so this reads the canonical row via `useCurrentSong()` and
+ * `songs` value — so this reads the canonical row via `useCurrentSong()` and
  * patches it through `PATCH /api/sonata/songs/:id`. There is no shell-context
  * mirror to seed from, and no source editor writes the title anymore.
  *

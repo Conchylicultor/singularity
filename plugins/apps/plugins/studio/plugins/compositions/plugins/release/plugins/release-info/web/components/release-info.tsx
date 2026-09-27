@@ -1,17 +1,20 @@
 import type { ReactNode } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { releaseRunResource, type ReleaseRun } from "@plugins/release/core";
+import { releaseRuns, type ReleaseRun } from "@plugins/release/core";
 
 function StatusBadge({ run }: { run: ReleaseRun }): ReactNode {
   if (run.status === "running") {
     return (
-      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning animate-pulse" />}>
+      <Badge
+        variant="warning"
+        icon={<StatusDot colorClass="bg-warning animate-pulse" />}
+      >
         Running
       </Badge>
     );
@@ -24,7 +27,10 @@ function StatusBadge({ run }: { run: ReleaseRun }): ReactNode {
     );
   }
   return (
-    <Badge variant="destructive" icon={<StatusDot colorClass="bg-destructive" />}>
+    <Badge
+      variant="destructive"
+      icon={<StatusDot colorClass="bg-destructive" />}
+    >
       {run.exitCode != null ? `Failed (exit ${run.exitCode})` : "Failed"}
     </Badge>
   );
@@ -44,17 +50,17 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function ReleaseInfo({ runId }: { runId: string }) {
-  const result = useResource(releaseRunResource, { id: runId });
+  const result = useLiveRow(releaseRuns, runId);
   if (result.pending) return <Loading />;
-  const run = result.data;
 
-  if (!run) {
+  if (!result.found) {
     return (
       <Text as="p" variant="caption" className="text-muted-foreground">
         Run not found
       </Text>
     );
   }
+  const run = result.row;
 
   return (
     <Stack gap="md">

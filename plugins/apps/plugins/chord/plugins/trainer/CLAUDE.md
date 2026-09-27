@@ -216,6 +216,7 @@ piano.
     - `integrations/youtube.useYouTubePlayhead`
     - `integrations/youtube.YouTubePlayer`
     - `integrations/youtube.YouTubePlayerController`
+    - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -239,7 +240,6 @@ piano.
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.defineRoute`

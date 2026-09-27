@@ -47,7 +47,7 @@ export function useSonataPlayback(): {
             if (raw !== undefined) rawMap[s.sourceId] = raw;
           }),
         );
-        setRawMap(rawMap);
+        setRawMap(song.id, rawMap);
         setCurrentSong(song.id);
         requestPlayOnLoad();
       })();

@@ -18,19 +18,22 @@ this contributor).
 **Dependency direction: this child imports the parent (`view-order → data-view`),
 never the reverse.** It contributes itself into the global
 `DataViewSlots.RowOrder` slot; the host names no contributor. Structurally the
-twin of `custom-columns` — a data-view child owning a generic DB table + push live
-resource + one endpoint, injected back through a global slot.
+twin of `custom-columns` — a data-view child owning a generic DB table + a live
+value + one endpoint, injected back through a global slot.
 
 ## Model
 
 - `data_view_row_order(data_view_id, view_id, row_key) → rank` (PK on the triple,
   index `dvro_view_idx` on the pair). `rank` is `rank_text` (C collation), the
   repo's fractional-index column type.
-- `rowOrderResource` — push-mode, keyed `{ dataViewId, viewId }`, emitting
-  `{ rowKey, rank }[]` rank-ascending. The loader reads the table, so the **L4 DB
-  change-feed** recomputes it on every write; no notify / `dependsOn`. It ships
-  only what was ever written — a view whose top three rows were arranged carries
-  three rows, not the whole view.
+- `rowOrder` — a live value (`liveValue` with `params: ["dataViewId", "viewId"]`,
+  served `serveValue(…, { source: "db", unbounded })`), emitting
+  `{ rowKey, rank }[]` rank-ascending. A value, not a collection: the composite
+  key has no single id to read a row by. The loader reads the table, so the
+  **change feed** recomputes it on every write; no notify. It ships only what
+  was ever written — a view whose top three rows were arranged carries three
+  rows, not the whole view. `useRowOrder` is a `pending | settled` union (see
+  Row keys for why the contribution abstains while pending).
 - `POST /api/data-view/row-order` — the single endpoint. Body carries the drag's
   **bounded write set** (`writes: { rowKey, rank }[]`, rank-ascending), never the
   whole ordered key set. The server validates and upserts it; nothing is deleted.
@@ -158,10 +161,11 @@ order (its keys would shift under the very reorder they encode) — the identica
 edge case as `custom-columns`; every DataView in the repo passes an id-derived
 `rowKey`.
 
-While the live resource is `pending` the contributor renders `render(null)` — an
-empty `persisted` map is indistinguishable from "never reordered", and seeding
-from it would show pure source order and let a drag persist that as if it were the
-user's arrangement.
+While the `rowOrder` value is `pending` the contributor renders `render(null)` —
+the pending arm of `useRowOrder` has no `persisted` map at all, because an empty
+one would be indistinguishable from "never reordered", and seeding from it would
+show pure source order and let a drag persist that as if it were the user's
+arrangement.
 
 ## Retention
 
@@ -208,9 +212,9 @@ set). Identical posture to `data_view_custom_values`.
   - Contributes: `DataViewSlots.RowOrder` "view-order" → `RowOrderContribution`
   - Uses:
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/data-view.DataViewSlots`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/live-state.useResource`
   - Exports (types): `RowOrderState`
   - Exports (values):
     - `useRowOrder`
@@ -221,18 +225,18 @@ set). Identical posture to `data_view_custom_values`.
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `primitives/rank.rankText`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/view-order/server/internal/tables.ts`
   - Exports (values):
     - `_dataViewRowOrder`
     - `applyRowOrder`
-    - `rowOrderLiveResource`
-  - Resources: `data-view-row-order` (push)
+  - Resources: `data-view-row-order` (push, unbounded: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
   - Routes: `POST /api/data-view/row-order`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `primitives/live-state.resourceDescriptor`
+    - `network/live.liveValue`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`
   - Exports (types):
@@ -242,7 +246,7 @@ set). Identical posture to `data_view_custom_values`.
   - Exports (values):
     - `applyMove`
     - `computeMoveWrites`
-    - `rowOrderResource`
+    - `rowOrder`
     - `RowOrderRowSchema`
     - `seedRanks`
     - `setRowOrder`

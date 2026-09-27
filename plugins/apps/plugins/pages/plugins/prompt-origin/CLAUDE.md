@@ -13,10 +13,12 @@ that wants to host pages. Pointing the edge the other way (`apps → page`) is t
 direction that already exists: the pages app is the consumer, `page/` is the
 library.
 
-The domain half — the task↔block link rows, the resources, the creation
-endpoint — stays under `page/plugins/prompt/plugins/link`, which this plugin
-reads through its `web` barrel. So the pane knowledge lives here and the data
-knowledge lives there, and neither has to know the other's internals.
+The domain half — the task↔block link rows, the live link collection, the
+creation endpoint — stays under `page/plugins/prompt/plugins/link`, which this
+plugin reads through its `web` barrel (`usePromptTaskLink(taskId)`, the task's
+row of that collection: `found: false` is "not launched from a page"). So the
+pane knowledge lives here and the data knowledge lives there, and neither has
+to know the other's internals.
 
 ## Why it can render nothing
 

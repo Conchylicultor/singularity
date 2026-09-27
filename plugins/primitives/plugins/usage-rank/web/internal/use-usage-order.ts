@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import { usePointResources } from "@plugins/primitives/plugins/live-state/web";
+import { useEffect, useRef } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   readDraft,
   writeDraft,
@@ -7,13 +7,13 @@ import {
 import {
   sortByUsage,
   usageKey,
-  usageStatsResource,
+  usageStats,
   type ScorableStat,
   type UsageStat,
 } from "../../core";
 
 // The last snapshotted order per namespace, so the FIRST paint after a mount
-// already shows the settled order. Point resources are never bootCritical (the
+// already shows the settled order. An id-set read is never preloaded (the
 // server cannot know a client's id set at snapshot time), so the stats arrive
 // one round-trip after mount; without this seed the strip would visibly
 // re-sort on every single open.
@@ -105,19 +105,15 @@ export function useUsageOrder(
   keys: readonly string[],
   resnapshotKey: string,
 ): readonly string[] {
+  const ids = keys.map((key) => usageKey(namespace, key));
   // The canonical (sorted, deduped, comma-joined) id set — the SAME encoding
-  // `usePointResources` subscribes with, so the signature and the subscription
-  // tuple can never drift, and re-ordering `keys` alone is not a key-set change.
-  const idsKey = usageStatsResource.point.encode(
-    keys.map((key) => usageKey(namespace, key)),
-  ).ids;
-  const ids = useMemo(
-    () => (idsKey === "" ? [] : idsKey.split(",")),
-    [idsKey],
-  );
+  // `useLive(c, { ids })` subscribes with, so the signature and the
+  // subscription tuple can never drift, and re-ordering `keys` alone is not a
+  // key-set change.
+  const idsKey = usageStats.rows.point.encode(ids).ids;
 
   // ONE coalesced subscription for the whole visible set — not one sub per key.
-  const result = usePointResources(usageStatsResource, ids);
+  const result = useLive(usageStats, { ids });
 
   // Length-prefixed so the two halves cannot alias: `resnapshotKey` is an
   // opaque consumer string and ids may contain any separator we might pick.
@@ -131,10 +127,11 @@ export function useUsageOrder(
     snapshot = { stamp, order: seedOrder(namespace, keys), settled: false };
   } else if (!held.settled && !result.pending) {
     // The one and only re-derivation for this window: server truth landed.
+    const stats = indexStats(namespace, keys, result.data);
     snapshot = {
       stamp,
       // eslint-disable-next-line react-hooks/purity -- the ordering is a decay over wall-clock time, so `now` IS an input; it is read exactly once per snapshot (not per render), and the result is frozen immediately after
-      order: sortByUsage(keys, indexStats(namespace, keys, result.data), Date.now()),
+      order: sortByUsage(keys, stats, Date.now()),
       settled: true,
     };
   } else {

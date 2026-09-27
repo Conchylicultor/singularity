@@ -71,9 +71,11 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`
     - `apps/deploy/deployments`
+    - `apps/deploy/health`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/model-call`
@@ -91,7 +93,15 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
     - `apps/sonata/library`
+    - `apps/sonata/notation`
+    - `apps/sonata/piano-roll`
+    - `apps/sonata/rich/chord-mode`
+    - `apps/sonata/rich/key-readout`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/songsheet`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/track-mixer`
+    - `apps/sonata/transpose`
     - `apps/studio/compositions`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/draft-actions`
@@ -165,6 +175,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/live-state`
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
+    - `review`
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`

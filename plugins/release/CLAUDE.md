@@ -10,14 +10,15 @@ its own ledger, its argv, and what a finished run MEANS. The Studio app is the
 first UI consumer; the engine ships no UI of its own. Its web barrel
 (`web/index.ts`) is **registration-only** — a side-effect import
 (`web/internal/register.ts`) that eagerly pulls `@plugins/release/core` into the
-web import graph so the boot-critical `release.previews` ResourceDescriptor
-self-registers before first paint. This must live with the resource OWNER: the
-descriptor is read only by the Studio release pane, which is lazy-loaded, so
-nothing else guarantees eager registration and boot-snapshot would otherwise file
-a crash report every boot. (The composition-scoped history now flows through the
-non-boot-critical `release.run` per-id resource + `release.history-revision`
-tick + the `queryReleaseHistory` keyset endpoint, which need no eager
-registration.)
+web import graph so the boot-critical `release.previews` value
+(`releasePreviews`, a `liveValue` declared with `preload: "boot"`) self-registers
+before first paint. This must live with the value's OWNER: it is read only by
+the Studio release pane, which is lazy-loaded, so nothing else guarantees eager
+registration and boot-snapshot would otherwise file a crash report every boot.
+(The composition-scoped history and its run detail flow through the
+`queryReleaseHistory` keyset endpoint, the `release.history-revision` tick and
+the `release.runs` lookup collection — one run by id — none of which is
+preloaded, so none needs eager registration.)
 
 ## How it works
 
@@ -65,8 +66,11 @@ registration.)
   mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
   binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=:<free>`, tracked in an in-memory
-  Map projected into the `release.previews` external resource. Stop kills the
-  process group and removes the data dir. Boot reconcile reaps dead previews.
+  Map projected into the `release.previews` value
+  (`server/internal/preview-state-resource.ts`: `serveValue(releasePreviews, {
+  source: "external" })`, pushed by `releasePreviewsServed.notify()` on every
+  start / stop / reap). Stop kills the process group and removes the data dir.
+  Boot reconcile reaps dead previews.
 
 ## How a release gets its source tree
 
@@ -245,8 +249,11 @@ into `undefined`, indistinguishable from still-loading. Applies to any
 server-delegated DataView source whose augmentors key off `dataViewId`; an
 invented surface id works only until an augmentor matches it.
 
-`internal/wire-columns.ts` is the one `release_runs` projection all four read
-paths select; add a column there, not per-site.
+`internal/wire-columns.ts` is the one `release_runs` projection the three
+hand-written read paths (history query, candidate, latest run) select; add a
+column there, not per-site. The `releaseRuns` collection is not one of them:
+`serveCollection` projects exactly `ReleaseRunSchema`'s keys, so a new column
+reaches it through the schema.
 
 ## Public surface (for the Studio UI)
 
@@ -254,9 +261,14 @@ paths select; add a column there, not per-site.
   `RELEASE_LOG_CHANNEL` (`"release"`), the endpoints
   (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`,
   `releaseLogsEndpoint`, `queryReleaseHistory` — the composition-scoped
-  keyset history query), and the resources/schemas (`ReleaseRun`,
-  `releaseRunResource` — per-id run detail, `releaseRunsRevisionResource` —
-  the history invalidation tick, `previewStateResource`/`Preview`).
+  keyset history query), and the resources/schemas:
+  - `ReleaseRun`, `releaseRuns` — a lookup-only `liveCollection`
+    (`release.runs:rows`) served from `_releaseRuns`, read one run at a time
+    with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run).
+    Plural so a composition-scoped window can later join the same declaration.
+  - `releaseRunsRevisionResource` — the history invalidation tick.
+  - `releasePreviews` / `Preview` — the live preview map, read with
+    `useLive(releasePreviews)`.
 
 ## Discovery
 
@@ -381,10 +393,10 @@ remote is built here.
 
 ## Plugin reference
 
-- Description: Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+- Description: Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
   - Contributes:
-    - `resource.declare` "release.run"
+    - `resource.declare` "release.runs:rows"
     - `resource.declare` "release.history-revision"
     - `resource.declare` "release.previews"
   - Uses:
@@ -400,6 +412,8 @@ remote is built here.
     - `infra/launcher.teardownSelfContainedApp`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
+    - `network/live.serveCollection`
+    - `network/live.serveValue`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.bindColumns`
     - `primitives/data-view/server-query.compileWhere`
@@ -427,7 +441,7 @@ remote is built here.
   - Resources:
     - `release.history-revision` (push)
     - `release.previews` (push)
-    - `release.run` (push)
+    - `release.runs:rows` (keyed, point)
   - Routes:
     - `POST /api/release`
     - `GET /api/release/candidate`
@@ -439,6 +453,8 @@ remote is built here.
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
+    - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveText`
     - `primitives/data-view.ServerFilterWireSchema`
@@ -469,7 +485,6 @@ remote is built here.
     - `PlatformTagSchema`
     - `previewEndpoint`
     - `PreviewSchema`
-    - `previewStateResource`
     - `queryReleaseHistory`
     - `QueryReleaseHistoryBodySchema`
     - `QueryReleaseHistoryResponseSchema`
@@ -484,7 +499,8 @@ remote is built here.
     - `ReleaseLatestRunResponseSchema`
     - `releaseLogsEndpoint`
     - `ReleaseLogsResponseSchema`
-    - `releaseRunResource`
+    - `releasePreviews`
+    - `releaseRuns`
     - `ReleaseRunSchema`
     - `releaseRunsRevisionResource`
     - `releaseTargetById`

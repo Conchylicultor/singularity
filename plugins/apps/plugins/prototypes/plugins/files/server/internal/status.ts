@@ -1,11 +1,11 @@
 import { statSync } from "node:fs";
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { defineAgentWriteLedger } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
 import {
   isPrototypeId,
-  prototypeStatusesResource as statusesDescriptor,
+  prototypeStatuses,
   setPrototypeStatus,
 } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
@@ -36,13 +36,10 @@ function prototypeExists(name: string): boolean {
  * notified by the PUT below on this backend and by the watcher on every
  * backend. A malformed file throws (`record-store.ts`).
  */
-export const prototypeStatusesLiveResource = defineExternalResource(
-  statusesDescriptor,
-  {
-    mode: "push",
-    loader: async () => store().readAll(),
-  },
-);
+export const prototypeStatusesServed = serveValue(prototypeStatuses, {
+  source: "external",
+  loader: async () => store().readAll(),
+});
 
 /**
  * What an automated browser session did to a prototype's status, so the e2e
@@ -63,7 +60,7 @@ const statusLedger = defineAgentWriteLedger<"status">({
       );
     }
     await s.restore(entry.key, entry.before.status);
-    prototypeStatusesLiveResource.notify();
+    prototypeStatusesServed.notify();
   },
 });
 
@@ -91,6 +88,6 @@ export const handleSetStatus = implement(
         ),
       afterWrite: () => statusLedger.noteComplete(writer, name),
     });
-    prototypeStatusesLiveResource.notify();
+    prototypeStatusesServed.notify();
   },
 );

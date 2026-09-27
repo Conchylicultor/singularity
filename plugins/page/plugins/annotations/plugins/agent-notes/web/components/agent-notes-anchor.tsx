@@ -36,10 +36,10 @@ import {
  * on a read-only surface (the blog renderer, the version-history preview): a
  * read-only node may carry no id, and there is no block API to hand a popover.
  * Either one missing ⇒ the static name, revealed by that surface's own CSS
- * group. With both, the card subscribes to its own authorship — a
- * point-membership read, so only a MOUNTED card pays for one — and an unauthored
- * card (a human pasted an agent's output in by hand) still renders the plain
- * name.
+ * group. With both, the card subscribes to its own authorship — one value per
+ * block id, so only a MOUNTED card pays for one — and an unauthored card (a
+ * human pasted an agent's output in by hand) still renders the plain name, as
+ * does a card whose authorship has not loaded yet.
  */
 export function AgentNotesAnchor({ blockId, editor }: BlockAnchorProps) {
   if (!editor || blockId === undefined) return <AgentNotesName />;
@@ -71,7 +71,11 @@ function AuthoredAgentNotesAnchor({
 }) {
   const authors = useAgentNotesAuthors(blockId);
 
-  if (authors.length === 0)
+  // While the authorship loads, the card shows its plain name: the name is true
+  // whatever the answer, and only its trigger waits on the read — a spinner in
+  // place of the word would be noise on every card of the page. An unauthored
+  // card keeps the same plain name once settled.
+  if (authors.pending || authors.data.length === 0)
     return <AgentNotesName blockId={blockId} editor={editor} />;
 
   return (
@@ -83,7 +87,7 @@ function AuthoredAgentNotesAnchor({
       triggerLabel="Agent notes authorship"
       width="md"
       sections={({ close }) => (
-        <AgentNotesAuthors authors={authors} onOpen={close} />
+        <AgentNotesAuthors authors={authors.data} onOpen={close} />
       )}
     />
   );

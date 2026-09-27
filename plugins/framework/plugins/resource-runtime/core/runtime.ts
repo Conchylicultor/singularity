@@ -27,7 +27,7 @@ import {
 // unaffected because the facades re-present this runtime's types and bind its
 // returned values.
 //
-// A plugin calls defineResource({key, loader, schema, mode?}). The host exposes:
+// A plugin calls defineResource({key, loader, schema, mode}). The host exposes:
 //   GET /api/resources/:key (or /api/central-resources/:key) — HTTP fallback
 //   WS  /ws/notifications  (or /ws/central-notifications)     — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
@@ -208,7 +208,14 @@ export interface ResourceDefinition<
   P extends ResourceParams = ResourceParams,
 > {
   key: string;
-  mode?: ResourceMode;
+  /**
+   * How a change reaches a subscriber: `push` ships the new value, `invalidate`
+   * tells the client to refetch it, `keyed` ships a per-row delta (requires
+   * `keyOf`). Required — there is no default, so every resource states its
+   * delivery where it is declared. The two-arg forms derive it: `keyed` from a
+   * keyed contract, otherwise the opts' own required `mode`.
+   */
+  mode: ResourceMode;
   /**
    * Compute the resource value for `params`. When the notify that triggered
    * this load carried scoped `affectedIds` (Layer 2), `ctx.affectedIds` lists
@@ -303,37 +310,6 @@ export interface ResourceDefinition<
    */
   membership?: KeyedMembership<P>;
   /**
-   * The params tuple names EXACTLY ONE row of `identityTable`; this returns that
-   * row's primary key. A ROUTING declaration and nothing else: it changes which
-   * subscribed tuples a change is SCHEDULED for, never what the owning tuple
-   * computes or receives. The owner falls through with its `affected` / `deleted`
-   * exactly as computed, so it stays on the legacy scoped/FULL drain and its
-   * frames are byte-identical to the no-`rowIdentity` behavior. What goes away is
-   * the other N-1 tuples, each of which re-ran its own one-row read, found the
-   * changed row was not its own, and diffed to empty. No frame ships from such a
-   * tuple — which is exactly what hides the cost: the read IS the cost.
-   *
-   * Deliberately NOT `membership: { kind: "point", idsOf: () => [theOneId] }`,
-   * which routes the same and then changes everything else. Declaring membership
-   * turns an INSERT/DELETE on the identity table from a FULL recompute into an
-   * incremental membership diff (`applyDbChange` below) and reroutes the drain
-   * (`drainEntry` branch 4); a membership delta must always assert the full
-   * `order`, a client-drift surface (`forceFullResub`) bought for nothing on a
-   * 0-or-1-row value that has neither membership nor order. It is also a
-   * persistence decision (`membershipBounded` excludes the entry from L2). The
-   * drain difference IS why both declarations exist.
-   *
-   * Requires `mode: "keyed"` + `identityTable`; mutually exclusive with
-   * `membership` and `scopedMembership`; incompatible with `preload` (the L2
-   * boot init and `recomputeResource` schedule the `{}` tuple, for which
-   * `rowIdentity({})` is meaningless) — all enforced with a loud throw in
-   * `createResource`. It MUST be pure, total, synchronous and cheap: it runs per
-   * subscribed tuple on the feed-routing path. Nothing enforces that, so the call
-   * site fails OPEN (`ownRowChanged`). See
-   * research/2026-08-25-global-own-row-resource-scoping.md.
-   */
-  rowIdentity?: (params: P) => string;
-  /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
    * NOT ride the immediate microtask flush; instead it arms a per-entry timer
@@ -403,8 +379,8 @@ export interface ResourceDefinition<
    * client descriptor through the two-arg `defineResource`/`defineExternalResource`
    * form onto the returned `Resource`. Pure metadata: it does not affect
    * loader/registry behavior — it only lets `Resource.Declare` derive the flag
-   * instead of restating it. Any value preloads server-side; `"boot-and-keep"`
-   * differs only on the client (resident cache).
+   * instead of restating it, and `preloadedKeys()` list it. Any value preloads
+   * server-side; `"boot-and-keep"` differs only on the client (resident cache).
    */
   preload?: "boot" | "boot-and-keep";
 }
@@ -424,8 +400,6 @@ export interface ResourceDefinition<
  * No frame shipped from those tuples — which is exactly what hid the cost; the
  * read IS the cost. So an `identityTable` arm must also carry exactly one of:
  *
- * - `rowIdentity` — the tuple names exactly ONE row, and this is its pk. Routing
- *   only: the owner's frames are byte-identical (`ResourceDefinition.rowIdentity`).
  * - `membership` — the tuple names a bounded window / point set, maintained
  *   incrementally (`KeyedMembership`). Also reroutes the drain and INSERT/DELETE.
  * - `scopedMembership` — the legacy unbounded-window alias of `membership`.
@@ -454,16 +428,7 @@ export interface ResourceDefinition<
 export type ScopePolicy<P extends ResourceParams = ResourceParams> =
   | {
       identityTable: string;
-      rowIdentity: (params: P) => string;
-      membership?: never;
-      scopedMembership?: never;
-      fanOut?: never;
-      recompute?: never;
-    }
-  | {
-      identityTable: string;
       membership: KeyedMembership<P>;
-      rowIdentity?: never;
       scopedMembership?: never;
       fanOut?: never;
       recompute?: never;
@@ -471,7 +436,6 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
   | {
       identityTable: string;
       scopedMembership: { orderOf: (params: P) => Promise<string[]> };
-      rowIdentity?: never;
       membership?: never;
       fanOut?: never;
       recompute?: never;
@@ -479,7 +443,6 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
   | {
       identityTable: string;
       fanOut: { reason: string };
-      rowIdentity?: never;
       membership?: never;
       scopedMembership?: never;
       recompute?: never;
@@ -487,7 +450,6 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
   | {
       recompute: { kind: "full"; reason: string };
       identityTable?: never;
-      rowIdentity?: never;
       membership?: never;
       scopedMembership?: never;
       fanOut?: never;
@@ -500,9 +462,10 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
  * comes SOLELY from the two-arg `defineResource(descriptor, opts)` overload, which
  * derives it from the shared client `KeyedResourceContract` descriptor — so the
  * client always carries the matching `keyOf`. This structurally removes the
- * "server says keyed, client forgot its keyOf → browser crash" class. `push`/
- * `invalidate` resources may still optionally set `identityTable` (e.g. a push
- * aggregate that propagates scoped ids downstream). `defineExternalResource` is
+ * "server says keyed, client forgot its keyOf → browser crash" class. `mode` is
+ * required: the runtime has no default delivery. `push`/`invalidate` resources
+ * may still optionally set `identityTable` (e.g. a push aggregate that
+ * propagates scoped ids downstream). `defineExternalResource` is
  * deliberately NOT constrained — keyed external resources have no DB feed to scope
  * against. See
  * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
@@ -518,10 +481,9 @@ export type DefineResourceInput<
   | "recompute"
   | "scopedMembership"
   | "membership"
-  | "rowIdentity"
   | "preload"
 > & {
-  mode?: "push" | "invalidate";
+  mode: "push" | "invalidate";
   identityTable?: string;
 };
 
@@ -533,7 +495,8 @@ export type DefineResourceInput<
  * (`ServerResourceOptions`), so `key` / `schema` / keyed-ness are declared in
  * exactly ONE place — the shared descriptor — instead of being restated on both
  * sides and silently drifting (the "server says keyed, client forgot its keyOf"
- * crash this collapses out of existence).
+ * crash this collapses out of existence). A keyed contract pairs with
+ * `KeyedServerResourceOptions`, any other with `ServerResourceOptions`.
  *
  * Matched **structurally**: the live-state `ResourceDescriptor` satisfies this
  * shape without the runtime importing the live-state primitive, so this module
@@ -562,9 +525,9 @@ export interface ResourceContract<
  * A keyed contract — the client descriptor carries a `keyOf` (produced by
  * `keyedResourceDescriptor`, whose return type makes `keyed` REQUIRED). The
  * server's two-arg `defineResource` matches this overload and pairs it with a
- * mandatory `ScopePolicy`, so a keyed resource declared via the descriptor form
- * is held to the SAME scope-coverage invariant as the flat `DefineResourceInput`
- * form — the descriptor path is not an escape hatch.
+ * mandatory `ScopePolicy`. It is the only keyed `defineResource` form (the flat
+ * `DefineResourceInput` is push/invalidate-only), so no keyed resource escapes
+ * the scope-coverage invariant.
  */
 export type KeyedResourceContract<
   T,
@@ -572,44 +535,17 @@ export type KeyedResourceContract<
 > = ResourceContract<T, P> & { keyed: { keyOf: (row: unknown) => string } };
 
 /**
- * Server-only half of a resource declaration, paired with a `ResourceContract`
- * in `defineResource`'s two-arg form. Everything here pulls loader/DB code that
- * must never enter the browser bundle; the browser-safe `key`/`schema`/keyed
- * fields come from the contract. `mode` picks push vs invalidate for a non-keyed
- * contract (a keyed contract forces `"keyed"` from its own `keyOf`, so `mode`
- * excludes it). The keyed overload additionally intersects `ScopePolicy`, which
- * makes `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory —
- * and, under `identityTable`, one of `rowIdentity` / `membership` /
- * `scopedMembership` / `fanOut: { reason }`, so which subscribed tuple owns a
- * changed row is answered too rather than defaulting to waking all of them.
+ * The fields both two-arg server halves share (see `ServerResourceOptions` and
+ * `KeyedServerResourceOptions`). Everything here pulls loader/DB code that must
+ * never enter the browser bundle; the browser-safe `key`/`schema`/keyed fields
+ * come from the contract.
  */
-export interface ServerResourceOptions<
+interface ServerResourceOptionsBase<
   T,
   P extends ResourceParams = ResourceParams,
 > {
   loader: ResourceDefinition<T, P>["loader"];
-  mode?: Exclude<ResourceMode, "keyed">;
   dependsOn?: ResourceDefinition<T, P>["dependsOn"];
-  identityTable?: string;
-  /**
-   * Opt-in row-level membership scoping (M5) — see
-   * `ResourceDefinition.scopedMembership`. Only meaningful on the KEYED overload
-   * (its `ScopePolicy` supplies the required `identityTable`); `createResource`
-   * throws if it is set without keyed mode + identityTable.
-   */
-  scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
-  /**
-   * Bounded-membership selector (window / point) — see `KeyedMembership`. Only
-   * meaningful on the KEYED overload (its `ScopePolicy` supplies the required
-   * `identityTable`); mutually exclusive with `scopedMembership`.
-   */
-  membership?: ResourceDefinition<T, P>["membership"];
-  /**
-   * Own-row routing declaration — see `ResourceDefinition.rowIdentity`. Only
-   * meaningful on the KEYED overload (its `ScopePolicy` supplies the required
-   * `identityTable`); mutually exclusive with `membership` / `scopedMembership`.
-   */
-  rowIdentity?: ResourceDefinition<T, P>["rowIdentity"];
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
@@ -619,21 +555,75 @@ export interface ServerResourceOptions<
   authorize?: ResourceDefinition<T, P>["authorize"];
 }
 
+/**
+ * Server-only half of a NON-keyed resource declaration, paired with a
+ * `ResourceContract` that has no `keyed` in the two-arg `defineResource` /
+ * `defineExternalResource` form. `mode` is required — `push` or `invalidate`,
+ * stated where the resource is declared; the runtime has no default. It may set
+ * `identityTable` (e.g. a push aggregate that propagates scoped ids
+ * downstream), but never a membership: that is keyed-only.
+ */
+export interface ServerResourceOptions<
+  T,
+  P extends ResourceParams = ResourceParams,
+> extends ServerResourceOptionsBase<T, P> {
+  mode: "push" | "invalidate";
+  identityTable?: string;
+}
+
+/**
+ * Server-only half of a KEYED resource declaration, paired with a
+ * `KeyedResourceContract`. There is no `mode`: keyed-ness comes solely from the
+ * contract's `keyOf`, so the server cannot state a delivery the client does not
+ * share. `defineResource`'s keyed overload intersects `ScopePolicy`, which makes
+ * `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory — and,
+ * under `identityTable`, one of `membership` / `scopedMembership` /
+ * `fanOut: { reason }`, so which subscribed tuple owns a changed row is answered
+ * too rather than defaulting to waking all of them.
+ */
+export interface KeyedServerResourceOptions<
+  T,
+  P extends ResourceParams = ResourceParams,
+> extends ServerResourceOptionsBase<T, P> {
+  mode?: never;
+}
+
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
 // runtime registers. Pure — keyed-ness comes solely from the contract, so the
-// server cannot disagree with the client about it. `recompute` (the keyed FULL
-// opt-out, supplied via the keyed overload's `ScopePolicy`) is threaded through.
+// server cannot disagree with the client about it. The scope policy (the keyed
+// overload's `ScopePolicy`: `identityTable`, `recompute`, a membership) is
+// threaded through. `opts` is the union the overloads narrow; an untyped caller
+// that breaks the pairing throws here rather than registering a guessed mode.
 function contractToDefinition<T, P extends ResourceParams>(
   contract: ResourceContract<T, P>,
-  opts: ServerResourceOptions<T, P> & {
+  opts: ServerResourceOptionsBase<T, P> & {
+    mode?: "push" | "invalidate";
     identityTable?: string;
     recompute?: { kind: "full"; reason: string };
+    scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
+    membership?: ResourceDefinition<T, P>["membership"];
   },
 ): ResourceDefinition<T, P> {
+  let mode: ResourceMode;
+  if (contract.keyed) {
+    if (opts.mode !== undefined) {
+      throw new Error(
+        `defineResource: a keyed contract takes no mode (it is "keyed", from the contract's keyOf) — drop mode "${String(opts.mode)}" for key "${contract.key}"`,
+      );
+    }
+    mode = "keyed";
+  } else {
+    if (opts.mode !== "push" && opts.mode !== "invalidate") {
+      throw new Error(
+        `defineResource: mode "push" | "invalidate" is required for key "${contract.key}", got ${String(opts.mode)}`,
+      );
+    }
+    mode = opts.mode;
+  }
   return {
     key: contract.key,
     schema: contract.schema,
-    mode: contract.keyed ? "keyed" : (opts.mode ?? "invalidate"),
+    mode,
     keyOf: contract.keyed?.keyOf,
     preload: contract.preload,
     loader: opts.loader,
@@ -642,7 +632,6 @@ function contractToDefinition<T, P extends ResourceParams>(
     recompute: opts.recompute,
     scopedMembership: opts.scopedMembership,
     membership: opts.membership,
-    rowIdentity: opts.rowIdentity,
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -835,15 +824,10 @@ interface RegistryEntry {
    */
   membership?: MembershipRecord;
   /**
-   * Own-row routing selector (declared via `rowIdentity`): this entry's params
-   * tuple names exactly ONE row of `identityTable`, and this returns that row's
-   * primary key. Read ONLY by `applyDbChange`, which drops a change whose known
-   * ids do not include it instead of scheduling a recompute the tuple would
-   * resolve to an empty diff. Nothing else in the runtime consults it — the
-   * owning tuple drains exactly as it does without one. Undefined → today's
-   * fan-out to every subscribed tuple (byte-identical).
+   * The definition's preload marker (see `ResourceDefinition.preload`). Read
+   * ONLY by `preloadedKeys()`; the runtime never branches on it.
    */
-  rowIdentity?: (params: ResourceParams) => string;
+  preload?: "boot" | "boot-and-keep";
   /**
    * Per-pk snapshot of id→SnapEntry for keyed entries. Allocated lazily only
    * when `mode === "keyed"`. Lets the diff ship only changed rows. Evicted
@@ -1180,7 +1164,8 @@ export interface ResourceRuntime {
    *   the shared client descriptor so server and client can't drift. A KEYED
    *   contract requires a `ScopePolicy` in `serverOpts` (the scope-coverage
    *   invariant lives entirely here — there is no flat keyed form to skip it);
-   *   a non-keyed contract takes plain `ServerResourceOptions`.
+   *   a non-keyed contract takes `ServerResourceOptions`, whose `mode` is
+   *   required.
    *
    * Prefer the two-arg form whenever a client descriptor exists for the resource.
    */
@@ -1190,7 +1175,7 @@ export interface ResourceRuntime {
     ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
-      opts: ServerResourceOptions<T, P> & ScopePolicy<P>,
+      opts: KeyedServerResourceOptions<T, P> & ScopePolicy<P>,
     ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
@@ -1210,14 +1195,19 @@ export interface ResourceRuntime {
    *   held to the `ScopePolicy` invariant — they have no DB feed to scope against).
    * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness AND
    *   `preload` from the shared client descriptor so server and client can't
-   *   drift, exactly like `defineResource`'s two-arg form.
+   *   drift, exactly like `defineResource`'s two-arg form (a keyed contract
+   *   takes `KeyedServerResourceOptions`, any other `ServerResourceOptions`).
    */
   defineExternalResource: {
     <T, P extends ResourceParams = ResourceParams>(
       def: ResourceDefinition<T, P>,
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
-      contract: ResourceContract<T, P>,
+      contract: KeyedResourceContract<T, P>,
+      opts: KeyedServerResourceOptions<T, P>,
+    ): ExternalResource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: ResourceContract<T, P> & { keyed?: never },
       opts: ServerResourceOptions<T, P>,
     ): ExternalResource<T, P>;
   };
@@ -1342,6 +1332,16 @@ export interface ResourceRuntime {
    * keys whose durable L2 value should reconstruct the in-memory diff base.
    */
   unboundedWindowKeys: () => string[];
+  /**
+   * Every registered resource that declared `preload` (`"boot"` /
+   * `"boot-and-keep"`), as its key. The runtime never acts on the flag: the boot
+   * snapshot and the L2 persist set read it off the facade's `Resource.Declare`
+   * contributions instead. This is the registry's half of that pairing — the
+   * server facade's boot assert compares the two, so a preloaded resource that
+   * was registered but never declared fails boot instead of silently losing its
+   * hydration and persistence.
+   */
+  preloadedKeys: () => string[];
   /**
    * Seed the in-memory diff base (`entry.snapshots` + order sigs) of a persisted
    * unbounded-window alias from its durable L2 value at boot, BEFORE catch-up, so
@@ -2101,7 +2101,14 @@ export function createResourceRuntime(
     if (registry.has(def.key)) {
       throw new Error(`defineResource: duplicate key "${def.key}"`);
     }
-    const mode = def.mode ?? "invalidate";
+    // `mode` is required on every form (the typed overloads say so); an untyped
+    // caller that omits it fails here instead of registering a guessed delivery.
+    const mode = def.mode;
+    if (mode !== "push" && mode !== "invalidate" && mode !== "keyed") {
+      throw new Error(
+        `defineResource: mode "push" | "invalidate" | "keyed" is required for key "${def.key}", got ${String(mode)}`,
+      );
+    }
     if (!def.schema) {
       throw new Error(
         `defineResource: a schema is required for key "${def.key}"`,
@@ -2138,36 +2145,6 @@ export function createResourceRuntime(
       if (!def.identityTable) {
         throw new Error(
           `defineResource: ${membershipField} requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
-        );
-      }
-    }
-    // `rowIdentity` is the OTHER answer to "which subscribed tuple owns this
-    // changed row?" (see `ResourceDefinition.rowIdentity`): a routing
-    // declaration, where membership is a diffing one. Same own-identity
-    // preconditions, plus two exclusions of its own — a membership entry already
-    // routes by id and would then ALSO be filtered here (two arbiters, one
-    // decision), and a preloaded entry is recomputed at the `{}` tuple by
-    // the L2 boot init and `recomputeResource`, for which `rowIdentity({})` is
-    // meaningless. Fail loudly at registration.
-    if (def.rowIdentity) {
-      if (mode !== "keyed") {
-        throw new Error(
-          `defineResource: rowIdentity requires mode "keyed" for key "${def.key}"`,
-        );
-      }
-      if (!def.identityTable) {
-        throw new Error(
-          `defineResource: rowIdentity requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
-        );
-      }
-      if (membershipField) {
-        throw new Error(
-          `defineResource: rowIdentity and ${membershipField} are mutually exclusive for key "${def.key}" — rowIdentity narrows WHO is scheduled and leaves the drain untouched, ${membershipField} reroutes the drain`,
-        );
-      }
-      if (def.preload !== undefined) {
-        throw new Error(
-          `defineResource: rowIdentity is incompatible with preload for key "${def.key}" — a persisted entry is recomputed at the {} tuple (L2 boot init / recomputeResource), for which rowIdentity({}) is meaningless`,
         );
       }
     }
@@ -2264,8 +2241,7 @@ export function createResourceRuntime(
       identityTable: def.identityTable,
       recompute: def.recompute,
       membership,
-      rowIdentity: def.rowIdentity as
-        ((params: ResourceParams) => string) | undefined,
+      preload: def.preload,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -2328,7 +2304,7 @@ export function createResourceRuntime(
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     contract: KeyedResourceContract<T, P>,
-    opts: ServerResourceOptions<T, P> & ScopePolicy<P>,
+    opts: KeyedServerResourceOptions<T, P> & ScopePolicy<P>,
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
@@ -2336,10 +2312,9 @@ export function createResourceRuntime(
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     a: DefineResourceInput<T, P> | ResourceContract<T, P>,
-    opts?: ServerResourceOptions<T, P> & {
-      identityTable?: string;
-      recompute?: { kind: "full"; reason: string };
-    },
+    opts?:
+      | ServerResourceOptions<T, P>
+      | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>),
   ): Resource<T, P> {
     const def = opts
       ? contractToDefinition(a as ResourceContract<T, P>, opts)
@@ -2352,17 +2327,21 @@ export function createResourceRuntime(
   // and the `(contract, serverOpts)` form that reads key/schema/keyed-ness AND
   // `preload` off a shared client descriptor. External resources are NOT
   // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
-  // the two-arg overload takes plain `ServerResourceOptions`.
+  // a keyed contract takes plain `KeyedServerResourceOptions`.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ResourceDefinition<T, P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
-    contract: ResourceContract<T, P>,
+    contract: KeyedResourceContract<T, P>,
+    opts: KeyedServerResourceOptions<T, P>,
+  ): ExternalResource<T, P>;
+  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P> & { keyed?: never },
     opts: ServerResourceOptions<T, P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
-    opts?: ServerResourceOptions<T, P>,
+    opts?: ServerResourceOptions<T, P> | KeyedServerResourceOptions<T, P>,
   ): ExternalResource<T, P> {
     const def = opts
       ? contractToDefinition(a as ResourceContract<T, P>, opts)
@@ -2663,31 +2642,6 @@ export function createResourceRuntime(
     } catch (err) {
       reportLoaderError(`orderSignatureOf failed for ${entry.key}`, err);
       return undefined;
-    }
-  }
-
-  // Does this change touch the ONE row this params tuple names (`rowIdentity`)?
-  // The answer is the decision itself — a total function, no "unknown" id for the
-  // caller to interpret — so fail-OPEN is structural: on a throwing declaration
-  // `return true` IS "schedule the tuple", i.e. today's fan-out for that one
-  // delivery, and there is no sentinel a future caller could forget to map.
-  // The direction is the whole point: `applyDbChange` wraps its body in a
-  // swallowing catch, so a throw escaping here would abort the entire change —
-  // silently dropping EVERY delivery for it, across every resource, with no
-  // frame, no error frame and no counter. One needless delivery is the price;
-  // a silent drop is not payable. (Unlike `safeOrderSig` above, which must hand
-  // its caller an id to store, nothing here outlives the decision.)
-  function ownRowChanged(
-    entry: RegistryEntry,
-    rowIdentity: (params: ResourceParams) => string,
-    params: ResourceParams,
-    routeIds: Set<string>,
-  ): boolean {
-    try {
-      return routeIds.has(rowIdentity(params));
-    } catch (err) {
-      reportLoaderError(`rowIdentity failed for ${entry.key}`, err);
-      return true;
     }
   }
 
@@ -3562,10 +3516,9 @@ export function createResourceRuntime(
       const scoped = affected !== null && !persisted;
       if (affected !== null && affected.size === 0 && !persisted) {
         // Nothing changed for this tuple — no version bump, no empty delta, no
-        // cascade. It is ALSO where a `rowIdentity` non-match lands its ACK-ONLY
-        // pending (the change named another tuple's row, but the writer still
-        // deserves its ack), so the standalone ack frame goes to the
-        // subscribers that asked for acks. Inert when none did.
+        // cascade. An ACK-ONLY pending (an empty set carrying only `sourceTx`)
+        // lands here too, so the standalone ack frame goes to the subscribers
+        // that asked for acks. Inert when none did.
         broadcastAckOnly(entry, pendingEntry);
         continue;
       }
@@ -4926,26 +4879,12 @@ export function createResourceRuntime(
         // scoped `affected` for a scopedMembership DELETE (see below).
         let affected: Set<string> | null;
         let deleted: Set<string> | undefined;
-        // The `rowIdentity` filter's condition, and it MUST be these two rather
-        // than `affected !== null`. `rowIdentity` has to filter op-`I`/`D`, where
-        // `affected` is deliberately `null` for a non-membership entry; and a
-        // `null` `affected` ALSO arises from the uncovered-dependency arm below,
-        // where `change.ids` live in a FOREIGN table's key space — intersecting
-        // an own-row id against those would silently drop every delivery. So the
-        // filter runs only when the ids are known (`routeIds !== null`) AND came
-        // in through the identity arm, in this entry's own key space.
-        let identityOrigin = false;
-        let routeIds: Set<string> | null = null;
         if (coveredOriginsFor(key).has(change.origin)) {
           if (change.origin === entry.identityTable) {
             // Identity-origin change: the identity view is the authoritative path.
             // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
             // scoped identity delivery.
             if (change.identityBase !== entry.identityTable) continue;
-            // Past the secondary-view drop: `change.ids` are this entry's own
-            // row keys, so `rowIdentity` may route against them.
-            identityOrigin = true;
-            routeIds = hasIds ? new Set(change.ids!) : null;
             // UPDATE always scopes (today). For a membership entry (window /
             // point / the M5 alias) an INSERT scopes to the new ids and a
             // DELETE scopes to an EMPTY affected set carrying the op-D ids in
@@ -4979,58 +4918,19 @@ export function createResourceRuntime(
         const subscribed = subscribedParamsFor(key);
         const pointMembership =
           entry.membership?.kind === "point" ? entry.membership : undefined;
-        const rowIdentity = entry.rowIdentity;
         // Fan out to every subscribed params tuple. A param-less resource is
         // always covered (key = {}); a parametrized resource with no current
         // subscribers admits nothing (a fresh subscribe loads from scratch).
         // A POINT entry never fans out to the `{}` fallback tuple — its params
         // ARE the id set, so with no subscribers there is nothing to maintain.
-        // A `rowIdentity` entry is excluded for the same reason: its params ARE
-        // one row id, so `{}` names no row and `rowIdentity({})` is meaningless.
-        const targets: ResourceParams[] =
-          pointMembership || rowIdentity
+        const targets: ResourceParams[] = pointMembership
+          ? subscribed
+          : subscribed.length > 0
             ? subscribed
-            : subscribed.length > 0
-              ? subscribed
-              : [{}];
-        // Deliberately NO reverse `rowId → tuple` index. It would make this loop
-        // O(changed ids) instead of O(subscribed tuples), but the per-tuple work
-        // is one closure call and a Set lookup — what the filter below deletes is
-        // N-1 Postgres round trips, not N-1 closure calls. An index would be a
-        // second source of truth for subscription state, needing to stay in
-        // lockstep with sub / unsub / socket close / `sub-batch` replay. Revisit
-        // above ~10^4 subscribed tuples for one key, or if `applyDbChange` shows
-        // up in a CPU profile once the fan-out is gone.
+            : [{}];
         for (const params of targets) {
           let tupleAffected = affected;
           let tupleDeleted = deleted;
-          // Own-row routing: this tuple names exactly ONE row of the identity
-          // table, so a change whose ids are known and do not include that row
-          // cannot touch its value — it is not scheduled at all (no read, no
-          // version bump, no frame). The owning tuple falls through with
-          // `affected` / `deleted` UNCHANGED, which is what makes its frames
-          // byte-identical to the no-`rowIdentity` behavior: this narrows WHO is
-          // woken, never WHAT they receive.
-          if (
-            rowIdentity &&
-            identityOrigin &&
-            routeIds !== null &&
-            !ownRowChanged(entry, rowIdentity, params, routeIds)
-          ) {
-            // Another tuple's row — but a subscriber that asked for acks is
-            // still owed the writer's ack (its optimistic client may hold a
-            // pending op whose write landed on another row). Schedule an
-            // ACK-ONLY pending: an empty scoped set carrying only sourceTx,
-            // which the drain resolves to a standalone ack frame (no version
-            // bump, no other frame, no cascade).
-            if (change.xid !== undefined && tupleWantsAcks(key, params)) {
-              scheduleNotify(entry, params, new Set<string>(), {
-                source: "feed",
-                sourceTx: change.xid,
-              });
-            }
-            continue;
-          }
           // Point routing: a scoped change reaches a subscribed tuple iff the
           // changed ids intersect that tuple's explicit id set (upsert), or a
           // D op hits one of its ids (delete). Empty intersection → the tuple
@@ -5156,6 +5056,16 @@ export function createResourceRuntime(
     return out;
   }
 
+  // Every registered preloaded key — the registry's half of the server facade's
+  // preload-declare boot assert (the other half is its `Resource.Declare` set).
+  function preloadedKeys(): string[] {
+    const out: string[] = [];
+    for (const entry of registry.values()) {
+      if (entry.preload !== undefined) out.push(entry.key);
+    }
+    return out;
+  }
+
   // Seed the in-memory diff base for a persisted unbounded-window alias from its
   // durable L2 value at boot, so the first post-boot change is scoped (not a FULL
   // rebuild). No-op unless the entry is a registered unbounded-window alias with NO
@@ -5188,6 +5098,7 @@ export function createResourceRuntime(
     scopedResourceIdentities,
     boundedMembershipKeys,
     unboundedWindowKeys,
+    preloadedKeys,
     seedPersistedSnapshot,
     readGateStats: () => readLoadGate.stats(),
   };

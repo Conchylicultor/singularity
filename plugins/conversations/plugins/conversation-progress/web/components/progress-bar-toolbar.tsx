@@ -12,9 +12,8 @@ export function ProgressBarToolbar() {
   if (!conversation) return null;
   if (conversation.kind === "agent") return null;
   // Nothing while loading, nothing when no progress is classified yet.
-  if (result.pending) return null;
-  const progress = result.data;
-  if (!progress) return null;
+  if (result.pending || !result.found) return null;
+  const progress = result.row;
   return (
     <Inline gap="none">
       <SegmentedProgressBar

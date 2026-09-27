@@ -17,7 +17,7 @@ export {
   ChordProgressSchema,
   ChordStandingSchema,
   LevelStandingSchema,
-  chordProgressResource,
+  chordProgress,
   decodeProgressParams,
   encodeProgressParams,
 } from "./progress";

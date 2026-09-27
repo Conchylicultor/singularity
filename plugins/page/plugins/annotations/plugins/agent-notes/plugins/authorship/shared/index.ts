@@ -1,2 +1,2 @@
-export { AgentNotesAuthorSchema, agentNotesAuthorsResource } from "./schemas";
+export { AgentNotesAuthorSchema, agentNotesAuthors } from "./schemas";
 export type { AgentNotesAuthor } from "./schemas";

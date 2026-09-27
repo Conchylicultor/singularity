@@ -1,13 +1,11 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { setCustomColumnValue, deleteCustomColumnValues } from "../core";
 import { handleSetCustomColumnValue } from "./internal/handle-set-custom-column-value";
 import { handleDeleteCustomColumnValues } from "./internal/handle-delete-custom-column-values";
-import { customColumnValuesLiveResource } from "./internal/resource";
+import { customColumnValuesServed } from "./internal/resource";
 import { customColumnsQueryAugmentor } from "./internal/query-augmentor";
 
 export { _dataViewCustomValues } from "./internal/tables";
-export { customColumnValuesLiveResource } from "./internal/resource";
 
 export default {
   description:
@@ -17,7 +15,7 @@ export default {
     [deleteCustomColumnValues.route]: handleDeleteCustomColumnValues,
   },
   contributions: [
-    Resource.Declare(customColumnValuesLiveResource),
+    ...customColumnValuesServed.declare,
     customColumnsQueryAugmentor,
   ],
 } satisfies ServerPluginDefinition;

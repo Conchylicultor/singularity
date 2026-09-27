@@ -59,7 +59,7 @@ export const buildRunKind = defineRunKind({
   // user's filter. A worktree DB is FORKED from main, so it inherits every row
   // main had at fork time; unscoped, the merged list would open on main's stale
   // history — including a finished-long-ago failure that reads as this
-  // worktree's own. `buildHistoryResource`, the surface this replaces, has
+  // worktree's own. `buildHistory`, the surface this replaces, has
   // carried exactly this predicate for the same reason, so dropping it here
   // would be a silent regression on the app's most-used surface rather than a
   // new view being generous.

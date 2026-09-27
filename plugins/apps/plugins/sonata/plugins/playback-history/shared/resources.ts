@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
@@ -23,9 +23,18 @@ export const playbackHistoryShape = defineExtensionShape({
 export const PlaybackHistoryRowSchema = playbackHistoryShape.schema;
 export type PlaybackHistoryRow = z.infer<typeof PlaybackHistoryRowSchema>;
 
-/** Reactive list of every song's playback rollup (push resource). */
-export const playbackHistoryResource = resourceDescriptor<PlaybackHistoryRow[]>(
-  "sonata-playback-history",
-  z.array(PlaybackHistoryRowSchema),
-  [],
-);
+/**
+ * Every song's playback rollup — the whole `sonata_songs_ext_playback` table as
+ * one value, recomputed and pushed whole by the DB change-feed on every play.
+ * No placeholder: before the first value lands the read is `pending`.
+ *
+ * A whole-table value, not a collection, until Resources item 7: its reader is
+ * the library's Plays / Last-played field extension, which the library DataView
+ * sorts over every song client-side. The bounded form needs joined side-table
+ * sort/filter columns on the songs collection, the host rows in data-view's
+ * `FieldExtensionProps`, and live-window paging in DataView. The server states
+ * that bound (`unbounded: { reason }`).
+ */
+export const playbackHistory = liveValue("sonata-playback-history", {
+  schema: z.array(PlaybackHistoryRowSchema),
+});

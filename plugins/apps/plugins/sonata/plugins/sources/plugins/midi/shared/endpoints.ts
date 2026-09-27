@@ -27,7 +27,7 @@ export const createMidiSong = defineEndpoint({
 /**
  * Fetch one song's MIDI data (or `null` if this song carries no MIDI). Used by
  * the source's `hydrate` to resolve the attachment to fetch — a one-shot read in
- * a non-hook context, complementing the reactive `songMidiResource` list.
+ * a non-hook context, complementing the live `songMidiRows` value.
  */
 export const getSongMidi = defineEndpoint({
   route: "GET /api/sonata/songs/:id/midi",

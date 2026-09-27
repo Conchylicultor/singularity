@@ -2,8 +2,8 @@ import { useState, type ReactElement, type ReactNode } from "react";
 import {
   matchResource,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -19,8 +19,8 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import {
-  prototypesResource,
-  prototypesVersionResource,
+  prototypesList,
+  prototypesVersion,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
@@ -74,8 +74,8 @@ export function PresentStage({
   exit?: PresentExit;
 }): ReactNode {
   const stage = useCombinedResources({
-    rows: useResource(prototypesResource),
-    version: useResource(prototypesVersionResource),
+    rows: useLive(prototypesList),
+    version: useLive(prototypesVersion),
   });
   return matchResource(stage, {
     pending: () => <Loading variant="block" />,
