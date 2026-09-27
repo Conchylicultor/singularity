@@ -110,11 +110,126 @@ const TAG_SLOT = "primitives.text-editor.inline-chip.tag"; // InlineChip.Tag
 const SERVER_INLINE_TOKEN_SLOT = "page.inline-token"; // Editor.InlineToken
 const DOCUMENT_SURFACE = "document";
 
-/** One chip that declared it belongs in documents. */
-interface DocumentChip {
+const SERVER_REFERENT_SLOT = "primitives.text-editor.inline-chip.referent"; // InlineTokenReferentSource
+
+/** One declared inline chip, read off its web barrel. */
+interface ScannedChip {
   pluginId: string;
   id: string;
   patternSource: string;
+  surfaces: readonly unknown[];
+  modelText: unknown;
+}
+
+type ChipScan =
+  | { ok: false; message: string }
+  | {
+      ok: true;
+      chips: ScannedChip[];
+      /** Server registry slot id → the pattern sources its contributions label. */
+      serverPatterns: Map<string, Set<string>>;
+    };
+
+/**
+ * Every inline chip (web) and every server contribution's doc label (both
+ * `Editor.InlineToken` and `InlineTokenReferentSource` label with their
+ * pattern's source), from ONE walk of the barrel-imported tree — the scan both
+ * chip checks below join over. A scan that recognises nothing is a failure,
+ * never a clean pass.
+ */
+async function scanInlineChips(): Promise<ChipScan> {
+  const root = await getWorktreeRoot();
+  // The barrel-imported ("enriched") tree — the same one docgen renders the
+  // contribution lines from. Its contributions facet carries BOTH halves:
+  // web slot contributions and server registry contributions.
+  const tree = await buildEnrichedTree(root);
+  registerBarrelStubs(root);
+
+  const naming = await declareSlotsFromBarrels(root, "registry");
+  const tagSlot: SlotHandle | undefined = naming.findSlot(TAG_SLOT);
+  if (tagSlot === undefined) {
+    return {
+      ok: false,
+      message:
+        `No slot is declared under "${TAG_SLOT}" in the registry-scoped declaration pass, so no ` +
+        "chip contribution could be recognized and nothing was verified. A slot id derives from " +
+        "its declaring plugin's id plus its `slots` key, so moving or renaming the inline-chip " +
+        "plugin renames it. This is a check/tooling failure, not a clean pass.",
+    };
+  }
+
+  // Which plugins contribute a chip at all, and which patterns each server
+  // registry already covers — one walk of the same tree.
+  const candidateDirs = new Set<string>();
+  const serverPatterns = new Map<string, Set<string>>();
+  for (const [dir, node] of tree.byDir) {
+    const facet = getFacet(node, contributionsFacetDef);
+    if (!facet) continue;
+    for (const c of facet.runtime) {
+      if (c.kind === "slot" && c.slotId === TAG_SLOT) {
+        // A web slot contribution can only have come from a web barrel; the
+        // guard is belt-and-braces so a tree oddity cannot turn into a throw.
+        if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
+      } else if (c.kind === "server" && c.doc.label) {
+        let set = serverPatterns.get(c.slotId);
+        if (!set) {
+          set = new Set();
+          serverPatterns.set(c.slotId, set);
+        }
+        set.add(c.doc.label);
+      }
+    }
+  }
+
+  if (candidateDirs.size === 0) {
+    return {
+      ok: false,
+      message:
+        `No \`InlineChip.Tag\` contributions found in the enriched plugin tree — the ` +
+        "barrel-imported contributions facet is empty, so no chip invariant could " +
+        "be verified. This is a check/tooling failure, not a clean pass.",
+    };
+  }
+
+  // `surfaces` / `modelText` are not on the doc label, so the chips themselves
+  // are read off the barrels — the same import the anchor/tag checks in
+  // page/editor do. Barrel modules are Bun-cached, so this costs nothing after
+  // the tree build.
+  const chips: ScannedChip[] = [];
+  for (const dir of candidateDirs) {
+    const mod = await importBarrel(join(dir, "web", "index.ts"));
+    const def = mod.default as { contributions?: unknown } | undefined;
+    if (!Array.isArray(def?.contributions)) continue;
+    for (const raw of def.contributions) {
+      const c = raw as {
+        _slot?: SlotHandle;
+        id?: unknown;
+        pattern?: unknown;
+        surfaces?: unknown;
+        modelText?: unknown;
+      };
+      if (c._slot !== tagSlot) continue;
+      chips.push({
+        pluginId: tree.byDir.get(dir)?.id ?? dir,
+        id: typeof c.id === "string" ? c.id : "<unnamed>",
+        patternSource:
+          c.pattern instanceof RegExp ? c.pattern.source : "<not a RegExp>",
+        surfaces: Array.isArray(c.surfaces) ? c.surfaces : [],
+        modelText: c.modelText,
+      });
+    }
+  }
+
+  if (chips.length === 0) {
+    return {
+      ok: false,
+      message:
+        `${candidateDirs.size} plugin(s) contribute to \`InlineChip.Tag\`, but no contribution off ` +
+        "them was recognized as an inline chip, so nothing was verified. This is a check/tooling " +
+        "failure, not a clean pass.",
+    };
+  }
+  return { ok: true, chips, serverPatterns };
 }
 
 const documentChipHasServerToken: Check = {
@@ -122,58 +237,10 @@ const documentChipHasServerToken: Check = {
   description:
     'every inline chip declaring `surfaces: ["…","document"]` also contributes the server `Editor.InlineToken` half, so a page block holding it stays agent-readable',
   async run() {
-    const root = await getWorktreeRoot();
-    // The barrel-imported ("enriched") tree — the same one docgen renders the
-    // contribution lines from. Its contributions facet carries BOTH halves:
-    // web slot contributions and server registry contributions.
-    const tree = await buildEnrichedTree(root);
-    registerBarrelStubs(root);
-
-    const naming = await declareSlotsFromBarrels(root, "registry");
-    const tagSlot: SlotHandle | undefined = naming.findSlot(TAG_SLOT);
-    if (tagSlot === undefined) {
-      return {
-        ok: false,
-        message:
-          `No slot is declared under "${TAG_SLOT}" in the registry-scoped declaration pass, so no ` +
-          "chip contribution could be recognized and nothing was verified. A slot id derives from " +
-          "its declaring plugin's id plus its `slots` key, so moving or renaming the inline-chip " +
-          "plugin renames it. This is a check/tooling failure, not a clean pass.",
-      };
-    }
-
-    // Which plugins contribute a chip at all, and which patterns the server
-    // already protects — one walk of the same tree.
-    const candidateDirs = new Set<string>();
-    const serverPatterns = new Set<string>();
-    for (const [dir, node] of tree.byDir) {
-      const facet = getFacet(node, contributionsFacetDef);
-      if (!facet) continue;
-      for (const c of facet.runtime) {
-        if (c.kind === "slot" && c.slotId === TAG_SLOT) {
-          // A web slot contribution can only have come from a web barrel; the
-          // guard is belt-and-braces so a tree oddity cannot turn into a throw.
-          if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
-        } else if (
-          c.kind === "server" &&
-          c.slotId === SERVER_INLINE_TOKEN_SLOT
-        ) {
-          // `Editor.InlineToken`'s docLabel IS its pattern's source.
-          if (c.doc.label) serverPatterns.add(c.doc.label);
-        }
-      }
-    }
-
-    if (candidateDirs.size === 0) {
-      return {
-        ok: false,
-        message:
-          `No \`InlineChip.Tag\` contributions found in the enriched plugin tree — the ` +
-          "barrel-imported contributions facet is empty, so the chip↔server-token invariant could " +
-          "not be verified. This is a check/tooling failure, not a clean pass.",
-      };
-    }
-    if (serverPatterns.size === 0) {
+    const scan = await scanInlineChips();
+    if (!scan.ok) return scan;
+    const serverPatterns = scan.serverPatterns.get(SERVER_INLINE_TOKEN_SLOT);
+    if (serverPatterns === undefined || serverPatterns.size === 0) {
       return {
         ok: false,
         message:
@@ -183,49 +250,9 @@ const documentChipHasServerToken: Check = {
           "readings are failures and neither is a clean pass.",
       };
     }
-
-    // `surfaces` is not on the doc label, so the chips themselves are read off
-    // the barrels — the same import the anchor/tag checks in page/editor do.
-    // Barrel modules are Bun-cached, so this costs nothing after the tree build.
-    const documentChips: DocumentChip[] = [];
-    let inlineChipCount = 0;
-    for (const dir of candidateDirs) {
-      const mod = await importBarrel(join(dir, "web", "index.ts"));
-      const def = mod.default as { contributions?: unknown } | undefined;
-      if (!Array.isArray(def?.contributions)) continue;
-      for (const raw of def.contributions) {
-        const c = raw as {
-          _slot?: SlotHandle;
-          id?: unknown;
-          pattern?: unknown;
-          surfaces?: unknown;
-        };
-        if (c._slot !== tagSlot) continue;
-        inlineChipCount++;
-        if (
-          !Array.isArray(c.surfaces) ||
-          !c.surfaces.includes(DOCUMENT_SURFACE)
-        ) {
-          continue;
-        }
-        documentChips.push({
-          pluginId: tree.byDir.get(dir)?.id ?? dir,
-          id: typeof c.id === "string" ? c.id : "<unnamed>",
-          patternSource:
-            c.pattern instanceof RegExp ? c.pattern.source : "<not a RegExp>",
-        });
-      }
-    }
-
-    if (inlineChipCount === 0) {
-      return {
-        ok: false,
-        message:
-          `${candidateDirs.size} plugin(s) contribute to \`InlineChip.Tag\`, but no contribution off ` +
-          "them was recognized as an inline chip, so nothing was verified. This is a check/tooling " +
-          "failure, not a clean pass.",
-      };
-    }
+    const documentChips = scan.chips.filter((chip) =>
+      chip.surfaces.includes(DOCUMENT_SURFACE),
+    );
 
     const missing = documentChips
       .filter((chip) => !serverPatterns.has(chip.patternSource))
@@ -266,4 +293,52 @@ const documentChipHasServerToken: Check = {
   },
 };
 
-export default [check, documentChipHasServerToken];
+/**
+ * A chip that says a model reads it `"resolved"` must have a server resolver.
+ *
+ * `inlineChip({ modelText: "resolved" })` promises that text a MODEL reads (a
+ * task description Haiku titles) gets the referent's title rather than the
+ * opaque id — which only holds if the family's server half contributes an
+ * `InlineTokenReferentSource` over the same pattern. Nothing in the type system
+ * joins the web and server barrels, so the join is here. Generic: names no chip.
+ */
+const resolvedChipHasReferent: Check = {
+  id: "active-data:resolved-chip-has-referent",
+  description:
+    'every inline chip declaring `modelText: "resolved"` also contributes a server `InlineTokenReferentSource` over the same pattern, so a model reads the referent\'s title instead of an opaque id',
+  async run() {
+    const scan = await scanInlineChips();
+    if (!scan.ok) return scan;
+    const referentPatterns =
+      scan.serverPatterns.get(SERVER_REFERENT_SLOT) ?? new Set<string>();
+    const missing = scan.chips
+      .filter(
+        (chip) =>
+          chip.modelText === "resolved" &&
+          !referentPatterns.has(chip.patternSource),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (missing.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message:
+        `${missing.length} inline chip(s) declare \`modelText: "resolved"\` with no server ` +
+        "`InlineTokenReferentSource`, so a model reading their token sees only the raw id:\n" +
+        missing
+          .map(
+            (chip) =>
+              `  chip "${chip.id}" (${chip.pluginId}) — pattern /${chip.patternSource}/`,
+          )
+          .join("\n"),
+      hint:
+        "In the chip family's server barrel, contribute\n" +
+        '  InlineTokenReferentSource({ kind: "<tag name>", pattern: <PATTERN>, resolve })\n' +
+        "from `@plugins/primitives/plugins/text-editor/plugins/inline-chip/server`, naming the SAME " +
+        "pattern constant the chip does (the join key). See " +
+        "plugins/active-data/plugins/prototype/server/index.ts. If the raw token already reads " +
+        'well to a model, declare `modelText: "self-describing"` on the chip instead.',
+    };
+  },
+};
+
+export default [check, documentChipHasServerToken, resolvedChipHasReferent];

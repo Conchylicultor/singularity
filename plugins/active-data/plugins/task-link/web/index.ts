@@ -17,6 +17,7 @@ export default {
         id: "task-link",
         pattern: TASK_ID_RE,
         surfaces: ["transcript", "document"],
+        modelText: "resolved",
         component: TaskLinkChip,
       }),
     ),

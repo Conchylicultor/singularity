@@ -1,0 +1,12 @@
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+
+export {
+  expandInlineTokenReferents,
+  InlineTokenReferentSource,
+} from "./internal/referents";
+export type { InlineTokenReferent } from "./internal/referents";
+
+export default {
+  description:
+    "Server-side referents of inline tokens: chip families contribute InlineTokenReferentSource (their chip's pattern + a resolve to the referent's title), and expandInlineTokenReferents rewrites a text's tokens as `<kind id title/>` so a model reads what the chip shows instead of an opaque id.",
+} satisfies ServerPluginDefinition;

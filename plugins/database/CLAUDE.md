@@ -256,6 +256,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `active-data/page-link`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/chord/curriculum`

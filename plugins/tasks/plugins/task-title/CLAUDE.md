@@ -21,6 +21,7 @@
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
+    - `primitives/text-editor/inline-chip.expandInlineTokenReferents`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`

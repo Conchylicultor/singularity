@@ -29,6 +29,7 @@ export default {
         // reading that draft or conversation, and means nothing in a page a
         // person wrote.
         surfaces: ["transcript"],
+        modelText: "self-describing",
         component: UiContextTag,
       }),
     ),

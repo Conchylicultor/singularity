@@ -6,6 +6,7 @@ import "./internal/register-node-source";
 export { InlineChip } from "./slots";
 export { inlineChip, inlineChips } from "./internal/inline-registry";
 export type {
+  ChipModelText,
   ChipSurface,
   InlineChipContribution,
 } from "./internal/inline-registry";

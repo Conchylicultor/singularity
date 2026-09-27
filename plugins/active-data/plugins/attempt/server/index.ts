@@ -1,11 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Editor } from "@plugins/page/plugins/editor/server";
 import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";
+import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { ATTEMPT_ID_RE } from "../core";
+import { resolveAttemptReferent } from "./internal/referent";
 
 export default {
   description:
-    "The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.",
+    "The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).",
   contributions: [
     // The SAME pattern the chip declares to `inlineChip`, and the SAME node spec
     // object the browser's `InlineChipNode` decorates. Every inline chip feeds
@@ -25,6 +27,12 @@ export default {
       pattern: ATTEMPT_ID_RE,
       markdownSpan: "transparent",
       node: inlineChipNode,
+    }),
+    // What the chip shows, for text a model reads instead of a person.
+    InlineTokenReferentSource({
+      kind: "attempt",
+      pattern: ATTEMPT_ID_RE,
+      resolve: resolveAttemptReferent,
     }),
   ],
 } satisfies ServerPluginDefinition;

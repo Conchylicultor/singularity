@@ -7,4 +7,7 @@
 // and the server barrel — which `thumbnails` reads `listPrototypeMetas` from —
 // all keep importing `./list`, so the move costs no call site and the exported
 // API is unchanged.
-export { listPrototypeMetas } from "../../shared/list-metas";
+export {
+  listPrototypeMetas,
+  readPrototypeTitle,
+} from "../../shared/list-metas";

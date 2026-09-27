@@ -25,7 +25,7 @@ The id pattern matches attempt ids derived from the worktree basename
 
 ## Plugin reference
 
-- Description: Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+- Description: Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
 - Web:
   - Contributes: `InlineChip.Tag` "attempt" → `AttemptChip`
   - Uses:
@@ -43,8 +43,14 @@ The id pattern matches attempt ids derived from the worktree basename
     - `tasks/attempt-view.attemptPane`
   - Exports (values): `AttemptChip`
 - Server:
-  - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-  - Uses: `page/editor.Editor`
+  - Contributes:
+    - `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+    - `primitives.text-editor.inline-chip.referent` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+  - Uses:
+    - `page/editor.Editor`
+    - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+    - `tasks/tasks-core.getAttempt`
+    - `tasks/tasks-core.getTask`
 - Core:
   - Uses: `active-data.inlineBoundary`
   - Exports (values): `ATTEMPT_ID_RE`

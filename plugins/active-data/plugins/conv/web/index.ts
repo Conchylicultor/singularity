@@ -17,6 +17,7 @@ export default {
         id: "conv",
         pattern: CONV_ID_RE,
         surfaces: ["transcript", "document"],
+        modelText: "resolved",
         component: ConvChip,
       }),
     ),

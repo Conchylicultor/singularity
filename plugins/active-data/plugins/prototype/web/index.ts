@@ -17,6 +17,7 @@ export default {
         id: "prototype",
         pattern: PROTOTYPE_INLINE_RE,
         surfaces: ["transcript", "document"],
+        modelText: "resolved",
         component: PrototypeChip,
       }),
     ),

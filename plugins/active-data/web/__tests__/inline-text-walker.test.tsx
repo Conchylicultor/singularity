@@ -55,6 +55,7 @@ const plugin = {
         id: "inline-text-walker-test-chip",
         pattern: /chip-\w+/g,
         surfaces: ["transcript"],
+        modelText: "self-describing",
         component: Chip,
       }),
     ),

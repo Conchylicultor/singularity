@@ -46,6 +46,23 @@ import type { ComponentType } from "react";
  */
 export type ChipSurface = "transcript" | "document";
 
+/**
+ * How the chip's token reads to a MODEL. REQUIRED, with no default.
+ *
+ * A chip turns an opaque id into a name for a person; text handed to a model
+ * (a task description Haiku titles) carries only the raw characters, and a
+ * model copies an opaque id straight into what it writes
+ * ("Proto-1789665568-9onf theme preview").
+ *
+ * - `"resolved"` — the token names a thing with a title, and the family's
+ *   server half contributes an `InlineTokenReferentSource` over the SAME
+ *   pattern, so `expandInlineTokenReferents` hands the model that title.
+ *   Enforced by the `active-data:resolved-chip-has-referent` check.
+ * - `"self-describing"` — the raw token already says what it is to a reader
+ *   (a `<ui-context …>` tag carries its own lineage); nothing to resolve.
+ */
+export type ChipModelText = "resolved" | "self-describing";
+
 // See the module header: a real symbol, unreachable outside this module.
 export const INLINE_CHIP: unique symbol = Symbol("inline-chip");
 
@@ -77,6 +94,7 @@ export interface InlineChipContribution {
   id: string;
   pattern: RegExp;
   surfaces: readonly ChipSurface[];
+  modelText: ChipModelText;
   component: ComponentType<{
     content: string;
     attrs: Record<string, string>;
@@ -102,6 +120,7 @@ export function inlineChip(spec: {
   id: string;
   pattern: RegExp;
   surfaces: readonly ChipSurface[];
+  modelText: ChipModelText;
   component: ComponentType<{ content: string; attrs: Record<string, string> }>;
 }): InlineChipContribution {
   const existing = chips.find((c) => c.id === spec.id);
@@ -117,6 +136,7 @@ export function inlineChip(spec: {
     id: spec.id,
     pattern: spec.pattern,
     surfaces: spec.surfaces,
+    modelText: spec.modelText,
     component: spec.component,
   };
   chips.push(chip);

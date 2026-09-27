@@ -32,6 +32,7 @@ const plugin = {
         id: "editor-bridge-test-chip",
         pattern: /@mention-\w+/g,
         surfaces: ["transcript"],
+        modelText: "self-describing",
         component: TestChip,
       }),
     ),

@@ -459,7 +459,10 @@ serves them.
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `active-data/attempt`
+    - `active-data/conv`
     - `active-data/task`
+    - `active-data/task-link`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `conversations`

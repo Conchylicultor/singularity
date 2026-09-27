@@ -4,7 +4,7 @@ import {
   inlineChip,
 } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 import { PageLinkChip } from "./components/page-link-chip";
-import { BLOCK_ID_RE } from "./internal/pattern";
+import { BLOCK_ID_RE } from "../core";
 
 export { PageLinkChip };
 
@@ -22,6 +22,7 @@ export default {
         // span. In a conversation there is no such token and a bare `block-…`
         // is the only spelling, so the chip earns its keep there.
         surfaces: ["transcript"],
+        modelText: "resolved",
         component: PageLinkChip,
       }),
     ),

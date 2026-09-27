@@ -17,6 +17,7 @@ export default {
         id: "attempt",
         pattern: ATTEMPT_ID_RE,
         surfaces: ["transcript", "document"],
+        modelText: "resolved",
         component: AttemptChip,
       }),
     ),

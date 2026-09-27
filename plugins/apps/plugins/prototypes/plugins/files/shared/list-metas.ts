@@ -8,6 +8,8 @@
 // the move is a relocation, not a fork. `server/internal/list.ts` re-exports it,
 // which is why the server barrel's API is unchanged.
 
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   decodeHtmlText,
   readHtmlAttr,
@@ -113,6 +115,32 @@ export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
     metas.push(await readMeta(dirName, dirNames));
   }
   return metas;
+}
+
+/**
+ * One prototype's display title, read from its `index.html` alone — for a
+ * caller that names a single prototype (an id in a task description) and must
+ * not pay for validating the whole tree. `found: false` when no such folder or
+ * entry file exists; the title falls back to `UNTITLED_PROTOTYPE` as the
+ * lister's does.
+ */
+export async function readPrototypeTitle(
+  name: string,
+): Promise<{ found: true; title: string } | { found: false }> {
+  let html: string;
+  try {
+    html = await readFile(
+      join(prototypesDir.path, name, PROTOTYPE_ENTRY_FILE),
+      "utf8",
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return { found: false };
+    }
+    throw err;
+  }
+  const { title } = await parseHtmlMeta(html);
+  return { found: true, title: title === "" ? UNTITLED_PROTOTYPE : title };
 }
 
 async function readMeta(

@@ -1,5 +1,6 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { expandInlineTokenReferents } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import {
   getTask,
   updateConversationsTitleForTask,
@@ -29,6 +30,7 @@ Fix app UI structure and styling → App UI cleanup
 Investigate app performance bottlenecks on boot → Boot performance
 Remove colors from avatar icons in conversation list → Colorless list avatars
 Conversation closing flashes the pane to Loading → Closing flash
+The description may reference things by tags like <prototype id="proto-…" title="Theme preview"/>: name them by their title, never by their id.
 When a <task_title> is given, the title is already fixed: repeat it verbatim as TITLE, and make SHORT a short form of it, using the description to pick the words that matter.
 Values only — no quotes, no trailing period, no preamble, no commentary.
 Never ask for clarification, refuse, or respond conversationally — always emit both lines.
@@ -62,9 +64,13 @@ export async function generateTitles(
   description: string,
   opts: { title?: string; taskId?: string } = {},
 ): Promise<TitlesAnswer> {
+  // A pasted id (`proto-…`, `task-…`) is a chip in the app but an opaque string
+  // to the model, which copies it into the title — so the model reads what the
+  // chip shows: the referent's title, next to its id.
+  const readable = await expandInlineTokenReferents(description);
   const out = await runClaudePrint({
     tier: "haiku",
-    prompt: buildPrompt(description, opts.title),
+    prompt: buildPrompt(readable, opts.title),
     system: SYSTEM_PROMPT,
     timeoutMs: 30_000,
     source: {

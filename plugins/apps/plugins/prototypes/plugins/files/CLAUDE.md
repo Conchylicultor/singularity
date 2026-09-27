@@ -459,6 +459,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `checkpointPrototype`
     - `listPrototypeMetas`
     - `onPrototypesChanged`
+    - `readPrototypeTitle`
   - Resources:
     - `prototypes.history` (push)
     - `prototypes.list` (push)

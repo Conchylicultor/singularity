@@ -22,6 +22,7 @@ describe("inlineChip", () => {
       id: "test-records",
       pattern: /records-\d+/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
 
@@ -36,6 +37,7 @@ describe("inlineChip", () => {
       id: "test-duplicate",
       pattern: /first-\d+/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
 
@@ -44,6 +46,7 @@ describe("inlineChip", () => {
         id: "test-duplicate",
         pattern: /second-\d+/,
         surfaces: ["document"],
+        modelText: "self-describing",
         component: stub,
       }),
     ).toThrow(/test-duplicate/);
@@ -56,12 +59,14 @@ describe("inlineChips(surface)", () => {
       id: "test-transcript-only",
       pattern: /transcript-only-\d+/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
     const both = inlineChip({
       id: "test-both-surfaces",
       pattern: /both-surfaces-\d+/,
       surfaces: ["transcript", "document"],
+      modelText: "self-describing",
       component: stub,
     });
 
@@ -81,12 +86,14 @@ describe("inlineChipExtension(surface)", () => {
       id: "test-union-transcript",
       pattern: /uniontranscript-\d+/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
     inlineChip({
       id: "test-union-document",
       pattern: /uniondocument-\d+/,
       surfaces: ["transcript", "document"],
+      modelText: "self-describing",
       component: stub,
     });
 
@@ -104,6 +111,7 @@ describe("inlineChipExtension(surface)", () => {
       id: "test-union-match",
       pattern: /matchme-\d+/,
       surfaces: ["document"],
+      modelText: "self-describing",
       component: stub,
     });
     const extension = inlineChipExtension("document")!;
@@ -121,6 +129,7 @@ describe("inlineChipFor(token)", () => {
       id: "test-anchor-inner",
       pattern: /inner-\d+/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
     const outer = inlineChip({
@@ -128,6 +137,7 @@ describe("inlineChipFor(token)", () => {
       // Deliberately contains the inner chip's token shape.
       pattern: /<wrap>inner-\d+<\/wrap>/,
       surfaces: ["transcript"],
+      modelText: "self-describing",
       component: stub,
     });
 

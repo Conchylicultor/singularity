@@ -86,13 +86,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data/attempt`
       - `active-data/commit-link`
       - `active-data/conv`
+      - `active-data/page-link`
       - `active-data/plugin-link`
       - `active-data/prototype`
       - `active-data/task`
       - `active-data/task-link`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
   - Plugins:
-    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "attempt" → `AttemptChip`
         - Uses:
@@ -110,8 +111,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-        - Uses: `page/editor.Editor`
+        - Contributes:
+          - `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `tasks/tasks-core.getAttempt`
+          - `tasks/tasks-core.getTask`
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `ATTEMPT_ID_RE`
@@ -134,7 +141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.formatRelativeTime`
           - `ui/icons.Icon`
-    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its conversation's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "conv" → `ConvChip`
         - Uses:
@@ -148,12 +155,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/inline-chip.InlineChip`
         - Exports (values): `ConvChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-        - Uses: `page/editor.Editor`
+        - Contributes:
+          - `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `tasks/tasks-core.getAttempt`
+          - `tasks/tasks-core.getConversation`
+          - `tasks/tasks-core.getTask`
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `CONV_ID_RE`
-    - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Models emit the bare id, no tag wrapping needed.
+    - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Models emit the bare id, no tag wrapping needed. Resolves a bare `block-<id>` to what its chip shows — the page's title, or '<page title> › <block type>' for a content block — for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "page-link" → `PageLinkChip`
         - Uses:
@@ -166,6 +180,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
         - Exports (values): `PageLinkChip`
+      - Server:
+        - Contributes: `primitives.text-editor.inline-chip.referent` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `database.db`
+          - `page/editor.liveBlocks`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+      - Core:
+        - Uses: `active-data.inlineBoundary`
+        - Exports (values): `BLOCK_ID_RE`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Slots: `plugin-conv-side.actions` ← `primitives.pane`
@@ -193,7 +216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
           - `ui/icons.Icon`
-    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its prototype's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
         - Uses:
@@ -207,8 +230,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/icons.Icon`
         - Exports (values): `PrototypeChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-        - Uses: `page/editor.Editor`
+        - Contributes:
+          - `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `apps/prototypes/files.readPrototypeTitle`
+          - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
       - Core:
         - Uses:
           - `active-data.inlineBoundary`
@@ -237,7 +265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/tasks-core.useTaskAttempts`
-    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
         - Uses:
@@ -252,8 +280,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
-        - Uses: `page/editor.Editor`
+        - Contributes:
+          - `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `tasks/tasks-core.getTask`
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `TASK_ID_RE`
@@ -3965,6 +3998,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkpointPrototype`
               - `listPrototypeMetas`
               - `onPrototypesChanged`
+              - `readPrototypeTitle`
             - Resources:
               - `prototypes.history` (push)
               - `prototypes.list` (push)
@@ -12748,6 +12782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by:
       - `active-data`
+      - `active-data/page-link`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
       - `apps/chord/curriculum`
@@ -32362,7 +32397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `page/editor`
               - `primitives/text-editor`
-        - **`inline-chip`** — Inline chips for every text surface: inlineChip() declares one (a self-certifying pattern, the surfaces it belongs on, and the component that renders it) and records it in a module registry; one generic Lexical node renders any declared chip, and inlineChipExtension(surface) hands a Lexical host that surface's chips as a single token extension. renderInlineChip(token) is the one rendering of a matched token, inside its own error boundary.
+        - **`inline-chip`** — Inline chips for every text surface: inlineChip() declares one (a self-certifying pattern, the surfaces it belongs on, and the component that renders it) and records it in a module registry; one generic Lexical node renders any declared chip, and inlineChipExtension(surface) hands a Lexical host that surface's chips as a single token extension. renderInlineChip(token) is the one rendering of a matched token, inside its own error boundary. Server-side referents of inline tokens: chip families contribute InlineTokenReferentSource (their chip's pattern + a resolve to the referent's title), and expandInlineTokenReferents rewrites a text's tokens as `<kind id title/>` so a model reads what the chip shows instead of an opaque id.
           - Web:
             - Slots: `InlineChip.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.page-link`, `active-data.prototype`, `active-data.task-link`, `primitives.ui-context.element-picker`
             - Uses:
@@ -32376,6 +32411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor.registerNodeExtensionSource`
               - `ui/icons.Icon`
             - Exports (types):
+              - `ChipModelText`
               - `ChipSurface`
               - `InlineChipContribution`
             - Exports (values):
@@ -32398,6 +32434,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/prototype`
               - `active-data/task-link`
               - `primitives/ui-context/element-picker`
+              - `tasks/task-title`
+          - Server:
+            - Exports (types): `InlineTokenReferent`
+            - Exports (values):
+              - `expandInlineTokenReferents`
+              - `InlineTokenReferentSource`
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders them as inline thumbnail chips that open the full-window image viewer.
           - Web:
             - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
@@ -35500,6 +35542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
+          - `primitives/text-editor/inline-chip.expandInlineTokenReferents`
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core._tasks`
@@ -35844,7 +35887,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `active-data/attempt`
+          - `active-data/conv`
           - `active-data/task`
+          - `active-data/task-link`
           - `backup/sources/transcripts`
           - `code-explorer`
           - `conversations`
