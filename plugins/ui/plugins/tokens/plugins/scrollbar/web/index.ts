@@ -7,7 +7,7 @@ import { ScrollbarSection } from "./components/scrollbar-section";
 
 export default {
   description:
-    "Scrollbar token group (native or custom, size, thumb inset and radius, thumb, hover and track colours) with its customizer section.",
+    "Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.",
   contributions: [
     ThemeEngine.TokenGroup({
       id: "scrollbar",

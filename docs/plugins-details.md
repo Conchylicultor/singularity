@@ -36123,7 +36123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `RichTextPaletteValues`
             - Exports (values): `richTextPaletteGroup`
-        - **`scrollbar`** — Scrollbar token group (native or custom, size, thumb inset and radius, thumb, hover and track colours) with its customizer section.
+        - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Scrollbar"

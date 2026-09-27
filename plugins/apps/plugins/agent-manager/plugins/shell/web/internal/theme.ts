@@ -308,28 +308,13 @@ const typeScale = typeScaleGroup.fragment(
 );
 
 /**
- * The mockup's scrollbars: a 10px gutter holding a 4px pill (inset 3px), in a
- * tone one step past the hover fill, firming to the input outline under the
- * pointer, over no track.
+ * The mockup's scrollbar thumb (a tone one step past the hover fill) on
+ * Chromium's native overlay bar, over a transparent track — so no rail
+ * appears behind the thumb while it is hovered.
  */
-const scrollbarShape = {
-  scrollbarStyle: "custom",
-  scrollbarSize: "10px",
-  scrollbarThumbInset: "3px",
-  scrollbarRadius: "9999px",
-  scrollbarTrack: "transparent",
-};
 const scrollbar = scrollbarGroup.fragment({
-  dark: {
-    ...scrollbarShape,
-    scrollbarThumb: "oklch(0.305 0.017 242)",
-    scrollbarThumbHover: DARK.input,
-  },
-  light: {
-    ...scrollbarShape,
-    scrollbarThumb: "oklch(0.87 0.01 240)",
-    scrollbarThumbHover: "oklch(0.78 0.012 240)",
-  },
+  dark: { scrollbarColor: "oklch(0.305 0.017 242) transparent" },
+  light: { scrollbarColor: "oklch(0.87 0.01 240) transparent" },
 });
 
 /**
