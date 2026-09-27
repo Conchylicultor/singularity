@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
-import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import {
   nextLingerExpiry,
   visibleAgentRows,
+  type BandSource,
   type RunningAgentRow,
 } from "../internal/agent-rows";
 
@@ -18,12 +18,12 @@ import {
 export type RunningAgentsState =
   { kind: "pending" } | { kind: "known"; rows: RunningAgentRow[] };
 
-const NO_ENTRIES: SubagentEntry[] = [];
+const NOTHING: BandSource = { entries: [], workflowRuns: [] };
 
 /**
  * The sub-agents to show above the prompt box: every one still running, plus
  * the ones that stopped moments ago and are still saying so, plus the
- * ancestors of both (see `visibleAgentRows`).
+ * ancestors of both — a workflow run's row among them (see `visibleAgentRows`).
  *
  * Run state is NOT derived here. It comes from the subagents plugin, which owns
  * the three-armed answer (running / finished / ended without reporting) and
@@ -36,11 +36,15 @@ const NO_ENTRIES: SubagentEntry[] = [];
  */
 export function useRunningAgents(conversationId: string): RunningAgentsState {
   const subagents = useConversationSubagents(conversationId);
-  const entries = subagents.kind === "known" ? subagents.entries : NO_ENTRIES;
+  const { entries, workflowRuns } =
+    subagents.kind === "known" ? subagents : NOTHING;
 
   // The instant the linger is measured against.
   const [now, setNow] = useState(() => Date.now());
-  const rows = useMemo(() => visibleAgentRows(entries, now), [entries, now]);
+  const rows = useMemo(
+    () => visibleAgentRows({ entries, workflowRuns }, now),
+    [entries, workflowRuns, now],
+  );
 
   useEffect(() => {
     const expiry = nextLingerExpiry(rows, now);

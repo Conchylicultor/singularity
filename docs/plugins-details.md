@@ -10928,6 +10928,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Core:
                 - Uses:
                   - `conversations.hasLiveProcess`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
                   - `conversations/transcript-watcher.JsonlEvent`
                   - `conversations/transcript-watcher.JsonlEventSchema`
                   - `primitives/live-state.resourceDescriptor`
@@ -10943,6 +10945,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SubagentRunStateInput`
                   - `SubagentTranscript`
                   - `UndescribedSubagent`
+                  - `WorkflowRunEntry`
+                  - `WorkflowRunsInput`
                 - Exports (values):
                   - `AGENT_TOOL_NAME`
                   - `agentCallForSubagent`
@@ -10966,6 +10970,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `toolResultIsOutcome`
                   - `turnEndedOfLines`
                   - `UndescribedSubagentSchema`
+                  - `workflowCallsIn`
+                  - `workflowRunIdOf`
+                  - `workflowRunsOf`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -11349,6 +11356,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
+                  - Cross-plugin:
+                    - Imported by: `conversations/conversation-view/jsonl-viewer/subagents`
+                  - Core:
+                    - Exports (types):
+                      - `WorkflowMeta`
+                      - `WorkflowPhase`
+                      - `WorkflowResult`
+                    - Exports (values):
+                      - `parseWorkflowMeta`
+                      - `parseWorkflowResult`
+                      - `WORKFLOW_TOOL_NAME`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`

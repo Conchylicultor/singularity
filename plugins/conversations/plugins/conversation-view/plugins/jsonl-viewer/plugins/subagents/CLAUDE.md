@@ -294,6 +294,46 @@ plugin's `core/join.ts` — the plugin that renders `Agent` cards already import
 this one, so importing it back would close a cycle. The server's raw-line name
 index reads the same constant.
 
+## Workflow agents: a second layout, one folder deeper
+
+A `Workflow` tool call runs its agents somewhere else on disk:
+
+```
+<session>/subagents/workflows/wf_<runId>/agent-<id>.jsonl / .meta.json
+<session>/subagents/workflows/wf_<runId>/journal.jsonl   launched / started{agentId,…} / result{agentId,…}
+```
+
+**Discovered below the same roots, never resolved from elsewhere.**
+`listSubagentEntries` walks `<root>/workflows/wf_*` under each `subagentDirs`
+root and tags those entries with their `workflowRunId`, so the anchored-chain
+ownership above still holds. The watcher routes by exact parent directory, so
+`subagentWatchDirs` adds `workflows/` and every run folder to the watched set —
+without them a write inside a run wakes nothing. Each run's `journal.jsonl` is
+a signature path, so a new `result` line moves the signature.
+
+**The journal is the completion signal.** A workflow agent's meta has no
+`toolUseId` and no `parentAgentId`, so it joins no `Agent` call and gets no
+notification of its own. Its `result` line in the run's journal is to it what
+a foreground `tool_result` is to an `Agent` call. `workflow-journal.ts` reads
+the journal **incrementally** (per path: a byte offset and the set of agents
+that reported; complete lines only; a shrink resets it), because one run's
+journal is hundreds of KB and only grows. The row carries it as
+`workflow: { runId, reported }` — on both arms, since an agent whose meta is
+unreadable still sits in its run's folder.
+
+**Run state.** `workflowRunsOf` (`core/workflow-join.ts`) derives one
+`WorkflowRunEntry` per run seen on a row. The run joins its `Workflow` call
+through the call result's `Run ID: wf_…` (`parseWorkflowResult`, from the
+workflow tool plugin's `core`). A run is finished when the `task-notification`
+carrying that call's id lands. With no call left to read, it is running while
+one of its agents is. Otherwise the parent's liveness decides. Each workflow
+agent then gets two inputs to `subagentRunState`: `workflowReported` (its
+journal line, checked first ⇒ finished) and `workflowRunEnded` (its run is no
+longer running, checked after its own turn end and before liveness ⇒ ended
+without reporting). `useConversationSubagents` computes the runs once and
+returns them as `workflowRuns` beside `entries`, so a list's run row and the
+state its agents were given cannot disagree.
+
 ## One unreadable meta costs one row, never the list
 
 A row is a **union**, not a flat record with an error flag:
@@ -391,6 +431,8 @@ downstream can widen the set, because nothing downstream resolves one.
 - Core:
   - Uses:
     - `conversations.hasLiveProcess`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
     - `conversations/transcript-watcher.JsonlEvent`
     - `conversations/transcript-watcher.JsonlEventSchema`
     - `primitives/live-state.resourceDescriptor`
@@ -406,6 +448,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentRunStateInput`
     - `SubagentTranscript`
     - `UndescribedSubagent`
+    - `WorkflowRunEntry`
+    - `WorkflowRunsInput`
   - Exports (values):
     - `AGENT_TOOL_NAME`
     - `agentCallForSubagent`
@@ -429,6 +473,9 @@ downstream can widen the set, because nothing downstream resolves one.
     - `toolResultIsOutcome`
     - `turnEndedOfLines`
     - `UndescribedSubagentSchema`
+    - `workflowCallsIn`
+    - `workflowRunIdOf`
+    - `workflowRunsOf`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

@@ -6,8 +6,8 @@ The sub-agents working for this conversation, in a card above the prompt box:
 
 Open by default; the summary line folds the rows. One row per sub-agent — dot,
 what it was asked to do, **what it last did**, type, a ticking clock — nested
-under the sub-agent that spawned it. Every row opens that sub-agent's report
-pane.
+under the sub-agent (or workflow run) that spawned it. Every sub-agent row opens
+that sub-agent's report pane.
 
 ## The hierarchy
 
@@ -26,6 +26,27 @@ Claude Code versions don't write it, so those rows sit at the top level.
   tool-use id, and when another sub-agent spawned it, that launching call is in
   the spawner's transcript, which the call-keyed lookup never reads. The own id
   names its files directly, so every row opens.
+
+### Workflow runs are rows too
+
+Agents a `Workflow` call spawned sit under **one row for their run**
+(`RunningAgentRow` is a union on `kind: "agent" | "workflow"`). The run row is
+keyed `workflow:<runId>` at the top level, named by the script's `meta.name`
+(else the run id), and its type reads "workflow". Its agents point at it as
+their `parentKey`, and their type cell shows their `workflowPhase`. Its state
+and clock come from `workflowRuns` (the subagents plugin), never derived here.
+
+- The same ancestor rule keeps the run row on screen while any of its agents is
+  shown. It also shows on its own while the run is going, including between
+  phases with no agent live.
+- **A run row opens nothing** (`rowActivation` resolves to `undefined`). There
+  is no whole-run pane, and the transcript's Workflow card already draws the
+  DAG, so folding is its only interaction. Its agents open their report pane
+  like any other row.
+- **The summary counts agents only.** A run is not an agent working, and
+  "4 agents working" over three would be a miscount. A run still going with no
+  agent live (between phases) is counted apart (`runsGoing`), so the header
+  reads "Workflow running · between phases", never "All agents finished".
 
 ## It derives nothing
 

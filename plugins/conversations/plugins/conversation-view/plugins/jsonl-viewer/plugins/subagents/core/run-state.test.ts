@@ -177,4 +177,64 @@ describe("subagentRunState", () => {
       }),
     ).toEqual({ kind: "ended-without-reporting" });
   });
+
+  describe("a workflow agent", () => {
+    // Real shape: `{agentType:"workflow-subagent", workflowPhase, spawnDepth:1,
+    // requestShape:"foreground"}` — foreground, yet no `toolUseId` and no
+    // `Agent` call to carry a result. Only its run's journal can finish it.
+    const workflowAgent = {
+      toolUseId: "",
+      agentToolEvent: undefined,
+      taskNotifications: [],
+      requestShape: "foreground" as const,
+    };
+
+    test("its journal `result` line means finished, even while the parent works", () => {
+      expect(
+        subagentRunState({
+          ...workflowAgent,
+          turnEnded: false,
+          conversationStatus: "working",
+          workflowReported: true,
+          workflowRunEnded: false,
+        }),
+      ).toEqual({ kind: "finished" });
+    });
+
+    test("its run ended and it never reported: ended without reporting, though the parent lives on", () => {
+      expect(
+        subagentRunState({
+          ...workflowAgent,
+          turnEnded: false,
+          conversationStatus: "working",
+          workflowReported: false,
+          workflowRunEnded: true,
+        }),
+      ).toEqual({ kind: "ended-without-reporting" });
+    });
+
+    test("its own turn end still wins over its run having ended", () => {
+      expect(
+        subagentRunState({
+          ...workflowAgent,
+          turnEnded: true,
+          conversationStatus: "working",
+          workflowReported: false,
+          workflowRunEnded: true,
+        }),
+      ).toEqual({ kind: "finished" });
+    });
+
+    test("a live run and no report yet: the parent's liveness decides", () => {
+      expect(
+        subagentRunState({
+          ...workflowAgent,
+          turnEnded: false,
+          conversationStatus: "working",
+          workflowReported: false,
+          workflowRunEnded: false,
+        }),
+      ).toEqual({ kind: "running" });
+    });
+  });
 });

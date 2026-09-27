@@ -1,18 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
+import type { WorkflowRunEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import {
   DONE_LINGER_MS,
   agentRow,
   nextLingerExpiry,
   summarizeAgents,
   visibleAgentRows,
+  workflowRow,
 } from "./agent-rows";
 
 const T0 = Date.parse("2026-09-22T10:00:00.000Z");
 const at = (s: number) => new Date(T0 + s * 1000);
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
+
+/** The band's rows from sub-agents alone, or with the runs some sit under. */
+const visible = (
+  entries: SubagentEntry[],
+  now: number,
+  workflowRuns: WorkflowRunEntry[] = [],
+) => visibleAgentRows({ entries, workflowRuns }, now);
 
 function call(input: Record<string, unknown>): ToolCallEvent {
   return {
@@ -206,7 +215,7 @@ describe("visibleAgentRows", () => {
   const now = at(60).getTime();
 
   test("shows what is running, plus what stopped within the linger", () => {
-    const rows = visibleAgentRows(
+    const rows = visible(
       [running, background, justFinished, longFinished, justEnded],
       now,
     );
@@ -216,18 +225,18 @@ describe("visibleAgentRows", () => {
       "finished",
       "ended",
     ]);
-    expect(rows[1]!.background).toBe(true);
+    expect(rows[1]).toMatchObject({ kind: "agent", background: true });
   });
 
   test("a sub-agent that ended without reporting leaves like any other", () => {
     const later = at(59).getTime() + DONE_LINGER_MS;
-    expect(visibleAgentRows([justEnded], later).map((r) => r.key)).toEqual([]);
+    expect(visible([justEnded], later).map((r) => r.key)).toEqual([]);
   });
 
   test("the next expiry is the first row due to leave", () => {
-    const rows = visibleAgentRows([running, justFinished, justEnded], now);
+    const rows = visible([running, justFinished, justEnded], now);
     expect(nextLingerExpiry(rows, now)).toBe(at(58).getTime() + DONE_LINGER_MS);
-    expect(nextLingerExpiry(visibleAgentRows([running], now), now)).toBeNull();
+    expect(nextLingerExpiry(visible([running], now), now)).toBeNull();
   });
 
   const child = (id: string, parent: string, over?: Partial<SubagentEntry>) =>
@@ -252,7 +261,7 @@ describe("visibleAgentRows", () => {
     // `old` finished long ago; its child, and that child's own child, are
     // still going. Dropping `old` would move `mid` to the top level — a claim
     // that the conversation launched it.
-    const rows = visibleAgentRows(
+    const rows = visible(
       [longFinished, child("mid", "old"), child("leaf", "mid")],
       now,
     );
@@ -268,17 +277,17 @@ describe("visibleAgentRows", () => {
       state: { kind: "finished" },
       endedAt: at(10),
     });
-    expect(visibleAgentRows([longFinished, gone], now)).toEqual([]);
+    expect(visible([longFinished, gone], now)).toEqual([]);
   });
 
   test("a parent kept only for its children arms no timer of its own", () => {
     // Its linger ran out before `now`; waiting on it would fire at once, forever.
-    const rows = visibleAgentRows([longFinished, child("mid", "old")], now);
+    const rows = visible([longFinished, child("mid", "old")], now);
     expect(nextLingerExpiry(rows, now)).toBeNull();
   });
 
   test("a parent that is not on disk leaves its child at the top level", () => {
-    const rows = visibleAgentRows([child("orphan", "missing")], now);
+    const rows = visible([child("orphan", "missing")], now);
     expect(rows.map((r) => r.key)).toEqual(["orphan"]);
   });
 });
@@ -286,7 +295,7 @@ describe("visibleAgentRows", () => {
 describe("summarizeAgents", () => {
   test("counts only what is still working, and clocks the longest of those", () => {
     const now = at(300).getTime();
-    const rows = visibleAgentRows(
+    const rows = visible(
       [
         entry({ id: "a", startedAt: at(60) }),
         entry({ id: "b", startedAt: at(120) }),
@@ -296,16 +305,156 @@ describe("summarizeAgents", () => {
     );
     expect(summarizeAgents(rows)).toEqual({
       running: 2,
+      runsGoing: 0,
       longestSince: at(60),
     });
   });
 
   test("nothing running is nothing working, however many rows linger", () => {
     const now = at(300).getTime();
-    const rows = visibleAgentRows(
+    const rows = visible(
       [entry({ id: "done", state: { kind: "finished" }, endedAt: at(299) })],
       now,
     );
-    expect(summarizeAgents(rows)).toEqual({ running: 0, longestSince: null });
+    expect(summarizeAgents(rows)).toEqual({
+      running: 0,
+      runsGoing: 0,
+      longestSince: null,
+    });
+  });
+});
+
+describe("workflow runs", () => {
+  const now = at(60).getTime();
+
+  const workflowCall = (script: unknown): ToolCallEvent => ({
+    kind: "tool-call",
+    at: at(1).toISOString(),
+    toolUseId: "toolu_wf",
+    name: "Workflow",
+    input: { script },
+  });
+
+  const run = (over: Partial<WorkflowRunEntry> = {}): WorkflowRunEntry => ({
+    runId: "wf_abc",
+    call: workflowCall(
+      "export const meta = { name: 'Audit plugins', phases: [] };\n",
+    ),
+    state: { kind: "running" },
+    startedAt: at(1),
+    endedAt: null,
+    ...over,
+  });
+
+  const workflowAgent = (
+    id: string,
+    over: Partial<SubagentEntry> & { reported?: boolean } = {},
+  ) => {
+    const { reported = false, ...rest } = over;
+    return entry({
+      id,
+      row: {
+        kind: "described",
+        agentId: id,
+        agentType: "workflow-subagent",
+        description: `Review ${id}`,
+        workflowPhase: "Review",
+        requestShape: "foreground",
+        startedAt: at(2).toISOString(),
+        lastActivityAt: at(30).toISOString(),
+        turnEnded: false,
+        lastStep: null,
+        workflow: { runId: "wf_abc", reported },
+      },
+      startedAt: at(2),
+      ...rest,
+    });
+  };
+
+  test("a run is a top-level row named by its script, and its agents sit under it", () => {
+    const rows = visible([workflowAgent("w1"), workflowAgent("w2")], now, [
+      run(),
+    ]);
+    expect(
+      rows.map((r) => [r.kind, r.key, r.parentKey, r.type, r.description]),
+    ).toEqual([
+      ["workflow", "workflow:wf_abc", null, "workflow", "Audit plugins"],
+      ["agent", "w1", "workflow:wf_abc", "Review", "Review w1"],
+      ["agent", "w2", "workflow:wf_abc", "Review", "Review w2"],
+    ]);
+  });
+
+  test("a run whose script names nothing goes by its run id", () => {
+    expect(workflowRow(run({ call: undefined })).description).toBe("wf_abc");
+    expect(
+      workflowRow(run({ call: workflowCall(undefined) })).description,
+    ).toBe("wf_abc");
+    expect(
+      workflowRow(run({ call: workflowCall("await agent('x');\n") }))
+        .description,
+    ).toBe("wf_abc");
+  });
+
+  test("a run interleaves with the conversation's own sub-agents by start", () => {
+    const early = entry({ id: "early", startedAt: at(0) });
+    const late = entry({ id: "late", startedAt: at(5) });
+    const rows = visible([early, workflowAgent("w1"), late], now, [run()]);
+    expect(rows.map((r) => r.key)).toEqual([
+      "early",
+      "workflow:wf_abc",
+      "w1",
+      "late",
+    ]);
+  });
+
+  test("an ended run stays while an agent under it lingers, and arms only that agent's timer", () => {
+    const rows = visible(
+      [
+        workflowAgent("w1", {
+          state: { kind: "finished" },
+          endedAt: at(58),
+          reported: true,
+        }),
+      ],
+      now,
+      [run({ state: { kind: "finished" }, endedAt: at(10) })],
+    );
+    expect(rows.map((r) => r.key)).toEqual(["workflow:wf_abc", "w1"]);
+    expect(nextLingerExpiry(rows, now)).toBe(at(58).getTime() + DONE_LINGER_MS);
+  });
+
+  test("an ended run leaves with its last agent", () => {
+    const rows = visible(
+      [workflowAgent("w1", { state: { kind: "finished" }, endedAt: at(10) })],
+      now,
+      [run({ state: { kind: "finished" }, endedAt: at(10) })],
+    );
+    expect(rows).toEqual([]);
+  });
+
+  test("a running run between phases shows on its own", () => {
+    const rows = visible(
+      [workflowAgent("w1", { state: { kind: "finished" }, endedAt: at(10) })],
+      now,
+      [run()],
+    );
+    expect(rows.map((r) => r.key)).toEqual(["workflow:wf_abc"]);
+  });
+
+  test("the summary counts agents, never the run", () => {
+    const rows = visible([workflowAgent("w1"), workflowAgent("w2")], now, [
+      run({ startedAt: at(1) }),
+    ]);
+    expect(summarizeAgents(rows)).toEqual({
+      running: 2,
+      runsGoing: 1,
+      longestSince: at(2),
+    });
+    // A run alone, between phases, is not "1 agent working" — but it is going.
+    expect(summarizeAgents(visible([], now, [run()]))).toEqual({
+      running: 0,
+      runsGoing: 1,
+      longestSince: null,
+    });
   });
 });

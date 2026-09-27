@@ -98,8 +98,13 @@ function ElapsedCell({ row }: { row: RunningAgentRow }) {
   );
 }
 
-/** What a row says it last did — `formatLastStep`, so a card phrases it the same. */
-function lastStepText(row: RunningAgentRow): string {
+/**
+ * What a row says it last did — `formatLastStep`, so a card phrases it the
+ * same. `null` for a workflow run's row: a run writes no transcript of its
+ * own, and what it is doing is what the agents under it say.
+ */
+function lastStepText(row: RunningAgentRow): string | null {
+  if (row.kind === "workflow") return null;
   return row.lastStep === null
     ? "Nothing written yet"
     : formatLastStep(row.lastStep);
@@ -115,12 +120,14 @@ function lastStepText(row: RunningAgentRow): string {
  * Plain inline spans only: a box of its own would take the truncation with it.
  */
 function TaskLabel({ row }: { row: RunningAgentRow }) {
+  const step = lastStepText(row);
+  if (step === null) return <>{row.description}</>;
   return (
     <>
       {row.description}
       <span className="text-muted-foreground">
         {" · "}
-        {lastStepText(row)}
+        {step}
       </span>
     </>
   );
@@ -128,9 +135,10 @@ function TaskLabel({ row }: { row: RunningAgentRow }) {
 
 /**
  * The row schema. One line per sub-agent, nested under the one that spawned
- * it: what it was asked to do and what it last did are the label, what it is
- * (type; model and where it runs a Properties toggle away) sits after it, and
- * its clock at the end.
+ * it (or the workflow run that did): what it was asked to do and what it last
+ * did are the label, what it is (type; model and where it runs a Properties
+ * toggle away) sits after it, and its clock at the end. A run's row fills the
+ * same columns with what a run has — its name, "workflow", its clock.
  */
 const FIELDS: FieldDef<RunningAgentRow>[] = [
   {
@@ -142,12 +150,18 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     cell: (row) => <TaskLabel row={row} />,
   },
   { id: "type", label: "Agent", type: "text", value: (row) => row.type },
-  { id: "model", label: "Model", type: "text", value: (row) => row.model },
+  {
+    id: "model",
+    label: "Model",
+    type: "text",
+    value: (row) => (row.kind === "agent" ? row.model : null),
+  },
   {
     id: "background",
     label: "Where it runs",
     type: "text",
-    value: (row) => (row.background ? "background" : null),
+    value: (row) =>
+      row.kind === "agent" && row.background ? "background" : null,
   },
   {
     id: "lastStep",
@@ -178,7 +192,7 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
 function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
   const { summary, collapsible } = useBandChrome();
   const { open, triggerProps, contentId } = collapsible;
-  const working = summary.running > 0;
+  const working = summary.running > 0 || summary.runsGoing > 0;
   return (
     <Text as="div" variant="caption">
       <Clip className="rounded-md border border-border bg-muted/30">
@@ -200,7 +214,17 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
               />
             )}
             <Fill as="span">
-              {working ? (
+              {working && summary.running === 0 ? (
+                // A run between phases: nothing to count, but not finished.
+                <>
+                  {summary.runsGoing === 1
+                    ? "Workflow running"
+                    : `${summary.runsGoing} workflows running`}
+                  <span className="text-muted-foreground">
+                    {" · between phases"}
+                  </span>
+                </>
+              ) : working ? (
                 <>
                   <span className="font-medium">{summary.running}</span>
                   {summary.running === 1 ? " agent working" : " agents working"}
@@ -307,16 +331,21 @@ export function RunningAgentsBand({
         searchPlaceholder="Search agents"
         toolbar={BAND_TOOLBAR}
         searchAccessor={(row) => `${row.description} ${row.type}`}
-        // A row opens the same report pane its transcript card does, by the
-        // sub-agent's own id — the one key every sub-agent has, including a
-        // teammate another sub-agent spawned, whose launching call is nowhere
-        // in this conversation's transcript.
-        rowActivation={(row) => () =>
-          openPane(
-            agentReportPane,
-            { by: "agent", key: row.key },
-            { mode: "push" },
-          )
+        // An agent row opens the same report pane its transcript card does,
+        // by the sub-agent's own id — the one key every sub-agent has,
+        // including a teammate another sub-agent spawned, whose launching call
+        // is nowhere in this conversation's transcript. A workflow run's row
+        // opens nothing: there is no pane for a whole run (its transcript card
+        // already draws the DAG), so folding is its only interaction.
+        rowActivation={(row) =>
+          row.kind === "agent"
+            ? () =>
+                openPane(
+                  agentReportPane,
+                  { by: "agent", key: row.key },
+                  { mode: "push" },
+                )
+            : undefined
         }
         emptyState={
           <Text tone="muted">No agent matches what you searched for.</Text>

@@ -1,14 +1,16 @@
 import type { LastStep, SubagentActivityRow } from "../../core";
 import {
   evictMetaCache,
-  listSubagentEntries,
+  listSubagents,
   readMeta,
   statIfPresent,
   subagentDirs,
   signaturePathsOf,
+  subagentWatchDirs,
   type SubagentEntry,
 } from "./discovery";
 import { readTail } from "./tail-read";
+import { evictWorkflowJournals, readWorkflowReports } from "./workflow-journal";
 
 /** What we remember about one sub-agent's transcript between scans. */
 interface TranscriptState {
@@ -32,15 +34,23 @@ const scans = new Map<string, Map<string, TranscriptState>>();
 export function evictActivityScan(scope: string): void {
   scans.delete(scope);
   evictMetaCache(scope);
+  evictWorkflowJournals(scope);
 }
 
-/** The files this conversation's activity signature is taken over, and the dirs to watch. */
+/**
+ * The files this conversation's activity signature is taken over, and the dirs
+ * to watch — both from ONE walk, so the watched set and the signed set cannot
+ * describe different listings.
+ */
 export async function resolveActivityTargets(
   conversationId: string,
 ): Promise<{ paths: string[]; dirs: string[] }> {
-  const dirs = await subagentDirs(conversationId);
-  const entries = await listSubagentEntries(dirs);
-  return { paths: signaturePathsOf(entries), dirs };
+  const roots = await subagentDirs(conversationId);
+  const listing = await listSubagents(roots);
+  return {
+    paths: signaturePathsOf(listing),
+    dirs: subagentWatchDirs(roots, listing.runs),
+  };
 }
 
 /**
@@ -60,7 +70,8 @@ export async function scanActivityIn(
   scope: string,
   dirs: readonly string[],
 ): Promise<SubagentActivityRow[]> {
-  const entries = await listSubagentEntries(dirs);
+  const { entries, runs } = await listSubagents(dirs);
+  const reports = await readWorkflowReports(scope, runs);
 
   let state = scans.get(scope);
   if (!state) {
@@ -84,6 +95,15 @@ export async function scanActivityIn(
       lastStep: transcript?.lastStep ?? null,
       // No transcript yet: no turn has been taken, let alone ended.
       turnEnded: transcript?.turnEnded ?? false,
+      ...(entry.workflowRunId === undefined
+        ? {}
+        : {
+            workflow: {
+              runId: entry.workflowRunId,
+              reported:
+                reports.get(entry.workflowRunId)?.has(entry.agentId) ?? false,
+            },
+          }),
     };
 
     if (read.kind === "unreadable") {
@@ -102,6 +122,7 @@ export async function scanActivityIn(
       requestShape: meta.requestShape,
       spawnDepth: meta.spawnDepth,
       parentAgentId: meta.parentAgentId,
+      workflowPhase: meta.workflowPhase,
     });
   }
 

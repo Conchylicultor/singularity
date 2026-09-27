@@ -9,10 +9,14 @@ import {
   describedSubagent,
   subagentActivityResource,
   subagentRunState,
+  workflowCallsIn,
+  workflowRunsOf,
   type DescribedSubagent,
   type LastStep,
   type SubagentActivityRow,
   type SubagentRunState,
+  type SubagentRunStateInput,
+  type WorkflowRunEntry,
 } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
@@ -100,6 +104,13 @@ export type ConversationSubagents =
         toolUseId: string;
         agentToolEvent: ToolCallEvent | undefined;
       }) => SubagentStatus;
+      /**
+       * Every `Workflow` run one of the entries belongs to, in start order —
+       * the parent a list draws a run's agents under. Derived here, once, from
+       * the same reads, so the state a run row shows and the
+       * `workflowRunEnded` each of its agents was given cannot disagree.
+       */
+      workflowRuns: WorkflowRunEntry[];
     };
 
 /**
@@ -138,6 +149,28 @@ export function useConversationSubagents(
   const agentCalls = agentCallsIn(events.data);
   const conversationStatus = conversation.status;
 
+  const workflowRuns = workflowRunsOf({
+    rows,
+    workflowCalls: workflowCallsIn(events.data),
+    taskNotifications,
+    conversationStatus,
+  });
+  const runEnded = new Map(
+    workflowRuns.map((run) => [run.runId, run.state.kind !== "running"]),
+  );
+  // A workflow agent's own completion signals — its run's journal line, and
+  // its run having ended — or nothing at all for every other sub-agent, which
+  // leaves `subagentRunState` exactly as it was for them.
+  const workflowInputs = (
+    row: SubagentActivityRow | undefined,
+  ): Pick<SubagentRunStateInput, "workflowReported" | "workflowRunEnded"> =>
+    row?.workflow === undefined
+      ? {}
+      : {
+          workflowReported: row.workflow.reported,
+          workflowRunEnded: runEnded.get(row.workflow.runId),
+        };
+
   const entries = rows.map((row): SubagentEntry => {
     const agentToolEvent = agentCallForSubagent(row, agentCalls);
     const state = subagentRunState({
@@ -153,6 +186,7 @@ export function useConversationSubagents(
       requestShape: row.kind === "described" ? row.requestShape : undefined,
       turnEnded: row.turnEnded,
       conversationStatus,
+      ...workflowInputs(row),
     });
     return {
       row,
@@ -169,6 +203,7 @@ export function useConversationSubagents(
   return {
     kind: "known",
     entries,
+    workflowRuns,
     statusOf: ({ toolUseId, agentToolEvent }) => {
       // The one sanctioned card → row join, which needs BOTH of a sub-agent's
       // keys: one spawned with a name is recorded as an in-process teammate and
@@ -191,6 +226,7 @@ export function useConversationSubagents(
         requestShape: row?.requestShape,
         turnEnded: row?.turnEnded,
         conversationStatus,
+        ...workflowInputs(row),
       });
       const startedAt = row?.startedAt ?? agentToolEvent?.at ?? null;
       return {

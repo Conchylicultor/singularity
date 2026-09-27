@@ -29,12 +29,16 @@ void mock.module(
 
 const {
   listSubagentEntries,
+  listSubagents,
+  signaturePathsOf,
+  subagentWatchDirs,
   findSubagentIn,
   subagentDirs,
   subagentDirOf,
   evictMetaCache,
 } = await import("./discovery");
-const { scanActivity, evictActivityScan } = await import("./activity-scan");
+const { scanActivity, evictActivityScan, resolveActivityTargets } =
+  await import("./activity-scan");
 const { readSubagentTranscript, resolveTranscriptTargets } =
   await import("./transcript-read");
 
@@ -289,7 +293,9 @@ describe("one sub-agent's transcript", () => {
       await resolveTranscriptTargets(CONV, { by: "call", key: "toolu_1" }),
     ).toEqual({
       paths: [],
-      dirs: [subagents],
+      // The `workflows/` level too: a workflow agent's file is born in a run
+      // folder below it, and the watcher routes by exact parent directory.
+      dirs: [subagents, join(subagents, "workflows")],
     });
 
     keptPaths = [
@@ -460,5 +466,155 @@ describe("a sub-agent opened by its own id", () => {
     expect(
       await readSubagentTranscript(CONV, { by: "agent", key: "ghost" }),
     ).toEqual({ kind: "unlinked" });
+  });
+});
+
+describe("agents a Workflow run spawned", () => {
+  /** A real workflow agent's meta: foreground, a phase, and no tool-use id. */
+  const workflowMeta = (label: string) => ({
+    agentType: "workflow-subagent",
+    description: label,
+    workflowPhase: "Census",
+    spawnDepth: 1,
+    requestShape: "foreground",
+    requestNonInteractive: false,
+  });
+
+  /** Lay out `<session>/subagents/workflows/<runId>/` with its agents and journal. */
+  async function writeRun(
+    projects: string,
+    sessionId: string,
+    runId: string,
+    agentIds: string[],
+    journal: string[],
+  ): Promise<string> {
+    const run = join(projects, sessionId, "subagents", "workflows", runId);
+    await mkdir(run, { recursive: true });
+    for (const agentId of agentIds) {
+      await writeFile(
+        join(run, `agent-${agentId}.meta.json`),
+        JSON.stringify(workflowMeta(`census:${agentId}`)),
+      );
+      await writeFile(
+        join(run, `agent-${agentId}.jsonl`),
+        `${assistantLine("working")}\n`,
+      );
+    }
+    await writeFile(
+      join(run, "journal.jsonl"),
+      journal.map((l) => `${l}\n`).join(""),
+    );
+    return run;
+  }
+
+  test("are found below the root, tagged with their run, beside ordinary sub-agents", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [
+      await writeSession(projects, "sess-a", [
+        {
+          agentId: "plain",
+          meta: meta("toolu_1"),
+          lines: [assistantLine("hi")],
+        },
+      ]),
+    ];
+    const run = await writeRun(projects, "sess-a", "wf_a", ["w1", "w2"], []);
+    // Not a run folder: ignored rather than walked.
+    await mkdir(join(projects, "sess-a", "subagents", "workflows", "scripts"));
+
+    const listing = await listSubagents(await subagentDirs(CONV));
+    expect(listing.entries).toEqual([
+      expect.objectContaining({ agentId: "plain" }),
+      {
+        agentId: "w1",
+        transcriptPath: join(run, "agent-w1.jsonl"),
+        metaPath: join(run, "agent-w1.meta.json"),
+        workflowRunId: "wf_a",
+      },
+      expect.objectContaining({ agentId: "w2", workflowRunId: "wf_a" }),
+    ]);
+    expect(listing.entries[0]?.workflowRunId).toBeUndefined();
+    expect(listing.runs).toEqual([
+      { runId: "wf_a", dir: run, journalPath: join(run, "journal.jsonl") },
+    ]);
+    expect(
+      (await listSubagentEntries(await subagentDirs(CONV))).map(
+        (e) => e.agentId,
+      ),
+    ).toEqual(["plain", "w1", "w2"]);
+  });
+
+  test("every level of the layout is watched, and the journal is signed", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [await writeSession(projects, "sess-a", [])];
+    const run = await writeRun(projects, "sess-a", "wf_a", ["w1"], []);
+    const root = join(projects, "sess-a", "subagents");
+
+    const listing = await listSubagents([root]);
+    expect(subagentWatchDirs([root], listing.runs)).toEqual([
+      root,
+      join(root, "workflows"),
+      run,
+    ]);
+    expect(signaturePathsOf(listing)).toEqual([
+      join(run, "agent-w1.meta.json"),
+      join(run, "agent-w1.jsonl"),
+      join(run, "journal.jsonl"),
+    ]);
+    expect(await resolveActivityTargets(CONV)).toEqual({
+      paths: signaturePathsOf(listing),
+      dirs: [root, join(root, "workflows"), run],
+    });
+  });
+
+  test("a row carries its run, its phase, and whether the journal holds its result", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [await writeSession(projects, "sess-a", [])];
+    await writeRun(
+      projects,
+      "sess-a",
+      "wf_a",
+      ["w1", "w2"],
+      [
+        JSON.stringify({ type: "launched" }),
+        JSON.stringify({ type: "started", agentId: "w1", phase: "Census" }),
+        JSON.stringify({ type: "result", agentId: "w1", result: { ok: true } }),
+      ],
+    );
+
+    const rows = await scanActivity(CONV);
+    expect(rows.map((r) => [r.agentId, r.workflow])).toEqual([
+      ["w1", { runId: "wf_a", reported: true }],
+      ["w2", { runId: "wf_a", reported: false }],
+    ]);
+    expect(rows[0]).toMatchObject({
+      kind: "described",
+      workflowPhase: "Census",
+      toolUseId: undefined,
+    });
+  });
+
+  test("a workflow agent opens by its own id, like any sub-agent", async () => {
+    const projects = await newProjectsDir();
+    keptPaths = [await writeSession(projects, "sess-a", [])];
+    await writeRun(projects, "sess-a", "wf_a", ["w1"], []);
+    const result = await readSubagentTranscript(CONV, {
+      by: "agent",
+      key: "w1",
+    });
+    expect(result.kind).toBe("linked");
+  });
+
+  test("a run under a session the anchor DROPPED is never walked", async () => {
+    const projects = await newProjectsDir();
+    const mine = await writeSession(projects, "sess-mine", []);
+    await writeSession(projects, "sess-foreign", []);
+    await writeRun(projects, "sess-foreign", "wf_theirs", ["theirs"], []);
+    keptPaths = [mine];
+
+    expect(await listSubagents(await subagentDirs(CONV))).toEqual({
+      entries: [],
+      runs: [],
+    });
   });
 });

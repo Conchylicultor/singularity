@@ -30,3 +30,9 @@ export type { SubagentRunState, SubagentRunStateInput } from "./run-state";
 export { subagentRunState } from "./run-state";
 export type { SubagentReport } from "./report";
 export { subagentReport } from "./report";
+export type { WorkflowRunEntry, WorkflowRunsInput } from "./workflow-join";
+export {
+  workflowCallsIn,
+  workflowRunIdOf,
+  workflowRunsOf,
+} from "./workflow-join";

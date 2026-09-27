@@ -1,6 +1,12 @@
 // The Workflow tool's `script` input always begins with a pure-literal
 // `export const meta = {...}` block (enforced by the tool). We extract its
 // name/description/phases for display without evaluating the script.
+//
+// Pure and import-free, and in `core/` rather than `web/` because it is read in
+// two places: this plugin's card, and the subagents plugin, which joins a
+// workflow run's agents back to the `Workflow` call that launched them through
+// the result's `Run ID:`. The subagents plugin imports this barrel; nothing here
+// imports it back, so the edge closes no cycle.
 
 export interface WorkflowPhase {
   title?: string;

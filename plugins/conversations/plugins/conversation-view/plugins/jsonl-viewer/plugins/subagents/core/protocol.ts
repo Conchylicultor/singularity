@@ -88,6 +88,16 @@ const SubagentBaseSchema = z.object({
    * "still working".
    */
   turnEnded: z.boolean(),
+  /**
+   * Set when a `Workflow` run spawned this agent (found under
+   * `subagents/workflows/wf_<runId>/`). On BOTH arms: an agent whose meta is
+   * unreadable still sits in its run's folder, so it still belongs to the run.
+   *
+   * `reported` = the run's journal holds this agent's `result` line — the
+   * workflow equivalent of a foreground `tool_result`, and the only completion
+   * signal such an agent has, since it joins no `Agent` call.
+   */
+  workflow: z.object({ runId: z.string(), reported: z.boolean() }).optional(),
 });
 
 /**
@@ -130,6 +140,8 @@ export const DescribedSubagentSchema = SubagentBaseSchema.extend({
   requestShape: SubagentRequestShapeSchema.optional(),
   spawnDepth: z.number().int().optional(),
   parentAgentId: z.string().optional(),
+  /** A workflow agent's phase title, from its meta. Absent for every other sub-agent. */
+  workflowPhase: z.string().optional(),
 });
 export type DescribedSubagent = z.infer<typeof DescribedSubagentSchema>;
 

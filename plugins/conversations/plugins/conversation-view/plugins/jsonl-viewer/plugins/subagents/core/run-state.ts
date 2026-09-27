@@ -38,6 +38,19 @@ export interface SubagentRunStateInput {
   turnEnded: boolean | undefined;
   /** The parent conversation's status. */
   conversationStatus: ConversationStatus;
+  /**
+   * A `Workflow` run spawned this agent, and the run's journal holds its
+   * `result` line (the row's `workflow.reported`). The journal is to a workflow
+   * agent what the parent's `tool_result` is to a foreground `Agent` call: the
+   * one line that means DONE. Absent = not a workflow agent (or no row yet).
+   */
+  workflowReported?: boolean;
+  /**
+   * The workflow run this agent belongs to has ENDED (its derived state is no
+   * longer `running` — see `workflowRunsOf`). An agent of an ended run that
+   * never reported will not report now. Absent = not a workflow agent.
+   */
+  workflowRunEnded?: boolean;
 }
 
 /**
@@ -65,6 +78,15 @@ export interface SubagentRunStateInput {
  * teammate woken by a later message appends a user line, which the next read
  * sees as an open turn again.
  *
+ * A workflow agent (spawned by a `Workflow` run, not an `Agent` call) joins no
+ * call and gets no notification of its own, so it has its own pair of signals,
+ * one at each end of this order: its run's journal `result` line decides
+ * FIRST — it is as authoritative as a foreground `tool_result` — and its run
+ * having ended decides just before liveness, because a run that is over while
+ * this agent never reported means the agent was cut off, whatever the parent
+ * is doing now. It sits AFTER the agent's own turn end: an agent that closed its
+ * turn finished, even if the journal line recording it never landed.
+ *
  * Last, the parent's own liveness.
  *
  * Deliberately NO staleness timeout as a fourth answer: a sub-agent that has
@@ -77,6 +99,7 @@ export function subagentRunState(
 ): SubagentRunState {
   const { toolUseId, agentToolEvent, taskNotifications, requestShape } = input;
 
+  if (input.workflowReported === true) return { kind: "finished" };
   if (
     toolResultIsOutcome(requestShape) &&
     agentToolEvent?.result !== undefined
@@ -90,6 +113,9 @@ export function subagentRunState(
     return { kind: "finished" };
   }
   if (input.turnEnded === true) return { kind: "finished" };
+  if (input.workflowRunEnded === true) {
+    return { kind: "ended-without-reporting" };
+  }
   // No completion recorded. The parent is the only thing that can still be
   // hosting it, so its liveness decides between "still going" and "stopped
   // without ever saying so".

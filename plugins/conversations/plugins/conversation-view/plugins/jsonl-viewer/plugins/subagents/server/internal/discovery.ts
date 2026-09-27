@@ -8,6 +8,10 @@ const SUBAGENT_DIR = "subagents";
 const FILE_PREFIX = "agent-";
 const TRANSCRIPT_SUFFIX = ".jsonl";
 const META_SUFFIX = ".meta.json";
+/** Where Claude Code puts the agents a `Workflow` run spawns, one folder per run. */
+const WORKFLOWS_DIR = "workflows";
+const RUN_PREFIX = "wf_";
+const JOURNAL_FILE = "journal.jsonl";
 
 /**
  * What the harness records about one sub-agent, in `agent-<id>.meta.json`.
@@ -41,6 +45,8 @@ const SubagentMetaSchema = z.object({
   spawnDepth: z.number().int().optional(),
   /** Set on a nested sub-agent: the sub-agent that spawned this one. */
   parentAgentId: z.string().optional(),
+  /** Set on an agent a `Workflow` run spawned: the script's phase title. */
+  workflowPhase: z.string().optional(),
 });
 export type SubagentMeta = z.infer<typeof SubagentMetaSchema>;
 
@@ -49,6 +55,32 @@ export interface SubagentEntry {
   agentId: string;
   transcriptPath: string;
   metaPath: string;
+  /**
+   * The `wf_…` folder this agent was found in, when a `Workflow` run spawned it.
+   * Absent for an ordinary sub-agent, which sits directly in the root.
+   */
+  workflowRunId?: string;
+}
+
+/**
+ * One `Workflow` run's folder, found BELOW a sub-agent root — never resolved
+ * from anywhere else, so it inherits the root's ownership for free.
+ *
+ * The journal is the run's own append-only log (`launched` / `started` /
+ * `result` lines); it may not exist yet, and a reader must treat that as "no
+ * agent has reported", not as a failure.
+ */
+export interface WorkflowRunDir {
+  /** The folder name, `wf_<runId>` — the same string the parent's `Workflow` result prints as `Run ID:`. */
+  runId: string;
+  dir: string;
+  journalPath: string;
+}
+
+/** Everything one walk of the sub-agent roots found: the agents, and the workflow runs they sit in. */
+export interface SubagentListing {
+  entries: SubagentEntry[];
+  runs: WorkflowRunDir[];
 }
 
 /** A session transcript's sub-agent directory: its path, minus `.jsonl`, plus `/subagents`. */
@@ -99,50 +131,150 @@ function agentIdOf(fileName: string): string | null {
 }
 
 /**
- * Every sub-agent visible in `dirs`, in a stable order.
+ * `readdir`, with "not there yet" as an empty listing and every other failure
+ * thrown. Each directory walked here appears the first time something is written
+ * into it, so its absence is the ordinary state before that.
+ */
+async function readdirIfPresent(dir: string): Promise<string[]> {
+  try {
+    return await readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return [];
+  }
+}
+
+/** Add every `agent-<id>.*` in `names` (one directory's listing) to `byId`, first-wins. */
+function collectAgents(
+  byId: Map<string, SubagentEntry>,
+  dir: string,
+  names: readonly string[],
+  workflowRunId: string | undefined,
+): void {
+  for (const name of names) {
+    const agentId = agentIdOf(name);
+    if (agentId === null || byId.has(agentId)) continue;
+    byId.set(agentId, {
+      agentId,
+      transcriptPath: `${dir}/${FILE_PREFIX}${agentId}${TRANSCRIPT_SUFFIX}`,
+      metaPath: `${dir}/${FILE_PREFIX}${agentId}${META_SUFFIX}`,
+      ...(workflowRunId === undefined ? {} : { workflowRunId }),
+    });
+  }
+}
+
+/** A root's `workflows/` directory. */
+function workflowsDirOf(root: string): string {
+  return `${root}/${WORKFLOWS_DIR}`;
+}
+
+/**
+ * Every `Workflow` run folder under the given roots, in a stable order.
+ *
+ * Walked BELOW each root and nowhere else: the roots are `subagentDirs`'
+ * anchored output, so a run folder is reachable only if its session already
+ * passed the ownership guard. A `wf_*` name that is not a directory is skipped
+ * by its own empty listing, not by a stat per name.
+ */
+export async function listWorkflowRuns(
+  roots: readonly string[],
+): Promise<WorkflowRunDir[]> {
+  const runs: WorkflowRunDir[] = [];
+  for (const root of roots) {
+    const workflows = workflowsDirOf(root);
+    for (const name of await readdirIfPresent(workflows)) {
+      if (!name.startsWith(RUN_PREFIX)) continue;
+      const dir = `${workflows}/${name}`;
+      runs.push({ runId: name, dir, journalPath: `${dir}/${JOURNAL_FILE}` });
+    }
+  }
+  return runs.sort(
+    (a, b) => a.runId.localeCompare(b.runId) || a.dir.localeCompare(b.dir),
+  );
+}
+
+/**
+ * Every sub-agent visible under `roots`, in a stable order, and the workflow
+ * runs found on the way.
+ *
+ * Two layouts, both below the root:
+ *
+ * - `<root>/agent-<id>.*` — an ordinary sub-agent.
+ * - `<root>/workflows/wf_<runId>/agent-<id>.*` — an agent a `Workflow` run
+ *   spawned, tagged with its run. Before this second pass these were never read,
+ *   and a conversation running thirteen workflow agents showed none.
  *
  * A sub-agent is discovered from EITHER of its files, because the two do not
  * land together: both paths are derived from the id, and whichever is missing
- * simply fails to stat later.
+ * simply fails to stat later. Agent ids are globally unique; should one ever
+ * turn up twice, the first found wins, as it always has.
  */
-export async function listSubagentEntries(
-  dirs: readonly string[],
-): Promise<SubagentEntry[]> {
+export async function listSubagents(
+  roots: readonly string[],
+): Promise<SubagentListing> {
   const byId = new Map<string, SubagentEntry>();
-  for (const dir of dirs) {
-    let names: string[];
-    try {
-      names = await readdir(dir);
-    } catch (err) {
-      // The directory appears the first time a sub-agent is spawned; until then
-      // its absence is the ordinary state, not a failure. Anything else throws.
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue;
-    }
-    for (const name of names) {
-      const agentId = agentIdOf(name);
-      if (agentId === null || byId.has(agentId)) continue;
-      byId.set(agentId, {
-        agentId,
-        transcriptPath: `${dir}/${FILE_PREFIX}${agentId}${TRANSCRIPT_SUFFIX}`,
-        metaPath: `${dir}/${FILE_PREFIX}${agentId}${META_SUFFIX}`,
-      });
-    }
+  for (const root of roots) {
+    collectAgents(byId, root, await readdirIfPresent(root), undefined);
   }
-  return [...byId.values()].sort((a, b) => a.agentId.localeCompare(b.agentId));
+  const runs = await listWorkflowRuns(roots);
+  for (const run of runs) {
+    collectAgents(byId, run.dir, await readdirIfPresent(run.dir), run.runId);
+  }
+  return {
+    entries: [...byId.values()].sort((a, b) =>
+      a.agentId.localeCompare(b.agentId),
+    ),
+    runs,
+  };
+}
+
+/** `listSubagents`' agents alone, for a caller that needs no run folders. */
+export async function listSubagentEntries(
+  roots: readonly string[],
+): Promise<SubagentEntry[]> {
+  return (await listSubagents(roots)).entries;
+}
+
+/**
+ * The directories a room must watch to see every sub-agent under `roots`: the
+ * roots, each root's `workflows/`, and every run folder.
+ *
+ * The watcher routes an event by its path's EXACT parent directory, so each
+ * level of the workflow layout has to be named for its own creation to wake the
+ * room: `workflows/` appearing (parent = root), a new `wf_*` folder (parent =
+ * `workflows/`), and every agent or journal write inside a run (parent = the run
+ * folder). A file born in the same batch as its folder is still found, because
+ * the re-resolve re-reads the disk; the watcher's reconcile sweep is the
+ * backstop.
+ *
+ * Takes the runs rather than walking again, so a caller that has just listed
+ * pays for one walk, not two.
+ */
+export function subagentWatchDirs(
+  roots: readonly string[],
+  runs: readonly WorkflowRunDir[],
+): string[] {
+  return [...roots, ...roots.map(workflowsDirOf), ...runs.map((r) => r.dir)];
 }
 
 /**
  * The file list a change signature is taken over: BOTH files of every discovered
- * sub-agent, in entry order.
+ * sub-agent, in entry order, then every workflow run's journal.
  *
  * Both halves matter. `transcriptChainSignature` folds in the list LENGTH plus a
  * per-file `(mtime, size)` triple for the files that exist, so a new sub-agent
  * moves the signature through the length, and a `.meta.json` landing after its
  * transcript moves it by adding a triple — which is what makes the row appear.
+ *
+ * The journals are inputs too: a `result` line there is what marks a workflow
+ * agent as reported (`workflow-journal.ts`), and it can land after the agent's
+ * own transcript has stopped moving.
  */
-export function signaturePathsOf(entries: readonly SubagentEntry[]): string[] {
-  return entries.flatMap((e) => [e.metaPath, e.transcriptPath]);
+export function signaturePathsOf(listing: SubagentListing): string[] {
+  return [
+    ...listing.entries.flatMap((e) => [e.metaPath, e.transcriptPath]),
+    ...listing.runs.map((r) => r.journalPath),
+  ];
 }
 
 export interface StatResult {

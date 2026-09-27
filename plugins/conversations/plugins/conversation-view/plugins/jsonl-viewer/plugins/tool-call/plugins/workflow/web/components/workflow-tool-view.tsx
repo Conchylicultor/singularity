@@ -15,10 +15,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  parseWorkflowMeta,
-  parseWorkflowResult,
-} from "../internal/parse-workflow";
+import { parseWorkflowMeta, parseWorkflowResult } from "../../core";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 import { WorkflowGraph } from "./workflow-graph";
 import { workflowNodePane } from "../panes";

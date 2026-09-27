@@ -10,6 +10,7 @@ import type {
   SubagentEntry,
   useConversationSubagents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
+import type { WorkflowRunEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
 import { RunningAgentsBand } from "../components/running-agents-band";
 
@@ -47,6 +48,7 @@ interface FakeDataViewProps {
     cell?: (row: never) => ReactNode;
   }[];
   rowKey: (row: never, index: number) => string;
+  rowActivation?: (row: never) => (() => void) | undefined;
   toolbar?: { kind?: string; frame?: ComponentType<HostedToolbarParts> };
   viewOptions?: { list?: { leading?: (row: never) => ReactNode } };
 }
@@ -68,7 +70,13 @@ vi.mock("@plugins/primitives/plugins/data-view/web", async () => {
           const key = props.rowKey(row as never, index);
           return createElement(
             "li",
-            { key, "data-testid": `row:${key}` },
+            {
+              key,
+              "data-testid": `row:${key}`,
+              "data-activates": String(
+                props.rowActivation?.(row as never) !== undefined,
+              ),
+            },
             leading?.(row as never),
             ...props.fields.map((field) =>
               createElement(
@@ -189,9 +197,13 @@ const FIXTURES: SubagentEntry[] = [
   }),
 ];
 
-const known = (entries: SubagentEntry[]): ConversationSubagents => ({
+const known = (
+  entries: SubagentEntry[],
+  workflowRuns: WorkflowRunEntry[] = [],
+): ConversationSubagents => ({
   kind: "known",
   entries,
+  workflowRuns,
   statusOf: () => ({ kind: "pending" }),
 });
 
@@ -297,5 +309,51 @@ describe("the running-agents band", () => {
     expect(summaryLine().getAttribute("aria-expanded")).toBe("false");
     // The summary itself never leaves — it is what folds and unfolds the rows.
     expect(summaryLine().textContent).toContain("2 agents working");
+  });
+
+  it("draws a workflow run as the row its agents sit under, which opens nothing", () => {
+    const agent = entry({
+      id: "w1",
+      description: "Review the router",
+      startedAgo: 30,
+      state: { kind: "running" },
+    });
+    subagents = known(
+      [
+        {
+          ...agent,
+          row: { ...agent.row, workflow: { runId: "wf_x", reported: false } },
+        },
+      ],
+      [
+        {
+          runId: "wf_x",
+          call: undefined,
+          state: { kind: "running" },
+          startedAt: ago(40),
+          endedAt: null,
+        },
+      ],
+    );
+    renderBand();
+
+    expect(
+      [...screen.getByTestId("rows").children].map((row) => [
+        row.getAttribute("data-testid"),
+        row.getAttribute("data-activates"),
+      ]),
+    ).toEqual([
+      ["row:workflow:wf_x", "false"],
+      ["row:w1", "true"],
+    ]);
+    // A run has no transcript of its own, so its label is its name alone.
+    expect(
+      screen.getByTestId("cell:workflow:wf_x:description").textContent,
+    ).toBe("wf_x");
+    expect(screen.getByTestId("cell:workflow:wf_x:type").textContent).toBe(
+      "workflow",
+    );
+    // One agent is working; the run it belongs to is not a second one.
+    expect(summaryLine().textContent).toContain("1 agent working");
   });
 });

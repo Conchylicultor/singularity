@@ -4,7 +4,9 @@ import type { SubagentRef, SubagentTranscript } from "../../core";
 import {
   findSubagentByAgentId,
   findSubagentIn,
+  listWorkflowRuns,
   subagentDirs,
+  subagentWatchDirs,
   type SubagentLookup,
 } from "./discovery";
 import { requestedNameFor } from "./agent-calls";
@@ -47,7 +49,9 @@ export async function transcriptPaths(
  *
  * While the sub-agent is still starting there is no file to watch, so the room
  * watches the conversation's `subagents/` DIRECTORIES — the only way an event
- * for a file that does not exist yet can reach us at all. Once the file is
+ * for a file that does not exist yet can reach us at all — including each
+ * `workflows/` level below them, since a workflow agent's file is born in its
+ * run's folder (`subagentWatchDirs`). Once the file is
  * known its identity is fixed, so the room narrows to that one path and a
  * sibling sub-agent's appends stop waking it.
  */
@@ -57,7 +61,11 @@ export async function resolveTranscriptTargets(
 ): Promise<WatchTargets> {
   const found = await lookup(conversationId, ref);
   if (found.kind === "found") return { paths: [found.entry.transcriptPath] };
-  return { paths: [], dirs: await subagentDirs(conversationId) };
+  const roots = await subagentDirs(conversationId);
+  return {
+    paths: [],
+    dirs: subagentWatchDirs(roots, await listWorkflowRuns(roots)),
+  };
 }
 
 /**
