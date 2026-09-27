@@ -48,7 +48,7 @@ export function AttemptSwitchButton() {
       className="gap-xs"
     >
       <MdSplitscreen />
-      <Text as="span" variant="count" className="tabular-nums">
+      <Text as="span" variant="count">
         {count}
       </Text>
     </Button>

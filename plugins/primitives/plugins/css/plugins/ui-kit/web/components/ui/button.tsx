@@ -13,6 +13,11 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 
+// The class walk reports a `cva` table at the call, so this covers the whole
+// table: its only raw radii are the `rounded-[min(var(--radius-md),Npx)]`
+// clamps on the xs / sm / inline sizes, which cap a small control's corner
+// whatever the Shape preset says (the same clamp `select.tsx` documents).
+// eslint-disable-next-line radius/no-adhoc-radius -- intentional min() clamps pin the small sizes' corners below the Shape preset's radius
 const buttonVariants = cva(
   "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
@@ -97,7 +102,7 @@ const buttonVariants = cva(
         // Sized by the surrounding text, so it has no control role: its
         // weight is the fixed medium, not the themable control weight.
         inline:
-          "h-auto rounded-[min(var(--radius-md),8px)] p-0.5 align-middle text-[1em] font-medium [&_svg:not([class*='size-'])]:icon-auto",
+          "h-auto rounded-[min(var(--radius-md),8px)] p-2xs align-middle text-[1em] font-medium [&_svg:not([class*='size-'])]:icon-auto",
       },
       // A pill's rounded ends take room a rectangle's corners don't: `pill-ends`
       // adds the shape group's pill extra to both sides of the size's own

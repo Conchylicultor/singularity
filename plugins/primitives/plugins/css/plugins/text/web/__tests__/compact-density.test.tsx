@@ -49,4 +49,49 @@ describe("Text compact density", () => {
     expect(el.classList.contains("text-heading")).toBe(true);
     expect(el.classList.contains("text-heading-compact")).toBe(false);
   });
+
+  it("gives the tag role its OWN compact rung, keeping the tag weight", () => {
+    render(
+      <>
+        <Text variant="tag" data-testid="md">
+          chip
+        </Text>
+        <ControlSizeProvider size="xs">
+          <Text variant="tag" data-testid="xs">
+            chip
+          </Text>
+        </ControlSizeProvider>
+      </>,
+    );
+    const md = document.querySelector<HTMLElement>('[data-testid="md"]')!;
+    const xs = document.querySelector<HTMLElement>('[data-testid="xs"]')!;
+    expect([...md.classList]).toEqual(
+      expect.arrayContaining(["text-tag", "font-tag"]),
+    );
+    expect([...xs.classList]).toEqual(
+      expect.arrayContaining(["text-tag-compact", "font-tag"]),
+    );
+    expect(xs.classList.contains("text-tag")).toBe(false);
+  });
+
+  it("renders count as the compact control rung with tabular figures at every density", () => {
+    render(
+      <>
+        <Text variant="count" data-testid="md">
+          3
+        </Text>
+        <ControlSizeProvider size="xs">
+          <Text variant="count" data-testid="xs">
+            3
+          </Text>
+        </ControlSizeProvider>
+      </>,
+    );
+    for (const id of ["md", "xs"]) {
+      const el = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)!;
+      expect([...el.classList]).toEqual(
+        expect.arrayContaining(["text-control-compact", "tabular-nums"]),
+      );
+    }
+  });
 });

@@ -61,6 +61,7 @@
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `page/editor.defineBlock`
+    - `primitives/css/text.typeVar`
   - Exports (types):
     - `PlaceData`
     - `PlaceSnapshot`

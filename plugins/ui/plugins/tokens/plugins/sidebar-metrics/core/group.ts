@@ -2,8 +2,11 @@ import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 
 /**
  * The sizes of the app-shell sidebar's chrome: how wide the panel is, and the
- * geometry of a nav row (its height, inline padding, icon, icon-to-label gap
- * and label weight).
+ * geometry of a nav row (its height, inline padding, icon and icon-to-label
+ * gap). NOT its type: a nav row's label is the `label` role (`text-label`,
+ * type-scale), so it follows the theme's role ladder and `--font-scale` like
+ * every other label — this group declares no font size, line height or weight
+ * (the `type-scale:closed-role-ladder` check fails on one).
  *
  * Every default is the value the sidebar had before these were tokens, so a
  * theme that says nothing about this group paints today's sidebar exactly. The
@@ -28,7 +31,6 @@ export const sidebarMetricsGroup = defineTokenGroup("sidebar-metrics", {
   },
   sidebarIconSize: { default: "1rem", label: "Sidebar icon size" },
   sidebarIconGap: { default: "var(--space-sm)", label: "Sidebar icon gap" },
-  sidebarLabelWeight: { default: "400", label: "Sidebar label weight" },
 });
 
 export type SidebarMetricsTokenValues = {

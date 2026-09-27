@@ -7,7 +7,7 @@ export { HeaderChip } from "./components/header-chip";
 
 export default {
   description:
-    "Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad and type tokens) the model and status chips share.",
+    "Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.",
   contributions: [],
   slots: ConversationSlots,
 } satisfies PluginDefinition;

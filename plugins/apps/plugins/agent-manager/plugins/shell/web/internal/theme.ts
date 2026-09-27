@@ -178,11 +178,16 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
   },
 });
 
-/** Inter for text (the bundled face, stated so it stays true) and JetBrains Mono for code. */
+/**
+ * Inter for text (the bundled face, stated so it stays true) and JetBrains Mono
+ * for code, drawn `antialiased` as the mockup is: `auto` lets macOS thicken the
+ * stems, which on Mist's dark slate reads a weight heavier than the mockup.
+ */
 const fontFamily = fontFamilyGroup.fragment(
   both({
     fontSans: "'Inter Variable', sans-serif",
     fontMono: "'JetBrains Mono', monospace",
+    fontSmoothing: "antialiased",
   }),
 );
 
@@ -206,8 +211,9 @@ const shape = shapeGroup.fragment(
 );
 
 /**
- * The mockup's sidebar geometry: a 246px panel, 28px nav rows padded 9px, 15px
- * icons with an 11px gap to a medium-weight label.
+ * The mockup's sidebar geometry: a 246px panel, 28px nav rows padded 9px, and
+ * 15px icons with an 11px gap to the label. The label itself is the `label`
+ * role (13px medium, see `typeScale`), shared with the conversation rows.
  */
 const sidebarMetrics = sidebarMetricsGroup.fragment(
   both({
@@ -216,7 +222,6 @@ const sidebarMetrics = sidebarMetricsGroup.fragment(
     sidebarRowPadX: "0.5625rem",
     sidebarIconSize: "0.9375rem",
     sidebarIconGap: "0.6875rem",
-    sidebarLabelWeight: "500",
   }),
 );
 
@@ -272,38 +277,41 @@ const density = densityGroup.fragment(
 );
 
 /**
- * The mockup's smaller type: 12px inherited text on a 1.4 line (the base,
- * set on the app's scope root, never on `html`), 12.5px prose on a 17.5px line,
- * and 11px semibold control labels at every size. The compact chip's text is
- * 9.5px semibold on a 15px line (a 17px chip). In the main pane: 11px semibold
- * header chips and toolbar counts, a 10.5px bold tool badge, 11.5px inline
- * code, and a bold primary action.
+ * The mockup's type (prototype proto-1789643584-ldt6, option `mist-text=roles`
+ * — Inter at Mist's own sizes), set as roles only, never component tokens. The
+ * ladder, smallest first:
+ *
+ * - 10.5px semibold `tag-compact` (a row's count chip, on a 15px line);
+ * - 11px `2xs` (relative times, counts) — the default rung, not set here;
+ * - 11.5px semibold `tag` (header chips, the tool badge), bold when strong;
+ * - 12px `caption` and `control` (buttons, tabs, footer pills), semibold, bold
+ *   for the primary action;
+ * - 12.5px `code` on a 19px line (inline and block code);
+ * - 13px `label` and base on a 1.4 line (the sidebar, section heads, inherited
+ *   text — the base is set on the app's scope root, never on `html`);
+ * - 13.5px `body` on a 19px line (messages, the prompt).
  */
 const typeScale = typeScaleGroup.fragment(
   both({
-    fontSizeBase: "0.75rem",
+    fontSizeBase: "0.8125rem",
     lineHeightBase: "1.4",
     // The thread keeps the column it had at 16px (75ch of Inter, 757px), the
     // mockup's width, rather than shrinking with the smaller base font.
     measureReading: "47.3125rem",
-    fontSizeBody: "0.78125rem",
-    lineHeightBody: "1.09375rem",
-    fontSizeControl: "0.6875rem",
-    fontSizeControlCompact: "0.6875rem",
+    fontSizeBody: "0.84375rem",
+    lineHeightBody: "1.1875rem",
+    lineHeightLabel: "1.1375rem",
+    fontSizeControl: "0.75rem",
     fontWeightControl: "600",
-    fontSizeChipCompact: "0.59375rem",
-    lineHeightChipCompact: "0.9375rem",
-    fontWeightChipCompact: "600",
     fontWeightControlStrong: "700",
-    fontSizeChipHeader: "0.6875rem",
-    lineHeightChipHeader: "0.9375rem",
-    fontWeightChipHeader: "600",
-    fontSizeToolBadge: "0.65625rem",
-    lineHeightToolBadge: "0.9375rem",
-    fontWeightToolBadge: "700",
-    fontSizeCode: "0.71875rem",
-    fontSizeCount: "0.6875rem",
-    fontWeightCount: "600",
+    fontSizeTag: "0.71875rem",
+    lineHeightTag: "0.9375rem",
+    fontWeightTag: "600",
+    fontWeightTagStrong: "700",
+    fontSizeTagCompact: "0.65625rem",
+    lineHeightTagCompact: "0.9375rem",
+    fontSizeCode: "0.78125rem",
+    lineHeightCode: "1.1875rem",
   }),
 );
 

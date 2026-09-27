@@ -51,9 +51,9 @@ function SidebarNavOpensItem({
  * `AppShellSidebarNav` contribution through this, so two nav rows cannot differ
  * in inset, height, icon size or hover — a contributor supplies data, never
  * chrome. The rail inset comes from `SidebarMenu` itself (`rail-follow`), not
- * from a class written here; the row's height, padding, icon size, icon gap
- * and label weight are the sidebar-metrics theme tokens (through
- * `SidebarMenuButton`).
+ * from a class written here; the row's height, padding, icon size and icon
+ * gap are the sidebar-metrics theme tokens, and its label is the `label` type
+ * role (both through `SidebarMenuButton`).
  *
  * The icon wears `--sidebar-icon` at rest (the row's own text colour unless a
  * theme quiets it) and the row's text colour while the row is hovered or

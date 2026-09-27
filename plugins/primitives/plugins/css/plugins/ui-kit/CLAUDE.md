@@ -63,9 +63,11 @@ The global UI kit — one cohesive design-system unit. It owns:
   `[&_svg]:size-control-icon-<size>`; defaults 12px at `xs`, 16px above), and
   the corners of the `md` / `lg` sizes and of every ButtonGroup segment are the
   shape group's `radiusControl` (`rounded-control`, default `--radius`). The
-  `xs` compact label has its own size tokens (`fontSizeControlCompact` /
-  `lineHeightControlCompact`, default the caption rung). So a theme sets a
-  button's whole bundle; the agent manager's Mist does.
+  `xs` compact label is the control role's compact rung (`text-control-compact`:
+  the caption role's metrics at the control weight) — there are no
+  button-named type tokens; the label is a role of the closed type ladder (see
+  the text plugin). So a theme sets a button's whole bundle through the control
+  and caption roles plus the density/shape tokens; the agent manager's Mist does.
 - **`Button variant="frame"`** is `outline`'s hairline with no fill of its
   own: like `ghost` it wears the surface it sits on and hovers to
   `--hover-fill`. Use it for a framed control on anything but the page canvas —

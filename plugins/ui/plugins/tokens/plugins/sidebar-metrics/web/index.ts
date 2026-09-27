@@ -7,7 +7,7 @@ import { SidebarMetricsSection } from "./components/sidebar-metrics-section";
 
 export default {
   description:
-    "Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.",
+    "Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.",
   contributions: [
     ThemeEngine.TokenGroup({
       id: "sidebar-metrics",

@@ -1,8 +1,16 @@
 # sidebar-metrics
 
 The sizes of the app-shell sidebar's chrome, as one token group: the panel
-width and a nav row's height, inline padding, icon size, icon-to-label gap and
-label weight.
+width and a nav row's height, inline padding, icon size and icon-to-label gap.
+
+Not its type. A nav row's label is the `label` role (`text-label`, from
+`tokens/type-scale`), so it follows the theme's role ladder and `--font-scale`
+like every other label; a theme that wants different sidebar text sets the
+`label` role. This group once carried `sidebarLabelSize` / `LineHeight` /
+`Weight` — component-named type tokens, deleted with the closed role ladder
+(`research/2026-09-27-global-type-scale-role-ladder.md`); the
+`type-scale:closed-role-ladder` check now fails if any token group other than
+type-scale declares a font size, line height or weight.
 
 Every default equals the value the sidebar had when these were hard-coded, so a
 theme that leaves this group out paints the old sidebar pixel for pixel. The
@@ -12,8 +20,7 @@ them in its own fragment.
 
 Consumers read them through `app.css` utilities: `w-(--sidebar-panel-width)`
 via the ui-kit `SidebarProvider` (which republishes it as `--sidebar-width`),
-`h-sidebar-row`, `px-sidebar-row`, `size-sidebar-icon`, `gap-sidebar-icon` and
-`font-sidebar-label`. The ui-kit `SidebarMenuButton` and the app-shell nav row
+`h-sidebar-row`, `px-sidebar-row`, `size-sidebar-icon` and `gap-sidebar-icon`. The ui-kit `SidebarMenuButton` and the app-shell nav row
 use them; a sidebar list that wants its own lead on the nav icon column (the
 agent manager's conversation rows and view switcher) sizes it with the same
 `size-sidebar-icon` / `gap-sidebar-icon`.
@@ -22,7 +29,7 @@ agent manager's conversation rows and view switcher) sizes it with the same
 
 ## Plugin reference
 
-- Description: Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.
+- Description: Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
 - Web:
   - Contributes:
     - `ThemeEngine.TokenGroup` "Sidebar Metrics"

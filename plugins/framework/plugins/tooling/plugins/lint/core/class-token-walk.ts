@@ -36,8 +36,33 @@ import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
  */
 export const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 
-/** Class-builder calls whose string arguments are class-name strings. */
-export const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
+/**
+ * Class-builder calls whose string arguments are class-name strings. `cva`
+ * counts: its base string and every variant value are classes (the sidebar's
+ * `text-xs` once hid in a `cva` table). Its variant NAMES are object keys the
+ * walk skips (see {@link isVariantNameKey}), and its `defaultVariants` values
+ * (`"default"`, `"sm"`) are variant names, not utilities, so no rule matches
+ * them.
+ */
+export const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge", "cva"]);
+
+/**
+ * Is this child slot a non-computed identifier KEY of an object property
+ * (`{ size: … }`, cva's `variants` / `size` / `defaultVariants`)? Such a key is
+ * a name, never a class, so the walk must not resolve it as an alias — a same-
+ * file binding that happens to share the name (`const size = "text-sm"`) would
+ * otherwise be harvested. A string-literal key (`clsx({ "text-x": cond })`) IS
+ * a class and is still harvested; so is the property's value, shorthand
+ * included.
+ */
+function isVariantNameKey(node: TSESTree.Node, key: string): boolean {
+  return (
+    node.type === "Property" &&
+    key === "key" &&
+    !node.computed &&
+    node.key.type === "Identifier"
+  );
+}
 
 /**
  * Strip Tailwind variant prefixes (`hover:`, `md:`, …) AND a leading `-`
@@ -72,10 +97,13 @@ export function baseClass(token: string): string {
  *     A rule anchored on a position teaches authors where the position isn't, so
  *     the walk follows the value instead of guarding the position.
  *
- * A styling-FUNCTION result (`cva(...)`) is deliberately not followed — its
- * output is not a value this walk can read. Resolution is same-file only (an
- * imported or parameter binding has no in-file initializer) and cycle-guarded
- * via `seen`. Because the walk only ever starts from a real class-name context,
+ * A `cva(...)` CALL is walked like any class builder (its base and variant
+ * values are literal classes), but a styling-function RESULT — an identifier
+ * bound to `cva(...)` and later called — is not followed: its output is not a
+ * value this walk can read. Non-computed identifier object keys (cva's variant
+ * names) are skipped, never resolved as aliases. Resolution is same-file only
+ * (an imported or parameter binding has no in-file initializer) and
+ * cycle-guarded via `seen`. Because the walk only ever starts from a real class-name context,
  * an unrelated doc-string that merely mentions `text-sm` is never inspected.
  */
 export function collectTokens(
@@ -120,7 +148,7 @@ export function collectTokens(
     return;
   }
   for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
+    if (key === "parent" || isVariantNameKey(node, key)) continue;
     const value = (node as unknown as Record<string, unknown>)[key];
     if (Array.isArray(value)) {
       for (const child of value) {
@@ -195,7 +223,7 @@ export function collectTokenNodes(
     return;
   }
   for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
+    if (key === "parent" || isVariantNameKey(node, key)) continue;
     const value = (node as unknown as Record<string, unknown>)[key];
     if (Array.isArray(value)) {
       for (const child of value) {

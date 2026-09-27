@@ -54,7 +54,7 @@ export function TasksButton() {
       <MdChecklist />
       {status && <StatusDot colorClass={status.dotClass} />}
       {blockedCount !== null && (
-        <Text as="span" variant="count" tone="muted" className="tabular-nums">
+        <Text as="span" variant="count" tone="muted">
           {blockedCount}
         </Text>
       )}

@@ -10211,7 +10211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer.useLastAssistantEvent`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
               - `primitives/launch.LaunchControl`
-        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad and type tokens) the model and status chips share.
+        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.
           - Web:
             - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
             - Uses:
@@ -22840,7 +22840,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.pageData`
           - `page/links.PageLinks`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `primitives/css/text.typeVar`
         - Exports (values): `pageLinkBlock`
     - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
       - Web:
@@ -22941,6 +22943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `page/editor.defineBlock`
+          - `primitives/css/text.typeVar`
         - Exports (types):
           - `PlaceData`
           - `PlaceSnapshot`
@@ -23157,6 +23160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.pageBlockAuthor`
           - `page/editor.pageBlockMarkdown`
           - `page/editor.PageDataSchema`
+          - `primitives/css/text.typeVar`
         - Exports (values): `subPageBlock`
     - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
       - Web:
@@ -27105,6 +27109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/math/equation`
               - `page/math/inline`
+              - `page/page-link`
               - `page/place`
               - `page/prompt/block`
               - `page/read-only-view`
@@ -27192,6 +27197,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
+          - Core:
+            - Exports (types):
+              - `TextTreatment`
+              - `TypeRole`
+              - `TypeSubscale`
+              - `TypeVarName`
+            - Exports (values):
+              - `roleTokenKeys`
+              - `TEXT_TREATMENTS`
+              - `TYPE_ROLES`
+              - `TYPE_SUBSCALE`
+              - `typeVar`
         - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
           - Web:
             - Uses:
@@ -36203,7 +36220,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ShapeTokenValues`
             - Exports (values): `shapeGroup`
-        - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.
+        - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Sidebar Metrics"

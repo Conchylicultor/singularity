@@ -51,7 +51,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
   - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.
   - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
   - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
-  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap, label weight) with its customizer section.
+  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
   - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
   - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with its customizer section.
 

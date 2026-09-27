@@ -9,8 +9,11 @@ const createRule = ESLintUtils.RuleCreator(
  * Arbitrary sub-12px font sizes (the `text-[<N>px]` / `text-[<N>rem]`
  * arbitrary-value classes) bypass the named typography scale and are the root
  * cause of the type-size sprawl the token system exists to close. This rule bans
- * them and redirects to the named steps. The mapped px and rem values auto-fix;
- * everything else reports only.
+ * them and redirects to the sub-scale (`text-3xs` / `text-2xs`) or a role. The
+ * two sub-scale sizes (10px / 11px and their rem spellings) auto-fix; everything
+ * else reports only — a 12px size is a ROLE (caption, control, …), which is a
+ * semantic choice no fixer can make (and `text-xs` is itself banned by
+ * `no-adhoc-typography`).
  *
  * Classes appear in two shapes:
  *   - bare JSX `className="… <class> …"` → string `Literal`
@@ -33,7 +36,7 @@ const createRule = ESLintUtils.RuleCreator(
 const BANNED = /(?:^|\s)(text-\[(?:(\d+)px|([\d.]+)rem)\])/g;
 
 /**
- * Pixel size → named replacement for the three auto-fixable steps. Keyed by the
+ * Pixel size → named replacement for the two auto-fixable sub-scale steps. Keyed by the
  * numeric px value (not the literal `text-[Npx]` string) so this rule file does
  * not itself contain a banned class token — otherwise the rule would flag its
  * own source.
@@ -41,7 +44,6 @@ const BANNED = /(?:^|\s)(text-\[(?:(\d+)px|([\d.]+)rem)\])/g;
 const FIX_PX: Record<string, string> = {
   "10": "text-3xs",
   "11": "text-2xs",
-  "12": "text-xs",
 };
 
 /**
@@ -53,7 +55,6 @@ const FIX_PX: Record<string, string> = {
 const FIX_REM: Record<string, string> = {
   "0.625": "text-3xs",
   "0.6875": "text-2xs",
-  "0.75": "text-xs",
 };
 
 /**
@@ -113,9 +114,11 @@ export default function buildRule({
       schema: [],
       messages: {
         arbitraryFontSize:
-          "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use " +
-          "text-3xs (10px), text-2xs (11px), or text-xs (12px). Add a token in " +
-          "plugins/ui/plugins/tokens/plugins/type-scale/core/group.ts for a new step.",
+          "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use the " +
+          "sub-scale text-3xs (10px) / text-2xs (11px), or a role: <Text variant> " +
+          "from @plugins/primitives/plugins/css/plugins/text/web (or its text-<role> " +
+          "utility). The role ladder is closed (TYPE_ROLES in the text plugin's core); " +
+          "a theme resizes a role, it never adds a size.",
       },
     },
     defaultOptions: [],

@@ -161,6 +161,9 @@ const typeScale = typeScaleGroup.fragment(
     // 12px / 1.6 — the eyebrow and the small print.
     fontSizeCaption: "0.75rem",
     lineHeightCaption: "1.2rem",
+    // Code at the caption size on the label's line, as it has always read here.
+    fontSizeCode: "0.75rem",
+    lineHeightCode: "1.4rem",
   }),
 );
 

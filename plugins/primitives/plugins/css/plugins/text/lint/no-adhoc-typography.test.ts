@@ -75,8 +75,30 @@ ruleTester.run(
           }
         `,
       },
+      // A `cva` table is walked, but its variant NAMES and `defaultVariants`
+      // values are not classes: roles in the values pass, and a same-file
+      // binding that shares a variant name (\`size\`) is never resolved as an
+      // alias of that key.
+      {
+        code: `
+          const size = "text-sm";
+          const v = cva("flex", {
+            variants: { size: { sm: "text-caption", lg: "text-body" } },
+            defaultVariants: { size: "sm" },
+          });
+        `,
+      },
     ],
     invalid: [
+      // `cva` is a class builder: its base string AND each variant value are
+      // classes. One CallExpression visit, two banned tokens → 2 errors.
+      {
+        code: `const v = cva("text-sm", { variants: { size: { a: "text-xs" } } });`,
+        errors: [
+          { messageId: "adhocTypography" },
+          { messageId: "adhocTypography" },
+        ],
+      },
       // A bare string `const` alias IS followed. It used to be deliberately
       // skipped, because the consts that shape carried in practice were shared
       // mono/code metrics with no role to move to. There is one now (`code`), and

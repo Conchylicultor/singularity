@@ -5,6 +5,7 @@ import {
   PAGE_BLOCK_TYPE,
   PageDataSchema,
 } from "@plugins/page/plugins/editor/core";
+import { typeVar } from "@plugins/primitives/plugins/css/plugins/text/core";
 
 /**
  * The sub-page block: a `type="page"` row rendered INLINE in its parent page's
@@ -24,8 +25,7 @@ export const subPageBlock = defineBlock({
   schema: PageDataSchema,
   // An icon+title Row (not doc text), wrapped in `Inset y="xs"`: seat the rail on
   // the Row's center — its own `pad-row-y` top plus half a `text-body` line.
-  gutterFirstLineCenter:
-    "calc(var(--space-xs) + var(--pad-row-y) + var(--line-height-body) / 2)",
+  gutterFirstLineCenter: `calc(var(--space-xs) + var(--pad-row-y) + ${typeVar("line-height-body")} / 2)`,
   // Always show the collapse chevron: a collapsed page mounts no children, so
   // `hasChildren` is false and without this no chevron would ever appear.
   collapsible: "always",

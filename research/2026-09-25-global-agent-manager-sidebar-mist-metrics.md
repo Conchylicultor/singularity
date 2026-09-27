@@ -1,5 +1,9 @@
 # Agent manager sidebar → Mist sizes (proto-1789643584-ldt6), part 2
 
+> **Superseded 2026-09-27.** The component-named type tokens this pass added
+> were folded into the type-scale roles; a theme now sets roles, never component
+> tokens. See `research/2026-09-27-global-type-scale-role-ladder.md`.
+
 ## Context
 
 The first pass (`2026-09-25-global-agent-manager-sidebar-mist-list.md`, commit

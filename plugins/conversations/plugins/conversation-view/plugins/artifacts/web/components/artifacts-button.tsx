@@ -155,9 +155,7 @@ function ArtifactsReady({
               {madeKinds.map(({ kind }) => (
                 <kind.icon key={kind.id} />
               ))}
-              <Text variant="count" className="tabular-nums">
-                {count}
-              </Text>
+              <Text variant="count">{count}</Text>
             </>
           )}
         </Button>

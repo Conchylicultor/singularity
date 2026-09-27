@@ -63,7 +63,7 @@ export function CommitsChip() {
       aria-label={title}
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-xs px-sm text-count tabular-nums"
+      className="gap-xs px-sm text-control-compact tabular-nums"
     >
       <MdAltRoute />
       <span className="text-muted-foreground">↑</span>
@@ -108,7 +108,7 @@ function UnmeasuredChip({
       aria-label={reason}
       aria-pressed={isOpen}
       onClick={onToggle}
-      className="gap-xs px-sm text-count tabular-nums"
+      className="gap-xs px-sm text-control-compact tabular-nums"
     >
       <MdAltRoute />
       <span className="text-muted-foreground">—</span>

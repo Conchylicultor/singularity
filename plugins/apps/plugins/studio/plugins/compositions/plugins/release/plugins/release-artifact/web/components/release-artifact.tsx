@@ -44,8 +44,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
           Artifact
         </Text>
         {run.artifactPath ? (
-          // eslint-disable-next-line text/no-adhoc-typography -- mono filesystem path, intentional inline-code size
-          <code className="font-mono text-xs break-all">{run.artifactPath}</code>
+          <code className="text-code break-all">{run.artifactPath}</code>
         ) : (
           <Text as="span" variant="body" className="text-muted-foreground">
             No artifact yet
@@ -80,7 +79,9 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
             mono
             leading={<MdOpenInNew />}
             title="Open preview in a new tab"
-            onClick={() => window.open(preview.url, "_blank", "noopener,noreferrer")}
+            onClick={() =>
+              window.open(preview.url, "_blank", "noopener,noreferrer")
+            }
           >
             {preview.url}
           </LinkChip>

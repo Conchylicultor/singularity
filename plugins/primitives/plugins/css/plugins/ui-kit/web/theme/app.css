@@ -143,10 +143,11 @@
     --color-categorical-9-lift: oklch(from var(--categorical-9) calc(l + 0.13) c h);
     --color-categorical-10-lift: oklch(from var(--categorical-10) calc(l + 0.13) c h);
     --tracking-normal: var(--letter-spacing);
-    --text-2xs: var(--font-size-2xs);
-    --text-2xs--line-height: var(--line-height-2xs);
-    --text-3xs: var(--font-size-3xs);
-    --text-3xs--line-height: var(--line-height-3xs);
+    /* The sub-scale follows `--font-scale` like every role utility. */
+    --text-2xs: calc(var(--font-size-2xs) * var(--font-scale));
+    --text-2xs--line-height: calc(var(--line-height-2xs) * var(--font-scale));
+    --text-3xs: calc(var(--font-size-3xs) * var(--font-scale));
+    --text-3xs--line-height: calc(var(--line-height-3xs) * var(--font-scale));
     --font-weight-normal: var(--font-weight-normal);
     --font-weight-medium: var(--font-weight-medium);
     --font-weight-semibold: var(--font-weight-semibold);
@@ -525,15 +526,14 @@
 @utility size-status-dot-lg { width: var(--status-dot-lg); height: var(--status-dot-lg); } /* twmerge: extend size */
 
 /* Sidebar chrome geometry — from the sidebar-metrics token group, whose
- * defaults are the sidebar's old hard-coded h-8 / px-sm / size-4 / gap-sm and
- * regular label. The ui-kit `SidebarMenuButton` and the app-shell nav row read
+ * defaults are the sidebar's old hard-coded h-8 / px-sm / size-4 / gap-sm. The
+ * nav row's label is the `label` role (`text-label`), not a sidebar token. The ui-kit `SidebarMenuButton` and the app-shell nav row read
  * them; a sidebar list whose lead should sit on the nav icon column reads
  * `size-sidebar-icon` + `gap-sidebar-icon` too. */
 @utility h-sidebar-row { height: var(--sidebar-row-height); } /* twmerge: extend h */
 @utility px-sidebar-row { padding-inline: var(--sidebar-row-pad-x); } /* twmerge: extend px */
 @utility size-sidebar-icon { width: var(--sidebar-icon-size); height: var(--sidebar-icon-size); } /* twmerge: extend size */
 @utility gap-sidebar-icon { gap: var(--sidebar-icon-gap); } /* twmerge: extend gap */
-@utility font-sidebar-label { font-weight: var(--sidebar-label-weight); } /* twmerge: extend font-weight */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
@@ -1538,67 +1538,59 @@
  * (that would auto-generate a colliding `text-<role>` font-size utility). */
 /* The display rung — a landing/marketing headline, the one role above `title`.
  * Bold and tightly tracked: at this size the default tracking reads loose. */
-@utility text-display    { font-size: var(--font-size-display);    line-height: var(--line-height-display);    font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
-@utility text-title      { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
-@utility text-heading    { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
-@utility text-subheading { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
-@utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
-@utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
-@utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-display    { font-size: calc(var(--font-size-display) * var(--font-scale));    line-height: calc(var(--line-height-display) * var(--font-scale));    font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
+@utility text-title      { font-size: calc(var(--font-size-title) * var(--font-scale));      line-height: calc(var(--line-height-title) * var(--font-scale));      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
+@utility text-heading    { font-size: calc(var(--font-size-heading) * var(--font-scale));    line-height: calc(var(--line-height-heading) * var(--font-scale));    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
+@utility text-subheading { font-size: calc(var(--font-size-subheading) * var(--font-scale)); line-height: calc(var(--line-height-subheading) * var(--font-scale)); font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-body       { font-size: calc(var(--font-size-body) * var(--font-scale));       line-height: calc(var(--line-height-body) * var(--font-scale));       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-label      { font-size: calc(var(--font-size-label) * var(--font-scale));      line-height: calc(var(--line-height-label) * var(--font-scale));      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
+@utility text-caption    { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 /* The control role: the words on a control (a button's label, a tab's title).
  * Unlike every role above, its weight is a token (`--font-weight-control`), so a
  * region that wears its own theme — the app chrome — can set lighter controls
  * without re-weighting its prose. `font-control` is that weight alone: `Button`
  * carries it beside its size rung, so a caller that swaps the size (`text-caption`)
  * keeps the control's weight, and one that sets `font-normal` replaces it. */
-@utility text-control    { font-size: var(--font-size-control);    line-height: var(--line-height-control);    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
+@utility text-control    { font-size: calc(var(--font-size-control) * var(--font-scale));    line-height: calc(var(--line-height-control) * var(--font-scale));    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
 @utility font-control    { font-weight: var(--font-weight-control); } /* twmerge: extend font-weight */
-/* The code role: monospaced running text (log viewers, code blocks, math source
- * fields). Caption size with the LOOSER label line-height — code wraps and is
- * scanned line-by-line, so it needs more leading than prose at the same size.
- * Owns the mono family too: "code" is the family + the metrics as one role, not
- * a `font-mono` a caller remembers to add. The values are the exact rendering of
- * the `font-mono text-xs leading-5` that eight files had each hoisted into their
- * own const, which is what made them invisible to this rule in the first place. */
-@utility text-code       { font-family: var(--font-mono);           font-size: var(--font-size-caption);        line-height: var(--line-height-label);  font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
+/* The strong control: a primary action's weight (Stop / Restore / Send). */
+@utility font-control-strong { font-weight: var(--font-weight-control-strong); } /* twmerge: extend font-weight */
+/* The tag role: the words on a chip (a `Badge`, a pane header's chips, a
+ * transcript card's tool badge). Like `control`, its weight is a token, and
+ * `font-tag` / `font-tag-strong` carry it alone, so a chip that swaps its size
+ * rung keeps its weight. */
+@utility text-tag        { font-size: calc(var(--font-size-tag) * var(--font-scale));        line-height: calc(var(--line-height-tag) * var(--font-scale));        font-weight: var(--font-weight-tag); }                               /* twmerge: extend font-size */
+@utility font-tag        { font-weight: var(--font-weight-tag); } /* twmerge: extend font-weight */
+@utility font-tag-strong { font-weight: var(--font-weight-tag-strong); } /* twmerge: extend font-weight */
+/* The code role: monospaced text, block and inline (log viewers, code blocks,
+ * an inline `code` span, math source fields). Its own size + line-height
+ * tokens, defaulting to caption size with the LOOSER label line-height — code
+ * wraps and is scanned line-by-line, so it needs more leading than prose at the
+ * same size. Owns the mono family too: "code" is the family + the metrics as
+ * one role, not a `font-mono` a caller remembers to add. */
+@utility text-code       { font-family: var(--font-mono);           font-size: calc(var(--font-size-code) * var(--font-scale));           line-height: calc(var(--line-height-code) * var(--font-scale));       font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Compact typography roles — the `xs` (compact) control density's one rung down.
  * Each is the SAME weight/tracking as its base role but the next size+line-height
- * rung smaller, so hierarchy + semantics survive compaction (a compact subheading
- * keeps its semibold). `Text` swaps in the `-compact` map when the ambient
- * `ControlSize` is `xs` (textStepFor === 1); `Badge` reads `text-caption-compact`
- * the same way. One density→text-step policy, three consumers (Button/Badge/Text). */
-@utility text-display-compact    { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
-@utility text-title-compact      { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
-@utility text-heading-compact    { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
-@utility text-subheading-compact { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
-@utility text-body-compact       { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
-@utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
-@utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
-/* The control role's compact rung has its own size tokens (defaults: caption),
- * so a theme can size its dense controls apart from its captions. */
-@utility text-control-compact    { font-size: var(--font-size-control-compact); line-height: var(--line-height-control-compact); font-weight: var(--font-weight-control); }            /* twmerge: extend font-size */
-/* The compact CHIP rung: what a `Badge` wears at `xs` density. Its size, line
- * height and weight are type-scale tokens whose defaults are exactly
- * `text-caption-compact` + `font-medium`, so a theme can re-set a dense row's
- * count chip without touching compact captions. The weight is its own utility
- * (like `font-medium` beside a size role), so a chip that swaps the size
- * (ToggleChip's `text-2xs`) keeps it. */
-@utility text-chip-compact       { font-size: var(--font-size-chip-compact); line-height: var(--line-height-chip-compact); } /* twmerge: extend font-size */
-@utility font-chip-compact       { font-weight: var(--font-weight-chip-compact); } /* twmerge: extend font-weight */
-/* Role type from the type-scale group, each defaulting to what its surface
- * always wore: a pane header's chips (caption, medium), a transcript card's
- * tool-name badge (the compact chip rung it sits on), an inline `code` span
- * (caption; the mono family stays the caller's `font-mono`), a toolbar count
- * (caption, regular), and a primary action's weight (the control weight). */
-@utility text-chip-header        { font-size: var(--font-size-chip-header); line-height: var(--line-height-chip-header); } /* twmerge: extend font-size */
-@utility font-chip-header        { font-weight: var(--font-weight-chip-header); } /* twmerge: extend font-weight */
-@utility text-tool-badge         { font-size: var(--font-size-tool-badge); line-height: var(--line-height-tool-badge); } /* twmerge: extend font-size */
-@utility font-tool-badge         { font-weight: var(--font-weight-tool-badge); } /* twmerge: extend font-weight */
-@utility text-inline-code        { font-size: var(--font-size-code); line-height: var(--line-height-code); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
-@utility text-count              { font-size: var(--font-size-count); line-height: var(--line-height-count); font-weight: var(--font-weight-count); } /* twmerge: extend font-size */
-@utility font-control-strong     { font-weight: var(--font-weight-control-strong); } /* twmerge: extend font-weight */
-@utility text-code-compact       { font-family: var(--font-mono);           font-size: var(--font-size-2xs);            line-height: var(--line-height-caption); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
+ * rung smaller (its `compact` in the text plugin's `TYPE_ROLES`), so hierarchy +
+ * semantics survive compaction (a compact subheading keeps its semibold). `Text`
+ * swaps in the `-compact` map when the ambient `ControlSize` is `xs`
+ * (textStepFor === 1); `Badge` reads `text-tag-compact` the same way. One
+ * density→text-step policy, three consumers (Button/Badge/Text). */
+@utility text-display-compact    { font-size: calc(var(--font-size-title) * var(--font-scale));      line-height: calc(var(--line-height-title) * var(--font-scale));      font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
+@utility text-title-compact      { font-size: calc(var(--font-size-heading) * var(--font-scale));    line-height: calc(var(--line-height-heading) * var(--font-scale));    font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
+@utility text-heading-compact    { font-size: calc(var(--font-size-subheading) * var(--font-scale)); line-height: calc(var(--line-height-subheading) * var(--font-scale)); font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
+@utility text-subheading-compact { font-size: calc(var(--font-size-body) * var(--font-scale));       line-height: calc(var(--line-height-body) * var(--font-scale));       font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-body-compact       { font-size: calc(var(--font-size-label) * var(--font-scale));      line-height: calc(var(--line-height-label) * var(--font-scale));      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-label-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
+@utility text-caption-compact    { font-size: calc(var(--font-size-2xs) * var(--font-scale));        line-height: calc(var(--line-height-2xs) * var(--font-scale));        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+/* The control role's compact rung: caption metrics at the control weight. */
+@utility text-control-compact    { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
+/* The tag role's compact rung — a `Badge` at `xs` density (a count chip in a
+ * dense row). Its OWN size tokens (defaults: the 2xs rung), so a theme can set
+ * its count chips a half-step below the 2xs sub-scale; weight from `font-tag`. */
+@utility text-tag-compact        { font-size: calc(var(--font-size-tag-compact) * var(--font-scale)); line-height: calc(var(--line-height-tag-compact) * var(--font-scale)); } /* twmerge: extend font-size */
+@utility text-code-compact       { font-family: var(--font-mono);           font-size: calc(var(--font-size-2xs) * var(--font-scale));            line-height: calc(var(--line-height-caption) * var(--font-scale));        font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
  * ToggleChip/Breadcrumb leading+actions) track the slot's font-size instead of a
@@ -1689,11 +1681,13 @@
      `--line-height-base`), consumed at every theme-scope root for the same
      inheritance reason as `font-family` below. NOT on `:root`: the injector
      paints the focused app's theme into `:root`, and a font-size there would
-     be the `html` font-size — rescaling every rem token in the app. Defaults
-     are `1em` and the unitless `1.5` — exactly what a scope root inherited
-     before — so only a theme that sets them changes anything. */
+     be the `html` font-size — rescaling every rem token in the app. Times
+     `--font-scale`, like every role utility. The size default is `1rem`, not
+     `1em`: every pane is its own nested scope root, so an em base would
+     multiply the scale once per nesting level. The line-height default is the
+     unitless `1.5` preflight's `html` carries. */
   [data-theme-scope] {
-    font-size: var(--font-size-base);
+    font-size: calc(var(--font-size-base) * var(--font-scale));
     line-height: var(--line-height-base);
     }
   :root,

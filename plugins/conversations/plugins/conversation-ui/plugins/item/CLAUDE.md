@@ -20,7 +20,8 @@ before hand-rolling a seventh clickable pill.
   History sources. The lead box and the title's gap are the sidebar nav's
   (`size-sidebar-icon` / `gap-sidebar-icon`), so the dot centres under the nav
   icons and titles start on the nav labels' column; the dot is at `md`
-  density, the title a full-size medium caption, the time faint.
+  density, the title the full `label` role (the nav labels' size and
+  weight), the time faint.
 
 `CONV_STATUS_DOT` is a `Record<ConversationStatus, StatusDotPaint>`: `working`
 filled green, `waiting` filled amber, and hollow rings for `starting` (muted),

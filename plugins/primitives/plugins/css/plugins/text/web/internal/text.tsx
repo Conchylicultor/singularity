@@ -5,25 +5,17 @@ import {
   textStepFor,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
+import type { TypeRole, TextTreatment } from "../../core";
+
 /**
- * The closed set of semantic typographic roles. Each role maps to a frozen
- * size + line-height + weight (+ tracking) bundle defined as a `text-<role>`
- * `@utility` in app.css, backed by the typography token group's runtime vars.
- * Pick a role, never a raw size — the `no-adhoc-typography` lint rule enforces
- * this repo-wide.
+ * A `<Text>` variant: one of the closed typographic ROLES (`TYPE_ROLES` in this
+ * plugin's core — each a frozen size + line-height + weight (+ tracking) bundle
+ * defined as a `text-<role>` `@utility` in app.css, backed by the type-scale
+ * token group's runtime vars), or a TREATMENT built on a role (`eyebrow`,
+ * `count`). Pick a variant, never a raw size — the `no-adhoc-typography` lint
+ * rule enforces this repo-wide.
  */
-export type TextVariant =
-  | "display"
-  | "title"
-  | "heading"
-  | "subheading"
-  | "body"
-  | "label"
-  | "control"
-  | "caption"
-  | "count"
-  | "eyebrow"
-  | "code";
+export type TextVariant = TypeRole | TextTreatment;
 
 /** Foreground tone applied on top of the variant. `default` inherits the surface. */
 export type TextTone =
@@ -51,10 +43,13 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   // the same themable role Button's label wears, so a region sets both at once.
   control: "text-control",
   caption: "text-caption",
-  // A count beside a glyph — a toolbar button's "3", a diff's "+387". Its own
-  // role (type-scale `*Count` tokens, defaulting to the caption rung at regular
-  // weight), so a theme can set its counters apart from its captions.
-  count: "text-count",
+  // The words on a chip (a header chip, a tool badge) — the role `Badge` wears.
+  // Its weight is a token, carried by `font-tag`.
+  tag: "text-tag font-tag",
+  // A count beside a glyph — a toolbar button's "3", a diff's "+387". A
+  // treatment, not a role: the control role's compact rung (caption metrics at
+  // the control weight) with tabular figures, so a column of counts aligns.
+  count: "text-control-compact tabular-nums",
   // Eyebrow/overline role: caption geometry + the small-caps treatment, single
   // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
   // section label (see the SectionLabel helper).
@@ -80,8 +75,10 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
   label: "text-label-compact",
   control: "text-control-compact",
   caption: "text-caption-compact",
-  // A count in a compact region steps down with the captions around it.
-  count: "text-caption-compact",
+  // The tag role's OWN compact rung (a count chip in a dense row).
+  tag: "text-tag-compact font-tag",
+  // Already the compact control rung — it stays there in a compact region.
+  count: "text-control-compact tabular-nums",
   eyebrow: "text-caption-compact uppercase tracking-wide whitespace-nowrap",
   code: "text-code-compact",
 };

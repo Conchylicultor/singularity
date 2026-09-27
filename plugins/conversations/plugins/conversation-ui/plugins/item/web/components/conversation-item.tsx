@@ -101,9 +101,16 @@ export function conversationTitle(conv: ConversationItemConv): string {
 
 export function ConvTitle({
   conv,
+  variant = "caption",
   className,
 }: {
   conv: ConversationItemConv;
+  /**
+   * The title's type role: `caption` (default) where it annotates something
+   * larger (a block row, an inline chip), `label` where it IS the row's label
+   * (the sidebar `line` layout, beside the nav rows' labels).
+   */
+  variant?: "caption" | "label";
   className?: string;
 }) {
   const muted = conv.status === "gone" || conv.status === "done";
@@ -115,7 +122,7 @@ export function ConvTitle({
     <SingleLineProvider value={true}>
       <Text
         as="span"
-        variant="caption"
+        variant={variant}
         className={cn(className, muted && "text-muted-foreground")}
       >
         {conversationTitle(conv)}
@@ -138,7 +145,7 @@ export function ConvRelativeTime({
   return (
     <span
       className={cn(
-        "text-3xs tabular-nums text-muted-foreground/60",
+        "text-2xs tabular-nums text-muted-foreground/60",
         className,
       )}
     >
@@ -176,10 +183,11 @@ export function ConversationItem({
             </ControlSizeProvider>
           </Center>
           <Fill>
-            {/* `sm`: the title's full caption size even in a compact (`xs`)
-                list, which would otherwise drop it a rung. */}
+            {/* `sm`: the title's full `label` role even in a compact (`xs`)
+                list, which would otherwise drop it to the compact rung — so
+                it matches the sidebar nav rows' labels. */}
             <ControlSizeProvider size="sm">
-              <ConvTitle conv={conv} className="font-medium" />
+              <ConvTitle conv={conv} variant="label" />
             </ControlSizeProvider>
           </Fill>
         </Line>

@@ -53,16 +53,25 @@ ruleTester.run(
       { code: `const el = <span className={cn("text-2xs", "px-2")} />;` },
     ],
     invalid: [
-      // Bare className string literal.
+      // Bare className string literal. 12px is a ROLE size (caption, control,
+      // …), a semantic choice — reported, never auto-fixed (the old fix wrote
+      // `text-xs`, itself banned by no-adhoc-typography).
       {
         code: `const el = <div className="text-[12px]" />;`,
-        output: `const el = <div className="text-xs" />;`,
+        output: null,
         errors: [{ messageId: "arbitraryFontSize" }],
       },
-      // cn(...) class-builder call argument — even outside JSX.
+      // cn(...) class-builder call argument — even outside JSX. Same for the
+      // 0.75rem spelling of 12px.
       {
-        code: `const cls = cn("text-[12px]", "px-2");`,
-        output: `const cls = cn("text-xs", "px-2");`,
+        code: `const cls = cn("text-[0.75rem]", "px-2");`,
+        output: null,
+        errors: [{ messageId: "arbitraryFontSize" }],
+      },
+      // A sub-scale size still auto-fixes, including inside a cva table.
+      {
+        code: `const v = cva("flex", { variants: { size: { sm: "text-[11px]" } } });`,
+        output: `const v = cva("flex", { variants: { size: { sm: "text-2xs" } } });`,
         errors: [{ messageId: "arbitraryFontSize" }],
       },
       // className={`…`} template-literal form.

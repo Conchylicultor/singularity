@@ -33,7 +33,10 @@ const createRule = ESLintUtils.RuleCreator(
  * unsafe to mechanize.
  *
  * Class strings appear in two shapes — bare JSX `className="…"` and inside
- * `cn(...)`/`clsx(...)`/template literals. We only inspect strings in a
+ * `cn(...)`/`clsx(...)`/`cva(...)`/template literals (a `cva` table's base and
+ * variant values are classes; its variant names and `defaultVariants` are not).
+ * The `type-scale:closed-role-ladder` check fails if the message below stops
+ * naming a `<Text>` variant. We only inspect strings in a
  * class-name context (a `className`/`class`/`*ClassName` attribute value, or a
  * class-builder argument), via the same `collectTokens` walk the sibling
  * `no-adhoc-*` rules use, so a doc-string or fixture that merely mentions
@@ -69,8 +72,9 @@ export default function buildRule({
         adhocTypography:
           "Raw typography class `{{token}}` is banned — set text hierarchy through " +
           "the <Text variant> primitive from @plugins/primitives/plugins/css/plugins/text/web " +
-          "(variants: title | heading | subheading | body | label | caption). The " +
-          "sub-scale text-2xs / text-3xs stays for chips/badges.",
+          "(variants: display | title | heading | subheading | body | label | control | " +
+          "caption | tag | code | eyebrow | count), or its `text-<role>` utility. Below " +
+          "role granularity the sub-scale is text-2xs / text-3xs (times, chip internals).",
       },
     },
     defaultOptions: [],

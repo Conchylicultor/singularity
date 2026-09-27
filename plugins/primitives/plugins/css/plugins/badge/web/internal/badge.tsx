@@ -63,21 +63,20 @@ export function Badge({
   ...rest
 }: BadgeProps) {
   const density = useControlSize();
-  // Text size tracks ambient control density via the single density→text policy
-  // (textStepFor, shared with Button + Text): the compact `xs` density drops one
-  // rung; every other density (incl. the no-provider default "md") reads
-  // text-caption at medium weight.
-  //
-  // The compact rung is the CHIP's own, not the caption's: size, line height,
-  // weight, padding and radius are all tokens (`text-chip-compact`,
-  // `font-chip-compact`, `p-chip-compact`, `rounded-chip-compact`) whose defaults are exactly the
-  // regular chip's `text-caption-compact font-medium` / `p-chip` / `rounded-md`.
-  // So a theme can give a dense row's count chip its own tighter shape without
-  // touching any other chip or any compact caption.
+  // A chip's words are the `tag` role (`text-tag` + its weight token
+  // `font-tag`), and its size tracks ambient control density via the single
+  // density→text policy (textStepFor, shared with Button + Text): the compact
+  // `xs` density steps down to the tag role's OWN compact rung
+  // (`text-tag-compact`, whose tokens default to the 2xs sub-scale), every other
+  // density (incl. the no-provider default "md") reads the tag role. The weight
+  // is its own utility, so a chip that swaps the size (ToggleChip's `text-2xs`)
+  // keeps it. Padding and radius are chip tokens too (`p-chip-compact`,
+  // `rounded-chip-compact`), so a theme can give a dense row's count chip its
+  // own tighter shape without touching any other chip.
   const compact = textStepFor(density) === 1;
   const sizeClass = compact
-    ? "p-chip-compact text-chip-compact font-chip-compact"
-    : "p-chip text-caption font-medium";
+    ? "p-chip-compact text-tag-compact font-tag"
+    : "p-chip text-tag font-tag";
   return (
     <As
       className={cn(

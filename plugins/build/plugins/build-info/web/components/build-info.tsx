@@ -132,10 +132,7 @@ export function BuildInfo({ runId }: { runId: string }) {
         </Row>
         {run.commitHash && (
           <Row label="Commit">
-            {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}
-            <code className="font-mono text-xs">
-              {run.commitHash.slice(0, 8)}
-            </code>
+            <code className="text-code">{run.commitHash.slice(0, 8)}</code>
           </Row>
         )}
         <Row label="Started">

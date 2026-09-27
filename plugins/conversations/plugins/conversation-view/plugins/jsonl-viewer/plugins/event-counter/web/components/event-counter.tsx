@@ -12,7 +12,7 @@ export function EventCounter() {
   const count = result.data.length;
   if (count === 0) return null;
   return (
-    <Text as="span" variant="count" tone="muted" className="tabular-nums">
+    <Text as="span" variant="count" tone="muted">
       {count}
     </Text>
   );

@@ -1,6 +1,7 @@
 import { MdPlace } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { PlaceDataSchema } from "./schemas";
+import { typeVar } from "@plugins/primitives/plugins/css/plugins/text/core";
 
 export const PLACE_TYPE = "place";
 
@@ -42,8 +43,7 @@ export const placeBlock = defineBlock({
   // The card's first line is the name row inside `Card`'s own padding, wrapped
   // in the block's `Inset y="xs"`. Seat the gutter rail on THAT line rather than
   // on the phantom text line the default assumes.
-  gutterFirstLineCenter:
-    "calc(var(--space-xs) + var(--pad-card) + var(--line-height-body) / 2)",
+  gutterFirstLineCenter: `calc(var(--space-xs) + var(--pad-card) + ${typeVar("line-height-body")} / 2)`,
   // `<place …/>` — a self-closing tag rather than the derived JSON-attribute
   // fallback, so an agent reading the page through `read_page` sees the place
   // itself. `body: "none"`: a place has no content of its own, so a body on
