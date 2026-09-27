@@ -287,6 +287,8 @@ const density = densityGroup.fragment(
  * - 12px `caption` and `control` (buttons, tabs, footer pills), semibold, bold
  *   for the primary action;
  * - 12.5px `code` on a 19px line (inline and block code);
+ * - 12.5px semibold `group` on a 17.5px line (the sidebar's quiet group
+ *   headings, "Queue 14" — the mock's 1.4 line at that size);
  * - 13px `label` and base on a 1.4 line (the sidebar, section heads, inherited
  *   text — the base is set on the app's scope root, never on `html`);
  * - 13.5px `body` on a 19px line (messages, the prompt).
@@ -312,6 +314,8 @@ const typeScale = typeScaleGroup.fragment(
     lineHeightTagCompact: "0.9375rem",
     fontSizeCode: "0.78125rem",
     lineHeightCode: "1.1875rem",
+    fontSizeGroup: "0.78125rem",
+    lineHeightGroup: "1.09375rem",
   }),
 );
 

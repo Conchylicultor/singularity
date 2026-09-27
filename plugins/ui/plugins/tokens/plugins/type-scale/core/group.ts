@@ -50,6 +50,11 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   lineHeightBody: { default: "1.5rem", label: "Line height body" },
   lineHeightLabel: { default: "1.25rem", label: "Line height label" },
   lineHeightCaption: { default: "1rem", label: "Line height caption" },
+  // The group role: the heading of a group of rows in a list or sidebar (a
+  // quiet group header, "Queue 14"). Semibold, frozen in its utility. Defaults
+  // = the caption metrics such headers wore before they had a role.
+  fontSizeGroup: { default: "0.75rem", label: "Font size group" },
+  lineHeightGroup: { default: "1rem", label: "Line height group" },
   // The control role: the words ON a control — a button's label, a tab's
   // title. Its own role, not `body`/`label`, so a region can set its controls'
   // type without resizing the prose around them (the app chrome sets smaller,

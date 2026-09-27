@@ -1545,6 +1545,10 @@
 @utility text-body       { font-size: calc(var(--font-size-body) * var(--font-scale));       line-height: calc(var(--line-height-body) * var(--font-scale));       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label      { font-size: calc(var(--font-size-label) * var(--font-scale));      line-height: calc(var(--line-height-label) * var(--font-scale));      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption    { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+/* The group role: the heading of a group of rows in a list or sidebar (a quiet
+ * group header, "Queue 14"). Its own tokens so a theme sizes group heads apart
+ * from the rows (`label`) they head. */
+@utility text-group      { font-size: calc(var(--font-size-group) * var(--font-scale));      line-height: calc(var(--line-height-group) * var(--font-scale));      font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
 /* The control role: the words on a control (a button's label, a tab's title).
  * Unlike every role above, its weight is a token (`--font-weight-control`), so a
  * region that wears its own theme — the app chrome — can set lighter controls
@@ -1584,6 +1588,8 @@
 @utility text-body-compact       { font-size: calc(var(--font-size-label) * var(--font-scale));      line-height: calc(var(--line-height-label) * var(--font-scale));      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: calc(var(--font-size-2xs) * var(--font-scale));        line-height: calc(var(--line-height-2xs) * var(--font-scale));        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+/* The group role's compact rung: caption metrics at the group's semibold. */
+@utility text-group-compact      { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
 /* The control role's compact rung: caption metrics at the control weight. */
 @utility text-control-compact    { font-size: calc(var(--font-size-caption) * var(--font-scale));    line-height: calc(var(--line-height-caption) * var(--font-scale));    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
 /* The tag role's compact rung — a `Badge` at `xs` density (a count chip in a

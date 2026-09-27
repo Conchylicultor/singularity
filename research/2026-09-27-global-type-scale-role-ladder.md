@@ -239,3 +239,18 @@ WP2, WP3 and WP4 touch disjoint files.
    - roles, sub-scale and inherited text all ×1.1, with no compounding in panes
    - page block bullets stay aligned
    - the chrome is unaffected
+
+## Addendum 2026-09-27 — the `group` role
+
+At the user's request, the quiet group header ("Queue 14") no longer borrows
+`label` (the plan's "quiet headers: 13px / 600"): role values must match what the
+app renders in the mock exactly, and the mock's group head is 12.5px, not the
+rows' 13px. It moved to a new role, `group` (semibold, frozen; compact rung =
+caption metrics), used by data-view's quiet `SectionHeaderRow`.
+
+- Defaults: `fontSizeGroup` 0.75rem / `lineHeightGroup` 1rem — the caption
+  12px/16px + semibold other apps' quiet group headers rendered before this plan,
+  so they return to it.
+- Mist: 0.78125rem (12.5px, proto-1789643584-ldt6's quiet group head) on
+  1.09375rem (12.5 × 1.4 = 17.5px, the mock's inherited line).
+- Verification step 4 now expects quiet headers at 12.5px / 600.

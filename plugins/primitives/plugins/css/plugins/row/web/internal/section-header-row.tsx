@@ -26,16 +26,23 @@ import { Row } from "./row";
  *   composition name is a namespace component stored lowercase, and a header
  *   reading `AGENT-MANAGER` shows an identifier in a form nothing stores.
  *
+ * - **`group`** — a QUIET group-by header: a value out of the data like
+ *   `value`, set as the `group` type role (the heading of a run of rows), whose
+ *   size, line-height and semibold weight the theme owns as one — no weight
+ *   class beside it, since a single-property `font-*` beats a role's bundled
+ *   weight in Tailwind's stylesheet order.
+ *
  * The split exists because a group header used to take the `eyebrow` default by
  * omission, which is how the app came to shout its own data back at the reader.
  */
-export type SectionHeaderVariant = "eyebrow" | "title" | "value";
+export type SectionHeaderVariant = "eyebrow" | "title" | "value" | "group";
 
 const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
   eyebrow:
     "text-caption font-medium uppercase tracking-wider text-muted-foreground",
   title: "text-body font-semibold",
   value: "text-caption font-medium text-muted-foreground",
+  group: "text-group text-muted-foreground",
 };
 
 /**

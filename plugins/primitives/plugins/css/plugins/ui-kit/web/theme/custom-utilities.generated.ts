@@ -65,11 +65,11 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["pr-none", "pr-2xs", "pr-xs", "pr-sm", "pr-md", "pr-lg", "pr-xl", "pr-2xl"], extend: "pr" },
   { classes: ["pb-none", "pb-2xs", "pb-xs", "pb-sm", "pb-md", "pb-lg", "pb-xl", "pb-2xl"], extend: "pb" },
   { classes: ["pl-none", "pl-2xs", "pl-xs", "pl-sm", "pl-md", "pl-lg", "pl-xl", "pl-2xl"], extend: "pl" },
-  { classes: ["text-display", "text-title", "text-heading", "text-subheading", "text-body", "text-label", "text-caption", "text-control"], extend: "font-size" },
+  { classes: ["text-display", "text-title", "text-heading", "text-subheading", "text-body", "text-label", "text-caption", "text-group", "text-control"], extend: "font-size" },
   { classes: ["font-control", "font-control-strong"], extend: "font-weight" },
   { classes: ["text-tag"], extend: "font-size" },
   { classes: ["font-tag", "font-tag-strong"], extend: "font-weight" },
-  { classes: ["text-code", "text-display-compact", "text-title-compact", "text-heading-compact", "text-subheading-compact", "text-body-compact", "text-label-compact", "text-caption-compact", "text-control-compact", "text-tag-compact", "text-code-compact"], extend: "font-size" },
+  { classes: ["text-code", "text-display-compact", "text-title-compact", "text-heading-compact", "text-subheading-compact", "text-body-compact", "text-label-compact", "text-caption-compact", "text-group-compact", "text-control-compact", "text-tag-compact", "text-code-compact"], extend: "font-size" },
   { classes: ["icon-auto"], group: "sg-icon-auto", excludes: ["size", "h", "w"], under: [] },
   { classes: ["z-under", "z-base", "z-raised", "z-nav", "z-float", "z-overlay", "z-popover", "z-draw", "z-max"], extend: "z" },
 ] as const satisfies readonly RegistryEntry[];

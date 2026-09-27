@@ -72,8 +72,8 @@ export default function buildRule({
         adhocTypography:
           "Raw typography class `{{token}}` is banned — set text hierarchy through " +
           "the <Text variant> primitive from @plugins/primitives/plugins/css/plugins/text/web " +
-          "(variants: display | title | heading | subheading | body | label | control | " +
-          "caption | tag | code | eyebrow | count), or its `text-<role>` utility. Below " +
+          "(variants: display | title | heading | subheading | body | label | group | " +
+          "control | caption | tag | code | eyebrow | count), or its `text-<role>` utility. Below " +
           "role granularity the sub-scale is text-2xs / text-3xs (times, chip internals).",
       },
     },

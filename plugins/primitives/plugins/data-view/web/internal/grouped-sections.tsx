@@ -159,10 +159,10 @@ export function GroupedSections({
               >
                 {quiet ? (
                   <SectionHeaderRow
-                    variant="value"
-                    // The `label` role: the same size as the rows it heads (the
-                    // sidebar nav's labels), set apart by weight alone.
-                    className="text-label font-semibold"
+                    // The `group` role: the heading of a group of rows (its
+                    // semibold comes with the role), sized by the theme apart
+                    // from the rows it heads.
+                    variant="group"
                     disclosure="trailing"
                     // The count is part of the label's run here, so the
                     // trailing cluster holds only an action — and, like the

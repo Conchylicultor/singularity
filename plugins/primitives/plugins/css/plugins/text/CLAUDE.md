@@ -48,6 +48,7 @@ A theme resizes every variant by setting role tokens (or `fontScale`).
 | `subheading` | role      | 1rem      | 1.5rem      | 600               | 0        | `text-base font-semibold` |
 | `body`       | role      | 0.875rem  | 1.5rem      | 400               | 0        | `text-sm leading-6`       |
 | `label`      | role      | 0.8125rem | 1.25rem     | 500               | 0        | `text-sm font-medium`     |
+| `group`      | role      | 0.75rem   | 1rem        | 600               | 0        | a group header's `text-xs font-semibold` |
 | `control`    | role      | 0.875rem  | 1.25rem     | 500 (token, strong) | 0      | a button's own `text-sm font-medium` |
 | `caption`    | role      | 0.75rem   | 1rem        | 400               | 0        | `text-xs`                 |
 | `tag`        | role      | 0.75rem   | 1rem        | 500 (token, strong) | 0      | a chip's `text-xs font-medium` |
@@ -71,6 +72,12 @@ chrome never reaches for it; a page has at most one.
 code wraps and is scanned line-by-line) and owns the mono **family** as well as
 the metrics, so "code" is one decision — do not pair it with `font-mono`. Its
 compact rung is the 2xs size at the caption line height.
+
+`group` is the heading of a group of rows in a list or sidebar — a quiet group
+header ("Queue 14", data-view's `headerStyle="quiet"`). Its own role rather than
+`label`, so a theme sizes its group heads apart from the rows they head (Mist:
+12.5px over 13px rows). Semibold, frozen; its compact rung is the caption
+metrics at that weight.
 
 `control` is the words ON a control — a tab's title, and (through
 `buttonTextClassFor`) every `Button`'s label — so a region sets both at once.

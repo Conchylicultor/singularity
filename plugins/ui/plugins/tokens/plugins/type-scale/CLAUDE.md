@@ -8,7 +8,8 @@ ladder** — `TYPE_ROLES` in the text plugin's `core/roles.ts` — derived by
 the four shared weights.
 
 - **A theme sets roles**, never component tokens: `fontSizeLabel`,
-  `lineHeightBody`, `fontWeightControl`, `fontSizeTagCompact`, … There is no
+  `lineHeightBody`, `fontSizeGroup` (a list's group headings),
+  `fontWeightControl`, `fontSizeTagCompact`, … There is no
   `fontSizeChip` or `sidebarLabelSize` to set — a component picks a role
   (`<Text variant>` / `text-<role>`) and inherits whatever the theme gives it.
 - **Role sizes and line heights are literal lengths**, never `var()` chains (a

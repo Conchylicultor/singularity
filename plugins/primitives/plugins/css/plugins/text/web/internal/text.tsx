@@ -39,6 +39,8 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   subheading: "text-subheading",
   body: "text-body",
   label: "text-label",
+  // The heading of a group of rows in a list or sidebar (a quiet group header).
+  group: "text-group",
   // The words ON a control (a tab's title, beside the Buttons it sits among):
   // the same themable role Button's label wears, so a region sets both at once.
   control: "text-control",
@@ -73,6 +75,7 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
   subheading: "text-subheading-compact",
   body: "text-body-compact",
   label: "text-label-compact",
+  group: "text-group-compact",
   control: "text-control-compact",
   caption: "text-caption-compact",
   // The tag role's OWN compact rung (a count chip in a dense row).
