@@ -59,6 +59,7 @@ tab bar, which an embed does not paint.
     - `primitives/persistent-draft.useDraft`
     - `shell/action-bar.ActionBar`
     - `shell/health-report.HealthReportButton`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

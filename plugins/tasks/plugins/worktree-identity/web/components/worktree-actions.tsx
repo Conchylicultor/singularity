@@ -1,4 +1,3 @@
-import { MdOpenInNew } from "react-icons/md";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
@@ -8,6 +7,9 @@ import {
   useLinkedTask,
   useWorktreePlace,
 } from "../internal/use-worktree-identity";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const openInNewIcon = symbol("open-in-new");
 
 /**
  * The worktree row's trailing controls: copy the namespace, and open the linked
@@ -24,7 +26,7 @@ export function WorktreeActions() {
       )}
       {task.kind === "linked" ? (
         <IconButton
-          icon={MdOpenInNew}
+          icon={openInNewIcon}
           label="Open task"
           onClick={() =>
             navigate(

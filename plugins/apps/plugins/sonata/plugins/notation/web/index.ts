@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdMusicNote } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { notationConfig } from "../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -17,7 +17,7 @@ export default {
       match: "notation",
       id: "notation",
       label: "Notation",
-      icon: MdMusicNote,
+      icon: symbol("music-note"),
       capabilities: [],
       // Lazy-loaded so VexFlow (the heavy engraving library reached through
       // `./components/notation` → `./components/engrave`) is code-split off the

@@ -1,5 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { type ReactNode, useState } from "react";
-import { MdAdd } from "react-icons/md";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -24,6 +24,9 @@ import type { ViewActionsCore } from "../internal/use-view-model";
 import { ViewSettingsPopover } from "./view-settings-popover";
 import { AddViewMenuItems } from "./add-view-menu-items";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 /**
  * Config-mode switcher: drag-reorderable ghost chips (matching the read-only
@@ -78,14 +81,14 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
           {instances.map((r) => {
             // `r.viewType.icon` is the generic `T["icon"]`; widen to the
             // concrete `ViewTypeMeta` icon shape so JSX accepts `<Icon />`.
-            const Icon: ViewTypeMeta["icon"] = r.viewType.icon;
+            const icon: ViewTypeMeta["icon"] = r.viewType.icon;
             const id = r.instance.id;
             const isActive = id === activeId;
             const chip = (
               <ToggleChip
                 active={isActive}
                 variant="ghost"
-                icon={<Icon />}
+                icon={<Icon icon={icon} />}
                 title={r.instance.name}
                 onClick={() => {
                   if (isActive) {
@@ -139,7 +142,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
         <span className={hoverRevealClass(revealed || addOpen)}>
           <DropdownMenu open={addOpen} onOpenChange={setAddOpen}>
             <DropdownMenuTrigger
-              render={<IconButton icon={MdAdd} label="Add view" />}
+              render={<IconButton icon={addIcon} label="Add view" />}
             />
             <DropdownMenuContent align="start">
               <AddViewMenuItems actions={actions} />

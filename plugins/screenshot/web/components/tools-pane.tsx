@@ -1,16 +1,18 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  MdContentCopy,
-  MdCrop,
-  MdDownload,
-  MdEdit,
-  MdRefresh,
-  MdPanTool,
-  MdUndo,
-} from "react-icons/md";
+
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const contentCopyIcon = symbol("content-copy");
+const cropIcon = symbol("crop");
+const downloadIcon = symbol("download");
+const editIcon = symbol("edit");
+const refreshIcon = symbol("refresh");
+const panToolIcon = symbol("pan-tool");
+const undoIcon = symbol("undo");
 
 export type Tool = "none" | "crop" | "draw";
 
@@ -56,19 +58,19 @@ export function ToolsPane(props: Props) {
             active={props.tool === "none"}
             onClick={() => props.onToolChange("none")}
             label="View"
-            icon={<MdPanTool className="size-4" />}
+            icon={<Icon icon={panToolIcon} className="size-4" />}
           />
           <ToolButton
             active={props.tool === "crop"}
             onClick={() => props.onToolChange("crop")}
             label="Crop"
-            icon={<MdCrop className="size-4" />}
+            icon={<Icon icon={cropIcon} className="size-4" />}
           />
           <ToolButton
             active={props.tool === "draw"}
             onClick={() => props.onToolChange("draw")}
             label="Draw"
-            icon={<MdEdit className="size-4" />}
+            icon={<Icon icon={editIcon} className="size-4" />}
           />
         </Grid>
       </div>
@@ -156,7 +158,7 @@ export function ToolsPane(props: Props) {
               onClick={props.onUndoStroke}
               disabled={!props.hasStrokes}
             >
-              <MdUndo className="size-4" />
+              <Icon icon={undoIcon} className="size-4" />
               Undo
             </Button>
             <Button
@@ -173,15 +175,15 @@ export function ToolsPane(props: Props) {
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y on a bordered padded footer; no named space-y utility, can't be a clean Stack */}
       <div className="mt-auto space-y-2 border-t p-md">
         <Button variant="outline" className="w-full" onClick={props.onCopy}>
-          <MdContentCopy className="size-4" />
+          <Icon icon={contentCopyIcon} className="size-4" />
           Copy to clipboard
         </Button>
         <Button variant="outline" className="w-full" onClick={props.onDownload}>
-          <MdDownload className="size-4" />
+          <Icon icon={downloadIcon} className="size-4" />
           Download PNG
         </Button>
         <Button variant="ghost" className="w-full" onClick={props.onReset}>
-          <MdRefresh className="size-4" />
+          <Icon icon={refreshIcon} className="size-4" />
           Reset to original
         </Button>
       </div>

@@ -1,8 +1,14 @@
 import { Fragment, type ReactNode } from "react";
-import { MdAutoMode, MdBolt, MdExitToApp, MdMap } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoModeIcon = symbol("auto-mode");
+const boltIcon = symbol("bolt");
+const exitToAppIcon = symbol("exit-to-app");
+const mapIcon = symbol("map");
 
 /** Auto mode injects no prose of its own — the switches ARE the fact, so the
  *  row reads them straight off the payload rather than off a fixed field. */
@@ -100,7 +106,10 @@ export function SessionModeView({ event }: AttachmentRendererProps) {
     case "auto_mode": {
       const active = activeSwitches(event.attachment as AutoModePayload);
       return (
-        <EventLine icon={<MdAutoMode className="size-3.5" />} label="Auto mode">
+        <EventLine
+          icon={<Icon icon={autoModeIcon} className="size-3.5" />}
+          label="Auto mode"
+        >
           <span className="truncate">
             {active.length > 0 ? active.join(" · ") : "all switches off"}
           </span>
@@ -109,14 +118,17 @@ export function SessionModeView({ event }: AttachmentRendererProps) {
     }
     case "plan_mode":
       return (
-        <EventLine icon={<MdMap className="size-3.5" />} label="Plan mode">
+        <EventLine
+          icon={<Icon icon={mapIcon} className="size-3.5" />}
+          label="Plan mode"
+        >
           {planDetail(event.attachment as PlanModePayload)}
         </EventLine>
       );
     case "plan_mode_exit":
       return (
         <EventLine
-          icon={<MdExitToApp className="size-3.5" />}
+          icon={<Icon icon={exitToAppIcon} className="size-3.5" />}
           label="Plan mode exited"
         >
           {planDetail(event.attachment as PlanModePayload)}
@@ -124,7 +136,10 @@ export function SessionModeView({ event }: AttachmentRendererProps) {
       );
     case "ultra_effort_enter":
       return (
-        <EventLine icon={<MdBolt className="size-3.5" />} label="Ultracode on">
+        <EventLine
+          icon={<Icon icon={boltIcon} className="size-3.5" />}
+          label="Ultracode on"
+        >
           <span className="truncate">exhaustive over fast</span>
         </EventLine>
       );

@@ -1,4 +1,3 @@
-import { MdCheck, MdClose } from "react-icons/md";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
@@ -27,6 +26,11 @@ import {
   type Box,
   type Round,
 } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const closeIcon = symbol("close");
 
 /** Half the gap between two boxes, in px: each box gives it up on both sides. */
 const HALF_GAP = 3;
@@ -283,7 +287,11 @@ function AnswerBox({
           style={placedStyle({ end: -9 }, { start: -9 })}
           data-mark={mark}
         >
-          {mark === "ok" ? <MdCheck /> : <MdClose />}
+          {mark === "ok" ? (
+            <Icon icon={checkIcon} />
+          ) : (
+            <Icon icon={closeIcon} />
+          )}
         </Center>
       )}
     </div>

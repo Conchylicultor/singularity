@@ -11,8 +11,12 @@ import type {
   PopoverPadding,
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
-import { MdChevronRight, MdCheck } from "react-icons/md";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronRightIcon = symbol("chevron-right");
+const checkIcon = symbol("check");
 
 function DropdownMenu({
   open,
@@ -236,7 +240,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <MdChevronRight className="ml-auto" />
+      <Icon icon={chevronRightIcon} className="ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -298,7 +302,7 @@ function DropdownMenuCheckboxItem({
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
-          <MdCheck />
+          <Icon icon={checkIcon} />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
     </MenuPrimitive.CheckboxItem>
@@ -340,7 +344,7 @@ function DropdownMenuRadioItem({
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <MdCheck />
+          <Icon icon={checkIcon} />
         </MenuPrimitive.RadioItemIndicator>
       </span>
     </MenuPrimitive.RadioItem>

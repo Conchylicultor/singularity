@@ -11,7 +11,7 @@ const agents = defineApp({
   id: "agent-manager",
   name: "Agent manager",
   basePath: "/agents",
-  iconKey: "chat_bubble",
+  iconKey: "chat-bubble",
 });
 const rootApp = defineApp({
   id: "home",

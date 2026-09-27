@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -23,13 +24,13 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
   const cfgResult = useResource(configV2Resource, { path: storePath });
 
   if (!provider) return null;
-  const Icon = provider.icon;
+  const icon = provider.icon;
   const configure = () => provider.configureCredentials?.();
 
   return (
     <Stack direction="row" gap="lg" align="start" className="p-lg">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
-      <Icon className="mt-1 size-6" />
+      <Icon icon={icon} className="mt-1 size-6" />
       <Fill>
         {metaResult.pending || cfgResult.pending ? (
           <Loading variant="text" />

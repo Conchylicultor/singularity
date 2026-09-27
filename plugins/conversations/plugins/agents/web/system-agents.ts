@@ -1,9 +1,10 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 
 export interface SystemAgentDescriptor {
   id: string;
   name: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   component?: ComponentType<{ descriptor: SystemAgentDescriptor }>;
 }
 

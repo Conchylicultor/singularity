@@ -1,4 +1,3 @@
-import { MdCommit } from "react-icons/md";
 import { commitDetailPane } from "@plugins/code-explorer/plugins/commit-detail/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -8,6 +7,10 @@ import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/we
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { COMMIT_WORKTREE } from "../internal/commit-worktree";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const commitIcon = symbol("commit");
 
 /**
  * Pure renderer, reachable ONLY on a claim — `value` is a commit the object
@@ -54,7 +57,7 @@ export function CommitLinkChip({
             { mode: "push" },
           );
         }}
-        leading={<MdCommit className="text-muted-foreground" />}
+        leading={<Icon icon={commitIcon} className="text-muted-foreground" />}
         mono
       >
         {content}

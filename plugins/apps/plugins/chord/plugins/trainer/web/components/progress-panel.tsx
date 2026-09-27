@@ -1,4 +1,3 @@
-import { MdCheck } from "react-icons/md";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   MASTERY_WINDOW,
@@ -41,6 +40,10 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
 
 /**
  * The side panel: today's totals, a quieter all-time line, "Your chords" —
@@ -255,7 +258,7 @@ function ChordStandingLine({
         data-mastered={mastered ? "" : undefined}
         aria-label={mastered ? "Mastered" : "Not mastered yet"}
       >
-        {mastered && <MdCheck aria-hidden="true" />}
+        {mastered && <Icon icon={checkIcon} aria-hidden="true" />}
       </Center>
     </Line>
   );

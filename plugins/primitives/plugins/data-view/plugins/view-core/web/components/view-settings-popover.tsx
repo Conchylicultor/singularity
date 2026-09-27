@@ -1,5 +1,4 @@
 import { type ReactNode, useMemo } from "react";
-import { MdContentCopy, MdDelete } from "react-icons/md";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
@@ -8,6 +7,11 @@ import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const contentCopyIcon = symbol("content-copy");
+const deleteIcon = symbol("delete");
 
 /**
  * Settings panel for the active instance — opened by clicking the active chip.
@@ -87,7 +91,7 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
 
       <ControlPanel.Footer>
         <ControlPanel.Row
-          icon={<MdContentCopy />}
+          icon={<Icon icon={contentCopyIcon} />}
           onSelect={() => {
             actions.duplicateView(id);
             onClose();
@@ -96,7 +100,7 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           Duplicate
         </ControlPanel.Row>
         <ControlPanel.Row
-          icon={<MdDelete />}
+          icon={<Icon icon={deleteIcon} />}
           tone="danger"
           onSelect={() => {
             actions.deleteView(id);

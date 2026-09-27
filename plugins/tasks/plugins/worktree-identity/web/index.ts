@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { HealthReport } from "@plugins/shell/plugins/health-report/web";
-import { MdAccountTree } from "react-icons/md";
 import { WorktreeActions } from "./components/worktree-actions";
 import { useWorktreeIdentity } from "./internal/use-worktree-identity";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -12,7 +12,7 @@ export default {
       kind: "info",
       id: "worktree",
       order: 0,
-      icon: MdAccountTree,
+      icon: symbol("account-tree"),
       useInfo: useWorktreeIdentity,
       actions: WorktreeActions,
     }),

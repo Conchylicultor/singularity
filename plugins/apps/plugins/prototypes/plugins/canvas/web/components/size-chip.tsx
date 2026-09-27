@@ -1,14 +1,5 @@
 import type { ReactElement } from "react";
-import {
-  MdComputer,
-  MdDesktopWindows,
-  MdLaptop,
-  MdOutlineDescription,
-  MdPhoneIphone,
-  MdSwapHoriz,
-  MdTabletMac,
-  MdWebAsset,
-} from "react-icons/md";
+
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
@@ -31,6 +22,17 @@ import {
 } from "../internal/layout";
 import { usePrototypeDetail } from "../context";
 import { useWindowSize } from "../internal/use-window-size";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const computerIcon = symbol("computer");
+const desktopWindowsIcon = symbol("desktop-windows");
+const laptopMacIcon = symbol("laptop-mac");
+const descriptionIcon = symbol("description");
+const phoneIphoneIcon = symbol("phone-iphone");
+const swapHorizIcon = symbol("swap-horiz");
+const tabletMacIcon = symbol("tablet-mac");
+const webAssetIcon = symbol("web-asset");
 
 /**
  * Size, zoom and Whole page: ONE chip for the whole canvas ("This window
@@ -76,7 +78,8 @@ export function SizeChip({
           <span aria-hidden className="h-3.5 w-px bg-border" />
           <span className="tabular-nums">{zoomLabel}</span>
           {wholePage ? (
-            <MdOutlineDescription
+            <Icon
+              icon={descriptionIcon}
               className="text-primary"
               aria-label="Whole page"
             />
@@ -198,7 +201,7 @@ export function SizeChip({
             select="switch"
             checked={wholePage}
             disabled={noWholePage}
-            icon={<MdOutlineDescription />}
+            icon={<Icon icon={descriptionIcon} />}
             hint="Show the entire page content, not just one screen."
             onSelect={() => dispatch({ type: "setWholePage", on: !wholePage })}
           >
@@ -220,24 +223,24 @@ export function SizeChip({
 function SizeIcon({ size }: { size: CanvasSize }): ReactElement {
   switch (size.kind) {
     case "responsive":
-      return <MdSwapHoriz />;
+      return <Icon icon={swapHorizIcon} />;
     case "window":
-      return <MdWebAsset />;
+      return <Icon icon={webAssetIcon} />;
     case "preset": {
       const preset = size.preset;
       return preset === "Phone" ? (
-        <MdPhoneIphone />
+        <Icon icon={phoneIphoneIcon} />
       ) : preset === "Tablet" ? (
-        <MdTabletMac />
+        <Icon icon={tabletMacIcon} />
       ) : preset === "Laptop" ? (
-        <MdLaptop />
+        <Icon icon={laptopMacIcon} />
       ) : preset === "Wide" ? (
-        <MdComputer />
+        <Icon icon={computerIcon} />
       ) : (
-        <MdDesktopWindows />
+        <Icon icon={desktopWindowsIcon} />
       );
     }
     case "custom":
-      return <MdDesktopWindows />;
+      return <Icon icon={desktopWindowsIcon} />;
   }
 }

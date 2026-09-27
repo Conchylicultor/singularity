@@ -178,6 +178,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/popover.InlinePopover`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CurriculumWrites`
     - `StandingLookup`

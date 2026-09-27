@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useReorderedEntries } from "@plugins/reorder/web";
@@ -158,7 +159,7 @@ function InsertEntryRow<E extends InsertEntry>({
   onHover: () => void;
 }) {
   const revealRef = useRevealOnActive(active);
-  const Icon = entry.kind === "block" ? entry.block.icon : entry.action.icon;
+  const icon = entry.kind === "block" ? entry.block.icon : entry.action.icon;
 
   const pressProps = onCommit
     ? {
@@ -187,7 +188,9 @@ function InsertEntryRow<E extends InsertEntry>({
       data-block-type={entry.kind === "block" ? entry.block.type : undefined}
       data-insert-action={entry.kind === "action" ? entry.action.id : undefined}
       icon={
-        Icon ? <Icon className="text-muted-foreground size-4" /> : undefined
+        icon ? (
+          <Icon icon={icon} className="text-muted-foreground size-4" />
+        ) : undefined
       }
       onMouseEnter={onHover}
       {...pressProps}

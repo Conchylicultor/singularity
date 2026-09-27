@@ -434,6 +434,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values):
     - `DeploymentDetail`
     - `deploymentDetailPane`

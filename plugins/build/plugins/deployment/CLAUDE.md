@@ -249,6 +249,7 @@ convergence mechanisms all missing it) and the design.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/loading.Loading`
+    - `ui/icons.Icon`
   - Exports (types): `DeploymentReading`
   - Exports (values):
     - `DeploymentChain`

@@ -24,7 +24,6 @@ import {
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { MdBolt } from "react-icons/md";
 import { DEFAULT_EMIT_DURATION_MS, MAX_EMIT_RATE } from "../../core";
 import {
   startEmit,
@@ -32,6 +31,10 @@ import {
   getEmitStatus,
   listResourcesForEmit,
 } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
 
 // Status polls while a session is active so ticks/lastSubscriberCount/remaining
 // stay live. This is a debug-pane read of a server-owned in-memory snapshot — the
@@ -105,7 +108,7 @@ export function EmitPane() {
         <Stack gap="xl">
           <Stack as="section" gap="sm">
             <Stack direction="row" gap="sm" align="center">
-              <MdBolt className="size-4 text-muted-foreground" />
+              <Icon icon={boltIcon} className="size-4 text-muted-foreground" />
               <SectionLabel>Synthetic no-op push emitter</SectionLabel>
             </Stack>
             <Text variant="caption" tone="muted">

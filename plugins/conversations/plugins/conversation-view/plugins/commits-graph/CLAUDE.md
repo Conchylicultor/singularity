@@ -49,6 +49,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"
   - Uses:

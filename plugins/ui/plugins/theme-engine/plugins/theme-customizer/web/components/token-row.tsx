@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { MdUndo } from "react-icons/md";
 import {
   Color,
   ColorPickerPopover,
@@ -7,6 +6,10 @@ import {
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const undoIcon = symbol("undo");
 
 export interface TokenRowProps {
   label: string;
@@ -124,7 +127,7 @@ export function TokenRow({
         }`}
         aria-hidden={!isOverridden}
       >
-        <MdUndo size={14} />
+        <Icon icon={undoIcon} className="size-3.5" />
       </button>
     </Row>
   );

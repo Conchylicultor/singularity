@@ -1,5 +1,4 @@
 import type { ReactElement, ReactNode } from "react";
-import { MdWarning } from "react-icons/md";
 import {
   matchResource,
   useCombinedResources,
@@ -22,6 +21,10 @@ import {
 import { prototypeDetailPane } from "../panes";
 import { PrototypeDetailProvider, usePrototypeDetail } from "../context";
 import { Canvas } from "./canvas";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /**
  * The detail pane: the prototype's canvas of frames. Its header controls (copy
@@ -109,7 +112,7 @@ function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
   return (
     <Inset pad="sm">
       <Stack direction="col" gap="2xs">
-        <Badge variant="warning" icon={<MdWarning />}>
+        <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
           {meta.problems.length === 1
             ? "1 problem with this folder"
             : `${String(meta.problems.length)} problems with this folder`}

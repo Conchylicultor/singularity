@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
-import { MdQueueMusic } from "react-icons/md";
 import { chordApp } from "../core";
 import { ChordLayout } from "./components/chord-layout";
 import { chordTheme } from "./internal/theme";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -13,7 +13,7 @@ export default {
   contributions: [
     Apps.App({
       app: chordApp,
-      icon: mdAppIcon(MdQueueMusic),
+      icon: appIcon(symbol("queue-music")),
       component: ChordLayout,
     }),
     // Selected for the chord app in `config/ui/theme-engine/@app/chord/theme.jsonc`.

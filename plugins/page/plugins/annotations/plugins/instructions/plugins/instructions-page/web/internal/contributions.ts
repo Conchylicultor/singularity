@@ -1,10 +1,12 @@
-import { MdMenuBook } from "react-icons/md";
 import type { PageData } from "@plugins/page/plugins/editor/core";
 import type { InsertAction } from "@plugins/page/plugins/editor/web";
 import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
 import { instructionsBlock } from "@plugins/page/plugins/annotations/plugins/instructions/core";
 import { InstructionsPageChip } from "../components/instructions-page-chip";
 import { turnIntoInstructionsPage } from "./turn-into-instructions-page";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const menuBookIcon = symbol("menu-book");
 
 /** An instructions page is a `page` row whose data says so. */
 function isInstructionsPage(page: PageData): boolean {
@@ -32,7 +34,7 @@ export const instructionsPageDecoration: PageReferenceDecorationContribution = {
 export const instructionsPageInsertAction: InsertAction = {
   id: "instructions-page",
   label: "Instructions page",
-  icon: MdMenuBook,
+  icon: menuBookIcon,
   aliases: ["instructions page", "rules page", "instructions-page"],
   after: instructionsBlock.type,
   run: ({ blockId, text }) => {

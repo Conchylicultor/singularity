@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DataView,
@@ -9,6 +8,11 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const folderIcon = symbol("folder");
+const draftIcon = symbol("draft");
 
 const FILE_TREE_VIEW = defineDataView("code-explorer.file-tree");
 
@@ -165,9 +169,9 @@ export function FileTree({
       expandOnActivate: (r) => r.isDir,
       leadingIcon: (r) =>
         r.isDir ? (
-          <MdFolder className="size-4 text-info" />
+          <Icon icon={folderIcon} className="size-4 text-info" />
         ) : (
-          <MdInsertDriveFile className="size-4 text-muted-foreground" />
+          <Icon icon={draftIcon} className="size-4 text-muted-foreground" />
         ),
     }),
     [],

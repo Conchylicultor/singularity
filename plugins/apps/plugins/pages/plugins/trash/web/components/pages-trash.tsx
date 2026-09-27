@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  MdDeleteOutline,
-  MdDescription,
-  MdRestoreFromTrash,
-  MdDeleteForever,
-} from "react-icons/md";
+
 import {
   Button,
   Dialog,
@@ -39,6 +34,13 @@ import {
 // The pages trash source id — owned by the plugin that registers the source, so
 // the server chokepoint and this dialog can never drift apart.
 import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const deleteIcon = symbol("delete");
+const descriptionIcon = symbol("description");
+const restoreFromTrashIcon = symbol("restore-from-trash");
+const deleteForeverIcon = symbol("delete-forever");
 
 /**
  * Sidebar "Trash" trigger: a Row that opens a dialog listing the pages that have
@@ -75,7 +77,7 @@ export function PagesTrash() {
   return (
     <>
       <div className="px-xs pt-xs">
-        <Row icon={<MdDeleteOutline />} onClick={() => setOpen(true)}>
+        <Row icon={<Icon icon={deleteIcon} />} onClick={() => setOpen(true)}>
           Trash
         </Row>
       </div>
@@ -179,7 +181,7 @@ function TrashList({
         {list.data.map((entry) => (
           <Row
             key={entry.id}
-            icon={<MdDescription />}
+            icon={<Icon icon={descriptionIcon} />}
             hover="muted"
             actionsAlwaysVisible
             actions={
@@ -188,13 +190,13 @@ function TrashList({
                   <RelativeTime date={entry.deletedAt} />
                 </Text>
                 <IconButton
-                  icon={MdRestoreFromTrash}
+                  icon={restoreFromTrashIcon}
                   label="Restore"
                   disabled={restoring}
                   onClick={() => onRestore(entry)}
                 />
                 <IconButton
-                  icon={MdDeleteForever}
+                  icon={deleteForeverIcon}
                   label="Delete permanently"
                   disabled={purging}
                   onClick={() => onPurge(entry)}

@@ -1,7 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
-import { MdBackup } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Stack,
@@ -13,6 +12,10 @@ import { BACKUP_RUN_KIND } from "../../core";
 import { runBackup } from "../../shared/endpoints";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import { backupConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const backupIcon = symbol("backup");
 
 export interface BackupPanelProps {
   /**
@@ -87,7 +90,7 @@ export function BackupPanel({ selectedRunId }: BackupPanelProps) {
         className={selfClass("start")}
       >
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-        <MdBackup className="size-4 mr-2" />
+        <Icon icon={backupIcon} className="size-4 mr-2" />
         Run Backup Now
       </Button>
 

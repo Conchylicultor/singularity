@@ -1,10 +1,13 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { useLatestConversationSummary } from "../hooks";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 export function SummarizeButton() {
   const { convId } = conversationPane.useParams();
@@ -24,7 +27,7 @@ export function SummarizeButton() {
         aria-label="Summary"
         aria-pressed={isOpen}
       >
-        <MdAutoAwesome className="size-3.5" />
+        <Icon icon={autoAwesomeIcon} className="size-3.5" />
         Summary
       </Button>
     );
@@ -43,7 +46,7 @@ export function SummarizeButton() {
         aria-label="Summary"
         aria-pressed={isOpen}
       >
-        <MdAutoAwesome className="size-3.5" />
+        <Icon icon={autoAwesomeIcon} className="size-3.5" />
         Summary
       </Button>
     );

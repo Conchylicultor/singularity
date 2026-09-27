@@ -1,6 +1,9 @@
-import { MdAutoAwesome } from "react-icons/md";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -12,6 +15,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 export function SystemFolder({
   selectedSystemId,
@@ -33,23 +39,27 @@ export function SystemFolder({
         <Center as="span" className="size-5">
           <CollapsibleChevron className="size-4" />
         </Center>
-        <SectionLabel as="span">
-          System
-        </SectionLabel>
+        <SectionLabel as="span">System</SectionLabel>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <Stack gap="none">
           {/* eslint-disable-next-line data-view/no-adhoc-row-list -- closed registry of system agents (sidebar nav chrome) */}
           {descriptors.map((d) => {
-            const Icon = d.icon ?? MdAutoAwesome;
+            const icon = d.icon ?? autoAwesomeIcon;
             const selected = d.id === selectedSystemId;
             return (
               <Row
                 key={d.id}
                 selected={selected}
                 indent={16 + 4}
-                icon={<Icon className="text-muted-foreground" />}
-                onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
+                icon={<Icon icon={icon} className="text-muted-foreground" />}
+                onClick={() =>
+                  openPane(
+                    systemAgentDetailPane,
+                    { systemId: d.id },
+                    { mode: "push" },
+                  )
+                }
               >
                 <Text>{d.name}</Text>
               </Row>

@@ -552,6 +552,7 @@ grouped under the wave or item that removes it
     - `tasks/task-preprompt`
     - `tasks/task-title`
     - `tasks/tasks-core`
+    - `ui/icons/sprites`
 - Central:
   - Exports (types): `CentralServedValue`
   - Exports (values): `serveValue`

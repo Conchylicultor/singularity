@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdAutoFixHigh } from "react-icons/md";
 import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildFixAction, useBuildFailed } from "./components/build-fix-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
     BuildDetailSlots.Section({
       id: "fix",
       label: "Fix",
-      icon: MdAutoFixHigh,
+      icon: symbol("auto-fix-high"),
       actions: BuildFixAction,
       useAvailable: useBuildFailed,
     }),

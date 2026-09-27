@@ -55,6 +55,7 @@ The composer names no contributor: a host decides what goes on the bar.
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor.TextEditorProps`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ComposerAttachButtonProps`
     - `ComposerFieldProps`

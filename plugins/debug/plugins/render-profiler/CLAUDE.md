@@ -114,6 +114,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `ui/icons.Icon`
   - Exports (values): `renderProfilerPane`
 - Core:
   - Exports (types):

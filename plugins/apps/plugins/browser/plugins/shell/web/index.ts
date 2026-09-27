@@ -1,10 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { MdPublic } from "react-icons/md";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { browserApp } from "../core";
 import { BrowserLayout } from "./components/browser-layout";
 import { Browser } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Browser } from "./slots";
 export {
@@ -29,7 +30,7 @@ export default {
   contributions: [
     Apps.App({
       app: browserApp,
-      icon: mdAppIcon(MdPublic),
+      icon: appIcon(symbol("public")),
       component: BrowserLayout,
     }),
   ],

@@ -6,7 +6,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ConfigMenuContent } from "@plugins/config_v2/plugins/config-link/web";
 import { useState } from "react";
-import { MdPlaylistPlay } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
@@ -24,6 +23,10 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playlistPlayIcon = symbol("playlist-play");
 
 export function LaunchPromptsButton({
   conversation,
@@ -81,7 +84,7 @@ export function LaunchPromptsButton({
           />
         }
       >
-        <MdPlaylistPlay className="size-3" />
+        <Icon icon={playlistPlayIcon} className="size-3" />
         Launch
       </DropdownMenuTrigger>
       <ConfigMenuContent

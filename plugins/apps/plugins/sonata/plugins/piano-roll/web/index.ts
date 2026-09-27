@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdGraphicEq } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -7,6 +6,7 @@ import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/w
 import { SpreadWheel } from "./components/spread-wheel";
 import { pianoRollConfig } from "../shared/config";
 import { PianoRollFx } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // The FX extension point: effect sub-plugins import these from this barrel
 // (the only legal cross-plugin path) and contribute headless effects.
@@ -34,7 +34,7 @@ export default {
       match: "piano-roll",
       id: "piano-roll",
       label: "Piano Roll",
-      icon: MdGraphicEq,
+      icon: symbol("graphic-eq"),
       capabilities: ["time-axis", "pitch-plane"],
       // The default lens when the user hasn't picked one.
       default: true,

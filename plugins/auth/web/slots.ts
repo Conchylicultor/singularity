@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
@@ -8,7 +9,7 @@ export interface AuthProviderRowProps {
 export interface AuthProviderContribution {
   id: string;
   name: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Optional override for the per-provider row in the Accounts pane. */
   rowComponent?: ComponentType<AuthProviderRowProps>;
   /** Optional setup help text shown when credentials are missing. */

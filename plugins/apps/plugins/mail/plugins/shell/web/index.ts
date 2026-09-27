@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdMail } from "react-icons/md";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { mailApp } from "../core";
@@ -8,6 +8,7 @@ import { MailLayout } from "./components/mail-layout";
 import { MailRailBadge } from "./components/mail-rail-badge";
 import { mailRootPane } from "./panes";
 import { Mail } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Mail } from "./slots";
 
@@ -17,7 +18,7 @@ export default {
   contributions: [
     Apps.App({
       app: mailApp,
-      icon: mdAppIcon(MdMail),
+      icon: appIcon(symbol("mail")),
       component: MailLayout,
       badge: MailRailBadge,
     }),

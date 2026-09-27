@@ -96,6 +96,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ColumnDef`
     - `DataTableGroup`

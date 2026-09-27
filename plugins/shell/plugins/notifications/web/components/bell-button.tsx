@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -11,6 +10,9 @@ import { recentClientIds } from "../internal/toast";
 import { notifications, notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import { NotificationsPanel } from "./notifications-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const notificationsIcon = symbol("notifications");
 
 export function BellButton() {
   const [open, setOpen] = useState(false);
@@ -59,7 +61,7 @@ export function BellButton() {
     return (
       <span className="relative inline-block">
         <IconButton
-          icon={MdNotificationsNone}
+          icon={notificationsIcon}
           label="Notifications"
           className="text-muted-foreground"
         />
@@ -94,7 +96,8 @@ export function BellButton() {
       trigger={
         <span className="relative inline-block">
           <IconButton
-            icon={unreadCount > 0 ? MdNotifications : MdNotificationsNone}
+            icon={notificationsIcon}
+            active={unreadCount > 0}
             // The exact count: the visible badge caps at "9+".
             label={
               unreadCount > 0

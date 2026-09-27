@@ -14,8 +14,11 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useContext, useState } from "react";
-import { MdCheck } from "react-icons/md";
 import { configSecretMeta } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
 
 /**
  * The one field type whose CONTROL has two states — and now that is all it has:
@@ -62,7 +65,7 @@ const SecretRenderer = defineFieldShape({
               gap="xs"
               className="text-success"
             >
-              <MdCheck className="size-3.5" />
+              <Icon icon={checkIcon} className="size-3.5" />
               <Text variant="caption">Configured</Text>
             </Stack>
             <ControlSizeProvider size="xs">

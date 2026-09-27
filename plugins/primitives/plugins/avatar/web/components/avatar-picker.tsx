@@ -1,4 +1,3 @@
-import { MdClose } from "react-icons/md";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
@@ -11,6 +10,10 @@ import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import type { AvatarColor } from "../../core";
 import { AVATAR_COLOR_KEYS, AVATAR_COLORS } from "../internal/colors";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export interface AvatarSpec {
   icon: string | null;
@@ -100,7 +103,7 @@ export function AvatarPicker({
         <ControlPanel.Footer>
           <ControlPanel.Row
             muted
-            icon={<MdClose />}
+            icon={<Icon icon={closeIcon} />}
             onSelect={() =>
               void onChange({ icon: null, color: null, svgNodes: null })
             }

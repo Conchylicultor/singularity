@@ -1,12 +1,12 @@
-import type { IconType } from "react-icons";
-import {
-  MdAdjust,
-  MdSubdirectoryArrowRight,
-  MdTurnRight,
-} from "react-icons/md";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const adjustIcon = symbol("adjust");
+const subdirectoryArrowRightIcon = symbol("subdirectory-arrow-right");
+const turnRightIcon = symbol("turn-right");
 
 /** One row of the menu: where this task goes relative to the current one. */
 interface DependencyChoice {
@@ -16,7 +16,7 @@ interface DependencyChoice {
   label: string;
   /** How the pill's trigger reads once this row is chosen. */
   short: string;
-  icon: IconType;
+  icon: IconRef;
 }
 
 const CHOICES: DependencyChoice[] = [
@@ -24,19 +24,19 @@ const CHOICES: DependencyChoice[] = [
     value: undefined,
     label: "As separate task",
     short: "Separate",
-    icon: MdAdjust,
+    icon: adjustIcon,
   },
   {
     value: "followup",
     label: "As follow up",
     short: "Follow-up",
-    icon: MdSubdirectoryArrowRight,
+    icon: subdirectoryArrowRightIcon,
   },
   {
     value: "prerequisite",
     label: "As prerequisite",
     short: "Prerequisite",
-    icon: MdTurnRight,
+    icon: turnRightIcon,
   },
 ];
 
@@ -103,7 +103,7 @@ export function DependencyPill({
 
   return (
     <PickerPill
-      icon={chosen ? chosen.icon : MdAdjust}
+      icon={chosen ? chosen.icon : adjustIcon}
       placeholder="Dependency"
       highlight={value !== undefined}
       disabled={disabled}
@@ -121,7 +121,7 @@ export function DependencyPill({
         {choices.map((choice) => (
           <PickerPill.Item
             key={choice.value ?? "independent"}
-            icon={<choice.icon aria-hidden className="size-3.5" />}
+            icon={<Icon icon={choice.icon} aria-hidden className="size-3.5" />}
             selected={choice.value === value}
             onSelect={() => onChange(choice.value)}
             disabled={disabled}

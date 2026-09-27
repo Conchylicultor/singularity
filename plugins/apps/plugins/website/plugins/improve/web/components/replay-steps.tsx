@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdCheck } from "react-icons/md";
 import {
   Button,
   ControlSizeProvider,
@@ -18,6 +17,10 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { issueTitle, readableIdea } from "../../core";
 import "./replay-steps.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
 
 /** What one replay plays: the visitor's idea, and the facts drawn for it. */
 export interface ReplayRun {
@@ -239,7 +242,7 @@ function StepDot({ state }: { state: StepState }) {
       )}
     >
       {state === "done" ? (
-        <MdCheck className="size-3.5" />
+        <Icon icon={checkIcon} className="size-3.5" />
       ) : state === "active" ? (
         <Spinner className="size-3.5" />
       ) : null}

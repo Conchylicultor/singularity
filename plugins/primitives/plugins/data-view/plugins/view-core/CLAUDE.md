@@ -212,6 +212,7 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/view-switcher.useActiveViewId`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ResolvedViewInstance`
     - `ViewActionsCore`

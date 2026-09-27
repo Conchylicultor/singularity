@@ -1,11 +1,7 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRef } from "react";
-import {
-  MdFastForward,
-  MdFastRewind,
-  MdPause,
-  MdPlayArrow,
-} from "react-icons/md";
+
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -20,6 +16,12 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { TempoWheel } from "./tempo-wheel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const fastForwardIcon = symbol("fast-forward");
+const fastRewindIcon = symbol("fast-rewind");
+const pauseIcon = symbol("pause");
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * The tempo in effect at `beat`, in BPM. Derived from the canonical
@@ -53,13 +55,13 @@ const HOLD_TO_REPEAT_MS = 220;
  */
 function SeekButton({
   direction,
-  icon: Icon,
+  icon,
   label,
   shortcut,
   disabled,
 }: {
   direction: -1 | 1;
-  icon: typeof MdFastRewind;
+  icon: typeof fastRewindIcon;
   label: string;
   shortcut: string;
   disabled: boolean;
@@ -120,7 +122,7 @@ function SeekButton({
       className="size-7 touch-none rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
     >
       <Center className="size-full">
-        <Icon className="size-4" />
+        <Icon icon={icon} className="size-4" />
       </Center>
     </button>
   );
@@ -160,13 +162,13 @@ export function PlaybackControls() {
     <Stack direction="row" gap="sm" align="center">
       <SeekButton
         direction={-1}
-        icon={MdFastRewind}
+        icon={fastRewindIcon}
         label="Seek back"
         shortcut="ArrowLeft"
         disabled={!hasScore}
       />
       <IconButton
-        icon={active ? MdPause : MdPlayArrow}
+        icon={active ? pauseIcon : playArrowIcon}
         label={active ? "Pause" : "Play"}
         shortcut="space"
         disabled={!active && !canPlay}
@@ -174,7 +176,7 @@ export function PlaybackControls() {
       />
       <SeekButton
         direction={1}
-        icon={MdFastForward}
+        icon={fastForwardIcon}
         label="Seek forward"
         shortcut="ArrowRight"
         disabled={!hasScore}

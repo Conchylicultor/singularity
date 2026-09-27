@@ -8,6 +8,9 @@ import {
   type InsertEntry,
 } from "../internal/block-sections";
 import { filterInsertEntries } from "../components/block-type-list";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const testIcon = symbol("add");
 
 // `Editor.InsertAction`s placed among the block types, and ranked against them
 // by the `/` query. The menu itself is `BlockMenuPlugin`; what is pinned here is
@@ -26,7 +29,7 @@ function action(
   label: string,
   over: Partial<InsertAction> = {},
 ): InsertAction {
-  return { id, label, icon: () => null, run: () => {}, ...over };
+  return { id, label, icon: testIcon, run: () => {}, ...over };
 }
 
 /** Compact view: one string per row, sections separated. */

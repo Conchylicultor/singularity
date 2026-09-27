@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 
 export interface FieldType<T = unknown> {
   readonly id: string;
@@ -16,7 +16,7 @@ export interface FieldMeta {
 export interface FieldIdentity<T = unknown> {
   readonly type: FieldType<T>;
   readonly label?: string;
-  readonly icon?: ComponentType<{ className?: string }>;
+  readonly icon?: IconRef;
   /** Base type whose table/filter contributions this type inherits (one hop in practice). */
   readonly extends?: FieldType;
   /** Opt-in: this type may be chosen when adding a custom DataView column. */

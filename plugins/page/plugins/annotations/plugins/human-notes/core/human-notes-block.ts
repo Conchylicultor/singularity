@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdPerson } from "react-icons/md";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const personIcon = symbol("person");
 
 /**
  * A human card is a VOID container: it owns NOTHING but its type.
@@ -67,7 +69,7 @@ export const humanNotesBlock = defineAnnotationBlock({
   type: "context",
   schema: humanNotesDataSchema,
   label: "Human",
-  icon: MdPerson,
+  icon: personIcon,
   // The card exists to be READ by an agent — withholding it would defeat the
   // block: an agent that never receives the page's conventions is exactly the
   // state this card was added to fix.

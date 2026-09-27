@@ -1,6 +1,9 @@
-import { MdCampaign } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const campaignIcon = symbol("campaign");
 
 interface HarnessNudgePayload {
   type: string;
@@ -41,7 +44,7 @@ export function HarnessNudgeView({ event }: AttachmentRendererProps) {
 
   return (
     <EventLine
-      icon={<MdCampaign className="size-3.5" />}
+      icon={<Icon icon={campaignIcon} className="size-3.5" />}
       label={labelFor(event.subtype)}
     >
       <span className="truncate">{att.text}</span>

@@ -1,8 +1,10 @@
-import { MdStar, MdStarBorder } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { useBookmarkToggle } from "../internal/use-bookmarks";
 import { hostOf } from "../internal/host-of";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const starIcon = symbol("star");
 
 /**
  * Star toggle for the chrome bar's trailing actions. Filled when the current
@@ -29,7 +31,8 @@ function UrlBookmarkStar({ url }: { url: string }) {
   const { bookmarked, toggle } = state;
   return (
     <IconButton
-      icon={bookmarked ? MdStar : MdStarBorder}
+      icon={starIcon}
+      active={bookmarked}
       label={bookmarked ? "Remove bookmark" : "Add bookmark"}
       tooltip={bookmarked ? "Remove bookmark" : "Add bookmark"}
       aria-pressed={bookmarked}

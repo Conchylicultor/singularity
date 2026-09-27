@@ -14,9 +14,13 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useMemo } from "react";
-import { MdUndo, MdWarning } from "react-icons/md";
 
 import { resetConfigField } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const undoIcon = symbol("undo");
+const warningIcon = symbol("warning");
 
 function formatOriginValue(value: unknown): string {
   if (typeof value === "string") return value;
@@ -129,14 +133,14 @@ export function ConfigField({
       // row's own `RowActions`, so nothing here hides it.
       actions: isModified ? (
         <IconButton
-          icon={MdUndo}
+          icon={undoIcon}
           label={`Reset ${label}`}
           onClick={handleReset}
         />
       ) : undefined,
       note: hasConflict ? (
         <Stack direction="row" gap="sm" align="center" className="text-warning">
-          <MdWarning className={cn("size-3", rigidClass())} />
+          <Icon icon={warningIcon} className={cn("size-3", rigidClass())} />
           <Fill as="span" className="truncate">
             Upstream: {formatOriginValue(originValue)}
           </Fill>

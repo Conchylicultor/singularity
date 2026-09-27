@@ -1,6 +1,10 @@
-import { MdContentCut, MdVisibilityOff } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const contentCutIcon = symbol("content-cut");
+const visibilityOffIcon = symbol("visibility-off");
 
 interface ReadTruncationPayload {
   type: "read_truncation_notice";
@@ -39,7 +43,7 @@ export function ToolOutputNoticeView({ event }: AttachmentRendererProps) {
   if (event.subtype === "bash_output_audience_note") {
     return (
       <EventLine
-        icon={<MdVisibilityOff className="size-3.5" />}
+        icon={<Icon icon={visibilityOffIcon} className="size-3.5" />}
         label="Output not shown to the user"
       >
         <span className="truncate">
@@ -56,7 +60,7 @@ export function ToolOutputNoticeView({ event }: AttachmentRendererProps) {
 
   return (
     <EventLine
-      icon={<MdContentCut className="size-3.5" />}
+      icon={<Icon icon={contentCutIcon} className="size-3.5" />}
       label="Read truncated"
     >
       <span className="truncate">{unwrapBanner(att.banner)}</span>

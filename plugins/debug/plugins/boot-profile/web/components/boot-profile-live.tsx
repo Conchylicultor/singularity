@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import { MdRefresh, MdReplay, MdLink } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -11,6 +10,12 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { saveBootTrace } from "../../shared/endpoints";
 import { BootProfileGantt } from "./boot-profile-gantt";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const refreshIcon = symbol("refresh");
+const replayIcon = symbol("replay");
+const linkIcon = symbol("link");
 
 // Live wrapper: owns the in-memory boot-trace subscription and the Refresh /
 // Reload / Copy permalink controls. The Gantt itself is pure (takes `trace`),
@@ -27,7 +32,9 @@ export function BootProfileLive(): ReactElement {
     // Persist the CURRENT live snapshot (not a stale captured copy), then copy a
     // worktree-scoped permalink. The URL keeps the worktree subdomain so the
     // snapshot resolves against the DB fork it was written to.
-    const { id } = await save.mutateAsync({ body: { snapshot: getBootTrace() } });
+    const { id } = await save.mutateAsync({
+      body: { snapshot: getBootTrace() },
+    });
     const url = `${window.location.origin}/debug/boot-profile/${id}`;
     await navigator.clipboard.writeText(url);
     toast({
@@ -47,15 +54,15 @@ export function BootProfileLive(): ReactElement {
         onClick={() => void onCopyPermalink()}
         disabled={save.isPending}
       >
-        <MdLink className="size-3.5" />
+        <Icon icon={linkIcon} className="size-3.5" />
         {save.isPending ? "Saving…" : "Copy permalink"}
       </Button>
       <Button variant="ghost" onClick={() => refreshBootTrace()}>
-        <MdRefresh className="size-3.5" />
+        <Icon icon={refreshIcon} className="size-3.5" />
         Refresh
       </Button>
       <Button variant="ghost" onClick={() => window.location.reload()}>
-        <MdReplay className="size-3.5" />
+        <Icon icon={replayIcon} className="size-3.5" />
         Reload & re-measure
       </Button>
     </div>
@@ -63,7 +70,11 @@ export function BootProfileLive(): ReactElement {
 
   if (trace.spans.length === 0) {
     return (
-      <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
+      <Text
+        as="div"
+        variant="caption"
+        className="px-lg py-sm text-muted-foreground"
+      >
         No boot trace captured.
       </Text>
     );

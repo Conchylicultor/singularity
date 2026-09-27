@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
-import { MdWarningAmber } from "react-icons/md";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { prototypeThumbnailUrl, type ThumbnailState } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /**
  * A prototype's rendered preview, for use as a gallery card's cover.
@@ -62,7 +65,7 @@ export function PrototypeThumbnail({
       <Overlay behind={fallback} fill className="h-full w-full">
         <Pin to="bottom-right" offset="xs">
           <WithTooltip content={state.message} className="max-w-md">
-            <Badge variant="warning" icon={<MdWarningAmber />}>
+            <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
               Preview failed
             </Badge>
           </WithTooltip>

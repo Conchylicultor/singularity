@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdVerticalSplit } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   PaneChrome,
@@ -32,6 +31,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { attemptPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const verticalSplitIcon = symbol("vertical-split");
 
 function SideBySideButton({ convId }: { convId: string }) {
   const openPane = useOpenPane();
@@ -45,7 +48,7 @@ function SideBySideButton({ convId }: { convId: string }) {
       }}
       className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
     >
-      <MdVerticalSplit size={14} />
+      <Icon icon={verticalSplitIcon} className="size-3.5" />
     </button>
   );
 }

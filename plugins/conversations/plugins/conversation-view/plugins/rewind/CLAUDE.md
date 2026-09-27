@@ -109,6 +109,7 @@ in the transcript, and the rewind removed it. Dismissing the card is correct.
     - `primitives/launch.useLaunchConversation`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (types): `RewindMode`
   - Exports (values): `useGoBackToMessage`
 - Server:

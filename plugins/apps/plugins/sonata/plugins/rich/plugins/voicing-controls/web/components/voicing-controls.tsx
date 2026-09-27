@@ -4,7 +4,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdRemove, MdAdd } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const removeIcon = symbol("remove");
+const addIcon = symbol("add");
 
 /** Octave clamp for the chord voicing (C4 = middle C). */
 const MIN_OCTAVE = 1;
@@ -48,7 +52,7 @@ export function VoicingControls() {
         </Text>
         <Stack direction="row" gap="xs" align="center">
           <IconButton
-            icon={MdRemove}
+            icon={removeIcon}
             label="Lower octave"
             disabled={cfg.octave <= MIN_OCTAVE}
             onClick={() =>
@@ -59,7 +63,7 @@ export function VoicingControls() {
             {cfg.octave}
           </Text>
           <IconButton
-            icon={MdAdd}
+            icon={addIcon}
             label="Raise octave"
             disabled={cfg.octave >= MAX_OCTAVE}
             onClick={() =>

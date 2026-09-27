@@ -10,7 +10,10 @@ import type {
   RoutesData,
   RouteDef,
 } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
-import { MdAltRoute } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const altRouteIcon = symbol("alt-route");
 
 type RouteRow = {
   plugin: PluginNode;
@@ -99,7 +102,13 @@ function rows(entries: FacetTableEntry[]): RouteRow[] {
     const callers = data.endpointCallers.length;
     for (const r of data.routes) {
       const { method, path } = methodAndPath(r);
-      result.push({ plugin: entry.node, method, path, runtime: r.runtime, callers });
+      result.push({
+        plugin: entry.node,
+        method,
+        path,
+        runtime: r.runtime,
+        callers,
+      });
     }
   }
   return result;
@@ -108,7 +117,7 @@ function rows(entries: FacetTableEntry[]): RouteRow[] {
 export const routesFacetTable = defineFacetTable<RouteRow>({
   facetId: "routes",
   label: "Routes",
-  icon: MdAltRoute,
+  icon: altRouteIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.method} ${r.path}`,

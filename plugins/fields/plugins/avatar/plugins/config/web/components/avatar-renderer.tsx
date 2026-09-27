@@ -2,7 +2,11 @@ import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { avatarFieldType } from "@plugins/fields/plugins/avatar/core";
 import { Avatar, AvatarPicker } from "@plugins/primitives/plugins/avatar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { MdAdd } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 /** A disc sizes to itself, so it takes the row's value cell `inline`. */
 const AvatarRenderer = defineFieldShape({
@@ -30,7 +34,7 @@ const AvatarRenderer = defineFieldShape({
               as="span"
               className="size-8 rounded-full border border-dashed border-border text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
             >
-              <MdAdd className="size-4" />
+              <Icon icon={addIcon} className="size-4" />
             </Center>
           ) : (
             <Avatar

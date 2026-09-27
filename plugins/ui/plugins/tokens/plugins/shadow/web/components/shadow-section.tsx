@@ -3,7 +3,6 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useRef, useState } from "react";
-import { MdUndo } from "react-icons/md";
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,6 +34,10 @@ import {
   type ShadowParams,
 } from "../../core";
 import { shadowShortcuts } from "../shortcuts";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const undoIcon = symbol("undo");
 
 function channelsToOklch(channels: string): string {
   return `oklch(${channels})`;
@@ -83,7 +86,7 @@ function ResetButton({
       )}
       aria-hidden={!isOverridden}
     >
-      <MdUndo size={14} />
+      <Icon icon={undoIcon} className="size-3.5" />
     </button>
   );
 }

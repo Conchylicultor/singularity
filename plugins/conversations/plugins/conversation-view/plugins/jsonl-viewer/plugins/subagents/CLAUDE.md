@@ -431,6 +431,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `primitives/relative-time.ElapsedTime`
     - `primitives/relative-time.formatElapsed`
     - `primitives/relative-time.useNow`
+    - `ui/icons.Icon`
   - Exports (types):
     - `SubagentEntry`
     - `SubagentStateDisplay`

@@ -99,6 +99,7 @@ the panel until it is given something to say.
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`
 - Server:
   - Contributes: `report-kind` "worktree-reap-failed"

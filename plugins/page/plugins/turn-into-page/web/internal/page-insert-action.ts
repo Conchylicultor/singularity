@@ -1,8 +1,10 @@
-import { MdDescription } from "react-icons/md";
 import { plainOf } from "@plugins/page/plugins/editor/core";
 import type { InsertAction } from "@plugins/page/plugins/editor/web";
 import { textBlock } from "@plugins/page/plugins/text/core";
 import { turnBlockIntoPage } from "./turn-block-into-page";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const descriptionIcon = symbol("description");
 
 /**
  * `/page`: a new sub-page made in place of the caret's line, listed right after
@@ -17,7 +19,7 @@ import { turnBlockIntoPage } from "./turn-block-into-page";
 export const pageInsertAction: InsertAction = {
   id: "page",
   label: "Page",
-  icon: MdDescription,
+  icon: descriptionIcon,
   aliases: ["sub-page", "subpage", "new page"],
   after: textBlock.type,
   run: ({ blockId, text }) => {

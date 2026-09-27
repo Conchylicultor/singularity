@@ -101,12 +101,15 @@ had exactly one line to carry and no way to carry the rest.
     - `page/container.ContainerBackdrop`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
+    - `ui/icons.Icon`
   - Exports (values): `quoteBlock`
 - Server:
   - Contributes: `page.block-data` "quote"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/container.defineContainerBlock`
+  - Uses:
+    - `page/container.defineContainerBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `quoteBlock`
     - `quoteDataSchema`

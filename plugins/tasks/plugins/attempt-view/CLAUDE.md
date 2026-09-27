@@ -36,6 +36,7 @@
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.useOpenPane`
+    - `ui/icons.Icon`
   - Exports (values): `attemptPane`
 - Cross-plugin:
   - Imported by:

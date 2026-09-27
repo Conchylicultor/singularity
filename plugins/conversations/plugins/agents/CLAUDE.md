@@ -101,6 +101,7 @@ migrate (Resources page item 3).
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
     - `shell.Shell`
+    - `ui/icons.Icon`
   - Exports (types): `SystemAgentDescriptor`
   - Exports (values):
     - `agentDetailPane`

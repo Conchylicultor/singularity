@@ -1,16 +1,20 @@
-import { MdContentPaste, MdNotes, MdUploadFile } from "react-icons/md";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ClaimedKind } from "../internal/drag-kind";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const contentPasteIcon = symbol("content-paste");
+const notesIcon = symbol("notes");
+const uploadFileIcon = symbol("upload-file");
 
 /** What the scrim promises to do with each kind of drag it claims. */
-const HINTS: Record<ClaimedKind, { Icon: typeof MdUploadFile; label: string }> =
-  {
-    files: { Icon: MdUploadFile, label: "Drop file to add to this page" },
-    forest: { Icon: MdContentPaste, label: "Drop blocks to add to this page" },
-    text: { Icon: MdNotes, label: "Drop text to add to this page" },
-  };
+const HINTS: Record<ClaimedKind, { icon: IconRef; label: string }> = {
+  files: { icon: uploadFileIcon, label: "Drop file to add to this page" },
+  forest: { icon: contentPasteIcon, label: "Drop blocks to add to this page" },
+  text: { icon: notesIcon, label: "Drop text to add to this page" },
+};
 
 const KINDS = Object.keys(HINTS) as ClaimedKind[];
 
@@ -56,13 +60,13 @@ export function ExternalDropOverlay({ kind }: { kind: ClaimedKind | null }) {
       )}
     >
       {KINDS.map((k) => {
-        const { Icon, label } = HINTS[k];
+        const { icon, label } = HINTS[k];
         return (
           <Pin key={k} to="top" offset="md" decorative>
             <Badge
               variant="primary"
               shape="pill"
-              icon={<Icon />}
+              icon={<Icon icon={icon} />}
               className={cn(FADE, kind === k ? "opacity-100" : "opacity-0")}
             >
               {label}

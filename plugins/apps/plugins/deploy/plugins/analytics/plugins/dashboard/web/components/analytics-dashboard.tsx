@@ -1,5 +1,4 @@
 import { useId, useState, type ReactNode } from "react";
-import { MdRefresh } from "react-icons/md";
 import {
   reportSourceFor,
   type AnalyticsFilter,
@@ -33,6 +32,9 @@ import { RankedPanel } from "./ranked-panel";
 import { RecordedFields } from "./recorded-fields";
 import { ResultState } from "./result-states";
 import { TrendChart } from "./trend-chart";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const refreshIcon = symbol("refresh");
 
 /** Dimensions a visitor ARRIVES through: filtering by one shows where they landed. */
 const SOURCE_DIMENSIONS: ReadonlySet<Dimension> = new Set([
@@ -101,7 +103,7 @@ export function AnalyticsDashboard({
             </Text>
           )}
           <IconButton
-            icon={MdRefresh}
+            icon={refreshIcon}
             label="Refresh"
             loading={answer.isFetching}
             onClick={() => void answer.refetch()}

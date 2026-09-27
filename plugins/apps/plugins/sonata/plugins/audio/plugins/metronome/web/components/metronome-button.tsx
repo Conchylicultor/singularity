@@ -1,4 +1,3 @@
-import { MdAvTimer } from "react-icons/md";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
@@ -10,6 +9,9 @@ import {
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { metronomeConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const avTimerIcon = symbol("av-timer");
 
 // Count-in lengths as a single-select segmented control. The ids are strings
 // (SegmentedControl is keyed by string); they map 1:1 to the `countInBars` int.
@@ -59,7 +61,7 @@ export function MetronomeButton() {
         // The trigger owns its own tooltip (`label`), which is why the panel has
         // no tooltip prop to duplicate it with.
         <IconButton
-          icon={MdAvTimer}
+          icon={avTimerIcon}
           label="Metronome"
           variant={continuous ? "default" : "ghost"}
           disabled={!hasScore}

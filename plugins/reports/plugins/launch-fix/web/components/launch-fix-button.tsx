@@ -1,10 +1,13 @@
-import { MdAutoFixHigh } from "react-icons/md";
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportContext } from "@plugins/reports/web";
 import { investigate } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoFixHighIcon = symbol("auto-fix-high");
 
 export function LaunchFixButton({
   report,
@@ -31,7 +34,7 @@ export function LaunchFixButton({
           className="rounded-md px-xs py-2xs underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
         >
           <Stack as="span" direction="row" gap="xs" align="center">
-            <MdAutoFixHigh className="size-3" />
+            <Icon icon={autoFixHighIcon} className="size-3" />
             Fix
           </Stack>
         </button>

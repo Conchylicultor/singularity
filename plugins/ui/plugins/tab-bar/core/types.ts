@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type { ComponentType } from "react";
 
@@ -7,7 +8,7 @@ import type { ComponentType } from "react";
  * root, which is the `<Line>` each variant renders.
  */
 export interface TabProps extends Passthrough {
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   label: string;
   active: boolean;
   /** Icon-only (overflow collapse). Variants hide the label + close when true. */

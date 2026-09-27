@@ -10,7 +10,6 @@ import {
   triggerBuildEndpoint,
   BUILD_LOG_CHANNEL,
 } from "../../core";
-import { MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
@@ -27,6 +26,10 @@ import { RunsDataView } from "@plugins/runs/web";
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
 import type { BuildRun } from "../../shared";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playArrowIcon = symbol("play-arrow");
 
 // Both build surfaces open on the `active` tab, which is empty whenever nothing
 // is in flight — the normal case. The shared surface's own default reads
@@ -52,7 +55,7 @@ function BuildControls({
       className="border-b px-md py-sm"
     >
       <Button variant="default" loading={building} onClick={() => onBuild()}>
-        <MdPlayArrow className="size-4" />
+        <Icon icon={playArrowIcon} className="size-4" />
         Build
       </Button>
     </Stack>

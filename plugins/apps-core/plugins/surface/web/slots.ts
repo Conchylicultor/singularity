@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   createContext,
   createElement,
@@ -80,7 +81,7 @@ export interface PlacementDef {
   /** Control tooltip / label. */
   label: string;
   /** Icon for the mode control. */
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Control order + default resolution (lowest order acts as default fallback). */
   order: number;
   /** Exactly one mode should set this — the registry's default (boot) mode. */

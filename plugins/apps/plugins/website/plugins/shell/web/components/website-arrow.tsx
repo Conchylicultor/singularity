@@ -1,4 +1,7 @@
-import { MdArrowForward } from "react-icons/md";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowForwardIcon = symbol("arrow-forward");
 
 /**
  * The site's forward arrow: trails a link or button that takes the reader
@@ -11,7 +14,8 @@ import { MdArrowForward } from "react-icons/md";
  */
 export function WebsiteArrow() {
   return (
-    <MdArrowForward
+    <Icon
+      icon={arrowForwardIcon}
       aria-hidden
       className="motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover/button:translate-x-1 motion-safe:group-focus-visible/button:translate-x-1"
     />

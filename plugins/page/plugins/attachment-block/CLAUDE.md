@@ -27,6 +27,7 @@
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (values): `AttachmentUpload`
 - Cross-plugin:
   - Imported by:

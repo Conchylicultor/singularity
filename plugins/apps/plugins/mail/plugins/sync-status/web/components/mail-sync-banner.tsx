@@ -1,5 +1,4 @@
 import type { ReactElement, ReactNode } from "react";
-import { MdErrorOutline, MdOpenInNew, MdWarningAmber } from "react-icons/md";
 import {
   MAIL_SYNC_REMEDIATION,
   type MailSyncErrorCode,
@@ -14,6 +13,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMailSyncState } from "../internal/use-mail-sync";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const errorIcon = symbol("error");
+const openInNewIcon = symbol("open-in-new");
+const warningIcon = symbol("warning");
 
 /**
  * The Mail app's sync-status banner. Renders a single compact, full-width strip
@@ -61,7 +66,7 @@ export function MailSyncBanner(): ReactElement | null {
     return (
       <BannerShell
         tone="warning"
-        icon={<MdWarningAmber className="size-4" />}
+        icon={<Icon icon={warningIcon} className="size-4" />}
         title={remediation.title}
         body={remediation.body}
         detail={detail}
@@ -74,7 +79,7 @@ export function MailSyncBanner(): ReactElement | null {
   return (
     <BannerShell
       tone="error"
-      icon={<MdErrorOutline className="size-4" />}
+      icon={<Icon icon={errorIcon} className="size-4" />}
       title={remediation.title}
       body={remediation.body}
       detail={detail}
@@ -113,7 +118,7 @@ function RemediationActions({
           }}
         >
           Enable Gmail API
-          <MdOpenInNew className="size-4" />
+          <Icon icon={openInNewIcon} className="size-4" />
         </Button>
       ) : null}
       <RetryButton />

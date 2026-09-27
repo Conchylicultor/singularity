@@ -153,6 +153,7 @@ remote health gate.
     - `primitives/setup-steps.StepState`
     - `primitives/view-switcher.useActiveViewId`
     - `primitives/view-switcher.ViewSwitcher`
+    - `ui/icons.Icon`
 - Core:
   - Exports (types):
     - `ReleaseState`

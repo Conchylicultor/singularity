@@ -1,10 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  MdCheckCircle,
-  MdCloudUpload,
-  MdError,
-  MdFolder,
-} from "react-icons/md";
+
 import { GrantAccessButton } from "@plugins/auth/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -23,6 +18,13 @@ import {
   backupTargetResults,
 } from "../internal/payload";
 import { formatBytes } from "../internal/format-bytes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkCircleIcon = symbol("check-circle");
+const cloudUploadIcon = symbol("cloud-upload");
+const errorIcon = symbol("error");
+const folderIcon = symbol("folder");
 
 /**
  * One storage target's outcome: the target's icon, its name, a tick or a cross,
@@ -41,16 +43,20 @@ function TargetResultLine({
 }: {
   result: BackupTargetResult;
 }): ReactNode {
-  const Icon = result.targetId === "google-drive" ? MdCloudUpload : MdFolder;
+  const icon =
+    result.targetId === "google-drive" ? cloudUploadIcon : folderIcon;
   return (
     <Text as="div" variant="body">
       <Inline gap="sm">
-        <Icon className={cn("size-4 text-muted-foreground", rigidClass())} />
+        <Icon
+          icon={icon}
+          className={cn("size-4 text-muted-foreground", rigidClass())}
+        />
         <span className="font-medium capitalize">{result.targetId}</span>
         {result.ok ? (
-          <MdCheckCircle className="size-3.5 text-success" />
+          <Icon icon={checkCircleIcon} className="size-3.5 text-success" />
         ) : (
-          <MdError className="size-3.5 text-destructive" />
+          <Icon icon={errorIcon} className="size-3.5 text-destructive" />
         )}
         {result.detail !== undefined && (
           <Text as="span" variant="caption" tone="muted">
@@ -100,7 +106,9 @@ function SourceReportLines({
       <Text as="p" variant="body" className="font-medium">
         <Inline gap="sm">
           <span>{source.name}</span>
-          {failed && <MdError className="size-3.5 text-destructive" />}
+          {failed && (
+            <Icon icon={errorIcon} className="size-3.5 text-destructive" />
+          )}
         </Inline>
       </Text>
       {source.outcome === "failed" && (
@@ -192,7 +200,7 @@ function OutcomeSummary({
   return (
     <Text as="span" variant="body" tone="destructive">
       <Inline gap="xs">
-        <MdError className={cn("size-4", rigidClass())} />
+        <Icon icon={errorIcon} className={cn("size-4", rigidClass())} />
         <span>{`${failed} of ${total} failed`}</span>
       </Inline>
     </Text>

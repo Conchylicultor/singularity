@@ -1,7 +1,11 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { ComponentProps } from "react";
-import { MdKeyboardArrowDown } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export interface ControlPanelFieldProps extends Omit<
   ComponentProps<typeof Button>,
@@ -58,7 +62,10 @@ export function ControlPanelField({
           {empty ? placeholder : label}
         </span>
       </span>
-      <MdKeyboardArrowDown className="shrink-0 text-muted-foreground" />
+      <Icon
+        icon={keyboardArrowDownIcon}
+        className="shrink-0 text-muted-foreground"
+      />
     </Button>
   );
 }

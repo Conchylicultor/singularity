@@ -1,5 +1,8 @@
-import { MdAutoAwesome } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * The prompt block's leading glyph, contributed as `chrome.regions.start` — the
@@ -13,7 +16,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 export function PromptMarker() {
   return (
     <Text as="span" variant="body" tone="muted" aria-hidden className="py-xs">
-      <MdAutoAwesome className="icon-auto" />
+      <Icon icon={autoAwesomeIcon} className="icon-auto" />
     </Text>
   );
 }

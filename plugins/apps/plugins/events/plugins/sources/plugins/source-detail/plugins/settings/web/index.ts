@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdTune } from "react-icons/md";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { SourceSettingsSection } from "./components/settings-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     EventSourceDetail.Section({
       id: "settings",
       label: "Settings",
-      icon: MdTune,
+      icon: symbol("tune"),
       component: SourceSettingsSection,
       // No `useAvailable`: the card always has at least the source's name, so
       // there is no longer a state in which it opens onto emptiness.

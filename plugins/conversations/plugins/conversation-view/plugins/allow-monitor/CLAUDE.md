@@ -20,6 +20,7 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
     - `primitives/css/badge.Badge`
     - `primitives/css/text.Text`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "allow-files"
   - Uses:

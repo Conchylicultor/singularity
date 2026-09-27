@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdMenuBook } from "react-icons/md";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const menuBookIcon = symbol("menu-book");
 
 /**
  * An instructions card is a void container whose ONE field is not appearance
@@ -38,7 +40,7 @@ export const instructionsBlock = defineAnnotationBlock({
   type: "instructions",
   schema: instructionsDataSchema,
   label: "Instructions",
-  icon: MdMenuBook,
+  icon: menuBookIcon,
   audience: "agent",
   author: "human",
   // `/instructions` itself is the label. These are the other words a person

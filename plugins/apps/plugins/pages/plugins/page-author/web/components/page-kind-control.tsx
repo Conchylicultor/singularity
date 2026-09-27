@@ -1,5 +1,3 @@
-import type { ComponentType } from "react";
-import { MdAutoAwesome, MdDescription, MdMenuBook } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -20,6 +18,11 @@ import {
   setPageKind,
   type PageKind,
 } from "@plugins/page/plugins/editor/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const autoAwesomeIcon = symbol("auto-awesome");
+const descriptionIcon = symbol("description");
+const menuBookIcon = symbol("menu-book");
 
 /**
  * The square an icon button occupies at each density, so the placeholder holds
@@ -38,27 +41,27 @@ const ICON_BOX: Record<ControlSize, string> = {
 const KIND_LOOK: Record<
   PageKind["kind"],
   {
-    icon: ComponentType<{ className?: string }>;
+    icon: IconRef;
     label: string;
     hint: string;
     tint: string | null;
   }
 > = {
   page: {
-    icon: MdDescription,
+    icon: descriptionIcon,
     label: "Page",
     hint: "An ordinary page: agents may read it and never write it.",
     tint: null,
   },
   "agent-page": {
-    icon: MdAutoAwesome,
+    icon: autoAwesomeIcon,
     label: "Agent page",
     hint: "Agents can write all of it.",
     // The `info` wash agent notes wear.
     tint: "bg-info/10 text-info hover:bg-info/20 hover:text-info",
   },
   instructions: {
-    icon: MdMenuBook,
+    icon: menuBookIcon,
     label: "Instructions",
     hint: "Your standing instructions to every agent working under the parent page.",
     // The `primary` wash the inline `<instructions>` card wears.

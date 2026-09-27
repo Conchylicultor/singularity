@@ -361,6 +361,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/select-scope.scopeSelectAllKeyDown`
     - `primitives/shortcuts.ShortcutDescriptor`
     - `primitives/shortcuts.useSurfaceShortcuts`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ButtonIconSize`
     - `ControlSize`
@@ -823,6 +824,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/theme-engine`
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/icons`
     - `ui/tokens/shadow`
     - `ui/tree-disclosure/column`
     - `ui/tree-disclosure/dimmed-leaf`

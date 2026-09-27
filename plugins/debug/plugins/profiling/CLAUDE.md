@@ -33,6 +33,7 @@
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `DragState`
     - `GanttContainerContextValue`

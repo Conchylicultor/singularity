@@ -89,6 +89,7 @@ lives inside the tool result, not in a message a rewind can cut at.
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (values): `answerQuestionDelivery`
 - Server:
   - Uses:

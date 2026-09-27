@@ -1,9 +1,11 @@
-import { MdRestartAlt } from "react-icons/md";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { resetTrackViews } from "../actions";
 import { useTrackMixerEntries } from "../hooks";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const restartAltIcon = symbol("restart-alt");
 
 /**
  * Header-right action for the "Tracks" `Sonata.Section` (contributed as
@@ -24,7 +26,7 @@ export function TrackMixerActions() {
   const anyCustomized = entries.value.some((e) => e.customized);
   return (
     <IconButton
-      icon={MdRestartAlt}
+      icon={restartAltIcon}
       label="Reset tracks to defaults"
       disabled={!anyCustomized}
       onClick={() => resetTrackViews(currentSongId)}

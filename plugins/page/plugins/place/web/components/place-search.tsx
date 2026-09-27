@@ -1,5 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
-import { MdPlace } from "react-icons/md";
 import {
   getEndpointErrorMessage,
   useEndpoint,
@@ -23,6 +23,9 @@ import { useBlockActivate } from "@plugins/page/plugins/editor/web";
 import { placeSearchEndpoint, type PlaceSuggestion } from "../../core";
 import { useDebouncedValue } from "../internal/use-debounced-value";
 import type { PlaceProviderContribution } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const locationOnIcon = symbol("location-on");
 
 /**
  * How long typing must settle before a lookup fires. Providers meter searches,
@@ -91,13 +94,16 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
     }
   }
 
-  const Icon = provider.icon ?? MdPlace;
+  const icon = provider.icon ?? locationOnIcon;
   const hasResults = suggestions.length > 0;
 
   return (
     <Stack gap="xs">
       <Stack direction="row" gap="sm" align="center">
-        <Icon className={cn(rigidClass(), "size-4 text-muted-foreground")} />
+        <Icon
+          icon={icon}
+          className={cn(rigidClass(), "size-4 text-muted-foreground")}
+        />
         <Fill>
           <Input
             // Chrome, not document content: the query is discarded on

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdAccountTree } from "react-icons/md";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { TreeView } from "./components/tree-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type { TreeViewOptions } from "./internal/types";
 
@@ -12,7 +12,7 @@ export default {
     DataViewSlots.View({
       type: "tree",
       title: "Tree",
-      icon: MdAccountTree,
+      icon: symbol("account-tree"),
       order: 2,
       hierarchical: true,
       // Defaults to manual (rank) order — the DnD-reorderable order the tree

@@ -3,18 +3,7 @@ import {
   useRef,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import {
-  MdAdd,
-  MdChevronLeft,
-  MdChevronRight,
-  MdClose,
-  MdContentCopy,
-  MdDownload,
-  MdFitScreen,
-  MdKeyboard,
-  MdOpenInNew,
-  MdRemove,
-} from "react-icons/md";
+
 import {
   Button,
   ControlSizeProvider,
@@ -52,6 +41,19 @@ import type { ViewController } from "../internal/view-controller";
 import { ViewStore, type ViewState } from "../internal/view-store";
 import type { ViewerImage } from "../internal/types";
 import { KeyCaps, keyTooltip } from "./key-caps";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const chevronLeftIcon = symbol("chevron-left");
+const chevronRightIcon = symbol("chevron-right");
+const closeIcon = symbol("close");
+const contentCopyIcon = symbol("content-copy");
+const downloadIcon = symbol("download");
+const fitScreenIcon = symbol("fit-screen");
+const keyboardIcon = symbol("keyboard");
+const openInNewIcon = symbol("open-in-new");
+const removeIcon = symbol("remove");
 
 /**
  * A floating control group: the overlay surface, see-through over the image,
@@ -131,14 +133,14 @@ export function TopBar({
             >
               {capabilities.open !== "none" && (
                 <IconButton
-                  icon={MdOpenInNew}
+                  icon={openInNewIcon}
                   label="Open original in a new tab"
                   onClick={onOpen}
                 />
               )}
               {capabilities.copy && (
                 <IconButton
-                  icon={MdContentCopy}
+                  icon={contentCopyIcon}
                   label="Copy image"
                   tooltip={keyTooltip("Copy image", "copy")}
                   disabled={natural === null}
@@ -147,7 +149,7 @@ export function TopBar({
               )}
               {capabilities.download && (
                 <IconButton
-                  icon={MdDownload}
+                  icon={downloadIcon}
                   label="Download"
                   onClick={onDownload}
                 />
@@ -164,7 +166,7 @@ export function TopBar({
             className={cn(PANEL, "pointer-events-auto p-2xs")}
           >
             <IconButton
-              icon={MdClose}
+              icon={closeIcon}
               label="Close"
               tooltip={keyTooltip("Close", "close")}
               onClick={onClose}
@@ -204,7 +206,7 @@ export function NavArrows({
     <ControlSizeProvider size="lg">
       <Pin to="left" offset="md" className={CHROME_FADE} data-viewer-chrome>
         <IconButton
-          icon={MdChevronLeft}
+          icon={chevronLeftIcon}
           label="Previous image"
           tooltip={keyTooltip("Previous image", "previous")}
           shape="pill"
@@ -215,7 +217,7 @@ export function NavArrows({
       </Pin>
       <Pin to="right" offset="md" className={CHROME_FADE} data-viewer-chrome>
         <IconButton
-          icon={MdChevronRight}
+          icon={chevronRightIcon}
           label="Next image"
           tooltip={keyTooltip("Next image", "next")}
           shape="pill"
@@ -278,7 +280,7 @@ export function BottomBar({ ctl }: { ctl: ViewController }) {
           className={cn(PANEL, "pointer-events-auto gap-2xs p-2xs")}
         >
           <IconButton
-            icon={MdRemove}
+            icon={removeIcon}
             label="Zoom out"
             tooltip={keyTooltip("Zoom out", "zoom-out")}
             disabled={!canZoomOut}
@@ -288,7 +290,7 @@ export function BottomBar({ ctl }: { ctl: ViewController }) {
             {percent}%
           </Text>
           <IconButton
-            icon={MdAdd}
+            icon={addIcon}
             label="Zoom in"
             tooltip={keyTooltip("Zoom in", "zoom-in")}
             disabled={!canZoomIn}
@@ -302,7 +304,7 @@ export function BottomBar({ ctl }: { ctl: ViewController }) {
               className="aria-pressed:bg-hover-fill"
               onClick={() => ctl.toFit(true)}
             >
-              <MdFitScreen />
+              <Icon icon={fitScreenIcon} />
               Fit
             </Button>
           </WithTooltip>
@@ -318,7 +320,7 @@ export function BottomBar({ ctl }: { ctl: ViewController }) {
           </WithTooltip>
           <Separator orientation="vertical" className="h-4" />
           <IconButton
-            icon={MdKeyboard}
+            icon={keyboardIcon}
             label="Keyboard shortcuts"
             tooltip={keyTooltip("Keyboard shortcuts", "shortcuts")}
             aria-pressed={sheet}

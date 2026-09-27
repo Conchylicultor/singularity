@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdVisibilityOff } from "react-icons/md";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const visibilityOffIcon = symbol("visibility-off");
 
 /**
  * A private-note card is a VOID container: it owns NOTHING but its type.
@@ -37,7 +39,7 @@ export const privateNotesBlock = defineAnnotationBlock({
   type: "private-note",
   schema: privateNotesDataSchema,
   label: "Private note",
-  icon: MdVisibilityOff,
+  icon: visibilityOffIcon,
   // The one card withheld from agents, and the reason `audience` exists at all.
   //
   // Declaring it here is what makes "privacy is a fact of the TYPE" a mechanism

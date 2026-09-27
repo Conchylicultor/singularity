@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
 import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
-import { MdOutlineAutoAwesome } from "react-icons/md";
 import { autoStartLaunchOption } from "../core";
 import { AutoStartLaunchControl } from "./components/auto-start-control";
 import {
@@ -10,6 +9,7 @@ import {
   AUTO_START_OFF_LABEL,
 } from "./components/auto-start-pill";
 import { useTaskAutoStartBinding } from "./internal/binding";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -26,7 +26,7 @@ export default {
       // pill — `✦ Opus 5  Max` — at the trailing end, where the bar reads as
       // "what happens when you submit".
       pill: {
-        icon: MdOutlineAutoAwesome,
+        icon: symbol("auto-awesome"),
         Value: AutoStartPillValue,
         // Fused with the thinking mode, so it is always on screen: off it reads
         // "Off" rather than disappearing out from under the user.

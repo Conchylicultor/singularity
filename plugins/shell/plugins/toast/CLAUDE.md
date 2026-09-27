@@ -15,6 +15,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/select-scope.ContentScope`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ToastArgs`
     - `ToastVariant`

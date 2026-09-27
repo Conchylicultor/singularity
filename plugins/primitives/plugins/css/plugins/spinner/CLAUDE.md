@@ -6,13 +6,14 @@
 
 - Description: Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses:
+    - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (types): `SpinnerProps`
   - Exports (values): `Spinner`
 - Cross-plugin:
   - Imported by:
     - `apps/browser/tabs`
-    - `apps/events/sources/refresh-all`
     - `apps/mail/attachments`
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`

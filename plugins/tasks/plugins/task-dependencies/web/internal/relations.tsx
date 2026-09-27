@@ -1,4 +1,3 @@
-import { MdClose } from "react-icons/md";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -11,6 +10,9 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 /**
  * One direction of the SAME edge (`task_dependencies`), read from the task the
@@ -77,7 +79,8 @@ export function RelationChip({
   const isTerminal = other ? isSettled(other.status) : false;
   const openPane = useOpenPane();
 
-  const open = () => openPane(taskDetailPane, { taskId: otherId }, { mode: "swap" });
+  const open = () =>
+    openPane(taskDetailPane, { taskId: otherId }, { mode: "swap" });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetchEndpoint(removeTaskDependency, direction.edge(taskId, otherId));
@@ -90,11 +93,13 @@ export function RelationChip({
         size="sm"
         hover="muted"
         actionsAlwaysVisible
-        className={isTerminal ? "text-muted-foreground line-through" : undefined}
+        className={
+          isTerminal ? "text-muted-foreground line-through" : undefined
+        }
         actions={
           <ControlSizeProvider size="sm">
             <IconButton
-              icon={MdClose}
+              icon={closeIcon}
               label={direction.removeLabel(title)}
               variant="ghost"
               onClick={remove}

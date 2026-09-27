@@ -9,7 +9,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState } from "react";
-import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
 import {
   useOpenPane,
   type PaneOpenMode,
@@ -34,6 +33,12 @@ import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playArrowIcon = symbol("play-arrow");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const checkIcon = symbol("check");
 
 export type LaunchRequest = {
   prompt?: string;
@@ -157,11 +162,13 @@ export function LaunchModelMenuContent({
             className={fillClasses("x")}
           >
             <ModelChoiceLabel choice={id} />
-            {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
+            {id === defaultModel && (
+              <Icon icon={checkIcon} className="size-3.5 opacity-70" />
+            )}
           </Stack>
           <Stack as="span" direction="row" align="center" gap="xs">
             <IconButton
-              icon={MdPlayArrow}
+              icon={playArrowIcon}
               label={`Launch ${choiceLabel(id)}`}
               variant="ghost"
               onClick={(e) => {
@@ -232,7 +239,7 @@ export function LaunchControl({
           title={launchTitle}
           onClick={() => launch(defaultModel)}
         >
-          <MdPlayArrow className={choiceIconSize(defaultModel)} />
+          <Icon icon={playArrowIcon} className={choiceIconSize(defaultModel)} />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -246,7 +253,7 @@ export function LaunchControl({
               />
             }
           >
-            <MdExpandMore className="size-3" />
+            <Icon icon={keyboardArrowDownIcon} className="size-3" />
           </DropdownMenuTrigger>
           {rows}
         </DropdownMenu>
@@ -272,7 +279,7 @@ export function LaunchControl({
           }
         >
           {choiceLabel(defaultModel)}
-          <MdExpandMore className="size-4 opacity-80" />
+          <Icon icon={keyboardArrowDownIcon} className="size-4 opacity-80" />
         </DropdownMenuTrigger>
         {rows}
       </DropdownMenu>
@@ -289,7 +296,7 @@ export function LaunchControl({
           variant === "default" && "border-l border-white/20",
         )}
       >
-        <MdPlayArrow className="size-4" />
+        <Icon icon={playArrowIcon} className="size-4" />
       </Button>
     </ButtonGroup>
   );

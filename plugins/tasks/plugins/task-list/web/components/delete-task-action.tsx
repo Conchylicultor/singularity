@@ -1,9 +1,11 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdDelete } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 // "Delete" is a soft drop: it marks the task dropped (reversible via the
 // task header's Undrop), never removing the row. Tasks are never hard-deleted.
@@ -29,7 +31,7 @@ export function DeleteTaskAction({
     // appear; onClick early-returns when disabled.
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={MdDelete}
+        icon={deleteIcon}
         label="Drop task"
         tooltip={title}
         variant="ghost"

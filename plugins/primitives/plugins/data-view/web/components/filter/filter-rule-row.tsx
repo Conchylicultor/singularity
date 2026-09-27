@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdAccountTree } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -8,6 +7,9 @@ import { useFilterEditor } from "../../internal/use-filter-editor";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FieldPicker } from "./field-picker";
 import { OperatorPicker } from "./operator-picker";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const accountTreeIcon = symbol("account-tree");
 
 /**
  * One rule, as one line of the builder's shared grid:
@@ -80,7 +82,7 @@ export function FilterRuleRow(props: {
       }
       actions={
         <IconButton
-          icon={MdAccountTree}
+          icon={accountTreeIcon}
           label="Turn into group"
           onClick={() => editor.wrapRuleInGroup(rule.id)}
         />

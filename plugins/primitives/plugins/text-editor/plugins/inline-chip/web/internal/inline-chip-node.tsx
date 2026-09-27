@@ -1,4 +1,3 @@
-import { MdClose } from "react-icons/md";
 import { type LexicalNode, type NodeKey } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
@@ -13,6 +12,10 @@ import {
 import type { InlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import { inlineChipNode, type InlineChipFields } from "../../core";
 import { renderInlineChip } from "./render-inline-chip";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 /**
  * The browser half: the SAME family declared in `core/node.ts`, with the chip
@@ -94,7 +97,7 @@ function InlineChipDecoration({
           aria-label="Remove"
         >
           <Center className="size-full">
-            <MdClose className="size-3" />
+            <Icon icon={closeIcon} className="size-3" />
           </Center>
         </button>
       </Pin>

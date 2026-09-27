@@ -22,6 +22,7 @@ lives in the `plugins/storage` sub-plugin.
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
     - `fields/text.textFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `uuidFieldType`
     - `uuidIdentity`

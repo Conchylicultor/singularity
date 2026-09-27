@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { MdAdd } from "react-icons/md";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { type DragEndEvent } from "@dnd-kit/core";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
@@ -34,6 +33,10 @@ import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useFlatExpandAll } from "./use-flat-expand-all";
 import type { TreeItem } from "./types";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 /** Above this many *visible* (expanded) rows the tree windows its rows via
  * VirtualRows. Below it the recursive render runs unchanged. Mirrors the list
@@ -453,7 +456,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
                   className="text-muted-foreground mt-1 w-fit"
                 >
-                  <MdAdd className="size-4" />
+                  <Icon icon={addIcon} className="size-4" />
                   {addLabel}
                 </Button>
               )}

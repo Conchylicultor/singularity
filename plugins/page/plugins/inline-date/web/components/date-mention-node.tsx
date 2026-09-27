@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdDeleteOutline, MdNotificationsActive } from "react-icons/md";
 import { $getNodeByKey, type LexicalNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -12,6 +11,11 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { DatePickerPanel } from "@plugins/primitives/plugins/date-picker/web";
 import { dateMentionNode, type DateMentionFields } from "../../core";
 import { DateMentionChip } from "./date-mention-chip";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const deleteIcon = symbol("delete");
+const notificationsActiveIcon = symbol("notifications-active");
 
 /**
  * The browser half of the inline date-mention token: the SAME family declared in
@@ -100,7 +104,7 @@ function DateMentionView({
           <ToggleChip
             active={isReminder}
             variant="ghost"
-            icon={<MdNotificationsActive />}
+            icon={<Icon icon={notificationsActiveIcon} />}
             // Minting/clearing the id is the ENTIRE reminder operation — the
             // server reconciles reminders from the block text on the next
             // `page.blocksChanged`.
@@ -122,7 +126,7 @@ function DateMentionView({
               mutate((node) => node.remove());
             }}
           >
-            <MdDeleteOutline />
+            <Icon icon={deleteIcon} />
             Remove
           </Button>
         </Line>

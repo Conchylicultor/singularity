@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
-import { SiGooglemaps } from "react-icons/si";
 import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 import { googleMapsSetupPane } from "./panes";
+import { brand } from "@plugins/ui/plugins/icons/core";
 
 export { googleMapsSetupPane } from "./panes";
 
@@ -20,7 +20,7 @@ export default {
     Auth.Provider({
       id: GOOGLE_MAPS_PROVIDER_ID,
       name: "Google Maps Platform",
-      icon: SiGooglemaps,
+      icon: brand("googlemaps"),
       helpUrl: "https://console.cloud.google.com/apis/credentials",
       configureCredentials: () =>
         openPane(googleMapsSetupPane, {}, { mode: "root" }),

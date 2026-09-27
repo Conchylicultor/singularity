@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { MdCloudDone, MdCloudOff, MdSyncProblem } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -11,6 +10,12 @@ import {
   SyncStatusStore,
   type SyncAggregate,
 } from "../internal/store";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const cloudDoneIcon = symbol("cloud-done");
+const cloudOffIcon = symbol("cloud-off");
+const syncProblemIcon = symbol("sync-problem");
 
 /** Time the `syncing` state must persist before the spinner shows, so fast saves
  *  never flash (mirrors the `loading` primitive's ~120ms delay-before-show). */
@@ -62,7 +67,10 @@ function Body({ agg }: { agg: Exclude<SyncAggregate, { kind: "idle" }> }) {
           </>
         }
       >
-        <MdCloudDone className="icon-auto text-muted-foreground" />
+        <Icon
+          icon={cloudDoneIcon}
+          className="icon-auto text-muted-foreground"
+        />
       </WithTooltip>
     );
   }
@@ -77,7 +85,7 @@ function Body({ agg }: { agg: Exclude<SyncAggregate, { kind: "idle" }> }) {
       <WithTooltip
         content={`${who} changed elsewhere while you were editing — your unsaved version is the one on screen`}
       >
-        <MdSyncProblem className="icon-auto text-warning" />
+        <Icon icon={syncProblemIcon} className="icon-auto text-warning" />
       </WithTooltip>
     );
   }
@@ -87,7 +95,7 @@ function Body({ agg }: { agg: Exclude<SyncAggregate, { kind: "idle" }> }) {
   const what = labels.length > 0 ? ` ${labels.join(", ")}` : "";
   return (
     <IconButton
-      icon={MdCloudOff}
+      icon={cloudOffIcon}
       label="Retry"
       tooltip={`Couldn't save${what} — click to retry`}
       className="text-destructive"

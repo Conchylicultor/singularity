@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -19,9 +20,6 @@ import type {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { NoDisplay } from "./components/no-display";
 import type { SongSettingKey } from "./song-setting";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /**
  * A Sonata section is scoped to the OPEN SONG, which every contributor already
@@ -94,7 +92,7 @@ export const Sonata = {
   Source: defineSlot<{
     id: string;
     label: string;
-    icon?: IconType;
+    icon?: IconRef;
     LoaderComponent: ComponentType<{
       raw?: unknown;
       onRaw: (raw: unknown) => void;
@@ -121,7 +119,7 @@ export const Sonata = {
     {
       id: string;
       label: string;
-      icon?: IconType;
+      icon?: IconRef;
       capabilities: Capability[];
       /** The lens selected when the user hasn't chosen one (exactly one; falls
        *  back to the first contribution). Collection-consumer clean — consumers

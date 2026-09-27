@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdAdd, MdCheck, MdHearing } from "react-icons/md";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { chordLabel } from "@plugins/apps/plugins/chord/plugins/vocabulary/core";
 import {
@@ -60,6 +59,12 @@ import {
   type CurriculumWrites,
 } from "../internal/use-curriculum";
 import "./path.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const checkIcon = symbol("check");
+const hearingIcon = symbol("hearing");
 
 /** How the path reads a chord's standing at one blanks level (from `chord.progress`). */
 export type StandingLookup = (
@@ -209,7 +214,7 @@ function ChordChips({
               <ChordNumeral token={token} />
               {state === "hear" && (
                 <span className="chord-state-ear" aria-hidden="true">
-                  <MdHearing />
+                  <Icon icon={hearingIcon} />
                 </span>
               )}
             </button>
@@ -261,7 +266,7 @@ function ChapterMenu({
           className="chord-state-more"
           aria-label="More chords"
         >
-          <MdAdd aria-hidden="true" />
+          <Icon icon={addIcon} aria-hidden="true" />
         </button>
       }
     >
@@ -626,7 +631,7 @@ function MapCell({
       />
       {s?.mastered === true && (
         <Center className="chord-map-check relative">
-          <MdCheck aria-hidden="true" />
+          <Icon icon={checkIcon} aria-hidden="true" />
         </Center>
       )}
     </button>

@@ -5,13 +5,20 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { MdCheck, MdOpenInNew } from "react-icons/md";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Stack, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const openInNewIcon = symbol("open-in-new");
 
 /**
  * Lifecycle position of a step within a guided setup flow. `upcoming` steps are
@@ -38,7 +45,13 @@ interface StepPositionProps {
  * step's number and last-position automatically, so callers never maintain
  * `number={…}` by hand. Direct children must be `<Step>` elements.
  */
-export function Steps({ children, className }: { children: ReactNode; className?: string }) {
+export function Steps({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   const items = Children.toArray(children).filter(isValidElement);
   return (
     <Stack as="ol" gap="none" className={className}>
@@ -89,7 +102,7 @@ export function Step({
           )}
         >
           {done ? (
-            <MdCheck className="size-3.5" />
+            <Icon icon={checkIcon} className="size-3.5" />
           ) : (
             <Text as="span" variant="caption" className="font-medium">
               {number}
@@ -99,7 +112,10 @@ export function Step({
         {!isLast && <Fill axis="y" aria-hidden className="w-px bg-border" />}
       </Stack>
       <Fill>
-        <Stack gap="xs" className={!isLast ? insetClass({ b: "lg" }) : undefined}>
+        <Stack
+          gap="xs"
+          className={!isLast ? insetClass({ b: "lg" }) : undefined}
+        >
           <Text as="span" variant="label">
             {title}
           </Text>
@@ -111,7 +127,13 @@ export function Step({
 }
 
 /** External-link affordance for a step: opens `href` in a new tab. */
-export function StepLink({ href, label = "Open" }: { href: string; label?: string }) {
+export function StepLink({
+  href,
+  label = "Open",
+}: {
+  href: string;
+  label?: string;
+}) {
   return (
     <Button
       variant="outline"
@@ -120,7 +142,7 @@ export function StepLink({ href, label = "Open" }: { href: string; label?: strin
     >
       {label}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
-      <MdOpenInNew className="ml-1 size-3.5" />
+      <Icon icon={openInNewIcon} className="ml-1 size-3.5" />
     </Button>
   );
 }
@@ -157,7 +179,7 @@ export function StepDone({ children }: { children: ReactNode }) {
   return (
     <Text as="div" variant="caption" className="text-success">
       <Stack direction="row" align="center" gap="xs">
-        <MdCheck className="size-4" />
+        <Icon icon={checkIcon} className="size-4" />
         {children}
       </Stack>
     </Text>

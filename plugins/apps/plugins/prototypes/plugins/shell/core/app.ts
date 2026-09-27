@@ -4,5 +4,5 @@ export const prototypesApp = defineApp({
   id: "prototypes",
   name: "Prototypes",
   basePath: "/prototypes",
-  iconKey: "dashboard_customize",
+  iconKey: "dashboard-customize",
 });

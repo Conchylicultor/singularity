@@ -1,6 +1,4 @@
 import { useState, type ReactElement } from "react";
-import { MdBolt, MdLanguage, MdPlayArrow } from "react-icons/md";
-import type { IconType } from "react-icons";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -14,6 +12,12 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
+const languageIcon = symbol("language");
+const playArrowIcon = symbol("play-arrow");
 
 // The "Serve live" pseudo-target. Deliberately NOT in RELEASE_TARGETS — that core
 // list drives real release build-args + the server validator; "serve" is a
@@ -23,7 +27,10 @@ const PICKER_TARGETS = [SERVE_TARGET, ...RELEASE_TARGETS];
 
 // Web-only icon decoration for the target list (the engine carries no icon —
 // the server must not import a UI component, so the web attaches a glyph by id).
-const TARGET_ICONS: Record<string, IconType> = { serve: MdBolt, web: MdLanguage };
+const TARGET_ICONS: Record<string, IconRef> = {
+  serve: boltIcon,
+  web: languageIcon,
+};
 
 function TargetPicker({
   target,
@@ -35,13 +42,13 @@ function TargetPicker({
   return (
     <Cluster gap="sm">
       {PICKER_TARGETS.map((t) => {
-        const Icon = TARGET_ICONS[t.id];
+        const icon = TARGET_ICONS[t.id];
         return (
           <ToggleChip
             key={t.id}
             active={target === t.id}
             disabled={!t.implemented}
-            icon={Icon ? <Icon /> : undefined}
+            icon={icon ? <Icon icon={icon} /> : undefined}
             onClick={() => onPick(t.id)}
             title={t.implemented ? t.label : `${t.label} (coming soon)`}
           >
@@ -63,7 +70,8 @@ export function ReleaseSection({ id }: { id: string }): ReactElement {
   // are inspection lenses with no product to build. Serving, however, is
   // available for ALL categories.
   const releasable = item?.category === "app";
-  const canRun = name !== undefined && releasable && target !== null && !trigger.isPending;
+  const canRun =
+    name !== undefined && releasable && target !== null && !trigger.isPending;
 
   return (
     <Stack gap="sm">
@@ -85,10 +93,11 @@ export function ReleaseSection({ id }: { id: string }): ReactElement {
             loading={trigger.isPending}
             disabled={!canRun}
             onClick={() => {
-              if (name && target) trigger.mutate({ body: { composition: name, target } });
+              if (name && target)
+                trigger.mutate({ body: { composition: name, target } });
             }}
           >
-            <MdPlayArrow className="size-4" />
+            <Icon icon={playArrowIcon} className="size-4" />
             Run release
           </Button>
 
@@ -109,7 +118,11 @@ export function ReleaseSection({ id }: { id: string }): ReactElement {
  * for a composition that exists — the panel is only ever rendered with a real
  * manifest item, and a hook cannot be called conditionally.
  */
-function ServeTarget({ item }: { item: CompositionManifestItem }): ReactElement {
+function ServeTarget({
+  item,
+}: {
+  item: CompositionManifestItem;
+}): ReactElement {
   const status = useServeStatus(item.id);
   return <ServeTargetPanel item={item} status={status} />;
 }

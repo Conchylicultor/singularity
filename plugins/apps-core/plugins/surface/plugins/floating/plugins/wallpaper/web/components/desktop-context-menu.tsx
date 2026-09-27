@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import { MdImage, MdRestartAlt } from "react-icons/md";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   CursorAnchoredMenu,
@@ -9,6 +8,11 @@ import {
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { wallpaperConfig } from "../../core";
 import { openWallpaperPicker } from "./wallpaper-picker";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const imageIcon = symbol("image");
+const restartAltIcon = symbol("restart-alt");
 
 /**
  * The desktop context menu host: a transparent full-surface capture layer that
@@ -81,12 +85,12 @@ function DesktopContextMenuContent({
   return (
     <CursorAnchoredMenu anchor={anchor} onClose={onClose}>
       <DropdownMenuItem onClick={openWallpaperPicker}>
-        <MdImage />
+        <Icon icon={imageIcon} />
         Change wallpaper…
       </DropdownMenuItem>
       {hasImage && (
         <DropdownMenuItem onClick={onReset}>
-          <MdRestartAlt />
+          <Icon icon={restartAltIcon} />
           Reset to default
         </DropdownMenuItem>
       )}

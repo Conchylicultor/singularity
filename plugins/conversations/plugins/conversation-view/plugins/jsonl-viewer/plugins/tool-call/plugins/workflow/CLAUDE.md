@@ -39,6 +39,7 @@
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/subagents`
 - Core:

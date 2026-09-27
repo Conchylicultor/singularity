@@ -1,4 +1,3 @@
-import { MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -6,6 +5,10 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { pageData, pagesResource } from "@plugins/page/plugins/editor/core";
 import { usePromptTaskLink } from "@plugins/page/plugins/prompt/plugins/link/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const descriptionIcon = symbol("description");
 
 /**
  * The page this task was launched from, or `null`. Three ways it is absent:
@@ -55,7 +58,7 @@ export function PromptOriginSection({ taskId }: { taskId: string }) {
   return (
     <Cluster>
       <LinkChip
-        leading={<MdDescription />}
+        leading={<Icon icon={descriptionIcon} />}
         title={page.title}
         onClick={() =>
           openPane(pageDetailPane, { pageId: page.pageId }, { mode: "push" })

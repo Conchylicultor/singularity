@@ -1,8 +1,10 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   Button,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ComponentProps, ComponentType, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import {
   WithTooltip,
   Kbd,
@@ -17,7 +19,14 @@ export interface IconButtonProps
   extends
     Omit<ComponentProps<typeof Button>, "children" | "size">,
     DensityControlled {
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
+  /** Draw the icon in its active form (the theme's active fill): an on toggle, a pinned row. */
+  active?: boolean;
+  /**
+   * Animate the glyph: `spin` while the action runs (a refresh), `pulse` while a
+   * mode is live (listening). Full-form only — INERT in row form.
+   */
+  motion?: "spin" | "pulse";
   /** The action's name: the aria-label + tooltip at full size, the visible row text in row form. */
   label: string;
   /** Full-form only — INERT in row form (the label is already visible text there). */
@@ -48,7 +57,9 @@ const ICON_BUTTON_LADDER = { shrinksTo: ["row"] } as const;
  * are INERT in that form.
  */
 export function IconButton({
-  icon: Icon,
+  icon,
+  active,
+  motion,
   label,
   tooltip,
   shortcut,
@@ -63,7 +74,8 @@ export function IconButton({
   if (form === "row") {
     return (
       <PanelActionRow
-        icon={Icon}
+        icon={icon}
+        active={active}
         label={label}
         onClick={props.onClick}
         disabled={props.disabled}
@@ -87,8 +99,19 @@ export function IconButton({
 
   return (
     <WithTooltip content={content} side={side}>
+      {/* eslint-disable-next-line icon-button/prefer-icon-button -- this IS IconButton: the one place a Button wraps a lone <Icon> */}
       <Button variant={variant} aspect="icon" aria-label={label} {...props}>
-        <Icon />
+        <Icon
+          icon={icon}
+          active={active}
+          className={
+            motion === "spin"
+              ? "animate-spin"
+              : motion === "pulse"
+                ? "animate-pulse"
+                : undefined
+          }
+        />
       </Button>
     </WithTooltip>
   );

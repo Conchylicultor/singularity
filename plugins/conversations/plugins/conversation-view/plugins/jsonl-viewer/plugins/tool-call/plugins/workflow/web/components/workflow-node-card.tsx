@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdAccountTree } from "react-icons/md";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import {
   MODEL_TIERS,
@@ -17,6 +16,10 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const accountTreeIcon = symbol("account-tree");
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -67,7 +70,8 @@ export function WorkflowNodeCard({
       <Stack gap="xs">
         <Line as="span" className="gap-xs">
           {node.kind === "workflow" && (
-            <MdAccountTree
+            <Icon
+              icon={accountTreeIcon}
               className={cn("size-3 text-muted-foreground", rigidClass())}
             />
           )}

@@ -1,5 +1,3 @@
-import { MdMusicNote, MdMusicOff, MdPiano, MdPianoOff } from "react-icons/md";
-import type { IconType } from "react-icons";
 import {
   MAX_VOLUME,
   type SoundChannel,
@@ -12,23 +10,29 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLevelFader } from "../internal/use-level-fader";
 import { useSetSoundChannel, useSoundMix } from "../internal/use-sound-mix";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const musicNoteIcon = symbol("music-note");
+const musicOffIcon = symbol("music-off");
+const pianoIcon = symbol("piano");
+const pianoOffIcon = symbol("piano-off");
 
 /** How each channel is spelled and drawn. A `Record`, so a third channel is a tsc error here. */
 const CHANNEL: Record<
   SoundChannel,
-  { name: string; on: IconType; off: IconType; turnOn: string; turnOff: string }
+  { name: string; on: IconRef; off: IconRef; turnOn: string; turnOff: string }
 > = {
   song: {
     name: "Song",
-    on: MdMusicNote,
-    off: MdMusicOff,
+    on: musicNoteIcon,
+    off: musicOffIcon,
     turnOn: "Unmute the song",
     turnOff: "Mute the song (it keeps playing, silently)",
   },
   piano: {
     name: "Piano",
-    on: MdPiano,
-    off: MdPianoOff,
+    on: pianoIcon,
+    off: pianoOffIcon,
     turnOn: "Play the loop's chords on the piano",
     turnOff: "Stop playing the loop's chords on the piano",
   },

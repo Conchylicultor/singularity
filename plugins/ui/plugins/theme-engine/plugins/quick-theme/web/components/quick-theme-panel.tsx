@@ -1,4 +1,3 @@
-import { MdTune } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -10,6 +9,10 @@ import {
   ThemeScopeProvider,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { QuickTheme } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const tuneIcon = symbol("tune");
 
 /**
  * Every component variant picker (sidebar framing, tab bar, progress bar, …).
@@ -85,7 +88,10 @@ export function QuickThemePanel({
       </QuickTheme.Section.Render>
       <ComponentVariantSection />
       <ControlPanel.Footer>
-        <ControlPanel.Row icon={<MdTune />} onSelect={onOpenEditor}>
+        <ControlPanel.Row
+          icon={<Icon icon={tuneIcon} />}
+          onSelect={onOpenEditor}
+        >
           Open theme editor
         </ControlPanel.Row>
       </ControlPanel.Footer>

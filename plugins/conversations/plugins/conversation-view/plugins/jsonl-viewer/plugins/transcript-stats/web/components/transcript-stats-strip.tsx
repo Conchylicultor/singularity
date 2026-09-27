@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { MdHistory } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
@@ -11,6 +10,10 @@ import {
 import { TranscriptStats } from "../slots";
 import { TranscriptReadProvider } from "../read-context";
 import { StatBadge } from "./stat-badge";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const historyIcon = symbol("history");
 
 export function TranscriptStatsStrip() {
   // The transcript the enclosing view draws — the conversation's own, or a
@@ -68,7 +71,7 @@ export function TranscriptStatsStrip() {
             sees the counters move for no reason. */}
         {!read.atEnd && (
           <StatBadge title="Showing the transcript up to the last row on screen. Scroll to the end for the totals.">
-            <MdHistory className="size-3" />
+            <Icon icon={historyIcon} className="size-3" />
           </StatBadge>
         )}
         <TranscriptReadProvider value={read}>

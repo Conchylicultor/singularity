@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdBookmark } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const bookmarkIcon = symbol("bookmark");
 
 export const BOOKMARK_TYPE = "bookmark";
 
@@ -23,7 +25,7 @@ export const bookmarkBlock = defineBlock({
     attachmentIds: z.array(z.string()).optional(),
   }),
   label: "Bookmark",
-  icon: MdBookmark,
+  icon: bookmarkIcon,
   aliases: ["link", "preview", "card", "url"],
   empty: () => ({}), // no url → URL-input placeholder UI
 });

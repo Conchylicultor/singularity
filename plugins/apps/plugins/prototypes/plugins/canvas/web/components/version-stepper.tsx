@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactElement } from "react";
-import { MdChevronLeft, MdChevronRight, MdRestore } from "react-icons/md";
 import {
   Button,
   ControlSizeProvider,
@@ -26,6 +25,12 @@ import {
 import { isPastStep, type VersionStep } from "../internal/version-steps";
 import { useVersionStepping } from "../internal/use-version-stepping";
 import { VersionList, VersionListFrameContext } from "./version-list";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronLeftIcon = symbol("chevron-left");
+const chevronRightIcon = symbol("chevron-right");
+const historyIcon = symbol("history");
 
 /** Which version a stepper moves: the pair, so every frame steps on its own. */
 export interface VersionStepperProps {
@@ -95,11 +100,11 @@ function Pill({
 function PendingStepper(): ReactElement {
   return (
     <Pill past={false}>
-      <IconButton icon={MdChevronLeft} label="Previous version" disabled />
+      <IconButton icon={chevronLeftIcon} label="Previous version" disabled />
       <Button variant="ghost" disabled className={LABEL_WIDTH}>
         <Loading variant="block" className="h-3 w-12" />
       </Button>
-      <IconButton icon={MdChevronRight} label="Next version" disabled />
+      <IconButton icon={chevronRightIcon} label="Next version" disabled />
     </Pill>
   );
 }
@@ -138,7 +143,7 @@ function ReadyStepper({
   return (
     <Pill past={past}>
       <IconButton
-        icon={MdChevronLeft}
+        icon={chevronLeftIcon}
         label="Previous version"
         disabled={prev === null}
         onClick={stepBack}
@@ -182,14 +187,14 @@ function ReadyStepper({
                 confirmRestore(name, restorable, show);
               }}
             >
-              <MdRestore />
+              <Icon icon={historyIcon} />
               Make v{restorable.n} the latest
             </Button>
           ) : null}
         </Stack>
       </InlinePopover>
       <IconButton
-        icon={MdChevronRight}
+        icon={chevronRightIcon}
         label="Next version"
         disabled={next === null}
         onClick={stepForward}

@@ -1,10 +1,12 @@
-import { MdLink } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const linkIcon = symbol("link");
 
 /**
  * Read-only equivalent of the editor's inline page-link chip
@@ -50,7 +52,7 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
         <Center as="span" className="size-3.5">
           <PageIcon
             nodes={data?.iconSvgNodes}
-            fallback={MdLink}
+            fallback={linkIcon}
             className="size-3.5"
           />
         </Center>

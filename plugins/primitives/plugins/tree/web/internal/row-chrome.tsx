@@ -6,8 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, type ReactNode } from "react";
-import { MdAdd, MdMoreHoriz, MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
-import type { IconType } from "react-icons";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -22,9 +20,16 @@ import {
   type RowControls,
 } from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const moreHorizIcon = symbol("more-horiz");
+const unfoldLessIcon = symbol("unfold-less");
+const unfoldMoreIcon = symbol("unfold-more");
 
 export type RowMenuItem = {
-  icon?: IconType;
+  icon?: IconRef;
   label: string;
   onClick: () => void;
 };
@@ -115,13 +120,13 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-popup-open:bg-background/60"
         >
           <Center axis="both" className="size-full">
-            <MdMoreHoriz className="size-4" />
+            <Icon icon={moreHorizIcon} className="size-4" />
           </Center>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="end">
           {menuItems.map((item, i) => (
             <DropdownMenuItem key={i} onClick={item.onClick}>
-              {item.icon ? <item.icon className="size-4" /> : null}
+              {item.icon ? <Icon icon={item.icon} className="size-4" /> : null}
               {item.label}
             </DropdownMenuItem>
           ))}
@@ -136,7 +141,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   // handles the create.
   const addChild = ctx.canCreate ? (
     <IconButton
-      icon={MdAdd}
+      icon={addIcon}
       label="Add child"
       variant="ghost"
       onClick={() => addChildAction()}
@@ -158,7 +163,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   // `onClick` and `onPointerDown`, so the row's select and drag never fire.
   const subtreeToggle = hasChildren ? (
     <IconButton
-      icon={subtreeAllExpanded ? MdUnfoldLess : MdUnfoldMore}
+      icon={subtreeAllExpanded ? unfoldLessIcon : unfoldMoreIcon}
       label={subtreeAllExpanded ? "Collapse subtree" : "Expand subtree"}
       variant="ghost"
       onClick={toggleSubtreeExpanded}

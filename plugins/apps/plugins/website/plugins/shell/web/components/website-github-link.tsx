@@ -1,6 +1,8 @@
-import { SiGithub } from "react-icons/si";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SOURCE_URL } from "../../core";
+import { brand } from "@plugins/ui/plugins/icons/core";
+
+const githubIcon = brand("github");
 
 /**
  * The GitHub mark in the shared site header, between the pages and the Improve
@@ -14,7 +16,7 @@ import { SOURCE_URL } from "../../core";
 export function WebsiteGithubLink() {
   return (
     <IconButton
-      icon={SiGithub}
+      icon={githubIcon}
       label="equin on GitHub"
       className="text-muted-foreground hover:text-foreground hover:bg-transparent"
       render={<a href={SOURCE_URL} target="_blank" rel="noreferrer noopener" />}

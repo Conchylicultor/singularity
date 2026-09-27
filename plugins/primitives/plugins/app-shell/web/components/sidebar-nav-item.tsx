@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -60,7 +61,7 @@ function SidebarNavOpensItem({
  * active.
  */
 function SidebarNavRow({
-  icon: Icon,
+  icon,
   title,
   onClick,
   badge: Badge,
@@ -77,13 +78,13 @@ function SidebarNavRow({
         <SidebarMenuButton onClick={onClick} isActive={isActive}>
           {Badge ? (
             <span className="relative">
-              <Icon className={iconClass} />
+              <Icon icon={icon} active={isActive} className={iconClass} />
               <Pin to="top-right" offset="2xs" outset decorative>
                 <Badge />
               </Pin>
             </span>
           ) : (
-            <Icon className={iconClass} />
+            <Icon icon={icon} active={isActive} className={iconClass} />
           )}
           <span>{title}</span>
         </SidebarMenuButton>

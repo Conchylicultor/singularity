@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdAutoAwesome } from "react-icons/md";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * An agent-note card is a VOID container: it owns NOTHING but its type.
@@ -43,7 +45,7 @@ export const agentNotesBlock = defineAnnotationBlock({
   type: "agent-note",
   schema: agentNotesDataSchema,
   label: "Agent notes",
-  icon: MdAutoAwesome,
+  icon: autoAwesomeIcon,
   // `"agent"` even though the card is addressed TO the human: `audience` answers
   // "may an agent receive this", not "who is the reader". An agent must be able
   // to re-read what it wrote last time — and it is the one card an agent may

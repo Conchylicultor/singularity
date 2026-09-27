@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdExpandMore, MdHelpOutline } from "react-icons/md";
 import {
   Button,
   ControlSizeProvider,
@@ -11,6 +10,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { FilterValueInputProps } from "../../../core";
 import { selectChoices } from "../../internal/select-choices";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const helpIcon = symbol("help");
 
 /**
  * The shared option-select operand editor for enum/tags-style filters. Instead of
@@ -97,7 +101,7 @@ export function ChipSelectFilterInput(
           ) : (
             <span className="truncate">{summary}</span>
           )}
-          <MdExpandMore />
+          <Icon icon={keyboardArrowDownIcon} />
         </Button>
       }
     >
@@ -119,7 +123,7 @@ export function ChipSelectFilterInput(
                 key={option.value}
                 active={selected.includes(option.value)}
                 variant="ghost"
-                icon={listed ? undefined : <MdHelpOutline />}
+                icon={listed ? undefined : <Icon icon={helpIcon} />}
                 title={
                   listed
                     ? undefined

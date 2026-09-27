@@ -1,10 +1,13 @@
-import { MdWarning } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { allowFiles } from "../../shared";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();
@@ -33,7 +36,7 @@ export function AllowMonitorChip() {
       <Badge
         as="button"
         colorClass="bg-destructive/90 text-white hover:bg-destructive"
-        icon={<MdWarning />}
+        icon={<Icon icon={warningIcon} />}
         className="animate-pulse cursor-default"
         aria-label="Security bypass active"
       >

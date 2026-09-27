@@ -832,6 +832,7 @@ See "Open questions" in the design doc.
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `AnyPane`
     - `AppNavigator`

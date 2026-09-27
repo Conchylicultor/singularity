@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdApps } from "react-icons/md";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { IconsView } from "./components/icons-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     DataViewSlots.View({
       type: "icons",
       title: "Icons",
-      icon: MdApps,
+      icon: symbol("apps"),
       order: 5,
       loadingVariant: "cards",
       component: IconsView,

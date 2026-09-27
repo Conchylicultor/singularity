@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { Apps } from "@plugins/apps-core/web";
-import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs, type Tab } from "@plugins/apps-core/plugins/tabs/web";
 import { TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -143,10 +142,7 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
                 // sync-error) is pixel-identical to the tab-strip / docked bar.
                 icon={
                   entry?.icon ? (
-                    <TabIcon
-                      icon={appIconComponent(entry.icon)}
-                      badge={entry.badge}
-                    />
+                    <TabIcon icon={entry.icon.symbol} badge={entry.badge} />
                   ) : undefined
                 }
                 onClick={onClick}

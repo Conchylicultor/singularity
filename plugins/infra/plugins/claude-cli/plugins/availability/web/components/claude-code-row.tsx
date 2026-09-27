@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { MdRefresh } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -14,6 +13,9 @@ import {
   recheckClaudeCode,
 } from "../../core";
 import { useClaudeCodeStatus } from "../internal/use-claude-code";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const refreshIcon = symbol("refresh");
 
 function recheck(): Promise<unknown> {
   return fetchEndpoint(recheckClaudeCode, {});
@@ -21,7 +23,9 @@ function recheck(): Promise<unknown> {
 
 /** The row's trailing control: ask the machine again now. */
 export function ClaudeCodeActions() {
-  return <IconButton icon={MdRefresh} label="Check again" onClick={recheck} />;
+  return (
+    <IconButton icon={refreshIcon} label="Check again" onClick={recheck} />
+  );
 }
 
 /** The expanded row: what is wrong, and the commands that fix it. */

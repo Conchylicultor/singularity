@@ -1,4 +1,3 @@
-import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactElement } from "react";
 import {
@@ -9,6 +8,10 @@ import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export interface PageIconValue {
   icon: string | null;
@@ -61,7 +64,7 @@ export function PageIconPicker({
         <ControlPanel.Footer>
           <ControlPanel.Row
             muted
-            icon={<MdClose />}
+            icon={<Icon icon={closeIcon} />}
             onSelect={() => {
               void onChange({ icon: null, iconSvgNodes: null });
               setOpen(false);

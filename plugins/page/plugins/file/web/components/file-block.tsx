@@ -1,16 +1,3 @@
-import {
-  MdAttachFile,
-  MdAudiotrack,
-  MdDownload,
-  MdFolderZip,
-  MdImage,
-  MdInsertDriveFile,
-  MdMovie,
-  MdPictureAsPdf,
-  MdSwapHoriz,
-} from "react-icons/md";
-import { createElement } from "react";
-import type { ComponentType } from "react";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -30,6 +17,18 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { fileBlock } from "../../core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const attachFileIcon = symbol("attach-file");
+const musicNoteIcon = symbol("music-note");
+const downloadIcon = symbol("download");
+const folderZipIcon = symbol("folder-zip");
+const imageIcon = symbol("image");
+const draftIcon = symbol("draft");
+const movieIcon = symbol("movie");
+const pictureAsPdfIcon = symbol("picture-as-pdf");
+const swapHorizIcon = symbol("swap-horiz");
 
 // Humanize a byte count: B / KB / MB / GB with one decimal above bytes.
 function formatBytes(n: number): string {
@@ -45,17 +44,15 @@ function formatBytes(n: number): string {
 }
 
 // Pick a leading icon from the file's mime type.
-function iconForMime(
-  mime: string | undefined,
-): ComponentType<{ className?: string }> {
+function iconForMime(mime: string | undefined): IconRef {
   const m = (mime ?? "").toLowerCase();
-  if (m === "application/pdf") return MdPictureAsPdf;
+  if (m === "application/pdf") return pictureAsPdfIcon;
   if (m.includes("zip") || m.includes("compressed") || m.includes("tar"))
-    return MdFolderZip;
-  if (m.startsWith("audio/")) return MdAudiotrack;
-  if (m.startsWith("video/")) return MdMovie;
-  if (m.startsWith("image/")) return MdImage;
-  return MdInsertDriveFile;
+    return folderZipIcon;
+  if (m.startsWith("audio/")) return musicNoteIcon;
+  if (m.startsWith("video/")) return movieIcon;
+  if (m.startsWith("image/")) return imageIcon;
+  return draftIcon;
 }
 
 export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
@@ -66,7 +63,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
       <AttachmentUpload
         accept="*"
         label="Add a file — click, drop, or paste"
-        icon={MdAttachFile}
+        icon={attachFileIcon}
         isFocused={isFocused}
         onUploaded={(res) =>
           editor.update({
@@ -80,9 +77,12 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
     );
   }
 
-  const iconEl = createElement(iconForMime(mime), {
-    className: cn("size-6 text-muted-foreground", rigidClass()),
-  });
+  const iconEl = (
+    <Icon
+      icon={iconForMime(mime)}
+      className={cn("size-6 text-muted-foreground", rigidClass())}
+    />
+  );
   const name = filename ?? "File";
 
   return (
@@ -106,7 +106,8 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
                 </Text>
               ) : null}
             </Stack>
-            <MdDownload
+            <Icon
+              icon={downloadIcon}
               className={cn("size-5 text-muted-foreground", rigidClass())}
             />
           </Stack>
@@ -122,7 +123,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
             )}
           >
             <Center className="size-full">
-              <MdSwapHoriz className="size-4" />
+              <Icon icon={swapHorizIcon} className="size-4" />
             </Center>
           </button>
         </Pin>

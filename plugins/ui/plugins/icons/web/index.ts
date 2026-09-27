@@ -1,0 +1,17 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+
+export { Icon, useIconStyle } from "./internal/icon";
+export type { IconProps } from "./internal/icon";
+export { IconScopeProvider } from "./internal/icon-scope";
+export {
+  usePublishIconStyle,
+  useWantedStyleKeys,
+} from "./internal/style-store";
+export { hasSprite, provideSprite } from "./internal/sprite-store";
+export { IconSpriteSheet } from "./internal/sprite-sheet";
+
+export default {
+  description:
+    "Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet.",
+  contributions: [],
+} satisfies PluginDefinition;

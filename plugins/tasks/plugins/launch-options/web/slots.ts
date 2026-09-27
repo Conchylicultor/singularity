@@ -1,5 +1,5 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
-import type { IconType } from "react-icons";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core";
 import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
@@ -54,7 +54,7 @@ export type LaunchBinding<V> =
  */
 export interface LaunchOptionPill<V> {
   /** Leading glyph on the pill's trigger. */
-  icon: IconType;
+  icon: IconRef;
   /**
    * This option's current value as pill text.
    *

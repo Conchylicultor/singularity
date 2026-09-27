@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType, ReactNode } from "react";
 import {
   defineRenderSlot,
@@ -37,7 +38,7 @@ export interface DataViewSourceContribution<THostProps> {
   id: string;
   /** Add-menu group label. */
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   order?: number;
   /** STATIC view-type whitelist for this source's add-menu group. */
   views?: string[];

@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
 import {
   useSurfaceMode,
@@ -29,7 +30,7 @@ export function ActionBarPlacementControl() {
         .map((d) => ({
           id: d.id,
           label: "",
-          icon: <d.icon />,
+          icon: <Icon icon={d.icon} />,
           title: d.label,
         })),
     [defs],

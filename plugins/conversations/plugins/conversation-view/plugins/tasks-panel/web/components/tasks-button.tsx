@@ -1,5 +1,4 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdChecklist } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useActiveDependentCount, useTask } from "@plugins/tasks/web";
@@ -7,6 +6,10 @@ import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checklistIcon = symbol("checklist");
 
 /**
  * The ONE task affordance of the conversation toolbar: opens the task pane and
@@ -51,7 +54,7 @@ export function TasksButton() {
       disabled={!taskId}
       className="gap-xs"
     >
-      <MdChecklist />
+      <Icon icon={checklistIcon} />
       {status && <StatusDot colorClass={status.dotClass} />}
       {blockedCount !== null && (
         <Text as="span" variant="count" tone="muted">

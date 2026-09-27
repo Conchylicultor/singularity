@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdViewList } from "react-icons/md";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { ListView } from "./components/list-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type { ListViewOptions } from "../core";
 
@@ -12,7 +12,7 @@ export default {
     DataViewSlots.View({
       type: "list",
       title: "List",
-      icon: MdViewList,
+      icon: symbol("view-list"),
       order: 3,
       loadingVariant: "rows",
       component: ListView,

@@ -1,11 +1,13 @@
-import { MdColorLens } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const paletteIcon = symbol("palette");
 
 export const colorFieldType = defineFieldType<string>("color");
 
 export const colorIdentity = defineFieldIdentity<string>({
   type: colorFieldType,
   label: "Color",
-  icon: MdColorLens,
+  icon: paletteIcon,
   coerce: (v) => String(v ?? ""),
 });

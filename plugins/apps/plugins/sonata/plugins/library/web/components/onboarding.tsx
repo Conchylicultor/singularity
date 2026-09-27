@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { MdLibraryMusic } from "react-icons/md";
 import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Library } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const libraryMusicIcon = symbol("library-music");
 
 /**
  * The Sonata first-run onboarding surface, shown by `SongLibrary` only when the
@@ -51,10 +57,14 @@ export function SonataOnboarding() {
           {/* Hero — app glyph, headline, and a source-neutral subline. */}
           <Stack gap="lg" align="center">
             <Center className="size-16 rounded-2xl bg-primary/10 text-primary">
-              <MdLibraryMusic className="size-8" />
+              <Icon icon={libraryMusicIcon} className="size-8" />
             </Center>
             <Stack gap="xs" align="center">
-              <Text as="h1" variant="title" className="text-center font-semibold">
+              <Text
+                as="h1"
+                variant="title"
+                className="text-center font-semibold"
+              >
                 Start your library
               </Text>
               <Text

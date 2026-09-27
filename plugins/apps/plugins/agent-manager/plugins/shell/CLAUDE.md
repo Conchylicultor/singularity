@@ -11,7 +11,6 @@
     - `ThemeEngine.Theme` "Mist"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `apps-core/tabs.navigate`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`

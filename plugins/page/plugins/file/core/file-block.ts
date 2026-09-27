@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdAttachFile } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const attachFileIcon = symbol("attach-file");
 
 export const FILE_TYPE = "file";
 
@@ -13,7 +15,7 @@ export const fileBlock = defineBlock({
     size: z.number().optional(),
   }),
   label: "File",
-  icon: MdAttachFile,
+  icon: attachFileIcon,
   aliases: ["attachment", "upload", "document", "pdf", "download"],
   empty: () => ({}), // no attachmentId → placeholder UI
 });

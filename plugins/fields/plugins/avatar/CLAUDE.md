@@ -30,6 +30,7 @@ sub-plugin.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (types):
     - `AvatarSpec`
     - `SvgNode`

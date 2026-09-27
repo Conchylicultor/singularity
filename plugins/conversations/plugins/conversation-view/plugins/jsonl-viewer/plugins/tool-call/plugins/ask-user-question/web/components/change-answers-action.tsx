@@ -1,4 +1,3 @@
-import { MdCallSplit, MdHistory, MdUndo } from "react-icons/md";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +13,12 @@ import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-
 import { restoreAnswerDraft } from "./answer-draft";
 import { type AskUserQuestionInput } from "./answer-model";
 import { findAnswerTurn } from "./awaiting";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const callSplitIcon = symbol("call-split");
+const historyIcon = symbol("history");
+const undoIcon = symbol("undo");
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
@@ -80,17 +85,17 @@ function ChangeAnswersMenuFor({
       <DropdownMenuTrigger
         render={
           <RowActionButton title="Change answers">
-            <MdHistory className="size-3" />
+            <Icon icon={historyIcon} className="size-3" />
           </RowActionButton>
         }
       />
       <DropdownMenuContent align="end">
         <DropdownMenuItem disabled={busy} onClick={() => void run("rewind")}>
-          <MdUndo />
+          <Icon icon={undoIcon} />
           Rewind and answer again
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy} onClick={() => void run("fork")}>
-          <MdCallSplit />
+          <Icon icon={callSplitIcon} />
           Answer again in a fork
         </DropdownMenuItem>
       </DropdownMenuContent>

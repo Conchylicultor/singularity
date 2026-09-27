@@ -8,6 +8,10 @@
         "@dnd-kit/core": "^6.1.0",
         "@dnd-kit/sortable": "^8.0.0",
         "@dnd-kit/utilities": "^3.2.2",
+        "@iconify-json/material-symbols": "^1.2.93",
+        "@iconify-json/material-symbols-light": "^1.2.94",
+        "@iconify-json/simple-icons": "^1.2.97",
+        "@iconify/types": "^2.0.0",
         "@parcel/watcher": "^2.5.0",
         "@tanstack/react-query": "^5.59.0",
         "@xyflow/react": "^12.3.5",
@@ -5156,6 +5160,14 @@
       "name": "@singularity/plugin-ui-breadcrumb-separator-slash",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/icons": {
+      "name": "@singularity/plugin-ui-icons",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/icons/plugins/sprites": {
+      "name": "@singularity/plugin-ui-icons-sprites",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/segmented-progress-bar": {
       "name": "@singularity/plugin-ui-segmented-progress-bar",
       "version": "0.0.1",
@@ -5266,6 +5278,10 @@
     },
     "plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts": {
       "name": "@singularity/plugin-ui-tokens-font-family-google-fonts",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/icons": {
+      "name": "@singularity/plugin-ui-tokens-icons",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/rich-text-palette": {
@@ -5560,6 +5576,14 @@
     "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "", {}, "sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA=="],
 
     "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.3", "", {}, "sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ=="],
+
+    "@iconify-json/material-symbols": ["@iconify-json/material-symbols@1.2.93", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-IfbpRixmEdeBrl2Bc+RtNZGb3NcTnMiPP4WausCParQYpIdezEYYbgMggJC1cYzm1q0f77p53t5tppy9PWsrvQ=="],
+
+    "@iconify-json/material-symbols-light": ["@iconify-json/material-symbols-light@1.2.94", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-Cchr0Wu9U7sm0EjMOqjXwG9CwMxF4NEEvezZq5bB7ILCmb30T04ltwu+Q5k72UW0Yu2FbNMfkRPG1CGhMEQhzQ=="],
+
+    "@iconify-json/simple-icons": ["@iconify-json/simple-icons@1.2.97", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-Z6PmM6jvWVU7rmLzqbxCLJA7SeqCnK6lMHXtjyzHPLZebwuoojBEcHHycppahDzEeN9xujRkrV5J8QpOhMyNrg=="],
+
+    "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@1.0.2", "", {}, "sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ=="],
 
@@ -8331,6 +8355,10 @@
 
     "@singularity/plugin-ui-breadcrumb-separator-slash": ["@singularity/plugin-ui-breadcrumb-separator-slash@workspace:plugins/ui/plugins/breadcrumb-separator/plugins/slash"],
 
+    "@singularity/plugin-ui-icons": ["@singularity/plugin-ui-icons@workspace:plugins/ui/plugins/icons"],
+
+    "@singularity/plugin-ui-icons-sprites": ["@singularity/plugin-ui-icons-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites"],
+
     "@singularity/plugin-ui-segmented-progress-bar": ["@singularity/plugin-ui-segmented-progress-bar@workspace:plugins/ui/plugins/segmented-progress-bar"],
 
     "@singularity/plugin-ui-segmented-progress-bar-arc": ["@singularity/plugin-ui-segmented-progress-bar-arc@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/arc"],
@@ -8386,6 +8414,8 @@
     "@singularity/plugin-ui-tokens-font-family": ["@singularity/plugin-ui-tokens-font-family@workspace:plugins/ui/plugins/tokens/plugins/font-family"],
 
     "@singularity/plugin-ui-tokens-font-family-google-fonts": ["@singularity/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
+
+    "@singularity/plugin-ui-tokens-icons": ["@singularity/plugin-ui-tokens-icons@workspace:plugins/ui/plugins/tokens/plugins/icons"],
 
     "@singularity/plugin-ui-tokens-rich-text-palette": ["@singularity/plugin-ui-tokens-rich-text-palette@workspace:plugins/ui/plugins/tokens/plugins/rich-text-palette"],
 

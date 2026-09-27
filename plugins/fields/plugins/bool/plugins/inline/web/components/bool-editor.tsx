@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { MdCheck, MdRemove } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const removeIcon = symbol("remove");
 
 /**
  * Compact inline boolean editor: an autofocused toggle button that immediately
@@ -20,9 +24,9 @@ export function BoolEditor(props: CellEditorProps): ReactNode {
     >
       <Center axis="vertical">
         {props.value ? (
-          <MdCheck className="text-foreground" />
+          <Icon icon={checkIcon} className="text-foreground" />
         ) : (
-          <MdRemove className="text-muted-foreground" />
+          <Icon icon={removeIcon} className="text-muted-foreground" />
         )}
       </Center>
     </button>

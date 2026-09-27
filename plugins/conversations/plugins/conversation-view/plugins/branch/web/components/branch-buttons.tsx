@@ -1,6 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { MdCallSplit } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
@@ -14,6 +13,10 @@ import {
   useVisibleModels,
   useDefaultModel,
 } from "@plugins/conversations/plugins/model-provider/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const callSplitIcon = symbol("call-split");
 
 export function BranchButtons({
   conversation,
@@ -61,7 +64,7 @@ export function BranchButtons({
           title="Branch conversation"
           aria-label="Branch conversation"
         >
-          <MdCallSplit />
+          <Icon icon={callSplitIcon} />
           Branch
         </Button>
       }

@@ -7,9 +7,13 @@ import {
 } from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
 import { useCallback, useId } from "react";
-import { MdCheck, MdDragIndicator } from "react-icons/md";
 
 import { HintedLabelCell } from "./hint";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const dragIndicatorIcon = symbol("drag-indicator");
 
 /** The three selection languages, one per meaning. There is no fourth. */
 export type ControlPanelRowSelect = "check" | "radio" | "switch";
@@ -224,7 +228,7 @@ export function ControlPanelRow({
       <CheckboxIndicator checked={checked ?? false} />
     ) : select === "radio" ? (
       checked ? (
-        <MdCheck className="text-primary" />
+        <Icon icon={checkIcon} className="text-primary" />
       ) : null
     ) : (
       icon
@@ -311,7 +315,7 @@ export function ControlPanelRow({
           handleProps?.className,
         )}
       >
-        {handle ? <MdDragIndicator /> : null}
+        {handle ? <Icon icon={dragIndicatorIcon} /> : null}
       </span>
       {/* Hidden from the accessibility tree: the indicator is a VISUAL restatement
           of `aria-checked`, and the icon is decorative — leaving them exposed

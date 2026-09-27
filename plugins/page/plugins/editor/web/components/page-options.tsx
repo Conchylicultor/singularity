@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdAddCircleOutline } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -7,11 +6,14 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addCircleIcon = symbol("add-circle");
 
 /** One row in a page picker: an existing page, or a "create new page" affordance. */
 export type PageOption =
-  | { kind: "page"; page: Block }
-  | { kind: "create"; title: string };
+  { kind: "page"; page: Block } | { kind: "create"; title: string };
 
 export type PageOptionsResult =
   | { pending: true; options?: undefined }
@@ -38,7 +40,9 @@ export function usePageOptions(
     const pages = resourceResult.data;
     const q = query.trim().toLowerCase();
     const matched = q
-      ? pages.filter((d) => (pageData(d).title || "Untitled").toLowerCase().includes(q))
+      ? pages.filter((d) =>
+          (pageData(d).title || "Untitled").toLowerCase().includes(q),
+        )
       : pages;
     const items: PageOption[] = matched.map((page) => ({ kind: "page", page }));
     if (allowCreate && query.trim()) {
@@ -87,7 +91,11 @@ export function PageOptionsList({
 }) {
   if (options.length === 0) {
     return (
-      <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
+      <Text
+        as="div"
+        variant="body"
+        className="text-muted-foreground px-sm py-xs"
+      >
         No pages found
       </Text>
     );
@@ -95,8 +103,18 @@ export function PageOptionsList({
   // Caret menu → commit on pointerdown; focused picker → commit on mousedown.
   const pressProps = (i: number, act: () => void) =>
     onCommit
-      ? { onPointerDown: (e: React.PointerEvent) => { e.preventDefault(); onCommit(i); } }
-      : { onMouseDown: (e: React.MouseEvent) => { e.preventDefault(); act(); } };
+      ? {
+          onPointerDown: (e: React.PointerEvent) => {
+            e.preventDefault();
+            onCommit(i);
+          },
+        }
+      : {
+          onMouseDown: (e: React.MouseEvent) => {
+            e.preventDefault();
+            act();
+          },
+        };
   return (
     <Stack gap="none">
       {/* eslint-disable-next-line data-view/no-adhoc-row-list -- page-link typeahead menu (transient chrome) */}
@@ -109,13 +127,17 @@ export function PageOptionsList({
             onMouseEnter={() => onHoverIndex?.(i)}
             {...pressProps(i, () => onSelect?.(option.page.id))}
           >
-            <span className="truncate">{pageData(option.page).title || "Untitled"}</span>
+            <span className="truncate">
+              {pageData(option.page).title || "Untitled"}
+            </span>
           </Row>
         ) : (
           <Row
             key="__create__"
             selected={i === activeIndex}
-            icon={<MdAddCircleOutline className="text-muted-foreground" />}
+            icon={
+              <Icon icon={addCircleIcon} className="text-muted-foreground" />
+            }
             onMouseEnter={() => onHoverIndex?.(i)}
             {...pressProps(i, () => onCreate?.(option.title))}
           >

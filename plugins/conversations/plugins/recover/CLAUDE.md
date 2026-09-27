@@ -27,6 +27,7 @@
     - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
+    - `ui/icons.Icon`
   - Exports (values): `recoveryPane`
 - Server:
   - Uses:

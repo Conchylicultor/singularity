@@ -27,6 +27,7 @@ equality on the field descriptor, with a text-input fallback when unmatched).
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `dynamicEnumFieldType`
     - `dynamicEnumIdentity`

@@ -1,11 +1,16 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ComponentPropsWithoutRef, type Ref } from "react";
-import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
 import { useDraggable } from "@dnd-kit/core";
 import { useBlockEditor } from "../block-editor-context";
 import { useInsertBlockBelow } from "./use-insert-block-below";
 import { BlockActionsMenu } from "./block-actions-menu";
 import type { RailSeat } from "../internal/rail-seat";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const chevronRightIcon = symbol("chevron-right");
+const dragIndicatorIcon = symbol("drag-indicator");
 
 /** Hover-only reveal, shared by the `+`/drag cluster and by an EXPANDED chevron. */
 const REVEAL_ON_ROW_HOVER =
@@ -128,7 +133,8 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
           }
           className={chevron.collapsed ? "opacity-60" : REVEAL_ON_ROW_HOVER}
         >
-          <MdChevronRight
+          <Icon
+            icon={chevronRightIcon}
             className={cn(
               "size-4 transition-transform",
               !chevron.collapsed && "rotate-90",
@@ -148,7 +154,7 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
         onClick={() => insertBelow(api)}
         className={REVEAL_ON_ROW_HOVER}
       >
-        <MdAdd className="size-4" />
+        <Icon icon={addIcon} className="size-4" />
       </RailButton>
       {/* Drag handle — drags to reorder (PointerSensor needs 4px movement),
           and a plain click opens the block-actions menu. That menu dispatches on
@@ -178,7 +184,7 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
               REVEAL_ON_ROW_HOVER,
             )}
           >
-            <MdDragIndicator className="size-4" />
+            <Icon icon={dragIndicatorIcon} className="size-4" />
           </RailButton>
         }
       />

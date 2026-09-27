@@ -5,7 +5,6 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 
 import {
   addMonths,
@@ -35,6 +34,10 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const chevronLeftIcon = symbol("chevron-left");
+const chevronRightIcon = symbol("chevron-right");
 
 export interface CalendarProps {
   /**
@@ -181,7 +184,7 @@ export function Calendar({
     <Stack gap="xs" className={className}>
       <Line>
         <IconButton
-          icon={MdChevronLeft}
+          icon={chevronLeftIcon}
           label="Previous month"
           onClick={() => goToMonth(addMonths(viewMonth, -1))}
         />
@@ -193,7 +196,7 @@ export function Calendar({
           </Center>
         </Fill>
         <IconButton
-          icon={MdChevronRight}
+          icon={chevronRightIcon}
           label="Next month"
           onClick={() => goToMonth(addMonths(viewMonth, 1))}
         />

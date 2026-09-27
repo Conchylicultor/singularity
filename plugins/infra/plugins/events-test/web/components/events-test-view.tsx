@@ -4,7 +4,6 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
-import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -27,6 +26,13 @@ import {
   deleteEventsTestTargeting,
   listEventsTestTriggers,
 } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
+const deleteIcon = symbol("delete");
+const refreshIcon = symbol("refresh");
+const sendIcon = symbol("send");
 
 interface TriggerRow {
   id: string;
@@ -317,7 +323,7 @@ export function EventsTestView() {
             </Text>
           </div>
           <Button variant="ghost" onClick={refresh}>
-            <MdRefresh className="size-4" />
+            <Icon icon={refreshIcon} className="size-4" />
             Refresh
           </Button>
         </Stack>
@@ -352,7 +358,7 @@ export function EventsTestView() {
               </Text>
             </Stack>
             <Button onClick={onSubscribe} loading={subBusy}>
-              <MdBolt className="size-4" />
+              <Icon icon={boltIcon} className="size-4" />
               Subscribe
             </Button>
           </Section>
@@ -378,7 +384,7 @@ export function EventsTestView() {
               loading={emitBusy}
               className="mt-auto"
             >
-              <MdSend className="size-4" />
+              <Icon icon={sendIcon} className="size-4" />
               Emit pinged
             </Button>
           </Section>
@@ -423,7 +429,7 @@ export function EventsTestView() {
             loading={deBusy}
             className={selfClass("start")}
           >
-            <MdSend className="size-4" />
+            <Icon icon={sendIcon} className="size-4" />
             Enqueue job
           </Button>
         </Section>
@@ -490,7 +496,7 @@ export function EventsTestView() {
                     </Stack>
                   </Fill>
                   <IconButton
-                    icon={MdDelete}
+                    icon={deleteIcon}
                     label="Delete trigger"
                     onClick={() => onDeleteTrigger(t.id)}
                   />
@@ -517,7 +523,7 @@ export function EventsTestView() {
               onClick={onDeleteTargeting}
               loading={dtBusy}
             >
-              <MdDelete className="size-4" />
+              <Icon icon={deleteIcon} className="size-4" />
               Sweep
             </Button>
           </Stack>
@@ -528,7 +534,7 @@ export function EventsTestView() {
           title={`Job log (${log.length})`}
           action={
             <Button variant="ghost" onClick={onResetLog}>
-              <MdDelete className="size-4" />
+              <Icon icon={deleteIcon} className="size-4" />
               Clear
             </Button>
           }

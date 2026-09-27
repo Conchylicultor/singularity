@@ -1,9 +1,11 @@
 import type { ReactElement } from "react";
-import { MdOpenInFull } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { FrameActionRow } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { BrowserTabOpener } from "./frame-link";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const openInFullIcon = symbol("open-in-full");
 
 /**
  * "Open responsive in a new tab" — a frame action of its own, beside Present:
@@ -23,7 +25,7 @@ export function OpenResponsiveAction({
     >
       {(open) => (
         <IconButton
-          icon={MdOpenInFull}
+          icon={openInFullIcon}
           label="Open responsive in a new tab"
           disabled={open === undefined}
           onClick={open}

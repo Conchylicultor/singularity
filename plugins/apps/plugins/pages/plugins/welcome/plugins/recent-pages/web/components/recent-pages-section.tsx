@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import { MdArrowForward } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
@@ -14,6 +13,10 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowForwardIcon = symbol("arrow-forward");
 
 const RECENT_LIMIT = 6;
 
@@ -81,7 +84,8 @@ export function RecentPagesSection(): ReactElement | null {
                       "text-caption text-muted-foreground",
                     )}
                   />
-                  <MdArrowForward
+                  <Icon
+                    icon={arrowForwardIcon}
                     className={cn(
                       "size-4 text-muted-foreground/50",
                       rigidClass(),

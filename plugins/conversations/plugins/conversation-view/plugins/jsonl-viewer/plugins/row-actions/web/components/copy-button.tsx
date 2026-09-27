@@ -1,6 +1,10 @@
-import { MdCheck, MdContentCopy } from "react-icons/md";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { RowActionButton } from "./row-action-button";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const contentCopyIcon = symbol("content-copy");
 
 export function CopyTextAction({
   text,
@@ -12,7 +16,11 @@ export function CopyTextAction({
   const { copy, copied } = useCopyToClipboard(text);
   return (
     <RowActionButton title={title} onClick={copy}>
-      {copied ? <MdCheck className="size-3" /> : <MdContentCopy className="size-3" />}
+      {copied ? (
+        <Icon icon={checkIcon} className="size-3" />
+      ) : (
+        <Icon icon={contentCopyIcon} className="size-3" />
+      )}
     </RowActionButton>
   );
 }

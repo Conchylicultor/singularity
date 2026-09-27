@@ -1,11 +1,14 @@
 import type React from "react";
-import { MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pageData, pagesResource } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const descriptionIcon = symbol("description");
 
 /** `block-7f1a2d3d-a3cd-…` → `7f1a2d3d…` — enough to recognize, short enough to sit in a header. */
 function shortenBlockId(id: string): string {
@@ -66,7 +69,11 @@ export function PageRefChip({
   };
 
   return (
-    <LinkChip leading={<MdDescription />} title={title} onClick={open}>
+    <LinkChip
+      leading={<Icon icon={descriptionIcon} />}
+      title={title}
+      onClick={open}
+    >
       {title}
     </LinkChip>
   );

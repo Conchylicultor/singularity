@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdTableChart } from "react-icons/md";
 import { readSetPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { readSetPane } from "./panes";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "read-set",
       title: "Read-set",
-      icon: MdTableChart,
+      icon: symbol("table-chart"),
       onClick: () => openPane(readSetPane, {}, { mode: "root" }),
     }),
   ],

@@ -1,14 +1,26 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdAdd } from "react-icons/md";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import type { FieldDef, HierarchyConfig } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  FieldDef,
+  HierarchyConfig,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { createTask, moveTask } from "@plugins/tasks/core";
-import type { TaskListItem, TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  TaskListItem,
+  TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
-import { STATUS_META, StatusIcon, StatusBadge } from "@plugins/tasks/plugins/task-status/web";
+import {
+  STATUS_META,
+  StatusIcon,
+  StatusBadge,
+} from "@plugins/tasks/plugins/task-status/web";
 import { Tasks } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 // The generic tree primitive speaks `parentId`; the tasks domain stores the
 // display hierarchy as `folderId`. Map at this boundary so the primitive stays
@@ -90,8 +102,11 @@ export const taskHierarchy: HierarchyConfig<TaskListItem> = {
 // affordances. Isolation from the main Tasks list is automatic — the primitive
 // keys its expand map by view instance — so nothing has to be stripped for it.
 // Pairs with `buildTreeOptions({ defaultExpanded: true })`.
-const { onMove: _onMove, onCreate: _onCreate, ...clusterHierarchy } =
-  taskHierarchy;
+const {
+  onMove: _onMove,
+  onCreate: _onCreate,
+  ...clusterHierarchy
+} = taskHierarchy;
 export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> =
   clusterHierarchy;
 
@@ -106,7 +121,8 @@ export function buildTreeOptions({
     leadingIcon: (t) => <StatusIcon status={t.status} />,
     labelClassName: (t) =>
       cn(
-        t.status === "dropped" && "text-muted-foreground/70 line-through italic",
+        t.status === "dropped" &&
+          "text-muted-foreground/70 line-through italic",
         t.status === "done" && "text-muted-foreground",
       ),
     expandAll: true,
@@ -120,7 +136,7 @@ export function buildTreeOptions({
       ? undefined
       : ({ addBelow }) => [
           {
-            icon: MdAdd,
+            icon: addIcon,
             label: "Add item below",
             onClick: () => void addBelow(),
           },

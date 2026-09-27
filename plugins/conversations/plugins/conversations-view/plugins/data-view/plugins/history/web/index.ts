@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdHistory } from "react-icons/md";
 import { SidebarSources } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import {
   HistorySource,
   HistoryItemActions,
   CloseConvAction,
 } from "./components/sidebar-history";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
     SidebarSources({
       id: "history",
       title: "History",
-      icon: MdHistory,
+      icon: symbol("history"),
       order: 10,
       views: ["list"],
       component: HistorySource,

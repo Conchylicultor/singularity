@@ -119,6 +119,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (types): `PrototypeGalleryRow`
   - Exports (values):
     - `mintPrototypeFolder`

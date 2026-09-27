@@ -70,6 +70,7 @@ event kind — that is the standard gate, not a filter on the slot.
     - `primitives/css/ui-kit.cn`
     - `primitives/row-actions.RowActions`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types): `RowActionContribution`
   - Exports (values):
     - `CopyTextAction`

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { MdFullscreen } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const fullscreenIcon = symbol("fullscreen");
 
 /** Tracks the document's fullscreen state, kept in sync via `fullscreenchange`. */
 function useIsFullscreen() {
@@ -26,7 +29,7 @@ export function FullscreenToggle() {
 
   return (
     <ControlPanel.Row
-      icon={<MdFullscreen />}
+      icon={<Icon icon={fullscreenIcon} />}
       select="switch"
       checked={isFullscreen}
       onSelect={() => {

@@ -20,7 +20,7 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
 - **React 19** + **TypeScript**
 - **Tailwind CSS v4** — `@tailwindcss/vite` plugin; the global stylesheet
   (`app.css`) lives in `primitives/ui-kit` and is imported from `web/main.tsx`.
-- **react-icons** — Icons (predominantly `react-icons/md`; not Lucide)
+- **Material Symbols** — Icons, as `symbol("…")` data drawn by `<Icon>` from inline SVG sprites (`ui/icons`); not Lucide, and react-icons only inside `primitives/icon-picker`
 
 ## Structure
 
@@ -91,9 +91,10 @@ above measure real loads instead of predicted ones; nothing reconstructs the
 import of `react-icons/md` (`mdModule[key]`) forces Rollup to retain *every* icon
 (the package is un-tree-shakeable through a namespace) and, because hundreds of
 barrels also import named icons eagerly, drags the whole ~2 MB set onto the eager
-boot path (once measured at **417 KB gzip = 62 % of the entry chunk**). Import
-named icons (`import { MdFoo }`) so tree-shaking keeps only the used union, or render
-stored `SvgNode` data (see `primitives/icon-picker`). Enforced by the
+boot path (once measured at **417 KB gzip = 62 % of the entry chunk**). App icons
+no longer come from react-icons at all (`icon-safety/no-react-icons`: they are
+Material Symbols sprites, `ui/icons`); inside `primitives/icon-picker`, its one
+remaining user, import named icons or render stored `SvgNode` data. Enforced by the
 `icon-safety/no-namespace-react-icons` lint rule; the sole exemption is the
 build-time `gen-icon-svg-map.ts` (never bundled).
 

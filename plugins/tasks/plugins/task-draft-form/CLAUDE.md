@@ -158,6 +158,7 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `tasks/launch-options.launchOptionValue`
     - `tasks/launch-options.LaunchOptionValues`
     - `tasks/launch-options.TaskLaunch`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ActiveRelateContext`
     - `CardDraft`

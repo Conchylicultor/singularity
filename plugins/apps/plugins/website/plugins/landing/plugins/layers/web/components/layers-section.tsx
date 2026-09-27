@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdArrowDownward, MdArrowForward } from "react-icons/md";
 import {
   useOpenPane,
   type PaneObject,
@@ -17,6 +16,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import "./layers-section.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowDownwardIcon = symbol("arrow-downward");
+const arrowForwardIcon = symbol("arrow-forward");
 
 const HEADING = "What is equin?";
 const SUBHEADING = "Three layers, each built on the one before it.";
@@ -185,7 +189,7 @@ function Layer({
               "website-layer-open border-border text-muted-foreground size-8.5 rounded-full border",
             )}
           >
-            <MdArrowForward aria-hidden />
+            <Icon icon={arrowForwardIcon} aria-hidden />
           </Center>
         </Stack>
         {children}
@@ -198,7 +202,7 @@ function Layer({
 function LayerArrow() {
   return (
     <Center className="text-muted-foreground/60 h-11">
-      <MdArrowDownward aria-hidden />
+      <Icon icon={arrowDownwardIcon} aria-hidden />
     </Center>
   );
 }

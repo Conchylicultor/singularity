@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { SiGooglemaps } from "react-icons/si";
 import {
   MapsAccessAction,
   useMapsAccess,
 } from "@plugins/integrations/plugins/google-maps/web";
 import { Place } from "@plugins/page/plugins/place/web";
 import { GOOGLE_PLACE_PROVIDER_ID } from "../shared";
+import { brand } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
     Place.Provider({
       id: GOOGLE_PLACE_PROVIDER_ID,
       label: "Google Maps",
-      icon: SiGooglemaps,
+      icon: brand("googlemaps"),
       // Rendered in place of the search box while no key is configured. The
       // block never learns that the blocker is a key — it just renders whatever
       // the provider says will fix it.

@@ -5,7 +5,6 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { MdEdit, MdSend } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -31,6 +30,11 @@ import {
   useUsageOrder,
 } from "@plugins/primitives/plugins/usage-rank/web";
 import { promptTemplatesConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const editIcon = symbol("edit");
+const sendIcon = symbol("send");
 
 /** Usage-rank namespace for the prompt-template chips. */
 const USAGE_NAMESPACE = "prompt-templates";
@@ -73,7 +77,7 @@ function TemplateChip({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => applyTemplate(template, insertText)}
       >
-        <MdEdit className="size-3" />
+        <Icon icon={editIcon} className="size-3" />
         <span>{template.title}</span>
       </Button>
       {/* eslint-disable-next-line icon-button/prefer-icon-button -- the send half of a ButtonGroup template chip, not a standalone action: it shares the chip's outline seam and its size-3 glyph matches the label half */}
@@ -89,7 +93,7 @@ function TemplateChip({
           canSend ? "text-muted-foreground" : "text-muted-foreground/30",
         )}
       >
-        <MdSend className="size-3" />
+        <Icon icon={sendIcon} className="size-3" />
       </Button>
     </ButtonGroup>
   );
@@ -203,7 +207,10 @@ export function FloatingTemplateChips({
             "max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56",
           )}
           trigger={
-            <MdEdit className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
+            <Icon
+              icon={editIcon}
+              className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors"
+            />
           }
         >
           <FloatingActionFadeIn>

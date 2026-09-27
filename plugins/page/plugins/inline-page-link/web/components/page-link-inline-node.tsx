@@ -1,4 +1,3 @@
-import { MdLink } from "react-icons/md";
 import type { LexicalNode } from "lexical";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -8,6 +7,9 @@ import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkInlineNode } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const linkIcon = symbol("link");
 
 /**
  * The browser half of the inline page-link token: the SAME family declared in
@@ -47,7 +49,7 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
         <Center as="span" className="size-3.5">
           <PageIcon
             nodes={data?.iconSvgNodes}
-            fallback={MdLink}
+            fallback={linkIcon}
             className="size-3.5"
           />
         </Center>

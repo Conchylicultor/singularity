@@ -1,6 +1,8 @@
-import { MdGrade, MdStarBorder } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useStar } from "../internal/use-star";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const starIcon = symbol("star");
 
 /**
  * Presentational star toggle shared by the sidebar row action and the page
@@ -16,7 +18,8 @@ export function StarButton({ pageId }: { pageId: string }) {
   const { isStarred, toggle } = star;
   return (
     <IconButton
-      icon={isStarred ? MdGrade : MdStarBorder}
+      icon={starIcon}
+      active={isStarred}
       label={isStarred ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={isStarred}
       onClick={toggle}

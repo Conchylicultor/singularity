@@ -2,12 +2,12 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdBuild } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
 import { BuildButton } from "./components/build-button";
 import { buildPane, buildDetailPane } from "./panes";
 import { BuildDetail } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
@@ -32,7 +32,7 @@ export default {
     DebugApp.Sidebar({
       id: "build",
       title: "Builds",
-      icon: MdBuild,
+      icon: symbol("build"),
       onClick: () => openPane(buildPane, {}, { mode: "root" }),
     }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),

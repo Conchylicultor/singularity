@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -25,7 +26,7 @@ export interface ArtifactKind {
   /** Section heading — plural, e.g. "Prototypes". */
   label: string;
   /** The kind's glyph, drawn at the left of each of its rows. */
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /**
    * Did the conversation MAKE these, or only look at them?
    *

@@ -162,6 +162,7 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
   - Uses:
     - `page/container.defineContainerBlock`
     - `page/editor.SvgNodeSchema`
+    - `ui/icons.symbol`
   - Exports (types): `CalloutColor`
   - Exports (values):
     - `CALLOUT_COLORS`

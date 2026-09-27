@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdOpenInNew, MdPlace, MdRefresh } from "react-icons/md";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -17,6 +16,12 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { PlaceData } from "../../core";
 import type { PlaceProviderContribution } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInNewIcon = symbol("open-in-new");
+const locationOnIcon = symbol("location-on");
+const refreshIcon = symbol("refresh");
 
 export interface PlaceCardProps {
   data: PlaceData;
@@ -40,7 +45,7 @@ export function PlaceCard({
   notice,
   onReplace,
 }: PlaceCardProps) {
-  const Icon = provider?.icon ?? MdPlace;
+  const icon = provider?.icon ?? locationOnIcon;
   const linkLabel = provider ? `Open in ${provider.label}` : "Open map";
 
   return (
@@ -49,6 +54,7 @@ export function PlaceCard({
         <Stack gap="2xs">
           <Line>
             <Icon
+              icon={icon}
               className={cn(rigidClass(), "size-4 text-muted-foreground")}
             />
             <Fill>
@@ -69,7 +75,7 @@ export function PlaceCard({
                   href={data.mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  icon={<MdOpenInNew className="icon-auto" />}
+                  icon={<Icon icon={openInNewIcon} className="icon-auto" />}
                   colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
                 >
                   {linkLabel}
@@ -91,7 +97,7 @@ export function PlaceCard({
           )}
         >
           <Center className="size-full">
-            <MdRefresh className="size-4" />
+            <Icon icon={refreshIcon} className="size-4" />
           </Center>
         </button>
       </Pin>

@@ -1,4 +1,3 @@
-import { MdAccountTree, MdCode } from "react-icons/md";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -19,6 +18,11 @@ import { parseWorkflowMeta, parseWorkflowResult } from "../../core";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 import { WorkflowGraph } from "./workflow-graph";
 import { workflowNodePane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const accountTreeIcon = symbol("account-tree");
+const codeIcon = symbol("code");
 
 interface WorkflowInput {
   script?: string;
@@ -79,7 +83,7 @@ function ScriptSection({ script }: { script: string }) {
         {...triggerProps}
         className="w-full px-md py-xs text-left text-caption text-muted-foreground hover:text-foreground"
       >
-        <MdCode className="size-3.5" />
+        <Icon icon={codeIcon} className="size-3.5" />
         <span className="font-medium">{open ? "Hide" : "View"} script</span>
         <span className="text-3xs opacity-60">
           ({script.split("\n").length} lines)
@@ -125,7 +129,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
     <Line as="span" className={cn(yieldClass("x"), "gap-sm")}>
       <Badge
         colorClass="bg-categorical-6/15 text-categorical-6"
-        icon={<MdAccountTree />}
+        icon={<Icon icon={accountTreeIcon} />}
         className={cn("font-mono", rigidClass())}
       >
         {name ?? "workflow"}

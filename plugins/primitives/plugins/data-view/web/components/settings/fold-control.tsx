@@ -1,5 +1,4 @@
 import { useCallback, type ReactNode } from "react";
-import { MdClose, MdUnfoldLess } from "react-icons/md";
 import {
   ControlPanel,
   usePanelStack,
@@ -13,6 +12,11 @@ import {
 } from "../controls/controls-context";
 import { FilterEditorPanel } from "../filter/filter-control-panel";
 import { FilterScopeProvider } from "../filter/filter-scope";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const unfoldLessIcon = symbol("unfold-less");
 
 /**
  * "Fold rows" setting (a `view`-scope settings contribution, modelled on
@@ -40,7 +44,7 @@ export function FoldControl(): ReactNode {
   return (
     <ControlPanel.Section label="Fold rows">
       <ControlPanel.Row
-        icon={<MdUnfoldLess />}
+        icon={<Icon icon={unfoldLessIcon} />}
         hint="Rows that don't match fold behind “… N more” at the end of their group. Searching shows every match."
         trailing={summary?.more ? `+${summary.more}` : undefined}
         onSelect={() =>
@@ -59,7 +63,7 @@ export function FoldControl(): ReactNode {
       </ControlPanel.Row>
       {fold ? (
         <ControlPanel.Row
-          icon={<MdClose />}
+          icon={<Icon icon={closeIcon} />}
           tone="danger"
           onSelect={() => viewModel.setFold(activeViewId, null)}
         >

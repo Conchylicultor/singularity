@@ -197,6 +197,7 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/popover.InlinePopoverProps`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CalendarProps`
     - `DatePickerPanelProps`

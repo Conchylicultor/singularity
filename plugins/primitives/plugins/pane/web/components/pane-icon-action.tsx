@@ -1,10 +1,6 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  forwardRef,
-  type ComponentProps,
-  type ComponentType,
-  type ReactNode,
-} from "react";
+import { forwardRef, type ComponentProps, type ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
@@ -13,7 +9,7 @@ interface PaneIconActionProps extends Omit<
   "icon" | "label"
 > {
   label: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   children?: ReactNode;
 }
 

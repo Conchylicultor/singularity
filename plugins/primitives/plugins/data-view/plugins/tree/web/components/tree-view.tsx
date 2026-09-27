@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
-import { MdAdd, MdLink, MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import {
   useRowFilter,
   FieldCell,
@@ -57,6 +56,13 @@ import {
   type Projected,
 } from "../internal/project-rows";
 import { EditableTreeLabel } from "./editable-tree-label";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const linkIcon = symbol("link");
+const unfoldLessIcon = symbol("unfold-less");
+const unfoldMoreIcon = symbol("unfold-more");
 
 /**
  * Default row: render the primary field through the same `data-view.cell`
@@ -211,7 +217,7 @@ function DefaultRow<TRow>(props: {
       ) : null}
       {isAlias ? (
         <Center as="span" axis="both">
-          <MdLink className="size-3.5 text-muted-foreground" />
+          <Icon icon={linkIcon} className="size-3.5 text-muted-foreground" />
         </Center>
       ) : trailing != null ? (
         <Center as="span" axis="both">
@@ -261,7 +267,7 @@ function renderSectionExpandAll(
   const collapse = state.allExpanded;
   return (
     <IconButton
-      icon={collapse ? MdUnfoldLess : MdUnfoldMore}
+      icon={collapse ? unfoldLessIcon : unfoldMoreIcon}
       label={collapse ? "Collapse group" : "Expand group"}
       variant="ghost"
       onClick={() => setExpanded(state.changes(!collapse))}
@@ -731,7 +737,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
               // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the sections above (mirrors TreeList's own footer)
               className="text-muted-foreground mt-1 w-fit"
             >
-              <MdAdd className="size-4" />
+              <Icon icon={addIcon} className="size-4" />
               {addLabel}
             </Button>
           </div>

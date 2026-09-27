@@ -1,6 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { MdFolder } from "react-icons/md";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -12,6 +11,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useHostDir } from "./use-host-dir";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const folderIcon = symbol("folder");
 
 export interface FolderPickerProps {
   /** Folder to open the browser at. Falls back to the user's home directory. */
@@ -52,7 +55,9 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
             <Spinner className="size-4 text-muted-foreground" />
           </Center>
         ) : isError ? (
-          <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
+          <Placeholder tone="error">
+            {getEndpointErrorMessage(error)}
+          </Placeholder>
         ) : data && !data.isDirectory ? (
           <Placeholder tone="error">Not a directory.</Placeholder>
         ) : subdirs.length === 0 ? (
@@ -63,8 +68,12 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
             <Row
               key={entry.name}
               hover="muted"
-              icon={<MdFolder className="text-muted-foreground" />}
-              onClick={() => data && setBrowsePath(`${data.path}/${entry.name}`)}
+              icon={
+                <Icon icon={folderIcon} className="text-muted-foreground" />
+              }
+              onClick={() =>
+                data && setBrowsePath(`${data.path}/${entry.name}`)
+              }
             >
               <Text>{entry.name}</Text>
             </Row>

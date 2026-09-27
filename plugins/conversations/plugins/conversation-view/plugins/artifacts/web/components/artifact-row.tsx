@@ -1,4 +1,5 @@
-import type { ComponentType } from "react";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -16,7 +17,7 @@ export interface ArtifactRowProps {
   /** What to call it — the kind resolves this (a prototype's name, a basename). */
   title: string;
   /** The kind's glyph. Every row of one kind shows the same one. */
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Opens the artifact. Omit for an artifact that has nowhere to go. */
   onOpen?: () => void;
   /**
@@ -53,7 +54,7 @@ export interface ArtifactRowProps {
 export function ArtifactRow({
   item,
   title,
-  icon: Icon,
+  icon,
   onOpen,
   inertReason,
 }: ArtifactRowProps) {
@@ -68,7 +69,7 @@ export function ArtifactRow({
       // No size class: the row sizes its leading glyph from its own type rung,
       // so the mark beside the words tracks them instead of being a number this
       // file picked once.
-      icon={<Icon className="text-muted-foreground" />}
+      icon={<Icon icon={icon} className="text-muted-foreground" />}
       // The picker density, which is what this popover is — and one step under
       // the panel's own header, so the list never out-shouts the thing naming
       // it. Measured against the mock: this lands the row on its 28px pitch and

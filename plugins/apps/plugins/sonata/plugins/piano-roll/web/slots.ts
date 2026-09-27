@@ -12,6 +12,7 @@
  * config auto-appears in the generic settings pane, so a new effect ships its
  * own toggle for free.
  */
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import type { Container, Renderer, Ticker } from "pixi.js";
 import type { EmitterOptions, ParticleEmitter } from "./internal/fx/particles";
@@ -22,9 +23,6 @@ import type {
   Note,
   Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /**
  * The shape every effect's config must take: exactly one `enabled` bool. The
@@ -123,7 +121,7 @@ export interface FxContext {
 export const PianoRollFx = defineSlot<{
   id: string;
   label: string;
-  icon?: IconType;
+  icon?: IconRef;
   tier: "ambient" | "fancy";
   config: FxToggleConfig;
   component: ComponentType<{ fx: FxContext }>;

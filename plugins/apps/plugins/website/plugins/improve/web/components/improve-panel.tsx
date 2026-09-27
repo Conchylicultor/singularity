@@ -1,7 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { MdAdsClick } from "react-icons/md";
-import { SiGithub } from "react-icons/si";
 import {
   Button,
   ControlSizeProvider,
@@ -25,6 +23,11 @@ import { SOURCE_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { buildIssueUrl } from "../../core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
+import { brand, symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const adsClickIcon = symbol("ads-click");
+const githubIcon = brand("github");
 
 /** What the visitor has written so far. Owned by the header item, so it
  * survives the popover closing and reopening. */
@@ -245,7 +248,7 @@ function ComposeView({
                 shape="pill"
                 onClick={arm}
               >
-                <MdAdsClick />
+                <Icon icon={adsClickIcon} />
                 Point to it on the page
               </Button>
             )}
@@ -333,7 +336,7 @@ function ReplayView({
           render={<a href={href} target="_blank" rel="noopener noreferrer" />}
           onClick={onFiled}
         >
-          <SiGithub />
+          <Icon icon={githubIcon} />
           File it
         </Button>
       </PanelFooter>

@@ -40,6 +40,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
+    - `ui/icons.Icon`
   - Exports (types): `WallpaperCandidate`
   - Exports (values):
     - `DesktopContextMenu`

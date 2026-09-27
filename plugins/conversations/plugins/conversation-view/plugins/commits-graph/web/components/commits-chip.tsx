@@ -1,10 +1,14 @@
-import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { convCommitsGraphPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const altRouteIcon = symbol("alt-route");
+const publishIcon = symbol("publish");
 
 export function CommitsChip() {
   const { convId } = conversationPane.useParams();
@@ -71,7 +75,7 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
       onClick={toggle}
       className="gap-xs px-sm text-control-compact tabular-nums"
     >
-      <MdAltRoute />
+      <Icon icon={altRouteIcon} />
       <span className="text-muted-foreground">↑</span>
       <span className="text-muted-foreground">{ahead}</span>
       {behind > 0 ? (
@@ -83,7 +87,8 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
       {pushCount > 0 ? (
         <>
           <span className="text-muted-foreground">·</span>
-          <MdPublish
+          <Icon
+            icon={publishIcon}
             className={`size-3.5 ${behind > 0 ? "text-muted-foreground" : "text-success"}`}
           />
           <span
@@ -116,7 +121,7 @@ function UnmeasuredChip({
       onClick={onToggle}
       className="gap-xs px-sm text-control-compact tabular-nums"
     >
-      <MdAltRoute />
+      <Icon icon={altRouteIcon} />
       <span className="text-muted-foreground">—</span>
     </Button>
   );

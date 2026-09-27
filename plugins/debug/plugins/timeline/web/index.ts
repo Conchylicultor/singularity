@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdTimeline } from "react-icons/md";
 import { SlowEvents } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import { TimelineView } from "./components/timeline-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     SlowEvents.View({
       id: "timeline",
       title: "Timeline",
-      icon: MdTimeline,
+      icon: symbol("timeline"),
       order: 40,
       component: TimelineView,
     }),

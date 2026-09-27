@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -26,6 +25,10 @@ import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 const PAGES_SIDEBAR_VIEW = defineDataView("pages-sidebar");
 
@@ -137,7 +140,7 @@ export function PagesSidebar() {
       {
         id: "new-page",
         label: "New page",
-        icon: <MdAdd />,
+        icon: <Icon icon={addIcon} />,
         onSelect: createRootPage,
       },
     ];

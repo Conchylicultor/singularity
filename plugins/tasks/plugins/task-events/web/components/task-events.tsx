@@ -1,4 +1,3 @@
-import { MdOpenInNew } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -17,6 +16,10 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInNewIcon = symbol("open-in-new");
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -73,7 +76,7 @@ function PushRow({
           {formatDate(push.createdAt)}
         </Text>
         {url ? (
-          <MdOpenInNew
+          <Icon icon={openInNewIcon}
             className={cn("text-muted-foreground size-4", rigidClass())}
           />
         ) : null}
@@ -192,7 +195,7 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                       conv={c}
                       actions={
                         <IconButton
-                          icon={MdOpenInNew}
+                          icon={openInNewIcon}
                           label="Open as page"
                           tooltip="Open in a new page"
                           onClick={() => opener.openAsPage(c.id)}

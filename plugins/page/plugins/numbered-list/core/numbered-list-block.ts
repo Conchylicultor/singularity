@@ -1,11 +1,13 @@
-import { MdFormatListNumbered } from "react-icons/md";
 import { defineBlock, textDataSchema } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const formatListNumberedIcon = symbol("format-list-numbered");
 
 export const numberedListBlock = defineBlock({
   type: "numbered-list",
   schema: textDataSchema,
   label: "Numbered list",
-  icon: MdFormatListNumbered,
+  icon: formatListNumberedIcon,
   aliases: ["number", "ordered", "ol", "1."],
   empty: () => ({ text: [] }),
   placeholder: "List",

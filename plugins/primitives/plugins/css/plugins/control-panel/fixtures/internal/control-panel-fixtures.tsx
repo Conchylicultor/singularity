@@ -9,13 +9,15 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ReactNode } from "react";
-import {
-  MdCallSplit,
-  MdClose,
-  MdDelete,
-  MdSort,
-  MdVisibility,
-} from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const callSplitIcon = symbol("call-split");
+const closeIcon = symbol("close");
+const deleteIcon = symbol("delete");
+const sortIcon = symbol("sort");
+const visibilityIcon = symbol("visibility");
 
 // ── The control-panel geometry gate ─────────────────────────────────
 //
@@ -233,7 +235,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="row-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -330,7 +332,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="row-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -396,7 +398,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="row-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -453,7 +455,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="outer-row-icon">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -466,7 +468,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
             <ControlPanel.Row
               icon={
                 <Fills id="group-row-icon">
-                  <MdSort />
+                  <Icon icon={sortIcon} />
                 </Fills>
               }
             >
@@ -539,7 +541,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="icon-row-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -626,7 +628,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
             onSelect={NOOP}
             icon={
               <Fills id="plain-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -640,11 +642,11 @@ export const controlPanelFixtures: HarnessFixture[] = [
             onSelect={NOOP}
             icon={
               <Fills id="actions-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
             trailing={<span className="whitespace-nowrap">3 rules</span>}
-            actions={<IconButton icon={MdDelete} label="Delete preset" />}
+            actions={<IconButton icon={deleteIcon} label="Delete preset" />}
           >
             <Fills id="actions-row-label">Recently updated</Fills>
           </ControlPanel.Row>
@@ -656,7 +658,9 @@ export const controlPanelFixtures: HarnessFixture[] = [
             checked={false}
             disabled
             onSelect={NOOP}
-            actions={<IconButton icon={MdDelete} label="Delete stale preset" />}
+            actions={
+              <IconButton icon={deleteIcon} label="Delete stale preset" />
+            }
           >
             <Fills id="disabled-row-label">No matching fields</Fills>
           </ControlPanel.Row>
@@ -738,7 +742,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
           <ControlPanel.Row
             icon={
               <Fills id="row-icon-cell">
-                <MdVisibility />
+                <Icon icon={visibilityIcon} />
               </Fills>
             }
           >
@@ -801,7 +805,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
               <ControlPanel.Row>Assignee</ControlPanel.Row>
             </div>
             <div data-geo="row-icon">
-              <ControlPanel.Row icon={<MdVisibility />}>
+              <ControlPanel.Row icon={<Icon icon={visibilityIcon} />}>
                 Visibility
               </ControlPanel.Row>
             </div>
@@ -863,7 +867,10 @@ export const controlPanelFixtures: HarnessFixture[] = [
                 prefix={<Fills id="prefix">Where</Fills>}
                 field={
                   <Fills id="field">
-                    <ControlPanel.Field icon={<MdSort />} label="Status" />
+                    <ControlPanel.Field
+                      icon={<Icon icon={sortIcon} />}
+                      label="Status"
+                    />
                   </Fills>
                 }
                 operator={
@@ -886,8 +893,8 @@ export const controlPanelFixtures: HarnessFixture[] = [
                 // let the case that actually clipped through.
                 actions={
                   <span data-geo="remove" className="flex items-center gap-2xs">
-                    <IconButton icon={MdCallSplit} label="Turn into group" />
-                    <IconButton icon={MdClose} label="Remove" />
+                    <IconButton icon={callSplitIcon} label="Turn into group" />
+                    <IconButton icon={closeIcon} label="Remove" />
                   </span>
                 }
               />
@@ -959,7 +966,10 @@ export const controlPanelFixtures: HarnessFixture[] = [
                 prefix={<Fills id="prefix">Sort by</Fills>}
                 field={
                   <Fills id="field">
-                    <ControlPanel.Field icon={<MdSort />} label="Updated" />
+                    <ControlPanel.Field
+                      icon={<Icon icon={sortIcon} />}
+                      label="Updated"
+                    />
                   </Fills>
                 }
                 // No `operator` — this IS the two-cell shape, and omitting it is
@@ -972,7 +982,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
                 }
                 actions={
                   <span data-geo="remove" className="flex items-center">
-                    <IconButton icon={MdClose} label="Remove" />
+                    <IconButton icon={closeIcon} label="Remove" />
                   </span>
                 }
               />
@@ -1040,7 +1050,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
       <ControlPanel aria-label="Long label">
         <ControlPanel.Section label="Sort">
           <ControlPanel.Row
-            icon={<MdSort />}
+            icon={<Icon icon={sortIcon} />}
             trailing={
               // A trailing cell as the contract describes it — a short count or
               // word. `nowrap` so its box is one deterministic measurement rather

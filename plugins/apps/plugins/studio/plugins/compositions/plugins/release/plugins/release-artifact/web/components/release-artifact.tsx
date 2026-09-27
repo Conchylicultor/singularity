@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdPlayArrow, MdStop, MdOpenInNew } from "react-icons/md";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,6 +13,12 @@ import {
   releaseRuns,
   releasePreviews,
 } from "@plugins/release/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playArrowIcon = symbol("play-arrow");
+const stopIcon = symbol("stop");
+const openInNewIcon = symbol("open-in-new");
 
 export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
   const runResult = useLiveRow(releaseRuns, runId);
@@ -59,7 +64,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
             loading={stopPreview.isPending}
             onClick={() => stopPreview.mutate({ params: { id: runId } })}
           >
-            <MdStop className="size-4" />
+            <Icon icon={stopIcon} className="size-4" />
             Stop preview
           </Button>
         ) : (
@@ -69,7 +74,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
             disabled={!canPreview}
             onClick={() => startPreview.mutate({ params: { id: runId } })}
           >
-            <MdPlayArrow className="size-4" />
+            <Icon icon={playArrowIcon} className="size-4" />
             Preview
           </Button>
         )}
@@ -77,7 +82,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
         {isPreviewRunning && preview && (
           <LinkChip
             mono
-            leading={<MdOpenInNew />}
+            leading={<Icon icon={openInNewIcon} />}
             title="Open preview in a new tab"
             onClick={() =>
               window.open(preview.url, "_blank", "noopener,noreferrer")

@@ -1,5 +1,4 @@
 import { useCallback, type ReactNode } from "react";
-import { MdVisibility } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import {
@@ -10,6 +9,10 @@ import { useVisibleFieldsController } from "../../internal/use-visible-fields-co
 import { FieldSections } from "../../internal/field-sections";
 import { dragHandleProps } from "../../internal/drag-handle-props";
 import { useDataViewControls } from "../controls/controls-context";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const visibilityIcon = symbol("visibility");
 
 /**
  * Properties setting (a `view`-scope settings contribution): a per-view-instance
@@ -99,7 +102,7 @@ export function PropertiesControl(): ReactNode {
         }}
       </FieldSections>
       <ControlPanel.Row
-        icon={<MdVisibility />}
+        icon={<Icon icon={visibilityIcon} />}
         muted
         disabled={!controller.isCustomized}
         onSelect={controller.showAll}

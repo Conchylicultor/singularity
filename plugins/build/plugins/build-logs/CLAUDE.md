@@ -25,6 +25,7 @@
     - `primitives/icon-button.IconButton`
     - `primitives/log-channels.LiveLogChannel`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`

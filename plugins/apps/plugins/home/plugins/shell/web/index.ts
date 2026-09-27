@@ -1,12 +1,13 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { MdHome } from "react-icons/md";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { homeApp } from "../core";
 import { HomeLayout } from "./components/home-layout";
 import { homeTheme } from "./internal/theme";
 import { Home } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Home } from "./slots";
 
@@ -16,7 +17,7 @@ export default {
   contributions: [
     Apps.App({
       app: homeApp,
-      icon: mdAppIcon(MdHome),
+      icon: appIcon(symbol("home")),
       component: HomeLayout,
       default: true,
     }),

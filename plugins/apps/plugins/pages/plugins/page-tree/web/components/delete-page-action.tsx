@@ -1,8 +1,10 @@
-import { MdDelete } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  useOpenPane,
+  usePaneStore,
+} from "@plugins/primitives/plugins/pane/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { useUndoableTrash } from "@plugins/infra/plugins/trash/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -14,6 +16,9 @@ import {
   type Block,
 } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 /**
  * Delete a page from the sidebar — instant, silent, and reversible (Notion's
@@ -55,7 +60,8 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
       onUndo:
         reopenId === undefined
           ? undefined
-          : () => openPane(pageDetailPane, { pageId: reopenId }, { mode: "push" }),
+          : () =>
+              openPane(pageDetailPane, { pageId: reopenId }, { mode: "push" }),
     });
 
     if (reopenId !== undefined) paneStore.clearRoute();
@@ -71,7 +77,7 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
   // double-fired, and it derives its size from the row's ambient control density.
   return (
     <IconButton
-      icon={MdDelete}
+      icon={deleteIcon}
       label="Delete page"
       onClick={(e) => {
         e.stopPropagation();

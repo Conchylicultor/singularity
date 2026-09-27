@@ -413,6 +413,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/font-family`
+    - `ui/tokens/icons`
     - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`

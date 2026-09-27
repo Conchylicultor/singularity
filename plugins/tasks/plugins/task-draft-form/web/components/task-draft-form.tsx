@@ -1,6 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdClose, MdScience } from "react-icons/md";
 import {
   SortableList,
   arrayMove,
@@ -25,6 +24,12 @@ import {
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
+const scienceIcon = symbol("science");
 
 export interface CardDraft {
   localId: string;
@@ -208,7 +213,7 @@ export function TaskDraftForm({
           gap="xs"
           className="text-destructive"
         >
-          <MdScience className="size-3.5" />
+          <Icon icon={scienceIcon} className="size-3.5" />
           <Text as="span" variant="caption" className="font-medium">
             Experimental — tasks target main from an agent worktree
           </Text>
@@ -225,13 +230,13 @@ export function TaskDraftForm({
             with one task left there is nothing to drop, so it closes. */}
         {isMulti ? (
           <IconButton
-            icon={MdClose}
+            icon={closeIcon}
             label="Remove task 1"
             onClick={() => removeAt(0)}
             disabled={submitting}
           />
         ) : (
-          <IconButton icon={MdClose} label="Close" onClick={onCancel} />
+          <IconButton icon={closeIcon} label="Close" onClick={onCancel} />
         )}
       </Line>
 
@@ -302,7 +307,7 @@ export function TaskDraftForm({
             loading={submitting}
             className="text-muted-foreground"
           >
-            <MdAdd className="size-3.5" />
+            <Icon icon={addIcon} className="size-3.5" />
             Follow-up task
           </Button>
         </WithTooltip>

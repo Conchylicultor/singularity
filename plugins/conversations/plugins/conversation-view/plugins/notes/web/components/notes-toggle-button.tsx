@@ -1,7 +1,9 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdStickyNote2 } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationNote } from "../internal/use-conversation-note";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const stickyNote2Icon = symbol("sticky-note-2");
 
 export function NotesToggleButton({
   conversation,
@@ -16,7 +18,7 @@ export function NotesToggleButton({
 
   return (
     <IconButton
-      icon={MdStickyNote2}
+      icon={stickyNote2Icon}
       label={isVisible ? "Hide notes" : "Add note"}
       variant={isVisible ? "secondary" : "ghost"}
       aria-pressed={isVisible}

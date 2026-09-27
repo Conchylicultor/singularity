@@ -1,9 +1,3 @@
-import {
-  MdCheckBox,
-  MdCheckBoxOutlineBlank,
-  MdCheckCircle,
-  MdRadioButtonUnchecked,
-} from "react-icons/md";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
@@ -16,6 +10,12 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const checkBoxIcon = symbol("check-box");
+const checkBoxOutlineBlankIcon = symbol("check-box-outline-blank");
+const checkCircleIcon = symbol("check-circle");
+const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
 
 // Marking a prototype Done: one shared record per prototype (`files`'
 // `prototypes.statuses`, `_status/<id>.json`), toggled from the gallery card and
@@ -46,7 +46,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
   return (
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={row.done ? MdCheckCircle : MdRadioButtonUnchecked}
+        icon={row.done ? checkCircleIcon : radioButtonUncheckedIcon}
         label={row.done ? "Done — mark as not done" : "Mark as done"}
         aria-pressed={row.done}
         variant="ghost"
@@ -73,13 +73,17 @@ export function DoneHeaderAction() {
   const { pending, setDone } = useSetPrototypeDone();
   if (statuses.pending) {
     return (
-      <IconButton icon={MdCheckBoxOutlineBlank} label="Mark as done" disabled />
+      <IconButton
+        icon={checkBoxOutlineBlankIcon}
+        label="Mark as done"
+        disabled
+      />
     );
   }
   const done = statusOf(statuses.data, name).done;
   return (
     <IconButton
-      icon={done ? MdCheckBox : MdCheckBoxOutlineBlank}
+      icon={done ? checkBoxIcon : checkBoxOutlineBlankIcon}
       label={done ? "Done — click to reopen" : "Mark as done"}
       aria-pressed={done}
       loading={pending}

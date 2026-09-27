@@ -8,7 +8,10 @@ import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { StructureFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/structure/core";
-import { MdRuleFolder } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const ruleFolderIcon = symbol("rule-folder");
 
 type StructureRow = {
   plugin: PluginNode;
@@ -97,7 +100,7 @@ function rows(entries: FacetTableEntry[]): StructureRow[] {
 export const structureFacetTable = defineFacetTable<StructureRow>({
   facetId: "structure",
   label: "Structure",
-  icon: MdRuleFolder,
+  icon: ruleFolderIcon,
   columns,
   rows,
   rowKey: (r) => r.plugin.id,

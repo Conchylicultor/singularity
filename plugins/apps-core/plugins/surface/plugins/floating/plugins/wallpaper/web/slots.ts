@@ -1,9 +1,7 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { WallpaperCandidate } from "../core";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /**
  * The wallpaper image-source registry (collection-consumer). Each source — an
@@ -17,7 +15,7 @@ export const Wallpaper = {
   Provider: defineSlot<{
     id: string;
     label: string;
-    icon?: IconType;
+    icon?: IconRef;
     Panel: ComponentType<{ onPick: (candidate: WallpaperCandidate) => void }>;
   }>({ docLabel: (p) => p.label }),
 };

@@ -1,6 +1,9 @@
-import { MdNotificationsNone } from "react-icons/md";
 import type { StructuredTag } from "../internal/parse-structured-tag";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const notificationsIcon = symbol("notifications");
 
 // "task-notification" → "Task notification". Natural case — jsonl-viewer bans
 // all-caps labels.
@@ -19,14 +22,20 @@ const SUMMARY_KEY = "summary";
  * task-notification row uses — so the `summary` truncates in the header and the
  * full payload (every field, field-agnostically) stays one click away.
  */
-export function StructuredTagCard({ structured }: { structured: StructuredTag }) {
+export function StructuredTagCard({
+  structured,
+}: {
+  structured: StructuredTag;
+}) {
   const { tag, fields } = structured;
-  const summary = fields.find((f) => f.key.toLowerCase() === SUMMARY_KEY)?.value;
+  const summary = fields.find(
+    (f) => f.key.toLowerCase() === SUMMARY_KEY,
+  )?.value;
   const bodyFields = fields.filter((f) => f.key.toLowerCase() !== SUMMARY_KEY);
 
   return (
     <FieldsCard
-      icon={<MdNotificationsNone className="size-3.5" />}
+      icon={<Icon icon={notificationsIcon} className="size-3.5" />}
       label={<span className="font-medium">{humanizeTag(tag)}</span>}
       summary={summary}
       fields={bodyFields}

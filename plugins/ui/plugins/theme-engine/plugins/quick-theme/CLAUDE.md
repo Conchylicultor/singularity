@@ -61,6 +61,7 @@ itself stays a pane concern — this surface only follows the choice made there.
     - `primitives/icon-button.IconButton`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/action-bar.ActionBar`
+    - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeScopeProvider`
     - `ui/theme-engine/theme-customizer.themeCustomizerRoute`

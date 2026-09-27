@@ -5,7 +5,6 @@ import {
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
-import { MdSearch } from "react-icons/md";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -18,6 +17,10 @@ import {
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const searchIcon = symbol("search");
 
 interface CommandPaletteDialogProps {
   open: boolean;
@@ -171,7 +174,8 @@ function CommandPaletteBody({
               rail. Both are direct children of the panel, which is what makes a
               bleed free (see the caveat in `dialog.tsx`). */}
       <Line className="gap-sm border-b rail-bleed py-sm">
-        <MdSearch
+        <Icon
+          icon={searchIcon}
           className={cn("size-4 text-muted-foreground", rigidClass())}
         />
         <input
@@ -292,7 +296,7 @@ function CommandRow({
   onClick: () => void;
 }) {
   const revealRef = useRevealOnActive(isActive);
-  const Icon = item.icon;
+  const icon = item.icon;
   return (
     <Line
       ref={revealRef}
@@ -307,8 +311,11 @@ function CommandRow({
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >
-      {Icon && (
-        <Icon className={cn("size-4 text-muted-foreground", rigidClass())} />
+      {icon && (
+        <Icon
+          icon={icon}
+          className={cn("size-4 text-muted-foreground", rigidClass())}
+        />
       )}
       <Fill as="span">
         <Text tone="muted">

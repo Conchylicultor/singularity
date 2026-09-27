@@ -1,6 +1,5 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -19,6 +18,10 @@ import type { ConversationSummary } from "../../core";
 import { generateConversationSummary } from "../../shared/endpoints";
 import { useLatestConversationSummary } from "../hooks";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 // Bound the spinner so a wedged Sonnet conversation eventually surfaces
 // rather than hanging the chip forever. Matches the server-side reaper
@@ -137,7 +140,7 @@ function SummaryPaneInner({
         className={cn("gap-xs", selfClass("start"), "text-caption")}
         aria-label={latest ? "Re-summarise" : "Summarise"}
       >
-        <MdAutoAwesome className="size-3.5" />
+        <Icon icon={autoAwesomeIcon} className="size-3.5" />
         {latest ? "Re-summarise" : "Summarise"}
       </Button>
 

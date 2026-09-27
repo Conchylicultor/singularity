@@ -72,6 +72,7 @@ rule), mirroring the scalar operators.
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataViewSlots`
     - `primitives/date-picker.Calendar`
+    - `ui/icons.Icon`
 - Core:
   - Exports (types):
     - `DateAnchor`

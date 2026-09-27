@@ -136,6 +136,7 @@ plus a per-song reset.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
+    - `ui/icons.Icon`
   - Exports (types): `TrackMixerEntry`
   - Exports (values):
     - `accidentalColor`

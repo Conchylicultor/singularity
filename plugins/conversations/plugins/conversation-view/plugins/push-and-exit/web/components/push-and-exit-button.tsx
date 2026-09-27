@@ -1,18 +1,8 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { IconType } from "react-icons";
-import {
-  MdDeleteForever,
-  MdErrorOutline,
-  MdLogout,
-  MdPlayArrow,
-  MdPlaylistAdd,
-  MdReplay,
-  MdRocketLaunch,
-  MdSend,
-  MdStop,
-} from "react-icons/md";
+
 import {
   isDraftEmpty,
   conversationPane,
@@ -47,6 +37,17 @@ import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { deriveExitMode, type Mode } from "./exit-mode";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const deleteForeverIcon = symbol("delete-forever");
+const errorIcon = symbol("error");
+const logoutIcon = symbol("logout");
+const playArrowIcon = symbol("play-arrow");
+const playlistAddIcon = symbol("playlist-add");
+const replayIcon = symbol("replay");
+const rocketLaunchIcon = symbol("rocket-launch");
+const sendIcon = symbol("send");
+const stopIcon = symbol("stop");
 
 // One action per mode: a `run` thunk owning its typed call (so each mode's
 // differing param/body/response types stay encapsulated in its own closure — no
@@ -91,16 +92,16 @@ const PRIMARY = "bg-primary hover:bg-primary/90 text-primary-foreground";
 // weight (`font-control-strong`, default = every button's control weight).
 const STRONG = "font-control-strong";
 
-const ICONS: Record<Mode, IconType> = {
-  restore: MdReplay,
-  send: MdSend,
-  queue: MdPlaylistAdd,
-  stop: MdStop,
-  go: MdPlayArrow,
-  "push-and-exit": MdRocketLaunch,
-  exit: MdLogout,
-  "exit-error": MdErrorOutline,
-  "drop-and-exit": MdDeleteForever,
+const ICONS: Record<Mode, IconRef> = {
+  restore: replayIcon,
+  send: sendIcon,
+  queue: playlistAddIcon,
+  stop: stopIcon,
+  go: playArrowIcon,
+  "push-and-exit": rocketLaunchIcon,
+  exit: logoutIcon,
+  "exit-error": errorIcon,
+  "drop-and-exit": deleteForeverIcon,
 };
 
 const BUTTON_CLASS: Record<Mode, string> = {
@@ -315,7 +316,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   }
 
   const label = LABELS[mode];
-  const Icon = ICONS[mode];
+  const icon = ICONS[mode];
 
   return (
     <Button
@@ -327,7 +328,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       onClick={onClick}
       className={cn(STRONG, BUTTON_CLASS[mode])}
     >
-      <Icon className="size-3.5" />
+      <Icon icon={icon} className="size-3.5" />
       {label}
     </Button>
   );

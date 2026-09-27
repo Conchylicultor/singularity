@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdUpload } from "react-icons/md";
 import { Wallpaper } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/web";
 import { UploadPanel } from "./components/upload-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     Wallpaper.Provider({
       id: "upload",
       label: "Upload",
-      icon: MdUpload,
+      icon: symbol("upload"),
       Panel: UploadPanel,
     }),
   ],

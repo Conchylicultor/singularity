@@ -21,6 +21,7 @@
     - `primitives/css/ui-kit.ScrollArea`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/overlay/tooltip.Kbd`
+    - `ui/icons.Icon`
   - Exports (types): `CommandPaletteItem`
   - Exports (values): `CommandPalette`
 

@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdAccountTree, MdFolderOpen } from "react-icons/md";
 import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
 import {
   DepsTreeSection,
@@ -11,6 +10,7 @@ import {
   DepsSource,
   CreatedSource,
 } from "./internal/deps-sources";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -33,7 +33,7 @@ export default {
     DepsSources({
       id: "deps",
       title: "Dependencies",
-      icon: MdAccountTree,
+      icon: symbol("account-tree"),
       order: 5,
       views: ["tree"],
       hasHierarchy: true,
@@ -42,7 +42,7 @@ export default {
     DepsSources({
       id: "created",
       title: "Created",
-      icon: MdFolderOpen,
+      icon: symbol("folder-open"),
       order: 10,
       views: ["tree"],
       hasHierarchy: true,

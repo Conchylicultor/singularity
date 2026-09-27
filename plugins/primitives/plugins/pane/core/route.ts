@@ -5,6 +5,8 @@
 // segment param substitution and `:param` name inference.
 // ---------------------------------------------------------------------------
 
+import type { SymbolName } from "@plugins/ui/plugins/icons/core";
+
 // ---------------------------------------------------------------------------
 // Type machinery — extract `:param`, `:param*` and `:param?` names from a path
 // template. An optional `:param?` (legal only as the LAST part of a segment —
@@ -70,19 +72,20 @@ export interface AppRef {
   /** App base path, e.g. "/agents", "/pages", or "/" for the root app. */
   readonly basePath: string;
   /**
-   * MD icon key (snake_case, e.g. "piano", "bug_report") for this app's icon,
-   * resolvable server-side via `resolveIconSvgNodes`. Must match the `MdXxx`
-   * the web shell passes to `Apps.App({ icon: mdAppIcon(MdXxx) })` — enforced
-   * by the `app-icon:key-in-sync` check.
+   * The Material Symbols name of this app's icon (e.g. "piano", "bug-report"),
+   * which the release CLI reads statically to draw the app's favicon / window
+   * icon. Must match the `symbol("…")` the web shell passes to
+   * `Apps.App({ icon: appIcon(symbol("…")) })` — enforced by the
+   * `app-icon:key-in-sync` check.
    */
-  readonly iconKey: string;
+  readonly iconKey: SymbolName;
 }
 
 export function defineApp(def: {
   id: string;
   name: string;
   basePath: string;
-  iconKey: string;
+  iconKey: SymbolName;
 }): AppRef {
   return Object.freeze({
     id: def.id,

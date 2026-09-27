@@ -1,10 +1,13 @@
-import { MdClearAll } from "react-icons/md";
 import { toast as sonnerToast } from "sonner";
 import {
   Button,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLiveToastCount } from "../internal/live-toasts";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const clearAllIcon = symbol("clear-all");
 
 /**
  * "Dismiss all" affordance for the toast stack. Clearing a pile-up one toast at
@@ -35,7 +38,7 @@ export function DismissAllButton() {
         className="pointer-events-auto"
         onClick={() => sonnerToast.dismiss()}
       >
-        <MdClearAll />
+        <Icon icon={clearAllIcon} />
         Dismiss all ({count})
       </Button>
     </ControlSizeProvider>

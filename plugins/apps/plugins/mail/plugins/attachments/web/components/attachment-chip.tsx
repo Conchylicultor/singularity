@@ -1,19 +1,21 @@
 import { useState, type ReactNode } from "react";
-import {
-  MdInsertDriveFile,
-  MdImage,
-  MdPictureAsPdf,
-  MdVideoFile,
-  MdAudioFile,
-  MdArchive,
-  MdDescription,
-} from "react-icons/md";
+
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import type { MailAttachment } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailAttachmentUrl } from "../../core";
 import { useMailAttachment } from "../internal/use-mail-attachment";
 import { formatBytes } from "../internal/format-bytes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const draftIcon = symbol("draft");
+const imageIcon = symbol("image");
+const pictureAsPdfIcon = symbol("picture-as-pdf");
+const videoFileIcon = symbol("video-file");
+const audioFileIcon = symbol("audio-file");
+const archiveIcon = symbol("archive");
+const descriptionIcon = symbol("description");
 
 /**
  * Render a Material MIME-type icon element. Returns an element (not a component
@@ -22,21 +24,25 @@ import { formatBytes } from "../internal/format-bytes";
  */
 function mimeIcon(mime: string): ReactNode {
   const cls = "icon-auto";
-  if (mime.startsWith("image/")) return <MdImage className={cls} />;
-  if (mime.startsWith("video/")) return <MdVideoFile className={cls} />;
-  if (mime.startsWith("audio/")) return <MdAudioFile className={cls} />;
-  if (mime === "application/pdf") return <MdPictureAsPdf className={cls} />;
+  if (mime.startsWith("image/"))
+    return <Icon icon={imageIcon} className={cls} />;
+  if (mime.startsWith("video/"))
+    return <Icon icon={videoFileIcon} className={cls} />;
+  if (mime.startsWith("audio/"))
+    return <Icon icon={audioFileIcon} className={cls} />;
+  if (mime === "application/pdf")
+    return <Icon icon={pictureAsPdfIcon} className={cls} />;
   if (
     mime.includes("zip") ||
     mime.includes("compressed") ||
     mime.includes("tar") ||
     mime.includes("gzip")
   ) {
-    return <MdArchive className={cls} />;
+    return <Icon icon={archiveIcon} className={cls} />;
   }
   if (mime.startsWith("text/") || mime.includes("document"))
-    return <MdDescription className={cls} />;
-  return <MdInsertDriveFile className={cls} />;
+    return <Icon icon={descriptionIcon} className={cls} />;
+  return <Icon icon={draftIcon} className={cls} />;
 }
 
 export interface AttachmentChipProps {
@@ -77,7 +83,11 @@ export function AttachmentChip({ attachment }: AttachmentChipProps) {
         void open();
       }}
       icon={
-        pending ? <Spinner className="icon-auto" /> : mimeIcon(attachment.mimeType)
+        pending ? (
+          <Spinner className="icon-auto" />
+        ) : (
+          mimeIcon(attachment.mimeType)
+        )
       }
     >
       {attachment.filename} · {formatBytes(attachment.sizeBytes)}

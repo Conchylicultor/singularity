@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdQueueMusic } from "react-icons/md";
-import { Sonata, useHasChords } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useHasChords,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordProgression } from "./components/chord-progression";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +13,7 @@ export default {
     Sonata.Section({
       id: "chord-progression",
       label: "Progression",
-      icon: MdQueueMusic,
+      icon: symbol("queue-music"),
       component: ChordProgression,
       area: "player",
       useAvailable: useHasChords,

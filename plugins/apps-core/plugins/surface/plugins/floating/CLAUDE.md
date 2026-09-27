@@ -107,7 +107,6 @@ last desktop creates a new one; moving before the first clamps).
     - `Shortcuts.Shortcut` ×14: "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.minimize (mod+m)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.toggle-pin (ctrl+alt+p)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.appIconComponent`
     - `apps-core/app-icon.AppIconView`
     - `apps-core/app-icon.DEFAULT_APP_ICON`
     - `apps-core/surface.PlacementChromeProps`
@@ -156,6 +155,7 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/shortcuts.defineShortcut`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/shortcuts.getFocusedSurfaceId`
+    - `ui/icons.Icon`
     - `ui/tab-bar.Tab`
     - `ui/tab-bar.TabIcon`
     - `ui/theme-engine.ThemeEngine`

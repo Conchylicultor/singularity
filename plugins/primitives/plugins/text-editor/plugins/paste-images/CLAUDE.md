@@ -22,6 +22,7 @@ editable. The task description's read-only display reuses the same chip.
     - `primitives/overlay/image-viewer.ViewerThumbnail`
     - `primitives/text-editor.registerNodeExtension`
     - `primitives/text-editor.TextEditorSlots`
+    - `ui/icons.Icon`
   - Exports (values):
     - `ATTACHMENT_MARKDOWN_RE`
     - `attachmentMarkdown`

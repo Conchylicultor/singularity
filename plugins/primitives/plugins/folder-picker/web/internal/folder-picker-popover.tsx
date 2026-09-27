@@ -1,6 +1,5 @@
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -9,6 +8,12 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { FolderPicker } from "./folder-picker";
 import { useHostDir } from "./use-host-dir";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const cancelIcon = symbol("cancel");
+const checkCircleIcon = symbol("check-circle");
+const folderOpenIcon = symbol("folder-open");
 
 export interface FolderPickerPopoverProps {
   value: string;
@@ -55,12 +60,14 @@ export function FolderPickerPopover({
           <Pin to="right" offset="sm" stretch decorative>
             <Center axis="vertical">
               {valid ? (
-                <MdCheckCircle
+                <Icon
+                  icon={checkCircleIcon}
                   className="size-4 text-success"
                   title="Folder exists"
                 />
               ) : (
-                <MdCancel
+                <Icon
+                  icon={cancelIcon}
                   className="size-4 text-destructive"
                   title="Not an existing folder"
                 />
@@ -77,7 +84,7 @@ export function FolderPickerPopover({
         tooltip="Browse folders"
         width="xl"
         padding="none"
-        trigger={<IconButton icon={MdFolderOpen} label="Browse folders" />}
+        trigger={<IconButton icon={folderOpenIcon} label="Browse folders" />}
       >
         <FolderPicker
           value={value}

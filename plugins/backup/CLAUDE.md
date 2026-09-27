@@ -133,6 +133,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `primitives/pane.PaneChrome`
     - `runs.RunsDataView`
     - `runs.useRun`
+    - `ui/icons.Icon`
   - Exports (values):
     - `backupPane`
     - `BackupRunDetail`

@@ -15,7 +15,6 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
     - `ThemeEngine.Theme` "Home"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `layouts/miller.PaneOverlayHost`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`

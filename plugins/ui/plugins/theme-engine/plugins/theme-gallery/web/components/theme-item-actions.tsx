@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdDeleteOutline, MdDriveFileRenameOutline } from "react-icons/md";
 import {
   defineItemActions,
   type ItemActionProps,
@@ -15,6 +14,10 @@ import { removeSavedTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved
 import type { ThemeRow } from "../internal/theme-rows";
 import { useScopeLabel } from "../internal/use-theme-gallery";
 import { RenameThemeDialog } from "./rename-theme-dialog";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
+const driveFileRenameIcon = symbol("drive-file-rename");
 
 /** Trailing-action slot for the Theme DataView's rows (the customizer pane's). */
 export const ThemeItemActions = defineItemActions<ThemeRow>();
@@ -82,7 +85,7 @@ export function DeleteThemeAction({
   const { theme } = target;
   return (
     <IconButton
-      icon={MdDeleteOutline}
+      icon={deleteIcon}
       label="Delete theme"
       onClick={(e) => {
         e.stopPropagation();
@@ -110,7 +113,7 @@ export function RenameThemeAction({
   const { theme } = target;
   return (
     <IconButton
-      icon={MdDriveFileRenameOutline}
+      icon={driveFileRenameIcon}
       label="Rename theme"
       onClick={(e) => {
         e.stopPropagation();

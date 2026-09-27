@@ -1,10 +1,13 @@
-import { MdFileUpload } from "react-icons/md";
 import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { deriveMidiSongMeta } from "../../shared/parse";
 import { createMidiSong } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const uploadIcon = symbol("upload");
 
 /**
  * Pick a single file imperatively (no rendered `<input>`): create a transient
@@ -35,7 +38,7 @@ export const midiCreateOption: CreateOption = {
   id: "midi",
   label: "Import MIDI",
   description: "Upload a .mid file to play and visualize it.",
-  icon: <MdFileUpload className="size-4" />,
+  icon: <Icon icon={uploadIcon} className="size-4" />,
   onSelect: async () => {
     const file = await pickFile(".mid,.midi");
     if (!file) return;

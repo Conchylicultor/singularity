@@ -1,11 +1,13 @@
-import { MdTitle } from "react-icons/md";
 import { defineBlock, textDataSchema } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const titleIcon = symbol("title");
 
 export const heading2Block = defineBlock({
   type: "heading-2",
   schema: textDataSchema,
   label: "Heading 2",
-  icon: MdTitle,
+  icon: titleIcon,
   aliases: ["h2", "subtitle"],
   empty: () => ({ text: [] }),
   placeholder: "Heading 2",

@@ -1,5 +1,10 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const unfoldLessIcon = symbol("unfold-less");
+const unfoldMoreIcon = symbol("unfold-more");
 
 export interface ExpandAllButtonProps {
   allExpanded: boolean;
@@ -15,7 +20,7 @@ export function ExpandAllButton({
   variant = "compact",
 }: ExpandAllButtonProps) {
   const label = allExpanded ? "Collapse all" : "Expand all";
-  const Icon = allExpanded ? MdUnfoldLess : MdUnfoldMore;
+  const icon = allExpanded ? unfoldLessIcon : unfoldMoreIcon;
 
   return (
     <button
@@ -32,7 +37,7 @@ export function ExpandAllButton({
           : "gap-xs text-caption",
       )}
     >
-      <Icon className="size-4" />
+      <Icon icon={icon} className="size-4" />
       {variant === "full" && label}
     </button>
   );

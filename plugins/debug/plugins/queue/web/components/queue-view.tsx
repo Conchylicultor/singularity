@@ -4,14 +4,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
-import {
-  MdBolt,
-  MdDelete,
-  MdHeartBroken,
-  MdRefresh,
-  MdReplay,
-  MdWorkOutline,
-} from "react-icons/md";
+
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -61,6 +54,15 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
+const deleteIcon = symbol("delete");
+const heartBrokenIcon = symbol("heart-broken");
+const refreshIcon = symbol("refresh");
+const replayIcon = symbol("replay");
+const workIcon = symbol("work");
 
 type Tab = "jobs" | "dead" | "events" | "triggers";
 
@@ -68,14 +70,14 @@ const TAB_OPTIONS = [
   {
     id: "jobs" as Tab,
     label: "Jobs",
-    icon: <MdWorkOutline className="size-4" />,
+    icon: <Icon icon={workIcon} className="size-4" />,
   },
   {
     id: "dead" as Tab,
     label: "Dead",
-    icon: <MdHeartBroken className="size-4" />,
+    icon: <Icon icon={heartBrokenIcon} className="size-4" />,
   },
-  { id: "events" as Tab, label: "Events", icon: <MdBolt className="size-4" /> },
+  { id: "events" as Tab, label: "Events", icon: <Icon icon={boltIcon} className="size-4" /> },
   { id: "triggers" as Tab, label: "Triggers" },
 ] as const;
 
@@ -254,7 +256,7 @@ function JobsTabInner({
         </FilterChip>
         <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
+          <Icon icon={refreshIcon} className="size-4" /> Refresh
         </Button>
       </Stack>
       <Scroll axis="both" fill>
@@ -326,12 +328,12 @@ function JobsTabInner({
                   >
                     {(r.state === "retrying" || r.state === "dead") && (
                       <Button variant="ghost" onClick={() => retry(r.id)}>
-                        <MdReplay className="size-3.5" /> Retry
+                        <Icon icon={replayIcon} className="size-3.5" /> Retry
                       </Button>
                     )}
                     {r.state === "pending" && (
                       <Button variant="ghost" onClick={() => cancel(r.id)}>
-                        <MdDelete className="size-3.5" /> Cancel
+                        <Icon icon={deleteIcon} className="size-3.5" /> Cancel
                       </Button>
                     )}
                   </td>
@@ -492,7 +494,7 @@ function DeadTabInner({ dead }: { dead: SettledList<DeadJobRow> }) {
         </Text>
         <Fill />
         <Button variant="ghost" onClick={() => dead.refetch()}>
-          <MdRefresh className="size-4" /> Refresh
+          <Icon icon={refreshIcon} className="size-4" /> Refresh
         </Button>
       </Stack>
       <Scroll axis="both" fill>
@@ -640,7 +642,7 @@ function EventsTabInner({
         </Text>
         <Fill />
         <Button variant="ghost" onClick={() => emissions.refetch()}>
-          <MdRefresh className="size-4" /> Refresh
+          <Icon icon={refreshIcon} className="size-4" /> Refresh
         </Button>
       </Stack>
       <Scroll axis="both" fill>
@@ -829,7 +831,7 @@ function TriggersTabInner({
         )}
         <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
+          <Icon icon={refreshIcon} className="size-4" /> Refresh
         </Button>
       </Stack>
       <Scroll axis="both" fill>
@@ -908,7 +910,7 @@ function TriggersTabInner({
                             {t.enabled ? "Disable" : "Enable"}
                           </Button>
                           <IconButton
-                            icon={MdDelete}
+                            icon={deleteIcon}
                             label="Delete trigger"
                             onClick={() => remove(t.id)}
                           />

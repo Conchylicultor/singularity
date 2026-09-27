@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
-import { MdSearch, MdSettings, MdShare, MdVolumeUp } from "react-icons/md";
 import {
   HOST_MARKER_ATTR,
   type LayoutFixture,
@@ -17,6 +16,13 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const searchIcon = symbol("search");
+const settingsIcon = symbol("settings");
+const shareIcon = symbol("share");
+const volumeUpIcon = symbol("volume-up");
 
 /**
  * The proof surface.
@@ -133,7 +139,7 @@ function VolumeControl(): ReactElement {
     return (
       <span data-geo="volume">
         <IconButton
-          icon={MdVolumeUp}
+          icon={volumeUpIcon}
           label="Volume"
           onClick={() => setValue((v) => (v === 0 ? 70 : 0))}
         />
@@ -142,7 +148,7 @@ function VolumeControl(): ReactElement {
   }
   return (
     <Stack direction="row" gap="2xs" align="center" data-geo="volume">
-      <MdVolumeUp className="icon-auto" />
+      <Icon icon={volumeUpIcon} className="icon-auto" />
       <div className="h-4 w-24 rounded-full bg-muted">
         <div
           className="h-4 rounded-full bg-primary"
@@ -281,13 +287,13 @@ function RichBarFixture(): ReactElement {
     <Line ref={hostRef} className="w-full" data-testid="adaptive-bar-rich">
       <AdaptiveBar gap="xs" label="More controls">
         <AdaptiveBar.Item id="search">
-          <IconButton icon={MdSearch} label="Search" onClick={() => {}} />
+          <IconButton icon={searchIcon} label="Search" onClick={() => {}} />
         </AdaptiveBar.Item>
         <AdaptiveBar.Item id="share">
-          <IconButton icon={MdShare} label="Share" onClick={() => {}} />
+          <IconButton icon={shareIcon} label="Share" onClick={() => {}} />
         </AdaptiveBar.Item>
         <AdaptiveBar.Item id="settings">
-          <IconButton icon={MdSettings} label="Settings" onClick={() => {}} />
+          <IconButton icon={settingsIcon} label="Settings" onClick={() => {}} />
         </AdaptiveBar.Item>
         <AdaptiveBar.Item id="volume">
           <VolumeControl />
@@ -307,17 +313,21 @@ function ActionsBarFixture(): ReactElement {
       <AdaptiveBar gap="xs" label="More actions">
         <AdaptiveBar.Item id="search">
           <span data-geo="search">
-            <IconButton icon={MdSearch} label="Search" onClick={() => {}} />
+            <IconButton icon={searchIcon} label="Search" onClick={() => {}} />
           </span>
         </AdaptiveBar.Item>
         <AdaptiveBar.Item id="share">
           <span data-geo="share">
-            <IconButton icon={MdShare} label="Share" onClick={() => {}} />
+            <IconButton icon={shareIcon} label="Share" onClick={() => {}} />
           </span>
         </AdaptiveBar.Item>
         <AdaptiveBar.Item id="settings">
           <span data-geo="settings">
-            <IconButton icon={MdSettings} label="Settings" onClick={() => {}} />
+            <IconButton
+              icon={settingsIcon}
+              label="Settings"
+              onClick={() => {}}
+            />
           </span>
         </AdaptiveBar.Item>
       </AdaptiveBar>
@@ -395,7 +405,7 @@ function StripBarFixture({ align }: { align: AdaptiveBarAlign }): ReactElement {
                 <AdaptiveBar.Item id="search">
                   <span data-geo="search">
                     <IconButton
-                      icon={MdSearch}
+                      icon={searchIcon}
                       label="Search"
                       onClick={() => {}}
                     />
@@ -404,7 +414,7 @@ function StripBarFixture({ align }: { align: AdaptiveBarAlign }): ReactElement {
                 <AdaptiveBar.Item id="share">
                   <span data-geo="share">
                     <IconButton
-                      icon={MdShare}
+                      icon={shareIcon}
                       label="Share"
                       onClick={() => {}}
                     />
@@ -413,7 +423,7 @@ function StripBarFixture({ align }: { align: AdaptiveBarAlign }): ReactElement {
                 <AdaptiveBar.Item id="settings">
                   <span data-geo="settings">
                     <IconButton
-                      icon={MdSettings}
+                      icon={settingsIcon}
                       label="Settings"
                       onClick={() => {}}
                     />

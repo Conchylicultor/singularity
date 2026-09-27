@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdAdd, MdClose } from "react-icons/md";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -21,6 +20,10 @@ import {
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
 import { DesktopMinimap } from "./desktop-minimap";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
 
 /**
  * The virtual-desktop (workspace) pager — a compact row of **miniature desktops**
@@ -91,7 +94,7 @@ export function WorkspacePager({
         />
       ))}
       <ControlSizeProvider size="sm">
-        <IconButton icon={MdAdd} label="New desktop" onClick={onCreate} />
+        <IconButton icon={addIcon} label="New desktop" onClick={onCreate} />
       </ControlSizeProvider>
     </Cluster>
   );
@@ -157,7 +160,7 @@ function DesktopPill({
         <span className={hoverRevealClass(revealed)}>
           <ControlSizeProvider size="sm">
             <IconButton
-              icon={MdClose}
+              icon={closeIcon}
               label={`Close ${label}`}
               onClick={(e) => {
                 e.stopPropagation();

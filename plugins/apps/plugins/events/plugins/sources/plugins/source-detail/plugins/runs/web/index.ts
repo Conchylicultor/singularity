@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdHistory } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { SourceRunsSection } from "./components/runs-section";
 import { eventSourceRunPane } from "./panes";
 import { RunActions, EventSourceRunDetail } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { RunActions, EventSourceRunDetail } from "./slots";
 export { eventSourceRunPane } from "./panes";
@@ -16,7 +16,7 @@ export default {
     EventSourceDetail.Section({
       id: "runs",
       label: "Runs",
-      icon: MdHistory,
+      icon: symbol("history"),
       component: SourceRunsSection,
       // Open by default: the ledger is the answer to "did my source do
       // anything, and why not", which is the first question after adding one.

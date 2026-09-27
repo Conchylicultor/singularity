@@ -1,9 +1,17 @@
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdLogout } from "react-icons/md";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ExitMenu } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const logoutIcon = symbol("logout");
 
 export function ExitMenuButton(_: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
@@ -15,10 +23,15 @@ export function ExitMenuButton(_: PromptEditorActionProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" aspect="icon" aria-label="Close options" title="Close options" />
+          <Button
+            variant="ghost"
+            aspect="icon"
+            aria-label="Close options"
+            title="Close options"
+          />
         }
       >
-        <MdLogout className="size-3.5" />
+        <Icon icon={logoutIcon} className="size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <ExitMenu.Item.Render>

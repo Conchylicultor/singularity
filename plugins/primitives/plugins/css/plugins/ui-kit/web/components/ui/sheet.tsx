@@ -6,8 +6,11 @@ import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button";
-import { MdClose } from "react-icons/md";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -86,7 +89,7 @@ function SheetContent({
               />
             }
           >
-            <MdClose />
+            <Icon icon={closeIcon} />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}

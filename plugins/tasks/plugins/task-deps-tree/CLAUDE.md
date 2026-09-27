@@ -64,6 +64,7 @@ now"), the opposite of the monotone one here.
     - `tasks/task-status.STATUS_META`
     - `tasks/task-status.StatusBadge`
     - `tasks/task-status.StatusIcon`
+    - `ui/icons.Icon`
 - Core:
   - Exports (types): `DepsTreeRow`
   - Exports (values):

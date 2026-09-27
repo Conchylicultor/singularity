@@ -99,6 +99,7 @@ cycle) — the `/mail` landing repoint is the route STRING `/mail/threads`.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values): `mailThreadsPane`
 - Server:
   - Contributes: `resource.declare` "mail-threads-revision"

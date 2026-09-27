@@ -2,7 +2,6 @@ import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, useMemo, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
-import { MdClose, MdOpenInFull } from "react-icons/md";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,6 +13,10 @@ import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
 import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const openInFullIcon = symbol("open-in-full");
 
 interface PaneChromeProps {
   pane: AnyPane;
@@ -186,12 +189,12 @@ export function PaneChrome({
               ? `Open in ${promote.app.name}`
               : "Expand pane"
           }
-          icon={MdOpenInFull}
+          icon={openInFullIcon}
           {...linkGestureProps(promote.run)}
         />
       )}
       {chrome.close && doClose && (
-        <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
+        <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
       )}
     </Bar>
   );

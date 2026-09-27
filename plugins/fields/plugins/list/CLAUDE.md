@@ -41,6 +41,7 @@ slot — lives in the `plugins/config` sub-plugin.
     - `fields.defineFieldType`
     - `fields.FieldsRecord`
     - `fields.InferFieldsObject`
+    - `ui/icons.symbol`
   - Exports (types): `ListItem`
   - Exports (values):
     - `listFieldType`

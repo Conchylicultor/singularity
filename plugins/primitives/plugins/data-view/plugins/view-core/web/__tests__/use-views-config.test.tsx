@@ -1,6 +1,6 @@
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import type { ComponentType } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -24,12 +24,12 @@ vi.mock("@plugins/config_v2/web", () => ({
   useSetConfig: () => setConfigSpy,
 }));
 
-const Icon: ComponentType<{ className?: string }> = () => null;
+const viewIcon = symbol("view-list");
 
 // Minimal view-type contributions so `buildInstanceFromRow` resolves each row.
 const contributions = [
-  { type: "table", title: "Table", icon: Icon },
-  { type: "gallery", title: "Gallery", icon: Icon },
+  { type: "table", title: "Table", icon: viewIcon },
+  { type: "gallery", title: "Gallery", icon: viewIcon },
 ] as unknown as SealContributions<ViewTypeMeta>[];
 
 // The implicit sole source — the single-source case every existing DataView is.

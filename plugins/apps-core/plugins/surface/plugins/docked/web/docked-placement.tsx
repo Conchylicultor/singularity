@@ -1,5 +1,7 @@
-import { MdViewSidebar } from "react-icons/md";
 import type { PlacementDef } from "@plugins/apps-core/plugins/surface/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const viewSidebarIcon = symbol("view-sidebar");
 
 /**
  * The docked placement: the default, full-area surface — the tab "fills" the
@@ -15,7 +17,7 @@ import type { PlacementDef } from "@plugins/apps-core/plugins/surface/web";
 export const dockedDef: PlacementDef = {
   id: "docked",
   label: "Dock in tab strip",
-  icon: MdViewSidebar,
+  icon: viewSidebarIcon,
   order: 0,
   default: true,
   themeScope: "app",

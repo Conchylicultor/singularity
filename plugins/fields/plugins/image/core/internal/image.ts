@@ -1,11 +1,13 @@
-import { MdImage } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const imageIcon = symbol("image");
 
 export const imageFieldType = defineFieldType<string>("image");
 
 export const imageIdentity = defineFieldIdentity<string>({
   type: imageFieldType,
   label: "Image",
-  icon: MdImage,
+  icon: imageIcon,
   coerce: (v) => String(v ?? ""),
 });

@@ -1,8 +1,11 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createElement } from "react";
 import type { ReactNode } from "react";
-import { MdCampaign } from "react-icons/md";
 import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const campaignIcon = symbol("campaign");
 
 type SvgNode = NonNullable<AvatarSpec["svgNodes"]>[number];
 
@@ -33,7 +36,8 @@ export function PrepromptGlyph({
   const nodes = icon?.svgNodes;
   if (!nodes?.length) {
     return (
-      <MdCampaign
+      <Icon
+        icon={campaignIcon}
         aria-hidden
         // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf glyph; must not shrink inside the select/chip flex rows that host it
         className={cn("size-3.5 shrink-0", className)}

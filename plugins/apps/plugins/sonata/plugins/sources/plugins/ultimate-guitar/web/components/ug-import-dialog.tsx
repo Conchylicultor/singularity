@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MdMusicNote } from "react-icons/md";
 import {
   Button,
   DialogTitle,
@@ -31,6 +30,10 @@ import {
   createUltimateGuitarSong,
   searchUgTabs,
 } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
 
 /**
  * Debounce a value: the returned value lags `input` by `delayMs` of quiet time.
@@ -304,7 +307,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
                       importing ? (
                         <Spinner className="size-4" />
                       ) : (
-                        <MdMusicNote />
+                        <Icon icon={musicNoteIcon} />
                       )
                     }
                     onMouseEnter={() => setActiveIdx(idx)}

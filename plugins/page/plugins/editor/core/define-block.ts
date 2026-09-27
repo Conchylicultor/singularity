@@ -1,5 +1,5 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import type { ComponentType } from "react";
 import type { AnyZodObject, z } from "zod";
 import { runsOf, type RichText } from "./rich-text";
 import { rowDataOf, type RowData } from "./row-data";
@@ -103,7 +103,7 @@ export interface BlockHandle<T> {
    */
   defaultText?: boolean;
   /** Optional insert-menu icon. */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /**
    * Optional alternate search terms for the insert menus (e.g. `["hr", "rule"]`
    * for a divider). The block-type pickers match these in addition to `label`,
@@ -453,7 +453,7 @@ export function defineBlock<
   schema: S;
   label?: string;
   defaultText?: boolean;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   aliases?: string[];
   empty?: () => z.infer<S>;
   markdown?: BlockMarkdown<z.infer<S>>;

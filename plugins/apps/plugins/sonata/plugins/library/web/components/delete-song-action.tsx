@@ -1,9 +1,11 @@
-import { MdDelete } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 /**
  * Per-row Delete action for the library. Contributed once into
@@ -17,7 +19,7 @@ export function DeleteSongAction({ row }: ItemActionProps<Song>) {
   const { mutate: deleteSongMutation } = useEndpointMutation(deleteSong);
   return (
     <IconButton
-      icon={MdDelete}
+      icon={deleteIcon}
       label="Delete"
       onClick={(e) => {
         e.stopPropagation();

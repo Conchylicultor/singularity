@@ -1,5 +1,7 @@
-import { MdCallSplit } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const callSplitIcon = symbol("call-split");
 
 /**
  * A discriminated/polymorphic object value. The `type` discriminant selects
@@ -20,6 +22,6 @@ export const variantFieldType = defineFieldType<VariantValue>("variant");
 export const variantIdentity = defineFieldIdentity<VariantValue>({
   type: variantFieldType,
   label: "Variant",
-  icon: MdCallSplit,
+  icon: callSplitIcon,
   // no coerce — not a sortable/filterable scalar (like reorder-tree/object).
 });

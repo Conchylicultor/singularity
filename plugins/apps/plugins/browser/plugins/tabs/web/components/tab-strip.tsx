@@ -1,4 +1,3 @@
-import { MdAdd, MdClose } from "react-icons/md";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -10,6 +9,10 @@ import {
   useBrowserTabs,
   Favicon,
 } from "@plugins/apps/plugins/browser/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
 
 /** A readable label for a tab: the URL's host, or "New tab" for the start page. */
 function tabLabel(url: string): string {
@@ -48,7 +51,7 @@ export function TabStrip() {
             actions={
               <ControlSizeProvider size="xs">
                 <IconButton
-                  icon={MdClose}
+                  icon={closeIcon}
                   label="Close tab"
                   tooltip="Close tab"
                   onClick={() => close(tab.id)}
@@ -60,7 +63,7 @@ export function TabStrip() {
           </Row>
         ))}
         <IconButton
-          icon={MdAdd}
+          icon={addIcon}
           label="New tab"
           tooltip="New tab"
           onClick={() => open()}

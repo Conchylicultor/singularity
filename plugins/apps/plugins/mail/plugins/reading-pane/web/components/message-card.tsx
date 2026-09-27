@@ -1,4 +1,3 @@
-import { MdExpandLess } from "react-icons/md";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
@@ -16,6 +15,9 @@ import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { addressLabel, recipientsLabel } from "../internal/format-address";
 import { MessageBody } from "./message-body";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 
 export interface MessageCardProps {
   message: MailMessage;
@@ -67,7 +69,7 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
                   </Text>
                 ) : null}
                 <IconButton
-                  icon={MdExpandLess}
+                  icon={keyboardArrowUpIcon}
                   label="Collapse"
                   onClick={toggle}
                 />

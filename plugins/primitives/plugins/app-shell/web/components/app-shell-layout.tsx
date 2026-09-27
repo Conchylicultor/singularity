@@ -1,3 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   Button,
   Sidebar,
@@ -27,7 +29,6 @@ import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SidebarItem } from "./sidebar-nav-item";
-type SidebarIcon = React.ComponentType<{ className?: string }>;
 
 /**
  * Where a nav entry goes, as DATA: a pane and its params, opened as the root
@@ -66,7 +67,7 @@ export function opensPane<Params>(
  */
 export type AppShellSidebarNav = {
   title: string;
-  icon: SidebarIcon;
+  icon: IconRef;
   badge?: React.ComponentType;
   component?: never;
 } & (
@@ -82,7 +83,7 @@ export type AppShellSidebarNav = {
  */
 export type AppShellSidebarComponent = {
   title: string;
-  icon: SidebarIcon;
+  icon: IconRef;
   component: React.ComponentType;
   onClick?: never;
   opens?: never;
@@ -96,8 +97,6 @@ export type AppShellSidebarComponent = {
  */
 export type AppShellSidebarItem = AppShellSidebarNav | AppShellSidebarComponent;
 
-type ToolbarIcon = React.ComponentType<{ className?: string }>;
-
 /**
  * An action item — a ghost button. Requires an `onClick` *and* at least one of
  * `label`/`icon`, so an action is never an invisible empty button. `component`
@@ -107,9 +106,7 @@ export type AppShellToolbarAction = {
   onClick: () => void;
   component?: never;
   group?: string;
-} & (
-  { label: string; icon?: ToolbarIcon } | { icon: ToolbarIcon; label?: string }
-);
+} & ({ label: string; icon?: IconRef } | { icon: IconRef; label?: string });
 
 /**
  * A custom-rendered widget. Requires a `component`; the action fields are
@@ -142,7 +139,7 @@ function ToolbarItem(item: AppShellToolbarItem) {
   if (item.onClick) {
     return (
       <Button variant="ghost" onClick={item.onClick}>
-        {item.icon && <item.icon className="size-4" />}
+        {item.icon && <Icon icon={item.icon} className="size-4" />}
         {item.label}
       </Button>
     );

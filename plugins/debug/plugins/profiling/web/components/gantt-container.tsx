@@ -8,7 +8,6 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -20,6 +19,10 @@ import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useGanttZoom, type ZoomWindow } from "./use-gantt-zoom";
 import { DragSelection, type DragState } from "./drag-selection";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)} ms`;
@@ -90,7 +93,7 @@ export function TimeAxis({
               }}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <MdClose className="size-3" />
+              <Icon icon={closeIcon} className="size-3" />
             </Center>
           </>
         ) : (

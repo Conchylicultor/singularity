@@ -1,0 +1,38 @@
+import { useSyncExternalStore } from "react";
+import type { SpriteKey } from "../../core";
+
+/**
+ * The sprites the page holds: one `<svg>` of `<symbol>`s per sprite key, filled
+ * by the sprite host (the resident ones from the boot snapshot, the rest on
+ * demand) and drawn by `<IconSpriteSheet>`. `<Icon>` asks whether its style's
+ * sprite is here yet, and draws the default style's symbol until it is.
+ */
+const sprites = new Map<SpriteKey, string>();
+const listeners = new Set<() => void>();
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: one sprite sheet per document serves every surface, and a sprite is the same bytes wherever it is drawn
+let snapshot: readonly (readonly [SpriteKey, string])[] = [];
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Hold `markup` (a whole `<svg>…</svg>`) as sprite `key`. A no-op when it is already there, byte for byte. */
+export function provideSprite(key: SpriteKey, markup: string): void {
+  if (sprites.get(key) === markup) return;
+  sprites.set(key, markup);
+  snapshot = [...sprites.entries()].sort(([a], [b]) => a.localeCompare(b));
+  for (const l of listeners) l();
+}
+
+export function hasSprite(key: SpriteKey): boolean {
+  return sprites.has(key);
+}
+
+export function useSpriteLoaded(key: SpriteKey): boolean {
+  return useSyncExternalStore(subscribe, () => sprites.has(key));
+}
+
+export function useSprites(): readonly (readonly [SpriteKey, string])[] {
+  return useSyncExternalStore(subscribe, () => snapshot);
+}

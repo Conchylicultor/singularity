@@ -48,6 +48,7 @@ panel width are the `ui/tokens/sidebar-metrics` theme tokens; the icon wears
     - `primitives/pane.useRoute`
     - `primitives/slot-render.renderIsolated`
     - `primitives/slot-render.RenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `AppShellSidebarComponent`
     - `AppShellSidebarItem`

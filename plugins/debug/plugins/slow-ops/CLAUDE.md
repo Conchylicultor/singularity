@@ -136,6 +136,7 @@ bar).
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `reports.Reports`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "slow-op"

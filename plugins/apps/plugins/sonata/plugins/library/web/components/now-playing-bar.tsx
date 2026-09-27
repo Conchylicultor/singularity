@@ -1,4 +1,3 @@
-import { MdMusicNote, MdPause, MdPlayArrow } from "react-icons/md";
 import {
   Sonata,
   useSonata,
@@ -14,6 +13,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenSong } from "../hooks";
 import { useCurrentSong } from "../use-current-song";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
+const pauseIcon = symbol("pause");
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * Compact now-playing bar at the bottom of the library. Shown only while a song
@@ -38,7 +43,7 @@ export function NowPlayingBar() {
       <Inset x="xl" y="sm">
         <Stack direction="row" align="center" gap="md">
           <Center className="size-8 rounded-md bg-primary/10 text-primary">
-            <MdMusicNote className="size-4" />
+            <Icon icon={musicNoteIcon} className="size-4" />
           </Center>
           {/* Title block — rigid (capped width), title truncates in its Line. */}
           <button
@@ -59,7 +64,7 @@ export function NowPlayingBar() {
             </Stack>
           </button>
           <IconButton
-            icon={isPlaying ? MdPause : MdPlayArrow}
+            icon={isPlaying ? pauseIcon : playArrowIcon}
             label={isPlaying ? "Pause" : "Play"}
             onClick={() => (isPlaying ? stop() : play())}
           />

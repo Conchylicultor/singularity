@@ -1,6 +1,6 @@
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import type { ComponentType } from "react";
 import { CollapsedViewSwitcher } from "../components/collapsed-view-switcher";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
@@ -11,12 +11,14 @@ import type { ViewTypeMeta } from "../../core";
  * changes the trigger, never what it offers.
  */
 
-const Icon: ComponentType<{ className?: string }> = () => null;
+const viewIcon = symbol("view-list");
+/** The trigger's chevron (the view icon is an svg too). */
+const CHEVRON = 'svg[data-icon="keyboard-arrow-down"]';
 
 function inst(id: string): ResolvedViewInstance<ViewTypeMeta> {
   return {
     instance: { id, name: id, type: "list" },
-    viewType: { type: "list", title: "List", icon: Icon },
+    viewType: { type: "list", title: "List", icon: viewIcon },
   } as unknown as ResolvedViewInstance<ViewTypeMeta>;
 }
 
@@ -63,7 +65,7 @@ describe("CollapsedViewSwitcher — appearance", () => {
     expect(trigger.tagName.toLowerCase()).toBe("button");
     expect(trigger.className).toContain("w-full");
     expect(trigger.className).not.toContain("rounded-full");
-    const chevron = trigger.querySelector("svg");
+    const chevron = trigger.querySelector(CHEVRON);
     expect(chevron?.getAttribute("class")).toContain("opacity-0");
   });
 
@@ -73,7 +75,7 @@ describe("CollapsedViewSwitcher — appearance", () => {
     const { trigger, items, onSelect } = openMenu("row");
     expect(items).toEqual(chip);
     expect(items).toEqual(["Models", "History", "Add view", "View settings…"]);
-    expect(trigger.querySelector("svg")?.getAttribute("class")).toContain(
+    expect(trigger.querySelector(CHEVRON)?.getAttribute("class")).toContain(
       "opacity-100",
     );
     act(() => screen.getByRole("menuitem", { name: "Models" }).click());

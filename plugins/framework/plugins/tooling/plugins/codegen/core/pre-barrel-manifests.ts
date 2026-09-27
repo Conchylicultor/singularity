@@ -16,6 +16,7 @@ import {
   fieldsEagerManifestPath,
   renderFieldsEagerManifest,
 } from "./fields-eager-gen";
+import { iconManifestPath, renderIconManifest } from "./icon-manifest-gen";
 import {
   eagerTierManifestPath,
   renderEagerTierManifest,
@@ -50,6 +51,8 @@ import {
  *     reachable at module-load via the spacing web barrel (`<Stack>` resolves its
  *     gap class off `RAMP_CLASSES` at top level).
  *   - fieldsEager / eagerTier: barrel-free `skipBarrelImport` tree scans.
+ *   - iconManifest: a plain source-file walk for `symbol("…")` / `brand("…")`
+ *     literals; the icon sprites server barrel reaches it at module-load.
  *
  * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
  * belong here — see {@link postWebManifests}.
@@ -97,6 +100,14 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "eagerTier",
     path: eagerTierManifestPath,
     render: renderEagerTierManifest,
+  },
+  {
+    // The icon names the code draws. The sprites server barrel reads it, and its
+    // renderer is a barrel-free source walk, so regenerating it pre-barrel is
+    // sound.
+    id: "iconManifest",
+    path: iconManifestPath,
+    render: renderIconManifest,
   },
 ];
 

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdAdd, MdAccountTree } from "react-icons/md";
 import {
   ControlPanel,
   usePanelStack,
@@ -8,6 +7,11 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useFilterEditor } from "../../internal/use-filter-editor";
 import { FieldSearchList } from "./field-search-list";
 import { useFilterPanelStack } from "./filter-scope";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const accountTreeIcon = symbol("account-tree");
 
 /**
  * The `Add filter` row at the foot of a group's rule list. Clicking it PUSHES the
@@ -23,7 +27,7 @@ export function AddFilterRow({ groupId }: { groupId: string }): ReactNode {
   const { push } = useFilterPanelStack();
   return (
     <ControlPanel.Row
-      icon={<MdAdd />}
+      icon={<Icon icon={addIcon} />}
       muted
       onSelect={() =>
         push({
@@ -84,7 +88,7 @@ export function AddGroupRow(props: { onClick: () => void }): ReactNode {
     <Row
       size="sm"
       hover="muted"
-      icon={<MdAccountTree />}
+      icon={<Icon icon={accountTreeIcon} />}
       onClick={props.onClick}
     >
       Add filter group

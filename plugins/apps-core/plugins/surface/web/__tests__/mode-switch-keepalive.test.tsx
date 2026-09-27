@@ -67,6 +67,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SurfaceBody } from "../components/surface-body";
 import { Surface, type PlacementDef } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const testIcon = symbol("add");
 
 /**
  * The app canvas every tab container paints, read from the primitive rather than
@@ -81,7 +84,7 @@ const CANVAS = SURFACE_LEVELS.base;
 const containedDef: PlacementDef = {
   id: "docked-ish",
   label: "Contained",
-  icon: () => null,
+  icon: testIcon,
   order: 0,
   default: true,
   frame: "pane",
@@ -92,7 +95,7 @@ const containedDef: PlacementDef = {
 const viewportDef: PlacementDef = {
   id: "solo-ish",
   label: "Viewport",
-  icon: () => null,
+  icon: testIcon,
   order: 1,
   frame: "viewport",
   themeScope: "app",
@@ -102,7 +105,7 @@ const viewportDef: PlacementDef = {
 const windowDef: PlacementDef = {
   id: "window-ish",
   label: "Window",
-  icon: () => null,
+  icon: testIcon,
   order: 2,
   frame: "window",
   frameClassName: cn("rounded-lg border"),

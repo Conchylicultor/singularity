@@ -43,6 +43,7 @@
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/slot-render.renderIsolated`
+    - `ui/icons.Icon`
   - Exports (types):
     - `EmitterOptions`
     - `FxContext`

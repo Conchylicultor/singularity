@@ -42,6 +42,7 @@ song's MIDI for playback is the `getSongMidi` endpoint, not this value.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (values):
     - `MIDI_SOURCE_ID`
     - `useSongMidiMap`

@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
-import { MdAdd } from "react-icons/md";
 import {
   ControlPanel,
   usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useDataViewControls } from "../controls/controls-context";
 import { FieldSearchList } from "../filter/field-search-list";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 /** The fields not yet sorted on — the only ones a new level can be added for. */
 function useAddableFields() {
@@ -29,7 +32,7 @@ export function AddSortRow(): ReactNode {
 
   return (
     <ControlPanel.Row
-      icon={<MdAdd />}
+      icon={<Icon icon={addIcon} />}
       muted
       onSelect={() =>
         push({

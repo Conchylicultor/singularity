@@ -1,12 +1,17 @@
-import { MdDelete } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
 import type { Agent } from "../../shared/resources";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export function DeleteAgentAction({ row, hasChildren }: ItemActionProps<Agent>) {
+const deleteIcon = symbol("delete");
+
+export function DeleteAgentAction({
+  row,
+  hasChildren,
+}: ItemActionProps<Agent>) {
   const agentId = row.id;
   const disabled = hasChildren;
   const title = disabled
@@ -22,7 +27,7 @@ export function DeleteAgentAction({ row, hasChildren }: ItemActionProps<Agent>) 
   return (
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={MdDelete}
+        icon={deleteIcon}
         label="Delete agent"
         tooltip={title}
         onClick={onClick}

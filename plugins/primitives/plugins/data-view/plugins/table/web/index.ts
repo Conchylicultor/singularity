@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { MdTableRows } from "react-icons/md";
 import { TableView } from "./components/table-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type { TableViewOptions } from "../core";
 
@@ -12,7 +12,7 @@ export default {
     DataViewSlots.View({
       type: "table",
       title: "Table",
-      icon: MdTableRows,
+      icon: symbol("table-rows"),
       order: 1,
       loadingVariant: "rows",
       loadingCount: 6,

@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { MdClose, MdImage } from "react-icons/md";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
@@ -19,6 +18,11 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const imageIcon = symbol("image");
 
 const MIN_W = 80;
 const DEFAULT_W = 480;
@@ -31,7 +35,7 @@ export function ImageBlock({ block, isFocused, editor }: BlockRendererProps) {
       <AttachmentUpload
         accept="image/*"
         label="Add an image — click, drop, or paste"
-        icon={MdImage}
+        icon={imageIcon}
         isFocused={isFocused}
         onUploaded={(res) =>
           editor.update({ attachmentId: res.id, width: DEFAULT_W })
@@ -127,7 +131,7 @@ function FilledImageBlock({
             )}
           >
             <Center className="size-full">
-              <MdClose className="size-4" />
+              <Icon icon={closeIcon} className="size-4" />
             </Center>
           </button>
         </Pin>

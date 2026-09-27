@@ -1,7 +1,10 @@
-import { MdBlock } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useAppExclusions } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const blockIcon = symbol("block");
 
 /**
  * Marks a row the app does not ship — the tree lists every plugin on disk, and
@@ -39,6 +42,10 @@ export function ExcludedBadge({ node }: { node: PluginNode }) {
     ? "Not in the app"
     : "Not in the app (cascade)";
   return (
-    <MdBlock className="size-3.5 text-muted-foreground" aria-label={label} />
+    <Icon
+      icon={blockIcon}
+      className="size-3.5 text-muted-foreground"
+      aria-label={label}
+    />
   );
 }

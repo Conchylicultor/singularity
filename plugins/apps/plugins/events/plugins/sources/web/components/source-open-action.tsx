@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { MdOpenInNew } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEventSourceOrigin } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const openInNewIcon = symbol("open-in-new");
 
 /**
  * Open the page this source stands for, in a new browser tab.
@@ -39,7 +41,7 @@ export function SourceOpenAction({
 
   return (
     <IconButton
-      icon={MdOpenInNew}
+      icon={openInNewIcon}
       label="Open source page"
       render={<a href={href} target="_blank" rel="noreferrer noopener" />}
     />

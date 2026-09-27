@@ -26,6 +26,7 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
+    - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.FillFromMenu`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

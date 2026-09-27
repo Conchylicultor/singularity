@@ -1,5 +1,7 @@
-import { MdDataObject } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const dataObjectIcon = symbol("data-object");
 
 export const jsonFieldType = defineFieldType<unknown>("json");
 
@@ -8,5 +10,5 @@ export const jsonFieldType = defineFieldType<unknown>("json");
 export const jsonIdentity = defineFieldIdentity<unknown>({
   type: jsonFieldType,
   label: "JSON",
-  icon: MdDataObject,
+  icon: dataObjectIcon,
 });

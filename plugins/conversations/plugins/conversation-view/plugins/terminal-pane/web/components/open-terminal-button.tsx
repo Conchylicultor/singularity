@@ -1,6 +1,9 @@
-import { MdTerminal } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { convTerminalPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const terminalIcon = symbol("terminal");
 
 /**
  * "Open terminal" affordance contributed into the jsonl-viewer's
@@ -16,7 +19,7 @@ export function OpenTerminalButton() {
 
   return (
     <Button variant="outline" onClick={toggle}>
-      <MdTerminal className="icon-auto" aria-hidden />
+      <Icon icon={terminalIcon} className="icon-auto" aria-hidden />
       Open terminal
     </Button>
   );

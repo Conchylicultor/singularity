@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { MdBookmark, MdRefresh } from "react-icons/md";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -30,6 +29,11 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const bookmarkIcon = symbol("bookmark");
+const refreshIcon = symbol("refresh");
 
 /**
  * Three states keyed on `(url, fetched)`:
@@ -90,7 +94,7 @@ function EmptyBookmarkBlock({
   return (
     <Inset x="md" y="xs">
       <Stack direction="row" gap="sm" align="center">
-        <MdBookmark className="size-4 text-muted-foreground" />
+        <Icon icon={bookmarkIcon} className="size-4 text-muted-foreground" />
         <Input
           // Chrome, not document content: this field holds nothing the page
           // persists, so its ⌘Z belongs to the browser's own input history.
@@ -171,7 +175,8 @@ function FetchingBookmarkBlock({
   return (
     <Inset x="md" y="xs">
       <Stack as={Card} direction="row" align="center" gap="md" className="p-md">
-        <MdBookmark
+        <Icon
+          icon={bookmarkIcon}
           className={cn(rigidClass(), "size-4 text-muted-foreground")}
         />
         <Stack as={Fill} gap="2xs">
@@ -276,7 +281,7 @@ function FilledBookmarkBlock({
             )}
           >
             <Center className="size-full">
-              <MdRefresh className="size-4" />
+              <Icon icon={refreshIcon} className="size-4" />
             </Center>
           </button>
         </Pin>

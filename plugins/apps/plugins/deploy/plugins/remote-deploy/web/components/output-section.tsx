@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdBuild, MdCloudUpload } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
@@ -15,6 +14,10 @@ import {
   type DeployRun,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { RELEASE_LOG_CHANNEL } from "@plugins/release/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const buildIcon = symbol("build");
+const cloudUploadIcon = symbol("cloud-upload");
 
 /**
  * The two channels a deploy drives, with the caption each one needs.
@@ -28,14 +31,14 @@ const CHANNELS = [
   {
     id: DEPLOY_LOG_CHANNEL,
     title: "Deploy",
-    icon: MdCloudUpload,
+    icon: cloudUploadIcon,
     scope:
       "Converge / ship output for this server. One run at a time — a run is exclusive per server.",
   },
   {
     id: RELEASE_LOG_CHANNEL,
     title: "Build",
-    icon: MdBuild,
+    icon: buildIcon,
     scope:
       "Release builds in this worktree, across ALL compositions — not just this one.",
   },

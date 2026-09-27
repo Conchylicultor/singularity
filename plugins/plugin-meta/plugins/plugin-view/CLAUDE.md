@@ -45,6 +45,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ExportRuntime`
     - `PluginNode`

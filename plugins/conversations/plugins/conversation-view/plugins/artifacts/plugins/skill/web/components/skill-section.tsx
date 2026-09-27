@@ -1,4 +1,3 @@
-import { MdBolt } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -9,9 +8,12 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import { useCloseArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { PACKAGED_SKILL_REASON, skillFilePath } from "../internal/skills";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const boltIcon = symbol("bolt");
 
 /** The skills' glyph. */
-export const SKILL_ICON = MdBolt;
+export const SKILL_ICON = boltIcon;
 
 /**
  * The skills this conversation loaded, as a wrapped strip of name chips.

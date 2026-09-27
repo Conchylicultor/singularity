@@ -8,10 +8,13 @@ import {
   useState,
 } from "react";
 import type React from "react";
-import { MdArrowBack } from "react-icons/md";
 
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowBackIcon = symbol("arrow-back");
 
 export interface PanelStackEntry {
   /** Identity of this level — a re-push with the same key replaces it. */
@@ -161,7 +164,10 @@ export function ControlPanelStack({
         {top ? (
           <>
             <ControlPanelSection>
-              <ControlPanelRow icon={<MdArrowBack />} onSelect={pop}>
+              <ControlPanelRow
+                icon={<Icon icon={arrowBackIcon} />}
+                onSelect={pop}
+              >
                 {top.title}
               </ControlPanelRow>
             </ControlPanelSection>

@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdImage } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const imageIcon = symbol("image");
 
 export const imageBlock = defineBlock({
   type: "image",
@@ -10,7 +12,7 @@ export const imageBlock = defineBlock({
     alt: z.string().optional(),
   }),
   label: "Image",
-  icon: MdImage,
+  icon: imageIcon,
   aliases: ["picture", "photo", "img", "media"],
   empty: () => ({}), // no attachmentId → placeholder UI
 });

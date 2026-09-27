@@ -1,6 +1,10 @@
-import { MdCloudOff, MdCloudSync } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const cloudOffIcon = symbol("cloud-off");
+const cloudSyncIcon = symbol("cloud-sync");
 
 /** The harness announcing a change in whether this conversation is followed
  *  from claude.ai. `commit` / `pr` carry the attribution trailers the agent
@@ -53,7 +57,7 @@ export function RemoteSessionView({ event }: AttachmentRendererProps) {
   if (att.url === null) {
     return (
       <EventLine
-        icon={<MdCloudOff className="size-3.5" />}
+        icon={<Icon icon={cloudOffIcon} className="size-3.5" />}
         label="Remote session"
       >
         <span className="truncate">detached from claude.ai</span>
@@ -63,7 +67,7 @@ export function RemoteSessionView({ event }: AttachmentRendererProps) {
 
   return (
     <EventLine
-      icon={<MdCloudSync className="size-3.5" />}
+      icon={<Icon icon={cloudSyncIcon} className="size-3.5" />}
       label="Remote session"
     >
       <a

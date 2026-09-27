@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
-import { MdWebAsset } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
@@ -32,6 +31,9 @@ import { type MergeTarget } from "./components/window-system-menu";
 import { DesktopBackdrop } from "./components/desktop-backdrop";
 import { FloatingForeground } from "./components/floating-foreground";
 import { CLOSE_MS, useFloatingWindowStyle } from "./hooks/use-window-motion";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const webAssetIcon = symbol("web-asset");
 
 /**
  * The floating placement: a free-floating, draggable/resizable window over the
@@ -42,7 +44,7 @@ import { CLOSE_MS, useFloatingWindowStyle } from "./hooks/use-window-motion";
 export const floatingDef: PlacementDef = {
   id: "floating",
   label: "Float as window",
-  icon: MdWebAsset,
+  icon: webAssetIcon,
   order: 1,
   visibleWhenUnfocused: true,
   newTabFollows: true,

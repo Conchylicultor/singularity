@@ -1,8 +1,11 @@
 import type React from "react";
-import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { hoverRevealTargetWithGroupFocus } from "@plugins/primitives/plugins/hover-reveal/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export interface TabCloseButtonProps {
   /** Tab label, used for the accessible name (`Close <label>`). */
@@ -25,7 +28,11 @@ export interface TabCloseButtonProps {
  * `stopPropagation` keeps a close from also activating the tab / starting a drag
  * the consumer wired on the root.
  */
-export function TabCloseButton({ label, onClose, active }: TabCloseButtonProps) {
+export function TabCloseButton({
+  label,
+  onClose,
+  active,
+}: TabCloseButtonProps) {
   return (
     <Center
       as="button"
@@ -40,7 +47,7 @@ export function TabCloseButton({ label, onClose, active }: TabCloseButtonProps) 
         active ? "opacity-70" : hoverRevealTargetWithGroupFocus,
       )}
     >
-      <MdClose className="icon-auto" />
+      <Icon icon={closeIcon} className="icon-auto" />
     </Center>
   );
 }

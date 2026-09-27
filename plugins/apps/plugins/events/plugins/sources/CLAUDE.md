@@ -199,6 +199,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ConfigValues`
     - `EventSourceTypeContribution`

@@ -13,6 +13,7 @@
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `conversations.deleteConversation`

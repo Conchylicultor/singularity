@@ -9,7 +9,6 @@ import {
 import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
 import { avatarFieldDef } from "@plugins/fields/plugins/avatar/plugins/table/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
-import { MdAdd } from "react-icons/md";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
@@ -17,6 +16,10 @@ import {
   mintPrototypeFolder,
   newPrototypePrompt,
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 const HOME_APPS_VIEW = defineDataView("home.apps");
 
@@ -131,7 +134,7 @@ export function AppGrid() {
     {
       id: "new-app",
       label: "New app",
-      icon: <MdAdd className="size-4" />,
+      icon: <Icon icon={addIcon} className="size-4" />,
       onSelect: newApp,
     },
   ];
@@ -149,7 +152,8 @@ export function AppGrid() {
           leading: true,
           avatar: (a) => ({
             icon: null,
-            svgNodes: a.icon.svgNodes,
+            svgNodes: null,
+            symbol: a.icon.symbol,
             color: a.icon.color ?? null,
             shape: "squircle",
             fallbackKey: a.id,

@@ -2,7 +2,6 @@ import {
   pct,
   Placed,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
-import { MdRepeat } from "react-icons/md";
 import type {
   Score,
   SectionAnnotation,
@@ -19,6 +18,9 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const repeatIcon = symbol("repeat");
 
 /**
  * Section-region marker. The Score's `section` annotations carry the song's
@@ -100,7 +102,7 @@ export function SectionBands({
             >
               <ControlSizeProvider size="xs">
                 <IconButton
-                  icon={MdRepeat}
+                  icon={repeatIcon}
                   label="Loop this section"
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => {

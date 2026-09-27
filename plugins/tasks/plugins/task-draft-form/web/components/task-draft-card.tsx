@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdDragIndicator } from "react-icons/md";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -8,6 +7,9 @@ import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/w
 import { TaskDraftComposer } from "./task-draft-composer";
 import type { DependencyExtras } from "./dependency-pill";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const dragIndicatorIcon = symbol("drag-indicator");
 
 export interface TaskDraftCardProps {
   cardId: string;
@@ -114,7 +116,7 @@ export function TaskDraftCard({
           {movable && (
             <Pin to="top-right" offset="xs">
               <IconButton
-                icon={MdDragIndicator}
+                icon={dragIndicatorIcon}
                 label="Drag to reorder"
                 disabled={disabled}
                 {...handleProps}

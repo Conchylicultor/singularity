@@ -10,7 +10,6 @@
   - Contributes: `Apps.App` "Pages" → `PagesLayout`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/slot-render.defineRenderSlot`

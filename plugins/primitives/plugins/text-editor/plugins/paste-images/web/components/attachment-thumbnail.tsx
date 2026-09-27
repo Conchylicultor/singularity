@@ -1,10 +1,13 @@
-import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { hoverRevealTargetWithGroupFocus } from "@plugins/primitives/plugins/hover-reveal/web";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { attachmentUrl } from "../internal/markdown";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export function AttachmentThumbnail({
   attachmentId,
@@ -42,7 +45,7 @@ export function AttachmentThumbnail({
             aria-label="Remove image"
           >
             <Center className="size-full">
-              <MdClose className="size-3" />
+              <Icon icon={closeIcon} className="size-3" />
             </Center>
           </button>
         </Pin>

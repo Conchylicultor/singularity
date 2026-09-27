@@ -1,6 +1,7 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ComponentType } from "react";
 import {
   uploadAttachment,
   type UploadedAttachment,
@@ -35,13 +36,13 @@ function matchesAccept(accept: string, mime: string): boolean {
 export function AttachmentUpload({
   accept,
   label,
-  icon: Icon,
+  icon,
   isFocused,
   onUploaded,
 }: {
   accept: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /**
    * Does the editor's caret sit on this block? Kept as a prop although the host
    * now owns focus: it arms the window `paste` listener below, which is
@@ -150,7 +151,7 @@ export function AttachmentUpload({
           dragOver && "border-primary bg-muted",
         )}
       >
-        <Icon className="size-4" />
+        <Icon icon={icon} className="size-4" />
         <span>{uploading ? "Uploading…" : label}</span>
       </Stack>
     </div>

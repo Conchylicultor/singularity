@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdAdd, MdClose } from "react-icons/md";
 import {
   Button,
   Input,
@@ -9,6 +8,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ColumnConfigProps } from "@plugins/primitives/plugins/data-view/web";
 import { readOptions, type EnumOption } from "../internal/enum-config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
 
 /** Mint a stable option `value` decoupled from the label, so renaming an option
  *  never re-keys (and thus never orphans) already-stored cell values. */
@@ -61,7 +65,7 @@ export function EnumOptionsEditor(props: ColumnConfigProps): ReactNode {
             placeholder="Option label"
           />
           <IconButton
-            icon={MdClose}
+            icon={closeIcon}
             label="Remove option"
             onClick={() => remove(index)}
           />
@@ -80,7 +84,7 @@ export function EnumOptionsEditor(props: ColumnConfigProps): ReactNode {
           placeholder="Add option…"
         />
         <Button variant="outline" onClick={add} disabled={draft.trim() === ""}>
-          <MdAdd />
+          <Icon icon={addIcon} />
           Add
         </Button>
       </Stack>

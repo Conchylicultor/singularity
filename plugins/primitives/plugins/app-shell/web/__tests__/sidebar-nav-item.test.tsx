@@ -1,6 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { MdHome } from "react-icons/md";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -20,6 +19,9 @@ import {
 import { SidebarProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { opensPane } from "../components/app-shell-layout";
 import { SidebarItem } from "../components/sidebar-nav-item";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const homeIcon = symbol("home");
 
 // A nav entry that OPENS a pane is data, so the shell can answer "is this the
 // current one?" — active exactly while the route's root pane is its pane. An
@@ -86,10 +88,10 @@ function renderNav() {
       <SidebarProvider>
         <SidebarItem
           title="Home"
-          icon={MdHome}
+          icon={homeIcon}
           opens={opensPane(homePane, {})}
         />
-        <SidebarItem title="Other" icon={MdHome} onClick={() => {}} />
+        <SidebarItem title="Other" icon={homeIcon} onClick={() => {}} />
       </SidebarProvider>
     </TestSurface>,
   );

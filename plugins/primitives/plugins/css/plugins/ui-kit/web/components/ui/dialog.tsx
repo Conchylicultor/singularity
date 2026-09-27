@@ -1,12 +1,15 @@
 import type * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { MdClose } from "react-icons/md";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -205,7 +208,7 @@ function DialogContent({
               />
             }
           >
-            <MdClose />
+            <Icon icon={closeIcon} />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}

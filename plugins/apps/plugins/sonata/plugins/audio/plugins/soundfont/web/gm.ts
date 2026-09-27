@@ -19,28 +19,24 @@
  * but the barrel filters to programs 1-127 so there is no program overlap.
  */
 
-import type { ComponentType } from "react";
-import {
-  MdPiano,
-  MdAlbum,
-  MdQueueMusic,
-  MdMusicNote,
-  MdGraphicEq,
-  MdMusicVideo,
-  MdLibraryMusic,
-  MdCampaign,
-  MdAir,
-  MdWaves,
-  MdFlare,
-  MdBlurOn,
-  MdAutoAwesome,
-  MdNightlight,
-  MdSurroundSound,
-  MdSpeaker,
-} from "react-icons/md";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
+const pianoIcon = symbol("piano");
+const albumIcon = symbol("album");
+const queueMusicIcon = symbol("queue-music");
+const musicNoteIcon = symbol("music-note");
+const graphicEqIcon = symbol("graphic-eq");
+const musicVideoIcon = symbol("music-video");
+const libraryMusicIcon = symbol("library-music");
+const campaignIcon = symbol("campaign");
+const airIcon = symbol("air");
+const wavesIcon = symbol("waves");
+const flareIcon = symbol("flare");
+const blurOnIcon = symbol("blur-on");
+const autoAwesomeIcon = symbol("auto-awesome");
+const nightlightIcon = symbol("nightlight");
+const surroundSoundIcon = symbol("surround-sound");
+const speakerIcon = symbol("speaker");
 
 /** One General MIDI melodic patch. */
 export interface GmInstrument {
@@ -77,24 +73,24 @@ export const GM_FAMILIES = [
   "Sound Effects",
 ] as const;
 
-/** One react-icons/md icon per GM family (the picker's grouping glyph). */
-export const familyIcon: Record<string, IconType> = {
-  Piano: MdPiano,
-  "Chromatic Percussion": MdAlbum,
-  Organ: MdQueueMusic,
-  Guitar: MdMusicNote,
-  Bass: MdGraphicEq,
-  Strings: MdMusicVideo,
-  Ensemble: MdLibraryMusic,
-  Brass: MdCampaign,
-  Reed: MdAir,
-  Pipe: MdWaves,
-  "Synth Lead": MdFlare,
-  "Synth Pad": MdBlurOn,
-  "Synth Effects": MdAutoAwesome,
-  Ethnic: MdNightlight,
-  Percussive: MdSurroundSound,
-  "Sound Effects": MdSpeaker,
+/** One Material Symbols icon per GM family (the picker's grouping glyph). */
+export const familyIcon: Record<string, IconRef> = {
+  Piano: pianoIcon,
+  "Chromatic Percussion": albumIcon,
+  Organ: queueMusicIcon,
+  Guitar: musicNoteIcon,
+  Bass: graphicEqIcon,
+  Strings: musicVideoIcon,
+  Ensemble: libraryMusicIcon,
+  Brass: campaignIcon,
+  Reed: airIcon,
+  Pipe: wavesIcon,
+  "Synth Lead": flareIcon,
+  "Synth Pad": blurOnIcon,
+  "Synth Effects": autoAwesomeIcon,
+  Ethnic: nightlightIcon,
+  Percussive: surroundSoundIcon,
+  "Sound Effects": speakerIcon,
 };
 
 /**

@@ -8,7 +8,6 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useRef, useState } from "react";
-import { MdEdit } from "react-icons/md";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
   AttachmentThumbnail,
@@ -18,6 +17,9 @@ import {
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const editIcon = symbol("edit");
 
 // Two-mode description editor:
 //   - Display: text rendered with inline widgets via <InlineText> (file-path
@@ -120,7 +122,7 @@ export function DescriptionView({
       <Pin to="top-right" offset="xs" className={hoverRevealTarget}>
         <ControlSizeProvider size="xs">
           <IconButton
-            icon={MdEdit}
+            icon={editIcon}
             label="Edit description"
             variant="ghost"
             onClick={() => enterEdit(null)}

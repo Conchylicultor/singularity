@@ -1,10 +1,12 @@
-import type { ComponentType, ReactNode } from "react";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ReactNode } from "react";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 export interface ViewSwitcherOption {
   id: string;
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
 }
 
 export interface ViewSwitcherProps {
@@ -30,15 +32,18 @@ export function ViewSwitcher({
 
   return (
     <SegmentedControl
-      options={options.map((opt) => {
-        const Icon = opt.icon;
-        return {
-          id: opt.id,
-          label: opt.title,
-          icon: <Icon className="size-3.5" />,
-          title: opt.title,
-        };
-      })}
+      options={options.map((opt) => ({
+        id: opt.id,
+        label: opt.title,
+        icon: (
+          <Icon
+            icon={opt.icon}
+            active={opt.id === activeId}
+            className="size-3.5"
+          />
+        ),
+        title: opt.title,
+      }))}
       value={activeId}
       onChange={onSelect}
       variant="ghost"

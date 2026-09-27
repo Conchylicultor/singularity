@@ -1,8 +1,10 @@
-import { MdAdd } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOptionalRowControls } from "@plugins/primitives/plugins/tree/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { PageRow } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 /**
  * Create a sibling page right below this one — formerly the tree primitive's own
@@ -22,7 +24,7 @@ export function AddPageBelowAction(_props: ItemActionProps<PageRow>) {
 
   return (
     <IconButton
-      icon={MdAdd}
+      icon={addIcon}
       label="Add page below"
       onClick={(e) => {
         e.stopPropagation();

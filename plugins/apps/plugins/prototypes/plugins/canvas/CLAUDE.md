@@ -351,6 +351,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/slot-render.defineDispatchSlot`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CanvasAction`
     - `CanvasFrame`

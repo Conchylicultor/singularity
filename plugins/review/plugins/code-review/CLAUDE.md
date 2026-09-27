@@ -38,6 +38,7 @@
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `review.ReviewSlots`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

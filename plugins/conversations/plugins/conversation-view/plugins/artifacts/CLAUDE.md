@@ -158,6 +158,7 @@ here.
     - `primitives/slot-render.defineRenderSlot`
     - `reorder.isNodeData`
     - `reorder.useReorderedEntries`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ArtifactKind`
     - `ArtifactRowProps`

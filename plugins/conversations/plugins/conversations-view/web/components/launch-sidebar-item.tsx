@@ -13,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdExpandMore, MdPlayArrow } from "react-icons/md";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   LaunchModelMenuContent,
@@ -21,6 +20,11 @@ import {
 } from "@plugins/primitives/plugins/launch/web";
 import { choiceLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * The new-conversation launch control as a sidebar nav row: a model picker —
@@ -64,12 +68,12 @@ export function LaunchSidebarItem() {
               <StatusDot colorClass="bg-primary" />
               <span>{label}</span>
               <Fill />
-              <MdExpandMore className="opacity-60" />
+              <Icon icon={keyboardArrowDownIcon} className="opacity-60" />
             </DropdownMenuTrigger>
             <LaunchModelMenuContent launch={launch} />
           </DropdownMenu>
           <IconButton
-            icon={MdPlayArrow}
+            icon={playArrowIcon}
             label={`Launch ${label}`}
             variant="ghost"
             disabled={launching !== null}

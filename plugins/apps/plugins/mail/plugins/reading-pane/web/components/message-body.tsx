@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdImage } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -12,6 +11,10 @@ import { AttachmentChip } from "@plugins/apps/plugins/mail/plugins/attachments/w
 import type { MailAttachment } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { useHydratedMessage } from "../internal/use-hydrated-message";
 import { useResolveCid } from "../internal/use-resolve-cid";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const imageIcon = symbol("image");
 
 // Renders a message body. Mounted only when its card is expanded (the collapsible
 // unmounts its content when closed), so the hydrate query fires on first open.
@@ -54,7 +57,7 @@ function RenderedBody({
       {remoteDetected && !showRemoteImages ? (
         <Row
           bordered
-          icon={<MdImage className="icon-auto" />}
+          icon={<Icon icon={imageIcon} className="icon-auto" />}
           actionsAlwaysVisible
           actions={
             <Button

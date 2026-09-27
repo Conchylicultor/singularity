@@ -1,7 +1,6 @@
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRef } from "react";
-import { MdClose } from "react-icons/md";
 import {
   scoreEndBeat,
   type Score,
@@ -22,6 +21,9 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { snapToBars } from "../loop-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 /**
  * The A–B practice-loop region marker. Draws the loop `[start, end]` as a band
@@ -135,7 +137,7 @@ export function LoopRegion({
           >
             <ControlSizeProvider size="xs">
               <IconButton
-                icon={MdClose}
+                icon={closeIcon}
                 label="Clear loop"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => setLoop(null)}

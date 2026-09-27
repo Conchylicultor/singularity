@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdSearch } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Mail } from "@plugins/apps/plugins/mail/plugins/shell/web";
 import { mailSearchPane, mailMessagePane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -11,7 +11,7 @@ export default {
     Mail.Sidebar({
       id: "search",
       title: "Search",
-      icon: MdSearch,
+      icon: symbol("search"),
       onClick: () => openPane(mailSearchPane, {}, { mode: "root" }),
     }),
     Pane.Register({ pane: mailSearchPane }),

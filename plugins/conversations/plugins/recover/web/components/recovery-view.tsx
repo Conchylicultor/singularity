@@ -6,7 +6,6 @@ import {
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -19,6 +18,10 @@ import { listGoneConversations } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { restoreBatch } from "../../shared/endpoints";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const historyIcon = symbol("history");
 
 const GONE_PAGE_SIZE = 50;
 const QUERY_KEY = ["conversations-recover", "recent-closed"];
@@ -243,7 +246,7 @@ function ClusterGroup({
               loading={anyPending}
             >
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-              <MdRestore className="size-3.5 mr-1" />
+              <Icon icon={historyIcon} className="size-3.5 mr-1" />
               Restore all ({group.length})
             </Button>
           </ControlSizeProvider>
@@ -300,7 +303,7 @@ function ConversationRow({
         <ControlSizeProvider size="sm">
           <Button variant="outline" onClick={onRestore} loading={pending}>
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-            <MdRestore className="size-3.5 mr-1" />
+            <Icon icon={historyIcon} className="size-3.5 mr-1" />
             Restore
           </Button>
         </ControlSizeProvider>

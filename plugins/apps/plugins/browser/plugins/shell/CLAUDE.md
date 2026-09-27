@@ -18,7 +18,6 @@
   - Contributes: `Apps.App` "Browser" → `BrowserLayout`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `primitives/bar.Bar`
     - `primitives/css/clip.Clip`
     - `primitives/css/clip.clipClasses`
@@ -30,6 +29,7 @@
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BrowserNavApi`
     - `BrowserProxyApi`

@@ -1,6 +1,9 @@
-import { MdAutoAwesome } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 interface ModelPayload {
   type: "model";
@@ -33,7 +36,10 @@ export function ModelView({ event }: AttachmentRendererProps) {
   }
 
   return (
-    <EventLine icon={<MdAutoAwesome className="size-3.5" />} label="Model">
+    <EventLine
+      icon={<Icon icon={autoAwesomeIcon} className="size-3.5" />}
+      label="Model"
+    >
       <span className="truncate text-foreground">{name}</span>
       {modelId && modelId !== name && (
         <span className="truncate font-mono">{modelId}</span>

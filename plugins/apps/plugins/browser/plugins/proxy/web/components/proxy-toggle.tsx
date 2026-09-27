@@ -1,6 +1,8 @@
-import { MdShield, MdOutlineShield } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useBrowserProxy } from "@plugins/apps/plugins/browser/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const shieldIcon = symbol("shield");
 
 /**
  * Proxy-mode toggle for the chrome bar's trailing actions. When on, pages load
@@ -15,7 +17,8 @@ export function ProxyToggle() {
 
   return (
     <IconButton
-      icon={enabled ? MdShield : MdOutlineShield}
+      icon={shieldIcon}
+      active={enabled}
       label={label}
       tooltip={label}
       aria-pressed={enabled}

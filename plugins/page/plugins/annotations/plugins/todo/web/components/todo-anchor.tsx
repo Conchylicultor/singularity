@@ -1,4 +1,3 @@
-import { MdPlayArrow } from "react-icons/md";
 import { ContainerCornerLabel } from "@plugins/page/plugins/container/web";
 import type {
   BlockAnchorProps,
@@ -9,6 +8,10 @@ import {
   TodoDispatch,
   useTodoTask,
 } from "@plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * The TODO card's name, in the top-right corner of its box — and the way an
@@ -103,7 +106,7 @@ function DispatchableTodoAnchor({
       className="text-warning/80"
       action={
         <Row gap="2xs" align="center">
-          <MdPlayArrow className="size-3" />
+          <Icon icon={playArrowIcon} className="size-3" />
           {dispatched ? "Launch again" : "Launch"}
         </Row>
       }

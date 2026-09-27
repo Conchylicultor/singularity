@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdTune } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { TrackMixerPanel } from "./components/track-mixer-panel";
 import { TrackMixerActions } from "./components/track-mixer-actions";
 import { TrackViewObserver } from "./components/track-view-observer";
 import { trackViewSetting } from "./track-view-setting";
 import { useTrackMixerAvailable } from "./hooks";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   useTrackMixerEntries,
@@ -31,7 +31,7 @@ export default {
     Sonata.Section({
       id: "track-mixer",
       label: "Tracks",
-      icon: MdTune,
+      icon: symbol("tune"),
       component: TrackMixerPanel,
       area: "player",
       actions: TrackMixerActions,

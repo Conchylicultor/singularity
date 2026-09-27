@@ -1,12 +1,14 @@
-import { MdCalendarToday } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const calendarTodayIcon = symbol("calendar-today");
 
 export const dateFieldType = defineFieldType<Date>("date");
 
 export const dateIdentity = defineFieldIdentity<Date>({
   type: dateFieldType,
   label: "Date",
-  icon: MdCalendarToday,
+  icon: calendarTodayIcon,
   customColumn: true,
   coerce: (v) =>
     v instanceof Date

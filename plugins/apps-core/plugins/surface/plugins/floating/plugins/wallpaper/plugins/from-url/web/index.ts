@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdLink } from "react-icons/md";
 import { Wallpaper } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/web";
 import { UrlPanel } from "./components/url-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     Wallpaper.Provider({
       id: "from-url",
       label: "From URL",
-      icon: MdLink,
+      icon: symbol("link"),
       Panel: UrlPanel,
     }),
   ],

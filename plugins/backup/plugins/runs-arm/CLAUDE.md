@@ -170,6 +170,7 @@ exist today — a real follow-up, and a bigger change than it looks.
     - `runs.armText`
     - `runs.runArmFields`
     - `runs.Runs`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `backup._backupRuns`

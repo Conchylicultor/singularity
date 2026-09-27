@@ -27,6 +27,7 @@
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `resource.declare` "conversation-summaries"

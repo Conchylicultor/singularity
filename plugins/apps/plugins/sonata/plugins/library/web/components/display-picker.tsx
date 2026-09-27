@@ -1,12 +1,13 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ComponentType } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type PickerItem = {
   id: string;
   label: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
 };
 
 /**
@@ -25,7 +26,7 @@ function PickerOption({
   loaded: boolean;
   onSelect: () => void;
 }) {
-  const Icon = item.icon;
+  const icon = item.icon;
   return (
     <button
       type="button"
@@ -39,7 +40,7 @@ function PickerOption({
       )}
     >
       <Stack direction="row" align="center" gap="xs">
-        {Icon ? <Icon className="size-3.5" /> : null}
+        {icon ? <Icon icon={icon} className="size-3.5" /> : null}
         {item.label}
         {loaded ? (
           <span

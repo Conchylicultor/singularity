@@ -131,6 +131,7 @@ every build — including a composition this plugin is not in.
     - `primitives/ui-context.collectMeta`
     - `primitives/ui-context.contributionNodeAttrs`
     - `primitives/ui-context.LINEAGE_ATTR`
+    - `ui/icons.Icon`
   - Exports (types): `ElementPickerProps`
   - Exports (values):
     - `ElementPicker`

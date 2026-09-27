@@ -1,8 +1,7 @@
-import { useCallback, type ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import { useCallback } from "react";
 import { resolveTypeChain } from "@plugins/fields/core";
 import { useFieldIdentities } from "./use-field-identities";
-
-type IconComponent = ComponentType<{ className?: string }>;
 
 /**
  * Resolve a field type id → its registered identity icon, honoring `extends`
@@ -11,9 +10,7 @@ type IconComponent = ComponentType<{ className?: string }>;
  * next to its label — reading the `fields.identity` registry by id, the same
  * sanctioned no-`fields/web`-import practice as `useResolveOperatorSet`.
  */
-export function useResolveFieldIcon(): (
-  typeId: string,
-) => IconComponent | undefined {
+export function useResolveFieldIcon(): (typeId: string) => IconRef | undefined {
   const identities = useFieldIdentities();
   return useCallback(
     (typeId) => {

@@ -3,7 +3,7 @@ import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-pa
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
-import { DynamicIcon } from "../../internal/dynamic-icon";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { FieldSearchList } from "./field-search-list";
 
 /**
@@ -40,7 +40,7 @@ export function FieldPicker<TRow>(props: {
       trigger={
         <ControlPanel.Field
           aria-label={props.label ?? "Filter field"}
-          icon={currentIcon ? <DynamicIcon icon={currentIcon} /> : undefined}
+          icon={currentIcon ? <Icon icon={currentIcon} /> : undefined}
           label={current?.label ?? null}
           placeholder="Select field"
         />

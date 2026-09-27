@@ -1,4 +1,3 @@
-import { MdDescription } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -8,6 +7,9 @@ import {
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const descriptionIcon = symbol("description");
 
 /**
  * The glyph, in one place: the registry draws it on the contribution and every
@@ -17,7 +19,7 @@ import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/pl
  * It is the Pages app's own icon: a row here opens that app, and the thing you
  * land in should wear the mark you clicked.
  */
-export const PAGE_ICON = MdDescription;
+export const PAGE_ICON = descriptionIcon;
 
 /**
  * Why a row cannot be opened — and NOT an error.

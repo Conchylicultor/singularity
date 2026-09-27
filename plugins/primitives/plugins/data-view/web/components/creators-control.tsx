@@ -1,5 +1,4 @@
 import { type ReactNode, useState } from "react";
-import { MdAdd } from "react-icons/md";
 import {
   Button,
   DropdownMenu,
@@ -11,6 +10,9 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { CreateOption, ToolbarPartForms } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 /**
  * Host-internal toolbar render of `DataViewProps.creators`. NOT exported from
@@ -67,7 +69,7 @@ export function CreatorsControl({
     if (compact || round) {
       return (
         <IconButton
-          icon={MdAdd}
+          icon={addIcon}
           label={c.label}
           disabled={busy}
           onClick={() => run(c)}
@@ -88,7 +90,7 @@ export function CreatorsControl({
       <DropdownMenuTrigger
         render={
           <IconButton
-            icon={MdAdd}
+            icon={addIcon}
             label="Create"
             disabled={busy}
             {...roundProps}

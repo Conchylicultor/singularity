@@ -1,11 +1,14 @@
 import { useRef } from "react";
-import { MdZoomIn } from "react-icons/md";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { JogWheel } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel/web";
 import { pianoRollConfig } from "../../shared/config";
 import { SPREAD_MIN } from "./geometry";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const zoomInIcon = symbol("zoom-in");
 
 /** Log-zoom units per pixel of horizontal drag. The wheel scrubs `log(spread)`,
  *  so each pixel multiplies the zoom by a CONSTANT ratio (exp(SENSITIVITY)) no
@@ -67,7 +70,7 @@ export function SpreadWheel() {
 
   return (
     <JogWheel
-      icon={<MdZoomIn className="size-3.5" />}
+      icon={<Icon icon={zoomInIcon} className="size-3.5" />}
       tooltip="Note spread — drag to zoom; pull left to fit the whole song"
       drag={drag}
       // Position tracks log(spread) so the ribs travel uniformly per zoom ratio

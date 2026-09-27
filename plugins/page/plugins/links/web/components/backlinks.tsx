@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdLink } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -11,6 +10,9 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { pageBacklinks } from "../../core";
 import type { BacklinkRow } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const linkIcon = symbol("link");
 
 export interface BacklinksProps {
   /** The target page whose backlinks (referencing pages) to show. */
@@ -62,7 +64,7 @@ export function Backlinks({ documentId }: BacklinksProps) {
             <Center as="span" className="size-4 text-muted-foreground">
               <PageIcon
                 nodes={row.iconSvgNodes}
-                fallback={MdLink}
+                fallback={linkIcon}
                 className="size-4"
               />
             </Center>

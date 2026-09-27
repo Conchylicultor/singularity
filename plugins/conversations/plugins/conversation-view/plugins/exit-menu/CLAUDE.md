@@ -38,6 +38,7 @@ hide itself based on conversation state.
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (values): `ExitMenu`
 - Cross-plugin:
   - Imported by:

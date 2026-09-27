@@ -160,6 +160,7 @@ non-surface mounts instead of crashing.
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/scoped-store.defineScopedStore`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ReportSyncArgs`
     - `SyncPhase`

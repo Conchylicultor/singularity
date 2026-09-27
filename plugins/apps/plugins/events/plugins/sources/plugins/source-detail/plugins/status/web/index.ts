@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdInfoOutline } from "react-icons/md";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import {
   SourceStatusSection,
   SourceStatusSummary,
   useSourceStatusDefaultOpen,
 } from "./components/status-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
     EventSourceDetail.Section({
       id: "status",
       label: "Status",
-      icon: MdInfoOutline,
+      icon: symbol("info"),
       component: SourceStatusSection,
       summary: SourceStatusSummary,
       useDefaultOpen: useSourceStatusDefaultOpen,

@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdCalendarToday, MdExpandMore } from "react-icons/md";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   ControlPanel,
@@ -23,6 +22,11 @@ import {
   type DateRange,
   type RelativeRange,
 } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const calendarTodayIcon = symbol("calendar-today");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 // Shared native-control chrome (matches the prior date-filter inputs and the
 // Input primitive's border/bg/radius — native inputs are exempt from
@@ -146,7 +150,7 @@ function AnchorChooser({
       label="Choose a date"
       trigger={
         <Button variant="outline">
-          <MdCalendarToday />
+          <Icon icon={calendarTodayIcon} />
           {label ? (
             <Text variant="body">{label}</Text>
           ) : (
@@ -154,7 +158,7 @@ function AnchorChooser({
               {placeholder}
             </Text>
           )}
-          <MdExpandMore />
+          <Icon icon={keyboardArrowDownIcon} />
         </Button>
       }
     >

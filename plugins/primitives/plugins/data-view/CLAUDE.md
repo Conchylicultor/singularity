@@ -1901,6 +1901,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CellContributionMeta`
     - `CellEditorProps`

@@ -1,7 +1,9 @@
-import { MdPlace } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { PlaceDataSchema } from "./schemas";
 import { typeVar } from "@plugins/primitives/plugins/css/plugins/text/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const locationOnIcon = symbol("location-on");
 
 export const PLACE_TYPE = "place";
 
@@ -37,7 +39,7 @@ export const placeBlock = defineBlock({
   type: PLACE_TYPE,
   schema: PlaceDataSchema,
   label: "Place",
-  icon: MdPlace,
+  icon: locationOnIcon,
   aliases: ["address", "location", "map", "maps"],
   empty: () => ({}), // no placeId → the search UI
   // The card's first line is the name row inside `Card`'s own padding, wrapped

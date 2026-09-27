@@ -52,6 +52,7 @@ Consumes only barrel APIs: `mail-core` (`_mailAttachments`, `requireGmailToken`)
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/spinner.Spinner`
+    - `ui/icons.Icon`
   - Exports (types):
     - `AttachmentChipProps`
     - `UseMailAttachment`

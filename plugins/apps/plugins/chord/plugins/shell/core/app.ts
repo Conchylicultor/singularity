@@ -4,5 +4,5 @@ export const chordApp = defineApp({
   id: "chord",
   name: "Chord",
   basePath: "/chord",
-  iconKey: "queue_music",
+  iconKey: "queue-music",
 });

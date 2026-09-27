@@ -92,6 +92,7 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values):
     - `ReleaseDetail`
     - `releaseDetailPane`

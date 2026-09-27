@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { MdHistory } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { VersionHistoryDialog } from "@plugins/history/plugins/dialog/web";
 import { PageVersionPreview } from "./page-version-preview";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const historyIcon = symbol("history");
 
 /**
  * "Version history" header action contributed to `PageDetail.HeaderActions`.
@@ -15,7 +17,7 @@ export function VersionHistoryAction({ pageId }: { pageId: string }) {
   return (
     <>
       <IconButton
-        icon={MdHistory}
+        icon={historyIcon}
         label="Version history"
         onClick={() => setOpen(true)}
       />

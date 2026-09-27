@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdBolt, MdList } from "react-icons/md";
 import { slowEventsPane, traceDetailPane } from "./panes";
 import { SlowEvents } from "./slots";
 import { EventsView } from "./components/events-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { SlowEvents } from "./slots";
 export { slowEventsPane, traceDetailPane } from "./panes";
@@ -24,14 +24,14 @@ export default {
     SlowEvents.View({
       id: "events",
       title: "Events",
-      icon: MdList,
+      icon: symbol("list"),
       order: 10,
       component: EventsView,
     }),
     DebugApp.Sidebar({
       id: "trace-slow-events",
       title: "Slow Events",
-      icon: MdBolt,
+      icon: symbol("bolt"),
       onClick: () => openPane(slowEventsPane, {}, { mode: "root" }),
     }),
   ],

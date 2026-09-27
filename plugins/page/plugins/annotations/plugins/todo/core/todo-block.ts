@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdPendingActions } from "react-icons/md";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const pendingActionsIcon = symbol("pending-actions");
 
 /**
  * A TODO card is a VOID container: it owns NOTHING but its type.
@@ -26,7 +28,7 @@ export const todoBlock = defineAnnotationBlock({
   type: "todo",
   schema: todoDataSchema,
   label: "TODO",
-  icon: MdPendingActions,
+  icon: pendingActionsIcon,
   // Work an agent still has to do — a card whose entire purpose is to be READ by
   // one. Same direction as `/human`; only the tense differs (standing
   // instructions vs outstanding work).

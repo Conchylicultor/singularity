@@ -107,6 +107,7 @@ and
     - `primitives/setup-steps.StepNote`
     - `primitives/setup-steps.Steps`
     - `primitives/setup-steps.StepState`
+    - `ui/icons.Icon`
   - Exports (types):
     - `SshConsoleProps`
     - `SshProviderDescriptor`

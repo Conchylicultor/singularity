@@ -1,4 +1,3 @@
-import { MdExpandMore } from "react-icons/md";
 import {
   Button,
   DropdownMenu,
@@ -7,6 +6,10 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 /**
  * "Fill from…" — replace a whole token group (or the colour adjustment) with a
@@ -27,7 +30,7 @@ export function FillFromMenu<T extends { id: string; label: string }>({
         render={<Button variant="outline" className={selfClass("start")} />}
       >
         Fill from…
-        <MdExpandMore />
+        <Icon icon={keyboardArrowDownIcon} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {shortcuts.map((shortcut) => (

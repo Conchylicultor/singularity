@@ -170,6 +170,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/tree.useOptionalRowControls`
     - `primitives/undo-redo.useUndoRedo`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BlockTarget`
     - `PageSeedBlock`

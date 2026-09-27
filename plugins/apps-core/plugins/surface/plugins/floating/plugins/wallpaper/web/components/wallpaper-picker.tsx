@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useState } from "react";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
@@ -64,7 +65,7 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
               options={providers.map((p) => ({
                 id: p.id,
                 label: p.label,
-                icon: p.icon ? <p.icon /> : undefined,
+                icon: p.icon ? <Icon icon={p.icon} /> : undefined,
               }))}
             />
           )}

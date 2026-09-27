@@ -94,7 +94,6 @@ view, which only it reads. A read is `SongSetting<T>` =
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `config_v2.useConfig`
     - `layouts/full-pane.FullPane`
     - `primitives/css/center.Center`

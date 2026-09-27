@@ -1,9 +1,18 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AppIcon } from "../../core";
-import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 
-export function AppIconView({ icon, className }: { icon: AppIcon; className?: string }) {
+export function AppIconView({
+  icon,
+  active,
+  className,
+}: {
+  icon: AppIcon;
+  /** The app is the focused one: its glyph in the theme's active fill. */
+  active?: boolean;
+  className?: string;
+}) {
   switch (icon.kind) {
-    case "md":
-      return <SvgIcon nodes={icon.svgNodes} className={className} />;
+    case "symbol":
+      return <Icon icon={icon.symbol} active={active} className={className} />;
   }
 }

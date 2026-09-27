@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdRocketLaunch } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -36,6 +35,10 @@ import type { PlatformTag } from "@plugins/release/core";
 import { bundleRefusalMessage } from "@plugins/release/plugins/bundles/core";
 import { shortSha, stalenessChipLabel, stalenessSentence } from "../../core";
 import { useReleaseInfo, type ReleaseInfo } from "../internal/use-release-info";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const rocketLaunchIcon = symbol("rocket-launch");
 
 /**
  * The three legs of an `update`, in the order they run — the same closed list
@@ -144,7 +147,7 @@ function RemoteDeploy({
             })
           }
         >
-          <MdRocketLaunch />
+          <Icon icon={rocketLaunchIcon} />
           {platform ? `Deploy ${platform}` : "Deploy"}
         </Button>
         <Text as="p" variant="caption" tone="muted">

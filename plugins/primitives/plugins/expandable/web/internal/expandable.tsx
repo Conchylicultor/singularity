@@ -1,7 +1,11 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export interface ExpandableProps {
   /** The content to clamp. */
@@ -97,12 +101,12 @@ export function Expandable({
           <Stack direction="row" gap="xs" align="center">
             {expanded ? (
               <>
-                <MdExpandLess className="size-3.5" />
+                <Icon icon={keyboardArrowUpIcon} className="size-3.5" />
                 Show less
               </>
             ) : (
               <>
-                <MdExpandMore className="size-3.5" />
+                <Icon icon={keyboardArrowDownIcon} className="size-3.5" />
                 Show more
               </>
             )}

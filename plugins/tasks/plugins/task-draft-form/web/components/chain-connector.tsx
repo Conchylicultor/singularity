@@ -1,11 +1,4 @@
-import {
-  MdAdd,
-  MdArrowDownward,
-  MdClose,
-  MdLink,
-  MdLinkOff,
-  MdPause,
-} from "react-icons/md";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   cn,
   ControlSizeProvider,
@@ -14,6 +7,14 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const arrowDownwardIcon = symbol("arrow-downward");
+const closeIcon = symbol("close");
+const linkIcon = symbol("link");
+const linkOffIcon = symbol("link-off");
+const pauseIcon = symbol("pause");
 
 export interface ChainConnectorProps {
   /** Whether the task below waits for the task above. */
@@ -45,10 +46,10 @@ export function ChainConnector({
   onRemove,
   disabled,
 }: ChainConnectorProps) {
-  const LeadIcon = linked ? MdArrowDownward : MdPause;
+  const LeadIcon = linked ? arrowDownwardIcon : pauseIcon;
   return (
     <Line className="gap-sm py-2xs text-muted-foreground">
-      <LeadIcon aria-hidden className="size-3" />
+      <Icon icon={LeadIcon} aria-hidden className="size-3" />
       <Text variant="caption" tone="muted">
         {linked
           ? `Then, once task ${prevNumber} is done`
@@ -69,27 +70,27 @@ export function ChainConnector({
       <ControlSizeProvider size="xs">
         {linked ? (
           <IconButton
-            icon={MdLinkOff}
+            icon={linkOffIcon}
             label="Unlink tasks (run in parallel)"
             onClick={onToggle}
             disabled={disabled}
           />
         ) : (
           <IconButton
-            icon={MdLink}
+            icon={linkIcon}
             label="Link tasks (run sequentially)"
             onClick={onToggle}
             disabled={disabled}
           />
         )}
         <IconButton
-          icon={MdAdd}
+          icon={addIcon}
           label="Insert a task here"
           onClick={onInsert}
           disabled={disabled}
         />
         <IconButton
-          icon={MdClose}
+          icon={closeIcon}
           label={`Remove task ${prevNumber + 1}`}
           onClick={onRemove}
           disabled={disabled}

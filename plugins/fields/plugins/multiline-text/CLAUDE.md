@@ -20,6 +20,7 @@ resolves to `text` and reuses `TextCell` / the text `FilterContribution`.
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
     - `fields/text.textFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `multilineTextFieldType`
     - `multilineTextIdentity`

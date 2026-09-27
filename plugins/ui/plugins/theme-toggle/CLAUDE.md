@@ -37,6 +37,7 @@ opens the popover and asserts the class and the switch move together.
   - Contributes: `QuickTheme.Section` "Appearance" → `ThemeToggle`
   - Uses:
     - `primitives/css/control-panel.ControlPanel`
+    - `ui/icons.Icon`
     - `ui/theme-engine.useResolvedColorMode`
     - `ui/theme-engine.useSetColorMode`
     - `ui/theme-engine/quick-theme.QuickTheme`

@@ -1,4 +1,3 @@
-import { MdDashboardCustomize } from "react-icons/md";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -8,6 +7,9 @@ import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/c
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const dashboardCustomizeIcon = symbol("dashboard-customize");
 
 /**
  * The glyph, in one place: the registry draws it on the contribution and every
@@ -17,7 +19,7 @@ import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/pl
  * It is the Prototypes app's own icon, not the mock's monitor: a row here opens
  * that app, and the thing you land in should wear the mark you clicked.
  */
-export const PROTOTYPE_ICON = MdDashboardCustomize;
+export const PROTOTYPE_ICON = dashboardCustomizeIcon;
 
 /**
  * Why a row cannot be opened. A prototype id is opaque and permanent, so an id

@@ -9,11 +9,14 @@ import {
   type ReactNode,
 } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { ReorderLayoutContext, type ReorderLayout } from "@plugins/reorder/web";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export interface CollapsibleWrapProps {
   /** The single <Slot.Render> element — never indexed or duplicated. */
@@ -181,7 +184,7 @@ export function CollapsibleWrap({
       {wrapBox}
       {showChevron && (
         <IconButton
-          icon={expanded ? MdExpandLess : MdExpandMore}
+          icon={expanded ? keyboardArrowUpIcon : keyboardArrowDownIcon}
           label={expanded ? "Collapse" : "Expand"}
           // eslint-disable-next-line layout/no-adhoc-layout -- rigid chevron affordance in the host's chip-row flex; must not shrink alongside the wrap box
           className="shrink-0"

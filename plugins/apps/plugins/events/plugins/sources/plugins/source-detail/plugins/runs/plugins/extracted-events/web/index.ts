@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdEventNote } from "react-icons/md";
 import { EventSourceRunDetail } from "@plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/web";
 import {
   ExtractedEventsSection,
   useExtractedEventsAvailable,
 } from "./components/extracted-events-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -13,7 +13,7 @@ export default {
     EventSourceRunDetail.Section({
       id: "extracted-events",
       label: "Extracted events",
-      icon: MdEventNote,
+      icon: symbol("event-note"),
       component: ExtractedEventsSection,
       // Loading is not emptiness: the card must exist while the fetch is in
       // flight, or it would pop in after the run resolves.

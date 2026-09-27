@@ -1,7 +1,10 @@
-import { MdReplay } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const replayIcon = symbol("replay");
 
 type MetaPromptEvent = Extract<JsonlEvent, { kind: "meta-prompt" }>;
 
@@ -14,11 +17,15 @@ export function MetaPromptRow({ event }: { event: JsonlEvent }) {
   return (
     <CollapsibleCard
       className="border-dashed"
-      icon={<MdReplay className="size-3.5" />}
+      icon={<Icon icon={replayIcon} className="size-3.5" />}
       label="Resumed by harness"
       note={e.source ? `· ${e.source}` : undefined}
     >
-      <Text as="div" variant="caption" className="whitespace-pre-wrap break-words text-muted-foreground">
+      <Text
+        as="div"
+        variant="caption"
+        className="whitespace-pre-wrap break-words text-muted-foreground"
+      >
         {e.text}
       </Text>
     </CollapsibleCard>

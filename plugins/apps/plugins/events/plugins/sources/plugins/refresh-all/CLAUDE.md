@@ -52,7 +52,6 @@ it armed) — reporting it here as well would double-report one failure.
   - Uses:
     - `apps/events/events-core.useRefreshAllEventSources`
     - `apps/events/sources.eventSourcesPane`
-    - `primitives/css/spinner.Spinner`
     - `primitives/icon-button.IconButton`
     - `shell/toast.showToast`
     - `shell/toast.ToastArgs`

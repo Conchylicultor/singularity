@@ -1,5 +1,4 @@
 import { useMemo, type ReactElement } from "react";
-import { MdAdd, MdCompare } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Stack,
@@ -35,6 +34,11 @@ import {
 import { useServeComposition } from "@plugins/build/plugins/serve-composition/web";
 import { compositionDetailPane, comparePane } from "../panes";
 import { CompositionItemActions } from "./composition-item-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const compareIcon = symbol("compare");
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**. The
 // views config is authored at
@@ -75,7 +79,7 @@ export function CompositionsList(): ReactElement {
       <Stack gap="lg">
         <Stack direction="row" align="center" gap="xs">
           <Button variant="outline" onClick={newComposition}>
-            <MdAdd />
+            <Icon icon={addIcon} />
             New
           </Button>
           <Button
@@ -84,7 +88,7 @@ export function CompositionsList(): ReactElement {
               openPane(comparePane, {}, { mode: "push", side: "right" })
             }
           >
-            <MdCompare />
+            <Icon icon={compareIcon} />
             Compare
           </Button>
         </Stack>

@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -31,7 +32,7 @@ export function DefaultProviderRow({ providerId }: Props) {
   const provider = providers.find((p) => p.id === providerId);
 
   if (!provider) return null;
-  const Icon = provider.icon;
+  const icon = provider.icon;
 
   // Three states, each with its own rendering: the state has not arrived yet
   // (a spinner, never a guessed "Disconnected"), central does not know the
@@ -62,7 +63,7 @@ export function DefaultProviderRow({ providerId }: Props) {
   return (
     <Stack direction="row" gap="lg" align="start" className="p-lg">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
-      <Icon className={cn("mt-1 h-6 w-6", rigidClass())} />
+      <Icon icon={icon} className={cn("mt-1 h-6 w-6", rigidClass())} />
       <Fill>
         <Stack direction="row" align="center" gap="sm">
           <span className="font-medium">{provider.name}</span>

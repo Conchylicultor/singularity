@@ -1,7 +1,9 @@
 import { useEffect, type ReactElement, type ReactNode } from "react";
-import { MdAttachFile } from "react-icons/md";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -15,6 +17,10 @@ import {
 import { mailHydrateMessageEndpoint } from "@plugins/apps/plugins/mail/plugins/sync/core";
 import type { MailAddress } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailMessagePane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const attachFileIcon = symbol("attach-file");
 
 function formatAddress(a: MailAddress): string {
   return a.name ? `${a.name} <${a.email}>` : a.email;
@@ -62,23 +68,34 @@ export function MailMessageBody(): ReactElement {
   // Both sides are real Dates: the endpoint response coerces (`z.coerce.date()`),
   // and a hint never survives a JSON round-trip (it is not persisted at all), so
   // the old `instanceof Date` string-guard is unreachable and gone.
-  const internalDate = envelope.pick("internalDate", hydrated?.message.internalDate) ?? null;
+  const internalDate =
+    envelope.pick("internalDate", hydrated?.message.internalDate) ?? null;
 
   let body: ReactNode;
   if (hydrated) {
     if (hydrated.message.bodyText) {
       body = (
-        <Text as="pre" variant="body" className="whitespace-pre-wrap break-words">
+        <Text
+          as="pre"
+          variant="body"
+          className="whitespace-pre-wrap break-words"
+        >
           {hydrated.message.bodyText}
         </Text>
       );
     } else if (hydrated.message.bodyHtml) {
-      body = <Placeholder tone="muted">Plain-text version unavailable.</Placeholder>;
+      body = (
+        <Placeholder tone="muted">Plain-text version unavailable.</Placeholder>
+      );
     } else {
       body = <Placeholder tone="muted">No message body.</Placeholder>;
     }
   } else if (isErrorForThis) {
-    body = <Placeholder tone="error">{getEndpointErrorMessage(hydrate.error)}</Placeholder>;
+    body = (
+      <Placeholder tone="error">
+        {getEndpointErrorMessage(hydrate.error)}
+      </Placeholder>
+    );
   } else {
     body = <Loading variant="text" label="Loading message…" />;
   }
@@ -104,7 +121,7 @@ export function MailMessageBody(): ReactElement {
           {hydrated && hydrated.attachments.length > 0 && (
             <Cluster>
               {hydrated.attachments.map((att) => (
-                <Badge key={att.id} icon={<MdAttachFile />}>
+                <Badge key={att.id} icon={<Icon icon={attachFileIcon} />}>
                   {att.filename}
                 </Badge>
               ))}

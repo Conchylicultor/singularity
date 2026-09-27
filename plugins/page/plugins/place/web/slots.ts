@@ -1,8 +1,6 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /**
  * The web half of a place provider — everything the BLOCK needs to talk about a
@@ -20,7 +18,7 @@ export interface PlaceProviderContribution {
   id: string;
   /** Human name, used in the picker and in the card's "Open in …" link. */
   label: string;
-  icon?: IconType;
+  icon?: IconRef;
   /**
    * Rendered in place of the search box when {@link useReady} says the provider
    * is not usable yet — the affordance that makes it usable, not a pointer at

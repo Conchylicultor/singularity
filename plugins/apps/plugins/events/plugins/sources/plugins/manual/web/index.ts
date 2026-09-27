@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdEditCalendar } from "react-icons/md";
 import { EventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import { MANUAL_SOURCE_TYPE_ID, manualSourceConfigFields } from "../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // No form code, and in this type's case no fields either: the `+` menu builds
 // the add/configure surface from `configFields` alone, which for a manual source
@@ -15,7 +15,7 @@ export default {
     EventSources.Type({
       id: MANUAL_SOURCE_TYPE_ID,
       label: "Manual",
-      icon: MdEditCalendar,
+      icon: symbol("edit-calendar"),
       configFields: manualSourceConfigFields,
     }),
   ],

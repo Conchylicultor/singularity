@@ -1,11 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdGroups } from "react-icons/md";
 import { EventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import {
   COWORKMEET_SOURCE_TYPE_ID,
   coworkmeetSourceConfigFields,
 } from "../core";
 import { coworkmeetSourceOriginUrl } from "./internal/origin-url";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // No form component, on purpose: the add/configure form — five multi-selects
 // over the association's own venue vocabulary — is rendered generically from
@@ -18,7 +18,7 @@ export default {
     EventSources.Type({
       id: COWORKMEET_SOURCE_TYPE_ID,
       label: "CoworkMeet",
-      icon: MdGroups,
+      icon: symbol("groups"),
       configFields: coworkmeetSourceConfigFields,
       originUrl: coworkmeetSourceOriginUrl,
     }),

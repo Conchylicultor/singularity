@@ -1,10 +1,13 @@
 import type { ReactElement } from "react";
-import { MdAdd } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { usePrototypeDetail } from "../context";
 import { prototypeFrames, type CanvasLayout } from "../internal/canvas-model";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 // The canvas's header actions, each a zero-prop contribution to
 // `prototypeDetailPane.Actions`: in the header they take no vertical room from
@@ -46,7 +49,7 @@ export function AddFrameActions(): ReactElement {
         }
         onClick={() => dispatch({ type: "addPrototype" })}
       >
-        <MdAdd className="text-primary" />
+        <Icon icon={addIcon} className="text-primary" />
         Frame
       </Button>
       {sources.map((source) => {
@@ -65,7 +68,7 @@ export function AddFrameActions(): ReactElement {
             }
             onClick={() => dispatch({ type: "addSource", source: source.id })}
           >
-            <MdAdd className="text-primary" />
+            <Icon icon={addIcon} className="text-primary" />
             {source.addLabel}
           </Button>
         );

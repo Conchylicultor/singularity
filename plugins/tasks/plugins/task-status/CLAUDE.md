@@ -16,6 +16,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (values):
     - `STATUS_META`
     - `StatusBadge`

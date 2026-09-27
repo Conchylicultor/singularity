@@ -135,6 +135,7 @@ directives establish); the selected voicing strategy from the shared
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `apps/sonata/library._songs`

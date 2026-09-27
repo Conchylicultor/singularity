@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdAudiotrack } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const musicNoteIcon = symbol("music-note");
 
 export const AUDIO_TYPE = "audio";
 
@@ -12,7 +14,7 @@ export const audioBlock = defineBlock({
     mime: z.string().optional(),
   }),
   label: "Audio",
-  icon: MdAudiotrack,
+  icon: musicNoteIcon,
   aliases: ["mp3", "sound", "music", "voice", "media"],
   empty: () => ({}), // no attachmentId → placeholder UI
 });

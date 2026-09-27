@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdAutoAwesome } from "react-icons/md";
 import { EventSourceRunDetail } from "@plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/web";
 import {
   ModelCallSection,
   useModelCallAvailable,
 } from "./components/model-call-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -13,7 +13,7 @@ export default {
     EventSourceRunDetail.Section({
       id: "model-call",
       label: "Model call",
-      icon: MdAutoAwesome,
+      icon: symbol("auto-awesome"),
       component: ModelCallSection,
       // Loading is not emptiness: the card must exist while the fetch is in
       // flight, or it would pop in after the run resolves.

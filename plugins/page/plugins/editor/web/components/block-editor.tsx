@@ -9,11 +9,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import {
-  MdDragIndicator,
-  MdFormatIndentDecrease,
-  MdFormatIndentIncrease,
-} from "react-icons/md";
+
 import {
   DndContext,
   DragOverlay,
@@ -118,6 +114,12 @@ import { dragKindFromTypes, type ClaimedKind } from "../internal/drag-kind";
 import { writeForestToClipboard } from "../internal/clipboard-write";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
 import "./block-selection-scope.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const dragIndicatorIcon = symbol("drag-indicator");
+const formatIndentDecreaseIcon = symbol("format-indent-decrease");
+const formatIndentIncreaseIcon = symbol("format-indent-increase");
 
 /**
  * How much of a block's text the spoken selection announcement quotes. Long
@@ -1753,7 +1755,7 @@ function SelectionLayer({
           actions={
             <>
               <IconButton
-                icon={MdFormatIndentDecrease}
+                icon={formatIndentDecreaseIcon}
                 label="Outdent"
                 shortcut="shift+tab"
                 disabled={!outdentable}
@@ -1763,7 +1765,7 @@ function SelectionLayer({
                 }}
               />
               <IconButton
-                icon={MdFormatIndentIncrease}
+                icon={formatIndentIncreaseIcon}
                 label="Indent"
                 shortcut="tab"
                 disabled={!indentable}
@@ -1975,7 +1977,7 @@ function SelectionLayer({
               gap="xs"
               className="bg-background/90 border-accent text-muted-foreground rounded-md border px-sm py-xs shadow"
             >
-              <MdDragIndicator className="size-4" />
+              <Icon icon={dragIndicatorIcon} className="size-4" />
               {bulkDrag && selectedCount > 1 ? (
                 <Text variant="body">{`${selectedCount} blocks`}</Text>
               ) : null}

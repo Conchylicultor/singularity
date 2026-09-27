@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from "react";
-import { MdChevronRight, MdExpandMore } from "react-icons/md";
 import { z } from "zod";
 import type { SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
@@ -27,6 +26,11 @@ import {
   ancestorChain,
   type SpanNode,
 } from "../internal/build-tree";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronRightIcon = symbol("chevron-right");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 // Categorical color per span kind (fill = "what", never state — the op-gantt
 // convention). The kind is now a per-row dot rather than a lane grouping: the rows
@@ -263,9 +267,9 @@ function TreeLabel({
             onClick={onToggle}
           >
             {collapsed ? (
-              <MdChevronRight className="size-3" />
+              <Icon icon={chevronRightIcon} className="size-3" />
             ) : (
-              <MdExpandMore className="size-3" />
+              <Icon icon={keyboardArrowDownIcon} className="size-3" />
             )}
           </button>
         ) : (

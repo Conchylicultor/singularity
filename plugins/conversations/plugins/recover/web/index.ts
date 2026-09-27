@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdRestore } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { recoveryPane } from "./pane";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { recoveryPane } from "./pane";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "conversations-recover",
       title: "Recovery",
-      icon: MdRestore,
+      icon: symbol("history"),
       onClick: () => openPane(recoveryPane, {}, { mode: "root" }),
     }),
   ],

@@ -1,4 +1,3 @@
-import { MdAdd, MdWarning } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -30,6 +29,11 @@ import {
 import { mintPrototypeFolder, newPrototypePrompt } from "./new-prototype";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { PrototypeCardActions, type PrototypeGalleryRow } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const warningIcon = symbol("warning");
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
@@ -55,7 +59,7 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
       above={
         meta.problems.length === 0 ? null : (
           <Pin to="top-right" offset="xs">
-            <Badge variant="warning" icon={<MdWarning />}>
+            <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
               {meta.problems.length}
             </Badge>
           </Pin>
@@ -131,7 +135,7 @@ export function PrototypeGallery() {
     <LaunchAgentPopover
       trigger={
         <Button variant="default">
-          <MdAdd />
+          <Icon icon={addIcon} />
           New prototype
         </Button>
       }

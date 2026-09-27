@@ -1,10 +1,16 @@
-import { MdOpenInNew } from "react-icons/md";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Hero } from "./hero";
 import { QuickLinks } from "./quick-links";
 import { BookmarksSection } from "./bookmarks-section";
 import { RecentsSection } from "./recents-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInNewIcon = symbol("open-in-new");
 
 /**
  * The browser start page: the empty-state landing shown in the viewport when no
@@ -22,7 +28,7 @@ export function StartPage() {
         <BookmarksSection />
         <RecentsSection />
         <Stack direction="row" gap="2xs" align="center" justify="center">
-          <MdOpenInNew style={{ width: 14, height: 14 }} />
+          <Icon icon={openInNewIcon} style={{ width: 14, height: 14 }} />
           <Text variant="caption" tone="muted">
             Some sites block embedding — use the open-in-new-tab button to open
             them in a new tab.

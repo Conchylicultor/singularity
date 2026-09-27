@@ -1,4 +1,3 @@
-import { MdBolt } from "react-icons/md";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -8,6 +7,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import type { PluginNode } from "../../core";
 import { PluginView } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
 
 interface PluginDetailProps {
   node: PluginNode | null;
@@ -43,8 +46,12 @@ export function PluginDetail({ node }: PluginDetailProps) {
                 }))}
                 actions={
                   node.loadBearing ? (
-                    // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 offsets this trailing load-bearing badge from the breadcrumb in the actions slot; one-off inline gap, no shared flex parent
-                    <Badge variant="warning" icon={<MdBolt />} className="ml-1">
+                    <Badge
+                      variant="warning"
+                      icon={<Icon icon={boltIcon} />}
+                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 offsets this trailing load-bearing badge from the breadcrumb in the actions slot; one-off inline gap, no shared flex parent
+                      className="ml-1"
+                    >
                       Load-bearing
                     </Badge>
                   ) : undefined

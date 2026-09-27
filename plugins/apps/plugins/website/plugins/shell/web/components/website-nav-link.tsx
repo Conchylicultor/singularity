@@ -30,7 +30,7 @@ export function WebsiteNavLink({
   label: string;
   /** `quiet` = a page of this site. `strong` = the header's one call to action. */
   emphasis?: "quiet" | "strong";
-  /** A leading glyph, sized by the button (a `react-icons` element). */
+  /** A leading glyph, sized by the button (an `<Icon>` element). */
   icon?: ReactNode;
 } & Omit<ComponentProps<typeof Button>, "variant" | "shape" | "children">) {
   return emphasis === "strong" ? (

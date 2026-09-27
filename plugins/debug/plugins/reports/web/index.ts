@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdBugReport } from "react-icons/md";
 import { reportsPane, reportDetailPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { reportsPane, reportDetailPane } from "./panes";
 
@@ -15,7 +15,7 @@ export default {
     DebugApp.Sidebar({
       id: "reports",
       title: "Reports",
-      icon: MdBugReport,
+      icon: symbol("bug-report"),
       onClick: () => openPane(reportsPane, {}, { mode: "root" }),
     }),
   ],

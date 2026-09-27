@@ -24,6 +24,7 @@ core; `FieldHeader` comes from the slot owner
     - `primitives/avatar.Avatar`
     - `primitives/avatar.AvatarPicker`
     - `primitives/css/center.Center`
+    - `ui/icons.Icon`
 - Core:
   - Uses:
     - `fields.FieldDef`

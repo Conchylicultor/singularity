@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdSpeed } from "react-icons/md";
 import { profilingPane } from "./panes";
 import { Profiling } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Profiling } from "./slots";
 export { profilingPane } from "./panes";
@@ -47,7 +47,7 @@ export default {
     DebugApp.Sidebar({
       id: "profiling",
       title: "Profiling",
-      icon: MdSpeed,
+      icon: symbol("speed"),
       onClick: () => openPane(profilingPane, {}, { mode: "root" }),
     }),
   ],

@@ -55,6 +55,7 @@ worktrees, which is deliberate: repo paths coincide.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneScroll`
     - `shell.Shell`
+    - `ui/icons.Icon`
   - Exports (values): `FileTree`
 - Server:
   - Uses:

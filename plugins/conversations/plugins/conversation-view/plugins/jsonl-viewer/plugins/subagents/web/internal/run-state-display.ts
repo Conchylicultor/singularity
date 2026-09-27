@@ -1,19 +1,18 @@
-import type { IconType } from "react-icons";
-import {
-  MdArticle,
-  MdErrorOutline,
-  MdHistory,
-  MdVisibility,
-} from "react-icons/md";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type { SubagentRunState } from "../../core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const articleIcon = symbol("article");
+const errorIcon = symbol("error");
+const historyIcon = symbol("history");
+const visibilityIcon = symbol("visibility");
 
 export interface SubagentStateDisplay {
   /** Sentence case — the jsonl-viewer bans all-caps and Title Case labels. */
   label: string;
   /** What the control that opens its transcript says. */
   openLabel: string;
-  icon: IconType;
+  icon: IconRef;
   variant: BadgeVariant;
   /**
    * Whether the state needs saying out loud on a card.
@@ -40,7 +39,7 @@ export function subagentStateDisplay(
       return {
         label: "Running",
         openLabel: "Watch",
-        icon: MdVisibility,
+        icon: visibilityIcon,
         variant: "info",
         notable: false,
       };
@@ -49,14 +48,14 @@ export function subagentStateDisplay(
         ? {
             label: "Failed",
             openLabel: "View error",
-            icon: MdErrorOutline,
+            icon: errorIcon,
             variant: "destructive",
             notable: false,
           }
         : {
             label: "Finished",
             openLabel: "View report",
-            icon: MdArticle,
+            icon: articleIcon,
             variant: "success",
             notable: false,
           };
@@ -64,7 +63,7 @@ export function subagentStateDisplay(
       return {
         label: "Ended without reporting",
         openLabel: "View transcript",
-        icon: MdHistory,
+        icon: historyIcon,
         variant: "warning",
         notable: true,
       };

@@ -38,6 +38,7 @@
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/loading.Loading`
     - `primitives/undo-redo.localUndoProps`
+    - `ui/icons.Icon`
   - Exports (types): `PlaceProviderContribution`
   - Exports (values):
     - `Place`
@@ -62,6 +63,7 @@
     - `infra/endpoints.defineEndpoint`
     - `page/editor.defineBlock`
     - `primitives/css/text.typeVar`
+    - `ui/icons.symbol`
   - Exports (types):
     - `PlaceData`
     - `PlaceSnapshot`

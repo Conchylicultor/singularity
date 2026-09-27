@@ -1,11 +1,5 @@
 import { useMemo, useState, type ReactElement } from "react";
-import {
-  MdContentCopy,
-  MdDelete,
-  MdRemoveCircleOutline,
-  MdUnfoldLess,
-  MdUnfoldMore,
-} from "react-icons/md";
+
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -21,6 +15,14 @@ import { useBlockHandles } from "../internal/block-handles";
 import { useBlockEditor } from "../block-editor-context";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
 import { blockEntries } from "../internal/block-sections";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const contentCopyIcon = symbol("content-copy");
+const deleteIcon = symbol("delete");
+const doNotDisturbOnIcon = symbol("do-not-disturb-on");
+const unfoldLessIcon = symbol("unfold-less");
+const unfoldMoreIcon = symbol("unfold-more");
 
 /**
  * Per-block actions popover, opened from the gutter drag handle — the ONE rail
@@ -173,7 +175,13 @@ export function BlockActionsMenu({
                 hide the same lines. */}
             {childCount > 1 && (
               <Row
-                icon={block.expanded ? <MdUnfoldLess /> : <MdUnfoldMore />}
+                icon={
+                  block.expanded ? (
+                    <Icon icon={unfoldLessIcon} />
+                  ) : (
+                    <Icon icon={unfoldMoreIcon} />
+                  )
+                }
                 onMouseDown={commit(() => api.setExpanded(!block.expanded))}
               >
                 {block.expanded ? "Collapse" : "Expand"}
@@ -187,7 +195,7 @@ export function BlockActionsMenu({
                 Delete does. A single "delete the container" would conflate them. */}
             {!isScopeRoot && (
               <Row
-                icon={<MdRemoveCircleOutline />}
+                icon={<Icon icon={doNotDisturbOnIcon} />}
                 onMouseDown={commit(() => unwrapBlock(block.id))}
               >
                 {`Remove ${containerName}`}
@@ -235,7 +243,7 @@ export function BlockActionsMenu({
         {/* The popover closes on commit, so the hook's own `copied` flash is
             never seen — the toast is the feedback. */}
         <Row
-          icon={<MdContentCopy />}
+          icon={<Icon icon={contentCopyIcon} />}
           onMouseDown={commit(() => {
             copyBlockId();
             showToast({ description: "Block ID copied" });
@@ -246,7 +254,7 @@ export function BlockActionsMenu({
         {!isScopeRoot && (
           <Row
             className="text-destructive"
-            icon={<MdDelete />}
+            icon={<Icon icon={deleteIcon} />}
             onMouseDown={commit(() => api.remove())}
           >
             Delete

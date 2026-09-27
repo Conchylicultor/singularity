@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
-import { MdCategory } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -11,6 +10,10 @@ import { ConversationArtifacts, type ArtifactKind } from "../slots";
 import { useConversationArtifacts } from "../use-conversation-artifacts";
 import { ArtifactsCloseContext } from "../internal/close-context";
 import { ArtifactsPanel } from "./artifacts-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const categoryIcon = symbol("category");
 
 const LABEL = "Artifacts";
 
@@ -45,7 +48,7 @@ export function ArtifactsButton() {
         disabled
         className="gap-xs"
       >
-        <MdCategory />
+        <Icon icon={categoryIcon} />
       </Button>
     );
   }
@@ -118,7 +121,7 @@ function ArtifactsReady({
         disabled
         className="gap-xs"
       >
-        <MdCategory />
+        <Icon icon={categoryIcon} />
       </Button>
     );
   }
@@ -149,11 +152,11 @@ function ArtifactsReady({
           className="gap-xs"
         >
           {madeKinds.length === 0 ? (
-            <MdCategory />
+            <Icon icon={categoryIcon} />
           ) : (
             <>
               {madeKinds.map(({ kind }) => (
-                <kind.icon key={kind.id} />
+                <Icon icon={kind.icon} key={kind.id} />
               ))}
               <Text variant="count">{count}</Text>
             </>

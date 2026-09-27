@@ -1,10 +1,13 @@
-import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type {
   PlacementChromeProps,
   PlacementDef,
 } from "@plugins/apps-core/plugins/surface/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const fullscreenIcon = symbol("fullscreen");
+const fullscreenExitIcon = symbol("fullscreen-exit");
 
 /**
  * The solo (fullscreen) surface mode: only the focused tab, full-viewport. It
@@ -26,7 +29,7 @@ import type {
 export const soloDef: PlacementDef = {
   id: "solo",
   label: "Fullscreen (solo)",
-  icon: MdFullscreen,
+  icon: fullscreenIcon,
   order: 2,
   frame: "viewport",
   // A single app fills the viewport, so `:root` carries the app's theme (like
@@ -53,7 +56,7 @@ function SoloExitOverlay({ focused, onExit }: PlacementChromeProps) {
     >
       <div className="opacity-0 transition-opacity pointer-events-none group-hover/solo:opacity-100 group-hover/solo:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
         <IconButton
-          icon={MdFullscreenExit}
+          icon={fullscreenExitIcon}
           label="Exit fullscreen (Esc)"
           variant="secondary"
           onClick={onExit}

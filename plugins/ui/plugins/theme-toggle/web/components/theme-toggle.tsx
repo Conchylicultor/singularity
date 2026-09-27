@@ -1,9 +1,12 @@
-import { MdDarkMode } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import {
   useResolvedColorMode,
   useSetColorMode,
 } from "@plugins/ui/plugins/theme-engine/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const darkModeIcon = symbol("dark-mode");
 
 /**
  * Light/dark as a switch inside the theme popover, rather than a second toolbar
@@ -31,7 +34,7 @@ export function ThemeToggle() {
 
   return (
     <ControlPanel.Row
-      icon={<MdDarkMode />}
+      icon={<Icon icon={darkModeIcon} />}
       select="switch"
       checked={dark}
       onSelect={() => setColorMode(dark ? "light" : "dark")}

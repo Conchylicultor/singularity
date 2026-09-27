@@ -1,7 +1,11 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdCheck, MdContentCopy } from "react-icons/md";
 import { useCopyToClipboard } from "./use-copy-to-clipboard";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const contentCopyIcon = symbol("content-copy");
 
 export interface CopyButtonProps {
   text: string;
@@ -36,9 +40,9 @@ export function CopyButton({
       }}
     >
       {copied ? (
-        <MdCheck className={iconClassName} />
+        <Icon icon={checkIcon} className={iconClassName} />
       ) : (
-        <MdContentCopy className={iconClassName} />
+        <Icon icon={contentCopyIcon} className={iconClassName} />
       )}
     </Button>
   );

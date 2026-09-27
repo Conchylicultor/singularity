@@ -1,8 +1,11 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdAdd } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 export function NewChildTaskAction() {
   const { convId } = conversationPane.useParams();
@@ -17,7 +20,7 @@ export function NewChildTaskAction() {
           aria-label="New child task"
           title="New child task"
         >
-          <MdAdd />
+          <Icon icon={addIcon} />
         </Button>
       }
       target={{ kind: "folder", folderTaskId: conversation.taskId }}

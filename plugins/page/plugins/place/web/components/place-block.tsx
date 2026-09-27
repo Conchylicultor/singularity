@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { MdPlace } from "react-icons/md";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {
   Stack,
@@ -28,6 +27,10 @@ import { usePlaceResolve } from "../internal/use-place-resolve";
 import type { PlaceProviderContribution } from "../slots";
 import { PlaceCard } from "./place-card";
 import { PlaceSearch } from "./place-search";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const locationOnIcon = symbol("location-on");
 
 /**
  * Three render states, keyed on `(placeId, name, fetchedAt)` — the place block's
@@ -120,7 +123,8 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
       <Inset x={BLOCK_INSET} y="xs">
         <Card>
           <Line>
-            <MdPlace
+            <Icon
+              icon={locationOnIcon}
               className={cn(rigidClass(), "size-4 text-muted-foreground")}
             />
             <Fill>

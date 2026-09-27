@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdFormatQuote } from "react-icons/md";
 import { defineContainerBlock } from "@plugins/page/plugins/container/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const formatQuoteIcon = symbol("format-quote");
 
 /**
  * A quote is a VOID container: it owns NOTHING but its type.
@@ -33,7 +35,7 @@ export const quoteBlock = defineContainerBlock({
   type: "quote",
   schema: quoteDataSchema,
   label: "Quote",
-  icon: MdFormatQuote,
+  icon: formatQuoteIcon,
   aliases: ["blockquote", "cite", "quotation"],
   empty: () => ({}),
   // Typing `| ` at the start of a line WRAPS that line into a quote, with the

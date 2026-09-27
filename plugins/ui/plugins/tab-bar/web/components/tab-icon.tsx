@@ -1,9 +1,11 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 export interface TabIconProps {
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Optional per-app attention overlay (e.g. a sync-error dot). Pinned to the
    *  icon's top-right corner — the badge component owns its own visuals/size and
    *  renders `null` when there's nothing to surface. */
@@ -31,12 +33,12 @@ export interface TabIconProps {
  * 16px and render at 18.4px, visibly bigger than the `+` and the action-bar
  * buttons sharing the same chrome row.
  */
-export function TabIcon({ icon: Icon, badge: Badge }: TabIconProps) {
-  if (!Icon) return null;
-  if (!Badge) return <Icon className="size-4" />;
+export function TabIcon({ icon, badge: Badge }: TabIconProps) {
+  if (!icon) return null;
+  if (!Badge) return <Icon icon={icon} className="size-4" />;
   return (
     <Center as="span" className="relative">
-      <Icon className="size-4" />
+      <Icon icon={icon} className="size-4" />
       <Pin to="top-right" offset="2xs" outset decorative>
         <Badge />
       </Pin>

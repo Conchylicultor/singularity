@@ -13,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useMemo, useState } from "react";
-import { MdAutoAwesome } from "react-icons/md";
 import {
   resolveLang,
   SHIKI_LANGS,
@@ -42,6 +41,10 @@ import {
 import { codeBlock } from "../../core";
 import { detectLanguage } from "../detect-language";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 // Tri-state language model, all stored in the single optional `language` field:
 //   undefined  → AUTO: detect the language from the content and highlight it
@@ -179,7 +182,8 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                       gap="xs"
                       className={fillClasses("x")}
                     >
-                      <MdAutoAwesome
+                      <Icon
+                        icon={autoAwesomeIcon}
                         className={cn(rigidClass(), "text-muted-foreground")}
                       />
                       <span className="truncate">
@@ -200,7 +204,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                 </SelectTrigger>
                 <SelectContent align="end">
                   <SelectItem value={AUTO}>
-                    <MdAutoAwesome />
+                    <Icon icon={autoAwesomeIcon} />
                     Auto
                   </SelectItem>
                   <SelectItem value={PLAIN}>Plain text</SelectItem>

@@ -5,7 +5,12 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
-import { MdClose, MdDragIndicator } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const dragIndicatorIcon = symbol("drag-indicator");
 
 export interface ControlPanelRuleRowProps {
   /** Leading word of the sentence — "Where", "And", "Sort by", "then by". */
@@ -102,7 +107,7 @@ export function ControlPanelRuleRow({
           handleProps?.className,
         )}
       >
-        {handle ? <MdDragIndicator /> : null}
+        {handle ? <Icon icon={dragIndicatorIcon} /> : null}
       </span>
       <span data-cp-cell="prefix" className="truncate text-muted-foreground">
         {prefix}
@@ -140,7 +145,11 @@ export function ControlPanelRuleRow({
         {actions ? <RowActions pin={null}>{actions}</RowActions> : null}
         {onRemove ? (
           <RowActions pin={null} alwaysVisible>
-            <IconButton icon={MdClose} label={removeLabel} onClick={onRemove} />
+            <IconButton
+              icon={closeIcon}
+              label={removeLabel}
+              onClick={onRemove}
+            />
           </RowActions>
         ) : null}
       </span>

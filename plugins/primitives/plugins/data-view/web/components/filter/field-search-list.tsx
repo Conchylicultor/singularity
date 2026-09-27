@@ -9,7 +9,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
-import { DynamicIcon } from "../../internal/dynamic-icon";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { FieldSections, fieldSearchText } from "../../internal/field-sections";
 
 /**
@@ -71,7 +71,7 @@ export function FieldSearchList<TRow>(props: {
                       key={field.id}
                       size="sm"
                       hover="muted"
-                      icon={icon ? <DynamicIcon icon={icon} /> : undefined}
+                      icon={icon ? <Icon icon={icon} /> : undefined}
                       onClick={() => props.onPick(field.id)}
                     >
                       <span className="truncate">{field.label}</span>

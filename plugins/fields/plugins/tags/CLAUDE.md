@@ -49,6 +49,7 @@ server.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `tagsFieldType`
     - `tagsIdentity`

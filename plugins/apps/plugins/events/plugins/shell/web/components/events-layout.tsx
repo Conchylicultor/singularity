@@ -1,9 +1,12 @@
-import { MdEvent } from "react-icons/md";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Events } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const eventIcon = symbol("event");
 
 /**
  * Events' main-area layout: the app shell wraps the `Events.Sidebar` left rail
@@ -21,7 +24,7 @@ export function EventsLayout() {
       sidebarSlot={Events.Sidebar}
       header={
         <Inline gap="xs">
-          <MdEvent className="icon-auto" />
+          <Icon icon={eventIcon} className="icon-auto" />
           <Text variant="label" className="font-semibold">
             Events
           </Text>

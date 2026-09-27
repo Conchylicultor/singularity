@@ -1,12 +1,13 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdEvent } from "react-icons/md";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { eventsApp } from "../core";
 import { EventsLayout } from "./components/events-layout";
 import { eventsRootPane } from "./panes";
 import { Events } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Events } from "./slots";
 
@@ -16,7 +17,7 @@ export default {
   contributions: [
     Apps.App({
       app: eventsApp,
-      icon: mdAppIcon(MdEvent),
+      icon: appIcon(symbol("event")),
       component: EventsLayout,
     }),
     Pane.Register({ pane: eventsRootPane }),

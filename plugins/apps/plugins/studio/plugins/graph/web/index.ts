@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdHub } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { graphCanvasPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { graphCanvasPane } from "./panes";
 
@@ -14,7 +14,7 @@ export default {
     Studio.Sidebar({
       id: "graph",
       title: "Plugin Graph",
-      icon: MdHub,
+      icon: symbol("hub"),
       onClick: () => openPane(graphCanvasPane, {}, { mode: "root" }),
     }),
   ],

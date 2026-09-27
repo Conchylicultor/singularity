@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdPause, MdPlayArrow } from "react-icons/md";
 import type { LoopCandidate } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import { SoundChannelControl } from "@plugins/apps/plugins/chord/plugins/piano/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -12,6 +11,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const pauseIcon = symbol("pause");
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * The song on screen: the YouTube player (small, 16:9, where the mockup has
@@ -98,7 +102,11 @@ export function SongCard({
             onClick={onTogglePlay}
           >
             <Center as="span" className="size-full">
-              {playing ? <MdPause /> : <MdPlayArrow />}
+              {playing ? (
+                <Icon icon={pauseIcon} />
+              ) : (
+                <Icon icon={playArrowIcon} />
+              )}
             </Center>
           </button>
           <Button variant={checked ? "default" : "outline"} onClick={onNext}>

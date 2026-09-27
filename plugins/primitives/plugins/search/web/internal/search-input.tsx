@@ -10,7 +10,12 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
-import { MdClose, MdSearch } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const searchIcon = symbol("search");
 
 /**
  * How the field is drawn.
@@ -62,7 +67,11 @@ export function SearchInput({
           wrapperClassName,
         )}
       >
-        <MdSearch className={cn("size-5", rigidClass())} aria-hidden />
+        <Icon
+          icon={searchIcon}
+          className={cn("size-5", rigidClass())}
+          aria-hidden
+        />
         <Fill>
           <Input
             className={cn(
@@ -90,7 +99,7 @@ export function SearchInput({
             tabIndex={-1}
             aria-label="Clear filter"
           >
-            <MdClose className="size-4" />
+            <Icon icon={closeIcon} className="size-4" />
           </button>
         ) : (
           <Kbd className={rigidClass()}>/</Kbd>
@@ -108,7 +117,7 @@ export function SearchInput({
         style={{ left: "0.5rem" }}
         className="text-muted-foreground"
       >
-        <MdSearch className="size-3.5" />
+        <Icon icon={searchIcon} className="size-3.5" />
       </Pin>
       <ControlSizeProvider size="sm">
         <Input
@@ -126,7 +135,7 @@ export function SearchInput({
             tabIndex={-1}
             aria-label="Clear filter"
           >
-            <MdClose className="size-3" />
+            <Icon icon={closeIcon} className="size-3" />
           </button>
         </Pin>
       )}

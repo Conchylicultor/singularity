@@ -1,9 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { MdDashboardCustomize } from "react-icons/md";
-import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
+
+import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { prototypesApp } from "../core";
 import { PrototypesLayout } from "./components/prototypes-layout";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -11,7 +12,7 @@ export default {
   contributions: [
     Apps.App({
       app: prototypesApp,
-      icon: mdAppIcon(MdDashboardCustomize),
+      icon: appIcon(symbol("dashboard-customize")),
       component: PrototypesLayout,
     }),
   ],

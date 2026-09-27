@@ -16,6 +16,7 @@
     - `primitives/css/ui-kit.SelectItem`
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
+    - `ui/icons.Icon`
   - Exports (types):
     - `PrepromptItem`
     - `PrepromptSelectProps`

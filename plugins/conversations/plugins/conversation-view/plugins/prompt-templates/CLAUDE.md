@@ -31,6 +31,7 @@
     - `primitives/prompt-editor.PromptEditorSlots`
     - `primitives/usage-rank.recordUsage`
     - `primitives/usage-rank.useUsageOrder`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

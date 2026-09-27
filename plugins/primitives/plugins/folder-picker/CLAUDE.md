@@ -54,6 +54,7 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `ui/icons.Icon`
   - Exports (types):
     - `FolderPickerPopoverProps`
     - `FolderPickerProps`

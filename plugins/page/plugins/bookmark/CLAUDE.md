@@ -30,6 +30,7 @@
     - `primitives/loading.Loading`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/undo-redo.localUndoProps`
+    - `ui/icons.Icon`
   - Exports (values):
     - `BOOKMARK_TYPE`
     - `bookmarkBlock`
@@ -50,6 +51,7 @@
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (types):
     - `LinkMeta`
     - `LinkPreview`

@@ -1,4 +1,3 @@
-import { MdWarning } from "react-icons/md";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
@@ -9,6 +8,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { configOrphans } from "../../shared/endpoints";
 import { configOrphansRoute } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /**
  * Pinned above Settings → Config when some of the user's own saved settings no
@@ -34,7 +37,7 @@ export function StrandedConfigNotice() {
       className="border-b border-warning/30 bg-warning/10 px-md py-sm text-warning"
     >
       <Stack direction="row" gap="sm" align="center" wrap>
-        <MdWarning className={cn("size-4", rigidClass())} />
+        <Icon icon={warningIcon} className={cn("size-4", rigidClass())} />
         <Fill as="span">
           {count === 1
             ? "1 saved setting no longer applies"

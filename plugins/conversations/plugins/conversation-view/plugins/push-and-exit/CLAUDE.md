@@ -33,6 +33,7 @@
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (values): `pushAndExitDelivery`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

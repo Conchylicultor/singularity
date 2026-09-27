@@ -8,7 +8,10 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { ExportsData } from "@plugins/plugin-meta/plugins/facets/plugins/exports/core";
 import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
-import { MdOutput } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const outputIcon = symbol("output");
 
 type ExportRow = {
   plugin: PluginNode;
@@ -82,7 +85,7 @@ function rows(entries: FacetTableEntry[]): ExportRow[] {
 export const exportsFacetTable = defineFacetTable<ExportRow>({
   facetId: "exports",
   label: "Exports",
-  icon: MdOutput,
+  icon: outputIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.name}`,

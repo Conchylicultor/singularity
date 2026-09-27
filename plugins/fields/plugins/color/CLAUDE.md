@@ -21,6 +21,7 @@ read-only table cell and no filter.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `colorFieldType`
     - `colorIdentity`

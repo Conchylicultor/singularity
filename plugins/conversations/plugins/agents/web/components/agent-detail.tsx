@@ -8,7 +8,6 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useMemo, useState } from "react";
-import { MdPlayArrow } from "react-icons/md";
 import {
   useResource,
   ResourceView,
@@ -35,6 +34,10 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 import { agentLaunchesResource, agentRows } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const playArrowIcon = symbol("play-arrow");
 
 type Patch = Partial<{
   name: string;
@@ -210,7 +213,7 @@ function AgentDetailInner({
             disabled={!promptField.value.trim()}
             className="gap-xs"
           >
-            <MdPlayArrow className="size-4" />
+            <Icon icon={playArrowIcon} className="size-4" />
             Launch
           </Button>
         </Stack>

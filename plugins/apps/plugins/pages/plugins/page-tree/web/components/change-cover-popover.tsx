@@ -1,5 +1,4 @@
 import { useRef, useState, type ReactElement } from "react";
-import { MdUpload } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
@@ -11,6 +10,10 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { PageCover } from "@plugins/page/plugins/editor/core";
 import { COVER_GRADIENTS } from "./cover-presets";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const uploadIcon = symbol("upload");
 
 /**
  * The cover chooser: a gradient gallery plus an image upload. Picking either
@@ -111,7 +114,7 @@ export function ChangeCoverPopover({
         <ControlPanel.Row
           disabled={uploading}
           onSelect={() => inputRef.current?.click()}
-          icon={uploading ? <Spinner /> : <MdUpload />}
+          icon={uploading ? <Spinner /> : <Icon icon={uploadIcon} />}
         >
           {uploading ? "Uploading…" : "Upload an image"}
         </ControlPanel.Row>

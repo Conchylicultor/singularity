@@ -15,7 +15,6 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type React from "react";
 import { useId, useState } from "react";
-import { MdClose } from "react-icons/md";
 
 import {
   ConfigFieldAdornmentsProvider,
@@ -23,6 +22,9 @@ import {
   type ConfigFieldAdornments,
 } from "./field-adornments";
 import { FieldRenderer } from "./field-renderer";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 /**
  * THE THRESHOLD, and it lives here because it is a PRESENTATION decision.
@@ -597,7 +599,7 @@ function ListItemMember({
       actions={
         onRemove ? (
           <IconButton
-            icon={MdClose}
+            icon={closeIcon}
             label="Remove"
             onClick={() => onRemove(item.id)}
           />

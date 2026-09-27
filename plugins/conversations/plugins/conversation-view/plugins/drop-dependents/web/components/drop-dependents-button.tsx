@@ -1,4 +1,3 @@
-import { MdDeleteSweep } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversation } from "@plugins/conversations/web";
@@ -6,6 +5,10 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveDependentCount } from "@plugins/tasks/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dropDependents } from "../../shared";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const deleteSweepIcon = symbol("delete-sweep");
 
 export function DropDependentsItem({
   conversation,
@@ -49,7 +52,7 @@ export function DropDependentsItem({
       disabled={disabled}
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
-      <MdDeleteSweep className="size-4" />
+      <Icon icon={deleteSweepIcon} className="size-4" />
       {isPending
         ? "Dropping…"
         : `Drop task + ${dependentCount} dependent(s) & Close`}

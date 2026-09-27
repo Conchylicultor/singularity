@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdLowPriority } from "react-icons/md";
 import { SidebarSources } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { QueueSource } from "./components/sidebar-queue";
 import {
@@ -11,6 +10,7 @@ import {
   AddToQueueAction,
   CloseAction,
 } from "./components/queue-item-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -19,7 +19,7 @@ export default {
     SidebarSources({
       id: "queue",
       title: "Queue",
-      icon: MdLowPriority,
+      icon: symbol("low-priority"),
       order: 5,
       views: ["list"],
       component: QueueSource,

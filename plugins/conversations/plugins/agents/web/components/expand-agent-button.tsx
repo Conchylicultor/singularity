@@ -1,6 +1,11 @@
-import { MdOpenInFull } from "react-icons/md";
-import { PaneIconAction, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneIconAction,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
 import { agentSidePane, agentDetailPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const openInFullIcon = symbol("open-in-full");
 
 export function ExpandAgentButton() {
   const { agentId } = agentSidePane.useParams();
@@ -8,8 +13,10 @@ export function ExpandAgentButton() {
   return (
     <PaneIconAction
       label="Expand"
-      icon={MdOpenInFull}
-      onClick={() => openPane(agentDetailPane, { id: agentId }, { mode: "root" })}
+      icon={openInFullIcon}
+      onClick={() =>
+        openPane(agentDetailPane, { id: agentId }, { mode: "root" })
+      }
     />
   );
 }

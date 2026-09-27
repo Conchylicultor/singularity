@@ -1,5 +1,4 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdAutoFixHigh } from "react-icons/md";
 import {
   useLiveRow,
   type LiveRowResult,
@@ -13,6 +12,10 @@ import {
 } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoFixHighIcon = symbol("auto-fix-high");
 
 /**
  * The run, by id: pending, then found or determinately absent (`found: false`
@@ -77,7 +80,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
     <LaunchAgentPopover
       trigger={
         <Button variant="destructive">
-          <MdAutoFixHigh className="size-4" />
+          <Icon icon={autoFixHighIcon} className="size-4" />
           Launch agent to investigate
         </Button>
       }

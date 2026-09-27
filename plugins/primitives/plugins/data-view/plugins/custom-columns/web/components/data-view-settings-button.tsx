@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { MdAdd, MdDelete } from "react-icons/md";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldIdentity, FieldsRecord } from "@plugins/fields/core";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -16,6 +15,11 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { CustomColumnDef } from "../../core";
 import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const deleteIcon = symbol("delete");
 
 /** Default new-column field type — the string-valued baseline that needs no config. */
 const DEFAULT_TYPE = "text";
@@ -45,8 +49,8 @@ function useCustomColumnTypeOptions(): TypeOption[] {
 
 /** A type option's icon as an element, or nothing when the identity has none. */
 function typeIcon(option: TypeOption | undefined): ReactNode {
-  const Icon = option?.icon;
-  return Icon ? <Icon /> : undefined;
+  const icon = option?.icon;
+  return icon ? <Icon icon={icon} /> : undefined;
 }
 
 /**
@@ -97,7 +101,7 @@ export function CustomColumnsFields({
         );
       })}
       <ControlPanel.Row
-        icon={<MdAdd />}
+        icon={<Icon icon={addIcon} />}
         muted
         onSelect={() =>
           push({
@@ -235,7 +239,7 @@ function NewColumnForm({
       </ControlPanel.Section>
       <ControlPanel.Footer>
         <ControlPanel.Row
-          icon={<MdAdd />}
+          icon={<Icon icon={addIcon} />}
           disabled={name.trim() === ""}
           onSelect={submit}
         >
@@ -314,7 +318,7 @@ function ColumnEditor({
 
       <ControlPanel.Footer>
         <ControlPanel.Row
-          icon={<MdDelete />}
+          icon={<Icon icon={deleteIcon} />}
           tone="danger"
           onSelect={() => onDelete(def.id)}
         >

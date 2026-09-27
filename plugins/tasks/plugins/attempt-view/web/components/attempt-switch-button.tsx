@@ -1,11 +1,14 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { attemptPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const splitscreenIcon = symbol("splitscreen");
 
 export function AttemptSwitchButton() {
   const { convId } = conversationPane.useParams();
@@ -29,7 +32,7 @@ export function AttemptSwitchButton() {
         aria-pressed={isOpen}
         onClick={toggle}
       >
-        <MdSplitscreen />
+        <Icon icon={splitscreenIcon} />
       </Button>
     );
   }
@@ -47,7 +50,7 @@ export function AttemptSwitchButton() {
       onClick={toggle}
       className="gap-xs"
     >
-      <MdSplitscreen />
+      <Icon icon={splitscreenIcon} />
       <Text as="span" variant="count">
         {count}
       </Text>

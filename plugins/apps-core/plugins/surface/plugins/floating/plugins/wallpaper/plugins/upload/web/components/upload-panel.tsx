@@ -1,9 +1,12 @@
 import { useRef } from "react";
-import { MdUpload } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { WallpaperCandidate } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const uploadIcon = symbol("upload");
 
 /**
  * Upload provider Panel: pick a local image file. A hidden `<input type="file">`
@@ -28,7 +31,7 @@ export function UploadPanel({
   return (
     <Stack gap="sm" align="center">
       <Button type="button" onClick={() => inputRef.current?.click()}>
-        <MdUpload className="icon-auto" />
+        <Icon icon={uploadIcon} className="icon-auto" />
         Choose image…
       </Button>
       <Text variant="caption" tone="muted">

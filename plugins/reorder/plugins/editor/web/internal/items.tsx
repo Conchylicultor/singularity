@@ -15,7 +15,6 @@ import {
   type RefObject,
   type ReactNode,
 } from "react";
-import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -24,6 +23,13 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
+const searchIcon = symbol("search");
+const storefrontIcon = symbol("storefront");
 
 // --- Area context ------------------------------------------------------------
 
@@ -226,7 +232,7 @@ function ReorderItemBox({
               onClick={handleHide}
               aria-label="Hide item"
             >
-              <MdClose className="size-2.5" />
+              <Icon icon={closeIcon} className="size-2.5" />
             </button>
           )}
           <div
@@ -332,7 +338,7 @@ export function SpacerReorderItem({
             onClick={handleDelete}
             aria-label="Remove spacer"
           >
-            <MdClose className="size-2.5" />
+            <Icon icon={closeIcon} className="size-2.5" />
           </button>
         </div>
       )}
@@ -365,7 +371,7 @@ export function RestoreButton({
       onOpenChange={setOpen}
       trigger={
         <Button variant="dashed" aria-label="Add items">
-          <MdAdd className="size-3.5" />
+          <Icon icon={addIcon} className="size-3.5" />
           {hasHidden
             ? hiddenItems.length === 1
               ? "1 hidden"
@@ -393,7 +399,7 @@ export function RestoreButton({
                 key={item.key}
                 size="sm"
                 hover="accent"
-                icon={<MdAdd className="text-muted-foreground" />}
+                icon={<Icon icon={addIcon} className="text-muted-foreground" />}
                 onClick={() => {
                   handleRestore(item.key);
                   if (hiddenItems.length <= 1) setOpen(false);
@@ -412,7 +418,7 @@ export function RestoreButton({
                 key={insert.label}
                 size="sm"
                 hover="accent"
-                icon={<MdAdd className="text-muted-foreground" />}
+                icon={<Icon icon={addIcon} className="text-muted-foreground" />}
                 onClick={() => {
                   insert.onInsert();
                   setOpen(false);
@@ -431,7 +437,7 @@ export function RestoreButton({
             // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
             className="text-muted-foreground mb-1.5"
           >
-            <MdStorefront className="size-3.5" />
+            <Icon icon={storefrontIcon} className="size-3.5" />
             <Text as="span" variant="label">
               Marketplace
             </Text>
@@ -444,7 +450,7 @@ export function RestoreButton({
               style={{ left: "0.5rem" }}
               className="size-3.5 text-muted-foreground"
             >
-              <MdSearch className="size-3.5" />
+              <Icon icon={searchIcon} className="size-3.5" />
             </Pin>
             <ControlSizeProvider size="sm">
               <Input
@@ -466,7 +472,7 @@ export function RestoreButton({
         </div>
 
         <div className="p-xs">
-          <Row size="sm" hover="accent" disabled icon={<MdAdd />}>
+          <Row size="sm" hover="accent" disabled icon={<Icon icon={addIcon} />}>
             Create custom plugin
           </Row>
         </div>

@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdDelete, MdRocketLaunch } from "react-icons/md";
 import {
   defineItemActions,
   type ItemActionProps,
@@ -20,6 +19,10 @@ import {
 } from "../../core";
 import { runningOnServer } from "../internal/deploy-runs";
 import { DeleteDeploymentDialog } from "./delete-deployment-dialog";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
+const rocketLaunchIcon = symbol("rocket-launch");
 
 /** Trailing-action slot for the Deployments list rows. */
 export const DeploymentItemActions = defineItemActions<Deployment>();
@@ -103,7 +106,7 @@ export function DeployAction({
   const run = useEndpointMutation(runDeployment);
   return (
     <IconButton
-      icon={MdRocketLaunch}
+      icon={rocketLaunchIcon}
       label="Deploy"
       tooltip={
         blocked ??
@@ -125,7 +128,7 @@ export function DeleteDeploymentAction({
   const remove = useEndpointMutation(deleteDeployment);
   return (
     <IconButton
-      icon={MdDelete}
+      icon={deleteIcon}
       label="Delete deployment"
       disabled={remove.isPending}
       onClick={(e) => {

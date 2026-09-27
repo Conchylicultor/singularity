@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { MdAdd, MdRemove } from "react-icons/md";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -26,6 +25,10 @@ import {
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
 import { STATE_LEGEND } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import { focusSubgraph, toCanvas, type Direction } from "../internal/subgraph";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const removeIcon = symbol("remove");
 
 const DEFAULT_DEPTH = 2;
 const NODE_CAP = 60;
@@ -127,14 +130,14 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
                   Depth
                 </Text>
                 <IconButton
-                  icon={MdRemove}
+                  icon={removeIcon}
                   label="Decrease depth"
                   disabled={depth <= 1}
                   onClick={() => setDepth((d) => Math.max(1, d - 1))}
                 />
                 <Text variant="label">{depth}</Text>
                 <IconButton
-                  icon={MdAdd}
+                  icon={addIcon}
                   label="Increase depth"
                   onClick={() => setDepth((d) => d + 1)}
                 />

@@ -1,6 +1,6 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { MdCheckCircle, MdDeleteForever } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -15,6 +15,10 @@ import {
   standingOf,
 } from "@plugins/tasks/plugins/attempt-work/core";
 import { dropAndExit } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const checkCircleIcon = symbol("check-circle");
+const deleteForeverIcon = symbol("delete-forever");
 
 export function DropAndExitItem({
   conversation,
@@ -98,14 +102,14 @@ export function DropAndExitItem({
     live.status === "done" ||
     live.status === "starting";
 
-  const { Icon, label, variant } = hasWork
+  const { icon, label, variant } = hasWork
     ? {
-        Icon: MdCheckCircle,
+        icon: checkCircleIcon,
         label: isPending ? "Completing…" : "Complete & Close",
         variant: "default" as const,
       }
     : {
-        Icon: MdDeleteForever,
+        icon: deleteForeverIcon,
         label: isPending ? "Dropping…" : "Drop & Close",
         variant: "destructive" as const,
       };
@@ -116,7 +120,7 @@ export function DropAndExitItem({
       disabled={disabled}
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
-      <Icon className="size-4" />
+      <Icon icon={icon} className="size-4" />
       {label}
     </DropdownMenuItem>
   );

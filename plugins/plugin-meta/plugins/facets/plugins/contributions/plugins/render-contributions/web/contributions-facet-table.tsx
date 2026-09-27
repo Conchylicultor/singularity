@@ -9,7 +9,10 @@ import {
   contributionId,
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { MdLayers } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const layersIcon = symbol("layers");
 
 type ContributionRow = {
   /**
@@ -79,7 +82,7 @@ function rows(entries: FacetTableEntry[]): ContributionRow[] {
 export const contributionsFacetTable = defineFacetTable<ContributionRow>({
   facetId: "contributions",
   label: "Contributions",
-  icon: MdLayers,
+  icon: layersIcon,
   columns,
   rows,
   rowKey: (r) => r.key,

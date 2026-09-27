@@ -1,7 +1,10 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactElement, ReactNode } from "react";
-import { MdExpandMore } from "react-icons/md";
 import type { StickyScrollHandle } from "./use-sticky-scroll";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 /**
  * The button only needs the view state + the jump action — never the
@@ -42,7 +45,7 @@ export function JumpToBottomButton({
       aria-label="Jump to bottom"
       className={cn("gap-xs rounded-full", className)}
     >
-      <MdExpandMore className="size-4" />
+      <Icon icon={keyboardArrowDownIcon} className="size-4" />
       {label}
     </Button>
   );

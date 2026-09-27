@@ -1,6 +1,8 @@
 import type { Ref, RefObject } from "react";
-import { MdImage, MdEmojiEmotions } from "react-icons/md";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
@@ -11,14 +13,29 @@ import {
   type Block,
   type PageCover,
 } from "@plugins/page/plugins/editor/core";
-import type { BlockEditorHandle, CaretSurface } from "@plugins/page/plugins/editor/web";
+import type {
+  BlockEditorHandle,
+  CaretSurface,
+} from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  PageIconButton,
+  PageIconPicker,
+  type PageIconValue,
+} from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
 import { PageTitle } from "./page-title";
 import "./page-header.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const imageIcon = symbol("image");
+const moodIcon = symbol("mood");
 
 export function PageHeader({
   pageId,
@@ -36,7 +53,14 @@ export function PageHeader({
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(pages) => {
         const page = pages.find((d) => d.id === pageId);
-        return <PageHeaderInner pageId={pageId} page={page} body={body} titleRef={titleRef} />;
+        return (
+          <PageHeaderInner
+            pageId={pageId}
+            page={page}
+            body={body}
+            titleRef={titleRef}
+          />
+        );
       }}
     </ResourceView>
   );
@@ -79,7 +103,13 @@ function PageHeaderInner({
     if (!page) return;
     await mutateAsync({
       params: { id: pageId },
-      body: { data: { ...pageData(page), icon: next.icon, iconSvgNodes: next.iconSvgNodes } },
+      body: {
+        data: {
+          ...pageData(page),
+          icon: next.icon,
+          iconSvgNodes: next.iconSvgNodes,
+        },
+      },
     });
   };
 
@@ -111,18 +141,14 @@ function PageHeaderInner({
 
       {/* Hover affordance row — only rendered when there's something to add. */}
       {(!hasIcon || !hasCover) && (
-        <Stack
-          direction="row"
-          gap="2xs"
-          className={hoverRevealTarget}
-        >
+        <Stack direction="row" gap="2xs" className={hoverRevealTarget}>
           {!hasIcon && (
             <PageIconPicker
               value={iconValue}
               onChange={saveIcon}
               trigger={
                 <Button variant="ghost" className="text-muted-foreground">
-                  <MdEmojiEmotions />
+                  <Icon icon={moodIcon} />
                   Add icon
                 </Button>
               }
@@ -134,7 +160,7 @@ function PageHeaderInner({
               onPick={saveCover}
               trigger={
                 <Button variant="ghost" className="text-muted-foreground">
-                  <MdImage />
+                  <Icon icon={imageIcon} />
                   Add cover
                 </Button>
               }

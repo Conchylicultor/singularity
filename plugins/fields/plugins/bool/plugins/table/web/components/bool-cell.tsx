@@ -1,12 +1,20 @@
 import type { ReactNode } from "react";
-import { MdCheck, MdRemove } from "react-icons/md";
 import type { TableCellProps } from "@plugins/primitives/plugins/data-view/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const removeIcon = symbol("remove");
 
 /** Read-only boolean cell: a check for truthy, a muted dash otherwise. */
 export function BoolCell(props: TableCellProps): ReactNode {
   return props.value ? (
-    <MdCheck className="text-foreground" aria-label="true" />
+    <Icon icon={checkIcon} className="text-foreground" aria-label="true" />
   ) : (
-    <MdRemove className="text-muted-foreground" aria-label="false" />
+    <Icon
+      icon={removeIcon}
+      className="text-muted-foreground"
+      aria-label="false"
+    />
   );
 }

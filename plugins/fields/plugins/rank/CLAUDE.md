@@ -28,6 +28,7 @@ wire-schema concern a consumer layers on with `@plugins/primitives/rank`'s
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
     - `fields/text.textFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `rankFieldType`
     - `rankIdentity`

@@ -42,6 +42,7 @@
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (values): `queuePane`
 - Core:
   - Uses: `primitives/pane.defineRoute`

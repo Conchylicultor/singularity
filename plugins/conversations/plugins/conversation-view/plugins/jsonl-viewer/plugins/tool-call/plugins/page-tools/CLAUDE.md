@@ -17,6 +17,7 @@
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
+    - `ui/icons.Icon`
   - Exports (types): `PageApplyReport`
   - Exports (values):
     - `PageMarkdown`

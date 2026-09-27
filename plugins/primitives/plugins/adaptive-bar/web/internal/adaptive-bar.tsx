@@ -9,7 +9,6 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { MdMoreHoriz } from "react-icons/md";
 import {
   assign,
   barRung,
@@ -95,6 +94,9 @@ import {
   supportsStatePreservingMove,
 } from "./relocate";
 import { AdaptiveBarYield, yieldFloorPx } from "./bar-yield";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const moreHorizIcon = symbol("more-horiz");
 
 /** What happens to an occupant the row cannot fit. */
 export type AdaptiveBarOverflow =
@@ -1759,7 +1761,7 @@ function AdaptiveBarShell({
               className={rigidClass()}
             >
               <IconButton
-                icon={MdMoreHoriz}
+                icon={moreHorizIcon}
                 label={label}
                 aria-haspopup="dialog"
                 aria-expanded={panelOpen}

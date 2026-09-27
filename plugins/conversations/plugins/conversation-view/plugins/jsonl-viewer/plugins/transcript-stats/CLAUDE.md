@@ -18,6 +18,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/outline/scroll-spy.useActiveInView`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `StatTone`
     - `TranscriptRead`

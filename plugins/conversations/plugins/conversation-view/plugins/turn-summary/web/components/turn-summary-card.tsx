@@ -1,4 +1,3 @@
-import { MdWarning, MdArrowForward } from "react-icons/md";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   CollapsibleChevron,
@@ -11,6 +10,11 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { turnSummaryRows } from "../../shared";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
+const arrowForwardIcon = symbol("arrow-forward");
 
 function parseBullets(text: string): string[] {
   if (!text.trim()) return [];
@@ -100,7 +104,7 @@ export function TurnSummaryCard({
           {caveats.length > 0 && (
             <BulletList
               icon={
-                <MdWarning
+                <Icon icon={warningIcon}
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                   className={cn("mt-0.5 size-3 text-warning", rigidClass())}
                 />
@@ -111,7 +115,7 @@ export function TurnSummaryCard({
           {actions.length > 0 && (
             <BulletList
               icon={
-                <MdArrowForward
+                <Icon icon={arrowForwardIcon}
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                   className={cn("mt-0.5 size-3 text-info", rigidClass())}
                 />

@@ -16,6 +16,7 @@
     - `tasks/task-draft-form.draftInsert`
     - `tasks/task-draft-form.TaskDraftInsert`
     - `tasks/task-draft-form.TaskDraftPopover`
+    - `ui/icons.Icon`
   - Exports (types): `ImproveSegmentContribution`
   - Exports (values):
     - `ImproveSlots`

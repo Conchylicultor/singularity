@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdFlare } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { PianoRollFx } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 import { fxCoreConfig } from "../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -12,13 +12,16 @@ export default {
     PianoRollFx({
       id: "fx-core",
       label: "Note glow & sparks",
-      icon: MdFlare,
+      icon: symbol("flare"),
       tier: "ambient",
       config: fxCoreConfig,
       // Lazy + headless (renders null): keeps this effect's pixi.js off the
       // eager boot wave. Loads inside the already-lazy piano-roll subtree.
       component: lazyComponent(
-        () => import("./internal/fx-core").then((m) => ({ default: m.NoteGlowSparksFx })),
+        () =>
+          import("./internal/fx-core").then((m) => ({
+            default: m.NoteGlowSparksFx,
+          })),
         { fallback: null },
       ),
     }),

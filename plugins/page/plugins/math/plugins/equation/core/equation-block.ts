@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdFunctions } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const functionsIcon = symbol("functions");
 
 export const EQUATION_TYPE = "equation";
 
@@ -8,7 +10,7 @@ export const equationBlock = defineBlock({
   type: EQUATION_TYPE,
   schema: z.object({ expression: z.string().default("") }),
   label: "Equation",
-  icon: MdFunctions,
+  icon: functionsIcon,
   aliases: ["math", "latex", "katex", "formula", "tex", "equation"],
   empty: () => ({ expression: "" }),
   // Markdown: `$$expr`. Reads/writes `expression` (NOT `text`) — the source of the

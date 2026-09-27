@@ -1,10 +1,13 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
-import { MdChevronLeft } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronLeftIcon = symbol("chevron-left");
 
 interface ResizeHandleProps {
   onResize: (dx: number) => void;
@@ -77,7 +80,7 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
           aria-label="Collapse column"
           className={collapseButtonClass}
         >
-          <MdChevronLeft className="size-3" />
+          <Icon icon={chevronLeftIcon} className="size-3" />
         </button>
       )}
     </div>

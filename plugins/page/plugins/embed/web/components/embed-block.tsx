@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { MdOpenInNew, MdSmartDisplay } from "react-icons/md";
 import {
   cn,
   Button,
@@ -19,6 +18,11 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInNewIcon = symbol("open-in-new");
+const smartDisplayIcon = symbol("smart-display");
 
 export function EmbedBlock({ block, editor }: BlockRendererProps) {
   const { url } = embedBlock.parse(block.data);
@@ -57,7 +61,7 @@ function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
           align="center"
           className="text-muted-foreground"
         >
-          <MdSmartDisplay className="size-4" />
+          <Icon icon={smartDisplayIcon} className="size-4" />
           <Text variant="caption" tone="muted">
             Paste a link to embed (YouTube, Vimeo, Spotify, …)
           </Text>
@@ -114,7 +118,7 @@ function FilledEmbedBlock({
           >
             <Inline gap="2xs">
               Open original
-              <MdOpenInNew className="size-3" />
+              <Icon icon={openInNewIcon} className="size-3" />
             </Inline>
           </a>
           {/*

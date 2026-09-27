@@ -14,7 +14,7 @@ export interface CollectedEntry {
 
 export const checkEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/check"), dependsOn: ["plugin-meta/plugins/facets"] },
-  { pluginPath: "apps-core/plugins/app-icon", id: "apps-core.app-icon", loader: () => import("@plugins/apps-core/plugins/app-icon/check"), dependsOn: ["primitives/plugins/icon-picker"] },
+  { pluginPath: "apps-core/plugins/app-icon", id: "apps-core.app-icon", loader: () => import("@plugins/apps-core/plugins/app-icon/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
@@ -96,5 +96,6 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/scope/plugins/dom-scope", id: "primitives.scope.dom-scope", loader: () => import("@plugins/primitives/plugins/scope/plugins/dom-scope/check"), dependsOn: [] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/check"), dependsOn: ["infra/plugins/launcher", "infra/plugins/paths"] },
+  { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/check"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: [] },
 ];

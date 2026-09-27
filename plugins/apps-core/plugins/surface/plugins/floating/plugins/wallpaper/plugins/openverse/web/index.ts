@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdImageSearch } from "react-icons/md";
 import { Wallpaper } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/web";
 import { OpenversePanel } from "./components/openverse-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     Wallpaper.Provider({
       id: "openverse",
       label: "Openverse",
-      icon: MdImageSearch,
+      icon: symbol("image-search"),
       Panel: OpenversePanel,
     }),
   ],

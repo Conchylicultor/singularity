@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MdLink } from "react-icons/md";
 import {
   $getSelection,
   $setSelection,
@@ -17,6 +16,9 @@ import {
   OPEN_LINK_POPOVER_COMMAND,
 } from "@plugins/page/plugins/editor/web";
 import { LinkForm, type LinkFormResult } from "./link-form";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const linkIcon = symbol("link");
 
 /**
  * Inline-link toolbar control. A chain button, active when the selection sits
@@ -100,7 +102,7 @@ export function LinkButton() {
       width="lg"
       trigger={
         <IconButton
-          icon={MdLink}
+          icon={linkIcon}
           label="Link"
           tooltip={
             <Inline gap="xs">

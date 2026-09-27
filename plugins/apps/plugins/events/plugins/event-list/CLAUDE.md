@@ -151,6 +151,7 @@ part of the query key.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values):
     - `EventList`
     - `eventListPane`

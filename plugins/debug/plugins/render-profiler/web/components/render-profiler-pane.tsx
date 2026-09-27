@@ -2,29 +2,48 @@ import {
   Button,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { MdInsights } from "react-icons/md";
-import { useProfilerReport, startSession, stopSession } from "../internal/session";
+import {
+  useProfilerReport,
+  startSession,
+  stopSession,
+} from "../internal/session";
 import { registerExcludedComponent } from "../internal/global-api";
 import { InitiatorRow } from "./initiator-row";
 import { RemountRow } from "./remount-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const insightsIcon = symbol("insights");
 
 const SESSION_MAX_MS = 30_000;
 
 export function RenderProfilerPane() {
   const report = useProfilerReport();
-  const { running, totalCommits, commitsPerSec, durationMs, initiators, remounts } =
-    report;
+  const {
+    running,
+    totalCommits,
+    commitsPerSec,
+    durationMs,
+    initiators,
+    remounts,
+  } = report;
 
   return (
     <Stack gap="none" className="h-full">
       <Inset x="md" y="sm">
         <Stack direction="row" gap="md" align="center" justify="between">
           <Stack direction="row" gap="sm" align="center">
-            <MdInsights className="size-4 text-muted-foreground" />
+            <Icon
+              icon={insightsIcon}
+              className="size-4 text-muted-foreground"
+            />
             <Text variant="subheading">Render Profiler</Text>
           </Stack>
           <ControlSizeProvider size="sm">
@@ -58,9 +77,9 @@ export function RenderProfilerPane() {
         {report.bridgeMissing ? (
           <Inset pad="md">
             <Placeholder tone="error">
-              The React commit bridge isn&apos;t installed (the frontend predates
-              this feature). Run ./singularity build to rebuild index.html, then
-              reload.
+              The React commit bridge isn&apos;t installed (the frontend
+              predates this feature). Run ./singularity build to rebuild
+              index.html, then reload.
             </Placeholder>
           </Inset>
         ) : initiators.length === 0 ? (

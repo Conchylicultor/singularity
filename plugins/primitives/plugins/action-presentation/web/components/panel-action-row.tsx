@@ -1,12 +1,16 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import type { ComponentType, MouseEventHandler } from "react";
+import type { MouseEventHandler } from "react";
 
 export interface PanelActionRowProps {
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
+  /** Draw the icon in its active form (the theme's active fill). */
+  active?: boolean;
   /** The action's name — the visible row text here, the aria-label inline. */
   label: string;
   disabled?: boolean;
@@ -49,7 +53,8 @@ export interface PanelActionRowProps {
  * `research/2026-08-17-global-row-usable-below-icon-button.md`.
  */
 export function PanelActionRow({
-  icon: Icon,
+  icon,
+  active,
   label,
   disabled,
   shortcut,
@@ -57,7 +62,7 @@ export function PanelActionRow({
 }: PanelActionRowProps) {
   return (
     <Row
-      icon={<Icon />}
+      icon={<Icon icon={icon} active={active} />}
       hover="muted"
       onClick={onClick}
       // `disabled` drives `Row`'s element inference as much as `onClick` does:

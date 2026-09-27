@@ -14,6 +14,7 @@
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `shell/notifications.toast`
     - `tasks.useActiveDependentCount`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `conversations.deleteConversation`

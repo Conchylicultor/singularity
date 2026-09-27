@@ -1,18 +1,19 @@
-import type { ComponentType } from "react";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { MdPlaylistAdd, MdNorthEast, MdClose } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { QueuedPromptCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card/web";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const playlistAddIcon = symbol("playlist-add");
+const northEastIcon = symbol("north-east");
+const closeIcon = symbol("close");
 
 type QueueOperationEvent = Extract<JsonlEvent, { kind: "queue-operation" }>;
 
-const OPERATIONS: Record<
-  string,
-  { icon: ComponentType<{ className?: string }>; label: string }
-> = {
-  enqueue: { icon: MdPlaylistAdd, label: "Queued" },
-  dequeue: { icon: MdNorthEast, label: "Sent to agent" },
-  remove: { icon: MdClose, label: "Removed from queue" },
+const OPERATIONS: Record<string, { icon: IconRef; label: string }> = {
+  enqueue: { icon: playlistAddIcon, label: "Queued" },
+  dequeue: { icon: northEastIcon, label: "Sent to agent" },
+  remove: { icon: closeIcon, label: "Removed from queue" },
 };
 
 // Background-task completions are split out into structured `task-notification`
@@ -29,13 +30,16 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
   }
 
   const op = OPERATIONS[e.operation] ?? {
-    icon: MdPlaylistAdd,
+    icon: playlistAddIcon,
     label: e.operation,
   };
-  const Icon = op.icon;
+  const icon = op.icon;
 
   return (
-    <EventLine icon={<Icon className="size-3.5" />} label={op.label}>
+    <EventLine
+      icon={<Icon icon={icon} className="size-3.5" />}
+      label={op.label}
+    >
       {e.content ? <span className="truncate">{e.content}</span> : null}
     </EventLine>
   );

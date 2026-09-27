@@ -21,6 +21,7 @@
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/undo-redo.localUndoProps`
+    - `ui/icons.Icon`
   - Exports (values):
     - `EMBED_TYPE`
     - `embedBlock`
@@ -28,7 +29,9 @@
   - Contributes: `page.block-data` "embed"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/editor.defineBlock`
+  - Uses:
+    - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `EMBED_TYPE`
     - `embedBlock`

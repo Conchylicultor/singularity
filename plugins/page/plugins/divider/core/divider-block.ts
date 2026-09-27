@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdHorizontalRule } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const horizontalRuleIcon = symbol("horizontal-rule");
 
 // Exported as a named const so consumers (e.g. story-core) can map this block
 // type to an IR role without string-duplicating the literal "divider".
@@ -11,7 +13,7 @@ export const dividerBlock = defineBlock({
   // Void block — carries no data; the type discriminator is the whole payload.
   schema: z.object({}),
   label: "Divider",
-  icon: MdHorizontalRule,
+  icon: horizontalRuleIcon,
   aliases: ["hr", "rule", "separator", "line", "horizontal rule", "---"],
   empty: () => ({}),
   // Markdown: `---`. A void type — parseLine returns `{}` (never a `text` key, so

@@ -127,6 +127,7 @@ detail is rendered through `renderIsolated`.
     - `primitives/row-actions.RowActions`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.renderIsolated`
+    - `ui/icons.Icon`
   - Exports (types):
     - `HealthInfo`
     - `HealthReportRow`

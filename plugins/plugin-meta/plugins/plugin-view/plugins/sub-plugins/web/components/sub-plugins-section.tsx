@@ -1,4 +1,3 @@
-import { MdBolt } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   CollapsibleChevron,
@@ -13,6 +12,10 @@ import {
   type PluginNode,
   pluginViewPane,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
 
 /** A leaf plugin has no sub-tree to show — the host then paints no card at all. */
 export function useSubPluginsAvailable({
@@ -79,7 +82,9 @@ function PluginTreeNode({ node, depth }: { node: PluginNode; depth: number }) {
         className="min-h-7"
       >
         <Text>{node.name}</Text>
-        {node.loadBearing && <MdBolt className="size-3 text-warning" />}
+        {node.loadBearing && (
+          <Icon icon={boltIcon} className="size-3 text-warning" />
+        )}
       </Row>
       {expanded &&
         node.children.map((c) => (

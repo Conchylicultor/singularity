@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdAnnouncement } from "react-icons/md";
 import { broadcastsPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { broadcastsPane } from "./panes";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "broadcasts",
       title: "Broadcasts",
-      icon: MdAnnouncement,
+      icon: symbol("feedback"),
       onClick: () => openPane(broadcastsPane, {}, { mode: "root" }),
     }),
   ],

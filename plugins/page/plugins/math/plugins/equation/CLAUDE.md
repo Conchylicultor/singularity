@@ -25,7 +25,9 @@
   - Contributes: `page.block-data` "equation"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/editor.defineBlock`
+  - Uses:
+    - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `EQUATION_TYPE`
     - `equationBlock`

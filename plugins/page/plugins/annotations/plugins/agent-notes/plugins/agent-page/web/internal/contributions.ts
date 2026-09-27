@@ -1,10 +1,12 @@
-import { MdAutoAwesome } from "react-icons/md";
 import type { PageData } from "@plugins/page/plugins/editor/core";
 import type { InsertAction } from "@plugins/page/plugins/editor/web";
 import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
 import { AgentPageCreatorChip } from "../components/agent-page-creator-chip";
 import { turnIntoAgentPage } from "./turn-into-agent-page";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /** An agent-authored page is a `page` row whose data says so. */
 function isAgentAuthoredPage(page: PageData): boolean {
@@ -34,7 +36,7 @@ export const agentPageDecoration: PageReferenceDecorationContribution = {
 export const agentPageInsertAction: InsertAction = {
   id: "agent-page",
   label: "Agent page",
-  icon: MdAutoAwesome,
+  icon: autoAwesomeIcon,
   aliases: ["agent", "agent-page", "agent page", "ai page"],
   after: agentNotesBlock.type,
   run: ({ blockId, text }) => {

@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.useViewportEscape`
     - `shell/action-bar.ActionBar`
+    - `ui/icons.Icon`
   - Exports (types):
     - `PlacementChromeProps`
     - `PlacementDef`

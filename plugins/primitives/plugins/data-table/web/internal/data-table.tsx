@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Fragment, type ReactNode } from "react";
 import {
   cn,
@@ -15,7 +16,6 @@ import {
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { MdArrowDownward, MdArrowUpward, MdUnfoldMore } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -26,6 +26,11 @@ import type {
   DataTableRowDecoration,
 } from "./types";
 import { useDataTable } from "./use-data-table";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const arrowDownwardIcon = symbol("arrow-downward");
+const arrowUpwardIcon = symbol("arrow-upward");
+const unfoldMoreIcon = symbol("unfold-more");
 
 /** No-op decoration hook so `DataTableRow` always calls a hook unconditionally
  *  (rules-of-hooks), whether or not the consumer supplied `useRowDecoration`. */
@@ -541,18 +546,18 @@ function SortIcon({
   active: boolean;
   direction: "asc" | "desc" | null;
 }) {
-  const Icon =
+  const icon =
     direction === "asc"
-      ? MdArrowUpward
+      ? arrowUpwardIcon
       : direction === "desc"
-        ? MdArrowDownward
-        : MdUnfoldMore;
+        ? arrowDownwardIcon
+        : unfoldMoreIcon;
   return (
     <Icon
-      size={12}
+      icon={icon}
       // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline sort-icon offset next to the column header text
       className={cn(
-        "mb-px ml-0.5 inline-block align-middle",
+        "mb-px ml-0.5 inline-block size-3 align-middle",
         active ? "text-foreground" : "text-muted-foreground/40",
       )}
     />

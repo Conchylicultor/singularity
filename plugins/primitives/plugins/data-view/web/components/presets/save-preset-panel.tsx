@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { MdBookmarkAdd } from "react-icons/md";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
   usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const bookmarkAddIcon = symbol("bookmark-add");
 
 /**
  * The pushed "Save as preset" page — a name field over a Save row. Enter submits,
@@ -53,7 +56,7 @@ export function SavePresetPanel({
       </ControlPanel.Section>
       <ControlPanel.Footer>
         <ControlPanel.Row
-          icon={<MdBookmarkAdd />}
+          icon={<Icon icon={bookmarkAddIcon} />}
           disabled={name.trim() === ""}
           onSelect={submit}
         >

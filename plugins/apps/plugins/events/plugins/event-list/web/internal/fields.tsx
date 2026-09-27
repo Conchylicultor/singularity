@@ -1,5 +1,4 @@
 import type { MouseEvent, ReactNode } from "react";
-import { MdOpenInNew } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -13,6 +12,10 @@ import {
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_FIELDS } from "../../core";
 import { formatEventWhen, urlHost } from "./format";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInNewIcon = symbol("open-in-new");
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills
 // and the default table/gallery cell. (Search/filter/sort actually run
@@ -62,7 +65,7 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
       target="_blank"
       rel="noreferrer noopener"
       onClick={(e: MouseEvent) => e.stopPropagation()}
-      icon={<MdOpenInNew />}
+      icon={<Icon icon={openInNewIcon} />}
       colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
       title={href}
     >

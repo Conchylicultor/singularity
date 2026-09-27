@@ -77,6 +77,7 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/tabbed-view.defineTabbedView`
+    - `ui/icons.Icon`
   - Exports (types): `IncidentInfo`
   - Exports (values):
     - `groupIncidents`

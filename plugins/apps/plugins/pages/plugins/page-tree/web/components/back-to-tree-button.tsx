@@ -1,4 +1,3 @@
-import { MdArrowBack } from "react-icons/md";
 import {
   PaneIconAction,
   useOpenPane,
@@ -6,6 +5,9 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { pagesTreePane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const arrowBackIcon = symbol("arrow-back");
 
 /**
  * "Back to the page tree", at the head of the page's own title bar.
@@ -36,7 +38,7 @@ export function BackToTreeButton() {
   return (
     <PaneIconAction
       label="Back to pages"
-      icon={MdArrowBack}
+      icon={arrowBackIcon}
       // `swap`: the page's own column becomes the tree again — the exact
       // inverse of the row activation that put the page here.
       onClick={() => openPane(pagesTreePane, {}, { mode: "swap" })}

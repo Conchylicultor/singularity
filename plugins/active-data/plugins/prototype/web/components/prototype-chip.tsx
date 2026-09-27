@@ -1,10 +1,13 @@
-import { MdDashboardCustomize } from "react-icons/md";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const dashboardCustomizeIcon = symbol("dashboard-customize");
 
 /**
  * A raw `proto-…` id rendered as a chip that opens the mock beside the text.
@@ -57,7 +60,7 @@ export function PrototypeChip({
             openPane(prototypeDetailPane, { name: id }, { mode: "push" });
           }}
           title={`${meta.title} · ${id}`}
-          leading={<MdDashboardCustomize />}
+          leading={<Icon icon={dashboardCustomizeIcon} />}
         >
           {meta.title}
         </LinkChip>

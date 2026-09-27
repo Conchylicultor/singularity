@@ -85,12 +85,15 @@ reachable.
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
     - `primitives/css/row.Row`
+    - `ui/icons.Icon`
   - Exports (values): `todoBlock`
 - Server:
   - Contributes: `page.block-data` "todo"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/annotations.defineAnnotationBlock`
+  - Uses:
+    - `page/annotations.defineAnnotationBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `todoBlock`
     - `todoDataSchema`

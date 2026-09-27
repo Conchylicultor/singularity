@@ -5,7 +5,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useCallback, useMemo } from "react";
-import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -26,6 +25,12 @@ import {
   writeBroadcasts,
   type BroadcastEntry,
 } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const deleteIcon = symbol("delete");
+const refreshIcon = symbol("refresh");
 
 type BroadcastSeverity = BroadcastEntry["severity"];
 type BroadcastCommand = OpKind;
@@ -138,13 +143,13 @@ export function BroadcastsPanel() {
         <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
           <ControlSizeProvider size="sm">
             <IconButton
-              icon={MdRefresh}
+              icon={refreshIcon}
               label="Refresh"
               variant="ghost"
               onClick={() => refetch()}
             />
             <Button className="gap-xs" onClick={() => setShowForm((v) => !v)}>
-              <MdAdd className="size-4" />
+              <Icon icon={addIcon} className="size-4" />
               Add
             </Button>
           </ControlSizeProvider>
@@ -369,7 +374,7 @@ export function BroadcastsPanel() {
                 </Fill>
                 <ControlSizeProvider size="xs">
                   <IconButton
-                    icon={MdDelete}
+                    icon={deleteIcon}
                     label="Delete"
                     variant="ghost"
                     className="text-muted-foreground hover:text-destructive"

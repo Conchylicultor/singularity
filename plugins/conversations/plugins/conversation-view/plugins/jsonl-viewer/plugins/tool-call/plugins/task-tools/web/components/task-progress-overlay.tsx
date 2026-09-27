@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-  MdRadioButtonUnchecked,
-  MdTimelapse,
-  MdCheckCircle,
-  MdCancel,
-  MdStopCircle,
-  MdExpandMore,
-  MdExpandLess,
-  MdClose,
-} from "react-icons/md";
+
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -18,28 +9,52 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
+const timelapseIcon = symbol("timelapse");
+const checkCircleIcon = symbol("check-circle");
+const cancelIcon = symbol("cancel");
+const stopCircleIcon = symbol("stop-circle");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
+const closeIcon = symbol("close");
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "in_progress":
-      return <MdTimelapse className={cn("size-4 text-info", rigidClass())} />;
+      return (
+        <Icon
+          icon={timelapseIcon}
+          className={cn("size-4 text-info", rigidClass())}
+        />
+      );
     case "completed":
       return (
-        <MdCheckCircle className={cn("size-4 text-success", rigidClass())} />
+        <Icon
+          icon={checkCircleIcon}
+          className={cn("size-4 text-success", rigidClass())}
+        />
       );
     case "failed":
       return (
-        <MdCancel className={cn("size-4 text-destructive", rigidClass())} />
+        <Icon
+          icon={cancelIcon}
+          className={cn("size-4 text-destructive", rigidClass())}
+        />
       );
     case "stopped":
       return (
-        <MdStopCircle
+        <Icon
+          icon={stopCircleIcon}
           className={cn("size-4 text-muted-foreground", rigidClass())}
         />
       );
     default:
       return (
-        <MdRadioButtonUnchecked
+        <Icon
+          icon={radioButtonUncheckedIcon}
           className={cn("size-4 text-muted-foreground", rigidClass())}
         />
       );
@@ -107,9 +122,9 @@ export function TaskProgressOverlay() {
                 className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {expanded ? (
-                  <MdExpandMore className="size-4" />
+                  <Icon icon={keyboardArrowDownIcon} className="size-4" />
                 ) : (
-                  <MdExpandLess className="size-4" />
+                  <Icon icon={keyboardArrowUpIcon} className="size-4" />
                 )}
               </button>
               <button
@@ -117,7 +132,7 @@ export function TaskProgressOverlay() {
                 onClick={() => setDismissed(true)}
                 className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <MdClose className="size-4" />
+                <Icon icon={closeIcon} className="size-4" />
               </button>
             </Stack>
           </Stack>

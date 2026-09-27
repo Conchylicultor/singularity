@@ -128,6 +128,7 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.VirtualRows`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CoverContent`
     - `DataCardProps`

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdAdd, MdClose } from "react-icons/md";
 import {
   Button,
   ControlSizeProvider,
@@ -23,6 +22,11 @@ import {
   type EntryPattern,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const closeIcon = symbol("close");
 
 // Compact chip label for an entry pattern: the base's last segment, decorated
 // with the grammar markers so `apps.website.demos`, `apps.website.demos.**`, and
@@ -104,7 +108,7 @@ export function EntryEditor({
                   : "This composition's entry points are committed source — edit core/config.ts and rebuild."
               }
             >
-              <MdAdd />
+              <Icon icon={addIcon} />
               Add
             </Button>
           }
@@ -156,7 +160,7 @@ export function EntryEditor({
                 editable ? (
                   <ControlSizeProvider size="sm">
                     <IconButton
-                      icon={MdClose}
+                      icon={closeIcon}
                       label="Remove entry point"
                       onClick={() => remove(pattern)}
                     />

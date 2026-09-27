@@ -1,10 +1,12 @@
 import type { ReactElement } from "react";
-import { MdClose } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -16,8 +18,14 @@ import { traceDetailPane } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import type { TimelineEvent, TimelineSeverity } from "../../core";
 import { sourceColorClass } from "../internal/view-model";
 import { formatWallclock } from "../internal/ticks";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const SEVERITY_VARIANT: Record<TimelineSeverity, "info" | "warning" | "destructive"> = {
+const closeIcon = symbol("close");
+
+const SEVERITY_VARIANT: Record<
+  TimelineSeverity,
+  "info" | "warning" | "destructive"
+> = {
   info: "info",
   warning: "warning",
   error: "destructive",
@@ -43,7 +51,9 @@ export function DetailStrip({
     <Inset x="md" y="sm" className="border-t bg-muted/50">
       <Stack gap="xs">
         <Line className="gap-sm">
-          <Badge variant={SEVERITY_VARIANT[event.severity]}>{event.severity}</Badge>
+          <Badge variant={SEVERITY_VARIANT[event.severity]}>
+            {event.severity}
+          </Badge>
           <Badge
             variant="muted"
             mono
@@ -55,19 +65,30 @@ export function DetailStrip({
             {event.worktree}
           </Badge>
           <Fill>
-            <Text as="span" variant="caption" className="font-mono font-medium" title={event.label}>
+            <Text
+              as="span"
+              variant="caption"
+              className="font-mono font-medium"
+              title={event.label}
+            >
               {event.label}
             </Text>
           </Fill>
           {traceId !== undefined && (
             <Button
               variant="outline"
-              onClick={() => openPane(traceDetailPane, { id: traceId }, { mode: "push" })}
+              onClick={() =>
+                openPane(traceDetailPane, { id: traceId }, { mode: "push" })
+              }
             >
               Open trace
             </Button>
           )}
-          <IconButton icon={MdClose} label="Close details" onClick={onClose} />
+          <IconButton
+            icon={closeIcon}
+            label="Close details"
+            onClick={onClose}
+          />
         </Line>
         <Text as="div" variant="caption" tone="muted" className="tabular-nums">
           {formatWallclock(event.startMs, { seconds: true })} →{" "}
@@ -76,7 +97,10 @@ export function DetailStrip({
         </Text>
         {hasDetail && (
           <Scroll axis="y" className="max-h-48">
-            <HighlightedCode code={JSON.stringify(event.detail, null, 2)} lang="json" />
+            <HighlightedCode
+              code={JSON.stringify(event.detail, null, 2)}
+              lang="json"
+            />
           </Scroll>
         )}
       </Stack>

@@ -9,7 +9,6 @@
   - Contributes: `Apps.App` "Deploy" → `DeployLayout`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
 - Core:

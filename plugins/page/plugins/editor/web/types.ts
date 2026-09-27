@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ComponentType } from "react";
 import type { InsetSides } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -117,7 +118,7 @@ export interface InsertAction {
   id: string;
   /** The menu row's text, and what the `/` query is matched against first. */
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Extra words the `/` query matches, ranked below `label` matches. */
   aliases?: string[];
   /**

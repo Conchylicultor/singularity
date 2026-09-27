@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   defineSlot,
   type SealContributions,
@@ -137,7 +138,7 @@ export interface DataViewControlContribution {
   /** The control's name: trigger tooltip + accessible name, compact-fold row
    *  label, and the back-header title of a panel pushed from it. */
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Reading order in the toolbar (ascending; default 0). */
   order?: number;
   /** Width ROLE of this control's panel — `menu` for a list of choices,

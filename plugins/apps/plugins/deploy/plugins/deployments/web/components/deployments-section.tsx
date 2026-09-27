@@ -1,5 +1,4 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
-import { MdAdd } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -34,6 +33,10 @@ import { Deployments } from "../slots";
 import { DeploymentItemActions } from "./deployment-item-actions";
 import { AddDeploymentDialog } from "./add-deployment-dialog";
 import { RunCell, RunFailureNotice } from "./run-cell";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
 
@@ -172,7 +175,7 @@ function DeploymentsBody({
     {
       id: "add",
       label: "Add deployment",
-      icon: <MdAdd />,
+      icon: <Icon icon={addIcon} />,
       onSelect: () => {
         // Fire-and-forget: awaiting `openDialog` would hold the toolbar's busy
         // flag for the dialog's whole open lifetime.

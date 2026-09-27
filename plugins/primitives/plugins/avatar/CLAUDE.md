@@ -115,6 +115,7 @@ color palette.
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/icon-picker.IconPicker`
     - `primitives/icon-picker.SvgIcon`
+    - `ui/icons.Icon`
   - Exports (types):
     - `AvatarColorPick`
     - `AvatarPickerProps`

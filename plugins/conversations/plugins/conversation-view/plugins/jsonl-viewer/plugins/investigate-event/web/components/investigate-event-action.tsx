@@ -1,10 +1,13 @@
-import { MdAutoAwesome } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
 import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { rowActionClass } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * One row action, gated entirely on the dispatch outcome: it renders iff the
@@ -37,7 +40,7 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
           aria-label="Launch agent to add a renderer"
           onClick={(e) => e.stopPropagation()}
         >
-          <MdAutoAwesome className="size-3" />
+          <Icon icon={autoAwesomeIcon} className="size-3" />
         </button>
       }
       getRequest={(userText) => {

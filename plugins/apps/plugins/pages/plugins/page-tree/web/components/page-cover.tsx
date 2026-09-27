@@ -1,11 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  MdSwapVert,
-  MdImage,
-  MdDelete,
-  MdCheck,
-  MdClose,
-} from "react-icons/md";
+
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -29,6 +23,14 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { gradientCss } from "./cover-presets";
 import { ChangeCoverPopover } from "./change-cover-popover";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const swapVertIcon = symbol("swap-vert");
+const imageIcon = symbol("image");
+const deleteIcon = symbol("delete");
+const checkIcon = symbol("check");
+const closeIcon = symbol("close");
 
 /**
  * The page cover band, full-bleed above the content column. Renders nothing
@@ -102,7 +104,7 @@ function FilledCover({
               onPick={onPick}
               trigger={
                 <Button variant="secondary">
-                  <MdImage />
+                  <Icon icon={imageIcon} />
                   Change cover
                 </Button>
               }
@@ -112,12 +114,12 @@ function FilledCover({
                 variant="secondary"
                 onClick={() => setRepositioning(true)}
               >
-                <MdSwapVert />
+                <Icon icon={swapVertIcon} />
                 Reposition
               </Button>
             )}
             <IconButton
-              icon={MdDelete}
+              icon={deleteIcon}
               label="Remove cover"
               variant="secondary"
               onClick={() => void onSave(null)}
@@ -231,11 +233,11 @@ function CoverImage({
           <Pin to="bottom-right" offset="md">
             <Stack direction="row" gap="xs">
               <Button variant="secondary" onClick={cancel}>
-                <MdClose />
+                <Icon icon={closeIcon} />
                 Cancel
               </Button>
               <Button variant="default" onClick={() => void save()}>
-                <MdCheck />
+                <Icon icon={checkIcon} />
                 Save
               </Button>
             </Stack>

@@ -225,7 +225,9 @@ second rendering path here (the step deferred in
   - Contributes: `page.block-data` "context"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/annotations.defineAnnotationBlock`
+  - Uses:
+    - `page/annotations.defineAnnotationBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `humanNotesBlock`
     - `humanNotesDataSchema`

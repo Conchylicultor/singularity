@@ -41,6 +41,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
     - `primitives/loading.Loading`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
   - Uses:

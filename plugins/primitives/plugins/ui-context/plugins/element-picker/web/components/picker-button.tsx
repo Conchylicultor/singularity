@@ -1,4 +1,3 @@
-import { MdAdsClick } from "react-icons/md";
 import {
   IconButton,
   type IconButtonProps,
@@ -6,6 +5,9 @@ import {
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPicker } from "./element-picker";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const adsClickIcon = symbol("ads-click");
 
 /**
  * The bare "pick a UI element" affordance: an icon button that arms the
@@ -37,7 +39,7 @@ export function PickerButton({
         // test for that (the e2e picks it every run). Do not "fix" a failed pick
         // here by dropping `disabled` — the bug would be in resolve-target.ts.
         <IconButton
-          icon={MdAdsClick}
+          icon={adsClickIcon}
           label={label}
           tooltip={<TooltipDoc title={label}>{description}</TooltipDoc>}
           variant={variant}

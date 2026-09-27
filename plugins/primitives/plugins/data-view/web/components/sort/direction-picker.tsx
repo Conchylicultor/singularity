@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdArrowDownward, MdArrowUpward } from "react-icons/md";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,6 +6,11 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowDownwardIcon = symbol("arrow-downward");
+const arrowUpwardIcon = symbol("arrow-upward");
 
 /**
  * Dropdown of the two sort directions. The trigger shows the current direction's
@@ -29,18 +33,24 @@ export function DirectionPicker(props: {
         render={
           <ControlPanel.Field
             aria-label="Sort direction"
-            icon={asc ? <MdArrowUpward /> : <MdArrowDownward />}
+            icon={
+              asc ? (
+                <Icon icon={arrowUpwardIcon} />
+              ) : (
+                <Icon icon={arrowDownwardIcon} />
+              )
+            }
             label={asc ? labels.asc : labels.desc}
           />
         }
       />
       <DropdownMenuContent align="start">
         <DropdownMenuItem onClick={() => props.onChange("asc")}>
-          <MdArrowUpward />
+          <Icon icon={arrowUpwardIcon} />
           {labels.asc}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => props.onChange("desc")}>
-          <MdArrowDownward />
+          <Icon icon={arrowDownwardIcon} />
           {labels.desc}
         </DropdownMenuItem>
       </DropdownMenuContent>

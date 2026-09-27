@@ -37,7 +37,9 @@ rule — not a reason to re-add a local `onKeyDown`.
   - Contributes: `page.block-data` "divider"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/editor.defineBlock`
+  - Uses:
+    - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `DIVIDER_TYPE`
     - `dividerBlock`

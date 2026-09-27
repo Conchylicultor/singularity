@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -14,7 +14,7 @@ export interface ViewTypeMeta {
    *  reference it via `ViewInstance.type`. */
   type: string;
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   order?: number;
   /** This view requires the host's hierarchy; the host drops it when absent. */
   hierarchical?: boolean;
@@ -78,7 +78,7 @@ export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
   id?: string;
   /** Add-menu group label; omitted for the implicit source (flat menu). */
   title?: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   contributions: SealContributions<T>[];
   hasHierarchy: boolean;
   /** Type whitelist for the add menu (gates addability, NOT authored rows —
@@ -92,7 +92,7 @@ export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
 export interface AddableViewType {
   type: string;
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
 }
 
 /** One add-menu group: the addable view-types of one source entry. A surface
@@ -102,7 +102,7 @@ export interface AddableSource {
   sourceId?: string;
   /** Menu group label; absent only for the implicit sole source. */
   title?: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Per entry: contributions ∩ `views` whitelist ∩ hierarchical gate. */
   types: AddableViewType[];
 }

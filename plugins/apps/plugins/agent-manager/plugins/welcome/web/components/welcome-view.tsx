@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdArrowForward } from "react-icons/md";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -15,6 +14,10 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const arrowForwardIcon = symbol("arrow-forward");
 
 export function WelcomeView() {
   const conv = useConversations();
@@ -145,7 +148,7 @@ function RecentConversations({
                   className="text-3xs text-muted-foreground"
                 />
               </Stack>
-              <MdArrowForward
+              <Icon icon={arrowForwardIcon}
                 className={cn(
                   "size-3.5 text-muted-foreground/50",
                   rigidClass(),

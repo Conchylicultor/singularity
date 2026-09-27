@@ -71,7 +71,6 @@ hover.
     - `ThemeEngine.SubTheme` "equin document"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `apps/deploy/analytics/collect.AnalyticsTracker`
     - `layouts/full-pane.FullPane`
     - `primitives/css/cluster.Cluster`
@@ -95,6 +94,7 @@ hover.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types): `WebsiteBandRhythm`
   - Exports (values):

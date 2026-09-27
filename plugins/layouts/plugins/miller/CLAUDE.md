@@ -147,6 +147,7 @@ not yet supported — see the open question in
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/ui-context.UiRegion`
+    - `ui/icons.Icon`
   - Exports (values):
     - `MillerColumns`
     - `PaneOverlayHost`

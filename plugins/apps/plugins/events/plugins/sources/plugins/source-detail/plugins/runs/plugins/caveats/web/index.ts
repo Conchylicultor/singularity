@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdWarningAmber } from "react-icons/md";
 import { EventSourceRunDetail } from "@plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/web";
 import {
   CaveatsSection,
   useCaveatsAvailable,
 } from "./components/caveats-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -13,7 +13,7 @@ export default {
     EventSourceRunDetail.Section({
       id: "caveats",
       label: "Extraction caveats",
-      icon: MdWarningAmber,
+      icon: symbol("warning"),
       component: CaveatsSection,
       // Loading is not emptiness: the card must exist while the fetch is in
       // flight, or it would pop in after the run resolves.

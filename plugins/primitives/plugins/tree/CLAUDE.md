@@ -158,6 +158,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/search.SearchInput`
     - `primitives/slot-render.renderIsolated`
     - `primitives/virtual-rows.VirtualRows`
+    - `ui/icons.Icon`
   - Exports (types):
     - `FlatExpandAll`
     - `RenameInputProps`

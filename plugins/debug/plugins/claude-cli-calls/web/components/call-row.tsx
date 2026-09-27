@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { ClaudeCliCallDetail } from "@plugins/infra/plugins/claude-cli/web";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
@@ -11,6 +10,11 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
   const { open, triggerProps, contentId } = useCollapsible();
@@ -33,9 +37,9 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line */}
         <span className="mt-0.5 text-muted-foreground">
           {open ? (
-            <MdExpandLess className="size-4" />
+            <Icon icon={keyboardArrowUpIcon} className="size-4" />
           ) : (
-            <MdExpandMore className="size-4" />
+            <Icon icon={keyboardArrowDownIcon} className="size-4" />
           )}
         </span>
         <Stack as={Fill} gap="xs">

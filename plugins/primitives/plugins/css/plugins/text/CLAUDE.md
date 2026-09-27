@@ -590,6 +590,7 @@ to reconcile them; they never needed reconciling.
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/icons`
     - `ui/tokens/shadow`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`

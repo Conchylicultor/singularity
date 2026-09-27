@@ -1,10 +1,10 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
 export interface CommandPaletteItem {
   id: string;
   label: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Display-only shortcut badge, e.g. "⌘B" */
   shortcut?: string;
   /** Extra fuzzy-match targets beyond the label */

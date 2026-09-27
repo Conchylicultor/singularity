@@ -8,7 +8,10 @@ import type {
   DbSchemaFacetData,
   DbSchemaTableRow,
 } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
-import { MdTableChart } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const tableChartIcon = symbol("table-chart");
 
 const columns: ColumnDef<DbSchemaTableRow>[] = [
   {
@@ -41,7 +44,11 @@ function rows(entries: FacetTableEntry[]): DbSchemaTableRow[] {
   for (const entry of entries) {
     const data = entry.data as DbSchemaFacetData;
     for (const t of data.tables) {
-      result.push({ pluginId: entry.node.id, name: t.name, varName: t.varName });
+      result.push({
+        pluginId: entry.node.id,
+        name: t.name,
+        varName: t.varName,
+      });
     }
   }
   return result;
@@ -50,7 +57,7 @@ function rows(entries: FacetTableEntry[]): DbSchemaTableRow[] {
 export const dbSchemaFacetTable = defineFacetTable<DbSchemaTableRow>({
   facetId: "db-schema",
   label: "Tables",
-  icon: MdTableChart,
+  icon: tableChartIcon,
   columns,
   rows,
   rowKey: (r) => `${r.pluginId}:${r.name}`,

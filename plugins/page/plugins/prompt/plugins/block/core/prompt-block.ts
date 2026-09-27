@@ -1,8 +1,10 @@
-import { MdAutoAwesome } from "react-icons/md";
 import {
   defineBlock,
   textBlockSchema,
 } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 // The block IS the prompt: its payload is plain text-bearing block data, with no
 // extra fields. In particular it stores NO task ids — the tasks a block launched
@@ -14,7 +16,7 @@ export const promptBlock = defineBlock({
   type: "prompt",
   schema: promptDataSchema,
   label: "Prompt",
-  icon: MdAutoAwesome,
+  icon: autoAwesomeIcon,
   aliases: ["agent", "ask", "launch", "claude", "ai"],
   empty: () => ({ text: [] }),
   placeholder: "Ask an agent…",

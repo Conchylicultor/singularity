@@ -2,10 +2,8 @@ import {
   useCallback,
   useMemo,
   useState,
-  type ComponentType,
   type ReactNode,
 } from "react";
-import { MdFullscreen, MdOpenInNew, MdTab, MdWebAsset } from "react-icons/md";
 import {
   Button,
   DropdownMenu,
@@ -31,6 +29,13 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 import { presentPath } from "../panes";
 import { BrowserTabOpener, frameTarget } from "./frame-link";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const fullscreenIcon = symbol("fullscreen");
+const openInNewIcon = symbol("open-in-new");
+const tabIcon = symbol("tab");
+const webAssetIcon = symbol("web-asset");
 
 /**
  * "Present" — one frame's menu of the ways to see it without the app around
@@ -86,12 +91,12 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
             />
           }
         >
-          <MdFullscreen />
+          <Icon icon={fullscreenIcon} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuSection label="Present">
             <PresentRow
-              icon={MdTab}
+              icon={tabIcon}
               label="In this app tab"
               hint="The tab bar stays, so you can switch tabs."
               onClick={() => present("surface")}
@@ -110,14 +115,14 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
               }
             />
             <PresentRow
-              icon={MdWebAsset}
+              icon={webAssetIcon}
               label="In this browser tab"
               hint="Nothing but the frame."
               onClick={() => present("viewport")}
               newTab={<NewBrowserTabItem frame={frame} meta={meta} />}
             />
             <PresentRow
-              icon={MdFullscreen}
+              icon={fullscreenIcon}
               label="Full screen"
               shortcut="F"
               onClick={() => present("screen")}
@@ -146,14 +151,14 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
  * an optional trailing "open it in a new tab" item beside it.
  */
 function PresentRow({
-  icon: Icon,
+  icon,
   label,
   hint,
   shortcut,
   onClick,
   newTab,
 }: {
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   label: string;
   hint?: string;
   shortcut?: string;
@@ -168,7 +173,7 @@ function PresentRow({
         disabled={onClick === undefined}
         className={fillClasses("x")}
       >
-        <Icon className="size-4 text-muted-foreground" />
+        <Icon icon={icon} className="size-4 text-muted-foreground" />
         <Stack gap="none" className={fillClasses("x")}>
           <Text>{label}</Text>
           {hint !== undefined ? (
@@ -202,7 +207,7 @@ function NewTabItem({
       onClick={open}
       className="w-auto"
     >
-      <MdOpenInNew className="size-4" />
+      <Icon icon={openInNewIcon} className="size-4" />
     </DropdownMenuItem>
   );
 }

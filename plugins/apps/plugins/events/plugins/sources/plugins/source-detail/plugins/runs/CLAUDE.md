@@ -76,6 +76,7 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values):
     - `EventSourceRunDetail`
     - `eventSourceRunPane`

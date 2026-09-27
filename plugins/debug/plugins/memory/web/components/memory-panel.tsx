@@ -9,7 +9,6 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { MdRefresh } from "react-icons/md";
 import {
   Badge,
   formatStatusLabel,
@@ -25,6 +24,9 @@ import {
   useEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const refreshIcon = symbol("refresh");
 
 type MemoryFile = {
   name: string;
@@ -106,7 +108,7 @@ export function MemoryPanel() {
           </SectionLabel>
           <ControlSizeProvider size="xs">
             <IconButton
-              icon={MdRefresh}
+              icon={refreshIcon}
               label="Refresh"
               variant="ghost"
               onClick={() => void listQuery.refetch()}

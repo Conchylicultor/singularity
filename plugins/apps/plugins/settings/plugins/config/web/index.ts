@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdTune } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";
 import { Settings } from "@plugins/apps/plugins/settings/plugins/shell/web";
 import { settingsConfigIndexPane } from "./panes";
 import { ConfigConflictDot } from "./components/config-conflict-dot";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
     Settings.Sidebar({
       id: "config",
       title: "Config",
-      icon: MdTune,
+      icon: symbol("tune"),
       onClick: () => openPane(configNavPane, {}, { mode: "root" }),
       badge: ConfigConflictDot,
     }),

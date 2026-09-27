@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdDescription } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
@@ -11,6 +10,7 @@ import {
 import { DeletePageAction } from "./components/delete-page-action";
 import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { PageDetail, PageTree } from "./slots";
 export { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
@@ -36,7 +36,7 @@ export default {
     Pages.Sidebar({
       id: "pages",
       title: "Pages",
-      icon: MdDescription,
+      icon: symbol("description"),
       component: PagesSidebar,
     }),
     PageDetail.Section({

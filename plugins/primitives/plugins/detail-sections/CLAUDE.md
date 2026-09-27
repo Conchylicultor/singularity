@@ -89,6 +89,7 @@ DataView dropped in is inset once, by the card. See `data-view/CLAUDE.md`
     - `primitives/section-card.SectionCard`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `DetailSection`
     - `DetailSections`

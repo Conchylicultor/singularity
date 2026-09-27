@@ -1,8 +1,10 @@
-import { MdSettings } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useOpenConfig } from "../internal/use-open-config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const settingsIcon = symbol("settings");
 
 export interface ConfigGearButtonProps {
   descriptor: ConfigDescriptor;
@@ -17,7 +19,7 @@ export function ConfigGearButton({ descriptor, label }: ConfigGearButtonProps) {
   return (
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={MdSettings}
+        icon={settingsIcon}
         label={label ?? "Open settings"}
         onClick={(e) => {
           e.stopPropagation();

@@ -1,3 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -105,7 +107,7 @@ function buildGraph(
 
   const nodes: GraphCanvasNode[] = closure.map((task) => {
     const meta = STATUS_META[task.status];
-    const Icon = meta.icon;
+    const icon = meta.icon;
     const selected = task.id === selectedId;
     const isTerminal = isSettled(task.status);
     const hasChildren = childIds.has(task.id);
@@ -117,8 +119,12 @@ function buildGraph(
       ringClass: selected ? "border-primary ring-primary/30 ring-2" : null,
       labelClassName:
         task.status === "dropped" ? cn("italic line-through") : null,
-      // eslint-disable-next-line layout/no-adhoc-layout -- rigid status icon in the graph node's leading slot (graph-canvas owns the row); must never shrink
-      leading: <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />,
+      leading: (
+        <Icon
+          icon={icon}
+          className={cn("size-4", rigidClass(), meta.iconClassName)}
+        />
+      ),
       connectable: true,
       actions: hasChildren ? undefined : <DeleteTaskButton taskId={task.id} />,
     };

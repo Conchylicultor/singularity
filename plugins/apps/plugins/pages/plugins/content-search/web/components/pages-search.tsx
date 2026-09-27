@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { MdSearch } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { QuickFindDialog } from "@plugins/search/plugins/quick-find/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const searchIcon = symbol("search");
 
 /**
  * Sidebar "Search" trigger: a Row that opens the reusable QuickFindDialog scoped
@@ -19,7 +22,7 @@ export function PagesSearch() {
   return (
     <>
       <div className="px-xs pt-xs">
-        <Row icon={<MdSearch />} onClick={() => setOpen(true)}>
+        <Row icon={<Icon icon={searchIcon} />} onClick={() => setOpen(true)}>
           Search
         </Row>
       </div>

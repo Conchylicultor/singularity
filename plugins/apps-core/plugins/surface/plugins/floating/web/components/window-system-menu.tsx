@@ -1,17 +1,4 @@
 import {
-  MdAdd,
-  MdAspectRatio,
-  MdCallSplit,
-  MdClose,
-  MdCropSquare,
-  MdDesktopWindows,
-  MdFilterNone,
-  MdOpenWith,
-  MdPushPin,
-  MdRemove,
-  MdWebAsset,
-} from "react-icons/md";
-import {
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -30,6 +17,20 @@ import type {
   Geometry,
   WindowId,
 } from "../hooks/use-floating-windows";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const aspectRatioIcon = symbol("aspect-ratio");
+const callSplitIcon = symbol("call-split");
+const closeIcon = symbol("close");
+const cropSquareIcon = symbol("crop-square");
+const desktopWindowsIcon = symbol("desktop-windows");
+const filterNoneIcon = symbol("filter-none");
+const openWithIcon = symbol("open-with");
+const keepIcon = symbol("keep");
+const removeIcon = symbol("remove");
+const webAssetIcon = symbol("web-asset");
 
 /** A merge target offered in the "Merge into ▸" submenu (another open window). */
 export interface MergeTarget {
@@ -110,31 +111,31 @@ export function WindowSystemMenu({
   return (
     <CursorAnchoredMenu anchor={anchor} onClose={onClose}>
       <DropdownMenuItem disabled={!snapped} onClick={onRestore}>
-        <MdFilterNone />
+        <Icon icon={filterNoneIcon} />
         Restore
       </DropdownMenuItem>
       <DropdownMenuItem disabled={maximized} onClick={onMove}>
-        <MdOpenWith />
+        <Icon icon={openWithIcon} />
         Move
       </DropdownMenuItem>
       <DropdownMenuItem disabled={maximized} onClick={onSize}>
-        <MdAspectRatio />
+        <Icon icon={aspectRatioIcon} />
         Size
       </DropdownMenuItem>
       <DropdownMenuItem onClick={onMinimize}>
-        <MdRemove />
+        <Icon icon={removeIcon} />
         Minimize
         <DropdownMenuShortcut>
           {formatShortcutLabel("mod+m")}
         </DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuItem disabled={maximized} onClick={onMaximize}>
-        <MdCropSquare />
+        <Icon icon={cropSquareIcon} />
         Maximize
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuCheckboxItem checked={geo.pinned} onClick={onTogglePin}>
-        <MdPushPin />
+        <Icon icon={keepIcon} />
         Always on top
         <DropdownMenuShortcut>
           {formatShortcutLabel(TOGGLE_PIN_SHORTCUT)}
@@ -147,7 +148,7 @@ export function WindowSystemMenu({
       {mergeTargets.length > 0 && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <MdWebAsset />
+            <Icon icon={webAssetIcon} />
             Merge into
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
@@ -156,7 +157,7 @@ export function WindowSystemMenu({
                 key={target.id}
                 onClick={() => onMergeInto(target.id)}
               >
-                <MdWebAsset />
+                <Icon icon={webAssetIcon} />
                 {target.title}
               </DropdownMenuItem>
             ))}
@@ -164,7 +165,7 @@ export function WindowSystemMenu({
         </DropdownMenuSub>
       )}
       <DropdownMenuItem disabled={!canSplit} onClick={onSplit}>
-        <MdCallSplit />
+        <Icon icon={callSplitIcon} />
         Move tab to new window
       </DropdownMenuItem>
       <DropdownMenuSeparator />
@@ -172,7 +173,7 @@ export function WindowSystemMenu({
           current desktop is checked + disabled; "New desktop" mints + moves. */}
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
-          <MdDesktopWindows />
+          <Icon icon={desktopWindowsIcon} />
           Move to desktop
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
@@ -183,13 +184,13 @@ export function WindowSystemMenu({
               disabled={desktop.id === currentDesktopId}
               onClick={() => onMoveToDesktop(desktop.id)}
             >
-              <MdDesktopWindows />
+              <Icon icon={desktopWindowsIcon} />
               {`Desktop ${index + 1}`}
             </DropdownMenuCheckboxItem>
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onMoveToNewDesktop}>
-            <MdAdd />
+            <Icon icon={addIcon} />
             New desktop
           </DropdownMenuItem>
         </DropdownMenuSubContent>
@@ -198,7 +199,7 @@ export function WindowSystemMenu({
       {/* Closes the WHOLE window (every member); per-tab close is the chip ×
           and the `mod+w` shortcut, which act on the active member alone. */}
       <DropdownMenuItem variant="destructive" onClick={onCloseWindow}>
-        <MdClose />
+        <Icon icon={closeIcon} />
         Close window
       </DropdownMenuItem>
     </CursorAnchoredMenu>

@@ -1,9 +1,7 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /**
  * The source-type registry, web half (collection-consumer). The `+` menu and the
@@ -30,7 +28,7 @@ export const EventSources = {
   Type: defineSlot<{
     id: string;
     label: string;
-    icon?: IconType;
+    icon?: IconRef;
     configFields: FieldsRecord;
     /**
      * The page one configured source of this type stands for, read off its stored

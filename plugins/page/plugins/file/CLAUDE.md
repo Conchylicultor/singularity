@@ -24,6 +24,7 @@
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/text-editor/paste-images.attachmentUrl`
+    - `ui/icons.Icon`
   - Exports (values):
     - `FILE_TYPE`
     - `fileBlock`
@@ -31,7 +32,9 @@
   - Contributes: `page.block-data` "file"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/editor.defineBlock`
+  - Uses:
+    - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `FILE_TYPE`
     - `fileBlock`

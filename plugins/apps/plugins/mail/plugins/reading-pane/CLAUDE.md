@@ -96,6 +96,7 @@ parses MIME or HTML itself.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values): `threadPane`
 - Server:
   - Contributes:

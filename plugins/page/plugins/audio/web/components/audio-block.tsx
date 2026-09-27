@@ -1,4 +1,3 @@
-import { MdAudiotrack, MdSwapHoriz } from "react-icons/md";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -10,6 +9,11 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { audioBlock } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
+const swapHorizIcon = symbol("swap-horiz");
 
 export function AudioBlock({ block, isFocused, editor }: BlockRendererProps) {
   const { attachmentId } = audioBlock.parse(block.data);
@@ -19,7 +23,7 @@ export function AudioBlock({ block, isFocused, editor }: BlockRendererProps) {
       <AttachmentUpload
         accept="audio/*"
         label="Add audio — click, drop, or paste"
-        icon={MdAudiotrack}
+        icon={musicNoteIcon}
         isFocused={isFocused}
         onUploaded={(res) =>
           editor.update({
@@ -47,7 +51,7 @@ export function AudioBlock({ block, isFocused, editor }: BlockRendererProps) {
             )}
           >
             <Center className="size-full">
-              <MdSwapHoriz className="size-4" />
+              <Icon icon={swapHorizIcon} className="size-4" />
             </Center>
           </button>
         </Pin>

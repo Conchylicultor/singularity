@@ -1,7 +1,10 @@
-import { MdSchedule } from "react-icons/md";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const scheduleIcon = symbol("schedule");
 
 /**
  * The one canonical appearance for a queued prompt — a message the user typed
@@ -28,7 +31,7 @@ export function QueuedPromptCard({
   return (
     <CollapsibleCard
       defaultOpen={defaultOpen}
-      icon={<MdSchedule className="size-3.5" />}
+      icon={<Icon icon={scheduleIcon} className="size-3.5" />}
       label={isPrompt ? "Queued message" : "Queued command"}
     >
       <Text

@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
@@ -20,7 +21,7 @@ export interface SshProviderDescriptor {
    */
   name: string;
   /** Leading icon for that chip. */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Detects this provider from the server's console URL (client-side only). */
   match: (consoleUrl: URL) => boolean;
   /**

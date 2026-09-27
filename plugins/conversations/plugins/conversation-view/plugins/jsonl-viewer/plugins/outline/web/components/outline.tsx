@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { MdKeyboardArrowDown } from "react-icons/md";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
 import { scrollToBottom } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -10,6 +9,9 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 const MAX_PREVIEW = 50;
 
@@ -80,7 +82,7 @@ export function ConversationOutline() {
         // Height still comes from the ambient control density; only the square
         // aspect's width is given up. `Button` centers its own glyph.
         <IconButton
-          icon={MdKeyboardArrowDown}
+          icon={keyboardArrowDownIcon}
           label="Scroll to bottom"
           className="w-full"
           onClick={() =>

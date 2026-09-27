@@ -1,14 +1,5 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
-import {
-  MdImage,
-  MdLink as MdLinkIcon,
-  MdFunctions,
-  MdBookmark,
-  MdAudiotrack,
-  MdVideocam,
-  MdInsertDriveFile,
-  MdWidgets,
-} from "react-icons/md";
+
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
@@ -49,6 +40,16 @@ import type {
 import { RunsRenderer } from "./runs-renderer";
 import { PlaceholderCard } from "./placeholder-card";
 import type { BlockDiffKind, ReadOnlyNode } from "../node";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const imageIcon = symbol("image");
+const linkIcon = symbol("link");
+const functionsIcon = symbol("functions");
+const bookmarkIcon = symbol("bookmark");
+const musicNoteIcon = symbol("music-note");
+const videocamIcon = symbol("videocam");
+const draftIcon = symbol("draft");
+const widgetsIcon = symbol("widgets");
 
 /**
  * `BlockTextVariant` is a superset of `TextVariant` only in name; the values are
@@ -232,7 +233,7 @@ function MediaBlock({
     const width = typeof data.width === "number" ? data.width : undefined;
     if (!attachmentId) {
       return (
-        <PlaceholderCard label="Image" icon={MdImage} caption="No image" />
+        <PlaceholderCard label="Image" icon={imageIcon} caption="No image" />
       );
     }
     const style: CSSProperties = {
@@ -281,14 +282,14 @@ function SubPageChip({ data }: { data: Record<string, unknown> }) {
 }
 
 /** Exotic blocks → labeled placeholder card (documented fidelity gap). */
-const PLACEHOLDER_ICONS: Record<string, typeof MdWidgets> = {
-  embed: MdLinkIcon,
-  equation: MdFunctions,
-  bookmark: MdBookmark,
-  audio: MdAudiotrack,
-  video: MdVideocam,
-  file: MdInsertDriveFile,
-  "page-link": MdLinkIcon,
+const PLACEHOLDER_ICONS: Record<string, typeof widgetsIcon> = {
+  embed: linkIcon,
+  equation: functionsIcon,
+  bookmark: bookmarkIcon,
+  audio: musicNoteIcon,
+  video: videocamIcon,
+  file: draftIcon,
+  "page-link": linkIcon,
 };
 
 function captionFor(
@@ -565,7 +566,7 @@ function NodeView({
         <PlaceholderCard
           label={label}
           caption={captionFor(node.type, data)}
-          icon={PLACEHOLDER_ICONS[node.type] ?? MdWidgets}
+          icon={PLACEHOLDER_ICONS[node.type] ?? widgetsIcon}
         />
         {children}
       </>

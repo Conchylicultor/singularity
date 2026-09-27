@@ -1,7 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
-import { MdRefresh } from "react-icons/md";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import {
@@ -12,6 +11,10 @@ import {
   type ControlSize,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const refreshIcon = symbol("refresh");
 
 // The class walk reports a `cva` table at the call, so this covers the whole
 // table: its only raw radii are the `rounded-[min(var(--radius-md),Npx)]`
@@ -208,10 +211,10 @@ function Button({
     >
       {isLoading ? (
         iconOnly ? (
-          <MdRefresh className="animate-spin" />
+          <Icon icon={refreshIcon} className="animate-spin" />
         ) : (
           <>
-            <MdRefresh className="animate-spin" />
+            <Icon icon={refreshIcon} className="animate-spin" />
             {children}
           </>
         )

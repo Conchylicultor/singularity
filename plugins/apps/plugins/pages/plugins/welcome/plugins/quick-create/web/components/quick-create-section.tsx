@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { type ReactElement } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -31,7 +32,7 @@ export function QuickCreateSection(): ReactElement {
       {/* eslint-disable-next-line layout/no-adhoc-layout -- responsive col-count grid (1-up → 3-up at the sm viewport breakpoint) */}
       <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
         {PAGE_TEMPLATES.map((template) => {
-          const Icon = template.icon;
+          const icon = template.icon;
           return (
             <Card
               key={template.id}
@@ -41,7 +42,7 @@ export function QuickCreateSection(): ReactElement {
               className="rounded-lg p-md text-left"
             >
               <Stack gap="sm">
-                <Icon className="size-5 text-muted-foreground" />
+                <Icon icon={icon} className="size-5 text-muted-foreground" />
                 <Stack gap="2xs">
                   <Text as="span" variant="body" className="font-medium">
                     {template.label}

@@ -30,6 +30,7 @@
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`
+    - `ui/icons.Icon`
   - Exports (values): `configOrphansPane`
 - Server:
   - Contributes: `report-kind` "config-orphans-stranded"

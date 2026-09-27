@@ -1,4 +1,3 @@
-import { MdAdd, MdRemove } from "react-icons/md";
 import {
   usePluginFacetDiffs,
   type FacetDiff,
@@ -9,6 +8,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const removeIcon = symbol("remove");
 
 function DiffSection({
   label,
@@ -28,13 +32,19 @@ function DiffSection({
       </Text>
       {diff.added.map((item) => (
         <Text as={Line} variant="caption" key={item} className="gap-xs">
-          <MdAdd className={cn("size-3 text-success", rigidClass())} />
+          <Icon
+            icon={addIcon}
+            className={cn("size-3 text-success", rigidClass())}
+          />
           <code className="text-success">{item}</code>
         </Text>
       ))}
       {diff.removed.map((item) => (
         <Text as={Line} variant="caption" key={item} className="gap-xs">
-          <MdRemove className={cn("size-3 text-destructive", rigidClass())} />
+          <Icon
+            icon={removeIcon}
+            className={cn("size-3 text-destructive", rigidClass())}
+          />
           <code className="text-destructive">{item}</code>
         </Text>
       ))}

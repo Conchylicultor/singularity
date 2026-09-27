@@ -1,4 +1,3 @@
-import { MdClose } from "react-icons/md";
 import {
   SectionLabel,
   Text,
@@ -20,6 +19,10 @@ import {
 } from "@plugins/primitives/plugins/search/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 export function DepPopoverContent({
   label,
@@ -78,7 +81,7 @@ export function DepPopoverContent({
                 )}
                 aria-label="Remove"
               >
-                <MdClose className="size-3" />
+                <Icon icon={closeIcon} className="size-3" />
               </button>
             </Stack>
           ))}
@@ -108,7 +111,7 @@ export function DepPopoverContent({
                   )}
                   aria-label="Remove"
                 >
-                  <MdClose className="size-3" />
+                  <Icon icon={closeIcon} className="size-3" />
                 </button>
               </Stack>
             );

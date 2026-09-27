@@ -1,4 +1,3 @@
-import { MdPhotoCamera } from "react-icons/md";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -10,9 +9,12 @@ import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { screenshotName } from "../internal/screenshots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const photoCameraIcon = symbol("photo-camera");
 
 /** The pictures' glyph, the same one the Screenshot toolbar button wears. */
-export const SCREENSHOT_ICON = MdPhotoCamera;
+export const SCREENSHOT_ICON = photoCameraIcon;
 
 /**
  * The pictures the conversation looked at, four to a row.

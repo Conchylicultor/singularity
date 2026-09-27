@@ -1,3 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType, ReactNode } from "react";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
@@ -33,7 +35,7 @@ interface DetailSectionCommon<EntityProps> {
   /** The section's title, and its click target: clicking it toggles the body. */
   label: string;
   /** Leading icon in the header row. Raw component; the row owns size + color. */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Header-right controls, reachable while collapsed. Rendered at `sm` density. */
   actions?: ComponentType<EntityProps>;
   /** Collapsed-state preview beside the title (a count, a +/− diff stat). */
@@ -239,12 +241,12 @@ export function defineDetailSections<
       `${Section.id}.${section.id}.open`,
       defaultOpen,
     );
-    const Icon = section.icon;
+    const icon = section.icon;
 
     return (
       <SectionCard
         title={section.label}
-        icon={Icon ? <Icon /> : undefined}
+        icon={icon ? <Icon icon={icon} /> : undefined}
         actions={headerRight(section, entityProps)}
         open={open}
         onOpenChange={setOpen}
@@ -265,11 +267,11 @@ export function defineDetailSections<
    * affordance is derived from the absence of a body, never declared.
    */
   function OneLineSection({ section, entityProps }: SectionProps): ReactNode {
-    const Icon = section.icon;
+    const icon = section.icon;
     return (
       <SectionCard
         title={section.label}
-        icon={Icon ? <Icon /> : undefined}
+        icon={icon ? <Icon icon={icon} /> : undefined}
         actions={headerRight(section, entityProps)}
       />
     );

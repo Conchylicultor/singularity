@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import {
   $createTextNode,
   $getSelection,
@@ -9,7 +8,10 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -21,6 +23,11 @@ import {
 import { type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { $createDateMentionNode } from "./date-mention-node";
 import { buildMenu, type DateOption } from "../internal/date-options";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const calendarTodayIcon = symbol("calendar-today");
+const notificationsActiveIcon = symbol("notifications-active");
 
 /**
  * Inline, Notion-style `@` date/reminder typeahead, built on the shared
@@ -79,18 +86,16 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   const menu = useMemo(() => buildMenu(caret.query, new Date()), [caret.query]);
   const options = menu.options;
 
-  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(caret, {
-    itemCount: options.length,
-    onCommit: (i) => insertMention(options[i]!),
-  });
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(
+    caret,
+    {
+      itemCount: options.length,
+      onCommit: (i) => insertMention(options[i]!),
+    },
+  );
 
   return (
-    <CaretTriggerMenu
-      caret={caret}
-      open={surfaceOpen}
-      width="lg"
-      padding="xs"
-    >
+    <CaretTriggerMenu caret={caret} open={surfaceOpen} width="lg" padding="xs">
       <Stack gap="none">
         {/* eslint-disable-next-line data-view/no-adhoc-row-list -- caret typeahead menu (transient chrome) */}
         {options.map((option, i) => (
@@ -99,9 +104,15 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
             selected={i === activeIndex}
             icon={
               option.kind === "reminder" ? (
-                <MdNotificationsActive className="text-muted-foreground" />
+                <Icon
+                  icon={notificationsActiveIcon}
+                  className="text-muted-foreground"
+                />
               ) : (
-                <MdCalendarToday className="text-muted-foreground" />
+                <Icon
+                  icon={calendarTodayIcon}
+                  className="text-muted-foreground"
+                />
               )
             }
             onMouseEnter={() => setActiveIndex(i)}

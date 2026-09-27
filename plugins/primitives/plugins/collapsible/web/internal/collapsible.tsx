@@ -9,8 +9,11 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { MdChevronRight } from "react-icons/md";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronRightIcon = symbol("chevron-right");
 
 export interface CollapsibleCtx {
   open: boolean;
@@ -81,7 +84,11 @@ export interface CollapsibleProps extends CollapsibleProviderProps {
 /** The standard collapsible: `CollapsibleProvider` plus the wrapper element that
  *  gives the group a box, a `data-state` styling hook, and (for a plain sticky
  *  header inside it) its own sticky containing block. */
-export function Collapsible({ className, children, ...options }: CollapsibleProps) {
+export function Collapsible({
+  className,
+  children,
+  ...options
+}: CollapsibleProps) {
   return (
     <CollapsibleProvider {...options}>
       <CollapsibleBox className={className}>{children}</CollapsibleBox>
@@ -179,7 +186,8 @@ export function CollapsibleChevron({
   const open = openProp ?? ctx?.open ?? false;
 
   return (
-    <MdChevronRight
+    <Icon
+      icon={chevronRightIcon}
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid chevron indicator placed in arbitrary trigger rows; must never shrink
       className={cn(
         "shrink-0 transition-transform duration-200",

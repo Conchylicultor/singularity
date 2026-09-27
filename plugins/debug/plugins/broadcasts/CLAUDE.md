@@ -32,6 +32,7 @@
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `ui/icons.Icon`
   - Exports (values): `broadcastsPane`
 - Server:
   - Uses:

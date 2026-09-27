@@ -10,7 +10,10 @@ import {
   RUNTIME_FOLDERS,
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { MdCallSplit } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const callSplitIcon = symbol("call-split");
 
 type CrossRefRow = {
   plugin: PluginNode;
@@ -64,7 +67,7 @@ function rows(entries: FacetTableEntry[]): CrossRefRow[] {
 export const crossRefsFacetTable = defineFacetTable<CrossRefRow>({
   facetId: "cross-refs",
   label: "Cross-refs",
-  icon: MdCallSplit,
+  icon: callSplitIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.used}`,

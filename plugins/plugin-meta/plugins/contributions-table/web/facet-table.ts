@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -14,7 +14,9 @@ export interface FacetTableEntry<T = unknown> {
  * `useOpenPane()` result, so an `onRowClick` can `push` a detail pane relative to
  * the Contributions pane — which a module-scope opener cannot do.
  */
-export type ContributionsRowClickContext = { openPane: ReturnType<typeof useOpenPane> };
+export type ContributionsRowClickContext = {
+  openPane: ReturnType<typeof useOpenPane>;
+};
 
 /**
  * Declarative aggregated cross-plugin table for one facet. Contributed to the
@@ -28,7 +30,7 @@ export interface ContributionsFacetTable<Row = unknown> {
   /** Tab label, e.g. "Routes", "Slots". */
   label: string;
   /** Tab icon for the Contributions category strip. */
-  icon: ComponentType<{ size?: number }>;
+  icon: IconRef;
   /** Columns passed straight to the data-table primitive. */
   columns: ColumnDef<Row>[];
   /** Project the per-plugin facet entries into flat table rows. */
@@ -44,7 +46,9 @@ export interface ContributionsFacetTable<Row = unknown> {
  * assignable to `ContributionsFacetTable<unknown>`. This factory type-checks authoring
  * against the concrete `Row`, then erases for storage in the slot.
  */
-export function defineFacetTable<Row>(table: ContributionsFacetTable<Row>): ContributionsFacetTable {
+export function defineFacetTable<Row>(
+  table: ContributionsFacetTable<Row>,
+): ContributionsFacetTable {
   return table as ContributionsFacetTable;
 }
 
@@ -57,6 +61,8 @@ export interface ContributionsRowClick<Row = unknown> {
   onRowClick: (row: Row, ctx: ContributionsRowClickContext) => void;
 }
 
-export function defineRowClick<Row>(entry: ContributionsRowClick<Row>): ContributionsRowClick {
+export function defineRowClick<Row>(
+  entry: ContributionsRowClick<Row>,
+): ContributionsRowClick {
   return entry as ContributionsRowClick;
 }

@@ -9,7 +9,6 @@
   - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.appIconComponent`
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.placementIsNewTabFollows`
     - `apps-core/tabs.usePlacementCapabilities`

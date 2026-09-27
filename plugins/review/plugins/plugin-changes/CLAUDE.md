@@ -41,6 +41,7 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `review.ReviewSlots`
+    - `ui/icons.Icon`
   - Exports (types): `FacetDiff`
   - Exports (values):
     - `PluginChangesSlots`

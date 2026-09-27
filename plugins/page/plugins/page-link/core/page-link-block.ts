@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { MdLink } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
 import { typeVar } from "@plugins/primitives/plugins/css/plugins/text/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const linkIcon = symbol("link");
 
 export const pageLinkBlock = defineBlock({
   type: "page-link",
   schema: z.object({ pageId: z.string() }),
   label: "Link to page",
-  icon: MdLink,
+  icon: linkIcon,
   aliases: ["link", "reference", "subpage"],
   empty: () => ({ pageId: "" }),
   // `<page id="x"/>` — the SAME tag name a sub-page serializes to, and this

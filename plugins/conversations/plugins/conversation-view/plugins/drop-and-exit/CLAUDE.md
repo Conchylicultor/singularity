@@ -16,6 +16,7 @@
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/live-state.useCombinedResources`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `conversations.deleteConversation`

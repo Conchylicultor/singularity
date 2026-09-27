@@ -1,6 +1,6 @@
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import type { ComponentType } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import type { AddableSource } from "../../core";
  * under the source it was listed in.
  */
 
-const Icon: ComponentType<{ className?: string }> = () => null;
+const viewIcon = symbol("view-list");
 
 function actionsWith(sources: AddableSource[]) {
   const addView = vi.fn();
@@ -49,8 +49,8 @@ describe("AddViewMenuItems", () => {
         sourceId: undefined,
         title: undefined,
         types: [
-          { type: "list", title: "List", icon: Icon },
-          { type: "table", title: "Table", icon: Icon },
+          { type: "list", title: "List", icon: viewIcon },
+          { type: "table", title: "Table", icon: viewIcon },
         ],
       } as unknown as AddableSource,
     ]);
@@ -69,12 +69,12 @@ describe("AddViewMenuItems", () => {
       {
         sourceId: "queue",
         title: "Queue",
-        types: [{ type: "list", title: "List", icon: Icon }],
+        types: [{ type: "list", title: "List", icon: viewIcon }],
       },
       {
         sourceId: "history",
         title: "History",
-        types: [{ type: "table", title: "Table", icon: Icon }],
+        types: [{ type: "table", title: "Table", icon: viewIcon }],
       },
     ] as unknown as AddableSource[]);
     renderOpen(actions);

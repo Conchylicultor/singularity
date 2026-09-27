@@ -50,7 +50,11 @@ export function AppRail() {
                   "bg-accent text-accent-foreground hover:bg-accent",
               )}
             >
-              <AppIconView icon={entry.icon} className="size-4.5" />
+              <AppIconView
+                icon={entry.icon}
+                active={entry.id === activeAppId}
+                className="size-4.5"
+              />
               {entry.badge && (
                 <Pin to="top-right" offset="xs" decorative>
                   <entry.badge />

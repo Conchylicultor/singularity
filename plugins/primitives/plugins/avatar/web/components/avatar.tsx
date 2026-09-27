@@ -7,6 +7,8 @@ import {
 import { forwardRef } from "react";
 import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AvatarShape } from "../../core";
 import {
   avatarColorPick,
@@ -22,6 +24,11 @@ export interface AvatarProps extends DensityControlled {
   icon?: string | null;
   color?: string | null;
   svgNodes?: SvgNode[] | null;
+  /**
+   * A glyph named in code (an app's icon), drawn in the theme's icon style when
+   * there are no stored `svgNodes`. Not persisted — stored avatars carry `svgNodes`.
+   */
+  symbol?: IconRef | null;
   /** Box outline. Defaults to `circle`. */
   shape?: AvatarShape;
   /** Tailwind bg class for an overlaid status dot (Slack-style presence). */
@@ -113,6 +120,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     icon,
     color,
     svgNodes,
+    symbol,
     shape = "circle",
     statusDot,
     fallbackKey,
@@ -128,7 +136,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   const sz = geometryFor(presentation, size);
   const hasSvg = svgNodes != null && svgNodes.length > 0;
   const glyph = fallbackGlyph ? fallbackGlyph.charAt(0).toUpperCase() : null;
-  const filled = !colorless && (hasSvg || color != null || glyph != null);
+  const filled =
+    !colorless && (hasSvg || symbol != null || color != null || glyph != null);
   const pick = filled
     ? avatarColorPick(color, fallbackKey ?? icon ?? undefined)
     : null;
@@ -154,6 +163,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     >
       {hasSvg ? (
         <SvgIcon nodes={svgNodes!} className={sz.icon} />
+      ) : symbol ? (
+        <Icon icon={symbol} className={sz.icon} />
       ) : glyph ? (
         <span className={glyphClass}>{glyph}</span>
       ) : null}

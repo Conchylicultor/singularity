@@ -238,6 +238,7 @@ genuine transient-chrome list escapes with
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/font-family`
+    - `ui/tokens/icons`
     - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`

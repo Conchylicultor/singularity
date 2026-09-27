@@ -169,6 +169,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorder/editor.ReorderEntry`
     - `reorder/editor.SortableReorderItem`
     - `reorder/node-types.useReorderNodeTypes`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ReorderLayout`
     - `ReorderNodeData`

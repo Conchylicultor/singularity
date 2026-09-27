@@ -25,6 +25,7 @@ lives in the `plugins/config` sub-plugin.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `objectFieldType`
     - `objectIdentity`

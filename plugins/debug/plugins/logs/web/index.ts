@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdTerminal } from "react-icons/md";
 import { logsPane, logChannelPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { logsPane, logChannelPane } from "./panes";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "logs",
       title: "Logs",
-      icon: MdTerminal,
+      icon: symbol("terminal"),
       onClick: () => openPane(logsPane, {}, { mode: "root" }),
     }),
   ],

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdBookmarkAdd, MdClose } from "react-icons/md";
 import {
   ControlPanel,
   usePanelStack,
@@ -10,6 +9,11 @@ import { FieldSearchList } from "../filter/field-search-list";
 import { AddSortRow } from "./add-sort-affordance";
 import { SortPresetSection, SortSavePresetPanel } from "./presets";
 import { SortRuleRow } from "./sort-rule-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const bookmarkAddIcon = symbol("bookmark-add");
+const closeIcon = symbol("close");
 
 /**
  * The sort control's panel body. Prop-less by contract — it reads the live
@@ -96,7 +100,7 @@ export function SortControlPanel(): ReactNode {
       {hasRules ? (
         <ControlPanel.Footer>
           <ControlPanel.Row
-            icon={<MdBookmarkAdd />}
+            icon={<Icon icon={bookmarkAddIcon} />}
             onSelect={() =>
               push({
                 key: "save-sort-preset",
@@ -112,7 +116,7 @@ export function SortControlPanel(): ReactNode {
               compact fold there is no popover to close at all, so "clear and
               dismiss" is not one gesture it can express in both layouts. */}
           <ControlPanel.Row
-            icon={<MdClose />}
+            icon={<Icon icon={closeIcon} />}
             tone="danger"
             onSelect={() => sort.clear()}
           >

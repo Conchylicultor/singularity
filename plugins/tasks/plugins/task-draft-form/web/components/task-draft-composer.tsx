@@ -1,5 +1,4 @@
 import { useRef } from "react";
-import { MdAdd, MdLink } from "react-icons/md";
 import {
   ComposerField,
   ComposerAttachButton,
@@ -12,6 +11,10 @@ import {
 import { DependencyPill, type DependencyExtras } from "./dependency-pill";
 import { TaskDraftFormSlots } from "../slots";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const linkIcon = symbol("link");
 
 export interface TaskDraftComposerProps {
   /** Scopes the editor's namespace; unique per mounted composer. */
@@ -93,8 +96,8 @@ export function TaskDraftComposer({
       insertRef={insertRef}
       attach={
         <ComposerAttachButton
-          icon={MdAdd}
-          activeIcon={MdLink}
+          icon={addIcon}
+          activeIcon={linkIcon}
           label="Attach page URL"
           description="Record the page you are on with the task, so the agent knows which screen it is about."
           active={includeUrl}

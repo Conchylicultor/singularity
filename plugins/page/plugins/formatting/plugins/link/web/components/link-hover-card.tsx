@@ -1,4 +1,3 @@
-import { MdLanguage } from "react-icons/md";
 import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -7,6 +6,10 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { LinkForm, type LinkFormResult } from "./link-form";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const languageIcon = symbol("language");
 
 export interface LinkHoverCardProps {
   /** The `<a>` the card hangs under. */
@@ -73,7 +76,8 @@ export function LinkHoverCard({
           />
         ) : (
           <Line className="gap-xs" onMouseDown={(e) => e.preventDefault()}>
-            <MdLanguage
+            <Icon
+              icon={languageIcon}
               aria-hidden
               className={cn(rigidClass(), "size-4 text-muted-foreground")}
             />

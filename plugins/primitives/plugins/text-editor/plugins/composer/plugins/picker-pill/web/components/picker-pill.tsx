@@ -14,12 +14,16 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Children, cloneElement, Fragment, isValidElement } from "react";
-import type { IconType } from "react-icons";
-import { MdCheck, MdExpandMore } from "react-icons/md";
+
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 export interface PickerPillProps {
   /** Leading glyph, always shown — it is what the pill is recognised by. */
-  icon: IconType;
+  icon: IconRef;
   /**
    * What the trigger reads while NOTHING is picked, in muted text. Also the
    * accessible name when `ariaLabel` is omitted.
@@ -95,7 +99,7 @@ export interface PickerPillCheckProps {
  * pill on a single-line bar does not move its neighbours when you open it.
  */
 export function PickerPill({
-  icon: Icon,
+  icon,
   placeholder,
   highlight,
   disabled,
@@ -122,7 +126,7 @@ export function PickerPill({
             />
           }
         >
-          <Icon aria-hidden className="size-3.5" />
+          <Icon icon={icon} aria-hidden className="size-3.5" />
           {values.length > 0 ? (
             values.map((value, i) =>
               cloneElement(value, { key: value.key ?? i }),
@@ -132,7 +136,7 @@ export function PickerPill({
               {placeholder}
             </Text>
           )}
-          <MdExpandMore className="size-3.5 opacity-70" />
+          <Icon icon={keyboardArrowDownIcon} className="size-3.5 opacity-70" />
         </DropdownMenuTrigger>
       </WithTooltip>
       <DropdownMenuContent align="start">
@@ -189,7 +193,7 @@ function PickerPillItem({
         {children}
       </Stack>
       {selected ? (
-        <MdCheck className="size-3.5 opacity-70" aria-hidden />
+        <Icon icon={checkIcon} className="size-3.5 opacity-70" aria-hidden />
       ) : note ? (
         <Text variant="caption" tone="muted">
           {note}

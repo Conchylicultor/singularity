@@ -9,7 +9,10 @@ import {
   resourceModeLabel,
   type ResourceFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
-import { MdStorage } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const storageIcon = symbol("storage");
 
 type ResourceRow = {
   plugin: PluginNode;
@@ -80,7 +83,7 @@ function rows(entries: FacetTableEntry[]): ResourceRow[] {
 export const resourcesFacetTable = defineFacetTable<ResourceRow>({
   facetId: "resources",
   label: "Resources",
-  icon: MdStorage,
+  icon: storageIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.key}`,

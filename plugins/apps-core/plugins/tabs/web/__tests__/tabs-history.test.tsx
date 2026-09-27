@@ -54,13 +54,13 @@ const appsPlugin = {
   description: "fake apps for the tabs-history suite",
   contributions: [
     Apps.App({
-      app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "" },
+      app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "home" },
       component: () => null,
       default: true,
       icon: {} as never,
     }),
     Apps.App({
-      app: { id: "story", name: "Story", basePath: "/story", iconKey: "" },
+      app: { id: "story", name: "Story", basePath: "/story", iconKey: "home" },
       component: () => null,
       icon: {} as never,
     }),

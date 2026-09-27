@@ -74,6 +74,7 @@ the join and the order: oldest run first.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/launch.LaunchControl`
     - `tasks/tasks-core.useTaskConversations`
+    - `ui/icons.Icon`
   - Exports (values): `promptBlock`
 - Server:
   - Contributes: `page.block-data` "prompt"
@@ -82,6 +83,7 @@ the join and the order: oldest run first.
   - Uses:
     - `page/editor.defineBlock`
     - `page/editor.textBlockSchema`
+    - `ui/icons.symbol`
   - Exports (values):
     - `promptBlock`
     - `promptDataSchema`

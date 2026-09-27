@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdMusicNote } from "react-icons/md";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { UltimateGuitarLoader } from "./loader";
@@ -9,6 +11,7 @@ import { hydrate } from "./hydrate";
 import { ultimateGuitarCreateOption } from "./components/ug-create-option";
 import { UltimateGuitarEditorSection } from "./components/ug-editor-section";
 import { UltimateGuitarPersistObserver } from "./components/ug-persist-observer";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -17,7 +20,7 @@ export default {
     Sonata.Source({
       id: UG_SOURCE_ID,
       label: "Ultimate Guitar",
-      icon: MdMusicNote,
+      icon: symbol("music-note"),
       LoaderComponent: UltimateGuitarLoader,
       compile,
     }),
@@ -29,7 +32,7 @@ export default {
     Sonata.Section({
       id: "ultimate-guitar-editor",
       label: "Ultimate Guitar",
-      icon: MdMusicNote,
+      icon: symbol("music-note"),
       component: UltimateGuitarEditorSection,
       area: "editor",
       useAvailable: () => useSonata().sourceRaw(UG_SOURCE_ID) !== undefined,

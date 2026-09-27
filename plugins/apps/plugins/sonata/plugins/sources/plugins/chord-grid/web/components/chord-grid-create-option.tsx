@@ -1,4 +1,3 @@
-import { MdGridView } from "react-icons/md";
 import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -8,6 +7,10 @@ import {
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile, type ChordGridRaw } from "../compile";
 import { createChordGridSong } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const gridViewIcon = symbol("grid-view");
 
 /**
  * The chord-grid source's create affordance, contributed to `Library.Source`
@@ -30,7 +33,7 @@ export const chordGridCreateOption: CreateOption = {
   id: "chord-grid",
   label: "New Chord Grid",
   description: "Author a chord progression and hear it voiced.",
-  icon: <MdGridView className="size-4" />,
+  icon: <Icon icon={gridViewIcon} className="size-4" />,
   onSelect: async () => {
     const score = compile(STARTER);
     const endBeat = scoreEndBeat(score);

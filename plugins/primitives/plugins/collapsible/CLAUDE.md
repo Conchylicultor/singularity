@@ -50,6 +50,7 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CollapsibleChevronProps`
     - `CollapsibleContentProps`

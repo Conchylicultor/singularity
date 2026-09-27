@@ -1,5 +1,10 @@
-import { MdChevronRight } from "react-icons/md";
-import { defineBlock, textBlockSchema } from "@plugins/page/plugins/editor/core";
+import {
+  defineBlock,
+  textBlockSchema,
+} from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const chevronRightIcon = symbol("chevron-right");
 
 export const toggleDataSchema = textBlockSchema({});
 
@@ -7,7 +12,7 @@ export const toggleBlock = defineBlock({
   type: "toggle",
   schema: toggleDataSchema,
   label: "Toggle",
-  icon: MdChevronRight,
+  icon: chevronRightIcon,
   aliases: ["collapsible", "accordion", "details", "expand"],
   empty: () => ({ text: [] }),
   placeholder: "Toggle",

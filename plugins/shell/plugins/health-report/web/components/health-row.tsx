@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { ReactNode } from "react";
 import type {
   Contribution,
@@ -247,11 +248,11 @@ export function InfoRowView({
   useInfo: SealedInfoRow["useInfo"];
 }) {
   const info = useInfo();
-  const Icon = row.icon;
+  const icon = row.icon;
   return (
     <StaticRow className="bg-muted/40" actions={contributedActions(row)}>
       <RowText
-        leading={<Icon className="size-4 text-muted-foreground" />}
+        leading={<Icon icon={icon} className="size-4 text-muted-foreground" />}
         title={info.title}
         summary={info.summary}
         summaryClassName={SUMMARY_CLASS.unknown}

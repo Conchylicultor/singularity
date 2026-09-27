@@ -4,7 +4,6 @@ import {
   type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { MdAdd } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   cn,
@@ -12,10 +11,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Tab } from "@plugins/ui/plugins/tab-bar/web";
-import {
-  appIconComponent,
-  DEFAULT_APP_ICON,
-} from "@plugins/apps-core/plugins/app-icon/web";
+import { DEFAULT_APP_ICON } from "@plugins/apps-core/plugins/app-icon/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import {
   endTabDrag,
@@ -24,6 +20,9 @@ import {
   useTabDragSession,
   type TabDragDrop,
 } from "../hooks/use-tab-drag";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 /** One member's display data for a tab-strip chip. */
 export interface WindowMember {
@@ -147,7 +146,10 @@ export function WindowTabStrip({
 
       const onMove = (ev: PointerEvent) => {
         if (!dragging) {
-          if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD)
+          if (
+            Math.hypot(ev.clientX - startX, ev.clientY - startY) <
+            DRAG_THRESHOLD
+          )
             return;
           dragging = true;
           startTabDrag({
@@ -179,8 +181,9 @@ export function WindowTabStrip({
           // (mirrors window-chrome.tsx). Walk up from any window strip element to
           // the shared backdrop and subtract its rect so the new window lands
           // under the cursor.
-          const anyStrip =
-            document.querySelector<HTMLElement>("[data-floating-window-id]");
+          const anyStrip = document.querySelector<HTMLElement>(
+            "[data-floating-window-id]",
+          );
           const backdrop = anyStrip?.parentElement?.parentElement ?? null;
           const rect = backdrop?.getBoundingClientRect();
           const point = rect
@@ -212,7 +215,7 @@ export function WindowTabStrip({
     <Stack direction="row" gap="2xs" align="center">
       {members.map((member) => {
         const active = member.tabId === activeTabId;
-        const Icon = appIconComponent(member.icon ?? DEFAULT_APP_ICON);
+        const icon = (member.icon ?? DEFAULT_APP_ICON).symbol;
         // The dragged chip placeholders in its source strip while the drag is live.
         const dragged =
           session?.tabId === member.tabId &&
@@ -225,7 +228,7 @@ export function WindowTabStrip({
           <Tab
             key={member.tabId}
             data-floating-tab-id={member.tabId}
-            icon={Icon}
+            icon={icon}
             badge={member.badge}
             label={member.title}
             active={active}
@@ -250,7 +253,7 @@ export function WindowTabStrip({
           never starts the titlebar move-drag underneath, mirroring the chips. */}
       <ControlSizeProvider size="sm">
         <IconButton
-          icon={MdAdd}
+          icon={addIcon}
           label="New tab"
           onPointerDown={stop}
           onClick={onNewTab}

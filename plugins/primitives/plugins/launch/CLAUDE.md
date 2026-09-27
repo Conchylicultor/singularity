@@ -75,6 +75,7 @@ started" notification confirms it), so its props are the form's minus
     - `tasks/launch-options.pickKnownOptions`
     - `tasks/launch-options.TaskLaunch`
     - `tasks/launch-options.useLaunchOptionDefaults`
+    - `ui/icons.Icon`
   - Exports (types):
     - `LaunchAgentFormProps`
     - `LaunchAgentPopoverProps`

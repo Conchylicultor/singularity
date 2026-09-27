@@ -1,4 +1,3 @@
-import { MdScience } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -7,6 +6,9 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { researchTitle } from "../internal/research-docs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const scienceIcon = symbol("science");
 
 /**
  * The design docs' glyph — a flask, the mark the mock draws for research
@@ -14,7 +16,7 @@ import { researchTitle } from "../internal/research-docs";
  * closed Artifacts button — it sits directly beside Pages, and two document
  * glyphs in a row read as one kind of thing split in two.
  */
-export const RESEARCH_ICON = MdScience;
+export const RESEARCH_ICON = scienceIcon;
 
 /**
  * The research docs this conversation wrote, changed or read, one per line.

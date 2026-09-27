@@ -1,9 +1,11 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { useEffect, type ReactElement } from "react";
-import { MdClose } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { OverflowBox } from "../components/overflow-box";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 // The bucket's members are AUTHORED in config, but each one decides per row
 // whether it applies (an item action returns null on a row it has nothing to do
@@ -26,7 +28,7 @@ function Applicable(): ReactElement {
   useEffect(() => {
     mounts["close"] = (mounts["close"] ?? 0) + 1;
   }, []);
-  return <IconButton icon={MdClose} label="Close conversation" />;
+  return <IconButton icon={closeIcon} label="Close conversation" />;
 }
 
 /**

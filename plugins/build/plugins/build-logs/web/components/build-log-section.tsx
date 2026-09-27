@@ -4,7 +4,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, type ReactElement } from "react";
-import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
@@ -23,6 +22,12 @@ import { BUILD_LOG_CHANNEL } from "@plugins/build/core";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const contentCopyIcon = symbol("content-copy");
+const checkIcon = symbol("check");
+const closeIcon = symbol("close");
 
 // Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
 const monoLogClass = textVariantClass("code");
@@ -71,7 +76,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
         </Text>
         <ControlSizeProvider size="xs">
           <IconButton
-            icon={MdContentCopy}
+            icon={contentCopyIcon}
             label="Copy logs"
             variant="ghost"
             onClick={copyAll}
@@ -96,9 +101,13 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
         <CollapsibleTrigger className="gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
           <CollapsibleChevron className="size-3 text-muted-foreground" />
           {step.success ? (
-            <MdCheck className={cn("size-3.5 text-success", rigidClass())} />
+            <Icon
+              icon={checkIcon}
+              className={cn("size-3.5 text-success", rigidClass())}
+            />
           ) : (
-            <MdClose
+            <Icon
+              icon={closeIcon}
               className={cn("size-3.5 text-destructive", rigidClass())}
             />
           )}

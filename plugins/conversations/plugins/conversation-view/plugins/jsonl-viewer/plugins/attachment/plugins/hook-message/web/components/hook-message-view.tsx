@@ -1,6 +1,9 @@
-import { MdInfoOutline } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const infoIcon = symbol("info");
 
 interface HookSystemMessagePayload {
   type: "hook_system_message";
@@ -34,7 +37,7 @@ export function HookMessageView({ event }: AttachmentRendererProps) {
 
   return (
     <EventLine
-      icon={<MdInfoOutline className="size-3.5" />}
+      icon={<Icon icon={infoIcon} className="size-3.5" />}
       label={hook ? `Hook message · ${hook}` : "Hook message"}
     >
       <span className="truncate">{content}</span>

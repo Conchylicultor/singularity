@@ -139,7 +139,9 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `renderInstructions`
   - Register: `defineJob('retention.page_instructions_deliveries')`
 - Core:
-  - Uses: `page/annotations.defineAnnotationBlock`
+  - Uses:
+    - `page/annotations.defineAnnotationBlock`
+    - `ui/icons.symbol`
   - Exports (types): `InstructionsData`
   - Exports (values):
     - `instructionsBlock`

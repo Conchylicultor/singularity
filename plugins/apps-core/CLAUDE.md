@@ -111,6 +111,7 @@ keeps reading the old location until then.
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/icons`
     - `ui/variant-region`
 - Core:
   - Exports (types):
@@ -123,7 +124,7 @@ keeps reading the old location until then.
   - Web: `@plugins/apps-core/web/testing`
     - `getFocusedAppId`
 - Sub-plugins:
-  - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
+  - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
   - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.

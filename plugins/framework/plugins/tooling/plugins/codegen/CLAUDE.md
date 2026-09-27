@@ -140,6 +140,7 @@
     - `generateReorderableSlots`
     - `generateSpaceRamp`
     - `generateTokenGroupVars`
+    - `iconManifestPath`
     - `isAppContent`
     - `listNamedCompositionRegistries`
     - `listReviewMarkedOverrides`
@@ -169,6 +170,7 @@
     - `renderDetailsDoc`
     - `renderEagerTierManifest`
     - `renderFieldsEagerManifest`
+    - `renderIconManifest`
     - `renderPluginClaudeMd`
     - `renderReorderableSlotsManifest`
     - `renderSpaceRamp`

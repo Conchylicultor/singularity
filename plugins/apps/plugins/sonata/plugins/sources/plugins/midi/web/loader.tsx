@@ -8,11 +8,15 @@
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
-import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
+const uploadFileIcon = symbol("upload-file");
 
 interface Props {
   onRaw: (raw: unknown) => void;
@@ -95,7 +99,7 @@ export function MidiLoader({ onRaw }: Props) {
             : "border-border hover:border-muted-foreground/50 hover:bg-muted/30",
         )}
       >
-        <MdUploadFile className="size-10 text-muted-foreground" />
+        <Icon icon={uploadFileIcon} className="size-10 text-muted-foreground" />
         <div className="text-center">
           <Text as="p" variant="label">
             {fileName ?? "Drop a MIDI file here"}
@@ -116,7 +120,10 @@ export function MidiLoader({ onRaw }: Props) {
             className="rounded-md bg-muted px-sm py-xs text-muted-foreground"
           >
             <Line className="gap-xs">
-              <MdMusicNote className={cn("size-3.5", rigidClass())} />
+              <Icon
+                icon={musicNoteIcon}
+                className={cn("size-3.5", rigidClass())}
+              />
               <Text className="max-w-[16rem]">{fileName}</Text>
             </Line>
           </Text>

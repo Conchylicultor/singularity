@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdMonitorHeart } from "react-icons/md";
 import { liveStateHealthPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { liveStateHealthPane } from "./panes";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "live-state-health",
       title: "Live State",
-      icon: MdMonitorHeart,
+      icon: symbol("monitor-heart"),
       onClick: () => openPane(liveStateHealthPane, {}, { mode: "root" }),
     }),
   ],

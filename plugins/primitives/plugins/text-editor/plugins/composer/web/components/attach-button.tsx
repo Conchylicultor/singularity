@@ -1,15 +1,16 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   TooltipDoc,
   WithTooltip,
 } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
-import type { IconType } from "react-icons";
 
 export interface ComposerAttachButtonProps {
   /** Glyph shown while the button is off. */
-  icon: IconType;
+  icon: IconRef;
   /** Glyph shown while it is on. Defaults to {@link ComposerAttachButtonProps.icon}. */
-  activeIcon?: IconType;
+  activeIcon?: IconRef;
   /** The one label. It is the SAME in both states — see below. */
   label: string;
   active: boolean;
@@ -46,13 +47,13 @@ export function ComposerAttachButton({
   description,
   disabled,
 }: ComposerAttachButtonProps) {
-  const Icon = active ? (activeIcon ?? icon) : icon;
+  const glyph = active ? (activeIcon ?? icon) : icon;
   return (
     <WithTooltip content={<TooltipDoc title={label}>{description}</TooltipDoc>}>
       <ToggleChip
         active={active}
         variant="tinted"
-        icon={<Icon aria-hidden />}
+        icon={<Icon icon={glyph} aria-hidden />}
         disabled={disabled}
         onClick={() => onToggle(!active)}
       >

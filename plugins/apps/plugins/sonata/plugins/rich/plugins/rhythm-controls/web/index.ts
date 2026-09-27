@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdGraphicEq } from "react-icons/md";
 import {
   Sonata,
   grooveSetting,
@@ -8,6 +7,7 @@ import {
 import { RhythmObserver } from "./components/rhythm-observer";
 import { RhythmControls } from "./components/rhythm-controls";
 import { RhythmActions } from "./components/rhythm-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { useSaveRhythm } from "./actions";
 export type { RhythmGroove } from "./actions";
@@ -24,7 +24,7 @@ export default {
     Sonata.Section({
       id: "rhythm",
       label: "Rhythm",
-      icon: MdGraphicEq,
+      icon: symbol("graphic-eq"),
       component: RhythmControls,
       area: "player",
       actions: RhythmActions,

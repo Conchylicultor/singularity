@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from "react";
-import { MdFormatColorText } from "react-icons/md";
 import {
   $getSelection,
   $isRangeSelection,
@@ -22,6 +21,9 @@ import {
   COLOR_TOKENS,
   type ColorToken,
 } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const formatColorTextIcon = symbol("format-color-text");
 
 /** Human label for each token (capitalized), for the swatch tooltip/aria. */
 function tokenLabel(token: ColorToken): string {
@@ -94,7 +96,7 @@ export function ColorButton() {
       width="sm"
       trigger={
         <IconButton
-          icon={MdFormatColorText}
+          icon={formatColorTextIcon}
           label="Text color"
           tooltip="Text color"
           aria-pressed={activeColor !== null}

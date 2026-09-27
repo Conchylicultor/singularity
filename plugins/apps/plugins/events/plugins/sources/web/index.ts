@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdSource } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
@@ -7,6 +6,7 @@ import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
 import { SourceOpenAction } from "./components/source-open-action";
 import { SourceToggleAction } from "./components/source-toggle-action";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   eventSourcesPane,
@@ -58,7 +58,7 @@ export default {
     Events.Sidebar({
       id: "sources",
       title: "Sources",
-      icon: MdSource,
+      icon: symbol("folder-code"),
       onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
     }),
     // Ordered by how much each one changes: `open` only looks (and renders

@@ -54,6 +54,7 @@ flagged orphan roots (evicted <5 ms parent, or a detached child).
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `trace-event-class` "spans"
   - Uses: `debug/trace/engine.defineTraceEventClass`

@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -28,7 +29,7 @@ export function SshSetupActions({ server }: { server: Server }) {
   return (
     <Inline gap="xs">
       {provider && (
-        <Badge icon={ProviderIcon ? <ProviderIcon /> : undefined}>
+        <Badge icon={ProviderIcon ? <Icon icon={ProviderIcon} /> : undefined}>
           {provider.name}
         </Badge>
       )}

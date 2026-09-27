@@ -220,6 +220,7 @@ surfacing as crash tasks, not just toasts.
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
+    - `ui/icons.Icon`
 - Server:
   - Uses:
     - `apps/sonata/library._songs`

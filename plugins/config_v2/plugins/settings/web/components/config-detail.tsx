@@ -2,15 +2,7 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useMemo, useCallback, useState } from "react";
-import {
-  MdWarning,
-  MdCode,
-  MdTune,
-  MdUndo,
-  MdDifference,
-  MdMerge,
-  MdLayersClear,
-} from "react-icons/md";
+
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -55,6 +47,16 @@ import { ConfigField } from "./config-field";
 import { ConflictDiff } from "./conflict-diff";
 import { InvalidDiff } from "./invalid-diff";
 import { ScopeTabs } from "./scope-tabs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
+const codeIcon = symbol("code");
+const tuneIcon = symbol("tune");
+const undoIcon = symbol("undo");
+const differenceIcon = symbol("difference");
+const mergeIcon = symbol("merge");
+const layersClearIcon = symbol("layers-clear");
 
 // The two banners' button tints, written once. Every action inside a banner —
 // this file's own resolutions and the contributed ones alike — reads its tint
@@ -209,7 +211,7 @@ function ConflictElsewhereBanner({
       className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
     >
       <Stack direction="row" gap="sm" align="center" wrap>
-        <MdWarning className={cn("size-4", rigidClass())} />
+        <Icon icon={warningIcon} className={cn("size-4", rigidClass())} />
         <Fill as="span">
           {elsewhere.length === 1
             ? "This config has an unresolved conflict under another tab"
@@ -414,9 +416,9 @@ function ConfigDetailBody({
   }, [removeScope, registration.storePath, scopeId, onSelectScope]);
 
   const toggleIcon = showRaw ? (
-    <MdTune className="size-3.5" />
+    <Icon icon={tuneIcon} className="size-3.5" />
   ) : (
-    <MdCode className="size-3.5" />
+    <Icon icon={codeIcon} className="size-3.5" />
   );
 
   return (
@@ -435,7 +437,7 @@ function ConfigDetailBody({
             loading={removeScopeM.isPending}
             onClick={handleStopCustomizing}
           >
-            <MdLayersClear className="size-3.5" />
+            <Icon icon={layersClearIcon} className="size-3.5" />
             Stop customizing
           </Button>
         )}
@@ -460,7 +462,7 @@ function ConfigDetailBody({
             </Stack>
           ) : (
             <Button variant="ghost" onClick={() => setConfirmReset(true)}>
-              <MdUndo className="size-3.5" />
+              <Icon icon={undoIcon} className="size-3.5" />
               Reset all
             </Button>
           ))}
@@ -484,7 +486,10 @@ function ConfigDetailBody({
                 >
                   <Stack gap="xs">
                     <Stack direction="row" gap="sm" align="center">
-                      <MdWarning className={cn("size-4", rigidClass())} />
+                      <Icon
+                        icon={warningIcon}
+                        className={cn("size-4", rigidClass())}
+                      />
                       <Fill as="span">
                         Stored config is invalid for the current schema
                       </Fill>
@@ -498,7 +503,7 @@ function ConfigDetailBody({
                         onClick={() => setShowDiff((v) => !v)}
                         className={DESTRUCTIVE_ACTION_CLASS}
                       >
-                        <MdDifference className="size-3.5" />
+                        <Icon icon={differenceIcon} className="size-3.5" />
                         {showDiff ? "Hide diff" : "View diff"}
                       </Button>
                       <Button
@@ -596,7 +601,10 @@ function ConfigDetailBody({
                 >
                   <Stack gap="xs">
                     <Stack direction="row" gap="sm" align="center">
-                      <MdWarning className={cn("size-4", rigidClass())} />
+                      <Icon
+                        icon={warningIcon}
+                        className={cn("size-4", rigidClass())}
+                      />
                       <Fill as="span">
                         {canMerge && trueConflictKeys!.length > 0
                           ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
@@ -614,7 +622,7 @@ function ConfigDetailBody({
                         onClick={() => setShowDiff((v) => !v)}
                         className={WARNING_ACTION_CLASS}
                       >
-                        <MdDifference className="size-3.5" />
+                        <Icon icon={differenceIcon} className="size-3.5" />
                         {showDiff ? "Hide diff" : "View diff"}
                       </Button>
                       {canMerge && (
@@ -624,7 +632,7 @@ function ConfigDetailBody({
                           onClick={handleMerge}
                           className={WARNING_ACTION_CLASS}
                         >
-                          <MdMerge className="size-3.5" />
+                          <Icon icon={mergeIcon} className="size-3.5" />
                           Merge
                         </Button>
                       )}

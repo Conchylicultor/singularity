@@ -1,7 +1,10 @@
-import { MdMusicNote } from "react-icons/md";
 import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { UgImportDialog } from "./ug-import-dialog";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
 
 /**
  * The UG source's create affordance, contributed to `Library.Source` and mapped
@@ -16,7 +19,7 @@ export const ultimateGuitarCreateOption: CreateOption = {
   id: "ultimate-guitar",
   label: "Import from Ultimate Guitar",
   description: "Paste a tab URL to import chords, sections, and lyrics.",
-  icon: <MdMusicNote className="size-4" />,
+  icon: <Icon icon={musicNoteIcon} className="size-4" />,
   onSelect: () =>
     openDialog((close) => <UgImportDialog onClose={close} />, { size: "md" }),
 };

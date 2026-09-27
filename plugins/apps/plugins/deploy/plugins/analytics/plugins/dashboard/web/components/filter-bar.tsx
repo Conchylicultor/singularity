@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdClose } from "react-icons/md";
 import type {
   AnalyticsFilter,
   Dimension,
@@ -13,6 +12,9 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { STACKED_FILTERS_NOTE, atFilterLimit } from "../internal/filters";
 import { DIMENSION_LABEL, dimensionValueLabel } from "../internal/format";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 /**
  * The active filters as removable chips, a Clear button, and — when the report
@@ -41,7 +43,7 @@ export function FilterBar({
               {DIMENSION_LABEL[f.dimension]} is <strong>{value}</strong>
             </Badge>
             <IconButton
-              icon={MdClose}
+              icon={closeIcon}
               label={`Remove filter ${DIMENSION_LABEL[f.dimension]} is ${value}`}
               onClick={() => onRemove(f.dimension)}
             />

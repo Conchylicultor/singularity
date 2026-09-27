@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdLanguage } from "react-icons/md";
 import { EventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import { URL_SOURCE_TYPE_ID, urlSourceConfigFields } from "../core";
 import { urlSourceOriginUrl } from "./internal/origin-url";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // No form component, on purpose: the add/configure form is rendered generically
 // from `configFields` — the same record the server validates the row's `config`
@@ -14,7 +14,7 @@ export default {
     EventSources.Type({
       id: URL_SOURCE_TYPE_ID,
       label: "Web page",
-      icon: MdLanguage,
+      icon: symbol("language"),
       configFields: urlSourceConfigFields,
       // What a source of this type stands for: its page. An event extracted from
       // it that carries no link of its own opens here instead.

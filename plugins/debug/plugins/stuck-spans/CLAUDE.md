@@ -144,6 +144,7 @@ run no `onReady`, so no watchdog.
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `reports.Reports`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `report-kind` "span-stuck"
   - Uses:

@@ -16,6 +16,7 @@
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/css/ui-kit.Input`
     - `primitives/overlay/tooltip.Kbd`
+    - `ui/icons.Icon`
   - Exports (types):
     - `SearchInputAppearance`
     - `SearchInputProps`

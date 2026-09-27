@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdSearch } from "react-icons/md";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { PagesSearch } from "./components/pages-search";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     Pages.Sidebar({
       id: "search",
       title: "Search",
-      icon: MdSearch,
+      icon: symbol("search"),
       component: PagesSearch,
     }),
   ],

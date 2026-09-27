@@ -4,6 +4,7 @@ import {
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import type React from "react";
 
 /**
@@ -114,6 +115,11 @@ export interface ThemeProps extends Passthrough {
  *  3. a painted canvas, because custom properties cascade down while paint does
  *     not travel up.
  *
+ * It also tells the icons inside which scope they are in (`IconScopeProvider`):
+ * an icon's style is which sprite symbol it draws, which CSS cannot choose, so
+ * `<Icon>` reads its scope from React context — the same token, crossing
+ * portals the way the theme does.
+ *
  * Miss (3) and you get the failure this was found by: `PaneBox` shipped with the
  * attribute and the portal forward but no paint, so a Pages pane hosted in the
  * agent manager read Pages' `--background` and painted none of it — the user saw
@@ -166,7 +172,7 @@ export function Theme({
       className={cn(THEME_SURFACES[surface], className)}
     >
       <PortalThemeScopeProvider scope={name}>
-        {children}
+        <IconScopeProvider scope={name}>{children}</IconScopeProvider>
       </PortalThemeScopeProvider>
     </Comp>
   );

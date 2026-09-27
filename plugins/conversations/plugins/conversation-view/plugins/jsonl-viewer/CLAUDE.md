@@ -157,6 +157,7 @@ back.
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `EventFilterContribution`
     - `OverlayContribution`

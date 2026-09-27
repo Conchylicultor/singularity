@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdAccountTree } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { countRules, findGroup } from "../../internal/filter-tree-ops";
@@ -8,6 +7,10 @@ import { AddFilterRow } from "./add-filter-affordance";
 import { ConjunctionCell } from "./conjunction-cell";
 import { useFilterPanelStack } from "./filter-scope";
 import { FilterRuleRow } from "./filter-rule-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const accountTreeIcon = symbol("account-tree");
 
 /**
  * One group's children, as a section: the rule list, then this group's own
@@ -99,7 +102,7 @@ function NestedGroupRow(props: {
       }
       field={
         <ControlPanel.Field
-          icon={<MdAccountTree />}
+          icon={<Icon icon={accountTreeIcon} />}
           aria-label="Open filter group"
           label={`Group · ${count} ${count === 1 ? "condition" : "conditions"}`}
           onClick={() =>

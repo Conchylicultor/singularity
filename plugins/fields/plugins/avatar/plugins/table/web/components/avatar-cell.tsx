@@ -1,19 +1,23 @@
 import type { ReactNode } from "react";
 import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 import type { AvatarShape } from "@plugins/primitives/plugins/avatar/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import type {
   FieldDef,
   TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
 
-/** An avatar cell's `data` payload. `fallbackKey` and `shape` are render-time
- *  only: `fallbackKey` seeds the derived colour when `color` is null, `shape`
- *  picks the outline (an app icon is a squircle; people and agents stay
- *  circles, so it is not part of the persisted {@link AvatarSpec}). */
+/** An avatar cell's `data` payload. `fallbackKey`, `shape` and `symbol` are
+ *  render-time only: `fallbackKey` seeds the derived colour when `color` is
+ *  null, `shape` picks the outline (an app icon is a squircle; people and
+ *  agents stay circles), and `symbol` is a glyph named in code (an app's icon)
+ *  drawn when there are no stored `svgNodes` — none is part of the persisted
+ *  {@link AvatarSpec}. */
 export type AvatarFieldData = AvatarSpec & {
   fallbackKey?: string;
   shape?: AvatarShape;
+  symbol?: IconRef;
 };
 
 /** Thrown when an avatar cell's `data` is not an {@link AvatarFieldData}. */
@@ -42,7 +46,13 @@ function isAvatarFieldData(data: unknown): data is AvatarFieldData {
     (!("fallbackKey" in data) ||
       data.fallbackKey === undefined ||
       isString(data.fallbackKey)) &&
-    (!("shape" in data) || data.shape === undefined || isShape(data.shape))
+    (!("shape" in data) || data.shape === undefined || isShape(data.shape)) &&
+    (!("symbol" in data) ||
+      data.symbol === undefined ||
+      (typeof data.symbol === "object" &&
+        data.symbol !== null &&
+        "kind" in data.symbol &&
+        "name" in data.symbol))
   );
 }
 
@@ -56,6 +66,7 @@ export function AvatarCell(props: TableCellProps): ReactNode {
       icon={data.icon}
       color={data.color}
       svgNodes={data.svgNodes}
+      symbol={data.symbol}
       fallbackKey={data.fallbackKey}
       shape={data.shape}
     />

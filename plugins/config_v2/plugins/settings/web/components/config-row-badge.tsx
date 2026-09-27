@@ -1,4 +1,3 @@
-import { MdWarning } from "react-icons/md";
 import type {
   ConfigSource,
   ConfigV2ConflictLocations,
@@ -9,6 +8,10 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { conflictSentence } from "../internal/conflict-locations";
 import { useScopeDisplay } from "../internal/scope-label";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /** Source → short tag label. `manual` (and missing) carries no tag — only the
  * auto-generated provenances are worth surfacing. */
@@ -51,7 +54,7 @@ export function ConfigRowBadge({
     <WithTooltip content={conflictSentence(conflict, scopeDisplay)}>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label */}
       <Inline as="span" gap="none" className="ml-2 text-warning">
-        <MdWarning className="size-4" />
+        <Icon icon={warningIcon} className="size-4" />
       </Inline>
     </WithTooltip>
   ) : modifiedCount !== undefined && modifiedCount > 0 ? (

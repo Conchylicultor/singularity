@@ -1,4 +1,3 @@
-import { MdRepeat } from "react-icons/md";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useSonata,
@@ -6,6 +5,9 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toggleLoop } from "../loop-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const repeatIcon = symbol("repeat");
 
 /**
  * The player header's Loop toggle (`sonataPlayerPane.Actions`). One click toggles the A–B practice
@@ -20,7 +22,7 @@ export function LoopToggle() {
 
   return (
     <IconButton
-      icon={MdRepeat}
+      icon={repeatIcon}
       label="Loop"
       tooltip="Loop"
       shortcut="l"

@@ -1,6 +1,10 @@
-import { MdCalendarToday, MdEvent } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const calendarTodayIcon = symbol("calendar-today");
+const eventIcon = symbol("event");
 
 /** Claude Code ≥ 2.1.260: one attachment for both the routine stamp and the
  *  crossing, told apart by `changed`. */
@@ -83,9 +87,9 @@ export function DateAttachmentView({ event }: AttachmentRendererProps) {
     <EventLine
       icon={
         changed ? (
-          <MdEvent className="size-3.5" />
+          <Icon icon={eventIcon} className="size-3.5" />
         ) : (
-          <MdCalendarToday className="size-3.5" />
+          <Icon icon={calendarTodayIcon} className="size-3.5" />
         )
       }
       label={changed ? "Date changed" : "Date"}

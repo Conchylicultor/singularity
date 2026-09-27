@@ -112,6 +112,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/persistent-draft.clearDraft`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`
+    - `ui/icons.Icon`
   - Exports (types):
     - `EdgeAutoScroll`
     - `EdgeScrollSurface`

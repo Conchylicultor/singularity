@@ -1,9 +1,13 @@
 import type { ReactElement } from "react";
-import { MdClose, MdContentCopy, MdCropSquare } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { usePrototypeDetail } from "../context";
 import type { FrameActionRow } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const contentCopyIcon = symbol("content-copy");
+const cropSquareIcon = symbol("crop-square");
 
 // The canvas's own frame actions, contributed to `PrototypeFrameActions` like
 // any other plugin's (Present adds its menu the same way). Keep only and Close
@@ -17,7 +21,7 @@ export function KeepOnlyFrameAction({
   if (canvas.frames.length < 2) return null;
   return (
     <IconButton
-      icon={MdCropSquare}
+      icon={cropSquareIcon}
       label="Keep only this frame — close the others"
       onClick={() => keepOnly(row.frame.id)}
     />
@@ -32,7 +36,7 @@ export function DuplicateFrameAction({
   if (row.frame.kind !== "prototype") return null;
   return (
     <IconButton
-      icon={MdContentCopy}
+      icon={contentCopyIcon}
       label="Duplicate — then change its variant or version"
       onClick={() => dispatch({ type: "addPrototype", from: row.frame.id })}
     />
@@ -47,7 +51,7 @@ export function CloseFrameAction({
   if (canvas.frames.length < 2) return null;
   return (
     <IconButton
-      icon={MdClose}
+      icon={closeIcon}
       label="Remove from canvas"
       onClick={() => dispatch({ type: "remove", id: row.frame.id })}
     />

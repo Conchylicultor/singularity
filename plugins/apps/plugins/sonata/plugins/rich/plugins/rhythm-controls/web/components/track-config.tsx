@@ -18,7 +18,11 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdAdd, MdRemove } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
+const removeIcon = symbol("remove");
 
 /** Subdivision clamp mirrors `resample`'s own [1, 48] bound. */
 const MIN_SUBDIVISIONS = 1;
@@ -141,7 +145,7 @@ export function TrackConfig({
         </Text>
         <Stack direction="row" gap="xs" align="center">
           <IconButton
-            icon={MdRemove}
+            icon={removeIcon}
             label="Rotate left"
             onClick={() => onChange(rotate(pattern, -1))}
           />
@@ -149,7 +153,7 @@ export function TrackConfig({
             {pattern.rotation}
           </Text>
           <IconButton
-            icon={MdAdd}
+            icon={addIcon}
             label="Rotate right"
             onClick={() => onChange(rotate(pattern, 1))}
           />
@@ -162,7 +166,7 @@ export function TrackConfig({
         </Text>
         <Stack direction="row" gap="xs" align="center">
           <IconButton
-            icon={MdRemove}
+            icon={removeIcon}
             label="Fewer subdivisions"
             disabled={pattern.subdivisions <= MIN_SUBDIVISIONS}
             onClick={() =>
@@ -178,7 +182,7 @@ export function TrackConfig({
             {pattern.subdivisions}
           </Text>
           <IconButton
-            icon={MdAdd}
+            icon={addIcon}
             label="More subdivisions"
             disabled={pattern.subdivisions >= MAX_SUBDIVISIONS}
             onClick={() =>

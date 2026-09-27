@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   DataView,
@@ -152,11 +153,11 @@ export function SourcesList(): ReactNode {
   const creators = useMemo<CreateOption[]>(
     () =>
       types.map((t) => {
-        const Icon = t.icon;
+        const icon = t.icon;
         return {
           id: t.id,
           label: t.label,
-          icon: Icon ? <Icon className="icon-auto" /> : undefined,
+          icon: icon ? <Icon icon={icon} className="icon-auto" /> : undefined,
           onSelect: () =>
             openAddSourceDialog(t, (sourceId) =>
               openPane(eventSourceDetailPane, { sourceId }, { mode: "push" }),

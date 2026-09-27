@@ -542,6 +542,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ui/theme-engine/saved-themes`
     - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/icons`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
 - Test helpers:

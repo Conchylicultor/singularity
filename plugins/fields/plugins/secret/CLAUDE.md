@@ -34,6 +34,7 @@ four runtimes (core / web / server / central).
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `secretFieldType`
     - `secretIdentity`

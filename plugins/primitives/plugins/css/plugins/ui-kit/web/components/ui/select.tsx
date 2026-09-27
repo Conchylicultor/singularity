@@ -15,8 +15,13 @@ import {
   useControlSize,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
-import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const checkIcon = symbol("check");
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 
 // Kept generic over base-ui's own `<Value, Multiple>` params: this was a bare
 // `const Select = SelectPrimitive.Root` alias, and a non-generic wrapper would
@@ -92,7 +97,10 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <MdExpandMore className="pointer-events-none size-4 text-muted-foreground" />
+          <Icon
+            icon={keyboardArrowDownIcon}
+            className="pointer-events-none size-4 text-muted-foreground"
+          />
         }
       />
     </SelectPrimitive.Trigger>
@@ -243,7 +251,7 @@ function SelectItem({
           <span className="pointer-events-none flex size-4 items-center justify-center" />
         }
       >
-        <MdCheck className="pointer-events-none" />
+        <Icon icon={checkIcon} className="pointer-events-none" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );
@@ -281,7 +289,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <MdExpandLess />
+      <Icon icon={keyboardArrowUpIcon} />
     </SelectPrimitive.ScrollUpArrow>
   );
 }
@@ -299,7 +307,7 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <MdExpandMore />
+      <Icon icon={keyboardArrowDownIcon} />
     </SelectPrimitive.ScrollDownArrow>
   );
 }

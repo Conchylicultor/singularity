@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdPalette } from "react-icons/md";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { QuickTheme } from "@plugins/ui/plugins/theme-engine/plugins/quick-theme/web";
 import {
@@ -13,6 +12,7 @@ import {
   RenameThemeAction,
   ThemeItemActions,
 } from "./components/theme-item-actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -21,7 +21,7 @@ export default {
     ThemeCustomizer.Section({
       id: "themes",
       label: "Theme",
-      icon: MdPalette,
+      icon: symbol("palette"),
       component: ThemeGalleryPicker,
       summary: SelectedThemeSummary,
       useAvailable: useThemeSectionMatchesSearch,

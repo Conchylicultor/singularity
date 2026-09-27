@@ -1,8 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdMic } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { useSpeechRecognition } from "./use-speech-recognition";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const micIcon = symbol("mic");
 
 export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
   const { isListening, error, toggle, isSupported } =
@@ -14,9 +16,8 @@ export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
 
   return (
     <IconButton
-      icon={({ className }) => (
-        <MdMic className={cn(className, isListening && "animate-pulse")} />
-      )}
+      icon={micIcon}
+      motion={isListening ? "pulse" : undefined}
       label={label}
       tooltip={error ?? label}
       onMouseDown={(e) => e.preventDefault()}

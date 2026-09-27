@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdLibraryMusic } from "react-icons/md";
 import {
   Sonata,
   chordModeSetting,
@@ -7,6 +6,7 @@ import {
 import { ChordModeObserver } from "./components/chord-mode-observer";
 import { ChordModeActions } from "./components/chord-mode-actions";
 import { useChordModeAvailable } from "./use-available";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { useSaveChordMode } from "./actions";
 
@@ -22,7 +22,7 @@ export default {
     Sonata.Section({
       id: "chord-mode",
       label: "Chords",
-      icon: MdLibraryMusic,
+      icon: symbol("library-music"),
       area: "player",
       actions: ChordModeActions,
       useAvailable: useChordModeAvailable,

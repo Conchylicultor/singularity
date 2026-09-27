@@ -1,9 +1,11 @@
 import { type ReactElement } from "react";
-import { MdOpenInNew } from "react-icons/md";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { Server } from "../../shared";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const openInNewIcon = symbol("open-in-new");
 
 /** Per-consumer trailing-action slot for the deploy Servers list rows. */
 export const ServerItemActions = defineItemActions<Server>();
@@ -19,7 +21,7 @@ export function OpenConsoleAction({
   if (!url) return null;
   return (
     <IconButton
-      icon={MdOpenInNew}
+      icon={openInNewIcon}
       label="Open console"
       onClick={(e) => {
         e.stopPropagation();

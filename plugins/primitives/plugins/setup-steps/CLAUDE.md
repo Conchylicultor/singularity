@@ -15,6 +15,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (types):
     - `StepProps`
     - `StepState`

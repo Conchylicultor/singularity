@@ -1,4 +1,3 @@
-import { MdAutoAwesome } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { CONFIG_CATEGORY_ID } from "@plugins/config_v2/plugins/settings/core";
@@ -7,6 +6,10 @@ import {
   buildConflictPrompt,
   describeConflict,
 } from "../internal/build-prompt";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * "Ask an agent" inside a config conflict banner: the standard launch popover,
@@ -28,7 +31,7 @@ export function ConflictAgentButton({
     <LaunchAgentPopover
       trigger={
         <Button variant="ghost" className={conflict.actionClassName}>
-          <MdAutoAwesome className="size-3.5" />
+          <Icon icon={autoAwesomeIcon} className="size-3.5" />
           Ask an agent
         </Button>
       }

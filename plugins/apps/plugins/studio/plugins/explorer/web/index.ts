@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdAccountTree } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { explorerPane } from "./panes";
 import { Explorer } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Explorer } from "./slots";
 export type { TreeRowBadgeContribution } from "./slots";
@@ -24,7 +24,7 @@ export default {
     Studio.Sidebar({
       id: "explorer",
       title: "Plugin",
-      icon: MdAccountTree,
+      icon: symbol("account-tree"),
       onClick: () => openPane(explorerPane, {}, { mode: "root" }),
     }),
   ],

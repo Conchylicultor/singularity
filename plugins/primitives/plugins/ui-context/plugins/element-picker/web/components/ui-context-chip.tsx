@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdAdsClick } from "react-icons/md";
 import {
   UI_CONTEXT_FIELDS,
   type UiContextField,
@@ -19,6 +18,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { LineagePath } from "./lineage-path";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const adsClickIcon = symbol("ads-click");
 
 /**
  * Fields whose value is structured enough that a flat string misrepresents it.
@@ -79,7 +82,10 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
       contentEditable={false}
       className="max-w-40"
       leading={
-        <MdAdsClick className={cn("text-muted-foreground", rigidClass())} />
+        <Icon
+          icon={adsClickIcon}
+          className={cn("text-muted-foreground", rigidClass())}
+        />
       }
     >
       {meta.element}
@@ -91,7 +97,8 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
       <Inset pad="sm">
         <Stack gap="sm">
           <Stack direction="row" gap="2xs" align="center">
-            <MdAdsClick
+            <Icon
+              icon={adsClickIcon}
               className={cn("text-muted-foreground size-4", rigidClass())}
             />
             <Text

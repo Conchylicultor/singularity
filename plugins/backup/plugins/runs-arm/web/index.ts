@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdArchive, MdCloudUpload, MdFolder } from "react-icons/md";
 import { Runs } from "@plugins/runs/web";
 import { BACKUP_RUN_KIND } from "@plugins/backup/core";
 import { BackupRunDetail, backupRunPane } from "@plugins/backup/web";
@@ -17,6 +16,7 @@ import {
   backupSources,
   backupTargetResults,
 } from "./internal/payload";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -42,7 +42,7 @@ export default {
     BackupRunDetail.Section({
       id: "archive",
       label: "Archive",
-      icon: MdArchive,
+      icon: symbol("archive"),
       summary: BackupArchiveSize,
       // A run that failed before producing an archive has no size, and a titled
       // row reading nothing is worse than no row. Same gate the other two take.
@@ -55,7 +55,7 @@ export default {
     BackupRunDetail.Section({
       id: "sources",
       label: "Sources",
-      icon: MdFolder,
+      icon: symbol("folder"),
       component: BackupSourcesSection,
       // The verdict beside the title, so a failed source shows while the card
       // is shut — the open state is remembered per section, not per run.
@@ -70,7 +70,7 @@ export default {
     BackupRunDetail.Section({
       id: "targets",
       label: "Targets",
-      icon: MdCloudUpload,
+      icon: symbol("cloud-upload"),
       component: BackupTargetsSection,
       summary: BackupTargetsSummary,
       useAvailable: ({ run }) => backupTargetResults(run).length > 0,

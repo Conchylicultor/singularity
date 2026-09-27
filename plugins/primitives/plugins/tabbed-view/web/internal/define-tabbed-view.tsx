@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { type ComponentType, type ReactNode, useMemo } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
@@ -12,7 +13,7 @@ import {
 export interface TabContribution<ViewProps> {
   id: string;
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   order?: number;
   component: ComponentType<ViewProps>;
 }

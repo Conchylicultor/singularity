@@ -21,6 +21,7 @@
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/row-actions.RowActions`
     - `primitives/slot-render.renderIsolated`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BreadcrumbProps`
     - `BreadcrumbSegment`

@@ -27,7 +27,6 @@
  * pointer-events-none, so the wrapper re-enables pointer events locally.
  */
 import { useState } from "react";
-import { MdTune } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
@@ -37,6 +36,10 @@ import {
   Sonata,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const tuneIcon = symbol("tune");
 
 type ViewOptionItem = ReturnType<
   typeof Sonata.ViewOption.useContributions
@@ -83,7 +86,7 @@ export function ViewOptionsToggle() {
         trigger={
           <ToggleChip
             active={open}
-            icon={<MdTune />}
+            icon={<Icon icon={tuneIcon} />}
             aria-label="Display options"
             // `ControlPanelPopover` has no tooltip prop (the trigger owns its
             // own), and a ToggleChip carries none — so the hover hint is the

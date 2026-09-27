@@ -1,9 +1,12 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdPause, MdPlayArrow } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { Song } from "../../core";
 import { useSonataPlayback } from "../use-playback";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const pauseIcon = symbol("pause");
+const playArrowIcon = symbol("play-arrow");
 
 /**
  * Trailing per-row Play/Pause action for the library table. Plays the song in
@@ -17,7 +20,7 @@ export function PlaySongAction({ row }: ItemActionProps<Song>) {
   return (
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={isThisPlaying ? MdPause : MdPlayArrow}
+        icon={isThisPlaying ? pauseIcon : playArrowIcon}
         label={isThisPlaying ? "Pause" : "Play"}
         variant="ghost"
         onClick={(e) => {

@@ -4,5 +4,5 @@ export const agentManagerApp = defineApp({
   id: "agent-manager",
   name: "Agent Manager",
   basePath: "/agents",
-  iconKey: "chat_bubble",
+  iconKey: "chat-bubble",
 });

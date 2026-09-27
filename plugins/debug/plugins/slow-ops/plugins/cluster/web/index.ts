@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdHub } from "react-icons/md";
 import { SlowEvents } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import { ClusterView } from "./components/cluster-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     SlowEvents.View({
       id: "cluster",
       title: "Cluster",
-      icon: MdHub,
+      icon: symbol("hub"),
       order: 30,
       component: ClusterView,
     }),

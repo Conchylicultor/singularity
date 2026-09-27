@@ -1,6 +1,9 @@
-import { MdGroups } from "react-icons/md";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const groupsIcon = symbol("groups");
 
 interface TeamContextPayload {
   type: "team_context";
@@ -26,7 +29,10 @@ export function TeamContextView({ event }: AttachmentRendererProps) {
   }
 
   return (
-    <EventLine icon={<MdGroups className="size-3.5" />} label="Team">
+    <EventLine
+      icon={<Icon icon={groupsIcon} className="size-3.5" />}
+      label="Team"
+    >
       <span className="truncate text-foreground">{att.agentName}</span>
       {att.teamName && <span className="truncate">in {att.teamName}</span>}
     </EventLine>

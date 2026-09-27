@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import { MdAttachFile, MdStar } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -13,6 +12,11 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { MailSearchResult } from "@plugins/apps/plugins/mail/plugins/sync/core";
 import { mailMessagePane } from "../panes";
 import { MailLabelChip } from "./mail-label-chip";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const attachFileIcon = symbol("attach-file");
+const starIcon = symbol("star");
 
 /**
  * One search hit: a clickable Gmail-style **thread-collapsed** row. Multiple
@@ -27,7 +31,11 @@ import { MailLabelChip } from "./mail-label-chip";
  * envelope in as `input` (still a `MailMessage`) so the header renders instantly
  * while the body hydrates.
  */
-export function MailSearchRow({ result }: { result: MailSearchResult }): ReactElement {
+export function MailSearchRow({
+  result,
+}: {
+  result: MailSearchResult;
+}): ReactElement {
   const openPane = useOpenPane();
   const message = result.message;
   const sender = message.from.name ?? message.from.email;
@@ -42,7 +50,11 @@ export function MailSearchRow({ result }: { result: MailSearchResult }): ReactEl
         )
       }
       // Transparent when read, so the leading column stays aligned across rows.
-      icon={<StatusDot colorClass={result.unread ? "bg-primary" : "bg-transparent"} />}
+      icon={
+        <StatusDot
+          colorClass={result.unread ? "bg-primary" : "bg-transparent"}
+        />
+      }
     >
       <Fill>
         {/* Outer 2xs gap sets the little top spacing before the label chips;
@@ -60,9 +72,15 @@ export function MailSearchRow({ result }: { result: MailSearchResult }): ReactEl
                 </Badge>
               )}
               {result.hasAttachments && (
-                <MdAttachFile className="text-muted-foreground" aria-label="Has attachment" />
+                <Icon
+                  icon={attachFileIcon}
+                  className="text-muted-foreground"
+                  aria-label="Has attachment"
+                />
               )}
-              {result.starred && <MdStar className="text-primary" />}
+              {result.starred && (
+                <Icon icon={starIcon} className="text-primary" />
+              )}
               {message.internalDate && (
                 <Text variant="caption" tone="muted">
                   <RelativeTime date={message.internalDate} />

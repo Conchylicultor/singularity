@@ -1,4 +1,5 @@
-import type { ComponentType, ReactNode } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ReactNode } from "react";
 import { FORMAT_TEXT_COMMAND } from "lexical";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -10,7 +11,7 @@ export interface MarkButtonProps {
   /** The boolean mark this button toggles. */
   mark: Mark;
   /** Icon glyph (e.g. `MdFormatBold`). */
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Accessible label + tooltip text. */
   label: string;
   /** Optional shortcut hint shown in the tooltip (e.g. `<Kbd>⌘B</Kbd>`). */
@@ -27,7 +28,12 @@ export interface MarkButtonProps {
  * instead of collapsing the caret. Each mark sub-plugin is a one-line wrapper
  * around this component.
  */
-export function MarkButton({ mark, icon, label, shortcutHint }: MarkButtonProps) {
+export function MarkButton({
+  mark,
+  icon,
+  label,
+  shortcutHint,
+}: MarkButtonProps) {
   const toolbar = useFormatToolbar();
   if (!toolbar) return null;
   const isActive = toolbar.active[mark];

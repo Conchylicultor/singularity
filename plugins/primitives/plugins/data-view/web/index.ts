@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdFilterList, MdSwapVert, MdTune } from "react-icons/md";
 import { dataViewConfigContributions } from "./internal/config-registrations";
 import { isGroupableField } from "./internal/use-data-view-sections";
 import { DataViewSlots } from "./slots";
@@ -11,6 +10,7 @@ import { SortControlPanel } from "./components/sort/sort-control-panel";
 import { SettingsControlPanel } from "./components/settings/settings-control-panel";
 import { summarizeFilter } from "./internal/summarize-filter";
 import { summarizeSort } from "./internal/summarize-sort";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DataView } from "./components/data-view";
 export { MergedDataView } from "./components/merged-data-view";
@@ -211,7 +211,7 @@ export default {
     DataViewSlots.Control({
       id: "data-view.filter",
       label: "Filter",
-      icon: MdFilterList,
+      icon: symbol("filter-list"),
       order: 0,
       size: "builder",
       // A literal transcription of the host's old `hasFilters`.
@@ -227,7 +227,7 @@ export default {
     DataViewSlots.Control({
       id: "data-view.sort",
       label: "Sort",
-      icon: MdSwapVert,
+      icon: symbol("swap-vert"),
       order: 1,
       size: "builder",
       // A literal transcription of the host's old `hasSort`.
@@ -243,7 +243,7 @@ export default {
     DataViewSlots.Control({
       id: "data-view.settings",
       label: "View settings",
-      icon: MdTune,
+      icon: symbol("tune"),
       order: 2,
       component: SettingsControlPanel,
     }),

@@ -24,9 +24,9 @@ icon-only square, so it has no narrower form of itself to offer.
 ## Enforcement
 
 `lint/prefer-icon-button.ts` (contributed by this plugin, registered repo-wide)
-steers a standalone `<Button><MdX/></Button>` toward
+steers a standalone `<Button><Icon icon={…}/></Button>` toward
 `<IconButton icon={…} label=… />`. It fires when the `<Button>`'s only child
-(ignoring whitespace) is a single react-icons glyph element, its `aspect` is
+(ignoring whitespace) is a single `<Icon>` glyph element, its `aspect` is
 absent or the literal `"icon"` or `"text"`, and it is NOT a render-target prop
 value (`trigger={<Button…/>}` / `render={<Button…/>}`). This is the exact shape
 an author hand-rolls when they skip `IconButton`.
@@ -57,6 +57,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/shortcuts.formatShortcutLabel`
+    - `ui/icons.Icon`
   - Exports (types): `IconButtonProps`
   - Exports (values): `IconButton`
 - Cross-plugin:

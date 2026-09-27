@@ -1,15 +1,7 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  MdCancel,
-  MdCheckCircle,
-  MdIncompleteCircle,
-  MdInput,
-  MdPauseCircle,
-  MdRadioButtonUnchecked,
-  MdTimelapse,
-} from "react-icons/md";
-import type { IconType } from "react-icons";
+
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -17,6 +9,15 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const cancelIcon = symbol("cancel");
+const checkCircleIcon = symbol("check-circle");
+const incompleteCircleIcon = symbol("incomplete-circle");
+const inputIcon = symbol("input");
+const pauseCircleIcon = symbol("pause-circle");
+const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
+const timelapseIcon = symbol("timelapse");
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).
@@ -28,7 +29,7 @@ const ATTENTION_STATUSES = new Set<TaskStatus>(["need_action", "held"]);
 export const STATUS_META: Record<
   TaskStatus,
   {
-    icon: IconType;
+    icon: IconRef;
     iconClassName: ClassName;
     label: string;
     badgeClassName: ClassName;
@@ -37,56 +38,56 @@ export const STATUS_META: Record<
   }
 > = {
   new: {
-    icon: MdRadioButtonUnchecked,
+    icon: radioButtonUncheckedIcon,
     iconClassName: cn("text-muted-foreground/60"),
     label: "New",
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/40",
   },
   in_progress: {
-    icon: MdTimelapse,
+    icon: timelapseIcon,
     iconClassName: cn("text-info"),
     label: "In progress",
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-info",
   },
   need_action: {
-    icon: MdInput,
+    icon: inputIcon,
     iconClassName: cn("text-warning"),
     label: "Need action",
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   attempted: {
-    icon: MdIncompleteCircle,
+    icon: incompleteCircleIcon,
     iconClassName: cn("text-muted-foreground"),
     label: "Attempted",
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/60",
   },
   done: {
-    icon: MdCheckCircle,
+    icon: checkCircleIcon,
     iconClassName: cn("text-success"),
     label: "Done",
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-success",
   },
   held: {
-    icon: MdPauseCircle,
+    icon: pauseCircleIcon,
     iconClassName: cn("text-warning"),
     label: "Held",
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   dropped: {
-    icon: MdCancel,
+    icon: cancelIcon,
     iconClassName: cn("text-muted-foreground/50"),
     label: "Dropped",
     badgeClassName: cn("bg-muted text-muted-foreground/60 italic"),
     dotClass: "bg-muted-foreground/40",
   },
   blocked: {
-    icon: MdPauseCircle,
+    icon: pauseCircleIcon,
     iconClassName: cn("text-muted-foreground"),
     label: "Blocked",
     badgeClassName: cn("bg-muted text-muted-foreground"),
@@ -96,7 +97,7 @@ export const STATUS_META: Record<
   // (info) so the live attempt is visible at a glance, and says so in the label
   // rather than reading as a plain `Blocked` row nothing is happening on.
   in_progress_blocked: {
-    icon: MdTimelapse,
+    icon: timelapseIcon,
     iconClassName: cn("text-info"),
     label: "In progress (blocked)",
     badgeClassName: cn("bg-muted"),
@@ -106,7 +107,7 @@ export const STATUS_META: Record<
 
 export function StatusIcon({ status }: { status: TaskStatus }) {
   const meta = STATUS_META[status];
-  const Icon = meta.icon;
+  const icon = meta.icon;
   return (
     <Center
       as="span"
@@ -114,7 +115,7 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
       aria-label={meta.label}
       className={cn("size-5", rigidClass())}
     >
-      <Icon className={cn("size-4", meta.iconClassName)} />
+      <Icon icon={icon} className={cn("size-4", meta.iconClassName)} />
     </Center>
   );
 }

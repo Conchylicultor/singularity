@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdBugReport } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
@@ -8,6 +7,9 @@ import {
   DEPLOY_LOG_CHANNEL,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const bugReportIcon = symbol("bug-report");
 
 /**
  * How this run died, in the same honest words the live failure notice uses: a
@@ -97,7 +99,7 @@ export function InvestigateFailureAction({
       placeholder="Optional — what you already suspect, or what to check first…"
       trigger={
         <IconButton
-          icon={MdBugReport}
+          icon={bugReportIcon}
           label="Investigate failure"
           tooltip={`Launch an agent to investigate this failed ${row.verb}`}
         />

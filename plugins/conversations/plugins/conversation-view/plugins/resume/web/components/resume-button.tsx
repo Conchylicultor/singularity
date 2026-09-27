@@ -1,10 +1,15 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdReplay } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpointMutation,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const replayIcon = symbol("replay");
 
 export function ResumeButton({
   conversation,
@@ -46,7 +51,7 @@ export function ResumeButton({
 
   return (
     <IconButton
-      icon={MdReplay}
+      icon={replayIcon}
       label="Resume"
       tooltip={resume.isPending ? "Resuming…" : tooltip}
       variant="outline"

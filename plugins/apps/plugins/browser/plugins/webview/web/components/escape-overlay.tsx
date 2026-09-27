@@ -1,11 +1,20 @@
-import { MdClose, MdOpenInNew, MdPublicOff, MdRefresh } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const openInNewIcon = symbol("open-in-new");
+const publicOffIcon = symbol("public-off");
+const refreshIcon = symbol("refresh");
 
 interface EscapeOverlayProps {
   /** The last known real URL (the page that triggered the escape). */
@@ -25,22 +34,34 @@ interface EscapeOverlayProps {
  * source `url`; the real browser then re-runs the same redirect with no framing
  * restriction and lands the user where the page intended.
  */
-export function EscapeOverlay({ url, onReload, onDismiss }: EscapeOverlayProps) {
+export function EscapeOverlay({
+  url,
+  onReload,
+  onDismiss,
+}: EscapeOverlayProps) {
   return (
-    <Center axis="both" className="h-full w-full bg-background/85 backdrop-blur-sm">
+    <Center
+      axis="both"
+      className="h-full w-full bg-background/85 backdrop-blur-sm"
+    >
       <Surface level="overlay" className="relative max-w-sm">
         <Pin to="top-right" offset="xs">
           <IconButton
-            icon={MdClose}
+            icon={closeIcon}
             label="Dismiss"
             tooltip="Dismiss"
             onClick={onDismiss}
           />
         </Pin>
         <Inset pad="xl">
-          <Stack direction="col" gap="md" align="center" className="text-center">
+          <Stack
+            direction="col"
+            gap="md"
+            align="center"
+            className="text-center"
+          >
             <Text variant="heading" tone="muted" as="span">
-              <MdPublicOff className="icon-auto" aria-hidden />
+              <Icon icon={publicOffIcon} className="icon-auto" aria-hidden />
             </Text>
             <Text variant="subheading">This page can't be shown here</Text>
             <Text variant="body" tone="muted">
@@ -54,11 +75,11 @@ export function EscapeOverlay({ url, onReload, onDismiss }: EscapeOverlayProps) 
                   window.open(url, "_blank", "noopener,noreferrer")
                 }
               >
-                <MdOpenInNew className="icon-auto" aria-hidden />
+                <Icon icon={openInNewIcon} className="icon-auto" aria-hidden />
                 Open in system browser
               </Button>
               <Button variant="outline" onClick={onReload}>
-                <MdRefresh className="icon-auto" aria-hidden />
+                <Icon icon={refreshIcon} className="icon-auto" aria-hidden />
                 Reload
               </Button>
             </Stack>

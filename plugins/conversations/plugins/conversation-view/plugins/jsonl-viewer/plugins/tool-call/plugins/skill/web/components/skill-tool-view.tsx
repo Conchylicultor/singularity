@@ -1,4 +1,3 @@
-import { MdOutlineDescription } from "react-icons/md";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -9,6 +8,10 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const descriptionIcon = symbol("description");
 
 type SkillInput = { skill: string; args?: string };
 
@@ -41,7 +44,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
     <LinkChip
       onClick={openSkillFile}
       mono
-      leading={<MdOutlineDescription />}
+      leading={<Icon icon={descriptionIcon} />}
       title={`Open ${skillFilePath}`}
     >
       {skillName}

@@ -160,6 +160,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/text-editor.registerNodeExtensionSource`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ChipSurface`
     - `InlineChipContribution`

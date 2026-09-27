@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo, useState } from "react";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -12,9 +13,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import type {
-  PluginNode,
-} from "@plugins/plugin-meta/plugins/plugin-view/core";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import {
   Contributions,
   type FacetTableEntry,
@@ -22,7 +21,10 @@ import {
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 
 /** Flatten the plugin tree into one entry per plugin carrying its slice of a facet. */
-function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[] {
+function facetEntries(
+  plugins: PluginNode[],
+  facetId: string,
+): FacetTableEntry[] {
   const out: FacetTableEntry[] = [];
   function visit(node: PluginNode) {
     const data = node.facets[facetId];
@@ -34,7 +36,11 @@ function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[]
 }
 
 export function ContributionsView() {
-  const { data: treeData, isLoading, error } = useEndpoint(getPluginFacetsTree, {});
+  const {
+    data: treeData,
+    isLoading,
+    error,
+  } = useEndpoint(getPluginFacetsTree, {});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const openPane = useOpenPane();
@@ -91,7 +97,9 @@ export function ContributionsView() {
 
   const activeId = selectedId ?? sortedTables[0]?.facetId ?? null;
   const activeTable = sortedTables.find((t) => t.facetId === activeId) ?? null;
-  const activeRowClick = activeTable ? rowClickByFacet.get(activeTable.facetId) : undefined;
+  const activeRowClick = activeTable
+    ? rowClickByFacet.get(activeTable.facetId)
+    : undefined;
 
   return (
     <Column
@@ -114,10 +122,12 @@ export function ContributionsView() {
                       setFilter("");
                     }}
                   >
-                    <table.icon size={14} />
+                    <Icon icon={table.icon} className="size-3.5" />
                     <span className="font-medium">{table.label}</span>
                     <Badge
-                      colorClass={active ? "bg-foreground/10 text-foreground" : undefined}
+                      colorClass={
+                        active ? "bg-foreground/10 text-foreground" : undefined
+                      }
                     >
                       {count}
                     </Badge>

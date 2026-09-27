@@ -1,5 +1,4 @@
 import { useContext, useState, type ReactNode } from "react";
-import { MdOpenInFull } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -12,6 +11,10 @@ import { GalleryContext } from "../internal/gallery-store";
 import { useViewerMember } from "../internal/use-image-viewer-trigger";
 import { ImageGallery } from "./image-gallery";
 import type { ViewerImage } from "../internal/types";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInFullIcon = symbol("open-in-full");
 
 export interface ViewerThumbnailProps {
   image: ViewerImage;
@@ -149,7 +152,7 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
               decorative
               className={cn(hoverRevealTargetWithGroupFocus, SCRIM, "p-2xs")}
             >
-              <MdOpenInFull className="block size-3.5" />
+              <Icon icon={openInFullIcon} className="block size-3.5" />
             </Pin>
           </>
         )}

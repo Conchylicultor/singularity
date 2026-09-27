@@ -3912,6 +3912,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `reorder.TopLevelEntry`
     - `reorder.useReorderedEntries`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BlockAnchorProps`
     - `BlockChrome`

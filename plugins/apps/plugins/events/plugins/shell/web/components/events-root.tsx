@@ -1,8 +1,11 @@
 import { type ReactElement } from "react";
-import { MdEvent } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const eventIcon = symbol("event");
 
 /**
  * Events' index surface (bare `/events`) — the empty state shown before the user
@@ -18,13 +21,13 @@ export function EventsRoot(): ReactElement {
   return (
     <Center axis="both" className="min-h-full">
       <Stack gap="md" align="center" className="max-w-sm text-center">
-        <MdEvent className="size-8 text-muted-foreground" />
+        <Icon icon={eventIcon} className="size-8 text-muted-foreground" />
         <Text as="h1" variant="heading">
           Events
         </Text>
         <Text as="p" variant="body" tone="muted">
-          One database of what is happening — concerts, parties, meetups — fed by
-          pluggable sources.
+          One database of what is happening — concerts, parties, meetups — fed
+          by pluggable sources.
         </Text>
         <Text as="p" variant="body" tone="muted">
           Add your first source from Sources in the sidebar to start collecting

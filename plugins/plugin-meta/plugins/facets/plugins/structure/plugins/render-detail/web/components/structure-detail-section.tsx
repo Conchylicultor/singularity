@@ -1,8 +1,11 @@
-import { MdWarningAmber } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { StructureFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/structure/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 // Renders the structure facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -13,8 +16,7 @@ const STRUCTURE_FACET_ID = "structure";
 /** The plugin's structural anomalies, or `null` when it is fully conformant. */
 function anomalies(node: PluginNode): StructureFacetData | null {
   const data = node.facets?.[STRUCTURE_FACET_ID] as
-    | StructureFacetData
-    | undefined;
+    StructureFacetData | undefined;
   if (!data) return null;
   const hasAnomaly =
     data.compositionRoot ||
@@ -41,13 +43,17 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
         <Badge
           key={`folder:${f.name}`}
           variant="warning"
-          icon={<MdWarningAmber />}
+          icon={<Icon icon={warningIcon} />}
         >
           {f.name}/
         </Badge>
       ))}
       {data.looseFiles.map((name) => (
-        <Badge key={`file:${name}`} variant="warning" icon={<MdWarningAmber />}>
+        <Badge
+          key={`file:${name}`}
+          variant="warning"
+          icon={<Icon icon={warningIcon} />}
+        >
           {name}
         </Badge>
       ))}

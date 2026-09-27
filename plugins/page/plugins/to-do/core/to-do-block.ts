@@ -1,9 +1,11 @@
-import { MdCheckBox } from "react-icons/md";
 import { z } from "zod";
 import {
   defineBlock,
   textBlockSchema,
 } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const checkBoxIcon = symbol("check-box");
 
 export const toDoDataSchema = textBlockSchema({
   checked: z.boolean().default(false),
@@ -13,7 +15,7 @@ export const toDoBlock = defineBlock({
   type: "to-do",
   schema: toDoDataSchema,
   label: "To-do",
-  icon: MdCheckBox,
+  icon: checkBoxIcon,
   aliases: ["checkbox", "task", "checklist", "todo"],
   empty: () => ({ text: [], checked: false }),
   placeholder: "To-do",

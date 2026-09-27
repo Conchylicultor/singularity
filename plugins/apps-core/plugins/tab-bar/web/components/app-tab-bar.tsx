@@ -1,5 +1,4 @@
 import { type ComponentType } from "react";
-import { MdAdd } from "react-icons/md";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   cn,
@@ -19,7 +18,6 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Tab, useActiveTabVariant } from "@plugins/ui/plugins/tab-bar/web";
 import { Apps } from "@plugins/apps-core/web";
-import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import {
   useTabs,
@@ -27,6 +25,9 @@ import {
   usePlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { ChromeMark } from "./chrome-mark";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+
+const addIcon = symbol("add");
 
 /** Bar-item id of the trailing `+`; tab ids are uuids, so it can't collide. */
 const NEW_TAB_ITEM_ID = "new-tab";
@@ -182,7 +183,7 @@ export function AppTabBar() {
                   {() => (
                     <TabChip
                       appId={tab.appId}
-                      icon={appIconComponent(entry.icon)}
+                      icon={entry.icon.symbol}
                       // Ambient per-app attention indicator (e.g. Mail sync-error,
                       // Settings config-conflict) — the same badge the app-rail
                       // icon paints, now on the more-proximate tab chip. Rides the
@@ -205,7 +206,7 @@ export function AppTabBar() {
             <Line as="div" className={fillHeight ? "h-full" : undefined}>
               <ControlSizeProvider size="sm">
                 <IconButton
-                  icon={MdAdd}
+                  icon={addIcon}
                   label={newTabIsWindow ? "New window" : "New tab"}
                   onClick={() => openTab("home")}
                 />
@@ -223,7 +224,7 @@ export function AppTabBar() {
 
 interface TabChipProps {
   appId: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Optional per-app attention overlay, pinned to the tab icon (see TabIcon). */
   badge?: ComponentType<{ className?: string }>;
   label: string;

@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdMusicNote } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { MidiLoader } from "./loader";
@@ -8,6 +7,7 @@ import { MIDI_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
 import { midiCreateOption } from "./components/midi-create-option";
 import { MidiFields } from "./components/midi-fields";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Re-export the source id so consumers can identify this source without
 // depending on its internal layout.
@@ -21,7 +21,7 @@ export default {
     Sonata.Source({
       id: MIDI_SOURCE_ID,
       label: "MIDI File",
-      icon: MdMusicNote,
+      icon: symbol("music-note"),
       LoaderComponent: MidiLoader,
       compile: parseMidi,
     }),

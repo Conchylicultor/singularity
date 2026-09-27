@@ -45,6 +45,7 @@
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useCaretQuery`
+    - `ui/icons.Icon`
 - Core:
   - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types): `DateMentionFields`

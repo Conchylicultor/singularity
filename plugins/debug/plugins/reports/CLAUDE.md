@@ -73,6 +73,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/scope/tab-id.getTabId`
     - `reports.investigate`
     - `reports.Reports`
+    - `ui/icons.Icon`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`

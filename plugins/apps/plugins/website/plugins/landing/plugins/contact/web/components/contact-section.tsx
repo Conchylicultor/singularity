@@ -7,11 +7,14 @@ import {
   WebsiteArrow,
   WebsiteBand,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { SiGithub } from "react-icons/si";
 import {
   CONTACT_MAILTO,
   ISSUES_URL,
 } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { brand } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const githubIcon = brand("github");
 
 const OFFERS = [
   {
@@ -75,7 +78,7 @@ export function ContactSection() {
                   />
                 }
               >
-                {offer.external && <SiGithub />}
+                {offer.external && <Icon icon={githubIcon} />}
                 {offer.action}
                 {offer.emphasis === "filled" && <WebsiteArrow />}
               </Button>

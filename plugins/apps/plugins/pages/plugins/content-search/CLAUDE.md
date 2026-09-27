@@ -14,6 +14,7 @@
     - `primitives/css/row.Row`
     - `primitives/pane.useOpenPane`
     - `search/quick-find.QuickFindDialog`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `trigger` "pages.search.reindex"

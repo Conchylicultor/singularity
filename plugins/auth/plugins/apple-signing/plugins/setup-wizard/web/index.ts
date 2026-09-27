@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
-import { SiApple } from "react-icons/si";
 import { appleSetupPane } from "./panes";
 import { AppleProviderRow } from "./components/apple-provider-row";
+import { brand } from "@plugins/ui/plugins/icons/core";
 
 export { appleSetupPane } from "./panes";
 
@@ -15,7 +15,7 @@ export default {
     Auth.Provider({
       id: "apple-signing",
       name: "Apple Developer",
-      icon: SiApple,
+      icon: brand("apple"),
       rowComponent: AppleProviderRow,
       configureCredentials: () =>
         openPane(appleSetupPane, {}, { mode: "root" }),

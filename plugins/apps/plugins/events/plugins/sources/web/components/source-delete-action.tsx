@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdDeleteOutline } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -13,6 +12,9 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useDeleteEventSource } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 /**
  * Delete a source from the list row.
@@ -28,7 +30,7 @@ export function SourceDeleteAction({
 
   return (
     <IconButton
-      icon={MdDeleteOutline}
+      icon={deleteIcon}
       label="Delete source"
       onClick={(e) => {
         e.stopPropagation();

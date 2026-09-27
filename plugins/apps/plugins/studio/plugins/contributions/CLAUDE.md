@@ -31,6 +31,7 @@
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`
+    - `ui/icons.Icon`
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

@@ -18,6 +18,7 @@
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/text-editor/paste-images.attachmentUrl`
+    - `ui/icons.Icon`
   - Exports (values):
     - `VIDEO_TYPE`
     - `videoBlock`
@@ -25,7 +26,9 @@
   - Contributes: `page.block-data` "video"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/editor.defineBlock`
+  - Uses:
+    - `page/editor.defineBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `VIDEO_TYPE`
     - `videoBlock`

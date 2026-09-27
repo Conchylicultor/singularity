@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdGridView } from "react-icons/md";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { ChordGridLoader } from "./loader";
@@ -9,6 +11,7 @@ import { hydrate } from "./hydrate";
 import { chordGridCreateOption } from "./components/chord-grid-create-option";
 import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 import { ChordGridPersistObserver } from "./components/chord-grid-persist-observer";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -17,7 +20,7 @@ export default {
     Sonata.Source({
       id: CHORD_GRID_SOURCE_ID,
       label: "Chord Grid",
-      icon: MdGridView,
+      icon: symbol("grid-view"),
       LoaderComponent: ChordGridLoader,
       compile,
     }),
@@ -29,7 +32,7 @@ export default {
     Sonata.Section({
       id: "chord-grid-editor",
       label: "Chord Grid",
-      icon: MdGridView,
+      icon: symbol("grid-view"),
       component: ChordGridEditorSection,
       area: "editor",
       useAvailable: () =>

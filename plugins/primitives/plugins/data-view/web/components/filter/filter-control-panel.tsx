@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdBookmarkAdd, MdClose } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useFilterEditor } from "../../internal/use-filter-editor";
 import { AddGroupRow } from "./add-filter-affordance";
@@ -7,6 +6,11 @@ import { FieldSearchList } from "./field-search-list";
 import { FilterGroupPanel } from "./filter-group-panel";
 import { useFilterPanelStack } from "./filter-scope";
 import { FilterPresetSection, FilterSavePresetPanel } from "./presets";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const bookmarkAddIcon = symbol("bookmark-add");
+const closeIcon = symbol("close");
 
 /**
  * The filter control's panel body. Prop-less by contract — it reads the live
@@ -55,7 +59,7 @@ export function FilterEditorPanel({
           <ControlPanel.Footer>
             {presets ? (
               <ControlPanel.Row
-                icon={<MdBookmarkAdd />}
+                icon={<Icon icon={bookmarkAddIcon} />}
                 onSelect={() =>
                   push({
                     key: "save-filter-preset",
@@ -73,7 +77,7 @@ export function FilterEditorPanel({
                 is no popover to close at all — so "clear and dismiss" is not one
                 gesture it can express in both layouts. */}
             <ControlPanel.Row
-              icon={<MdClose />}
+              icon={<Icon icon={closeIcon} />}
               tone="danger"
               onSelect={editor.clear}
             >

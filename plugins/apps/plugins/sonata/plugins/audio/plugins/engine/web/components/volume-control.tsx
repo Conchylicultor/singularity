@@ -1,8 +1,12 @@
-import { MdVolumeDown, MdVolumeOff, MdVolumeUp } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useAudioControls, useAudioState } from "../audio-store";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const volumeDownIcon = symbol("volume-down");
+const volumeOffIcon = symbol("volume-off");
+const volumeUpIcon = symbol("volume-up");
 
 /**
  * The master-volume control pinned into the Sonata top toolbar
@@ -17,7 +21,11 @@ export function VolumeControl() {
   const { volume } = useAudioState();
   const { setVolume, toggleMute } = useAudioControls();
   const muted = volume === 0;
-  const Icon = muted ? MdVolumeOff : volume < 0.5 ? MdVolumeDown : MdVolumeUp;
+  const Icon = muted
+    ? volumeOffIcon
+    : volume < 0.5
+      ? volumeDownIcon
+      : volumeUpIcon;
 
   return (
     <Stack direction="row" gap="xs" align="center">

@@ -1,12 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdTimeline, MdHistory } from "react-icons/md";
 import {
   bootProfilePane,
   bootProfileDetailPane,
   bootProfileListPane,
 } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Pure presentational Gantt of a BootTrace (no store/performance.* reads), so a
 // beacon-carried snapshot renders identically elsewhere (the trace detail's
@@ -23,13 +23,13 @@ export default {
     DebugApp.Sidebar({
       id: "boot-profile",
       title: "Boot Profile",
-      icon: MdTimeline,
+      icon: symbol("timeline"),
       onClick: () => openPane(bootProfilePane, {}, { mode: "root" }),
     }),
     DebugApp.Sidebar({
       id: "boot-profiles-list",
       title: "Boot Profiles",
-      icon: MdHistory,
+      icon: symbol("history"),
       onClick: () => openPane(bootProfileListPane, {}, { mode: "root" }),
     }),
   ],

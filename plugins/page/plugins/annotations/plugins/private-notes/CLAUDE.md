@@ -48,7 +48,9 @@ Two invariants for whoever builds that:
   - Contributes: `page.block-data` "private-note"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/annotations.defineAnnotationBlock`
+  - Uses:
+    - `page/annotations.defineAnnotationBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `privateNotesBlock`
     - `privateNotesDataSchema`

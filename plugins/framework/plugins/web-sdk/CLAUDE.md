@@ -278,8 +278,11 @@ fails the install). A moved or renamed plugin needs no name edit at all.
 ## Styling
 
 Read the `css` and `theme` SKILLs before any UI work (the root `CLAUDE.md` mandates both).
-Semantic tokens only — never hardcode colors. Icons come from `react-icons/md` (Material
-Design, `{ className?: string }`); `lucide-react` is banned by the `icon-safety` lint rule.
+Semantic tokens only — never hardcode colors. Icons are data: `symbol("…")` (Material
+Symbols) / `brand("…")` from `ui/icons/core`, drawn by `<Icon icon={…}/>` in the theme
+scope's icon style — see [`ui/icons/CLAUDE.md`](../../../ui/plugins/icons/CLAUDE.md). A slot
+or prop takes `icon: IconRef`, never a component; `react-icons` and `lucide-react` are
+banned by the `icon-safety` lint rules.
 UI primitives and `cn()` come from `@plugins/primitives/plugins/css/plugins/ui-kit/web` —
 see [`ui-kit/CLAUDE.md`](../../../primitives/plugins/css/plugins/ui-kit/CLAUDE.md).
 
@@ -301,7 +304,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 - Description: Web plugin runtime: slots, contributions, loader
 - Web:
   - Slots:
-    - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+    - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
     - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
 - Core:
   - Uses:

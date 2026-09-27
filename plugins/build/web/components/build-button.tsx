@@ -7,7 +7,6 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect } from "react";
 import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { MdOpenInFull, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -23,6 +22,11 @@ import { ReloadSegment } from "./reload-segment";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const openInFullIcon = symbol("open-in-full");
+const buildIcon = symbol("build");
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({
@@ -116,7 +120,7 @@ function BuildButtonInner({
   // a due reload joins it as the pill's own Reload segment.
   const quiet = status === "idle" && advice.kind === "none";
   const trigger = quiet ? (
-    <IconButton icon={MdBuild} label="Builds" />
+    <IconButton icon={buildIcon} label="Builds" />
   ) : (
     <Button
       variant="frame"
@@ -131,7 +135,7 @@ function BuildButtonInner({
     >
       {spinning && <Spinner spinning className="size-4" />}
       {status === "failed" && <StatusDot colorClass="bg-destructive" />}
-      {status === "idle" ? <MdBuild className="size-4" /> : label}
+      {status === "idle" ? <Icon icon={buildIcon} className="size-4" /> : label}
       {status === "building" && latestRun && (
         <ElapsedTime
           since={latestRun.startedAt}
@@ -162,7 +166,7 @@ function BuildButtonInner({
         </Text>
         <ControlSizeProvider size="xs">
           <IconButton
-            icon={MdOpenInFull}
+            icon={openInFullIcon}
             label="Open in pane"
             variant="ghost"
             onClick={() => {
@@ -211,7 +215,7 @@ export function BuildButton() {
   // loading — no fake "idle" status and no misleading useEffect trace before
   // data arrives. The popover needs the history, so it cannot open yet.
   if (historyResult.pending) {
-    return <IconButton icon={MdBuild} label="Builds" disabled />;
+    return <IconButton icon={buildIcon} label="Builds" disabled />;
   }
 
   return (

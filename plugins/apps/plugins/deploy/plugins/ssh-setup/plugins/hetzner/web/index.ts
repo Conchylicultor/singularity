@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { SiHetzner } from "react-icons/si";
 import { SshProvider } from "@plugins/apps/plugins/deploy/plugins/ssh-setup/web";
 import { HetznerConsoleInstructions } from "./components/hetzner-console";
+import { brand } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     SshProvider({
       id: "hetzner",
       name: "Hetzner",
-      icon: SiHetzner,
+      icon: brand("hetzner"),
       match: (consoleUrl) => consoleUrl.hostname === "console.hetzner.com",
       ConsoleInstructions: HetznerConsoleInstructions,
     }),

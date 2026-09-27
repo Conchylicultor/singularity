@@ -246,6 +246,7 @@ piano.
     - `primitives/pane.Pane`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
 - Core:
   - Uses:
     - `apps/chord/song-index.beatTimesAlignment`

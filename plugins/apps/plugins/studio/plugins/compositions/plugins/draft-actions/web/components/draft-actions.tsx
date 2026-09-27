@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdDeleteOutline, MdSave } from "react-icons/md";
 import {
   Button,
   Input,
@@ -19,6 +18,11 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/web";
 import { useDeleteComposition } from "@plugins/build/plugins/serve-composition/web";
 import { isCommittedSourceComposition } from "@plugins/plugin-meta/plugins/composition/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const deleteIcon = symbol("delete");
+const saveIcon = symbol("save");
 
 /**
  * Persistence actions for the active draft: an inline editable name plus Save /
@@ -107,12 +111,12 @@ export function DraftActions({ id }: { id: string }): ReactElement {
           }
           onClick={() => save(draft, id)}
         >
-          <MdSave />
+          <Icon icon={saveIcon} />
           Save
         </Button>
         {!committedSource && (
           <Button variant="ghost" onClick={onDelete}>
-            <MdDeleteOutline />
+            <Icon icon={deleteIcon} />
             Delete
           </Button>
         )}

@@ -1,10 +1,13 @@
-import { MdWidgets } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pluginConvSidePane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const widgetsIcon = symbol("widgets");
 
 /**
  * Pure renderer, reachable ONLY on a claim — `value` is a resolved plugin, so
@@ -28,13 +31,17 @@ export function PluginLinkChip({
       onClick={(e) => {
         e.stopPropagation();
         if (convId) {
-          openPane(pluginConvSidePane, { pluginId: resolvedId }, { mode: "push" });
+          openPane(
+            pluginConvSidePane,
+            { pluginId: resolvedId },
+            { mode: "push" },
+          );
         } else {
           openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
         }
       }}
       title={value.description ?? resolvedId}
-      leading={<MdWidgets className="text-muted-foreground" />}
+      leading={<Icon icon={widgetsIcon} className="text-muted-foreground" />}
       mono
     >
       {content}

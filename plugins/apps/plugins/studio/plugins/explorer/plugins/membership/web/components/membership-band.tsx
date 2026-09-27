@@ -1,5 +1,7 @@
-import { MdMyLocation, MdHub } from "react-icons/md";
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
@@ -13,6 +15,10 @@ import {
 import { graphCanvasPane } from "@plugins/apps/plugins/studio/plugins/graph/web";
 import { STATE_TINT } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const myLocationIcon = symbol("my-location");
+const hubIcon = symbol("hub");
 
 // COMPARE-mode tints, sourced from the themeable categorical palette so they read
 // as a deliberately DIFFERENT scheme from the single-composition membership tints
@@ -27,7 +33,11 @@ export const DIFF_TINT: Record<Exclude<DiffState, "neither">, string> = {
 };
 
 /** Legend rows for the four diff states, in display order. */
-export const DIFF_LEGEND: { state: DiffState; label: string; tint: string | null }[] = [
+export const DIFF_LEGEND: {
+  state: DiffState;
+  label: string;
+  tint: string | null;
+}[] = [
   { state: "only-a", label: "Only in A", tint: DIFF_TINT["only-a"] },
   { state: "only-b", label: "Only in B", tint: DIFF_TINT["only-b"] },
   { state: "both", label: "In both", tint: DIFF_TINT.both },
@@ -77,7 +87,7 @@ export function MembershipPin({ node }: { node: PluginNode }) {
       <ControlSizeProvider size="sm">
         <Cluster gap="none">
           <IconButton
-            icon={MdMyLocation}
+            icon={myLocationIcon}
             label="Show closure from here"
             onClick={(e) => {
               e.stopPropagation();
@@ -85,11 +95,15 @@ export function MembershipPin({ node }: { node: PluginNode }) {
             }}
           />
           <IconButton
-            icon={MdHub}
+            icon={hubIcon}
             label="Open in graph"
             onClick={(e) => {
               e.stopPropagation();
-              openPane(graphCanvasPane, {}, { mode: "root", options: { focusId: node.id } });
+              openPane(
+                graphCanvasPane,
+                {},
+                { mode: "root", options: { focusId: node.id } },
+              );
             }}
           />
         </Cluster>

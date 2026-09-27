@@ -3,8 +3,11 @@ import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { MdMoreHoriz } from "react-icons/md";
 import { Children, type ReactNode } from "react";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const moreHorizIcon = symbol("more-horiz");
 
 type OverflowPayload = { label?: string };
 
@@ -66,7 +69,10 @@ export function OverflowBox({
       <div className="rounded-md border border-border/50">
         <Inset x="xs" y="xs">
           <Line className="gap-2xs">
-            <MdMoreHoriz className="size-3.5 text-muted-foreground" />
+            <Icon
+              icon={moreHorizIcon}
+              className="size-3.5 text-muted-foreground"
+            />
             <Text
               variant="caption"
               tone={payload.label ? "default" : "muted"}

@@ -80,6 +80,7 @@ how the caller obtained it.
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
     - `primitives/latest-ref.useLatestRef`
+    - `ui/icons.Icon`
   - Exports (types):
     - `CustomColumnDefsController`
     - `CustomColumnValueIndex`

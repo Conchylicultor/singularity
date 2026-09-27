@@ -1,10 +1,13 @@
-import { MdMail } from "react-icons/md";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Mail } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const mailIcon = symbol("mail");
 
 /**
  * Mail's main-area layout: the app shell wraps the `Mail.Sidebar` left rail
@@ -24,7 +27,7 @@ export function MailLayout() {
       sidebarSlot={Mail.Sidebar}
       header={
         <Inline gap="xs">
-          <MdMail className="icon-auto" />
+          <Icon icon={mailIcon} className="icon-auto" />
           <Text variant="label" className="font-semibold">
             Mail
           </Text>

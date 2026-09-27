@@ -1,5 +1,4 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { MdAdd } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import {
@@ -22,6 +21,10 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useScopeDisplay } from "../internal/scope-label";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 type AppContribution = ReturnType<typeof Apps.App.useContributions>[number];
 
@@ -156,7 +159,11 @@ function AddScopeButton({
       width="sm"
       padding="2xs"
       trigger={
-        <ToggleChip active={false} variant="ghost" icon={<MdAdd />}>
+        <ToggleChip
+          active={false}
+          variant="ghost"
+          icon={<Icon icon={addIcon} />}
+        >
           App
         </ToggleChip>
       }

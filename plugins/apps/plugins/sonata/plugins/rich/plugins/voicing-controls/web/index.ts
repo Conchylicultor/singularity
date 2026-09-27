@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdPiano } from "react-icons/md";
 import {
   Sonata,
   useHasVoicedChords,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { VoicingControls } from "./components/voicing-controls";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -13,7 +13,7 @@ export default {
     Sonata.Section({
       id: "voicing",
       label: "Voicing",
-      icon: MdPiano,
+      icon: symbol("piano"),
       component: VoicingControls,
       area: "player",
       useAvailable: useHasVoicedChords,

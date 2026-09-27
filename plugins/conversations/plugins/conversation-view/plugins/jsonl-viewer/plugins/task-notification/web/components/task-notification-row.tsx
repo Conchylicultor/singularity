@@ -1,4 +1,3 @@
-import { MdArticle } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
@@ -7,6 +6,9 @@ import { agentReportPane } from "@plugins/conversations/plugins/conversation-vie
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const articleIcon = symbol("article");
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
@@ -34,7 +36,7 @@ function OpenSubagentAction({ toolUseId }: { toolUseId: string }) {
   const openPane = useOpenPane();
   return (
     <IconButton
-      icon={MdArticle}
+      icon={articleIcon}
       label="View sub-agent"
       onClick={(e) => {
         e.stopPropagation();

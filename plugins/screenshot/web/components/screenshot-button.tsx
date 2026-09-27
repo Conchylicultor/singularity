@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
-import { MdPhotoCamera } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  EndpointError,
+  fetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { createScreenshot } from "../../shared/endpoints";
 import { captureApp } from "../capture";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const photoCameraIcon = symbol("photo-camera");
 
 export function ScreenshotButton() {
   const [busy, setBusy] = useState(false);
@@ -24,7 +29,12 @@ export function ScreenshotButton() {
       // modern-screenshot relies on never fires in a hidden tab).
       const blob = await captureApp();
       if (!blob) {
-        toast({ type: "screenshot", title: "Screenshot failed", description: "Capture returned no image", variant: "error" });
+        toast({
+          type: "screenshot",
+          title: "Screenshot failed",
+          description: "Capture returned no image",
+          variant: "error",
+        });
         return;
       }
 
@@ -61,7 +71,7 @@ export function ScreenshotButton() {
 
   return (
     <IconButton
-      icon={MdPhotoCamera}
+      icon={photoCameraIcon}
       label="Screenshot"
       loading={busy}
       onClick={handleClick}
@@ -77,7 +87,11 @@ async function upload(id: string, blob: Blob): Promise<void> {
     .write([new ClipboardItem({ "image/png": blob })])
     .catch((err) => {
       // Clipboard permission denied or not supported — non-fatal; upload proceeds regardless.
-      if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError")) return;
+      if (
+        err instanceof DOMException &&
+        (err.name === "NotAllowedError" || err.name === "SecurityError")
+      )
+        return;
       throw err;
     });
 

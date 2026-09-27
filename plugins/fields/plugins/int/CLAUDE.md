@@ -21,6 +21,7 @@ the foundation's proof that the `extends` chain works end to end.
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
     - `fields/number.numberFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `intFieldType`
     - `intIdentity`

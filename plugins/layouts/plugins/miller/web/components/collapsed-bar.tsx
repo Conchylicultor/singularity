@@ -1,10 +1,13 @@
-import { MdChevronRight } from "react-icons/md";
 import {
   paneThemeScope,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronRightIcon = symbol("chevron-right");
 
 interface CollapsedBarProps {
   entry: MatchEntry;
@@ -44,7 +47,7 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       className="h-full w-8 shrink-0 border-r py-sm text-muted-foreground hover:bg-hover-fill hover:text-foreground"
     >
       <Stack align="center" gap="sm">
-        <MdChevronRight className="size-4" />
+        <Icon icon={chevronRightIcon} className="size-4" />
         {title && (
           <span
             style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}

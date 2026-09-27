@@ -1,13 +1,5 @@
 import { createContext, useContext, type ReactElement } from "react";
-import {
-  MdClose,
-  MdKeyboardDoubleArrowDown,
-  MdOutlineQueue,
-  MdOutlinePushPin,
-  MdPushPin,
-  MdVerticalAlignBottom,
-  MdVerticalAlignTop,
-} from "react-icons/md";
+
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -21,6 +13,14 @@ import {
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { QueueRow } from "./use-queue-rows";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const keyboardDoubleArrowDownIcon = symbol("keyboard-double-arrow-down");
+const libraryAddIcon = symbol("library-add");
+const keepIcon = symbol("keep");
+const verticalAlignBottomIcon = symbol("vertical-align-bottom");
+const verticalAlignTopIcon = symbol("vertical-align-top");
 
 /** Per-consumer trailing-action slot for the Queue source's rows. */
 export const QueueItemActions = defineItemActions<QueueRow>();
@@ -50,7 +50,8 @@ export function PinAction({
   if (row.section === "done" || row.section === "disconnected") return null;
   return (
     <IconButton
-      icon={row.pinned ? MdPushPin : MdOutlinePushPin}
+      icon={keepIcon}
+      active={row.pinned}
       label={row.pinned ? "Unpin" : "Pin to top"}
       onClick={(e) => {
         e.stopPropagation();
@@ -74,7 +75,7 @@ export function PromoteAction({
     return null;
   return (
     <IconButton
-      icon={MdVerticalAlignTop}
+      icon={verticalAlignTopIcon}
       label="Move to top"
       onClick={(e) => {
         e.stopPropagation();
@@ -95,7 +96,7 @@ export function StepDownAction({
   if (!row.canStepDown) return null;
   return (
     <IconButton
-      icon={MdKeyboardDoubleArrowDown}
+      icon={keyboardDoubleArrowDownIcon}
       label="Move down 5"
       onClick={(e) => {
         e.stopPropagation();
@@ -117,7 +118,7 @@ export function DemoteAction({
     return null;
   return (
     <IconButton
-      icon={MdVerticalAlignBottom}
+      icon={verticalAlignBottomIcon}
       label="Move to bottom"
       onClick={(e) => {
         e.stopPropagation();
@@ -138,7 +139,7 @@ export function AddToQueueAction({
   if (row.section !== "unranked") return null;
   return (
     <IconButton
-      icon={MdOutlineQueue}
+      icon={libraryAddIcon}
       label="Add to queue"
       onClick={(e) => {
         e.stopPropagation();
@@ -160,7 +161,7 @@ export function CloseAction({
   if (row.section === "done" || !onCloseConversation) return null;
   return (
     <IconButton
-      icon={MdClose}
+      icon={closeIcon}
       label="Close conversation"
       onClick={(e) => {
         e.stopPropagation();

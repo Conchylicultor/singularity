@@ -22,6 +22,7 @@ Like `int`, it demonstrates the `extends` chain — differing only in that its
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
     - `fields/number.numberFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `floatFieldType`
     - `floatIdentity`

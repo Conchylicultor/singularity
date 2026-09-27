@@ -4,7 +4,6 @@ import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
-import { MdPrecisionManufacturing } from "react-icons/md";
 import {
   agentsRootPane,
   agentDetailPane,
@@ -16,6 +15,7 @@ import { AgentAvatarTitlePrefix } from "./components/agent-avatar-title-prefix";
 import { DeleteAgentAction } from "./components/delete-agent-action";
 import { ExpandAgentButton } from "./components/expand-agent-button";
 import { Agents as AgentsSlots } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   agentsRootPane,
@@ -40,7 +40,7 @@ export default {
     Shell.Sidebar({
       id: "agents",
       title: "Agents",
-      icon: MdPrecisionManufacturing,
+      icon: symbol("precision-manufacturing"),
       opens: opensPane(agentsRootPane, {}),
     }),
     Item.Avatar({

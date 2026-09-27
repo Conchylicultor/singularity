@@ -1,9 +1,12 @@
-import { MdDataObject } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { rowActionClass } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const dataObjectIcon = symbol("data-object");
 
 export function RawJsonAction({ event }: { event: JsonlEvent }) {
   return (
@@ -15,7 +18,7 @@ export function RawJsonAction({ event }: { event: JsonlEvent }) {
           aria-label="View raw JSON"
           onClick={(e) => e.stopPropagation()}
         >
-          <MdDataObject className="size-3" />
+          <Icon icon={dataObjectIcon} className="size-3" />
         </button>
       }
       align="end"

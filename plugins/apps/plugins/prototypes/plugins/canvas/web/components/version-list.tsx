@@ -1,5 +1,4 @@
 import { createContext, useContext } from "react";
-import { MdAddToPhotos, MdOpenInNew } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -18,6 +17,10 @@ import type {
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PrototypeVersionActions } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const libraryAddIcon = symbol("library-add");
+const openInNewIcon = symbol("open-in-new");
 
 const VERSIONS_VIEW = defineDataView("prototypes.versions");
 
@@ -136,7 +139,7 @@ export function OpenVersionConversation({
   if (convId === null) return null;
   return (
     <IconButton
-      icon={MdOpenInNew}
+      icon={openInNewIcon}
       label="Open the conversation that made it"
       {...linkGestureProps(({ newTab }) =>
         navigate(conversationRoute.link(agentManagerApp, { convId }), {
@@ -159,7 +162,7 @@ export function CompareVersionAction({
   if (compare === undefined || row.sha === shownSha) return null;
   return (
     <IconButton
-      icon={MdAddToPhotos}
+      icon={libraryAddIcon}
       label={`Compare v${row.n} in a new frame`}
       onClick={() => compare(row)}
     />

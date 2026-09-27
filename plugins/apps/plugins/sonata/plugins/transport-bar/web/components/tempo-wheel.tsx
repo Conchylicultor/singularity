@@ -1,7 +1,10 @@
-import { MdSpeed } from "react-icons/md";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { JogWheel } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const speedIcon = symbol("speed");
 
 /** Playback-speed bounds, as authored-tempo fractions (0% … 400%). A frozen 0%
  *  is a stopped transport; 400% is the practical ceiling the stepper also used. */
@@ -42,7 +45,7 @@ export function TempoWheel() {
 
   return (
     <JogWheel
-      icon={<MdSpeed className="size-3.5" />}
+      icon={<Icon icon={speedIcon} className="size-3.5" />}
       tooltip="Playback speed — drag to scrub (↑/↓ to nudge)"
       drag={drag}
       // Position tracks the linear tempo so the ribs travel at a constant rate

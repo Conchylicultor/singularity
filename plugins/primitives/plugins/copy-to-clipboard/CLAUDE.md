@@ -6,7 +6,9 @@
 
 - Description: useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
 - Web:
-  - Uses: `primitives/css/ui-kit.Button`
+  - Uses:
+    - `primitives/css/ui-kit.Button`
+    - `ui/icons.Icon`
   - Exports (types): `CopyButtonProps`
   - Exports (values):
     - `CopyButton`

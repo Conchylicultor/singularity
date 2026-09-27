@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdVpnKey } from "react-icons/md";
 import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { useServerVerified } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import { SshSetupSection } from "./components/ssh-setup-section";
 import { SshSetupActions } from "./components/ssh-setup-actions";
 import { SshProvider } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { SshProvider } from "./slots";
 export type { SshProviderDescriptor, SshConsoleProps } from "./slots";
@@ -21,7 +21,7 @@ export default {
       // than as a card whose name changes row to row. Same for the icon — a key
       // names what the section does; the provider's own icon rides its chip.
       label: "Set up SSH access",
-      icon: MdVpnKey,
+      icon: symbol("vpn-key"),
       actions: SshSetupActions,
       // Expanded while action is needed; collapsed to one row once the
       // connection is actually proven. This only SEEDS the persisted open state

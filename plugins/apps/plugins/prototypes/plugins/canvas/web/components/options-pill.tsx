@@ -1,5 +1,4 @@
 import { useState, type ReactElement } from "react";
-import { MdLink, MdTune, MdViewColumn } from "react-icons/md";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -22,6 +21,12 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { documentOptions, useFramePicks, usePrototypeDetail } from "../context";
 import { prototypeFrames, type PrototypeFrame } from "../internal/canvas-model";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const linkIcon = symbol("link");
+const tuneIcon = symbol("tune");
+const viewColumnIcon = symbol("view-column");
 
 /**
  * One prototype frame's options, as a pill ("Mist · Home +3") that opens the
@@ -54,7 +59,7 @@ export function OptionsPill({
       width="builder"
       trigger={
         <Button variant="floating" shape="pill" aria-label="Prototype options">
-          <MdTune />
+          <Icon icon={tuneIcon} />
           <PillSummary options={options} picks={picks} />
         </Button>
       }
@@ -179,7 +184,7 @@ function OptionRow({
       <Stack direction="row" gap="none" className={rigidClass()}>
         {multi ? (
           <IconButton
-            icon={MdLink}
+            icon={linkIcon}
             label={
               linked
                 ? "Same in every frame — click to unlink"
@@ -193,7 +198,7 @@ function OptionRow({
           />
         ) : null}
         <IconButton
-          icon={MdViewColumn}
+          icon={viewColumnIcon}
           label={
             spread
               ? `Gather back into one frame`

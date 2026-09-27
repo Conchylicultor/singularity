@@ -1,9 +1,11 @@
-import { MdArrowForward, MdMyLocation } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  type BadgeVariant,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import {
@@ -18,8 +20,16 @@ import type {
   MembershipState,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const STATE_BADGE: Record<MembershipState, { variant: BadgeVariant; label: string }> = {
+const arrowForwardIcon = symbol("arrow-forward");
+const myLocationIcon = symbol("my-location");
+
+const STATE_BADGE: Record<
+  MembershipState,
+  { variant: BadgeVariant; label: string }
+> = {
   entry: { variant: "primary", label: "Entry point" },
   required: { variant: "primary", label: "Required" },
   contributor: { variant: "success", label: "Contributor" },
@@ -37,7 +47,7 @@ function shortName(id: PluginId): string {
 function PinButton({ id }: { id: PluginId }) {
   return (
     <Button variant="outline" onClick={() => pinAsRoot(id)}>
-      <MdMyLocation />
+      <Icon icon={myLocationIcon} />
       Show closure from here
     </Button>
   );
@@ -136,14 +146,18 @@ export function InclusionSection({ node }: { node: PluginNode }) {
 function EdgeChip({ step }: { step: InclusionStep }) {
   return (
     <Stack as="span" direction="row" align="center" gap="xs">
-      <LinkChip mono onClick={() => pinAsRoot(step.from)} title={String(step.from)}>
+      <LinkChip
+        mono
+        onClick={() => pinAsRoot(step.from)}
+        title={String(step.from)}
+      >
         {shortName(step.from)}
       </LinkChip>
-      <MdArrowForward className="size-3 text-muted-foreground" />
+      <Icon icon={arrowForwardIcon} className="size-3 text-muted-foreground" />
       <Badge variant={step.kind === "hard" ? "primary" : "info"}>
         {step.kind}
       </Badge>
-      <MdArrowForward className="size-3 text-muted-foreground" />
+      <Icon icon={arrowForwardIcon} className="size-3 text-muted-foreground" />
       <LinkChip mono onClick={() => pinAsRoot(step.to)} title={String(step.to)}>
         {shortName(step.to)}
       </LinkChip>

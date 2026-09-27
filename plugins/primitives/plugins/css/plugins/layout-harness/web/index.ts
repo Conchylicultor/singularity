@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdGridView } from "react-icons/md";
 import { layoutLabPane } from "./internal/lab-pane";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { layoutLabPane } from "./internal/lab-pane";
 
@@ -14,7 +14,7 @@ export default {
     DebugApp.Sidebar({
       id: "layout-lab",
       title: "Layout Lab",
-      icon: MdGridView,
+      icon: symbol("grid-view"),
       onClick: () => openPane(layoutLabPane, {}, { mode: "root" }),
     }),
   ],

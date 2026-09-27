@@ -29,7 +29,6 @@ Auth state and affordances come only from
     - `Pane.Register` "mail-root"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `apps-core/tabs.navigate`
     - `integrations/gmail.GMAIL_BLOCKER_BODY`
     - `integrations/gmail.GmailAccessAction`
@@ -46,6 +45,7 @@ Auth state and affordances come only from
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/icons.Icon`
   - Exports (values): `Mail`
 - Core:
   - Uses: `primitives/pane.defineApp`

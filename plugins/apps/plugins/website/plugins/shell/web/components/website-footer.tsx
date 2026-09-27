@@ -1,4 +1,3 @@
-import { SiGithub } from "react-icons/si";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -7,6 +6,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { CONTACT_EMAIL, CONTACT_MAILTO, SOURCE_URL } from "../../core";
 import { WebsiteBand } from "./website-band";
 import { WordmarkText } from "./website-wordmark";
+import { brand } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const githubIcon = brand("github");
 
 /**
  * The site-wide footer, rendered at the end of every website pane's content
@@ -51,7 +54,7 @@ export function WebsiteFooter() {
               "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground rounded-full border",
             )}
           >
-            <SiGithub className="size-4.5" />
+            <Icon icon={githubIcon} className="size-4.5" />
           </a>
         </Inline>
       </Cluster>

@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { MdDelete } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 /** One saved preset, as the panel reads it — identity, name, and its two states. */
 export interface PresetEntry {
@@ -66,7 +68,7 @@ export function PresetSection({
             // `IconButton` with no size of its own. The label names the preset:
             // a screen reader hears one "Delete" per row otherwise.
             <IconButton
-              icon={MdDelete}
+              icon={deleteIcon}
               label={`Delete preset “${entry.label}”`}
               onClick={() => onDelete(entry.id)}
             />

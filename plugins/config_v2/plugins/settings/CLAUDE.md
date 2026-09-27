@@ -123,6 +123,7 @@ contributor that hands a conflict to an agent.
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
     - `shell/toast.showToast`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ConfigConflictContext`
     - `ConfigConflictField`

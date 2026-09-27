@@ -26,6 +26,7 @@ reuse these capabilities via the `extends`-chain fallback.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `textFieldType`
     - `textIdentity`

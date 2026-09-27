@@ -2,9 +2,9 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
-import { MdInsights } from "react-icons/md";
 import { statsPane } from "./panes";
 import { Stats } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Stats } from "./slots";
 export { statsPane } from "./panes";
@@ -19,7 +19,7 @@ export default {
     Shell.Sidebar({
       id: "stats",
       title: "Stats",
-      icon: MdInsights,
+      icon: symbol("insights"),
       opens: opensPane(statsPane, {}),
     }),
   ],

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdLayers } from "react-icons/md";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -14,6 +13,10 @@ import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/compo
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { compositionDetailRoute } from "@plugins/apps/plugins/studio/plugins/compositions/core";
 import { deployments } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const layersIcon = symbol("layers");
 
 /**
  * **Composition** — *what* this deployment builds and ships, and where that is
@@ -82,7 +85,7 @@ function CompositionCard({
         <Cluster gap="xs">
           <LinkChip
             mono
-            leading={<MdLayers />}
+            leading={<Icon icon={layersIcon} />}
             title={`Open “${item.name}” in Studio`}
             onClick={() =>
               navigate(compositionDetailRoute.link(studioApp, { id: item.id }))

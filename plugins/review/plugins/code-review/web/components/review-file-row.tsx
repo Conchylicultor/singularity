@@ -1,4 +1,3 @@
-import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -17,6 +16,10 @@ import { useConfig } from "@plugins/config_v2/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import { getFileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /** Strip border-* utilities from a gitStatusBadge string (keep only bg/text). */
 function statusBadgeColor(status: EditedFileStatus): string {
@@ -133,7 +136,8 @@ export function ReviewFileRow({
             <span className="text-success">+{file.additions}</span>
             <span className="text-destructive">−{file.deletions}</span>
             {level !== "safe" && (
-              <MdWarning
+              <Icon
+                icon={warningIcon}
                 className={LEVEL_ICON_CLASS[level]}
                 aria-label={LEVEL_TOOLTIP[level]}
               />

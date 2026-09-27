@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdAttachFile, MdLabelImportant } from "react-icons/md";
 import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -7,6 +6,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { senderSummary } from "../internal/sender-summary";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const attachFileIcon = symbol("attach-file");
+const labelImportantIcon = symbol("label-important");
 
 /**
  * One Gmail-style thread row body: a two-line block — senders + important /
@@ -36,10 +40,16 @@ export function ThreadRow({ thread }: { thread: MailThread }): ReactElement {
             </Text>
           </Fill>
           {thread.important && (
-            <MdLabelImportant className="icon-auto text-warning" />
+            <Icon
+              icon={labelImportantIcon}
+              className="icon-auto text-warning"
+            />
           )}
           {thread.hasAttachments && (
-            <MdAttachFile className="icon-auto text-muted-foreground" />
+            <Icon
+              icon={attachFileIcon}
+              className="icon-auto text-muted-foreground"
+            />
           )}
           <Text variant="caption" tone="muted">
             <RelativeTime date={new Date(sortDate)} />

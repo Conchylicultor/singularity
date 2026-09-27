@@ -10,6 +10,7 @@
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `ui/icons.Icon`
   - Exports (values): `QueuedPromptCard`
 - Cross-plugin:
   - Imported by:

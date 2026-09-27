@@ -1,4 +1,3 @@
-import { MdAdd, MdDelete } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type {
@@ -31,6 +30,11 @@ import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
 import { SystemFolder } from "./system-folder";
 import { moveAgentTo, patchAgent } from "./patch-agent";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const deleteIcon = symbol("delete");
 
 export { patchAgent } from "./patch-agent";
 
@@ -83,7 +87,7 @@ function DeleteSelectedAction() {
   };
   return (
     <Button variant="destructive" onClick={() => onClick()}>
-      <MdDelete />
+      <Icon icon={deleteIcon} />
       Delete
     </Button>
   );
@@ -166,7 +170,7 @@ export function AgentsList({
             leadingIcon: (a: Agent) => <AgentStatus agentId={a.id} />,
             rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
               {
-                icon: MdAdd,
+                icon: addIcon,
                 label: "Add agent below",
                 onClick: () => void addBelow(),
               },

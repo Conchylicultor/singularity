@@ -119,6 +119,7 @@ unbounded.
     - `primitives/perfs/boot-trace.useBootTrace`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (values): `BootProfileGantt`
 - Server:
   - Contributes: `fork-data-exclusion` "boot_traces"

@@ -1,6 +1,9 @@
-import { MdCheck, MdContentCopy } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const checkIcon = symbol("check");
+const contentCopyIcon = symbol("content-copy");
 
 /**
  * "Copy block ID" header action contributed to `PageDetail.HeaderActions`.
@@ -14,7 +17,7 @@ export function CopyIdAction({ pageId }: { pageId: string }) {
   const { copy, copied } = useCopyToClipboard(pageId);
   return (
     <IconButton
-      icon={copied ? MdCheck : MdContentCopy}
+      icon={copied ? checkIcon : contentCopyIcon}
       label="Copy block ID"
       tooltip={copied ? "Copied" : "Copy block ID"}
       onClick={copy}

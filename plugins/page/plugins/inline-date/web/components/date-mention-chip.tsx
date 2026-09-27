@@ -1,9 +1,13 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type React from "react";
-import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { DateMentionFields } from "../../core";
 import { formatMention } from "../internal/format-date";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const calendarTodayIcon = symbol("calendar-today");
+const notificationsActiveIcon = symbol("notifications-active");
 
 /**
  * The date-mention token as a chip, and nothing else — no popover, no editing,
@@ -29,12 +33,12 @@ export function DateMentionChip({
   onClick,
 }: DateMentionFields & { onClick: (e: React.MouseEvent) => void }) {
   const isReminder = reminderId !== null;
-  const Icon = isReminder ? MdNotificationsActive : MdCalendarToday;
+  const icon = isReminder ? notificationsActiveIcon : calendarTodayIcon;
   return (
     <LinkChip
       leading={
         <Center as="span" className="size-3.5">
-          <Icon className="size-3.5" />
+          <Icon icon={icon} className="size-3.5" />
         </Center>
       }
       onClick={onClick}

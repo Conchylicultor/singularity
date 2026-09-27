@@ -2,18 +2,8 @@ import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, useState, type ComponentType } from "react";
-import {
-  MdAutoMode,
-  MdCheck,
-  MdExpandMore,
-  MdVisibility,
-  MdVisibilityOff,
-  MdVolumeDown,
-  MdVolumeMute,
-  MdVolumeOff,
-  MdVolumeUp,
-} from "react-icons/md";
+import { useMemo, useState } from "react";
+
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -49,14 +39,24 @@ import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
 import { useTrackFader } from "../use-track-fader";
 import { TRACK_PALETTE, accidentalColor } from "../palette";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
-type IconType = ComponentType<{ className?: string }>;
+const autoModeIcon = symbol("auto-mode");
+const checkIcon = symbol("check");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const visibilityIcon = symbol("visibility");
+const visibilityOffIcon = symbol("visibility-off");
+const volumeDownIcon = symbol("volume-down");
+const volumeMuteIcon = symbol("volume-mute");
+const volumeOffIcon = symbol("volume-off");
+const volumeUpIcon = symbol("volume-up");
 
 /** The instrument-contribution metadata the picker reads (never `createVoices`). */
 interface InstrumentOption {
   id: string;
   label: string;
-  icon?: IconType;
+  icon?: IconRef;
   group?: string;
 }
 
@@ -170,10 +170,13 @@ function InstrumentPicker({
           )}
         >
           {ResolvedIcon ? (
-            <ResolvedIcon className={cn("size-3", rigidClass())} />
+            <Icon icon={ResolvedIcon} className={cn("size-3", rigidClass())} />
           ) : null}
           <span className="truncate">{resolvedLabel}</span>
-          <MdExpandMore className={cn("size-3", rigidClass())} />
+          <Icon
+            icon={keyboardArrowDownIcon}
+            className={cn("size-3", rigidClass())}
+          />
         </Line>
       }
     >
@@ -192,10 +195,10 @@ function InstrumentPicker({
           size="sm"
           hover="muted"
           selected={!instrumentCustomized}
-          icon={<MdAutoMode />}
+          icon={<Icon icon={autoModeIcon} />}
           actions={
             !instrumentCustomized ? (
-              <MdCheck className="size-3.5 text-primary" />
+              <Icon icon={checkIcon} className="size-3.5 text-primary" />
             ) : undefined
           }
           actionsAlwaysVisible
@@ -212,7 +215,7 @@ function InstrumentPicker({
             </div>
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
             {groupOptions.map((o) => {
-              const Icon = o.icon;
+              const icon = o.icon;
               const active = instrumentCustomized && o.id === resolvedId;
               return (
                 <Row
@@ -221,15 +224,18 @@ function InstrumentPicker({
                   hover="muted"
                   selected={active}
                   icon={
-                    Icon ? (
-                      <Icon className="size-3.5" />
+                    icon ? (
+                      <Icon icon={icon} className="size-3.5" />
                     ) : (
                       <span className="size-3.5" />
                     )
                   }
                   actions={
                     active ? (
-                      <MdCheck className="size-3.5 text-primary" />
+                      <Icon
+                        icon={checkIcon}
+                        className="size-3.5 text-primary"
+                      />
                     ) : undefined
                   }
                   actionsAlwaysVisible
@@ -254,10 +260,10 @@ function InstrumentPicker({
  * different thing — it removes the track's notes upstream, rather than being a
  * fader position — and it is what a click on this button toggles.
  */
-function levelIcon(muted: boolean, volume: number): IconType {
-  if (muted) return MdVolumeOff;
-  if (volume === 0) return MdVolumeMute;
-  return volume < 1 ? MdVolumeDown : MdVolumeUp;
+function levelIcon(muted: boolean, volume: number): IconRef {
+  if (muted) return volumeOffIcon;
+  if (volume === 0) return volumeMuteIcon;
+  return volume < 1 ? volumeDownIcon : volumeUpIcon;
 }
 
 /**
@@ -422,7 +428,7 @@ function TrackRow({
             volume={volume}
           />
           <IconButton
-            icon={hidden ? MdVisibilityOff : MdVisibility}
+            icon={hidden ? visibilityOffIcon : visibilityIcon}
             label={hidden ? "Show track" : "Hide track"}
             aria-pressed={hidden}
             className={cn(hidden && "text-muted-foreground")}

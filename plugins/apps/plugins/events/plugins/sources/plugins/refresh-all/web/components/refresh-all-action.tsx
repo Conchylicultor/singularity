@@ -1,10 +1,11 @@
 import type { ReactElement } from "react";
-import { MdRefresh } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { showToast, type ToastArgs } from "@plugins/shell/plugins/toast/web";
 import { useRefreshAllEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { RefreshAllResult } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const refreshIcon = symbol("refresh");
 
 /**
  * Turn one `RefreshAllResult` into the toast that reports it — arm by arm,
@@ -89,10 +90,10 @@ export function RefreshAllAction(): ReactElement {
 
   return (
     <IconButton
-      // `Spinner` IS an `{ className }` icon component (it renders the same
-      // MdRefresh with `animate-spin`), so the pending state is the same button
-      // with the same glyph, spinning — no extra chrome, no size change.
-      icon={refreshAll.isPending ? Spinner : MdRefresh}
+      // The pending state is the same button with the same glyph, spinning —
+      // no extra chrome, no size change.
+      icon={refreshIcon}
+      motion={refreshAll.isPending ? "spin" : undefined}
       label="Refresh all sources"
       disabled={refreshAll.isPending}
       onClick={() => {

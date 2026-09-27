@@ -4,10 +4,12 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-// The SmartToy robot-face icon from react-icons/md looks cheap and
-// unprofessional, and agents keep reaching for it to represent agents/AI.
-// Match every Material variant (Outlined/Rounded/Sharp/TwoTone) of it.
-const ROBOT_ICON_RE = /^Md(Outlined|Rounded|Sharp|TwoTone)?SmartToy$/;
+/** The `symbol()` marker the icons core exports. */
+const ICONS_CORE = "@plugins/ui/plugins/icons/core";
+
+// The robot-face glyphs look cheap and unprofessional, and agents keep reaching
+// for them to represent agents/AI. Material Symbols draws a robot three ways.
+const ROBOT_SYMBOLS = new Set(["smart-toy", "robot", "robot-2"]);
 
 export default createRule({
   name: "no-robot-icon",
@@ -15,32 +17,44 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow the MdSmartToy robot icon — use MdAutoAwesome to represent agents/AI.",
+        'Disallow the robot-face symbols (symbol("smart-toy") and its variants) — use symbol("auto-awesome") to represent agents/AI.',
     },
     schema: [],
     messages: {
       robotIcon:
-        "Robot icon '{{name}}' is banned — it looks unprofessional. " +
-        "Use 'MdAutoAwesome' to represent agents/AI (the codebase's canonical AI glyph).",
+        'Robot icon symbol("{{name}}") is banned — it looks unprofessional. ' +
+        'Use symbol("auto-awesome") to represent agents/AI (the codebase\'s canonical AI glyph).',
     },
   },
   defaultOptions: [],
   create(context) {
+    let imported = false;
     return {
       ImportDeclaration(node) {
-        if (node.source.value !== "react-icons/md") return;
-        for (const spec of node.specifiers) {
-          if (
-            spec.type === "ImportSpecifier" &&
-            spec.imported.type === "Identifier" &&
-            ROBOT_ICON_RE.test(spec.imported.name)
-          ) {
-            context.report({
-              node: spec,
-              messageId: "robotIcon",
-              data: { name: spec.imported.name },
-            });
-          }
+        if (node.source.value !== ICONS_CORE) return;
+        imported ||= node.specifiers.some(
+          (s) =>
+            s.type === "ImportSpecifier" &&
+            s.imported.type === "Identifier" &&
+            s.imported.name === "symbol" &&
+            s.local.name === "symbol",
+        );
+      },
+      CallExpression(node) {
+        if (!imported) return;
+        if (node.callee.type !== "Identifier" || node.callee.name !== "symbol")
+          return;
+        const [arg] = node.arguments;
+        if (
+          arg?.type === "Literal" &&
+          typeof arg.value === "string" &&
+          ROBOT_SYMBOLS.has(arg.value)
+        ) {
+          context.report({
+            node: arg,
+            messageId: "robotIcon",
+            data: { name: arg.value },
+          });
         }
       },
     };

@@ -101,6 +101,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/shortcuts.formatShortcutLabel`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ImageViewerProps`
     - `ImageViewerTrigger`

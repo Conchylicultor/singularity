@@ -1,3 +1,4 @@
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 
 /** A known verdict about one health check. */
@@ -77,7 +78,7 @@ export interface StatusRow extends RowCommon {
  */
 export interface InfoRow extends RowCommon {
   kind: "info";
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   /** Called only while the report is open. */
   useInfo: () => HealthInfo;
   glance?: never;

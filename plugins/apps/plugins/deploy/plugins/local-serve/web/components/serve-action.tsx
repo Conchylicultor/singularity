@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdBolt, MdOpenInNew } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
@@ -13,6 +12,10 @@ import {
   isServableCompositionId,
   isServed,
 } from "@plugins/plugin-meta/plugins/composition/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const boltIcon = symbol("bolt");
+const openInNewIcon = symbol("open-in-new");
 
 /**
  * The **serve** shortcut on a deployments row: one button that opens the
@@ -35,7 +38,7 @@ export function ServeAction({
   if (!item) {
     return (
       <IconButton
-        icon={MdBolt}
+        icon={boltIcon}
         label="Serve locally"
         tooltip={`No composition named "${row.compositionId}" in the compositions config.`}
         disabled
@@ -60,7 +63,7 @@ function ServeRowAction({
   if (status.kind === "pending") {
     return (
       <IconButton
-        icon={MdBolt}
+        icon={boltIcon}
         label="Serve locally"
         tooltip="Checking what is served locally…"
         disabled
@@ -70,7 +73,7 @@ function ServeRowAction({
   if (status.kind === "error") {
     return (
       <IconButton
-        icon={MdBolt}
+        icon={boltIcon}
         label="Serve locally"
         tooltip={`Could not read the serve state: ${status.message}`}
         disabled
@@ -84,7 +87,7 @@ function ServeRowAction({
     const { url } = status;
     return (
       <IconButton
-        icon={MdOpenInNew}
+        icon={openInNewIcon}
         label="Open the local serve"
         tooltip={`Open ${url}`}
         onClick={(e) => {
@@ -102,7 +105,7 @@ function ServeRowAction({
   const canServe = isServableCompositionId(item.id);
   return (
     <IconButton
-      icon={MdBolt}
+      icon={boltIcon}
       label="Serve locally"
       tooltip={
         canServe

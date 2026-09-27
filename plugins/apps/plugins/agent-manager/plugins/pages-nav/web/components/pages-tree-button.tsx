@@ -1,6 +1,8 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { MdDescription } from "react-icons/md";
 import { pagesTreePane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const descriptionIcon = symbol("description");
 
 export function PagesTreeButton() {
   // Rendered inside the conversation pane, so `useToggle`'s default push has a
@@ -10,7 +12,7 @@ export function PagesTreeButton() {
 
   return (
     <IconButton
-      icon={MdDescription}
+      icon={descriptionIcon}
       label="Pages"
       variant={isOpen ? "secondary" : "ghost"}
       aria-pressed={isOpen}

@@ -1,5 +1,7 @@
-import { MdFace } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const faceIcon = symbol("face");
 
 export interface SvgNode {
   tag: string;
@@ -18,6 +20,6 @@ export const avatarFieldType = defineFieldType<AvatarSpec>("avatar");
 export const avatarIdentity = defineFieldIdentity<AvatarSpec>({
   type: avatarFieldType,
   label: "Avatar",
-  icon: MdFace,
+  icon: faceIcon,
   coerce: (v) => v?.icon ?? "",
 });

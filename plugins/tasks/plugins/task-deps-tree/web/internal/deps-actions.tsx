@@ -1,4 +1,3 @@
-import { MdClose, MdLinkOff } from "react-icons/md";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   defineItemActions,
@@ -11,6 +10,11 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import type { DepsTreeRow } from "@plugins/tasks/plugins/task-deps-tree/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
+const linkOffIcon = symbol("link-off");
 
 // The deps-tree row-action slot. Contributed into by web/index.ts and passed to
 // the DataView via `itemActions`; every view renders its contributions in the
@@ -34,7 +38,7 @@ export function DetachAction({ row }: ItemActionProps<DepsTreeRow>) {
   return (
     <ControlSizeProvider size="sm">
       <IconButton
-        icon={MdLinkOff}
+        icon={linkOffIcon}
         label="Detach from parent"
         tooltip="Detach — make this a root"
         variant="ghost"
@@ -72,7 +76,7 @@ function AlsoAfterChip({ taskId, dep }: { taskId: string; dep: TaskListItem }) {
       type="button"
       variant="muted"
       shape="pill"
-      icon={<MdClose />}
+      icon={<Icon icon={closeIcon} />}
       title={`also after: ${title} — click to remove`}
       onClick={remove}
       className="hover:text-destructive"

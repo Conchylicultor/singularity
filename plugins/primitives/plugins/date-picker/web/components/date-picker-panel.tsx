@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdClose } from "react-icons/md";
 
 import {
   addDays,
@@ -19,6 +18,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Calendar } from "./calendar";
 import { TimeField } from "./time-field";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const closeIcon = symbol("close");
 
 /** Day offsets of the quick presets, in the order they are shown. */
 const PRESET_OFFSETS = [0, 1, -1];
@@ -116,7 +119,9 @@ export function DatePickerPanel({
   const presetItems = PRESET_OFFSETS.map((offset) => {
     const day = addDays(today, offset);
     return { day, label: relativeDayLabel(day, now) };
-  }).filter((p): p is { day: Date; label: RelativeDayLabel } => p.label !== null);
+  }).filter(
+    (p): p is { day: Date; label: RelativeDayLabel } => p.label !== null,
+  );
 
   const timeValue = value == null ? "" : toTimeValue(value);
 
@@ -168,7 +173,7 @@ export function DatePickerPanel({
               <Fill />
               {onClear ? (
                 <Button variant="ghost" onClick={onClear}>
-                  <MdClose />
+                  <Icon icon={closeIcon} />
                   Clear
                 </Button>
               ) : null}

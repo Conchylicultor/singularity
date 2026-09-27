@@ -1,6 +1,8 @@
-import { MdSort } from "react-icons/md";
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const sortIcon = symbol("sort");
 
 // The `rank` field type — a string column backed by the `rank_text` Postgres
 // domain (TEXT COLLATE "C") instead of plain `text`, so fractional-indexing
@@ -17,6 +19,6 @@ export const rankFieldType = defineFieldType<string>("rank");
 export const rankIdentity = defineFieldIdentity<string>({
   type: rankFieldType,
   label: "Rank",
-  icon: MdSort,
+  icon: sortIcon,
   extends: textFieldType,
 });

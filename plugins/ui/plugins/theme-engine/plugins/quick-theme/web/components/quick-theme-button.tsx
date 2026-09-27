@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { themeCustomizerRoute } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { QuickThemePanel } from "./quick-theme-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const paletteIcon = symbol("palette");
 
 /**
  * Toolbar entry point for theming, surfaced in every app via `ActionBar.Item`
@@ -43,7 +45,7 @@ export function QuickThemeButton() {
       label="Theme"
       trigger={
         <IconButton
-          icon={MdPalette}
+          icon={paletteIcon}
           label="Theme"
           variant={open ? "secondary" : "ghost"}
         />

@@ -1,6 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
-import { MdWarningAmber } from "react-icons/md";
 import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -13,6 +12,10 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -131,7 +134,7 @@ export function WorkflowGraph({
           {graph.truncated && (
             <Badge
               colorClass="bg-warning/10 text-warning"
-              icon={<MdWarningAmber />}
+              icon={<Icon icon={warningIcon} />}
             >
               Graph truncated at the preview cap — see full script below.
             </Badge>

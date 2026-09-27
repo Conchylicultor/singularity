@@ -1,4 +1,3 @@
-import { MdLightbulb } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   PageIcon,
@@ -10,6 +9,9 @@ import {
   readCalloutAppearance,
 } from "./callout-appearance";
 import { COLOR_TEXT } from "./callout-colors";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const lightbulbIcon = symbol("lightbulb");
 
 /**
  * The callout's leading glyph — the ONLY thing its row paints, and APPEARANCE
@@ -42,7 +44,7 @@ export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
       glyph={
         <PageIcon
           nodes={iconSvgNodes}
-          fallback={MdLightbulb}
+          fallback={lightbulbIcon}
           className={cn("size-5", COLOR_TEXT[color])}
         />
       }

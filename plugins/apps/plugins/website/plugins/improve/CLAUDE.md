@@ -105,6 +105,7 @@ Verify with `e2e/improve-verify.ts` after `./singularity build`.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/text-editor.TextEditor`
     - `primitives/ui-context/element-picker.ElementPicker`
+    - `ui/icons.Icon`
 - Core:
   - Uses: `primitives/ui-context.splitUiContext`
   - Exports (types):

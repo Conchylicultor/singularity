@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdInsights } from "react-icons/md";
 import { DeploymentDetail } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { AnalyticsSection } from "./components/analytics-section";
 import { useAnalyticsAvailable } from "./internal/use-analytics-available";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -11,7 +11,7 @@ export default {
     DeploymentDetail.Section({
       id: "analytics",
       label: "Analytics",
-      icon: MdInsights,
+      icon: symbol("insights"),
       component: AnalyticsSection,
       useAvailable: useAnalyticsAvailable,
     }),

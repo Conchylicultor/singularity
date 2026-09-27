@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { MdTune } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
@@ -40,6 +39,10 @@ import {
   type TopLevelEntry,
 } from "./sorting";
 import { ReorderLayoutContext } from "./reorder-layout";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const tuneIcon = symbol("tune");
 
 /**
  * Below this host width (px), a horizontal reorder area in edit mode is too
@@ -669,7 +672,7 @@ function ReorderInner({
               // eslint-disable-next-line layout/no-adhoc-layout -- rigid popover-trigger leaf in the constrained horizontal reorder band
               className="shrink-0 pointer-events-auto"
             >
-              <MdTune className="size-3.5" />
+              <Icon icon={tuneIcon} className="size-3.5" />
             </Button>
           }
           width="lg"

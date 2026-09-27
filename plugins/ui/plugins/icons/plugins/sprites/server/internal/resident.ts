@@ -1,0 +1,27 @@
+import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  BRANDS_SPRITE,
+  DEFAULT_STYLE_KEYS,
+  type SpriteKey,
+} from "@plugins/ui/plugins/icons/core";
+import { residentSprites } from "../../core";
+import { manifestHash, spriteFor } from "./sprites";
+
+const RESIDENT: readonly SpriteKey[] = [...DEFAULT_STYLE_KEYS, BRANDS_SPRITE];
+
+/**
+ * The resident sprites. External with no `notify`: they are a pure function of
+ * the manifest compiled into this process and the installed icon sets, so the
+ * first load is the only one.
+ */
+export const residentSpritesServed = serveValue(residentSprites, {
+  source: "external",
+  loader: async () => ({
+    manifestHash,
+    sprites: Object.fromEntries(
+      await Promise.all(
+        RESIDENT.map(async (key) => [key, await spriteFor(key)] as const),
+      ),
+    ),
+  }),
+});

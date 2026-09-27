@@ -26,6 +26,7 @@ sub-plugins under `plugins/`:
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `dateFieldType`
     - `dateIdentity`

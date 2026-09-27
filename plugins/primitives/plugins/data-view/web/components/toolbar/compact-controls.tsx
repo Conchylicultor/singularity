@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { MdTune } from "react-icons/md";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
@@ -13,6 +12,10 @@ import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
 import { ROUND_AT_REST } from "./round-form";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const tuneIcon = symbol("tune");
 
 /**
  * The narrow-toolbar fold. One `MdTune` trigger (ghost, or `secondary` + count
@@ -133,12 +136,12 @@ export function CompactControls({
             shape={shape}
             className={revealClass}
           >
-            <MdTune />
+            <Icon icon={tuneIcon} />
             <span className="tabular-nums">{activeCount}</span>
           </Button>
         ) : (
           <IconButton
-            icon={MdTune}
+            icon={tuneIcon}
             label="View options"
             variant="ghost"
             shape={shape}
@@ -177,7 +180,7 @@ function CompactRootPanel({
           return (
             <ControlPanel.Row
               key={control.id}
-              icon={<control.icon />}
+              icon={<Icon icon={control.icon} />}
               trailing={
                 summary
                   ? summary.more

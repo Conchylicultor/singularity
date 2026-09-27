@@ -1,9 +1,12 @@
-import { MdChevronRight } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { BreadcrumbSlots } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const chevronRightIcon = symbol("chevron-right");
 
 /**
  * The default mark between two crumbs: a chevron, dimmed, with the trail's own
@@ -16,7 +19,8 @@ import { BreadcrumbSlots } from "../slots";
  */
 function DefaultChevronSeparator() {
   return (
-    <MdChevronRight
+    <Icon
+      icon={chevronRightIcon}
       aria-hidden
       className={cn(rigidClass(), "text-muted-foreground/45")}
     />

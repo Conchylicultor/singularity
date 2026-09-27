@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdLyrics } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Songsheet } from "./components/songsheet";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -15,7 +15,7 @@ export default {
       match: "songsheet",
       id: "songsheet",
       label: "Songsheet",
-      icon: MdLyrics,
+      icon: symbol("lyrics"),
       capabilities: [],
       component: Songsheet,
     }),

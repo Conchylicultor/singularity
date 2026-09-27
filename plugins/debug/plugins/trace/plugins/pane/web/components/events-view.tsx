@@ -1,5 +1,4 @@
 import { useMemo, type ReactElement } from "react";
-import { MdRefresh } from "react-icons/md";
 import {
   useEndpoint,
   getEndpointErrorMessage,
@@ -22,6 +21,10 @@ import { triggerVariant } from "../internal/trigger-meta";
 import { groupIncidents } from "../internal/incidents";
 import { IncidentBadge } from "./incident-badge";
 import { traceDetailPane } from "../panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const refreshIcon = symbol("refresh");
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const TRACE_EVENTS = defineDataView("debug.trace.events");
@@ -33,7 +36,10 @@ const TRACE_EVENTS = defineDataView("debug.trace.events");
 // change-feed-excluded). Row activate opens the detail Gantt.
 export function EventsView(): ReactElement {
   const openPane = useOpenPane();
-  const { data, error, isLoading, refetch, isFetching } = useEndpoint(listTraces, {});
+  const { data, error, isLoading, refetch, isFetching } = useEndpoint(
+    listTraces,
+    {},
+  );
   const selectedId = traceDetailPane.useRouteEntry()?.params.id;
 
   const rows = useMemo(() => data?.items ?? [], [data]);
@@ -93,7 +99,12 @@ export function EventsView(): ReactElement {
         primary: true,
         value: (r) => r.triggerLabel,
         cell: (r) => (
-          <Text as="span" variant="caption" className="truncate font-mono" title={r.triggerLabel}>
+          <Text
+            as="span"
+            variant="caption"
+            className="truncate font-mono"
+            title={r.triggerLabel}
+          >
             {r.triggerLabel}
           </Text>
         ),
@@ -105,7 +116,9 @@ export function EventsView(): ReactElement {
         type: "number",
         value: (r) => Math.round(r.durationMs),
         cell: (r) => (
-          <span className="font-mono tabular-nums">{Math.round(r.durationMs)} ms</span>
+          <span className="font-mono tabular-nums">
+            {Math.round(r.durationMs)} ms
+          </span>
         ),
         align: "end",
         sortable: true,
@@ -147,10 +160,19 @@ export function EventsView(): ReactElement {
       defaultView="table"
       loading={isLoading}
       selectedRowId={selectedId}
-      onRowActivate={(r) => openPane(traceDetailPane, { id: r.id }, { mode: "push" })}
+      onRowActivate={(r) =>
+        openPane(traceDetailPane, { id: r.id }, { mode: "push" })
+      }
       actions={
-        <Button variant="ghost" onClick={() => void refetch()} className="gap-xs">
-          <MdRefresh className={isFetching ? "size-4 animate-spin" : "size-4"} />
+        <Button
+          variant="ghost"
+          onClick={() => void refetch()}
+          className="gap-xs"
+        >
+          <Icon
+            icon={refreshIcon}
+            className={isFetching ? "size-4 animate-spin" : "size-4"}
+          />
           Refresh
         </Button>
       }

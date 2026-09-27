@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdMusicNote } from "react-icons/md";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -26,6 +25,10 @@ import { useOpenSong } from "../hooks";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const musicNoteIcon = symbol("music-note");
 
 const LIBRARY_VIEW = defineDataView("sonata.library");
 
@@ -190,7 +193,7 @@ export function SongLibrary() {
           // old SongCard that was a real gap in the generic card.
           leading: () => (
             <Center className="size-10 rounded-md bg-primary/10 text-primary">
-              <MdMusicNote className="size-5" />
+              <Icon icon={musicNoteIcon} className="size-5" />
             </Center>
           ),
         },

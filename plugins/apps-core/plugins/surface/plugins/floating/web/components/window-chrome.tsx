@@ -4,20 +4,9 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import {
-  MdClose,
-  MdRemove,
-  MdCropSquare,
-  MdFilterNone,
-  MdFullscreen,
-  MdOutlinePushPin,
-  MdPushPin,
-} from "react-icons/md";
+
 import { useConfig } from "@plugins/config_v2/web";
-import {
-  appIconComponent,
-  DEFAULT_APP_ICON,
-} from "@plugins/apps-core/plugins/app-icon/web";
+import { DEFAULT_APP_ICON } from "@plugins/apps-core/plugins/app-icon/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -32,7 +21,11 @@ import {
   type Geometry,
   type WindowId,
 } from "../hooks/use-floating-windows";
-import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
+import {
+  detectSnapZone,
+  setSnapPreview,
+  type SnapZone,
+} from "../hooks/use-snap";
 import {
   beginWindowInteraction,
   endWindowInteraction,
@@ -50,6 +43,14 @@ import {
   type MenuAnchor,
   type MergeTarget,
 } from "./window-system-menu";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const removeIcon = symbol("remove");
+const cropSquareIcon = symbol("crop-square");
+const filterNoneIcon = symbol("filter-none");
+const fullscreenIcon = symbol("fullscreen");
+const keepIcon = symbol("keep");
 
 /** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
 export const WINDOW_TITLEBAR_INSET = "2.25rem";
@@ -286,7 +287,7 @@ export function WindowChrome({
   // The system-menu button icon = the active member's app icon (the strip shows
   // every member, so the titlebar icon just stands in for the window menu).
   const activeMember = members.find((m) => m.tabId === win.activeTabId);
-  const MenuIcon = appIconComponent(activeMember?.icon ?? DEFAULT_APP_ICON);
+  const menuIcon = (activeMember?.icon ?? DEFAULT_APP_ICON).symbol;
 
   return (
     <>
@@ -325,7 +326,7 @@ export function WindowChrome({
         <div onPointerDown={(e) => e.stopPropagation()} className="shrink-0">
           <ControlSizeProvider size="sm">
             <IconButton
-              icon={MenuIcon}
+              icon={menuIcon}
               label="Window menu"
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect();
@@ -354,11 +355,15 @@ export function WindowChrome({
           />
         </div>
         {/* Each control stops the pointer so it never starts a window drag. */}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing controls cluster pinned right in the titlebar's hand-rolled drag flex (see titlebar disable above) */}
-        <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          // eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing controls cluster pinned right in the titlebar's hand-rolled drag flex (see titlebar disable above)
+          className="flex shrink-0 items-center gap-2xs"
+        >
           <ControlSizeProvider size="sm">
             <IconButton
-              icon={geo.pinned ? MdPushPin : MdOutlinePushPin}
+              icon={keepIcon}
+              active={geo.pinned}
               label={
                 geo.pinned
                   ? `Unpin (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
@@ -369,24 +374,24 @@ export function WindowChrome({
               onClick={onTogglePin}
             />
             <IconButton
-              icon={MdRemove}
+              icon={removeIcon}
               label={`Minimize (${formatShortcutLabel("mod+m")})`}
               onClick={toggleMinimize}
             />
             <IconButton
-              icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
+              icon={geo.snap === "maximize" ? filterNoneIcon : cropSquareIcon}
               label={geo.snap === "maximize" ? "Restore" : "Maximize"}
               onClick={toggleMaximize}
             />
             <IconButton
-              icon={MdFullscreen}
+              icon={fullscreenIcon}
               // Solo (full-app over everything) — not maximize (which only fills
               // the surface). Exit via the solo overlay button or Esc.
               label="Fullscreen"
               onClick={onFullscreen}
             />
             <IconButton
-              icon={MdClose}
+              icon={closeIcon}
               // Closes the whole window; the chip × closes a single member.
               label="Close window"
               onClick={onCloseWindow}

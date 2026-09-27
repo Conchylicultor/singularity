@@ -586,6 +586,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ControlPanelBlockProps`
     - `ControlPanelEmptyProps`

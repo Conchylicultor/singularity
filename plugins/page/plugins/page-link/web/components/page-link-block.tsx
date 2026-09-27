@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -23,6 +22,10 @@ import {
   usePageReferenceActions,
 } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkBlock } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const linkIcon = symbol("link");
 
 /**
  * The four states a page-link row can be in.
@@ -166,7 +169,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
             <Row
               hover="muted"
               className="text-muted-foreground"
-              icon={<MdLink />}
+              icon={<Icon icon={linkIcon} />}
             >
               Select a page…
             </Row>
@@ -199,7 +202,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
           trigger={
             <Row
               hover="muted"
-              icon={<MdLink className="text-muted-foreground" />}
+              icon={<Icon icon={linkIcon} className="text-muted-foreground" />}
             >
               <Placeholder>(page not found)</Placeholder>
             </Row>
@@ -225,7 +228,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
           <Center as="span" className="size-4 text-muted-foreground">
             <PageIcon
               nodes={targetData?.iconSvgNodes}
-              fallback={MdLink}
+              fallback={linkIcon}
               className="size-4"
             />
           </Center>

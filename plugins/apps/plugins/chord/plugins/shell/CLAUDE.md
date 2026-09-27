@@ -27,7 +27,6 @@ The Chord app's identity and frame.
     - `ThemeEngine.Theme` "Chord"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `layouts/full-pane.FullPane`
     - `primitives/bar.Bar`
     - `primitives/css/column.Column`

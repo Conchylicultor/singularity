@@ -1,5 +1,4 @@
 import { type ReactNode, useRef, useState } from "react";
-import { MdAdd, MdExpandMore, MdSettings } from "react-icons/md";
 import {
   Button,
   cn,
@@ -26,6 +25,12 @@ import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
 import { ViewSettingsPopover } from "./view-settings-popover";
 import { AddViewMenuItems } from "./add-view-menu-items";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const settingsIcon = symbol("settings");
 
 /**
  * The view switcher folded into ONE chip: the active view's icon and name and a
@@ -106,7 +111,8 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         // reads as one more line of the sidebar rather than a smaller caption.
         className="gap-sidebar-icon text-label font-medium"
         icon={
-          <ActiveIcon
+          <Icon
+            icon={ActiveIcon}
             className={cn(
               "size-sidebar-icon text-muted-foreground",
               rigidClass(),
@@ -116,7 +122,8 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         {...reveal.groupProps}
       >
         <Fill>{active.instance.name}</Fill>
-        <MdExpandMore
+        <Icon
+          icon={keyboardArrowDownIcon}
           className={cn(
             "text-faint-foreground",
             rigidClass(),
@@ -131,9 +138,9 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         shape="pill"
         aria-label={label}
       >
-        <ActiveIcon className="text-muted-foreground" />
+        <Icon icon={ActiveIcon} className="text-muted-foreground" />
         {active.instance.name}
-        <MdExpandMore className="text-faint-foreground" />
+        <Icon icon={keyboardArrowDownIcon} className="text-faint-foreground" />
       </Button>
     );
 
@@ -147,7 +154,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
             <DropdownMenuTrigger render={trigger(popupOpen)} />
             <DropdownMenuContent align="start">
               {others.map((r) => {
-                const Icon: ViewTypeMeta["icon"] = r.viewType.icon;
+                const icon: ViewTypeMeta["icon"] = r.viewType.icon;
                 return (
                   <DropdownMenuItem
                     key={r.instance.id}
@@ -156,7 +163,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
                       onSelect(r.instance.id);
                     }}
                   >
-                    <Icon className="size-4" />
+                    <Icon icon={icon} className="size-4" />
                     {r.instance.name}
                   </DropdownMenuItem>
                 );
@@ -164,7 +171,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
               {others.length > 0 ? <DropdownMenuSeparator /> : null}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <MdAdd className="size-4" />
+                  <Icon icon={addIcon} className="size-4" />
                   Add view
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
@@ -174,7 +181,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
               <DropdownMenuItem
                 onClick={() => setSettingsForId(active.instance.id)}
               >
-                <MdSettings className="size-4" />
+                <Icon icon={settingsIcon} className="size-4" />
                 View settings…
               </DropdownMenuItem>
             </DropdownMenuContent>

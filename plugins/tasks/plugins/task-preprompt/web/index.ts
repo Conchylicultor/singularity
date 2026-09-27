@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
-import { MdOutlineArticle } from "react-icons/md";
 import { prepromptLaunchOption } from "../core";
 import { PrepromptLaunchControl } from "./components/preprompt-control";
 import {
@@ -8,6 +7,7 @@ import {
   PrepromptPillMenu,
 } from "./components/preprompt-pill";
 import { useTaskPrepromptBinding } from "./internal/binding";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { useTaskPreprompt } from "./hooks";
 
@@ -29,7 +29,7 @@ export default {
       // what the agent is told, which belongs beside the prose rather than with
       // the run controls.
       pill: {
-        icon: MdOutlineArticle,
+        icon: symbol("article"),
         Value: PrepromptPillValue,
         MenuGroup: PrepromptPillMenu,
         side: "start",

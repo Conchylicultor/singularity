@@ -4,5 +4,5 @@ export const debugApp = defineApp({
   id: "debug",
   name: "Debug",
   basePath: "/debug",
-  iconKey: "bug_report",
+  iconKey: "bug-report",
 });

@@ -1,4 +1,3 @@
-import { MdWarning } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -8,6 +7,10 @@ import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view
 import { useConversationById } from "@plugins/conversations/web";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
   careful: "size-3.5 text-warning",
@@ -97,7 +100,7 @@ function AttemptCodeReviewSummary({
         −{deletions}
       </Text>
       {maxLevel !== "safe" && (
-        <MdWarning className={WARNING_ICON_CLASS[maxLevel]} />
+        <Icon icon={warningIcon} className={WARNING_ICON_CLASS[maxLevel]} />
       )}
     </Stack>
   );

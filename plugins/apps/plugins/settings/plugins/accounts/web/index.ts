@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdKey } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { accountsPane } from "@plugins/auth/web";
 import { Settings } from "@plugins/apps/plugins/settings/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -12,7 +12,7 @@ export default {
     Settings.Sidebar({
       id: "accounts",
       title: "Account",
-      icon: MdKey,
+      icon: symbol("key"),
       onClick: () => openPane(accountsPane, {}, { mode: "root" }),
     }),
   ],

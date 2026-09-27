@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdPushPin, MdSettings } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   ControlPanel,
@@ -7,6 +6,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { useActionBarPin } from "../internal/use-action-bar-pin";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keepIcon = symbol("keep");
+const settingsIcon = symbol("settings");
 
 /**
  * The bar's single gear button. Options about how the app is SHOWN (surface
@@ -34,7 +38,7 @@ export function ViewOptionsButton() {
       label="View options"
       trigger={
         <IconButton
-          icon={MdSettings}
+          icon={settingsIcon}
           label="View options"
           variant={open ? "secondary" : "ghost"}
         />
@@ -42,7 +46,7 @@ export function ViewOptionsButton() {
     >
       <ActionBar.ViewOption.Render />
       <ControlPanel.Row
-        icon={<MdPushPin />}
+        icon={<Icon icon={keepIcon} />}
         select="switch"
         checked={pinned}
         onSelect={togglePin}

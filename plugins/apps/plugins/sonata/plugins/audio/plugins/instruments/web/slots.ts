@@ -1,8 +1,5 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-
-/** Icon component convention used across the platform (react-icons/md style). */
-type IconType = ComponentType<{ className?: string }>;
 
 /** One note to sound, timed against the AudioContext clock (absolute seconds). */
 export interface ScheduledNote {
@@ -40,7 +37,7 @@ export const SonataAudio = {
   Instrument: defineSlot<{
     id: string;
     label: string;
-    icon?: IconType;
+    icon?: IconRef;
     /** GM program (0-127) this timbre represents — the auto-map key. */
     gmProgram?: number;
     /** Picker grouping label (e.g. the GM family). */

@@ -7,7 +7,10 @@ import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { MdExtension } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const extensionIcon = symbol("extension");
 
 type SlotRow = {
   plugin: PluginNode;
@@ -81,7 +84,7 @@ function rows(entries: FacetTableEntry[]): SlotRow[] {
 export const slotsFacetTable = defineFacetTable<SlotRow>({
   facetId: "slots",
   label: "Slots",
-  icon: MdExtension,
+  icon: extensionIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.slotId}`,

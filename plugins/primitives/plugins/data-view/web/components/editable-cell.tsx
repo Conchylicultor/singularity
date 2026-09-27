@@ -1,5 +1,4 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
-import { MdEdit } from "react-icons/md";
 import {
   cn,
   ControlSizeProvider,
@@ -16,6 +15,9 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { FieldDef, FieldValue } from "../index";
 import type { useResolveCellEditor } from "../index";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const editIcon = symbol("edit");
 
 /**
  * A scalar FieldValue is "empty" when null/undefined or the empty string.
@@ -76,7 +78,7 @@ function ReadAffordance(props: {
     // this is chrome sitting inside a line of data, not a control of its own.
     <ControlSizeProvider size="xs">
       <IconButton
-        icon={MdEdit}
+        icon={editIcon}
         label={`Edit ${props.label}`}
         className={cn(hoverRevealTarget, rigidClass())}
         // Both halves are load-bearing: the click must not reach the row (it

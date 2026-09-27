@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import { MdStar, MdStarBorder } from "react-icons/md";
 import {
   useResource,
   matchResource,
@@ -26,6 +25,10 @@ import {
 } from "../core";
 import { useMailThreadFieldDefs } from "./internal/fields";
 import { ThreadRow } from "./components/thread-row";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const starIcon = symbol("star");
 
 const MAIL_THREADS_VIEW = defineDataView("mail-threads");
 
@@ -77,9 +80,16 @@ function MailThreadsPaneView(): ReactElement {
             size: "md",
             leading: (t: MailThread) =>
               t.starred ? (
-                <MdStar className="icon-auto text-warning" />
+                <Icon
+                  icon={starIcon}
+                  active
+                  className="icon-auto text-warning"
+                />
               ) : (
-                <MdStarBorder className="icon-auto text-muted-foreground" />
+                <Icon
+                  icon={starIcon}
+                  className="icon-auto text-muted-foreground"
+                />
               ),
             renderRow: (t: MailThread) => <ThreadRow thread={t} />,
           },

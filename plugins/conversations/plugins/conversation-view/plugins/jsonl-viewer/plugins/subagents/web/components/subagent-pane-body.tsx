@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MdArticle } from "react-icons/md";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ResourceView,
@@ -41,6 +40,10 @@ import {
 import { subagentStateDisplay } from "../internal/run-state-display";
 import { SubagentDuration } from "./subagent-duration";
 import { SubagentLastStep } from "./subagent-last-step";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const articleIcon = symbol("article");
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type ReportText = Extract<SubagentReport, { kind: "report" }>;
@@ -227,7 +230,7 @@ function SubagentHeader({
 function ReportCard({ report }: { report: ReportText }) {
   return (
     <CollapsibleCard
-      icon={<MdArticle className="size-3.5" />}
+      icon={<Icon icon={articleIcon} className="size-3.5" />}
       label={report.isError ? "Error" : "Report"}
       error={report.isError}
       defaultOpen

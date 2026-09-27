@@ -7,7 +7,6 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -29,6 +28,13 @@ import {
   type ReapStep,
   type WorktreeEntry,
 } from "../../shared/endpoints";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const deleteIcon = symbol("delete");
+const folderDeleteIcon = symbol("folder-delete");
+const refreshIcon = symbol("refresh");
+const warningIcon = symbol("warning");
 
 type DeleteEvent =
   { step: ReapStep } | { ok: true } | { ok: false; error: string };
@@ -94,7 +100,7 @@ function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   return (
     <Text as="div" variant="caption" className="text-warning">
       <Stack direction="row" gap="xs" align="center">
-        <MdWarning className="size-3.5" />
+        <Icon icon={warningIcon} className="size-3.5" />
         {parts.join(", ")}
       </Stack>
     </Text>
@@ -282,11 +288,11 @@ export function WorktreeCleanupPanel() {
             disabled={safeCount === 0}
           >
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-            <MdFolderDelete className="size-4 mr-1.5" />
+            <Icon icon={folderDeleteIcon} className="size-4 mr-1.5" />
             Delete {safeCount} safe
           </Button>
           <IconButton
-            icon={MdRefresh}
+            icon={refreshIcon}
             label="Refresh"
             variant="outline"
             onClick={() => load()}
@@ -437,7 +443,7 @@ function EntryRow({
                 className="opacity-40 cursor-default"
               >
                 {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                <MdDelete className="size-3.5 mr-1" />
+                <Icon icon={deleteIcon} className="size-3.5 mr-1" />
                 Drop DB
               </Button>
             ) : (
@@ -455,7 +461,7 @@ function EntryRow({
                 ) : (
                   <>
                     {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                    <MdDelete className="size-3.5 mr-1" />
+                    <Icon icon={deleteIcon} className="size-3.5 mr-1" />
                     {entry.dirExists ? "Delete" : "Drop DB"}
                   </>
                 )}

@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useEffect, useRef, useState } from "react";
 import {
   $createTextNode,
@@ -13,12 +14,7 @@ import {
 } from "lexical";
 import { $createLinkNode, $isLinkNode } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import {
-  MdAlternateEmail,
-  MdBookmark,
-  MdLink,
-  MdSmartDisplay,
-} from "react-icons/md";
+
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   CaretTriggerMenu,
@@ -43,6 +39,12 @@ import {
   linkMetaEndpoint,
 } from "@plugins/page/plugins/bookmark/core";
 import { EMBED_TYPE } from "@plugins/page/plugins/embed/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const alternateEmailIcon = symbol("alternate-email");
+const bookmarkIcon = symbol("bookmark");
+const linkIcon = symbol("link");
+const smartDisplayIcon = symbol("smart-display");
 
 /** A bare http(s) URL is a single whitespace-free token that parses as a URL. */
 function bareUrl(text: string): string | null {
@@ -61,10 +63,10 @@ function bareUrl(text: string): string | null {
 // Every row the menu can show, in commit-index order. Which of them a given
 // paste offers is `rowsFor` — the index the keyboard commits is into THAT list.
 const ALL_ROWS = [
-  { kind: "link", icon: MdLink, label: "Keep as link" },
-  { kind: "mention", icon: MdAlternateEmail, label: "Mention" },
-  { kind: "bookmark", icon: MdBookmark, label: "Create bookmark" },
-  { kind: "embed", icon: MdSmartDisplay, label: "Create embed" },
+  { kind: "link", icon: linkIcon, label: "Keep as link" },
+  { kind: "mention", icon: alternateEmailIcon, label: "Mention" },
+  { kind: "bookmark", icon: bookmarkIcon, label: "Create bookmark" },
+  { kind: "embed", icon: smartDisplayIcon, label: "Create embed" },
 ] as const;
 
 /** The menu a paste opened: what it inserted, and the text it left behind. */
@@ -431,11 +433,11 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
       {/* eslint-disable-next-line data-view/no-adhoc-row-list -- Transient caret-menu
           chrome, not a collection of domain records: up to four fixed choices
           whose index IS the keyboard commit key. Same shape as the `/` menu's rows. */}
-      {rows.map(({ kind, icon: Icon, label }, i) => (
+      {rows.map(({ kind, icon, label }, i) => (
         <Row
           key={kind}
           selected={activeIndex === i}
-          icon={<Icon />}
+          icon={<Icon icon={icon} />}
           onMouseEnter={() => setActiveIndex(i)}
           // Commits on `pointerdown`, never `click`: the focus-less surface
           // perturbs the host selection and unmounts this row before a later

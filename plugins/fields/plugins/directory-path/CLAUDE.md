@@ -25,6 +25,7 @@ picker.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (values):
     - `directoryPathFieldType`
     - `directoryPathIdentity`

@@ -33,6 +33,7 @@ to-do-specific nesting logic.
   - Uses:
     - `page/editor.defineBlock`
     - `page/editor.textBlockSchema`
+    - `ui/icons.symbol`
   - Exports (values):
     - `toDoBlock`
     - `toDoDataSchema`

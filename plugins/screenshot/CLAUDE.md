@@ -36,6 +36,7 @@
     - `screenshot/draw-canvas.Stroke`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (values):
     - `captureApp`
     - `screenshotPane`

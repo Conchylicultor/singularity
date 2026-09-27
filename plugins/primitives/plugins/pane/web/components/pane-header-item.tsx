@@ -1,7 +1,7 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentType, ReactNode } from "react";
-
-type HeaderIcon = ComponentType<{ className?: string }>;
 
 /**
  * What every header item carries, whichever renderable form it takes.
@@ -43,9 +43,7 @@ interface PaneHeaderItemBase {
 export type PaneHeaderAction = PaneHeaderItemBase & {
   onClick: () => void;
   component?: never;
-} & (
-    { label: string; icon?: HeaderIcon } | { icon: HeaderIcon; label?: string }
-  );
+} & ({ label: string; icon?: IconRef } | { icon: IconRef; label?: string });
 
 /**
  * A custom-rendered widget: a self-contained zero-prop component that reads its
@@ -87,7 +85,7 @@ export function PaneHeaderCell(item: PaneHeaderItem): ReactNode {
   if (item.onClick) {
     return (
       <Button variant="ghost" onClick={item.onClick}>
-        {item.icon && <item.icon className="size-4" />}
+        {item.icon && <Icon icon={item.icon} className="size-4" />}
         {item.label}
       </Button>
     );

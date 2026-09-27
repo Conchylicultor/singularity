@@ -2,9 +2,9 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
-import { MdChecklist } from "react-icons/md";
 import { tasksRootPane, taskDetailPane } from "./panes";
 import { TaskDetail as TaskDetailSectionSlots } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export { useFlushAll, useRegisterFlush } from "./context";
@@ -20,7 +20,7 @@ export default {
     Shell.Sidebar({
       id: "tasks",
       title: "Tasks",
-      icon: MdChecklist,
+      icon: symbol("checklist"),
       opens: opensPane(tasksRootPane, {}),
     }),
   ],

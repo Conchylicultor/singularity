@@ -96,6 +96,7 @@ rename.
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `reports.Reports`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "stall-monitor"

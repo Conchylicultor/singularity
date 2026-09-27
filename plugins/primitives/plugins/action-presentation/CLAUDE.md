@@ -109,6 +109,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.formatShortcutLabel`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ActionForm`
     - `ItemFormChannel`

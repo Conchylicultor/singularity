@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdRuleFolder } from "react-icons/md";
 import { ConfigNavSlots } from "@plugins/config_v2/plugins/settings/web";
 import { configOrphansPane } from "./panes";
 import { StrandedConfigNotice } from "./components/stranded-config-notice";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { configOrphansPane } from "./panes";
 
@@ -16,7 +16,7 @@ export default {
     DebugApp.Sidebar({
       id: "config-orphans",
       title: "Config Orphans",
-      icon: MdRuleFolder,
+      icon: symbol("rule-folder"),
       onClick: () => openPane(configOrphansPane, {}, { mode: "root" }),
     }),
     ConfigNavSlots.Notice({

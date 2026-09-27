@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { MdAdd } from "react-icons/md";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -34,6 +33,10 @@ import {
 import type { CoverContent, GalleryViewOptions } from "../../core";
 import { DataCard } from "./data-card";
 import { useGridColumns } from "./use-grid-columns";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
 
 /** Above this card count the gallery windows its grid (lane-aware: each windowed
  *  row holds one measured row of `columns` cards). Smaller galleries keep the
@@ -206,7 +209,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           className="focus-ring aspect-video rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
         >
           <Stack gap="xs" align="center" justify="center" className="size-full">
-            <MdAdd className="size-5" />
+            <Icon icon={addIcon} className="size-5" />
             <Text variant="label">{creators![0]!.label}</Text>
           </Stack>
         </Button>

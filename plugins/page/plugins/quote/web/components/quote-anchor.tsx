@@ -1,5 +1,8 @@
-import { MdFormatQuote } from "react-icons/md";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const formatQuoteIcon = symbol("format-quote");
 
 /**
  * The quote's leading glyph — the only thing its row paints, and a plain,
@@ -18,6 +21,13 @@ import { ContainerAnchor } from "@plugins/page/plugins/container/web";
  */
 export function QuoteAnchor() {
   return (
-    <ContainerAnchor glyph={<MdFormatQuote className="text-muted-foreground/50 size-4" />} />
+    <ContainerAnchor
+      glyph={
+        <Icon
+          icon={formatQuoteIcon}
+          className="text-muted-foreground/50 size-4"
+        />
+      }
+    />
   );
 }

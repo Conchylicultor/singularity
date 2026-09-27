@@ -76,7 +76,9 @@ without being in it.
   - Contributes: `page.block-data` "agent-note"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/annotations.defineAnnotationBlock`
+  - Uses:
+    - `page/annotations.defineAnnotationBlock`
+    - `ui/icons.symbol`
   - Exports (values):
     - `agentNotesBlock`
     - `agentNotesDataSchema`

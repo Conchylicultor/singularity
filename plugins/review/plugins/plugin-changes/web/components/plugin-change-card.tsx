@@ -1,4 +1,3 @@
-import { MdExpandMore, MdExpandLess } from "react-icons/md";
 import {
   Badge,
   formatStatusLabel,
@@ -13,6 +12,11 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 
 export function PluginChangeCard({
   conversationId,
@@ -34,11 +38,13 @@ export function PluginChangeCard({
         className="w-full gap-sm px-md py-sm text-left hover:bg-muted/30"
       >
         {expanded ? (
-          <MdExpandLess
+          <Icon
+            icon={keyboardArrowUpIcon}
             className={cn("size-4 text-muted-foreground", rigidClass())}
           />
         ) : (
-          <MdExpandMore
+          <Icon
+            icon={keyboardArrowDownIcon}
             className={cn("size-4 text-muted-foreground", rigidClass())}
           />
         )}

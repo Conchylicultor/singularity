@@ -31,6 +31,7 @@ needing a DOM handle wraps `<Tab>` in its own element.
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
     - `primitives/slot-render.renderIsolated`
+    - `ui/icons.Icon`
   - Exports (types):
     - `TabProps`
     - `TabStrip`

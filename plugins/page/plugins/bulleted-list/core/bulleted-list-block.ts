@@ -1,11 +1,13 @@
-import { MdFormatListBulleted } from "react-icons/md";
 import { defineBlock, textDataSchema } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const formatListBulletedIcon = symbol("format-list-bulleted");
 
 export const bulletedListBlock = defineBlock({
   type: "bulleted-list",
   schema: textDataSchema,
   label: "Bulleted list",
-  icon: MdFormatListBulleted,
+  icon: formatListBulletedIcon,
   aliases: ["bullet", "unordered", "ul", "list"],
   empty: () => ({ text: [] }),
   marker: "•",

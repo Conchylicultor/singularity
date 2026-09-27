@@ -1,4 +1,3 @@
-import { MdPublic } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -8,6 +7,10 @@ import {
   pagesResource,
 } from "@plugins/page/plugins/editor/core";
 import type { PageReferenceChipProps } from "@plugins/page/plugins/page-reference/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const publicIcon = symbol("public");
 
 /**
  * The chip at the right edge of an instructions page's row: `Global` when the
@@ -29,7 +32,7 @@ export function InstructionsPageChip({ pageId }: PageReferenceChipProps) {
   return (
     <Badge
       variant="primary"
-      icon={<MdPublic />}
+      icon={<Icon icon={publicIcon} />}
       title="Handed to every agent conversation at its start"
     >
       Global

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdSchedule } from "react-icons/md";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { SourceScheduleSection } from "./components/schedule-section";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     EventSourceDetail.Section({
       id: "schedule",
       label: "Schedule",
-      icon: MdSchedule,
+      icon: symbol("schedule"),
       component: SourceScheduleSection,
       useDefaultOpen: () => true,
     }),

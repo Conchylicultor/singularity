@@ -1,4 +1,3 @@
-import { MdAdd, MdRemove, MdSwapVert } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -13,6 +12,12 @@ import {
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { ToolbarControl } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control/web";
 import { saveTranspose } from "../actions";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const addIcon = symbol("add");
+const removeIcon = symbol("remove");
+const swapVertIcon = symbol("swap-vert");
 
 /** Transpose bounds — a full octave each way (matches the endpoint clamp). */
 const MIN_SEMITONES = -12;
@@ -46,7 +51,7 @@ export function TransposeControl() {
 
   return (
     <ToolbarControl
-      icon={<MdSwapVert className="size-3.5" />}
+      icon={<Icon icon={swapVertIcon} className="size-3.5" />}
       tooltip="Transpose — shift the whole song by semitones"
       disabled={transpose.pending || !hasScore}
     >
@@ -84,7 +89,7 @@ function TransposeStepper({
   return (
     <>
       <IconButton
-        icon={MdRemove}
+        icon={removeIcon}
         label="Transpose down a semitone"
         disabled={disabled || semitones <= MIN_SEMITONES}
         onClick={() => setTranspose(semitones - 1)}
@@ -114,7 +119,7 @@ function TransposeStepper({
         </Text>
       </button>
       <IconButton
-        icon={MdAdd}
+        icon={addIcon}
         label="Transpose up a semitone"
         disabled={disabled || semitones >= MAX_SEMITONES}
         onClick={() => setTranspose(semitones + 1)}

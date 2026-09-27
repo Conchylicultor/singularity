@@ -1,6 +1,5 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
-import { MdClear, MdUndo } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   DrawCanvas,
@@ -10,6 +9,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const undoIcon = symbol("undo");
 
 const COLORS = [
   "#ef4444",
@@ -116,13 +119,13 @@ export function LiveDrawOverlay({
               </Stack>
               <Stack direction="row" gap="xs" align="center">
                 <IconButton
-                  icon={MdUndo}
+                  icon={undoIcon}
                   label="Undo"
                   onClick={() => onStrokesChange((s) => s.slice(0, -1))}
                   disabled={strokes.length === 0}
                 />
                 <IconButton
-                  icon={MdClear}
+                  icon={closeIcon}
                   label="Clear"
                   onClick={() => onStrokesChange([])}
                   disabled={strokes.length === 0}

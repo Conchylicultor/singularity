@@ -1,10 +1,12 @@
-import { MdVerticalSplit } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   usePageNavigation,
   type PageNavigation,
   type PageReferenceActionProps,
 } from "@plugins/page/plugins/page-reference/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const verticalSplitIcon = symbol("vertical-split");
 
 /**
  * Only where the host declared it can put a page beside the one being read.
@@ -29,7 +31,7 @@ export function OpenAsideAction({ pageId }: PageReferenceActionProps) {
   if (!openAside) return null;
   return (
     <IconButton
-      icon={MdVerticalSplit}
+      icon={verticalSplitIcon}
       label="Open in side pane"
       onClick={() => openAside(pageId)}
     />

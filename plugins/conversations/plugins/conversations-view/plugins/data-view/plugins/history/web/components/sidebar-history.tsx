@@ -1,5 +1,4 @@
 import { createContext, useContext, type ReactElement } from "react";
-import { MdClose } from "react-icons/md";
 import {
   useResource,
   matchResource,
@@ -23,6 +22,9 @@ import {
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
 
 // Per-consumer trailing-action slot. The close action contribution lives in this
 // plugin's `web/index.ts`.
@@ -45,7 +47,7 @@ export function CloseConvAction({
   if (!onCloseConversation) return null;
   return (
     <IconButton
-      icon={MdClose}
+      icon={closeIcon}
       label="Close conversation"
       onClick={(e) => {
         e.stopPropagation();

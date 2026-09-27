@@ -1,5 +1,4 @@
 import { useMemo, type ReactElement } from "react";
-import { MdBolt } from "react-icons/md";
 import {
   useEndpoint,
   getEndpointErrorMessage,
@@ -30,6 +29,10 @@ import {
   SPAN_MEASURES,
   type SpanMeasure,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const boltIcon = symbol("bolt");
 
 // Newest captured sample first; deep-link its trace when the engine admitted one.
 function newestTraceId(op: SlowOp): string | undefined {
@@ -212,7 +215,7 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
             {newestTraceId(r) && (
               <Stack direction="row" gap="2xs" align="start">
                 <LinkChip
-                  leading={<MdBolt className="icon-auto" />}
+                  leading={<Icon icon={boltIcon} className="icon-auto" />}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(

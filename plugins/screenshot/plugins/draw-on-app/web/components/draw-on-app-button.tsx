@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
-import { MdGesture } from "react-icons/md";
 import { captureApp } from "@plugins/screenshot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -9,6 +8,9 @@ import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plug
 import { insertIntoImproveDraft } from "@plugins/improve/web";
 import type { Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { LiveDrawOverlay } from "./live-draw-overlay";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const gestureIcon = symbol("gesture");
 
 export function DrawOnAppButton() {
   const [active, setActive] = useState(false);
@@ -42,7 +44,12 @@ export function DrawOnAppButton() {
           !(node instanceof HTMLElement && node.dataset.drawChrome === "true"),
       );
       if (!blob) {
-        toast({ type: "screenshot", title: "Capture failed", description: "Capture returned no image", variant: "error" });
+        toast({
+          type: "screenshot",
+          title: "Capture failed",
+          description: "Capture returned no image",
+          variant: "error",
+        });
         setChromeVisible(true);
         return;
       }
@@ -65,7 +72,7 @@ export function DrawOnAppButton() {
   return (
     <>
       <IconButton
-        icon={MdGesture}
+        icon={gestureIcon}
         label="Draw on app"
         disabled={active}
         onClick={() => setActive(true)}

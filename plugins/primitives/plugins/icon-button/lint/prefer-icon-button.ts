@@ -14,7 +14,7 @@ const createRule = ESLintUtils.RuleCreator(
  * `IconButton` (`@plugins/primitives/plugins/icon-button/web`) is the sanctioned
  * way to render a single icon action: it injects the mandatory `aria-label` +
  * tooltip and renders a bare `<Icon/>`, so the control is always accessible. A
- * hand-rolled `<Button><MdX/></Button>` slips past that — the audit found exactly
+ * hand-rolled `<Button><Icon icon={…}/></Button>` slips past that — the audit found exactly
  * this (an icon action with no `aria-label`).
  *
  * The `aspect` axis is NOT part of the test, because the wrong half of it is the
@@ -25,15 +25,17 @@ const createRule = ESLintUtils.RuleCreator(
  * its icon actions square, half of them padded. Gating the rule on
  * `aspect="icon"` caught only the half that already had the geometry right.
  *
- * So the rule fires on the unmistakable "single react-icons glyph as a direct,
+ * So the rule fires on the unmistakable "single icon glyph as a direct,
  * standalone child" shape, at any aspect:
  *
  *   1. the element's `aspect` is absent (→ the `"text"` default) or the string
  *      literal `"icon"` — `"inline"` and any computed value are left alone, AND
  *   2. its children — ignoring whitespace `JSXText` — are EXACTLY ONE
  *      `JSXElement`, AND
- *   3. that child's tag identifier resolves (via scope → import binding) to a
- *      module matching `^react-icons(/|$)` — the `IconButton.icon` contract, AND
+ *   3. that child's tag identifier resolves (via scope → import binding) to
+ *      the icons primitive's `<Icon>` (`@plugins/ui/plugins/icons/web`) — the
+ *      `IconButton.icon` contract — or, inside the icon picker, a react-icons
+ *      glyph, AND
  *   4. the `<Button>` is NOT a render-target prop value (`trigger={<Button…/>}`
  *      / `render={<Button…/>}`), which legitimately keeps a bare Button.
  *
@@ -46,13 +48,13 @@ const createRule = ESLintUtils.RuleCreator(
  * resolve the `@plugins/*` alias. No auto-fix (the label text can't be inferred).
  */
 
-const REACT_ICONS_MODULE = /^react-icons(\/|$)/;
+const ICON_MODULES = /^(react-icons(\/|$)|@plugins\/ui\/plugins\/icons\/web$)/;
 
 /**
  * Resolve a JSX child-element's tag identifier to the module it was imported
  * from, returning that module specifier (or null if it isn't an import binding).
  * Same-file scope walk only — a local component or a member-expression tag
- * (`<foo.Bar/>`) is not a react-icons import and yields null.
+ * (`<foo.Bar/>`) is not an icon import and yields null.
  */
 function importSourceOfTag(
   sourceCode: TSESLint.SourceCode,
@@ -86,7 +88,7 @@ export default createRule({
     type: "suggestion",
     docs: {
       description:
-        "Steer a standalone `<Button>` whose only child is a react-icons glyph toward `<IconButton icon={…} label=… />`, which adds the mandatory aria-label + tooltip and the square icon box.",
+        "Steer a standalone `<Button>` whose only child is an icon glyph toward `<IconButton icon={…} label=… />`, which adds the mandatory aria-label + tooltip and the square icon box.",
     },
     schema: [],
     messages: {
@@ -143,12 +145,12 @@ export default createRule({
         const only = meaningful[0]!;
         if (only.type !== "JSXElement") return;
 
-        // (3) that child's tag resolves to a react-icons import.
+        // (3) that child's tag resolves to an icon import.
         const source = importSourceOfTag(
           context.sourceCode,
           only.openingElement.name,
         );
-        if (!source || !REACT_ICONS_MODULE.test(source)) return;
+        if (!source || !ICON_MODULES.test(source)) return;
 
         context.report({ node, messageId: "preferIconButton" });
       },

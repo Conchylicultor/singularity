@@ -22,12 +22,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/tooltip";
-import { MdMenu } from "react-icons/md";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useSurfaceShortcuts,
   type ShortcutDescriptor,
 } from "@plugins/primitives/plugins/shortcuts/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const menuIcon = symbol("menu");
 
 // Local shimmer atom (was components/ui/skeleton.tsx — deleted; feature code
 // uses the `loading` primitive's <Loading> variants instead).
@@ -304,7 +307,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <MdMenu />
+      <Icon icon={menuIcon} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

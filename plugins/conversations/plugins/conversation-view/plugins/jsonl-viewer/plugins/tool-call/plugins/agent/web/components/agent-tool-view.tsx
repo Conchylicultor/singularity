@@ -1,4 +1,4 @@
-import { MdArticle } from "react-icons/md";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
@@ -26,6 +26,9 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { agentReportPane } from "../panes";
 import { AgentInputSchema, DEFAULT_AGENT_TYPE } from "../../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const articleIcon = symbol("article");
 
 function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
@@ -83,7 +86,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
   // is where you watch it, and if it died without reporting the pane is the only
   // place its work survives at all.
   const openLabel = display?.openLabel ?? "Open sub-agent";
-  const OpenIcon = display?.icon ?? MdArticle;
+  const OpenIcon = display?.icon ?? articleIcon;
 
   const summary = (
     <Line as="span" className="gap-sm">
@@ -152,7 +155,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
             bordered
             onClick={openReport}
             className="rounded-md border-border/40 text-muted-foreground"
-            icon={<OpenIcon />}
+            icon={<Icon icon={OpenIcon} />}
           >
             <span className="font-medium">{openLabel}</span>
           </Row>

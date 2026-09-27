@@ -1,4 +1,3 @@
-import { MdRocketLaunch } from "react-icons/md";
 import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -7,6 +6,9 @@ import {
   asNamespace,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const rocketLaunchIcon = symbol("rocket-launch");
 
 export function OpenAppButton() {
   const { convId } = conversationPane.useParams();
@@ -21,7 +23,7 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
   return (
     <PaneIconAction
       label="Open app"
-      icon={MdRocketLaunch}
+      icon={rocketLaunchIcon}
       // Pending until we know whether the task was filed from a page: opening
       // `/` meanwhile would be a guess the click cannot take back.
       loading={source.isPending}

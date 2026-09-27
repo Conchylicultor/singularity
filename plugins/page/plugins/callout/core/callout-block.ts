@@ -1,9 +1,17 @@
 import { z } from "zod";
-import { MdLightbulb } from "react-icons/md";
 import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
 import { defineContainerBlock } from "@plugins/page/plugins/container/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export const CALLOUT_COLORS = ["default", "info", "success", "warning", "danger"] as const;
+const lightbulbIcon = symbol("lightbulb");
+
+export const CALLOUT_COLORS = [
+  "default",
+  "info",
+  "success",
+  "warning",
+  "danger",
+] as const;
 export type CalloutColor = (typeof CALLOUT_COLORS)[number];
 
 /**
@@ -37,7 +45,11 @@ export const calloutBlock = defineContainerBlock({
   type: "callout",
   schema: calloutDataSchema,
   label: "Callout",
-  icon: MdLightbulb,
+  icon: lightbulbIcon,
   aliases: ["note", "info", "warning", "tip", "aside", "highlight", "banner"],
-  empty: () => ({ icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
+  empty: () => ({
+    icon: null,
+    iconSvgNodes: null,
+    color: "default" as CalloutColor,
+  }),
 });

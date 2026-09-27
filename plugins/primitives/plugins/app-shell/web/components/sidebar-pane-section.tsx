@@ -1,3 +1,5 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -10,13 +12,13 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 
 export function SidebarPaneSection({
-  icon: Icon,
+  icon,
   title,
   labelExtra: LabelExtra,
   defaultOpen = true,
   children,
 }: {
-  icon: ComponentType<{ className?: string }>;
+  icon: IconRef;
   title: string;
   labelExtra?: ComponentType;
   defaultOpen?: boolean;
@@ -34,7 +36,7 @@ export function SidebarPaneSection({
         {...triggerControlProps}
       >
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off icon offset inside shadcn SidebarGroupLabel label row */}
-        <Icon className="mr-2 size-4" />
+        <Icon icon={icon} className="mr-2 size-4" />
         {title}
         {LabelExtra && <LabelExtra />}
         <CollapsibleChevron open={open} className="ml-auto size-4" />

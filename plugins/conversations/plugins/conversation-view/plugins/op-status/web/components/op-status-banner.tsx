@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
@@ -24,6 +23,12 @@ import {
   useNow,
 } from "@plugins/primitives/plugins/relative-time/web";
 import { worktreeOps, type WorktreeOp } from "../../shared";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const hourglassEmptyIcon = symbol("hourglass-empty");
 
 // The op markers are keyed on the worktree directory basename, exactly how the
 // status poller keys them (`basename(worktreePath)`). Avoid node:path in the
@@ -177,7 +182,7 @@ function OpRowView({
           <Rigid as="span" className="w-6" />
         )}
         {waiting ? (
-          <MdHourglassEmpty
+          <Icon icon={hourglassEmptyIcon}
             className={cn("size-3.5 text-warning", rigidClass())}
           />
         ) : (
@@ -264,7 +269,7 @@ export function OpStatusBanner({
             className="px-md py-sm"
           >
             {queued ? (
-              <MdHourglassEmpty className={cn("size-3.5", rigidClass())} />
+              <Icon icon={hourglassEmptyIcon} className={cn("size-3.5", rigidClass())} />
             ) : (
               <Spinner className={cn("size-3.5", rigidClass())} />
             )}
@@ -291,11 +296,11 @@ export function OpStatusBanner({
               {elapsed}
             </span>
             {expanded ? (
-              <MdExpandLess
+              <Icon icon={keyboardArrowUpIcon}
                 className={cn("size-4 text-muted-foreground", rigidClass())}
               />
             ) : (
-              <MdExpandMore
+              <Icon icon={keyboardArrowDownIcon}
                 className={cn("size-4 text-muted-foreground", rigidClass())}
               />
             )}

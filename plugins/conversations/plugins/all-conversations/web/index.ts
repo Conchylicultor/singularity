@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdForum } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { allConversationsPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { allConversationsPane } from "./panes";
 export { conversationFieldDefs } from "./internal/fields";
@@ -16,7 +16,7 @@ export default {
     Shell.Sidebar({
       id: "all-conversations",
       title: "Conversations",
-      icon: MdForum,
+      icon: symbol("forum"),
       opens: opensPane(allConversationsPane, {}),
     }),
   ],

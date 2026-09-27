@@ -116,6 +116,7 @@ errors until they have an entry.
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.formatElapsed`
     - `primitives/relative-time.useNow`
+    - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "worktree-ops"
   - Uses:

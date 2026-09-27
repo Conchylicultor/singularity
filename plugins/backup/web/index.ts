@@ -2,10 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
-import { MdBackup } from "react-icons/md";
 import { backupPane, backupRunPane } from "./panes";
 import { BackupRunDetail } from "./slots";
 import { backupConfig } from "../shared/config";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { backupPane, backupRunPane } from "./panes";
 export { BackupRunDetail } from "./slots";
@@ -21,7 +21,7 @@ export default {
     DebugApp.Sidebar({
       id: "backup",
       title: "Backup",
-      icon: MdBackup,
+      icon: symbol("backup"),
       onClick: () => openPane(backupPane, {}, { mode: "root" }),
     }),
   ],

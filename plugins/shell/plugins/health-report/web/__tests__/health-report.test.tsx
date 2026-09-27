@@ -16,7 +16,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
-import { MdAccountTree } from "react-icons/md";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -28,6 +27,9 @@ import {
 import type { HealthReportRow, HealthStatus, StatusRow } from "../../core";
 import { HealthReport } from "../slots";
 import { HealthReportButton } from "../components/health-report-button";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const accountTreeIcon = symbol("account-tree");
 
 const consoleError = console.error;
 afterEach(() => {
@@ -70,7 +72,7 @@ const info = (id: string, useInfo = () => ({ title: id, summary: "where" })) =>
     kind: "info",
     id,
     order: 0,
-    icon: MdAccountTree,
+    icon: accountTreeIcon,
     useInfo,
   }) satisfies HealthReportRow;
 

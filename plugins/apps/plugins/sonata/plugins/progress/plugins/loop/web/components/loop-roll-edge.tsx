@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
@@ -8,8 +9,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { MdKeyboardArrowDown, MdKeyboardArrowUp } from "react-icons/md";
 import { useLoopEdgeBuckets, type LoopEdgeLetter } from "../loop-edge-state";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
+const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 
 /**
  * The off-screen A–B loop boundary indicator: a small "A"/"B" arrow chip pinned
@@ -83,7 +87,8 @@ function EdgeChip({
   direction: "up" | "down";
   enabled: boolean;
 }) {
-  const Arrow = direction === "up" ? MdKeyboardArrowUp : MdKeyboardArrowDown;
+  const Arrow =
+    direction === "up" ? keyboardArrowUpIcon : keyboardArrowDownIcon;
   return (
     <div
       // eslint-disable-next-line text/no-adhoc-typography -- text-2xs sub-scale keeps the single-letter loop-edge chip tight (mirrors LoopLabel)
@@ -93,7 +98,7 @@ function EdgeChip({
       )}
     >
       <Inline gap="2xs">
-        <Arrow className="icon-auto" />
+        <Icon icon={Arrow} className="icon-auto" />
         {letter}
       </Inline>
     </div>

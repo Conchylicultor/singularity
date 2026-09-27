@@ -1,7 +1,6 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
-import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -10,6 +9,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 import { PaneIconAction } from "./pane-icon-action";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const closeIcon = symbol("close");
+const openInFullIcon = symbol("open-in-full");
 
 interface Props {
   pane: PaneInternal;
@@ -135,12 +138,16 @@ function FallbackChrome({
                     ? `Open in ${promote.app.name}`
                     : "Expand pane"
                 }
-                icon={MdOpenInFull}
+                icon={openInFullIcon}
                 {...linkGestureProps(promote.run)}
               />
             )}
             {chrome.close && doClose && (
-              <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
+              <PaneIconAction
+                label="Close"
+                icon={closeIcon}
+                onClick={doClose}
+              />
             )}
           </Stack>
         </Bar>

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdComputer } from "react-icons/md";
 import { SlowEvents } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import { SlowOpsView } from "./components/slow-ops-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // The per-worktree ranked slow-op aggregate — no longer its own sidebar pane.
 // It contributes as the **Aggregates** tab of the unified Debug → Slow Events
@@ -15,7 +15,7 @@ export default {
     SlowEvents.View({
       id: "aggregates",
       title: "Aggregates",
-      icon: MdComputer,
+      icon: symbol("computer"),
       order: 20,
       component: SlowOpsView,
     }),

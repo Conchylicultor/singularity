@@ -114,6 +114,7 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ReorderAreaCtxValue`
     - `ReorderEditorProps`

@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { MdDescription } from "react-icons/md";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { getVersion } from "@plugins/history/plugins/engine/core";
@@ -20,6 +19,9 @@ import {
   type PageSnapshot,
 } from "../internal/build-diff";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const descriptionIcon = symbol("description");
 
 /**
  * Faithful read-only preview of one page version, with per-block diff
@@ -74,7 +76,7 @@ export function PageVersionPreview({
         <Line className="gap-sm">
           <PageIcon
             nodes={iconNodes}
-            fallback={MdDescription}
+            fallback={descriptionIcon}
             className="size-6"
           />
           <Text as="h2" variant="title">

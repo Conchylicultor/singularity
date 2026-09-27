@@ -1,5 +1,4 @@
 import { createContext, useContext, useMemo } from "react";
-import { MdCheck } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   DataView,
@@ -39,6 +38,10 @@ import {
 } from "../internal/agent-rows";
 import { useRunningAgents } from "./use-running-agents";
 import "./running-agents-band.css";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checkIcon = symbol("check");
 
 const RUNNING_AGENTS_VIEW = defineDataView("running-agents");
 
@@ -87,7 +90,7 @@ function ElapsedCell({ row }: { row: RunningAgentRow }) {
   const done = row.endedAt !== null;
   return (
     <Line as="span" className="gap-2xs text-muted-foreground">
-      {done && <MdCheck className={cn("size-3", rigidClass())} />}
+      {done && <Icon icon={checkIcon} className={cn("size-3", rigidClass())} />}
       {done && <span>done</span>}
       <SubagentDuration
         startedAt={row.startedAt}
@@ -209,7 +212,8 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
             {working ? (
               <ActivityRing />
             ) : (
-              <MdCheck
+              <Icon
+                icon={checkIcon}
                 className={cn("size-3 text-muted-foreground", rigidClass())}
               />
             )}

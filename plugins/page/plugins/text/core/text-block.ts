@@ -1,16 +1,18 @@
-import { MdNotes } from "react-icons/md";
 import {
   defineBlock,
   runsLength,
   textDataSchema,
 } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const notesIcon = symbol("notes");
 
 export const textBlock = defineBlock({
   type: "text",
   schema: textDataSchema,
   label: "Text",
   defaultText: true,
-  icon: MdNotes,
+  icon: notesIcon,
   aliases: ["paragraph", "plain", "body", "p"],
   empty: () => ({ text: [] }),
   placeholder: "Type '/' for commands",

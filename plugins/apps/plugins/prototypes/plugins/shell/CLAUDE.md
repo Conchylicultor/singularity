@@ -16,7 +16,6 @@ Panes themselves are defined and registered in the sibling `gallery` plugin.
   - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.mdAppIcon`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
 - Core:

@@ -128,6 +128,7 @@ declares the token. This plugin renders chips; it owns none.
     - `primitives/css/ui-kit.cn`
     - `primitives/syntax-highlight.HighlightedCode`
     - `primitives/text-editor/paste-images.attachmentUrl`
+    - `ui/icons.Icon`
   - Exports (types):
     - `BlockDiffKind`
     - `ForestBlock`

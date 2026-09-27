@@ -1,0 +1,29 @@
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { iconsGroup } from "../core";
+import { IconsSection } from "./components/icons-section";
+import { IconThemeBridge } from "./components/icon-theme-bridge";
+
+export default {
+  description:
+    "Icons token group (shape, fill, active fill and stroke of the Material Symbols a scope draws; outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.",
+  contributions: [
+    ThemeEngine.TokenGroup({
+      id: "icons",
+      label: "Icons",
+      descriptor: iconsGroup,
+    }),
+    ThemeCustomizer.Section({
+      id: "icons",
+      label: "Icons",
+      component: IconsSection,
+      useAvailable: ({ search }) => tokenGroupMatchesSearch(iconsGroup, search),
+    }),
+    Core.Root({ component: IconThemeBridge }),
+  ],
+} satisfies PluginDefinition;

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdDeleteOutline } from "react-icons/md";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { PagesTrash } from "./components/pages-trash";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -10,7 +10,7 @@ export default {
     Pages.Sidebar({
       id: "trash",
       title: "Trash",
-      icon: MdDeleteOutline,
+      icon: symbol("delete"),
       component: PagesTrash,
     }),
   ],

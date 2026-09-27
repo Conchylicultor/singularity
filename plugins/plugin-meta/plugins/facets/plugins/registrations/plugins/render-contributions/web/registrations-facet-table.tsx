@@ -6,7 +6,10 @@ import {
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
-import { MdAppRegistration } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const appRegistrationIcon = symbol("app-registration");
 
 type RegistrationRow = {
   plugin: PluginNode;
@@ -73,7 +76,7 @@ function rows(entries: FacetTableEntry[]): RegistrationRow[] {
 export const registrationsFacetTable = defineFacetTable<RegistrationRow>({
   facetId: "registrations",
   label: "Registrations",
-  icon: MdAppRegistration,
+  icon: appRegistrationIcon,
   columns,
   rows,
   rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.name}`,

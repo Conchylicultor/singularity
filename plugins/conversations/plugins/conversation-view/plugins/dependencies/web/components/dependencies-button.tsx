@@ -4,7 +4,6 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
-import { MdLink } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
@@ -26,6 +25,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DepPopoverContent } from "./dep-popover-content";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const linkIcon = symbol("link");
 
 export function DependenciesButton({
   conversation,
@@ -306,7 +309,7 @@ function DependenciesButtonInner({
         </InlinePopover>
 
         <Center axis="vertical" className="px-xs">
-          <MdLink className="size-3 text-muted-foreground" />
+          <Icon icon={linkIcon} className="size-3 text-muted-foreground" />
         </Center>
 
         <InlinePopover

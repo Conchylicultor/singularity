@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdRepeat } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -8,6 +7,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_CATEGORY_OPTIONS } from "../../core";
 import { formatEventWhen, formatPlace } from "../internal/format";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const repeatIcon = symbol("repeat");
 
 const CATEGORY_LABEL = new Map(
   EVENT_CATEGORY_OPTIONS.map((o) => [o.value, o.label]),
@@ -35,7 +38,8 @@ export function EventRow({ event }: { event: EventRecord }): ReactElement {
             </Text>
           </Fill>
           {event.recurring && (
-            <MdRepeat
+            <Icon
+              icon={repeatIcon}
               className="icon-auto text-muted-foreground"
               title={event.recurrenceLabel ?? "Recurring"}
             />

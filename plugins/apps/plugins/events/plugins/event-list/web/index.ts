@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdEventNote } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventListPane } from "./panes";
 import { EventList } from "./slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { eventListPane } from "./panes";
 export { EventList } from "./slots";
@@ -23,7 +23,7 @@ export default {
     Events.Sidebar({
       id: "event-list",
       title: "Events",
-      icon: MdEventNote,
+      icon: symbol("event-note"),
       onClick: () => openPane(eventListPane, {}, { mode: "root" }),
     }),
   ],

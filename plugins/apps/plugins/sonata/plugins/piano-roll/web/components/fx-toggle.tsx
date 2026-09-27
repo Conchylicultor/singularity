@@ -15,7 +15,6 @@
  * pointer-events-none, so the wrapper re-enables pointer events locally.
  */
 import { useState } from "react";
-import { MdAutoAwesome } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   ControlPanel,
@@ -24,6 +23,10 @@ import {
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PianoRollFx } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 type FxItem = ReturnType<typeof PianoRollFx.useContributions>[number];
 
@@ -57,7 +60,7 @@ export function FxToggle() {
         trigger={
           <ToggleChip
             active={open}
-            icon={<MdAutoAwesome />}
+            icon={<Icon icon={autoAwesomeIcon} />}
             aria-label="Visual effects"
             // `ControlPanelPopover` has no tooltip prop (the trigger owns its
             // own), and a ToggleChip carries none — so the hover hint is the
@@ -102,7 +105,7 @@ function FxTierSection({
 function FxToggleRow({ effect }: { effect: FxItem }) {
   const { enabled } = useConfig(effect.config);
   const setConfig = useSetConfig(effect.config);
-  const Icon = effect.icon;
+  const icon = effect.icon;
   return (
     // `select="switch"` IS the row's on/off language — the switch owns the
     // trailing cell and the row itself is the control, so the hand-rolled track
@@ -112,7 +115,7 @@ function FxToggleRow({ effect }: { effect: FxItem }) {
     <ControlPanel.Row
       select="switch"
       checked={enabled}
-      icon={Icon ? <Icon /> : undefined}
+      icon={icon ? <Icon icon={icon} /> : undefined}
       onSelect={() => setConfig("enabled", !enabled)}
     >
       {effect.label}

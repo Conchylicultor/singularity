@@ -1,4 +1,3 @@
-import { MdAutoFixHigh, MdOpenInNew } from "react-icons/md";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -23,6 +22,11 @@ import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { reportDetailPane } from "../panes";
 import { useReport } from "../internal/use-report";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoFixHighIcon = symbol("auto-fix-high");
+const openInNewIcon = symbol("open-in-new");
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
@@ -210,7 +214,7 @@ function Investigate({
           }
           className="gap-xs"
         >
-          <MdOpenInNew className="size-4" />
+          <Icon icon={openInNewIcon} className="size-4" />
           View task
         </Button>
       </Stack>
@@ -222,7 +226,7 @@ function Investigate({
       <LaunchAgentPopover
         trigger={
           <Button variant="default" className="gap-xs">
-            <MdAutoFixHigh className="size-4" />
+            <Icon icon={autoFixHighIcon} className="size-4" />
             Launch an agent to investigate
           </Button>
         }

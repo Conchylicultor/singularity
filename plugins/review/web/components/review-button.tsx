@@ -1,8 +1,11 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdRateReview } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convReviewPane } from "../panes";
 import { Review } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const rateReviewIcon = symbol("rate-review");
 
 export function ReviewButton() {
   const { convId } = conversationPane.useParams();
@@ -18,7 +21,7 @@ export function ReviewButton() {
       onClick={toggle}
       className="gap-xs"
     >
-      <MdRateReview />
+      <Icon icon={rateReviewIcon} />
       {sections.map((s) => {
         const S = s.summary;
         return S ? (

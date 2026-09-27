@@ -1,7 +1,10 @@
-import { MdRefresh } from "react-icons/md";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { ReloadAdvice } from "../hooks/use-reload-advice";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const refreshIcon = symbol("refresh");
 
 type ShownAdvice = Exclude<ReloadAdvice, { kind: "none" }>;
 
@@ -43,7 +46,7 @@ export function ReloadSegment({ advice }: { advice: ReloadAdvice }) {
         )}
         onClick={() => window.location.reload()}
       >
-        <MdRefresh />
+        <Icon icon={refreshIcon} />
         Reload
       </Button>
     </WithTooltip>

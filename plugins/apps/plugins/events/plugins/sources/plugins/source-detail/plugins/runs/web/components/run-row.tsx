@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { MdWarningAmber } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -12,6 +11,10 @@ import {
   describeRun,
   formatDuration,
 } from "@plugins/apps/plugins/events/plugins/sources/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const warningIcon = symbol("warning");
 
 /**
  * One run: outcome chip, the human sentence, duration, and when it started.
@@ -37,7 +40,7 @@ export function RunRow({ run }: { run: EventSourceRun }): ReactElement {
         {caveats > 0 && (
           <Badge
             variant="warning"
-            icon={<MdWarningAmber />}
+            icon={<Icon icon={warningIcon} />}
             title="The extraction reported schedules it could not express"
           >
             {caveats}

@@ -35,7 +35,8 @@ import {
   compositionsConfig,
   manifestItemToManifest,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
+import { symbolBody } from "@plugins/ui/plugins/icons/server";
+import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
 import {
@@ -239,7 +240,7 @@ function writeDmgBackground(productName: string, outPath: string): void {
  * app's `core/`, and its `iconKey` is a string literal — true for every app
  * shell `core/app.ts` (e.g. `defineApp({ id, basePath, iconKey: "piano" })`).
  */
-function findDefineAppIconKey(node: PluginNode): string | null {
+function findDefineAppIconKey(node: PluginNode): SymbolName | null {
   const coreDir = join(node.dir, "core");
   if (existsSync(coreDir)) {
     for (const f of readdirSync(coreDir)) {
@@ -249,10 +250,11 @@ function findDefineAppIconKey(node: PluginNode): string | null {
       const body = call?.[1];
       if (body == null) continue;
       const key = body.match(/iconKey:\s*["']([^"']+)["']/);
-      if (key?.[1] != null) return key[1];
+      // `defineApp` types `iconKey` as a SymbolName, so tsc has checked this literal.
+      if (key?.[1] != null) return key[1] as SymbolName;
       throw new Error(
         `release: ${join(coreDir, f)} calls defineApp(...) without an iconKey. ` +
-          `Add iconKey: "<md-name>" so the app is releasable.`,
+          `Add iconKey: "<material-symbols-name>" so the app is releasable.`,
       );
     }
   }
@@ -274,7 +276,7 @@ function findDefineAppIconKey(node: PluginNode): string | null {
 async function resolveCompositionIconKey(opts: {
   root: string;
   composition: string;
-}): Promise<string> {
+}): Promise<SymbolName> {
   const { root, composition } = opts;
 
   const items = compositionsConfig.fields.manifests.defaultValue;
@@ -977,7 +979,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   //
   // It is still SHELLED OUT TO rather than called in-process, and that is
   // the CORRECTNESS BOUNDARY, not an implementation detail: this module
-  // statically imports plugin barrels (resolveIconSvgNodes,
+  // statically imports plugin barrels (symbolBody,
   // runAssetMirrorPrewarm, propagateConfigToUser, buildPluginTree), and ESM
   // imports are hoisted and evaluated before this action body runs — so by
   // now Bun's module cache has those barrels FROZEN. Stage 2's
@@ -1405,17 +1407,13 @@ async function wrapTauri(opts: {
   writeFileSync(overridePath, JSON.stringify(override, null, 2) + "\n");
 
   // ── Generate the platform icon set from the composition's app icon ──────────
-  // Resolve the composition's entry app → iconKey → MD glyph nodes, render a
+  // Resolve the composition's entry app → iconKey → its Material Symbols glyph
+  // (default icon style), render a
   // 512px PNG, and hand it to `tauri icon` (writes the full set into icons/ next
   // to tauri.conf.json). Always regenerate so a clean checkout (icons/ gitignored
   // + absent) builds end-to-end, and the macOS dmg step's icon.icns is populated.
   const iconKey = await resolveCompositionIconKey({ root, composition });
-  const svgNodes = resolveIconSvgNodes(iconKey);
-  if (!svgNodes)
-    throw new Error(
-      `release: app "${composition}" iconKey "${iconKey}" did not resolve to an icon.`,
-    );
-  const svg = appIconToSvg({ kind: "md", svgNodes });
+  const svg = appIconToSvg(symbolBody(iconKey));
   const pngPath = join(tmpdir(), `${composition}-appicon-512.png`);
   writeFileSync(pngPath, renderPng(svg, 512));
   console.log("\n[tauri] Generating icon set from app icon...");

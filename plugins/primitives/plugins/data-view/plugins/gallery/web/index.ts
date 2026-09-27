@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdGridView } from "react-icons/md";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { GalleryView } from "./components/gallery-view";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DataCard } from "./components/data-card";
 export type { DataCardProps } from "./components/data-card";
@@ -15,7 +15,7 @@ export default {
     DataViewSlots.View({
       type: "gallery",
       title: "Gallery",
-      icon: MdGridView,
+      icon: symbol("grid-view"),
       order: 0,
       loadingVariant: "cards",
       loadingCount: 8,

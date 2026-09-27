@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { MdAutoAwesome } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { EMPTY_DRAFT, ImprovePanel, type ImproveDraft } from "./improve-panel";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * "Improve" in the shared site header — the header's one call to action, so the
@@ -58,7 +61,7 @@ export function ImproveNavItem() {
         <WebsiteNavLink
           label="Improve"
           emphasis="strong"
-          icon={<MdAutoAwesome />}
+          icon={<Icon icon={autoAwesomeIcon} />}
         />
       }
     >

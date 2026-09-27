@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdMemory } from "react-icons/md";
 import { memoryPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { memoryPane } from "./panes";
 
@@ -13,7 +13,7 @@ export default {
     DebugApp.Sidebar({
       id: "memory",
       title: "Memory",
-      icon: MdMemory,
+      icon: symbol("memory"),
       onClick: () => openPane(memoryPane, {}, { mode: "root" }),
     }),
   ],

@@ -1,5 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { MdRefresh } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const refreshIcon = symbol("refresh");
 
 export interface SpinnerProps {
   spinning?: boolean;
@@ -7,5 +11,10 @@ export interface SpinnerProps {
 }
 
 export function Spinner({ spinning = true, className }: SpinnerProps) {
-  return <MdRefresh className={cn(spinning && "animate-spin", className)} />;
+  return (
+    <Icon
+      icon={refreshIcon}
+      className={cn(spinning && "animate-spin", className)}
+    />
+  );
 }

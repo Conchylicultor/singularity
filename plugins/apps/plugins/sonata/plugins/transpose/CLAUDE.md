@@ -64,6 +64,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `ui/icons.Icon`
   - Exports (values): `saveTranspose`
 - Server:
   - Contributes: `resource.declare` "sonata-transpose:rows"

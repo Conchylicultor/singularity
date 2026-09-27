@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { AnyZodObject, z } from "zod";
 import {
   defineBlock,
@@ -65,7 +65,7 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
   /** Insert-menu label. A container without one is not offered in the palette. */
   label?: string;
   /** Insert-menu icon. */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: IconRef;
   /** Alternate insert-menu search terms. */
   aliases?: string[];
   /** The default payload for a freshly inserted container. */

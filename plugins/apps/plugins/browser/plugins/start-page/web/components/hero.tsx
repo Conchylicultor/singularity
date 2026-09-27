@@ -1,12 +1,15 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { MdPublic } from "react-icons/md";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { normalizeInput } from "@plugins/apps/plugins/browser/plugins/omnibox/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const publicIcon = symbol("public");
 
 /**
  * The start-page hero: the app wordmark, a tagline, and a prominent
@@ -32,7 +35,7 @@ export function Hero() {
     <Stack gap="lg" align="center">
       <Stack gap="2xs" align="center">
         <Stack direction="row" gap="sm" align="center">
-          <MdPublic style={{ width: 28, height: 28 }} />
+          <Icon icon={publicIcon} style={{ width: 28, height: 28 }} />
           <Text as="h1" variant="title" className="tracking-tight">
             Browser
           </Text>

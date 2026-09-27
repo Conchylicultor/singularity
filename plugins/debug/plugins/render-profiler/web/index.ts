@@ -4,9 +4,9 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { MdInsights } from "react-icons/md";
 import { ProfilerInstaller } from "./internal/global-api";
 import { renderProfilerPane } from "./panes";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { renderProfilerPane } from "./panes";
 
@@ -18,7 +18,7 @@ export default {
     DebugApp.Sidebar({
       id: "render-profiler",
       title: "Render Profiler",
-      icon: MdInsights,
+      icon: symbol("insights"),
       onClick: () => openPane(renderProfilerPane, {}, { mode: "root" }),
     }),
     Core.Root({ component: ProfilerInstaller }),

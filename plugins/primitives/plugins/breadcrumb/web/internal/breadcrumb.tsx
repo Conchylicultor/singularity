@@ -1,5 +1,4 @@
 import { Fragment, useRef, type ReactNode } from "react";
-import { MdMoreHoriz } from "react-icons/md";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -15,6 +14,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TrailSeparator } from "./trail-separator";
 import { useAncestorCollapse } from "./use-ancestor-collapse";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const moreHorizIcon = symbol("more-horiz");
 
 export interface BreadcrumbSegment {
   key: string;
@@ -83,7 +86,7 @@ function FoldedCrumbs({
             aria-label={`Show the ${segments.length} levels above this one`}
             className="px-2xs text-muted-foreground hover:text-foreground"
           >
-            <MdMoreHoriz />
+            <Icon icon={moreHorizIcon} />
           </Button>
         }
       />

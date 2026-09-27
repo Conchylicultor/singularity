@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import { MdDeleteOutline } from "react-icons/md";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -8,6 +7,9 @@ import {
   isCommittedSourceComposition,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const deleteIcon = symbol("delete");
 
 /** Per-consumer trailing-action slot for the Compositions list rows. */
 export const CompositionItemActions =
@@ -37,7 +39,7 @@ export function DeleteAction({
   if (isCommittedSourceComposition(row.id)) return null;
   return (
     <IconButton
-      icon={MdDeleteOutline}
+      icon={deleteIcon}
       label="Delete composition"
       onClick={(e) => {
         e.stopPropagation();

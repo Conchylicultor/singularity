@@ -258,6 +258,7 @@ pages every ledger off its own keyset query (`runs-arm`).
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
+    - `ui/icons.Icon`
   - Exports (types): `ReloadAdvice`
   - Exports (values):
     - `buildDetailPane`

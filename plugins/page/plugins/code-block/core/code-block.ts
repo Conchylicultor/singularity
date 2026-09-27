@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { MdCode } from "react-icons/md";
 import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const codeIcon = symbol("code");
 
 export const codeBlock = defineBlock({
   type: "code-block",
@@ -10,7 +12,7 @@ export const codeBlock = defineBlock({
     language: z.string().optional(),
   }),
   label: "Code",
-  icon: MdCode,
+  icon: codeIcon,
   aliases: ["snippet", "syntax", "monospace", "pre"],
   empty: () => ({ code: "" }),
   // Fenced markdown: ```lang\n…code…\n``` round-trips code + language. The info

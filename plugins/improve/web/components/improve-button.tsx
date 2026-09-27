@@ -5,7 +5,6 @@ import {
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Fragment, useSyncExternalStore } from "react";
-import { MdAutoAwesome } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import {
   getImproveOpenState,
@@ -14,6 +13,10 @@ import {
 } from "../internal/open-store";
 import { IMPROVEMENTS_CATEGORY_ID } from "../../core";
 import { ImproveSlots } from "../slots";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 /**
  * The Improve pill: the Improve button (opening the draft popover) joined with
@@ -36,7 +39,7 @@ export function ImproveButton() {
         onOpenChange={setImproveOpen}
         trigger={
           <Button variant="frame" className="text-foreground">
-            <MdAutoAwesome />
+            <Icon icon={autoAwesomeIcon} />
             Improve
           </Button>
         }

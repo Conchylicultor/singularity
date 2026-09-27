@@ -1,8 +1,11 @@
 import { useCallback, type ReactNode } from "react";
-import { MdLayers } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { scopeAppId } from "@plugins/config_v2/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const layersIcon = symbol("layers");
 
 /** How one scope is named on screen. `scopeId` undefined = the base document. */
 export interface ScopeDisplay {
@@ -34,7 +37,7 @@ export function useScopeDisplay(): (
           icon: <AppIconView icon={entry.icon} />,
         };
       }
-      return { label: rawId ?? scopeId, icon: <MdLayers /> };
+      return { label: rawId ?? scopeId, icon: <Icon icon={layersIcon} /> };
     },
     [apps],
   );

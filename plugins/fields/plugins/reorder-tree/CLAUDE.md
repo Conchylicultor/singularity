@@ -17,6 +17,7 @@ type means adding a line there (see `reorder/node-types`).
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.symbol`
   - Exports (types):
     - `ReorderNode`
     - `ReorderTree`

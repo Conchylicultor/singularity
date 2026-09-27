@@ -1,3 +1,4 @@
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { ReactNode } from "react";
 import {
   DropdownMenuItem,
@@ -25,10 +26,10 @@ export function AddViewMenuItems({
   const sources = actions.availableSources;
   if (sources.length === 1 && !sources[0]!.title) {
     return sources[0]!.types.map((v) => {
-      const Icon = v.icon;
+      const icon = v.icon;
       return (
         <DropdownMenuItem key={v.type} onClick={() => actions.addView(v.type)}>
-          <Icon className="size-4" />
+          <Icon icon={icon} className="size-4" />
           {v.title}
         </DropdownMenuItem>
       );
@@ -40,13 +41,13 @@ export function AddViewMenuItems({
       label={source.title ?? source.sourceId ?? "Views"}
     >
       {source.types.map((v) => {
-        const Icon = v.icon;
+        const icon = v.icon;
         return (
           <DropdownMenuItem
             key={v.type}
             onClick={() => actions.addView(v.type, source.sourceId)}
           >
-            <Icon className="size-4" />
+            <Icon icon={icon} className="size-4" />
             {v.title}
           </DropdownMenuItem>
         );

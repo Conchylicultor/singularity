@@ -158,6 +158,7 @@ the code:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
+    - `ui/icons.IconScopeProvider`
   - Exports (types):
     - `ThemeProps`
     - `ThemeSurface`

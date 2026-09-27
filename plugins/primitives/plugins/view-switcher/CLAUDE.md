@@ -20,7 +20,9 @@ The shared **view-switching primitive**. It offers two things:
 
 - Description: Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
 - Web:
-  - Uses: `primitives/css/toggle-chip.SegmentedControl`
+  - Uses:
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ActiveViewState`
     - `ViewSwitcherOption`

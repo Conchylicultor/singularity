@@ -92,7 +92,6 @@ disc and the color palette) on top, and future pickers reuse the same block.
     - `SvgIcon`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/app-icon`
     - `apps/pages/page-tree`
     - `conversations/agents`
     - `page/callout`

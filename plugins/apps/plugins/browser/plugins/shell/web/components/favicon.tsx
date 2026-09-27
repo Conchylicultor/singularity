@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { MdPublic } from "react-icons/md";
+
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const publicIcon = symbol("public");
 
 export interface FaviconProps {
   /** Full URL whose host's favicon to show. */
@@ -29,7 +33,7 @@ export function Favicon({ url, size = 16 }: FaviconProps) {
   const [failed, setFailed] = useState(false);
 
   if (!host || failed) {
-    return <MdPublic style={{ width: size, height: size }} />;
+    return <Icon icon={publicIcon} style={{ width: size, height: size }} />;
   }
 
   return (
