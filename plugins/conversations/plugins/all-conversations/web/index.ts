@@ -15,7 +15,7 @@ export default {
     Pane.Register({ pane: allConversationsPane }),
     Shell.Sidebar({
       id: "all-conversations",
-      title: "Conversation",
+      title: "Conversations",
       icon: MdForum,
       opens: opensPane(allConversationsPane, {}),
     }),

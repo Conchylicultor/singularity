@@ -9,7 +9,7 @@
   - Slots: `allConversationsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "all-conversations"
-    - `Shell.Sidebar` "Conversation"
+    - `Shell.Sidebar` "Conversations"
   - Uses:
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`

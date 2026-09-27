@@ -9268,7 +9268,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `allConversationsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "all-conversations"
-          - `Shell.Sidebar` "Conversation"
+          - `Shell.Sidebar` "Conversations"
         - Uses:
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
