@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MdInfoOutline } from "react-icons/md";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -27,6 +28,8 @@ import {
 import { DownloadCode } from "./download-code";
 import { DownloadLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
+
+const infoIcon = symbol("info");
 
 type Audience = "human" | "agent";
 
@@ -170,7 +173,8 @@ function Disclaimer() {
         insetClass({ x: "lg", y: "md" }),
       )}
     >
-      <MdInfoOutline
+      <Icon
+        icon={infoIcon}
         aria-hidden
         className={cn("text-muted-foreground size-4", rigidClass())}
       />

@@ -184,6 +184,7 @@ default sprites are resident from first paint.
     - `apps/website/improve`
     - `apps/website/landing/contact`
     - `apps/website/landing/layers`
+    - `apps/website/pages/download`
     - `apps/website/shell`
     - `auth`
     - `auth/apple-signing/setup-wizard`
