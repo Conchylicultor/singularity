@@ -17377,6 +17377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreeArtifacts`
               - `infra/spawn.getWorktreeRoot`
               - `infra/spawn.spawnCaptured`
+              - `infra/spawn.SpawnResult`
               - `infra/stack-sampler.claimStackSampler`
               - `infra/stack-sampler.frameKey`
               - `infra/stack-sampler.StackFrame`

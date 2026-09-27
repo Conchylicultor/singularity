@@ -287,8 +287,8 @@ const check: Check = {
       await grepCode({
         root,
         pattern: /var\(--(?:font-size|line-height)-/,
-        // ERE: the literal paren is escaped — an unbalanced pattern makes `git
-        // grep` exit 128, which gitGrepList reads as "no matches".
+        // ERE: the literal paren is escaped (unescaped, git rejects the pattern
+        // and the check fails with its error).
         grepArg: "var\\(--(font-size|line-height)-",
         maskStrings: false,
       })

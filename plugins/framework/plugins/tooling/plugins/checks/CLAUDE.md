@@ -331,6 +331,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/paths.worktreeArtifacts`
     - `infra/spawn.getWorktreeRoot`
     - `infra/spawn.spawnCaptured`
+    - `infra/spawn.SpawnResult`
     - `infra/stack-sampler.claimStackSampler`
     - `infra/stack-sampler.frameKey`
     - `infra/stack-sampler.StackFrame`

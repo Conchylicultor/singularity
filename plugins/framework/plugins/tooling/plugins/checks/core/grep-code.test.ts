@@ -11,7 +11,12 @@ import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { grepCode } from "./grep-code";
+import {
+  GitScanError,
+  gitGrepList,
+  grepCode,
+  listCandidateSources,
+} from "./grep-code";
 import { withScanView } from "./scan-context";
 import { computeTreeHash } from "./tree-hash";
 
@@ -68,7 +73,9 @@ test("grepCode (no scan tree) scans untracked files via the working-tree fallbac
       grepArg: "new WebSocket(",
       fixed: true,
     });
-    expect(matches.some((m) => m.path === "untracked_fallback.ts" && m.line === 1)).toBe(true);
+    expect(
+      matches.some((m) => m.path === "untracked_fallback.ts" && m.line === 1),
+    ).toBe(true);
   } finally {
     rmSync(f, { force: true });
   }
@@ -88,11 +95,18 @@ test("grepCode scans the ambient scan tree — incl. files untracked when it was
   writeFileSync(f, "const x = 1;\n");
   try {
     const matches = await withScanView(tree, null, () =>
-      grepCode({ root, pattern: /new WebSocket\(/, grepArg: "new WebSocket(", fixed: true }),
+      grepCode({
+        root,
+        pattern: /new WebSocket\(/,
+        grepArg: "new WebSocket(",
+        fixed: true,
+      }),
     );
     // Found via the tree blob (its untracked-at-write-time content), proving the
     // scan reads the tree, not the now-mutated working file.
-    expect(matches.some((m) => m.path === "untracked_tree.ts" && m.line === 1)).toBe(true);
+    expect(
+      matches.some((m) => m.path === "untracked_tree.ts" && m.line === 1),
+    ).toBe(true);
   } finally {
     rmSync(f, { force: true });
   }
@@ -106,4 +120,36 @@ test("grepCode returns [] when git grep finds nothing", async () => {
     fixed: true,
   });
   expect(matches).toEqual([]);
+});
+
+// A pattern git rejects (here: an unbalanced ERE group) exits 128 with empty
+// stdout. It must fail loudly, never read as "no matches" — otherwise a check
+// with a broken pattern passes without ever having searched.
+test("grepCode throws GitScanError when git rejects the pattern", async () => {
+  const run = grepCode({
+    root,
+    pattern: /var\(--/,
+    grepArg: "var(--(font-size",
+  });
+  expect(run).rejects.toBeInstanceOf(GitScanError);
+  expect(run).rejects.toThrow(/exit 128/);
+});
+
+test("listCandidateSources throws when git rejects the pattern", async () => {
+  expect(
+    listCandidateSources({ root, grepArg: "WebSocket(" }),
+  ).rejects.toBeInstanceOf(GitScanError);
+});
+
+test("gitGrepList throws on a bad pattern against a scan tree", async () => {
+  const tree = await computeTreeHash(root);
+  expect(
+    gitGrepList(root, "WebSocket(", false, ["*.ts"], tree),
+  ).rejects.toBeInstanceOf(GitScanError);
+});
+
+test("gitGrepList throws on an unknown tree-ish", async () => {
+  expect(
+    gitGrepList(root, "WebSocket", true, ["*.ts"], "0".repeat(40)),
+  ).rejects.toBeInstanceOf(GitScanError);
 });

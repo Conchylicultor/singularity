@@ -8,6 +8,7 @@ import {
 import {
   getWorktreeRoot,
   spawnCaptured,
+  type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
 import { currentScanTree, currentScanView } from "./scan-context";
 
@@ -17,6 +18,34 @@ import { currentScanTree, currentScanView } from "./scan-context";
 // magnitude above what either takes; it exists to break a wedge, not to police
 // a slow scan.
 const GIT_SCAN_TIMEOUT_MS = 120_000;
+
+/**
+ * A git scan that did not complete — a pattern git rejected, a bad pathspec or
+ * tree-ish, a timeout, a truncated `cat-file` stream. Thrown, never absorbed:
+ * the scans below feed PASS/FAIL verdicts, and a scan that never ran reads
+ * exactly like one that found nothing. A throw from a check body fails that
+ * check (fatal, uncached — see `thrown-outcome.ts`); from the cache replay hook
+ * it degrades to a MISS, which re-runs the body and fails it the same way.
+ */
+export class GitScanError extends Error {
+  constructor(
+    readonly argv: readonly string[],
+    readonly result: Pick<SpawnResult, "exitCode" | "timedOut" | "stderr">,
+    detail?: string,
+  ) {
+    const why = result.timedOut
+      ? `timed out after ${GIT_SCAN_TIMEOUT_MS / 1000}s`
+      : `exit ${result.exitCode}`;
+    const stderr = result.stderr.trim();
+    super(
+      [
+        `\`${argv.join(" ")}\` failed (${why})${detail ? `: ${detail}` : ""}`,
+        ...(stderr ? [stderr] : []),
+      ].join("\n"),
+    );
+    this.name = "GitScanError";
+  }
+}
 
 export interface CodeMatch {
   /** File path relative to `root` (as reported by `git grep`). */
@@ -195,6 +224,9 @@ export async function listCandidateSources(
  * shared by `grepCode` (masked line re-scan) and `grepImports` (structured
  * import scan) so the git plumbing lives in one place.
  *
+ * Every git failure throws (`GitScanError`) — a verdict built on a scan that
+ * did not run would be vacuous.
+ *
  * The cache key is computed from this tree-ish; scanning it (rather than the
  * working tree) guarantees a recorded PASS reflects the exact bytes hashed —
  * including files that were untracked when the cache entry was written. Null
@@ -227,9 +259,7 @@ async function readCandidates(
   for (const rel of candidates) {
     const src = blobs
       ? (blobs.get(rel) ?? null)
-      : await Bun.file(join(root, rel))
-          .text()
-          .catch(() => null);
+      : await readWorkingTreeFile(join(root, rel));
     if (src == null) continue;
     // Record a per-candidate CONTENT fact (its blobSha, taken from the snapshot —
     // no extra read; the BATCH `readTreeBlobs` above already loaded the bytes).
@@ -252,6 +282,10 @@ async function readCandidates(
  * fresh snapshot tree). Keeping one implementation guarantees the recorded and
  * replayed selections are computed identically (same flags, same pathspec
  * framing, same `<tree>:`-prefix stripping).
+ *
+ * Exit 1 with no output is "no matches" and returns `[]`; every other failure
+ * (exit 128 for a pattern git rejects, a bad pathspec or tree-ish; a timeout,
+ * whose stdout may be a truncated list) throws `GitScanError`.
  */
 export async function gitGrepList(
   root: string,
@@ -275,8 +309,13 @@ export async function gitGrepList(
     timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
   const stdout = result.stdout.trim();
-  // `git grep` exits 1 with no output when there are no matches — that's success.
-  if (result.exitCode !== 0 && stdout === "") return [];
+  if (result.timedOut) throw new GitScanError(args, result);
+  if (result.exitCode === 1) {
+    // `git grep`'s "no matches". Output alongside it would be incoherent.
+    if (stdout === "") return [];
+    throw new GitScanError(args, result, "exit 1 with output");
+  }
+  if (result.exitCode !== 0) throw new GitScanError(args, result);
   if (stdout === "") return [];
 
   const prefix = tree ? `${tree}:` : "";
@@ -299,11 +338,14 @@ async function readTreeBlobs(
   // Whole-buffer stdin + after-exit stdoutBytes: the parser below already walks
   // a fully-buffered Uint8Array, so the batch framing is unchanged by the move
   // off piped stdio.
-  const result = await spawnCaptured(["git", "cat-file", "--batch"], {
+  const argv = ["git", "cat-file", "--batch"];
+  const result = await spawnCaptured(argv, {
     cwd: root,
     stdin: requests,
     timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
+  if (result.timedOut || result.exitCode !== 0)
+    throw new GitScanError(argv, result);
   const buf = result.stdoutBytes;
 
   const decoder = new TextDecoder();
@@ -311,14 +353,35 @@ async function readTreeBlobs(
   let i = 0;
   for (const p of paths) {
     const nl = buf.indexOf(0x0a, i);
-    if (nl < 0) break;
+    if (nl < 0)
+      throw new GitScanError(argv, result, `output ends before \`${p}\``);
     const header = decoder.decode(buf.subarray(i, nl));
     i = nl + 1;
+    // The object is absent from the tree — a legitimate answer, not a failure.
     if (header.endsWith(" missing")) continue;
     const size = Number.parseInt(header.split(" ")[2] ?? "", 10);
-    if (!Number.isFinite(size)) break; // framing desync — stop rather than mis-slice
+    // Framing desync or a short stream: stop rather than mis-slice, and say so
+    // rather than hand back a map missing every candidate after this one.
+    if (!Number.isFinite(size) || i + size > buf.length)
+      throw new GitScanError(
+        argv,
+        result,
+        `unreadable object header \`${header}\` for \`${p}\``,
+      );
     out.set(p, decoder.decode(buf.subarray(i, i + size)));
     i += size + 1; // content + trailing newline
   }
   return out;
+}
+
+// Working-tree fallback read. `git grep --untracked` listed the file, so only a
+// deletion in between (ENOENT) is a legitimate skip; any other read failure
+// would silently drop a candidate from the verdict.
+async function readWorkingTreeFile(abs: string): Promise<string | null> {
+  try {
+    return await Bun.file(abs).text();
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
 }
