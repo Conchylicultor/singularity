@@ -63,6 +63,9 @@ export { VersionStepper } from "./components/version-stepper";
 export type { VersionStepperProps } from "./components/version-stepper";
 export { SizeChip } from "./components/size-chip";
 export { useFrameNames } from "./components/canvas";
+export { PrototypeCanvas } from "./components/prototype-detail";
+export { decodeCanvas, encodeCanvas } from "./internal/saved-canvas";
+export type { RestoredCanvas } from "./internal/saved-canvas";
 
 export default {
   description:

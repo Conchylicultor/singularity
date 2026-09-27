@@ -43,7 +43,7 @@ export function PrototypeDetail(): ReactElement {
         pane={prototypeDetailPane}
         title={<PrototypeTitle name={name} />}
       >
-        <CanvasBody />
+        <PrototypeCanvas />
       </PaneChrome>
     </PrototypeDetailProvider>
   );
@@ -69,10 +69,12 @@ function PrototypeTitle({ name }: { name: string }): ReactNode {
 }
 
 /**
- * The pane body. The list and the version (the live frames' cache-bust) are
- * gated together, so the canvas never renders from a half-loaded snapshot.
+ * The pane body — also what a surface mounting its own provider draws to show
+ * the whole canvas (Present's canvas page). The list and the version (the live
+ * frames' cache-bust) are gated together, so the canvas never renders from a
+ * half-loaded snapshot.
  */
-function CanvasBody(): ReactNode {
+export function PrototypeCanvas(): ReactNode {
   const { name } = usePrototypeDetail();
   const gate = useCombinedResources({
     rows: useLive(prototypesList),

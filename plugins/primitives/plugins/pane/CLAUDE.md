@@ -731,6 +731,7 @@ See "Open questions" in the design doc.
     - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
     - `prototypes-present.actions` "title" → `PaneTitleItem`
+    - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
     - `settings-config-index.actions` "title" → `PaneTitleItem`
     - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
     - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`

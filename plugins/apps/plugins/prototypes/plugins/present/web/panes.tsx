@@ -5,6 +5,7 @@ import type {
   StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PresentPage } from "./components/present-page";
+import { PresentCanvasPage } from "./components/present-canvas-page";
 import { LIVE_VERSION, encodePicks, encodeSize } from "./internal/present-link";
 
 /**
@@ -62,5 +63,34 @@ export const prototypePresentPane = Pane.define({
   app: prototypesApp,
   resolve: false,
   component: PresentPage,
+  width: 720,
+});
+
+/**
+ * `present-canvas/<id>/<canvas>`: the whole canvas — every frame, its version
+ * and picks, the size, zoom and layout — as `canvas` encodes it
+ * (`encodeCanvas`). Frame A carries no picks: the page reads the shared record.
+ */
+export const prototypePresentCanvasRoute = defineRoute({
+  id: "prototypes-present-canvas",
+  segment: "present-canvas/:name/:canvas",
+});
+
+/** The in-app path of a canvas shown as a page of its own. */
+export function presentCanvasPath(name: string, canvas: string): string {
+  return prototypePresentCanvasRoute.link(prototypesApp, { name, canvas });
+}
+
+/**
+ * The canvas as a page of its own: what "Open the canvas in a new tab" opens,
+ * chromeless (`?embed=1`), so every frame gets the whole browser tab to compare
+ * in. A root route, like the one-frame page, so opened alone it fills the
+ * surface.
+ */
+export const prototypePresentCanvasPane = Pane.define({
+  route: prototypePresentCanvasRoute,
+  app: prototypesApp,
+  resolve: false,
+  component: PresentCanvasPage,
   width: 720,
 });

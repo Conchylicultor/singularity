@@ -239,7 +239,10 @@ other.
 
 For surfaces that show a frame outside the pane (Present, its new-tab page)
 the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
-`initialVersion` / `initialPicks`), `usePrototypeDetail`, `CanvasFrameView`
+`initialVersion` / `initialPicks`; or on a whole given canvas, with
+`initialCanvas`), `PrototypeCanvas` (the pane's body, for a page drawing the
+whole canvas), `encodeCanvas` / `decodeCanvas` (the canvas as one url segment,
+validated like a saved one), `usePrototypeDetail`, `CanvasFrameView`
 (the very same frame screen), `OptionsPill`, `VersionStepper`, `SizeChip`,
 `layoutFrames` and `useFrameNames`.
 
@@ -280,7 +283,7 @@ navigation, so it starts from nothing remembered.
 - Description: The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
 - Web:
   - Slots:
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `primitives.pane`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`, `apps.prototypes.copy-id`, `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
     - `PrototypeFrameActions` ← `apps.prototypes.canvas`, `apps.prototypes.present`
     - `FrameSource` ← `apps.prototypes.compare`
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
@@ -370,18 +373,22 @@ navigation, so it starts from nothing remembered.
     - `PageExtent`
     - `PrototypeDetailContextValue`
     - `PrototypeFrame`
+    - `RestoredCanvas`
     - `Room`
     - `SourceFrame`
     - `VersionStepperProps`
   - Exports (values):
     - `CanvasFrameView`
+    - `decodeCanvas`
     - `documentOptions`
+    - `encodeCanvas`
     - `frameA`
     - `FrameSource`
     - `layoutFrames`
     - `letterOf`
     - `OptionsPill`
     - `pageHeightOf`
+    - `PrototypeCanvas`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
     - `prototypeDocumentSrc`

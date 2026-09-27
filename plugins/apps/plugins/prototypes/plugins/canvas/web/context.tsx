@@ -158,6 +158,13 @@ interface PrototypeDetailProviderProps {
    * "Responsive, in a new browser tab"). Not with `remember`.
    */
   initialSize?: PrototypeViewport;
+  /**
+   * The whole canvas to open on — frames, versions, picks, size, zoom, layout —
+   * for a surface handed another pane's canvas (Present's "Open the canvas in a
+   * new tab"). Frame A's `"shared"` still reads the shared record. Not with
+   * `remember`, nor with the one-frame `initial*` props, which it replaces.
+   */
+  initialCanvas?: CanvasState;
   children: ReactNode;
 }
 
@@ -234,6 +241,7 @@ function DetailProvider({
   initialVersion = null,
   initialPicks,
   initialSize,
+  initialCanvas,
   children,
 }: PrototypeDetailProviderProps & {
   size: PrototypeViewport;
@@ -268,11 +276,12 @@ function DetailProvider({
     state:
       slot !== null
         ? openCanvas(slot, size)
-        : initialCanvasState({
+        : (initialCanvas ??
+          initialCanvasState({
             size: initialSize ?? size,
             version: initialVersion,
             picks: initialPicks ?? "shared",
-          }),
+          })),
   });
   const [held, setHeld] = useState<Held>(open);
   let current = held;
