@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   useResource,
@@ -138,10 +138,21 @@ export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
 // Point lookup by id. Checks the live WS-backed resource first (real-time
 // updates for recent conversations), falling back to a one-shot fetch for
 // conversations older than the sidebar's bounded recent-gone window.
+//
+// Closing a conversation moves its row from `conversations-active` to
+// `conversations-gone` — two independent resources, pushed separately (active
+// is debounced, gone is a full recompute). Between the two pushes the row is in
+// NEITHER list, so a naive lookup reports "unknown" for a conversation we were
+// just rendering: every consumer flashes its loading state (the conversation
+// pane unmounts its whole body to "Loading…") and then redraws. The row did not
+// become unknown — it is moving between lists — so while that lookup is still
+// in flight we keep the last row we resolved for this same id. The hold ends as
+// soon as either source answers (including the fetch settling to "not found").
 export function useConversationById(
   id: string | null,
 ): ConversationEntry | null {
   const liveConv = useConversation(id ?? "");
+  const [held, setHeld] = useState<ConversationEntry | null>(null);
   const q = useQuery({
     queryKey: ["conversation", id],
     queryFn: async (): Promise<ConversationEntry | null> => {
@@ -155,5 +166,13 @@ export function useConversationById(
     enabled: id !== null && liveConv === null,
     staleTime: Infinity,
   });
-  return liveConv ?? q.data ?? null;
+  const resolved = liveConv ?? q.data ?? null;
+  // Render-phase derived state (React's sanctioned "store info from previous
+  // renders" pattern): remember the latest row resolved for this id.
+  if (resolved !== null && resolved !== held) setHeld(resolved);
+  if (resolved !== null) return resolved;
+  // `isPending` with the query enabled = the fallback fetch has not answered
+  // yet, i.e. the row is between lists rather than known to be absent.
+  const inTransit = id !== null && q.isPending;
+  return inTransit && held?.id === id ? held : null;
 }
