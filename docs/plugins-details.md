@@ -23477,6 +23477,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-tree`
+      - Test helpers:
+        - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
+          - `reactExportsSeen`
     - **`closure`**
       - Core:
         - Uses:

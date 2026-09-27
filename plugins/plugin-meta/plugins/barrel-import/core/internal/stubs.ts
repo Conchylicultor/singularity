@@ -31,17 +31,29 @@ export const BARREL_STUB_WORKTREE = "barrel-import-stub";
  * Registers Bun runtime stubs so web/server barrel files can be imported
  * outside the browser. Must be called once before any `importBarrel()` call.
  *
- * Uses build.module() for virtual modules (React, DOM-heavy packages) and
- * build.onLoad() for CSS files. Path aliases (@plugins/* → plugins/*, @/* →
- * web/src/*) are resolved via the root tsconfig.json.
+ * Uses build.module() for the generated npm-package stubs (see
+ * auto-stub-packages.ts) and build.onLoad() for CSS files. Path aliases
+ * (@plugins/* → plugins/*, @/* → web/src/*) are resolved via the root
+ * tsconfig.json.
  *
- * NOTE: `@plugins/framework/plugins/web-sdk/core` is deliberately NOT stubbed.
- * The real barrel only pulls in `react` (stubbed above), `plugin-id/core`, and
- * `collected-dir/core` — all side-effect-free — so it loads verbatim against the
- * React stub, resolved through the tsconfig `@plugins/*` alias like any other
- * barrel. Stubbing it forced a hand-maintained mirror of its export list that
- * silently broke docgen whenever a new export was added; letting the real module
- * be its own source of truth removes that coupling entirely.
+ * React is NOT stubbed: `react`, `react/jsx-runtime`, `react/jsx-dev-runtime`,
+ * `react-dom` and `react-dom/client` load for real. A static named import is
+ * bound at link time, so a hand-kept React export list broke the build every
+ * time web code imported a name it lacked (`useInsertionEffect` was the last),
+ * with an error blaming whichever barrel happened to reach that module. No
+ * consumer reads fake React semantics — they read plain contribution/slot data
+ * — and React is a pure JS package whose eval-time surface (createContext,
+ * memo, forwardRef, lazy, createElement) needs no DOM. It is evaluated once per
+ * process (ESM cache), ~50–75 ms. There must be no hand-written export lists
+ * in this file: a package is either real or stubbed from its own `.d.ts`.
+ *
+ * NOTE: `@plugins/framework/plugins/web-sdk/core` is deliberately NOT stubbed
+ * either. The real barrel only pulls in `react`, `plugin-id/core`, and
+ * `collected-dir/core` — all side-effect-free — so it loads verbatim, resolved
+ * through the tsconfig `@plugins/*` alias like any other barrel. Stubbing it
+ * forced a hand-maintained mirror of its export list that silently broke docgen
+ * whenever a new export was added; letting the real module be its own source of
+ * truth removes that coupling entirely.
  */
 export function registerBarrelStubs(_repoRoot: string): void {
   if (registered) return;
@@ -68,7 +80,6 @@ export function registerBarrelStubs(_repoRoot: string): void {
   }
 
   const noop = () => {};
-  const identity = <T>(x: T): T => x;
 
   // Read structurally rather than as `globalThis.window`: this module runs in
   // Bun, where there is no window, and the structural probe says exactly that —
@@ -100,6 +111,11 @@ export function registerBarrelStubs(_repoRoot: string): void {
         contains: () => false,
       },
     });
+    // Must NOT gain a `document` property. react-dom-client decides at eval
+    // whether it runs in a browser by probing `window.document.createElement`
+    // (its `canUseDOM`); without it, it takes the no-DOM path and skips its
+    // DOM feature probes and the DevTools console banner. The top-level
+    // `document` global below is separate and does not flip that probe.
     (globalThis as any).window = {
       location: loc,
       addEventListener: noop,
@@ -148,105 +164,15 @@ export function registerBarrelStubs(_repoRoot: string): void {
     };
   }
 
-  const reactExports = {
-    createElement: () => null,
-    cloneElement: () => null,
-    createContext: (defaultValue?: unknown) => ({
-      Provider: noop,
-      Consumer: noop,
-      displayName: "",
-      _currentValue: defaultValue,
-    }),
-    useState: (init: unknown) => [
-      typeof init === "function" ? (init as () => unknown)() : init,
-      noop,
-    ],
-    useEffect: noop,
-    useLayoutEffect: noop,
-    useInsertionEffect: noop,
-    useMemo: (fn: () => unknown) => fn(),
-    useCallback: identity,
-    useRef: (init: unknown) => ({ current: init }),
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ctx is untyped at runtime
-    useContext: (ctx: { _currentValue?: unknown }) => ctx?._currentValue,
-    useReducer: (_r: unknown, init: unknown) => [init, noop],
-    useId: () => "stub",
-    useSyncExternalStore: (_sub: unknown, getSnapshot: () => unknown) =>
-      getSnapshot(),
-    forwardRef: (c: unknown) => c,
-    memo: (c: unknown) => c,
-    Fragment: Symbol.for("react.fragment"),
-    Children: {
-      map: (_c: unknown, fn: unknown) =>
-        Array.isArray(_c) ? _c.map(fn as never) : [],
-      forEach: noop,
-      count: (c: unknown) => (Array.isArray(c) ? c.length : 0),
-      only: identity,
-      toArray: (c: unknown) => (Array.isArray(c) ? c : []),
-    },
-    isValidElement: () => false,
-    lazy: (load: unknown) => ({
-      $$typeof: Symbol.for("react.lazy"),
-      _payload: load,
-    }),
-    Suspense: noop,
-    startTransition: (fn: () => void) => fn(),
-    useTransition: () => [false, (fn: () => void) => fn()],
-    useDeferredValue: identity,
-    useImperativeHandle: noop,
-    useDebugValue: noop,
-    Component: class {},
-    PureComponent: class {},
-    version: "19.0.0-stub",
-    __esModule: true,
-    default: null as unknown,
-  };
-  reactExports.default = reactExports;
-
-  const jsxExports = {
-    jsx: () => null,
-    jsxs: () => null,
-    jsxDEV: () => null,
-    Fragment: reactExports.Fragment,
-  };
-
   Bun.plugin({
     name: "barrel-import-stubs",
     setup(build) {
-      // ── React family ───────────────────────────────────────────────
-      build.module("react", () => ({
-        exports: reactExports,
-        loader: "object",
-      }));
-      build.module("react/jsx-runtime", () => ({
-        exports: jsxExports,
-        loader: "object",
-      }));
-      build.module("react/jsx-dev-runtime", () => ({
-        exports: jsxExports,
-        loader: "object",
-      }));
-      const reactDomExports = {
-        createPortal: () => null,
-        flushSync: (fn: () => void) => fn(),
-        __esModule: true,
-        default: null as unknown,
-      };
-      reactDomExports.default = reactDomExports;
-      build.module("react-dom", () => ({
-        exports: reactDomExports,
-        loader: "object",
-      }));
-      build.module("react-dom/client", () => ({
-        exports: {
-          createRoot: () => ({ render: noop, unmount: noop }),
-          __esModule: true,
-        },
-        loader: "object",
-      }));
+      // React (react, react/jsx-runtime, react/jsx-dev-runtime, react-dom,
+      // react-dom/client) is intentionally left unstubbed — see the note on
+      // registerBarrelStubs.
 
       // @plugins/framework/plugins/web-sdk/core is intentionally left unstubbed —
-      // the real barrel loads against the React stub above (see the note on
+      // the real barrel loads against the real React (see the note on
       // registerBarrelStubs). Stubbing it is what created the export-list drift bug.
 
       // @plugins/database/server is intentionally left unstubbed too: its barrel
@@ -259,12 +185,6 @@ export function registerBarrelStubs(_repoRoot: string): void {
       // Reads .d.ts entry points to discover named exports at build time.
       // To add a package: edit auto-stub-packages.ts and run ./singularity build.
       registerAutoStubs(build);
-
-      // ── Manually-stubbed CSS subpath (package uses export *) ───────
-      build.module("@xyflow/react/dist/style.css", () => ({
-        exports: {},
-        loader: "object",
-      }));
 
       // ── CSS imports → empty ───────────────────────────────────────
       build.onLoad({ filter: /\.css$/ }, () => ({

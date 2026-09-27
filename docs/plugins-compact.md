@@ -237,7 +237,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
-    - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
+    - **`barrel-import`** [test helpers] — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
     - **`closure`**
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
