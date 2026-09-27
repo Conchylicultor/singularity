@@ -1,4 +1,4 @@
-// @hash 7ab4a6389770
+// @hash e9b384fe9f8b
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "tasks.task-category:category"
+    "tasks.task-category:category",
+    "tasks.task-track:track"
   ]
 }

@@ -131,6 +131,7 @@
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`
+    - `tasks/task-track`
 - Shared:
   - Exports (values):
     - `createNotification`

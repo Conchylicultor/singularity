@@ -1,4 +1,4 @@
-// @hash 708a28098242
+// @hash e42e8e917d10
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "conversations.conversation-view:title",
     "conversations.conversation-view.allow-monitor:allow-monitor",
     "conversations.conversation-view.model:model",
-    "conversations.conversation-view.status:status"
+    "conversations.conversation-view.status:status",
+    "conversations.conversation-view.track:track"
   ]
 }

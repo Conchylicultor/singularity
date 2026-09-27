@@ -9167,6 +9167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/status`
       - `conversations/conversation-view/tasks-panel`
       - `conversations/conversation-view/terminal-pane`
+      - `conversations/conversation-view/track`
       - `conversations/conversation-view/turn-summary`
       - `conversations/conversation-view/vscode`
       - `conversations/conversations-view/queue`
@@ -9807,6 +9808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/status`
           - `conversations/conversation-view/tasks-panel`
           - `conversations/conversation-view/terminal-pane`
+          - `conversations/conversation-view/track`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversation-view/vscode`
           - `conversations/conversations-view`
@@ -10322,7 +10324,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.LaunchControl`
         - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.
           - Web:
-            - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
+            - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`
             - Uses:
               - `primitives/collapsible-wrap.CollapsibleWrap`
               - `primitives/css/badge.Badge`
@@ -10341,6 +10343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/model`
               - `conversations/conversation-view/status`
+              - `conversations/conversation-view/track`
         - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
@@ -12034,6 +12037,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/terminal.terminalPane`
               - `ui/icons.Icon`
+        - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
+          - Web:
+            - Contributes: `Conversation.Header` → `TrackChip`
+            - Uses:
+              - `conversations.useConversationById`
+              - `conversations/conversation-view.conversationPane`
+              - `conversations/conversation-view/header.Conversation`
+              - `conversations/conversation-view/header.HeaderChip`
+              - `primitives/loading.Loading`
+              - `tasks/task-track.useTaskTrack`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Web:
             - Contributes:
@@ -12840,6 +12853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-category`
       - `tasks/task-source-url`
       - `tasks/task-title`
+      - `tasks/task-track`
       - `tasks/tasks-core`
       - `toolchain`
       - `ui/theme-engine/saved-themes`
@@ -18941,6 +18955,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list`
           - `tasks/task-preprompt`
           - `tasks/task-source-url`
+          - `tasks/task-track`
           - `ui/icons/sprites`
           - `ui/theme-engine/saved-themes`
           - `ui/theme-engine/theme-customizer`
@@ -19066,6 +19081,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
           - `tasks/task-source-url`
           - `tasks/task-title`
+          - `tasks/task-track`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Server:
         - Contributes:
@@ -21274,6 +21290,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-preprompt`
           - `tasks/task-title`
+          - `tasks/task-track`
           - `tasks/tasks-core`
           - `ui/icons/sprites`
       - Central:
@@ -25321,6 +25338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/auto-start`
               - `tasks/task-deps-tree`
               - `tasks/task-status`
+              - `tasks/task-track`
           - Core:
             - Exports (types): `BadgeVariant`
         - **`bouncing-dots`** — Three-dot bouncing activity indicator for 'working'/'pending' states. Renders three animate-bounce dots with staggered delays; size sm (size-1) or md (size-1.5, default).
@@ -30412,6 +30430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/track`
           - `conversations/recover`
           - `conversations/summary`
           - `debug/boot-profile`
@@ -30464,6 +30483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-list`
+          - `tasks/task-track`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
           - `ui/tokens/color-adjust`
@@ -34267,6 +34287,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-draft-form`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
+          - `tasks/task-track`
       - Shared:
         - Exports (values):
           - `createNotification`
@@ -34607,6 +34628,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-source-url.setTaskSourceUrl`
       - `tasks/task-title.scheduleTaskTitleUpdate`
       - `tasks/task-title.synthesiseTitleFallback`
+      - `tasks/task-track.listSidequestIds`
+      - `tasks/task-track.setTaskTrack`
       - `tasks/tasks-core._tasks`
       - `tasks/tasks-core.addTaskDependency`
       - `tasks/tasks-core.createTask`
@@ -35309,7 +35332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-status.STATUS_META`
           - `ui/icons.Icon`
-    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
+    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
         - Uses:
@@ -35328,12 +35351,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useRegisterFlush`
           - `tasks/task-status.StatusSignal`
+          - `tasks/task-track.TaskTrackControl`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
         - Slots:
           - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
           - `Tasks.ListActions`
-          - `Tasks.Fields` ← `tasks.task-category`
+          - `Tasks.Fields` ← `tasks.task-category`, `tasks.task-track`
         - Contributes:
           - `Tasks.TaskActions` "child-count" → `ChildCountAction`
           - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
@@ -35369,6 +35393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-category`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
+          - `tasks/task-track`
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
@@ -35522,6 +35547,60 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
+    - **`task-track`** — Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (window for the task list, point reads for one task), and the endpoint that switches a task's track.
+      - Web:
+        - Contributes: `Tasks.Fields` "track" → `TrackField`
+        - Uses:
+          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
+          - `network/live.useLiveRow`
+          - `primitives/css/badge.Badge`
+          - `primitives/loading.Loading`
+          - `shell/notifications.toast`
+          - `tasks/task-list.Tasks`
+        - Exports (values):
+          - `TaskTrackControl`
+          - `useTaskTrack`
+      - Server:
+        - Contributes:
+          - `resource.declare` "task-tracks"
+          - `resource.declare` "task-tracks:rows"
+          - `resource.declare` "task-tracks:groups"
+        - Uses:
+          - `database.db`
+          - `database.DbExecutor`
+          - `infra/endpoints.implement`
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._tasks`
+        - DB schema: `plugins/tasks/plugins/task-track/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_track`)
+        - Exports (values):
+          - `getTaskTrack`
+          - `listSidequestIds`
+          - `setTaskTrack`
+        - Resources:
+          - `task-tracks` (keyed, window)
+          - `task-tracks:groups` (push)
+          - `task-tracks:rows` (keyed, point)
+        - Routes: `PUT /api/tasks/:taskId/track`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `StoredTaskTrack`
+          - `TaskTrack`
+        - Exports (values):
+          - `DEFAULT_TASK_TRACK`
+          - `putTaskTrack`
+          - `STORED_TASK_TRACKS`
+          - `TASK_TRACKS`
+          - `TaskTrackSchema`
+          - `TRACK_META`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/track`
+          - `tasks`
+          - `tasks/task-header`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
         - Contributes:
@@ -35830,6 +35909,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
           - `tasks/task-source-url`
           - `tasks/task-title`
+          - `tasks/task-track`
           - `toolchain`
         - Extended by:
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
@@ -35845,6 +35925,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
+          - `tasks/task-track` (table `tasks_ext_track`)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `installTaskDerivedSchema`

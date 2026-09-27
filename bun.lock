@@ -1794,6 +1794,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-terminal-pane",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/track": {
+      "name": "@singularity/plugin-conversations-conversation-view-track",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/turn-summary": {
       "name": "@singularity/plugin-conversations-conversation-view-turn-summary",
       "version": "0.0.1",
@@ -5132,6 +5136,10 @@
       "name": "@singularity/plugin-tasks-task-title",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-track": {
+      "name": "@singularity/plugin-tasks-task-track",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/tasks-core": {
       "name": "@singularity/plugin-tasks-tasks-core",
       "version": "0.0.1",
@@ -6789,6 +6797,8 @@
 
     "@singularity/plugin-conversations-conversation-view-terminal-pane": ["@singularity/plugin-conversations-conversation-view-terminal-pane@workspace:plugins/conversations/plugins/conversation-view/plugins/terminal-pane"],
 
+    "@singularity/plugin-conversations-conversation-view-track": ["@singularity/plugin-conversations-conversation-view-track@workspace:plugins/conversations/plugins/conversation-view/plugins/track"],
+
     "@singularity/plugin-conversations-conversation-view-turn-summary": ["@singularity/plugin-conversations-conversation-view-turn-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/turn-summary"],
 
     "@singularity/plugin-conversations-conversation-view-vscode": ["@singularity/plugin-conversations-conversation-view-vscode@workspace:plugins/conversations/plugins/conversation-view/plugins/vscode"],
@@ -8340,6 +8350,8 @@
     "@singularity/plugin-tasks-task-status": ["@singularity/plugin-tasks-task-status@workspace:plugins/tasks/plugins/task-status"],
 
     "@singularity/plugin-tasks-task-title": ["@singularity/plugin-tasks-task-title@workspace:plugins/tasks/plugins/task-title"],
+
+    "@singularity/plugin-tasks-task-track": ["@singularity/plugin-tasks-task-track@workspace:plugins/tasks/plugins/task-track"],
 
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
 

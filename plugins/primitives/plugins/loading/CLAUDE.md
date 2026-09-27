@@ -138,6 +138,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/track`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`
@@ -190,6 +191,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-list`
+    - `tasks/task-track`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
     - `ui/tokens/color-adjust`

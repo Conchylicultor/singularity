@@ -100,6 +100,7 @@
     - `conversations/conversation-view/status`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
+    - `conversations/conversation-view/track`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversation-view/vscode`
     - `conversations/conversations-view`
@@ -147,6 +148,7 @@
   - **`status`** — Displays the conversation status as a colored badge in the toolbar.
   - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
   - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
+  - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
   - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
   - **`vscode`** — Opens the conversation's worktree in VSCode.
 

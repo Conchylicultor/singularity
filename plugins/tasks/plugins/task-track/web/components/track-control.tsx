@@ -1,0 +1,46 @@
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
+import { TRACK_META, type TaskTrack } from "../../core";
+import { useTaskTrack } from "../hooks";
+import { setTaskTrackRemote } from "../internal/api";
+
+const OTHER_TRACK: Record<TaskTrack, TaskTrack> = {
+  main: "sidequest",
+  sidequest: "main",
+};
+
+/**
+ * The task detail's Track value: the track badge as a button. Clicking it
+ * moves the task to the other track (the human override of what the filing
+ * agent chose). Only the track changes — the dependency edges and the
+ * auto-start marker stay as they are.
+ */
+export function TaskTrackControl({ taskId }: { taskId: string }) {
+  const result = useTaskTrack(taskId);
+  if (result.pending) return <Loading variant="block" className="h-5 w-16" />;
+  const meta = TRACK_META[result.track];
+  const next = OTHER_TRACK[result.track];
+  const onClick = () => {
+    setTaskTrackRemote(taskId, next).catch((err: unknown) => {
+      toast({
+        type: "task",
+        title: "Failed to change the task's track",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "error",
+      });
+    });
+  };
+  return (
+    <Badge
+      as="button"
+      type="button"
+      variant={meta.variant}
+      title={`${meta.hint} Click to move it to ${TRACK_META[next].label}.`}
+      aria-label={`Track: ${meta.label}. Move to ${TRACK_META[next].label}`}
+      onClick={onClick}
+    >
+      {meta.label}
+    </Badge>
+  );
+}

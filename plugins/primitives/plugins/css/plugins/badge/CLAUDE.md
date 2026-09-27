@@ -215,6 +215,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `tasks/auto-start`
     - `tasks/task-deps-tree`
     - `tasks/task-status`
+    - `tasks/task-track`
 - Core:
   - Exports (types): `BadgeVariant`
 

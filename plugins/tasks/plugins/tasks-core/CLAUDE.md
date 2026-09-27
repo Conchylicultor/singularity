@@ -510,6 +510,7 @@ serves them.
     - `tasks/task-preprompt`
     - `tasks/task-source-url`
     - `tasks/task-title`
+    - `tasks/task-track`
     - `toolchain`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
@@ -525,6 +526,7 @@ serves them.
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
+    - `tasks/task-track` (table `tasks_ext_track`)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
     - `installTaskDerivedSchema`

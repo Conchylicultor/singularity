@@ -551,6 +551,7 @@ grouped under the wave or item that removes it
     - `tasks/task-events`
     - `tasks/task-preprompt`
     - `tasks/task-title`
+    - `tasks/task-track`
     - `tasks/tasks-core`
     - `ui/icons/sprites`
 - Central:
