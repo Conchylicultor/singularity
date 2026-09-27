@@ -211,14 +211,14 @@ const shape = shapeGroup.fragment(
 );
 
 /**
- * The mockup's sidebar geometry: a 246px panel, 28px nav rows padded 9px, and
+ * The mockup's sidebar geometry: a 246px panel, 32px nav rows padded 9px, and
  * 15px icons with an 11px gap to the label. The label itself is the `label`
  * role (13px medium, see `typeScale`), shared with the conversation rows.
  */
 const sidebarMetrics = sidebarMetricsGroup.fragment(
   both({
     sidebarPanelWidth: "15.375rem",
-    sidebarRowHeight: "1.75rem",
+    sidebarRowHeight: "2rem",
     sidebarRowPadX: "0.5625rem",
     sidebarIconSize: "0.9375rem",
     sidebarIconGap: "0.6875rem",

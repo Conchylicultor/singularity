@@ -3,7 +3,10 @@ import {
   loadRouteForConversation,
   reportCorruptSavedRoute,
 } from "@plugins/conversations/plugins/pane-restore/web";
-import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  useOpenPane,
+  usePaneStore,
+} from "@plugins/primitives/plugins/pane/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { closeConversation } from "@plugins/conversations/core";
 import { ConversationsSidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
@@ -37,7 +40,7 @@ export function ConversationList() {
     }
   };
 
-  // The merged DataView surface owns its own `Scroll fill` root, so it fills
+  // The merged DataView surface owns its own full-height root, so it fills
   // the sidebar column directly — no extra wrapper needed.
   return (
     <ConversationsSidebarDataView

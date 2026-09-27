@@ -48,7 +48,8 @@ import { AddViewMenuItems } from "./add-view-menu-items";
  * - **`row`** — a full-width `Row` for a sidebar list: the view's icon in the
  *   row's lead column, sized and spaced like the sidebar nav icons
  *   (`size-sidebar-icon` / `gap-sidebar-icon`), so the switcher reads as the
- *   list's heading line on the nav's columns; the name at medium weight; and a
+ *   list's heading line on the nav's columns; the name in the nav labels'
+ *   `label` role at medium weight; and a
  *   chevron that appears only on hover / keyboard focus and while the menu (or
  *   the settings panel) is open.
  */
@@ -95,14 +96,15 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
       <Row
         ref={setAnchor}
         aria-label={label}
-        // `sm`: the row form heads a dense list (a sidebar), so it takes the
-        // list rows' caption size — at `md` it would read as a heading. Medium
-        // weight: it names the list below it.
+        // `sm`: the row form heads a dense list (a sidebar), so it keeps the
+        // list rows' tight padding — at `md` it would read as a heading.
         size="sm"
-        // The row form lives in a sidebar, so its lead sits on the sidebar
-        // NAV's columns (sidebar-metrics): the nav icon's size, and the nav's
-        // icon-to-label gap — the view name starts where the nav labels do.
-        className="gap-sidebar-icon font-medium"
+        // The row form lives in a sidebar, so it sits on the sidebar NAV's
+        // columns and type (sidebar-metrics): the nav icon's size, the nav's
+        // icon-to-label gap — the view name starts where the nav labels do —
+        // and the nav labels' `label` role at medium weight, so the switcher
+        // reads as one more line of the sidebar rather than a smaller caption.
+        className="gap-sidebar-icon text-label font-medium"
         icon={
           <ActiveIcon
             className={cn(

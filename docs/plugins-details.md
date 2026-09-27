@@ -12013,6 +12013,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/line.Line`
+          - `primitives/css/spacing.insetClass`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DropdownMenu`
@@ -12034,7 +12035,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineDataViewSources`
               - `primitives/data-view.MergedDataView`
@@ -26725,6 +26729,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/rewind`
               - `conversations/conversation-view/turn-summary`
+              - `conversations/conversations-view`
+              - `conversations/conversations-view/data-view`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -27763,6 +27769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/terminal-pane`
               - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
+              - `conversations/conversations-view/data-view`
               - `conversations/effort-provider`
               - `conversations/model-provider`
               - `conversations/preprompts`

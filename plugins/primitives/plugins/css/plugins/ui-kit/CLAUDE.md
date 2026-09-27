@@ -612,6 +612,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view`
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/preprompts`

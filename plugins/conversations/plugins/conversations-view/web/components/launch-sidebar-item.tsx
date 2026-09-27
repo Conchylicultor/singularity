@@ -11,6 +11,7 @@ import {
   Fill,
   fillClasses,
 } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdExpandMore, MdPlayArrow } from "react-icons/md";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -25,8 +26,11 @@ import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/w
  * The new-conversation launch control as a sidebar nav row: a model picker —
  * a bordered, filled box led by an accent dot, its label in the sidebar's
  * emphasised text colour — and, a small gap away, a launch button in the same
- * fill and at the same (sidebar row) height. Built from `SidebarMenuButton` chrome
- * so it keeps the nav links' height, font and icon sizing. (Rendering
+ * fill and at the same height. Built from `SidebarMenuButton` chrome so it
+ * keeps the nav links' font and icon sizing; its height is the md control's
+ * (`--control-height-md`), not the nav row's, because it is a control sitting
+ * above the nav rather than one of its links — and it stands a `md` step apart
+ * from the first nav row below it. (Rendering
  * `LaunchControl` here would import the page-canvas `Button` density and
  * typography into the nav rail, which is why the composition is local; the
  * launch *behavior* and the model menu still come from the primitive, via
@@ -43,7 +47,7 @@ export function LaunchSidebarItem() {
   const label = choiceLabel(defaultModel);
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className={insetClass({ b: "md" })}>
       <SidebarMenuItem>
         <Line className="gap-xs">
           <DropdownMenu>
@@ -52,7 +56,7 @@ export function LaunchSidebarItem() {
                 <SidebarMenuButton
                   className={cn(
                     fillClasses("x"),
-                    "border border-sidebar-border bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
+                    "h-(--control-height-md) border border-sidebar-border bg-sidebar-accent font-semibold text-sidebar-accent-foreground",
                   )}
                 />
               }
@@ -71,9 +75,9 @@ export function LaunchSidebarItem() {
             disabled={launching !== null}
             onClick={() => launch(defaultModel)}
             // The nav rows' `rounded-md`, in the picker's fill, with the
-            // accent on the glyph only. As tall as the picker beside it (the
-            // sidebar row height); its width stays the md icon button's.
-            className="h-sidebar-row w-(--control-height-md) rounded-md bg-sidebar-accent text-primary"
+            // accent on the glyph only. As tall as the picker beside it (the md
+            // control height), and as wide: a square.
+            className="h-(--control-height-md) w-(--control-height-md) rounded-md bg-sidebar-accent text-primary"
           />
         </Line>
       </SidebarMenuItem>

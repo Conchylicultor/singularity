@@ -11,7 +11,10 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineDataViewSources`
     - `primitives/data-view.MergedDataView`

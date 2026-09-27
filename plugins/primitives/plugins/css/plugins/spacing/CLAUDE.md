@@ -244,6 +244,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/rewind`
     - `conversations/conversation-view/turn-summary`
+    - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

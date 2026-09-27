@@ -19,6 +19,7 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
+    - `primitives/css/spacing.insetClass`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DropdownMenu`
