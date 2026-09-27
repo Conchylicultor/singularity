@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useInsertionEffect, useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { useActiveApp, Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
@@ -129,6 +129,16 @@ const scopedStyleIdFor = (scopeToken: string, groupId: string) =>
  * One painted `<style>` element: `text` in the document and in the pre-paint
  * cache, under `id`. `null` text (a theme still loading) leaves whatever is
  * there — the CSS replayed before first paint — untouched.
+ *
+ * Written in INSERTION effects, not layout effects: React runs every insertion
+ * effect of a commit before any layout effect. A layout effect elsewhere in the
+ * same commit that measures (a synchronous initial `getBoundingClientRect`)
+ * forces a style recalc; had the new tokens not landed yet, the elements that
+ * commit mounted would take the OUTGOING theme as their first computed style,
+ * and every `transition-*` on them would then animate from it. That was the
+ * sidebar visibly resizing on an app switch (Pages 16rem → Agent Manager's
+ * narrower `--sidebar-panel-width`): a freshly mounted sidebar running a
+ * 200 ms width transition from the previous app's width.
  */
 function usePaintedStyle(id: string, text: string | null): void {
   // Element lifecycle — runs once per id, NOT on theme changes. Adopts the
@@ -137,7 +147,7 @@ function usePaintedStyle(id: string, text: string | null): void {
   // pending) also protects the replayed pre-paint CSS from a prune triggered by
   // an already-resolved sibling. The element is only removed on unmount —
   // never as part of a content update.
-  useLayoutEffect(() => {
+  useInsertionEffect(() => {
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement("style");
@@ -158,7 +168,7 @@ function usePaintedStyle(id: string, text: string | null): void {
   // `text` is null (theme pending) it leaves the replayed pre-paint CSS
   // untouched — painting a guess here would overwrite it with wrong values for
   // one window.
-  useLayoutEffect(() => {
+  useInsertionEffect(() => {
     if (text === null) return;
     const el = document.getElementById(id);
     if (el && el.textContent !== text) el.textContent = text;
@@ -247,8 +257,11 @@ function useReportFaults(faults: ThemeResolutionFault[]): void {
 // desktop config, so switching the focused app never flips light/dark. The
 // resolution itself lives in useResolvedColorMode so the class and prop-themed
 // components never drift.
+//
+// An insertion effect for the same reason as usePaintedStyle: the class must be
+// on `<html>` before any layout effect of the commit can force a style recalc.
 function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
-  useLayoutEffect(() => {
+  useInsertionEffect(() => {
     document.documentElement.classList.toggle("dark", resolved === "dark");
   }, [resolved]);
 

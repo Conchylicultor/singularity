@@ -163,6 +163,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
     ],
     useEffect: noop,
     useLayoutEffect: noop,
+    useInsertionEffect: noop,
     useMemo: (fn: () => unknown) => fn(),
     useCallback: identity,
     useRef: (init: unknown) => ({ current: init }),
