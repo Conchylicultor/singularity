@@ -452,7 +452,7 @@
     },
     {
       "paneId": "prototypes-present",
-      "segment": "present/:name/:version/:picks?",
+      "segment": "present/:name/:version/:size/:picks?",
       "appIndex": false,
       "parent": null
     },

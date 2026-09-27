@@ -94,6 +94,11 @@ export function parseViewport(
     : { ok: false, raw: (raw ?? "").trim() };
 }
 
+/** The tag's word for a size — the inverse of {@link parseViewport}. */
+export function viewportWord(v: PrototypeViewport): string {
+  return v.kind === "preset" ? v.preset.toLowerCase() : v.kind;
+}
+
 /** The `problems[]` detail for a tag {@link parseViewport} refused. */
 export function viewportProblemDetail(raw: string): string {
   return `<meta name="prototype-viewport" content="${raw}"> is not a size — write one of ${PROTOTYPE_VIEWPORT_WORDS.join(", ")} (the default is window). Pixel sizes are no longer read`;

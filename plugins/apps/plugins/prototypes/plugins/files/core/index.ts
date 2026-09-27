@@ -48,6 +48,7 @@ export {
   PROTOTYPE_VIEWPORT_WORDS,
   PrototypeViewportSchema,
   parseViewport,
+  viewportWord,
   viewportProblemDetail,
   presetSize,
   viewportRenderSize,

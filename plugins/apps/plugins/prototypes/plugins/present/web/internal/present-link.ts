@@ -1,7 +1,31 @@
-import type { StoredPicks } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  parseViewport,
+  viewportWord,
+  type PrototypeViewport,
+  type StoredPicks,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /** The `version` segment that means the live folder rather than a recorded sha. */
 export const LIVE_VERSION = "live";
+
+/** The `size` segment that means the size the prototype declares. */
+export const DECLARED_SIZE = "declared";
+
+/** A size as ONE route segment: its tag word, or `declared` for none given. */
+export function encodeSize(size: PrototypeViewport | undefined): string {
+  return size === undefined ? DECLARED_SIZE : viewportWord(size);
+}
+
+/** The inverse of {@link encodeSize}. Throws on a word that is not a size. */
+export function decodeSize(segment: string): PrototypeViewport | undefined {
+  if (segment === DECLARED_SIZE) return undefined;
+  const parsed = parseViewport(segment);
+  // parseViewport reads blank as the default size; a segment is never blank.
+  if (!parsed.ok || segment.trim() === "") {
+    throw new Error(`Malformed size "${segment}"`);
+  }
+  return parsed.viewport;
+}
 
 /**
  * A frame's own picks as ONE route segment: `a=b,c=d`. Each name and value is

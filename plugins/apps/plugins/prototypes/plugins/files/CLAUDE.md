@@ -556,6 +556,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `validatePrototypeFolder`
     - `viewportProblemDetail`
     - `viewportRenderSize`
+    - `viewportWord`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`

@@ -152,6 +152,12 @@ interface PrototypeDetailProviderProps {
    * Not with `remember`.
    */
   initialPicks?: StoredPicks;
+  /**
+   * The size the canvas opens at, instead of the one the prototype declares —
+   * for a surface asked to show the frame at a given size (Present's
+   * "Responsive, in a new browser tab"). Not with `remember`.
+   */
+  initialSize?: PrototypeViewport;
   children: ReactNode;
 }
 
@@ -227,6 +233,7 @@ function DetailProvider({
   remember,
   initialVersion = null,
   initialPicks,
+  initialSize,
   children,
 }: PrototypeDetailProviderProps & {
   size: PrototypeViewport;
@@ -262,7 +269,7 @@ function DetailProvider({
       slot !== null
         ? openCanvas(slot, size)
         : initialCanvasState({
-            size,
+            size: initialSize ?? size,
             version: initialVersion,
             picks: initialPicks ?? "shared",
           }),

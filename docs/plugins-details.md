@@ -4039,6 +4039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `validatePrototypeFolder`
               - `viewportProblemDetail`
               - `viewportRenderSize`
+              - `viewportWord`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
@@ -4088,7 +4089,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useSetPrototypeDone`
           - Cross-plugin:
             - Imported by: `apps/home/app-cards`
-        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.
+        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, Full screen (F, which presents the selected frame), and Responsive, in a new browser tab (the page filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.
           - Web:
             - Slots: `prototypes-present.actions` ← `primitives.pane`
             - Contributes:

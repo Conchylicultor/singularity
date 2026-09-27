@@ -5,7 +5,13 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { MdFullscreen, MdOpenInNew, MdTab, MdWebAsset } from "react-icons/md";
+import {
+  MdFullscreen,
+  MdOpenInFull,
+  MdOpenInNew,
+  MdTab,
+  MdWebAsset,
+} from "react-icons/md";
 import {
   Button,
   DropdownMenu,
@@ -31,14 +37,18 @@ import {
   type FrameResolution,
   type PrototypeFrame,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type {
+  PrototypeMeta,
+  PrototypeViewport,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { presentPath } from "../panes";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
 
 /**
  * "Present" — one frame's menu of the ways to see it without the app around
  * it, ordered by how much they cover: this app tab (with a new-app-tab icon),
- * this browser tab (with a new-browser-tab icon), and full screen (`F`).
+ * this browser tab (with a new-browser-tab icon), full screen (`F`), and a new
+ * browser tab at the Responsive size — the page filling the whole tab.
  *
  * A frame action (`PrototypeFrameActions`) on each canvas frame, so this whole
  * feature is one folder the canvas knows nothing about. The menu of the
@@ -125,6 +135,20 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
               shortcut="F"
               onClick={() => present("screen")}
             />
+            <BrowserTabOpener
+              frame={frame}
+              meta={meta}
+              size={{ kind: "responsive" }}
+            >
+              {(open) => (
+                <PresentRow
+                  icon={MdOpenInFull}
+                  label="Responsive, in a new browser tab"
+                  hint="The page fills the whole tab, at the tab's width."
+                  onClick={open}
+                />
+              )}
+            </BrowserTabOpener>
           </DropdownMenuSection>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -171,12 +195,17 @@ function PresentRow({
   label: string;
   hint?: string;
   shortcut?: string;
-  onClick: () => void;
+  /** `undefined` when there is nothing to open: the row shows disabled. */
+  onClick: (() => void) | undefined;
   newTab?: ReactNode;
 }) {
   return (
     <Stack direction="row" gap="2xs" align="center">
-      <DropdownMenuItem onClick={onClick} className={fillClasses("x")}>
+      <DropdownMenuItem
+        onClick={onClick}
+        disabled={onClick === undefined}
+        className={fillClasses("x")}
+      >
         <Icon className="size-4 text-muted-foreground" />
         <Stack gap="none" className={fillClasses("x")}>
           <Text>{label}</Text>
@@ -228,31 +257,54 @@ function NewBrowserTabItem({
   frame: CanvasFrame;
   meta: PrototypeMeta;
 }) {
-  const label = "Open in a new browser tab";
+  return (
+    <BrowserTabOpener frame={frame} meta={meta}>
+      {(open) => <NewTabItem label="Open in a new browser tab" open={open} />}
+    </BrowserTabOpener>
+  );
+}
+
+/**
+ * How a frame opens in a new browser tab, handed to `children` — `undefined`
+ * when it cannot. A prototype frame opens its present page chromeless, at
+ * `size` (the size it declares when omitted); a source frame opens its own
+ * `href`, which is already the page at the tab's size, whatever `size` says.
+ */
+function BrowserTabOpener({
+  frame,
+  meta,
+  size,
+  children,
+}: {
+  frame: CanvasFrame;
+  meta: PrototypeMeta;
+  size?: PrototypeViewport;
+  children: (open: (() => void) | undefined) => ReactNode;
+}) {
   const openHref = (href: string) => () =>
     window.open(href, "_blank", "noopener,noreferrer");
   if (frame.kind === "prototype") {
-    return (
-      <NewTabItem
-        label={label}
-        open={openHref(
-          embedUrl(presentPath(frameTarget(frame, meta)), "chromeless"),
-        )}
-      />
+    return children(
+      openHref(
+        embedUrl(
+          presentPath({
+            ...frameTarget(frame, meta),
+            ...(size === undefined ? {} : { size }),
+          }),
+          "chromeless",
+        ),
+      ),
     );
   }
   return (
     <FrameSource.Dispatch source={frame.source} meta={meta}>
-      {(resolution: FrameResolution) => (
-        <NewTabItem
-          label={label}
-          open={
-            resolution.status === "found" && resolution.href !== undefined
-              ? openHref(resolution.href)
-              : undefined
-          }
-        />
-      )}
+      {(resolution: FrameResolution) =>
+        children(
+          resolution.status === "found" && resolution.href !== undefined
+            ? openHref(resolution.href)
+            : undefined,
+        )
+      }
     </FrameSource.Dispatch>
   );
 }

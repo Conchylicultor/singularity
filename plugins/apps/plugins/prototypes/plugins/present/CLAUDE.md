@@ -4,7 +4,7 @@
 frame action (`PrototypeFrameActions`), so every frame of the prototype canvas
 gets its own Present button, and the canvas knows nothing about it.
 
-The menu, headed "Present B", has three rows, ordered by how much they cover:
+The menu, headed "Present B", has four rows, ordered by how much they cover:
 
 - **In this app tab** — a `<SurfaceOverlay>` filling the tab's surface. The
   Singularity tab bar and app rail stay visible and clickable, so the user can
@@ -21,6 +21,10 @@ The menu, headed "Present B", has three rows, ordered by how much they cover:
 - **Full screen** (`F`) — the viewport overlay, also handed to the browser's
   Fullscreen API. Escape exits fullscreen (the browser handles it), and the
   resulting `fullscreenchange` closes the overlay, so one key still leaves.
+- **Responsive, in a new browser tab** — the new-browser-tab page, but at the
+  Responsive size (`present/<id>/<version>/responsive`) whatever size the
+  canvas is at: at Fit that is the page laid out at the tab's own width,
+  filling it. A source frame opens its own `href`, which already is that.
 
 **`F` presents the selected frame** in full screen. Only the selected frame's
 menu registers the key (a surface-scoped shortcut, silent in text fields), and
@@ -67,12 +71,15 @@ a half-move.
 
 ## The present page
 
-`present/<id>/<version>[/<picks>]` (`prototypePresentPane`, a root route of
+`present/<id>/<version>/<size>[/<picks>]` (`prototypePresentPane`, a root route of
 the Prototypes app, so opened alone it is the only column and fills the tab):
 
 - `version` is a recorded version's sha, or `live` for the live folder. It is
   required rather than optional because a route may have only one optional
   part, and it must be the last — `picks` needs that place.
+- `size` is `declared` (the prototype's own `<meta name="prototype-viewport">`)
+  or a size word (`responsive`, `window`, `phone`, …), handed to the canvas as
+  `initialSize`. Required for the same reason as `version`.
 - `picks` is the frame's own picks, `a=b,c=d` (each name and value escaped on
   its own, `internal/present-link.ts`). Frame A reads the shared picks record,
   so its link carries none, and the page then reads the shared record too.
@@ -86,7 +93,7 @@ Exit: closing the tab is how you leave.
 
 ## Plugin reference
 
-- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<picks?>, a one-frame page carrying the frame's version and own picks.
+- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, Full screen (F, which presents the selected frame), and Responsive, in a new browser tab (the page filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.
 - Web:
   - Slots: `prototypes-present.actions` ← `primitives.pane`
   - Contributes:

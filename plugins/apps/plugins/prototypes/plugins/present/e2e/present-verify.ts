@@ -306,7 +306,7 @@ await withBrowser(async (h) => {
   const tabUrl = new URL(tab.url());
   r.ok(
     "the new tab opens frame A's present page (live, shared picks), chromeless",
-    tabUrl.pathname === `/prototypes/present/${name}/live` &&
+    tabUrl.pathname === `/prototypes/present/${name}/live/declared` &&
       tabUrl.searchParams.get("embed") === "1",
     tab.url(),
   );
@@ -359,6 +359,39 @@ await withBrowser(async (h) => {
     await snap(tab, out, "new-tab");
   }
   await tab.close();
+
+  // --- Responsive, in a new browser tab ------------------------------------
+  await openMenuOfA();
+  const openedResponsive = context.waitForEvent("page", { timeout: 5000 });
+  await page
+    .getByRole("menuitem", { name: /Responsive, in a new browser tab/ })
+    .click();
+  const rTab = await openedResponsive;
+  await rTab.setViewportSize({ width: 1111, height: 777 });
+  await rTab.waitForLoadState("domcontentloaded");
+  const rUrl = new URL(rTab.url());
+  r.ok(
+    "the responsive tab opens frame A's present page at the Responsive size, chromeless",
+    rUrl.pathname === `/prototypes/present/${name}/live/responsive` &&
+      rUrl.searchParams.get("embed") === "1",
+    rTab.url(),
+  );
+  const rFrame = rTab.locator(
+    canvasFrameSelector({ letter: "A", status: "found" }),
+  );
+  await rFrame.waitFor({ state: "attached", timeout: 15_000 });
+  const fills = await waitFor(
+    async () => (await rTab.locator("iframe").first().boundingBox())?.width,
+    (w) => w !== undefined && Math.abs(w - 1111) <= 2,
+    { timeoutMs: 10_000 },
+  );
+  r.ok(
+    "the responsive tab's frame fills the tab's width",
+    fills.ok,
+    String(fills.value),
+  );
+  await snap(rTab, out, "responsive-tab");
+  await rTab.close();
 
   r.ok(
     "no page errors",
