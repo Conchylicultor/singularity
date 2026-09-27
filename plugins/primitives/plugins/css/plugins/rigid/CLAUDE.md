@@ -150,6 +150,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `tasks/task-status`
     - `ui/breadcrumb-separator/chevron`
     - `ui/breadcrumb-separator/slash`
+    - `ui/segmented-progress-bar/arc`
     - `ui/segmented-progress-bar/pie`
     - `ui/tokens/shadow`
 

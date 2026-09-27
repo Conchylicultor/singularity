@@ -6,7 +6,7 @@ import { ProgressBarRow } from "./components/progress-bar-row";
 
 export default {
   description:
-    "4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip.",
+    "4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip.",
   contributions: [
     Conversation.Header({ id: "progress", component: ProgressBarToolbar }),
     Item.Chips({ id: "progress", component: ProgressBarRow }),

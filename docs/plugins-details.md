@@ -9533,7 +9533,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `conversationPrepromptRows`
           - `ConversationPrepromptSchema`
-    - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
+    - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes:
           - `Conversation.Header` → `ProgressBarToolbar`
@@ -17859,6 +17859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/auto-start`
               - `tasks/launch-options`
               - `tasks/task-draft-form`
+              - `ui/segmented-progress-bar/arc`
               - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
@@ -26357,6 +26358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
+              - `ui/segmented-progress-bar/arc`
               - `ui/segmented-progress-bar/pie`
               - `ui/tokens/shadow`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
@@ -27991,6 +27993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
               - `ui/segmented-progress-bar`
+              - `ui/segmented-progress-bar/arc`
               - `ui/segmented-progress-bar/pie`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
@@ -35650,7 +35653,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
-        - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`
+        - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`, `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`
         - Contributes:
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Progress bar variant"
@@ -35692,10 +35695,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-progress`
+          - `ui/segmented-progress-bar/arc`
           - `ui/segmented-progress-bar/dots`
           - `ui/segmented-progress-bar/pie`
           - `ui/segmented-progress-bar/segmented`
       - Plugins:
+        - **`arc`** — Arc progress: one unbroken arc on a faint ring, filled clockwise from the top through the current step (step 1 of 4 is a quarter, the last step the whole circle); one colour, no segments. Hover or click lists every step.
+          - Web:
+            - Contributes: `SegmentedProgressBarSlots.Variant` "Arc" → `ArcRenderer`
+            - Uses:
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/ui-kit.cn`
+              - `ui/segmented-progress-bar.progressStepLabel`
+              - `ui/segmented-progress-bar.ProgressStepsTooltip`
+              - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
           - Web:
             - Contributes: `SegmentedProgressBarSlots.Variant` "Dots" → `DotsRenderer`

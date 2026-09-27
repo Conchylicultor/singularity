@@ -11,10 +11,14 @@ export const PHASE_ORDER = [
 ] as const;
 export type ConversationPhase = (typeof PHASE_ORDER)[number];
 
+// Each label names a milestone already reached, in the past tense: a phase is
+// only classified once its evidence exists (a plan file, a code change, a
+// push). The first names the one milestone before any of them — the agent is
+// on it. The ids stay the stored `phase` values.
 export const PHASE_LABELS: Record<ConversationPhase, string> = {
-  research: "Research",
-  design: "Design",
-  implementation: "Implementation",
+  research: "Started",
+  design: "Designed",
+  implementation: "Implemented",
   pushed: "Pushed",
 };
 
@@ -22,8 +26,8 @@ export const PHASE_LABELS: Record<ConversationPhase, string> = {
 // each restates the rule the heuristic job classifies by.
 export const PHASE_DESCRIPTIONS: Record<ConversationPhase, string> = {
   research: "Reading and exploring — no files changed yet.",
-  design: "Writing a plan — only files under research/ changed.",
-  implementation: "Changing code in its worktree.",
+  design: "A plan is written — only files under research/ changed.",
+  implementation: "Code changed in its worktree.",
   pushed: "Its work is merged into main.",
 };
 

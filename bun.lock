@@ -5160,6 +5160,10 @@
       "name": "@singularity/plugin-ui-segmented-progress-bar",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/segmented-progress-bar/plugins/arc": {
+      "name": "@singularity/plugin-ui-segmented-progress-bar-arc",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/segmented-progress-bar/plugins/dots": {
       "name": "@singularity/plugin-ui-segmented-progress-bar-dots",
       "version": "0.0.1",
@@ -8328,6 +8332,8 @@
     "@singularity/plugin-ui-breadcrumb-separator-slash": ["@singularity/plugin-ui-breadcrumb-separator-slash@workspace:plugins/ui/plugins/breadcrumb-separator/plugins/slash"],
 
     "@singularity/plugin-ui-segmented-progress-bar": ["@singularity/plugin-ui-segmented-progress-bar@workspace:plugins/ui/plugins/segmented-progress-bar"],
+
+    "@singularity/plugin-ui-segmented-progress-bar-arc": ["@singularity/plugin-ui-segmented-progress-bar-arc@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/arc"],
 
     "@singularity/plugin-ui-segmented-progress-bar-dots": ["@singularity/plugin-ui-segmented-progress-bar-dots@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/dots"],
 

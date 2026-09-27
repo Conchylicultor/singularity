@@ -1,6 +1,7 @@
 // @hash b7a47ff1112e
 {
-  // The agent manager's progress is a small pie (Mist, proto-1789643584-ldt6):
-  // in the conversation header and in each queue row.
-  "variant": "pie"
+  // The agent manager's progress is a thin arc (Mist, proto-1789643584-ldt6):
+  // one colour and no segments, in the conversation header and in each queue
+  // row — the pie's four wedges in two blues read as too much for its size.
+  "variant": "arc"
 }

@@ -41,10 +41,13 @@ const SEGMENT = {
  */
 export function ProgressStepsTooltip({
   side,
+  pinOnClick,
   children,
   ...props
 }: Props & {
   side?: WithTooltipProps["side"];
+  /** A click on the bar pins the tooltip open — for a bar with no click action of its own. */
+  pinOnClick?: WithTooltipProps["pinOnClick"];
   /** The bar — the tooltip's trigger. */
   children: ReactElement;
 }) {
@@ -52,6 +55,7 @@ export function ProgressStepsTooltip({
     <WithTooltip
       content={<StepsBody {...props} />}
       side={side}
+      pinOnClick={pinOnClick}
       className="max-w-md"
     >
       {children}
