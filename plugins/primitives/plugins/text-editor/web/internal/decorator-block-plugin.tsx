@@ -32,8 +32,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 //      default handler commits a caret at an unanchorable element point first,
 //      and a transform must not reach into selection.)
 //   2. A node transform — heals the structure for every other path (paste, drop,
-//      programmatic insertion). Here the selection is anchored to the decorator
-//      node itself, so it follows the node through the split for free.
+//      programmatic insertion). A caret anchored INSIDE a moved node (a text
+//      point) follows it for free, but one anchored on the old paragraph by
+//      child offset — exactly where `$insertNodes` leaves it after inserting a
+//      decorator — does not, so the transform carries those points across.
 //
 // Lives in the editor core so every inline decorator — present and future —
 // benefits, rather than each node plugin reimplementing it.
@@ -99,14 +101,38 @@ function splitParagraphBeforeAdjacentDecorator(
 // Structural healer: when an inline decorator directly follows a line break,
 // drop the line break and move the decorator (plus everything after it on that
 // line) into a new paragraph, so the decorator starts a block.
-function hoistDecoratorAfterLineBreakToNewBlock(lineBreak: LineBreakNode): void {
+//
+// A selection point on `parent` by child offset past the line break names a
+// position among the moved nodes, so it moves with them. Left alone, Lexical
+// clamps it to the end of the now-shorter `parent`: pasting an image on a fresh
+// line put the caret (and the next keystroke) back at the end of the line above.
+export function hoistDecoratorAfterLineBreakToNewBlock(
+  lineBreak: LineBreakNode,
+): void {
   const next = lineBreak.getNextSibling();
   if (!$isInlineDecorator(next)) return;
   const parent = lineBreak.getParentOrThrow();
+  const breakIndex = lineBreak.getIndexWithinParent();
   const newParagraph = $createParagraphNode();
+  const selection = $getSelection();
+  // Offsets into the new paragraph, taken BEFORE the moves: `remove()` itself
+  // shifts `parent`'s later element offsets.
+  const carried = (
+    $isRangeSelection(selection) ? [selection.anchor, selection.focus] : []
+  )
+    .filter(
+      (point) =>
+        point.type === "element" &&
+        point.key === parent.getKey() &&
+        point.offset > breakIndex,
+    )
+    .map((point) => ({ point, offset: point.offset - breakIndex - 1 }));
   const moved: LexicalNode[] = [];
   for (let n = next; n !== null; n = n.getNextSibling()) moved.push(n);
   lineBreak.remove();
   for (const n of moved) newParagraph.append(n);
   parent.insertAfter(newParagraph);
+  for (const { point, offset } of carried) {
+    point.set(newParagraph.getKey(), offset, "element");
+  }
 }
