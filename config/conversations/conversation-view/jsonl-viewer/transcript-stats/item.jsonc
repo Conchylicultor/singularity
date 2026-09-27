@@ -10,12 +10,14 @@
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   //
-  // Left-to-right order of the strip pinned at the foot of the transcript,
-  // widest scope first: the session's whole token budget, then this
-  // conversation's own context and output. The usage chip stays rightmost,
-  // where it has always sat.
+  // Left-to-right order of the strip pinned at the foot of the transcript.
+  // The token-budget chip is hidden: its harness-allowance count read as a
+  // near-duplicate of the usage chip's context size.
   "items": [
-    "conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget:token-budget",
+    {
+      "item": "conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget:token-budget",
+      "hidden": true
+    },
     "conversations.conversation-view.jsonl-viewer.transcript-stats.usage:usage"
   ]
 }
