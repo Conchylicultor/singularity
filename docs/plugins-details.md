@@ -35472,7 +35472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-header`
           - `tasks/task-list`
-    - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. Owns the tasks_ext_short_title side-table: a ≤3-word short title per task, regenerated on tasks.titleChanged and backfilled for recently active tasks.
+    - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. One Haiku call reads the full description and makes both the title and a ≤3-word short title (stored in the tasks_ext_short_title side-table); a title set by hand gets its short title from the same call on tasks.titleChanged, and recently active tasks are backfilled.
       - Server:
         - Contributes:
           - `resource.declare` "task-short-titles:rows"
@@ -35499,7 +35499,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
         - Exports (values):
-          - `generateTaskTitle`
           - `scheduleTaskTitleUpdate`
           - `scheduleTaskTitleUpgrade`
           - `synthesiseTitleFallback`

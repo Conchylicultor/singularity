@@ -20,7 +20,6 @@ import {
 } from "./internal/short-title-backfill";
 
 export {
-  generateTaskTitle,
   scheduleTaskTitleUpdate,
   scheduleTaskTitleUpgrade,
   synthesiseTitleFallback,
@@ -28,7 +27,7 @@ export {
 
 export default {
   description:
-    "Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. Owns the tasks_ext_short_title side-table: a ≤3-word short title per task, regenerated on tasks.titleChanged and backfilled for recently active tasks.",
+    "Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. One Haiku call reads the full description and makes both the title and a ≤3-word short title (stored in the tasks_ext_short_title side-table); a title set by hand gets its short title from the same call on tasks.titleChanged, and recently active tasks are backfilled.",
   register: [
     titleOnConversationCreatedJob,
     titleOnUserTurnSentJob,
