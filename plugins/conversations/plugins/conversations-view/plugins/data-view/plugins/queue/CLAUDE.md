@@ -17,7 +17,8 @@
     - `queue-actions` "close" → `CloseAction`
   - Uses:
     - `conversations/all-conversations.conversationFieldDefs`
-    - `conversations/conversation-ui/item.ConversationItem`
+    - `conversations/conversations-view/data-view.ConversationSidebarProps`
+    - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
     - `conversations/conversations-view/queue.applyReorder`
     - `conversations/conversations-view/queue.classifyQueue`

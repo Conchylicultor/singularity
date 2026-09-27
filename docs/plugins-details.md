@@ -8434,7 +8434,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -8635,6 +8635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/prompt-templates`
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversation-view/turn-summary`
+      - `conversations/conversations-view/data-view`
       - `conversations/hibernation`
       - `conversations/model-provider`
       - `conversations/preprompts`
@@ -9617,6 +9618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `ConversationItemConv`
               - `ConversationItemProps`
+              - `ConvTitleOverride`
             - Exports (values):
               - `CONV_STATUS_DOT`
               - `ConversationItem`
@@ -9639,8 +9641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/op-status`
-              - `conversations/conversations-view/data-view/history`
-              - `conversations/conversations-view/data-view/queue`
+              - `conversations/conversations-view/data-view`
               - `tasks/attempt-view`
         - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
           - Web:
@@ -12028,10 +12029,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.usePaneStore`
           - `shell.Shell`
       - Plugins:
-        - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
+        - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources and name their rows through SidebarConversationItem, which reads the Conversation list title setting (conversation / task / short task title). Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.
           - Web:
             - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `conversations/conversation-ui/item.ConversationItem`
+              - `conversations/conversation-ui/item.ConversationItemConv`
+              - `conversations/conversation-ui/item.conversationTitle`
+              - `conversations/conversation-ui/item.ConvTitleOverride`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
@@ -12042,11 +12050,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineDataViewSources`
               - `primitives/data-view.MergedDataView`
+              - `tasks/task-title.useTaskShortTitle`
             - Exports (types): `ConversationSidebarProps`
             - Exports (values):
               - `ConversationsSidebarDataView`
               - `SIDEBAR_VIEW`
+              - `SidebarConversationItem`
               - `SidebarSources`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversations-view`
@@ -12061,7 +12074,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `history-actions` "close" → `CloseConvAction`
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
-                  - `conversations/conversation-ui/item.ConversationItem`
+                  - `conversations/conversations-view/data-view.ConversationSidebarProps`
+                  - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/data-view.defineItemActions`
@@ -12081,7 +12095,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `queue-actions` "close" → `CloseAction`
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
-                  - `conversations/conversation-ui/item.ConversationItem`
+                  - `conversations/conversations-view/data-view.ConversationSidebarProps`
+                  - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
                   - `conversations/conversations-view/queue.applyReorder`
                   - `conversations/conversations-view/queue.classifyQueue`
@@ -12728,6 +12743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/auto-start`
       - `tasks/task-category`
       - `tasks/task-source-url`
+      - `tasks/task-title`
       - `tasks/tasks-core`
       - `toolchain`
       - `ui/theme-engine/saved-themes`
@@ -18899,6 +18915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort`
           - `tasks/task-preprompt`
           - `tasks/task-source-url`
+          - `tasks/task-title`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Server:
         - Contributes:
@@ -20507,6 +20524,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks`
           - `tasks/auto-start`
+          - `tasks/task-title`
     - **`worktree`**
       - Server:
         - Uses:
@@ -21103,6 +21121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort`
           - `tasks/task-events`
           - `tasks/task-preprompt`
+          - `tasks/task-title`
           - `tasks/tasks-core`
       - Central:
         - Exports (types): `CentralServedValue`
@@ -35168,20 +35187,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-header`
           - `tasks/task-list`
-    - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
+    - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. Owns the tasks_ext_short_title side-table: a ≤3-word short title per task, regenerated on tasks.titleChanged and backfilled for recently active tasks.
       - Server:
         - Contributes:
+          - `resource.declare` "task-short-titles:rows"
           - `trigger` "task-title.on-conversation-created"
           - `trigger` "task-title.on-user-turn-sent"
+          - `trigger` "task-title.short-on-title-changed"
         - Uses:
           - `conversations.conversationCreated`
           - `conversations.userTurnSent`
+          - `database.db`
           - `infra/claude-cli.runClaudePrint`
+          - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
+          - `infra/warmup.defineWarmup`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.getTask`
+          - `tasks/tasks-core.taskTitleChanged`
           - `tasks/tasks-core.updateConversationsTitleForTask`
           - `tasks/tasks-core.updateTaskTitle`
+        - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
         - Exports (values):
           - `generateTaskTitle`
           - `scheduleTaskTitleUpdate`
@@ -35190,8 +35221,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register:
           - `defineJob('task-title.on-conversation-created')`
           - `defineJob('task-title.on-user-turn-sent')`
+          - `defineJob('task-title.short')`
+          - `defineJob('task-title.short-on-title-changed')`
+          - `defineJob('task-title.short-backfill')`
+          - `defineWarmup('task-title.short-backfill')`
+        - Resources: `task-short-titles:rows` (keyed, point)
+      - Web:
+        - Uses:
+          - `network/live.LiveRowResult`
+          - `network/live.useLiveRow`
+        - Exports (types): `TaskShortTitle`
+        - Exports (values): `useTaskShortTitle`
       - Cross-plugin:
         - Imported by:
+          - `conversations/conversations-view/data-view`
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
@@ -35269,6 +35312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskListItem`
           - `TaskStatus`
           - `TaskStatusChangedPayload`
+          - `TaskTitleChangedPayload`
           - `UpdateConversationPatch`
           - `UpdateTaskPatch`
         - Exports (values):
@@ -35278,6 +35322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `_pushLandedTriggers`
           - `_tasks`
           - `_taskStatusChangedTriggers`
+          - `_taskTitleChangedTriggers`
           - `addTaskDependency`
           - `adoptOrphanConversation`
           - `AttemptSchema`
@@ -35344,6 +35389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskStatusChanged`
           - `TaskStatusSchema`
           - `tasksView`
+          - `taskTitleChanged`
           - `touchConversationViewed`
           - `unionTaskClusters`
           - `updateConversation`
@@ -35354,6 +35400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register:
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`
+          - `defineTriggerEvent('tasks.titleChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
         - Resources:
@@ -35512,6 +35559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
+          - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`

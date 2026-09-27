@@ -74,7 +74,15 @@ export type ConversationItemProps = {
    *   icon-sized lead box so every title starts on the same column.
    */
   layout?: "block" | "inline" | "line";
+  /** Overrides what the row is named by; see {@link ConvTitleOverride}. */
+  title?: ConvTitleOverride;
 };
+
+/**
+ * A caller-resolved name for the conversation: `label` is shown, `full` is the
+ * hover. Absent, the title is {@link conversationTitle} for both.
+ */
+export type ConvTitleOverride = { label: string; full: string };
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
   return (
@@ -101,10 +109,12 @@ export function conversationTitle(conv: ConversationItemConv): string {
 
 export function ConvTitle({
   conv,
+  title,
   variant = "caption",
   className,
 }: {
   conv: ConversationItemConv;
+  title?: ConvTitleOverride;
   /**
    * The title's type role: `caption` (default) where it annotates something
    * larger (a block row, an inline chip), `label` where it IS the row's label
@@ -124,8 +134,9 @@ export function ConvTitle({
         as="span"
         variant={variant}
         className={cn(className, muted && "text-muted-foreground")}
+        title={title?.full}
       >
-        {conversationTitle(conv)}
+        {title?.label ?? conversationTitle(conv)}
       </Text>
     </SingleLineProvider>
   );
@@ -158,6 +169,7 @@ export function ConvRelativeTime({
 export function ConversationItem({
   conv,
   layout = "block",
+  title,
 }: ConversationItemProps) {
   const active = conv.status === "working";
   if (layout === "line") {
@@ -187,7 +199,7 @@ export function ConversationItem({
                 list, which would otherwise drop it to the compact rung — so
                 it matches the sidebar nav rows' labels. */}
             <ControlSizeProvider size="sm">
-              <ConvTitle conv={conv} variant="label" />
+              <ConvTitle conv={conv} title={title} variant="label" />
             </ControlSizeProvider>
           </Fill>
         </Line>
@@ -212,7 +224,7 @@ export function ConversationItem({
         <ControlSizeProvider size="xs">
           <AvatarSlot conv={conv} />
         </ControlSizeProvider>
-        <ConvTitle conv={conv} />
+        <ConvTitle conv={conv} title={title} />
         <ConvSysBadge conv={conv} />
         <ChipsSlot conv={conv} />
       </Inline>
@@ -234,7 +246,7 @@ export function ConversationItem({
       </span>
       <Stack as={Fill} gap="2xs">
         <Line as={Clip} className="gap-xs">
-          <ConvTitle conv={conv} />
+          <ConvTitle conv={conv} title={title} />
           <ConvSysBadge conv={conv} />
         </Line>
         <Stack direction="row" gap="xs" align="center">

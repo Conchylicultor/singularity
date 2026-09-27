@@ -115,6 +115,8 @@ export const ConversationSchema = fieldsToZodObject(conversationFields).extend({
   kind: ConversationKindSchema,
   worktreePath: z.string(),
   taskId: z.string(),
+  // The owning task's current title (joined in `conversations_v`).
+  taskTitle: z.string(),
   active: z.boolean(),
 });
 export type Conversation = z.infer<typeof ConversationSchema>;

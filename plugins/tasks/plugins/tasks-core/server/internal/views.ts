@@ -397,19 +397,26 @@ export const tasks = pgView("tasks_v").as((qb) => {
     .leftJoin(deps, eq(deps.taskId, _tasks.id));
 });
 
-// Conversation view adds derived fields from the attempt join.
+// Conversation view adds derived fields from the attempt and task joins.
 export const conversations = pgView("conversations_v").as((qb) =>
   qb
     .select({
       ...getTableColumns(_conversations),
       worktreePath: _attempts.worktreePath,
       taskId: _attempts.taskId,
+      // The owning task's title, beside the conversation's own. Aliased: both
+      // base tables have a `title` column, and a view cannot carry two. Read by
+      // the conversations list, whose title mode can show the task's title
+      // instead of the conversation's (History reads server-side, so a
+      // client-side join on the unbounded tasks resource would not do).
+      taskTitle: sql`${_tasks.title}`.mapWith(_tasks.title).as("task_title"),
       active: sql`(${_conversations.status} <> 'done')`
         .mapWith(Boolean)
         .as("active"),
     })
     .from(_conversations)
-    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId)),
+    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
+    .innerJoin(_tasks, eq(_tasks.id, _attempts.taskId)),
 );
 
 // These view objects are declared as derived views via the `View` server

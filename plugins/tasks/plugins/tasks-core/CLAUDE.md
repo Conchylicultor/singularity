@@ -276,6 +276,7 @@ serves them.
     - `TaskListItem`
     - `TaskStatus`
     - `TaskStatusChangedPayload`
+    - `TaskTitleChangedPayload`
     - `UpdateConversationPatch`
     - `UpdateTaskPatch`
   - Exports (values):
@@ -285,6 +286,7 @@ serves them.
     - `_pushLandedTriggers`
     - `_tasks`
     - `_taskStatusChangedTriggers`
+    - `_taskTitleChangedTriggers`
     - `addTaskDependency`
     - `adoptOrphanConversation`
     - `AttemptSchema`
@@ -351,6 +353,7 @@ serves them.
     - `taskStatusChanged`
     - `TaskStatusSchema`
     - `tasksView`
+    - `taskTitleChanged`
     - `touchConversationViewed`
     - `unionTaskClusters`
     - `updateConversation`
@@ -361,6 +364,7 @@ serves them.
   - Register:
     - `defineTriggerEvent('pushes.landed')`
     - `defineTriggerEvent('tasks.statusChanged')`
+    - `defineTriggerEvent('tasks.titleChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
   - Resources:
@@ -519,6 +523,7 @@ serves them.
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
+    - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`

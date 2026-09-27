@@ -18,8 +18,10 @@ import {
   queryConversations,
 } from "@plugins/conversations/plugins/all-conversations/core";
 import { conversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
+import {
+  SidebarConversationItem,
+  type ConversationSidebarProps,
+} from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
 // Per-consumer trailing-action slot. The close action contribution lives in this
@@ -88,7 +90,7 @@ export function HistorySource({
         viewOptions: {
           list: {
             renderRow: (c: Conversation) => (
-              <ConversationItem conv={c} layout="line" />
+              <SidebarConversationItem conv={c} />
             ),
             size: "sm",
           },

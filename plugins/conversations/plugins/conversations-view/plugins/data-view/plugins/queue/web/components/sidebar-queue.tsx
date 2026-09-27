@@ -1,7 +1,9 @@
 import { type ReactElement } from "react";
 import type { DataViewSourceProps } from "@plugins/primitives/plugins/data-view/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
+import {
+  SidebarConversationItem,
+  type ConversationSidebarProps,
+} from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
 import { queueFields } from "./queue-fields";
 import {
@@ -38,9 +40,7 @@ export function QueueSource({
         onRowActivate: (r) => onNavigate(r.id),
         viewOptions: {
           list: {
-            renderRow: (c: QueueRow) => (
-              <ConversationItem conv={c} layout="line" />
-            ),
+            renderRow: (c: QueueRow) => <SidebarConversationItem conv={c} />,
             size: "sm",
           },
         },

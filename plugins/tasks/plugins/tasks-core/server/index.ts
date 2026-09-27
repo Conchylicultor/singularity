@@ -18,6 +18,7 @@ import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import {
   pushLanded,
   taskStatusChanged,
+  taskTitleChanged,
   conversationStatusChanged,
 } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
@@ -32,7 +33,7 @@ export {
   conversationAttachments,
 } from "./internal/schema-attachments";
 export { _tasks, _attempts, _conversations } from "./internal/tables";
-// The derived `conversations_v` relation (carries worktreePath / taskId / active
+// The derived `conversations_v` relation (carries worktreePath / taskId / taskTitle / active
 // on top of the base columns). Exposed so the All-conversations query compiler can
 // bind its FieldColumnMap to the SAME view the live resources read.
 export { conversations as conversationsView } from "./internal/views";
@@ -180,6 +181,14 @@ export {
 } from "./internal/tables-events";
 export type { TaskStatusChangedPayload } from "./internal/tables-events";
 
+// Emitted at every write of a task's title (create, edit, the Haiku CAS
+// upgrade). Filterable by taskId.
+export {
+  taskTitleChanged,
+  _taskTitleChangedTriggers,
+} from "./internal/tables-events";
+export type { TaskTitleChangedPayload } from "./internal/tables-events";
+
 // Emitted at the conversation status-write chokepoint whenever a single
 // conversation's status column changes. Finer-grained than taskStatusChanged;
 // the queue plugin subscribes to revalidate the focus pin.
@@ -243,6 +252,7 @@ export default {
   register: [
     pushLanded,
     taskStatusChanged,
+    taskTitleChanged,
     conversationStatusChanged,
     pushLedgerReaction,
   ],

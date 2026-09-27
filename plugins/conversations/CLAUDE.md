@@ -359,7 +359,7 @@
       - **`vscode`** — Opens the conversation's worktree in VSCode.
   - **`conversations-view`** — Sidebar list of all conversations.
     - Plugins:
-      - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
+      - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources and name their rows through SidebarConversationItem, which reads the Conversation list title setting (conversation / task / short task title). Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.
         - Plugins:
           - **`history`** — Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
           - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.

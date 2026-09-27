@@ -12,7 +12,8 @@
     - `history-actions` "close" → `CloseConvAction`
   - Uses:
     - `conversations/all-conversations.conversationFieldDefs`
-    - `conversations/conversation-ui/item.ConversationItem`
+    - `conversations/conversations-view/data-view.ConversationSidebarProps`
+    - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/data-view.defineItemActions`

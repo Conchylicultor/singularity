@@ -4,10 +4,17 @@
 
 ## Plugin reference
 
-- Description: Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
+- Description: Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources and name their rows through SidebarConversationItem, which reads the Conversation list title setting (conversation / task / short task title). Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.
 - Web:
   - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `conversations/conversation-ui/item.ConversationItem`
+    - `conversations/conversation-ui/item.ConversationItemConv`
+    - `conversations/conversation-ui/item.conversationTitle`
+    - `conversations/conversation-ui/item.ConvTitleOverride`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
@@ -18,11 +25,16 @@
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineDataViewSources`
     - `primitives/data-view.MergedDataView`
+    - `tasks/task-title.useTaskShortTitle`
   - Exports (types): `ConversationSidebarProps`
   - Exports (values):
     - `ConversationsSidebarDataView`
     - `SIDEBAR_VIEW`
+    - `SidebarConversationItem`
     - `SidebarSources`
+- Server:
+  - Contributes: `ConfigV2.Register` "config"
+  - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversations-view`

@@ -10,6 +10,8 @@ import {
   taskDependsOn,
 } from "../queries/tasks";
 import { withTaskStatusChange } from "../status-scope";
+import { taskTitleChanged } from "../tables-events";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { unionTaskClusters } from "./clusters";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -86,6 +88,12 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // vanishing-from-its-tree failure this column exists to prevent, and it needs
   // no crash, just ordinary concurrency.
   if (folderId) await unionTaskClusters(id, folderId, exec);
+  // On the creating executor, so the event commits (or rolls back) with the
+  // row. Same PgTransaction ⇄ EmitTx cast as `withTaskStatusChange`'s emit.
+  await taskTitleChanged.emit(
+    { taskId: id, title: input.title },
+    exec === db ? undefined : { tx: exec as EmitTx },
+  );
   // No parent force-expand here: expand/collapse is device-local view state
   // owned by the data-view primitive, not a column. The tree reveals a new child
   // client-side (`useTreeRow.addChild` expands the row it created under). Which
@@ -171,6 +179,12 @@ async function updateTaskOn(
       return row;
     });
     if (!updated) return null;
+    if (typeof patch.title === "string") {
+      await taskTitleChanged.emit(
+        { taskId: id, title: patch.title },
+        exec === db ? undefined : { tx: exec as EmitTx },
+      );
+    }
   }
   // No destination force-expand on a re-file, for the same reason as in
   // `createTask`: the tree opens a collapsed drop target itself
@@ -196,6 +210,8 @@ export async function updateTaskTitle(
     .set({ title, titleAuto: true })
     .where(and(eq(_tasks.id, id), inArray(_tasks.title, onlyIfTitleIn)))
     .returning({ id: _tasks.id });
+  // Only a write that landed changed the title; a lost CAS changed nothing.
+  if (updated) await taskTitleChanged.emit({ taskId: id, title });
   return !!updated;
 }
 

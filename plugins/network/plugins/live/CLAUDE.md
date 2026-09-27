@@ -550,6 +550,7 @@ grouped under the wave or item that removes it
     - `tasks/task-effort`
     - `tasks/task-events`
     - `tasks/task-preprompt`
+    - `tasks/task-title`
     - `tasks/tasks-core`
 - Central:
   - Exports (types): `CentralServedValue`

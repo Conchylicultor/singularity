@@ -4,20 +4,32 @@
 
 ## Plugin reference
 
-- Description: Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
+- Description: Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. Owns the tasks_ext_short_title side-table: a ≤3-word short title per task, regenerated on tasks.titleChanged and backfilled for recently active tasks.
 - Server:
   - Contributes:
+    - `resource.declare` "task-short-titles:rows"
     - `trigger` "task-title.on-conversation-created"
     - `trigger` "task-title.on-user-turn-sent"
+    - `trigger` "task-title.short-on-title-changed"
   - Uses:
     - `conversations.conversationCreated`
     - `conversations.userTurnSent`
+    - `database.db`
     - `infra/claude-cli.runClaudePrint`
+    - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
+    - `infra/warmup.defineWarmup`
+    - `network/live.serveCollection`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
+    - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.getTask`
+    - `tasks/tasks-core.taskTitleChanged`
     - `tasks/tasks-core.updateConversationsTitleForTask`
     - `tasks/tasks-core.updateTaskTitle`
+  - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
   - Exports (values):
     - `generateTaskTitle`
     - `scheduleTaskTitleUpdate`
@@ -26,8 +38,20 @@
   - Register:
     - `defineJob('task-title.on-conversation-created')`
     - `defineJob('task-title.on-user-turn-sent')`
+    - `defineJob('task-title.short')`
+    - `defineJob('task-title.short-on-title-changed')`
+    - `defineJob('task-title.short-backfill')`
+    - `defineWarmup('task-title.short-backfill')`
+  - Resources: `task-short-titles:rows` (keyed, point)
+- Web:
+  - Uses:
+    - `network/live.LiveRowResult`
+    - `network/live.useLiveRow`
+  - Exports (types): `TaskShortTitle`
+  - Exports (values): `useTaskShortTitle`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversations-view/data-view`
     - `page/annotations/todo/task-link`
     - `page/prompt/link`
     - `tasks`

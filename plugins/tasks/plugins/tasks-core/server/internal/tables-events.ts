@@ -40,6 +40,25 @@ export const { event: taskStatusChanged, table: _taskStatusChangedTriggers } =
     },
   });
 
+export interface TaskTitleChangedPayload {
+  taskId: string;
+  title: string;
+  [key: string]: unknown;
+}
+
+// Emitted at each of the task title write points (`createTaskOn`, `updateTaskOn`
+// with a title in the patch, and `updateTaskTitle` when its CAS write landed).
+// The payload's `title` is what was written; a subscriber doing slow work on it
+// re-reads the task before persisting anything derived, since a newer write may
+// have landed in between (its own event is then on its way).
+export const { event: taskTitleChanged, table: _taskTitleChangedTriggers } =
+  defineTriggerEvent<TaskTitleChangedPayload>({
+    name: "tasks.titleChanged",
+    filters: {
+      taskId: text("task_id"),
+    },
+  });
+
 export interface ConversationStatusChangedPayload {
   conversationId: string;
   taskId: string | null;
@@ -53,8 +72,10 @@ export interface ConversationStatusChangedPayload {
 // →done, insert). Finer-grained than `tasks.statusChanged`, which only fires
 // when the parent task's *derived* status flips. No filter columns: the sole
 // consumer (queue pin revalidation) is global and idempotent.
-export const { event: conversationStatusChanged, table: _conversationStatusChangedTriggers } =
-  defineTriggerEvent<ConversationStatusChangedPayload>({
-    name: "conversation.statusChanged",
-    filters: {},
-  });
+export const {
+  event: conversationStatusChanged,
+  table: _conversationStatusChangedTriggers,
+} = defineTriggerEvent<ConversationStatusChangedPayload>({
+  name: "conversation.statusChanged",
+  filters: {},
+});
