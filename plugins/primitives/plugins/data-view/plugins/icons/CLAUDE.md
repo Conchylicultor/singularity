@@ -64,13 +64,13 @@ drag is in flight the lane holding the drag source is kept mounted.
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.FieldCell`
     - `primitives/data-view.FieldDef`
-    - `primitives/data-view.FoldLine`
     - `primitives/data-view.GroupedSections`
     - `primitives/data-view.leadingSlot`
     - `primitives/data-view.ManualOrderConfig`
     - `primitives/data-view.pickLeadingField`
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
+    - `primitives/data-view.SectionBody`
     - `primitives/data-view.useDataViewSections`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`

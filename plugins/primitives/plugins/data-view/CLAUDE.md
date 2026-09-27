@@ -714,16 +714,20 @@ The rules, each enforced in exactly one place:
    decides. `section.count` stays the total; `section.fold = { hidden, open }` is
    present only when ≥1 entry fails `keep`.
 
-**Every flat view must draw the fold line.** The host hands views
+**A section's body band draws its fold line.** The host hands views
 `DataViewRenderProps.foldLines` (`{ open, setOpen, summary }`, present exactly
 when a fold is in effect). A view passes `foldLines.open` + `selectedRowId` to
-`useDataViewSections`, and renders `<FoldLine section foldLines/>` (web barrel)
-for each section carrying `section.fold`: `GroupedSections` does it for the
-grouped path when handed `foldLines` (inside the collapsible content, so a
-collapsed group hides it too); each view's ungrouped fast path renders it after
-its body (key `UNGROUPED_FOLD_KEY`); the table puts it in `DataTable`'s
-full-span `footer` / `DataTableGroup.footer` row. A view that skips it makes the
-folded rows vanish silently. The **tree** declares `supportsFold: false`: the
+`useDataViewSections`, and renders each section's entries inside
+`<SectionBody section foldLines className>` (web barrel) — the ONE box that pays
+the rail for that section's content, ending in the section's fold line. There is
+no separate `FoldLine` to place (it is not exported), so a view cannot forget it
+or put it on a different edge than its entries: the line is a plain `Row` in the
+same band, landing on the list rows' text column or the gallery cards' edge
+alike. Its content must not `rail-follow` again (the band paid). In the grouped
+path the view returns its `SectionBody` from `GroupedSections`' `children`
+(inside the collapsible content, so a collapsed group hides it too); the table
+puts a `SectionBody` holding only the line in `DataTable`'s full-span `footer` /
+`DataTableGroup.footer` row. The **tree** declares `supportsFold: false`: the
 host applies no fold to it and hides the setting.
 
 **The editor** is the "Fold rows" `view`-scope `Setting` (`fold-control.tsx`):
@@ -1941,7 +1945,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterPreset`
     - `FilterRule`
     - `FilterValueInputProps`
-    - `FoldLineProps`
     - `FoldRule`
     - `GlobalRowOrderContribution`
     - `GlobalRowOrderProps`
@@ -1963,6 +1966,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `MergedDataViewProps`
     - `PartitionOptions`
     - `RowTone`
+    - `SectionBodyProps`
     - `SelectionConfig`
     - `ServerDataSourceResult`
     - `ServerDataSourceSpec`
@@ -1986,7 +1990,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `EditableCell`
     - `FieldCell`
     - `FilterValueInput`
-    - `FoldLine`
     - `getDataViewDescriptor`
     - `GroupedSections`
     - `IDENTITY_CODEC`
@@ -2004,6 +2007,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `readFallback`
     - `resolveBodyFields`
     - `rowToneClass`
+    - `SectionBody`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
     - `useDataViewSections`

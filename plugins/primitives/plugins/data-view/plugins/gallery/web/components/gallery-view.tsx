@@ -12,8 +12,8 @@ import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import {
   FieldCell,
-  FoldLine,
   GroupedSections,
+  SectionBody,
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
@@ -27,6 +27,7 @@ import {
   type CreateOption,
   type DataViewAggregateConfig,
   type DataViewRenderProps,
+  type DataViewSection,
   type FieldDef,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -324,19 +325,28 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     cell.kind === "create" ? "::create" : cell.key;
   const estimateRowHeight = options.cover || coverField ? 240 : 132;
 
-  // Render one section's cells: plain auto-fill grid below the threshold (exact
-  // legacy markup), else the lane-aware windowed grid.
+  // Render one section's cells: plain auto-fill grid below the threshold, else
+  // the lane-aware windowed grid — inside the section's `SectionBody` band, which
+  // pays the rail and ends in the fold line.
+  const renderSection = (
+    section: DataViewSection<unknown>,
+    cells: GalleryCell[],
+  ): ReactNode => (
+    <SectionBody
+      section={section}
+      foldLines={props.foldLines}
+      className="py-sm"
+    >
+      {renderGrid(cells)}
+    </SectionBody>
+  );
   const renderGrid = (cells: GalleryCell[]): ReactNode => {
     // A section whose cards are all folded draws no grid — its header and fold
     // line say everything.
     if (cells.length === 0) return null;
     if (cells.length <= VIRTUALIZE_THRESHOLD) {
       return (
-        <Grid
-          minCellWidth={`${minCardWidth}px`}
-          gap="lg"
-          className="rail-follow py-sm"
-        >
+        <Grid minCellWidth={`${minCardWidth}px`} gap="lg">
           {cells.map((cell) => (
             <div key={cellKey(cell)} className="contents">
               {renderCell(cell)}
@@ -347,7 +357,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     }
     const rowsOfCells = columns > 0 ? chunkRows(cells, columns) : [];
     return (
-      <div className="rail-follow py-sm">
+      <>
         <Grid
           ref={probeRef}
           aria-hidden
@@ -372,7 +382,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
             )}
           </VirtualRows>
         ) : null}
-      </div>
+      </>
     );
   };
 
@@ -388,12 +398,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     if (options.showCreateCard && creators?.length === 1) {
       cells.push({ kind: "create" });
     }
-    return (
-      <>
-        {renderGrid(cells)}
-        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
-      </>
-    );
+    return renderSection(sections[0]!, cells);
   }
 
   // Grouped: the shared pinned/stacking group-header chrome (identical to the
@@ -406,10 +411,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       collapsedSections={props.collapsedSections}
       setSectionCollapsed={props.setSectionCollapsed}
       headerStyle={props.groupHeaders}
-      foldLines={props.foldLines}
     >
       {(section) =>
-        renderGrid(
+        renderSection(
+          section,
           section.entries.map((e) => ({
             kind: "row",
             row: e.row,

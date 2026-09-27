@@ -10,8 +10,8 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   FieldCell,
-  FoldLine,
   GroupedSections,
+  SectionBody,
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
@@ -425,49 +425,49 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // replaced, and keeping the old estimate would size the sizer ~35% long.
   const estimateSize =
     lines === 2 ? (rowSize === "sm" ? 36 : 44) : rowSize === "sm" ? 28 : 32;
-  const renderEntries = (
-    entries: DataViewRowEntry<unknown>[],
+  // One section's body: its rows — windowed past the threshold, else a plain
+  // `.map` — inside the section's `SectionBody` band, which pays the rail and
+  // ends in the fold line, so the line's caption sits on the rows' own column.
+  const renderSection = (
+    section: DataViewSection<unknown>,
     activeId: string | null,
-    group: string | null,
   ): ReactNode => {
-    // A section whose rows are all folded draws no body — its header and fold
-    // line say everything, and an empty padded stack would only add a gap.
-    if (entries.length === 0) return null;
-    if (entries.length > VIRTUALIZE_THRESHOLD) {
-      return (
-        <VirtualRows<DataViewRowEntry<unknown>>
-          items={entries}
-          estimateSize={estimateSize}
-          getKey={(entry) => entry.key}
-          itemClassName={cn("rail-follow")}
-          keepMounted={activeId ? [activeId] : undefined}
-          raisedKey={activeId ?? undefined}
-        >
-          {(entry) => renderEntry(entry, group)}
-        </VirtualRows>
-      );
-    }
+    const { entries, key: group } = section;
     // A quiet group header reads as a caption over its rows, so the section body
     // starts right under it: the header row's own padding is the only gap.
     const quietGroup = group !== null && props.groupHeaders === "quiet";
+    const windowed = entries.length > VIRTUALIZE_THRESHOLD;
     return (
-      <Stack
-        gap="none"
-        className={cn("rail-follow py-sm", quietGroup && "pt-none")}
+      <SectionBody
+        section={section}
+        foldLines={props.foldLines}
+        className={windowed ? undefined : cn("py-sm", quietGroup && "pt-none")}
       >
-        {entries.map((entry) => renderEntry(entry, group))}
-      </Stack>
+        {/* A section whose rows are all folded draws no rows — its header and
+            fold line say everything. */}
+        {entries.length === 0 ? null : windowed ? (
+          <VirtualRows<DataViewRowEntry<unknown>>
+            items={entries}
+            estimateSize={estimateSize}
+            getKey={(entry) => entry.key}
+            keepMounted={activeId ? [activeId] : undefined}
+            raisedKey={activeId ?? undefined}
+          >
+            {(entry) => renderEntry(entry, group)}
+          </VirtualRows>
+        ) : (
+          <Stack gap="none">
+            {entries.map((entry) => renderEntry(entry, group))}
+          </Stack>
+        )}
+      </SectionBody>
     );
   };
 
   const renderBody = (activeId: string | null): ReactNode =>
-    // Ungrouped: the single implicit section renders headerless — byte-for-byte
-    // the legacy markup — ending in its fold line when some rows are folded.
+    // Ungrouped: the single implicit section renders headerless.
     sections.length === 1 && sections[0]!.key === null ? (
-      <>
-        {renderEntries(sections[0]!.entries, activeId, null)}
-        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
-      </>
+      renderSection(sections[0]!, activeId)
     ) : (
       // Grouped: the shared pinned/stacking group-header chrome. GroupedSections
       // follows the ambient rail too, so header and body sit on one rail.
@@ -476,9 +476,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
         headerStyle={props.groupHeaders}
-        foldLines={props.foldLines}
       >
-        {(section) => renderEntries(section.entries, activeId, section.key)}
+        {(section) => renderSection(section, activeId)}
       </GroupedSections>
     );
 

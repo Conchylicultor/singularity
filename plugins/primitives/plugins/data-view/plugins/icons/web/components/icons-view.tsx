@@ -16,8 +16,8 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   FieldCell,
-  FoldLine,
   GroupedSections,
+  SectionBody,
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
@@ -248,11 +248,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     if (entries.length === 0) return null;
     if (entries.length <= VIRTUALIZE_THRESHOLD) {
       return (
-        <Grid
-          cellWidth={CELL_WIDTH}
-          gap="2xl"
-          className={cn(GRID_GEOMETRY, "rail-follow pb-sm")}
-        >
+        <Grid cellWidth={CELL_WIDTH} gap="2xl" className={GRID_GEOMETRY}>
           {entries.map((entry) => renderEntry(entry, group))}
         </Grid>
       );
@@ -267,7 +263,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       ? lanes.find((lane) => lane.some((e) => e.key === activeId))
       : undefined;
     return (
-      <div className="rail-follow pb-sm">
+      <>
         <Grid
           ref={probeRef}
           aria-hidden
@@ -294,25 +290,36 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
             )}
           </VirtualRows>
         ) : null}
-      </div>
+      </>
     );
   };
 
+  // One section's body: its grid inside the section's `SectionBody` band, which
+  // pays the rail and ends in the fold line.
+  const renderSection = (
+    section: DataViewSection<unknown>,
+    activeId: string | null,
+  ): ReactNode => (
+    <SectionBody
+      section={section}
+      foldLines={props.foldLines}
+      className="pb-sm"
+    >
+      {renderGrid(section.entries, activeId, section.key)}
+    </SectionBody>
+  );
+
   const renderBody = (activeId: string | null): ReactNode =>
     sections.length === 1 && sections[0]!.key === null ? (
-      <>
-        {renderGrid(sections[0]!.entries, activeId, null)}
-        <FoldLine section={sections[0]!} foldLines={props.foldLines} />
-      </>
+      renderSection(sections[0]!, activeId)
     ) : (
       <GroupedSections
         sections={sections}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
         headerStyle={props.groupHeaders}
-        foldLines={props.foldLines}
       >
-        {(section) => renderGrid(section.entries, activeId, section.key)}
+        {(section) => renderSection(section, activeId)}
       </GroupedSections>
     );
 

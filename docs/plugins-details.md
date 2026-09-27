@@ -28034,7 +28034,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterPreset`
           - `FilterRule`
           - `FilterValueInputProps`
-          - `FoldLineProps`
           - `FoldRule`
           - `GlobalRowOrderContribution`
           - `GlobalRowOrderProps`
@@ -28056,6 +28055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MergedDataViewProps`
           - `PartitionOptions`
           - `RowTone`
+          - `SectionBodyProps`
           - `SelectionConfig`
           - `ServerDataSourceResult`
           - `ServerDataSourceSpec`
@@ -28079,7 +28079,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `EditableCell`
           - `FieldCell`
           - `FilterValueInput`
-          - `FoldLine`
           - `getDataViewDescriptor`
           - `GroupedSections`
           - `IDENTITY_CODEC`
@@ -28097,6 +28096,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readFallback`
           - `resolveBodyFields`
           - `rowToneClass`
+          - `SectionBody`
           - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
           - `useDataViewSections`
@@ -28382,10 +28382,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataViewAggregateConfig`
               - `primitives/data-view.DataViewRenderProps`
+              - `primitives/data-view.DataViewSection`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
-              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.leadingSlot`
@@ -28393,6 +28393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.rowToneClass`
+              - `primitives/data-view.SectionBody`
               - `primitives/data-view.useDataViewSections`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
@@ -28428,13 +28429,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
-              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.leadingSlot`
               - `primitives/data-view.ManualOrderConfig`
               - `primitives/data-view.pickLeadingField`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.SectionBody`
               - `primitives/data-view.useDataViewSections`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
@@ -28462,7 +28463,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSection`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
-              - `primitives/data-view.FoldLine`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.leadingSlot`
@@ -28471,6 +28471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.rowToneClass`
+              - `primitives/data-view.SectionBody`
               - `primitives/data-view.useDataViewSections`
               - `primitives/data-view.useIsChipField`
               - `primitives/data-view.useItemActionZones`
@@ -28536,11 +28537,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldValue`
-              - `primitives/data-view.FoldLine`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.ManualOrderConfig`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.SectionBody`
               - `primitives/data-view.SortRule`
               - `primitives/data-view.useDataViewSections`
               - `primitives/data-view.useItemActionZones`

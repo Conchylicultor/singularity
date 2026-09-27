@@ -82,8 +82,8 @@ export {
 } from "./internal/identity-grouping";
 export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
-export { FoldLine } from "./components/fold-line";
-export type { FoldLineProps } from "./components/fold-line";
+export { SectionBody } from "./components/section-body";
+export type { SectionBodyProps } from "./components/section-body";
 export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";

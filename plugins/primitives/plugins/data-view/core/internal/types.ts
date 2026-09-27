@@ -489,8 +489,9 @@ export interface DataViewSection<TRow> {
    * Present only when the view's fold is in effect AND ≥1 entry of this section
    * fails `FoldRule.keep`. `hidden` counts those entries; `open` says whether the
    * section's fold line is open. While closed, `entries` holds only the kept
-   * entries; while open, every entry in sorted order. A renderer MUST draw a
-   * `FoldLine` for a section carrying this — otherwise its folded rows vanish.
+   * entries; while open, every entry in sorted order. A renderer draws the
+   * section's entries inside a `SectionBody` (web), which ends in the fold line —
+   * otherwise its folded rows would vanish.
    */
   fold?: { hidden: number; open: boolean };
 }
@@ -717,10 +718,10 @@ export interface DataViewRenderProps<TRow> {
   setSectionCollapsed?: (key: string, collapsed: boolean) => void;
   /**
    * The fold-line controls, present exactly when `state.fold` is in effect. A
-   * flat view passes `foldLines.open` to `useDataViewSections` and draws a
-   * `FoldLine` for every section carrying `section.fold` (`GroupedSections` does
-   * it for the grouped path; the ungrouped fast path draws its own). The tree
-   * view ignores folding — a deliberate no-op.
+   * flat view passes `foldLines.open` to `useDataViewSections` and renders each
+   * section's entries in a `SectionBody` (web), which ends in the fold line for a
+   * section carrying `section.fold`. The tree view ignores folding — a
+   * deliberate no-op.
    */
   foldLines?: DataViewFoldLines;
   /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
