@@ -182,7 +182,8 @@ function OpRowView({
           <Rigid as="span" className="w-6" />
         )}
         {waiting ? (
-          <Icon icon={hourglassEmptyIcon}
+          <Icon
+            icon={hourglassEmptyIcon}
             className={cn("size-3.5 text-warning", rigidClass())}
           />
         ) : (
@@ -269,7 +270,10 @@ export function OpStatusBanner({
             className="px-md py-sm"
           >
             {queued ? (
-              <Icon icon={hourglassEmptyIcon} className={cn("size-3.5", rigidClass())} />
+              <Icon
+                icon={hourglassEmptyIcon}
+                className={cn("size-3.5", rigidClass())}
+              />
             ) : (
               <Spinner className={cn("size-3.5", rigidClass())} />
             )}
@@ -296,11 +300,13 @@ export function OpStatusBanner({
               {elapsed}
             </span>
             {expanded ? (
-              <Icon icon={keyboardArrowUpIcon}
+              <Icon
+                icon={keyboardArrowUpIcon}
                 className={cn("size-4 text-muted-foreground", rigidClass())}
               />
             ) : (
-              <Icon icon={keyboardArrowDownIcon}
+              <Icon
+                icon={keyboardArrowDownIcon}
                 className={cn("size-4 text-muted-foreground", rigidClass())}
               />
             )}

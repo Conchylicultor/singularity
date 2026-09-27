@@ -26,7 +26,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
-    - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
+    - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
     - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
       - Plugins:
@@ -473,6 +473,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`chevron`** — Chevron breadcrumb separator — a dimmed caret pointing along the path (the default).
         - **`slash`** — Slash breadcrumb separator — the path spelling, dimmed so it reads as a mark rather than as a character of the words beside it.
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon).
+      - Plugins:
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable.
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Plugins:
         - **`arc`** — Arc progress: one unbroken arc on a faint ring, filled clockwise from the top through the current step (step 1 of 4 is a quarter, the last step the whole circle); one colour, no segments. Hover or click lists every step.
@@ -497,7 +500,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
         - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
     - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
-    - **`tokens`** [14 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
+    - **`tokens`** [15 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:
         - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).

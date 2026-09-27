@@ -148,7 +148,8 @@ function RecentConversations({
                   className="text-3xs text-muted-foreground"
                 />
               </Stack>
-              <Icon icon={arrowForwardIcon}
+              <Icon
+                icon={arrowForwardIcon}
                 className={cn(
                   "size-3.5 text-muted-foreground/50",
                   rigidClass(),

@@ -77,7 +77,11 @@ const TAB_OPTIONS = [
     label: "Dead",
     icon: <Icon icon={heartBrokenIcon} className="size-4" />,
   },
-  { id: "events" as Tab, label: "Events", icon: <Icon icon={boltIcon} className="size-4" /> },
+  {
+    id: "events" as Tab,
+    label: "Events",
+    icon: <Icon icon={boltIcon} className="size-4" />,
+  },
   { id: "triggers" as Tab, label: "Triggers" },
 ] as const;
 

@@ -14,7 +14,7 @@ const starIcon = symbol("star");
 export function BookmarkStar() {
   const { current } = useBrowserNav();
   if (current === "") {
-    return <IconButton icon={MdStarBorder} label="Add bookmark" disabled />;
+    return <IconButton icon={starIcon} label="Add bookmark" disabled />;
   }
   return <UrlBookmarkStar url={current} />;
 }
@@ -26,7 +26,7 @@ export function BookmarkStar() {
 function UrlBookmarkStar({ url }: { url: string }) {
   const state = useBookmarkToggle(url);
   if (state.pending) {
-    return <IconButton icon={MdStarBorder} label="Add bookmark" disabled />;
+    return <IconButton icon={starIcon} label="Add bookmark" disabled />;
   }
   const { bookmarked, toggle } = state;
   return (

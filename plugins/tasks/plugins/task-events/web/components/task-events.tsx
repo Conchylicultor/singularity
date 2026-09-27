@@ -76,7 +76,8 @@ function PushRow({
           {formatDate(push.createdAt)}
         </Text>
         {url ? (
-          <Icon icon={openInNewIcon}
+          <Icon
+            icon={openInNewIcon}
             className={cn("text-muted-foreground size-4", rigidClass())}
           />
         ) : null}

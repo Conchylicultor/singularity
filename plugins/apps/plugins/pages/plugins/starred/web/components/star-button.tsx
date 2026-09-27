@@ -6,14 +6,14 @@ const starIcon = symbol("star");
 
 /**
  * Presentational star toggle shared by the sidebar row action and the page
- * header. Filled star (MdGrade) when favorited, outline (MdStarBorder) when not.
+ * header. The star is drawn active (filled) when favorited, at rest when not.
  */
 export function StarButton({ pageId }: { pageId: string }) {
   const star = useStar(pageId);
   if (star.pending) {
     // Not known yet: the button's own loading state (a spinner, disabled) —
     // never the hollow star, which is what "not a favorite" looks like.
-    return <IconButton icon={MdStarBorder} label="Loading favorites" loading />;
+    return <IconButton icon={starIcon} label="Loading favorites" loading />;
   }
   const { isStarred, toggle } = star;
   return (

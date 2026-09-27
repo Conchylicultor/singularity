@@ -104,7 +104,8 @@ export function TurnSummaryCard({
           {caveats.length > 0 && (
             <BulletList
               icon={
-                <Icon icon={warningIcon}
+                <Icon
+                  icon={warningIcon}
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                   className={cn("mt-0.5 size-3 text-warning", rigidClass())}
                 />
@@ -115,7 +116,8 @@ export function TurnSummaryCard({
           {actions.length > 0 && (
             <BulletList
               icon={
-                <Icon icon={arrowForwardIcon}
+                <Icon
+                  icon={arrowForwardIcon}
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                   className={cn("mt-0.5 size-3 text-info", rigidClass())}
                 />

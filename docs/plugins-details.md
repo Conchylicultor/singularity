@@ -133,6 +133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.formatRelativeTime`
+          - `ui/icons.Icon`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
         - Contributes: `InlineChip.Tag` "conv" → `ConvChip`
@@ -191,6 +192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
+          - `ui/icons.Icon`
     - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
         - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
@@ -202,6 +204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
+          - `ui/icons.Icon`
         - Exports (values): `PrototypeChip`
       - Server:
         - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
@@ -273,7 +276,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeEngine.Theme` "Mist"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `apps-core/tabs.navigate`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
@@ -311,6 +313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
             - Exports (values): `welcomePane`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
@@ -464,7 +467,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Browser" → `BrowserLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `primitives/bar.Bar`
               - `primitives/css/clip.Clip`
               - `primitives/css/clip.clipClasses`
@@ -476,6 +478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (types):
               - `BrowserNavApi`
               - `BrowserProxyApi`
@@ -528,6 +531,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.matchResource`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
         - **`tabs`** — Browser tab strip: an in-app row of tabs, each an independent navigation stack, with a new-tab button. Renders above the chrome bar.
           - Web:
             - Contributes: `Browser.TabStrip` "Tab strip" → `TabStrip`
@@ -563,6 +567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Plugins:
         - **`curriculum`** — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, the key modes), useCurriculumWrites (its four writes, refusals as toasts), <PathCard> — the folded card holding every practice control: the chord chips, the blanks, where the path goes next, and each chapter's map — and <PathProgress>, the step bar of the chapter in hand. The Chord trainer's curriculum, server side: the chord_curriculum row (each chord practised, heard or off; how much of a loop is blank; the key modes), the live chord.curriculum resource, and the four writes — one chord, a whole chapter, the blanks, or a cell of the path.
@@ -611,6 +616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/overlay/popover.InlinePopover`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
             - Exports (types):
               - `CurriculumWrites`
               - `StandingLookup`
@@ -790,7 +796,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeEngine.Theme` "Chord"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/full-pane.FullPane`
               - `primitives/bar.Bar`
               - `primitives/css/column.Column`
@@ -1030,6 +1035,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
           - Core:
             - Uses:
               - `apps/chord/song-index.beatTimesAlignment`
@@ -1170,7 +1176,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
@@ -1464,6 +1469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/loading.Loading`
+              - `ui/icons.Icon`
         - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
           - Web:
             - Slots: `DeployRunItemActions` ← `apps.deploy.deploy-history.investigate-failure`
@@ -1553,6 +1559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
             - Exports (values):
               - `DeploymentDetail`
               - `deploymentDetailPane`
@@ -1858,6 +1865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps.StepState`
               - `primitives/view-switcher.useActiveViewId`
               - `primitives/view-switcher.ViewSwitcher`
+              - `ui/icons.Icon`
           - Core:
             - Exports (types):
               - `ReleaseState`
@@ -1990,7 +1998,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
           - Core:
@@ -2032,6 +2039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps.StepNote`
               - `primitives/setup-steps.Steps`
               - `primitives/setup-steps.StepState`
+              - `ui/icons.Icon`
             - Exports (types):
               - `SshConsoleProps`
               - `SshProviderDescriptor`
@@ -2102,6 +2110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
             - Exports (values):
               - `EventList`
               - `eventListPane`
@@ -2388,7 +2397,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "events-root"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/center.Center`
@@ -2399,6 +2407,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (values): `Events`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -2460,6 +2469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ConfigValues`
               - `EventSourceTypeContribution`
@@ -2571,7 +2581,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/events/events-core.useRefreshAllEventSources`
                   - `apps/events/sources.eventSourcesPane`
-                  - `primitives/css/spinner.Spinner`
                   - `primitives/icon-button.IconButton`
                   - `shell/toast.showToast`
                   - `shell/toast.ToastArgs`
@@ -2646,6 +2655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
                       - `primitives/relative-time.RelativeTime`
+                      - `ui/icons.Icon`
                     - Exports (values):
                       - `EventSourceRunDetail`
                       - `eventSourceRunPane`
@@ -2793,7 +2803,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
@@ -2828,6 +2837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.LaunchAgentForm`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/scope/surface-id.useSurfaceTabId`
+              - `ui/icons.Icon`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
@@ -2836,7 +2846,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeEngine.Theme` "Home"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.PaneOverlayHost`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -2858,6 +2867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/badge.Badge`
               - `primitives/css/spinner.Spinner`
+              - `ui/icons.Icon`
             - Exports (types):
               - `AttachmentChipProps`
               - `UseMailAttachment`
@@ -3063,6 +3073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
             - Exports (values): `threadPane`
           - Server:
             - Contributes:
@@ -3130,6 +3141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
         - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
           - Web:
             - Slots:
@@ -3142,7 +3154,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "mail-root"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `apps-core/tabs.navigate`
               - `integrations/gmail.GMAIL_BLOCKER_BODY`
               - `integrations/gmail.GmailAccessAction`
@@ -3159,6 +3170,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (values): `Mail`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -3243,6 +3255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
         - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
           - Web:
             - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
@@ -3264,6 +3277,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
             - Exports (values): `mailThreadsPane`
           - Server:
             - Contributes: `resource.declare` "mail-threads-revision"
@@ -3354,6 +3368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/row.Row`
               - `primitives/pane.useOpenPane`
               - `search/quick-find.QuickFindDialog`
+              - `ui/icons.Icon`
           - Server:
             - Contributes:
               - `trigger` "pages.search.reindex"
@@ -3533,6 +3548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.useOptionalRowControls`
               - `primitives/undo-redo.useUndoRedo`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
             - Exports (types):
               - `BlockTarget`
               - `PageSeedBlock`
@@ -3580,13 +3596,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
+              - `ui/icons.Icon`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
           - Web:
             - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
             - Contributes: `Apps.App` "Pages" → `PagesLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
@@ -3657,6 +3673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
           - Web:
             - Slots:
@@ -3688,6 +3705,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/pane.useOpenPane`
+                  - `ui/icons.Icon`
             - **`recent-pages`** — Recent-pages section for the Pages landing surface: the most recently updated pages as clickable rows.
               - Web:
                 - Contributes: `PagesWelcome.Section` → `RecentPagesSection`
@@ -3706,6 +3724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
+                  - `ui/icons.Icon`
     - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
       - Server:
         - Contributes: `taskCategory` "prototypes"
@@ -3787,6 +3806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/slot-render.defineDispatchSlot`
               - `shell/toast.showToast`
+              - `ui/icons.Icon`
             - Exports (types):
               - `CanvasAction`
               - `CanvasFrame`
@@ -4080,6 +4100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
             - Exports (types): `PrototypeGalleryRow`
             - Exports (values):
               - `mintPrototypeFolder`
@@ -4151,12 +4172,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `ui/icons.Icon`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
           - Core:
@@ -4186,6 +4207,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/icons.Icon`
             - Exports (values):
               - `PrototypeThumbnail`
               - `usePrototypeThumbnails`
@@ -4246,7 +4268,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Settings" → `SettingsLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
@@ -4456,6 +4477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.usePaneStore`
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
+              - `ui/icons.Icon`
             - Exports (values):
               - `Library`
               - `openSongImperative`
@@ -4668,6 +4690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `primitives/log-channels.clientLog`
               - `primitives/slot-render.renderIsolated`
+              - `ui/icons.Icon`
             - Exports (types):
               - `EmitterOptions`
               - `FxContext`
@@ -4938,6 +4961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useEventCallback`
                   - `primitives/shortcuts.useSurfaceShortcuts`
+                  - `ui/icons.Icon`
             - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
               - Web:
                 - Slots: `SonataProgress.Marker` ← `apps.sonata.progress.bars`, `apps.sonata.progress.keys`, `apps.sonata.progress.loop`, `apps.sonata.progress.sections`
@@ -5297,7 +5321,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `config_v2.useConfig`
               - `layouts/full-pane.FullPane`
               - `primitives/css/center.Center`
@@ -5424,6 +5447,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
+                  - `ui/icons.Icon`
               - Server:
                 - Uses:
                   - `apps/sonata/library._songs`
@@ -5457,6 +5481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `ui/icons.Icon`
                 - Exports (values):
                   - `MIDI_SOURCE_ID`
                   - `useSongMidiMap`
@@ -5549,6 +5574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/loading.Loading`
                   - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
+                  - `ui/icons.Icon`
               - Server:
                 - Uses:
                   - `apps/sonata/library._songs`
@@ -5673,6 +5699,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/search.SearchInput`
               - `primitives/search.useTextFilter`
+              - `ui/icons.Icon`
             - Exports (types): `TrackMixerEntry`
             - Exports (values):
               - `accidentalColor`
@@ -5730,6 +5757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
         - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
@@ -5751,6 +5779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `ui/icons.Icon`
             - Exports (values): `saveTranspose`
           - Server:
             - Contributes: `resource.declare` "sonata-transpose:rows"
@@ -5776,6 +5805,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
         - **`voicing`** — Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -5866,6 +5896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `ui/icons.Icon`
             - Exports (values):
               - `comparePane`
               - `CompositionDetail`
@@ -5931,6 +5962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.Input`
                   - `primitives/loading.Loading`
                   - `primitives/pane.openPane`
+                  - `ui/icons.Icon`
             - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
               - Web:
                 - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
@@ -5951,6 +5983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/icon-button.IconButton`
                   - `primitives/overlay/popover.InlinePopover`
                   - `primitives/search.SearchInput`
+                  - `ui/icons.Icon`
             - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
               - Web:
                 - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
@@ -5995,6 +6028,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
+                  - `ui/icons.Icon`
                 - Exports (values):
                   - `ReleaseDetail`
                   - `releaseDetailPane`
@@ -6024,6 +6058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
                       - `primitives/loading.Loading`
+                      - `ui/icons.Icon`
                 - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
                   - Web:
                     - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
@@ -6081,6 +6116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
           - Plugins:
             - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
               - Web:
@@ -6252,7 +6288,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "collapsed" → `CollapsedBadge`
-                - Uses: `apps/studio/explorer.Explorer`
+                - Uses:
+                  - `apps/studio/explorer.Explorer`
+                  - `ui/icons.Icon`
             - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "excluded" → `ExcludedBadge`
@@ -6260,10 +6298,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/studio/explorer.Explorer`
                   - `plugin-meta/composition.useAppExclusions`
                   - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
-                - Uses: `apps/studio/explorer.Explorer`
+                - Uses:
+                  - `apps/studio/explorer.Explorer`
+                  - `ui/icons.Icon`
             - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
               - Web:
                 - Contributes:
@@ -6340,7 +6381,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Studio" → `StudioLayout`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
@@ -6380,6 +6420,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/text-editor.TextEditor`
               - `primitives/ui-context/element-picker.ElementPicker`
+              - `ui/icons.Icon`
           - Core:
             - Uses: `primitives/ui-context.splitUiContext`
             - Exports (types):
@@ -6405,6 +6446,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
+                  - `ui/icons.Icon`
             - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
               - Web:
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
@@ -6436,6 +6478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
                   - `primitives/pane.PaneObject`
                   - `primitives/pane.useOpenPane`
+                  - `ui/icons.Icon`
             - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.
               - Web:
                 - Contributes: `Website.Section` "Screenshot" → `ScreenshotSection`
@@ -6530,7 +6573,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeEngine.SubTheme` "equin document"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.mdAppIcon`
               - `apps/deploy/analytics/collect.AnalyticsTracker`
               - `layouts/full-pane.FullPane`
               - `primitives/css/cluster.Cluster`
@@ -6554,6 +6596,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types): `WebsiteBandRhythm`
             - Exports (values):
@@ -6655,6 +6698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
       - `ui/theme-engine/theme-gallery`
+      - `ui/tokens/icons`
       - `ui/variant-region`
   - Core:
     - Exports (types):
@@ -6667,43 +6711,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
+    - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
       - Web:
-        - Uses:
-          - `primitives/icon-picker.extractSvgNodes`
-          - `primitives/icon-picker.SvgIcon`
+        - Uses: `ui/icons.Icon`
         - Exports (values):
-          - `appIconComponent`
           - `AppIconView`
           - `DEFAULT_APP_ICON`
-          - `mdAppIcon`
-      - Core:
-        - Uses: `primitives/icon-picker.svgNodesToString`
-        - Exports (types):
-          - `AppIcon`
-          - `AppIconSvgOptions`
-        - Exports (values): `appIconToSvg`
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-rail`
           - `apps-core/surface/floating`
-          - `apps-core/tab-bar`
-          - `apps/agent-manager/shell`
-          - `apps/browser/shell`
-          - `apps/chord/shell`
-          - `apps/debug/shell`
-          - `apps/deploy/shell`
-          - `apps/events/shell`
-          - `apps/file-explorer/shell`
-          - `apps/home/shell`
-          - `apps/mail/shell`
-          - `apps/pages/shell`
-          - `apps/prototypes/shell`
-          - `apps/settings/shell`
-          - `apps/sonata/shell`
-          - `apps/studio/shell`
-          - `apps/website/shell`
           - `config_v2/settings`
+      - Core:
+        - Exports (types):
+          - `AppIcon`
+          - `AppIconGlyph`
+          - `AppIconSvgOptions`
+        - Exports (values):
+          - `appIcon`
+          - `appIconToSvg`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses:
@@ -6818,6 +6844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.useViewportEscape`
           - `shell/action-bar.ActionBar`
+          - `ui/icons.Icon`
         - Exports (types):
           - `PlacementChromeProps`
           - `PlacementDef`
@@ -6845,7 +6872,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Shortcuts.Shortcut` ×14: "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.minimize (mod+m)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.toggle-pin (ctrl+alt+p)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.appIconComponent`
               - `apps-core/app-icon.AppIconView`
               - `apps-core/app-icon.DEFAULT_APP_ICON`
               - `apps-core/surface.PlacementChromeProps`
@@ -6894,6 +6920,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/shortcuts.defineShortcut`
               - `primitives/shortcuts.formatShortcutLabel`
               - `primitives/shortcuts.getFocusedSurfaceId`
+              - `ui/icons.Icon`
               - `ui/tab-bar.Tab`
               - `ui/tab-bar.TabIcon`
               - `ui/theme-engine.ThemeEngine`
@@ -6933,6 +6960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
                   - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
+                  - `ui/icons.Icon`
                 - Exports (types): `WallpaperCandidate`
                 - Exports (values):
                   - `DesktopContextMenu`
@@ -7022,6 +7050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
+                      - `ui/icons.Icon`
         - **`solo`** — Solo (fullscreen) surface mode — only the focused tab, full-viewport, with a hover exit button and an Esc shortcut back to the previous mode.
           - Web:
             - Contributes:
@@ -7039,7 +7068,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
         - Uses:
           - `apps-core.Apps`
-          - `apps-core/app-icon.appIconComponent`
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.placementIsNewTabFollows`
           - `apps-core/tabs.usePlacementCapabilities`
@@ -7194,7 +7222,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.appThemeScope`
         - Exports (values): `useRootThemeScope`
       - Cross-plugin:
-        - Imported by: `ui/theme-engine`
+        - Imported by:
+          - `ui/theme-engine`
+          - `ui/tokens/icons`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
@@ -7225,6 +7255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.Pane`
       - `primitives/pane.useOpenPane`
       - `shell/notifications.toast`
+      - `ui/icons.Icon`
     - Exports (types):
       - `AuthProviderContribution`
       - `AuthProviderRowProps`
@@ -7413,6 +7444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps.StepLink`
               - `primitives/setup-steps.StepNote`
               - `primitives/setup-steps.Steps`
+              - `ui/icons.Icon`
             - Exports (values): `appleSetupPane`
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Web:
@@ -7555,6 +7587,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.PaneChrome`
       - `runs.RunsDataView`
       - `runs.useRun`
+      - `ui/icons.Icon`
     - Exports (values):
       - `backupPane`
       - `BackupRunDetail`
@@ -7642,6 +7675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runs.armText`
           - `runs.runArmFields`
           - `runs.Runs`
+          - `ui/icons.Icon`
       - Server:
         - Uses:
           - `backup._backupRuns`
@@ -7866,6 +7900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
+      - `ui/icons.Icon`
     - Exports (types): `ReloadAdvice`
     - Exports (values):
       - `buildDetailPane`
@@ -7984,6 +8019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live.useLiveRow`
           - `primitives/css/ui-kit.Button`
           - `primitives/launch.LaunchAgentPopover`
+          - `ui/icons.Icon`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
@@ -8021,6 +8057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/log-channels.LiveLogChannel`
           - `shell/notifications.toast`
+          - `ui/icons.Icon`
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -8149,6 +8186,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/loading.Loading`
+          - `ui/icons.Icon`
         - Exports (types): `DeploymentReading`
         - Exports (values):
           - `DeploymentChain`
@@ -8335,6 +8373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.PaneChrome`
       - `primitives/pane.PaneScroll`
       - `shell.Shell`
+      - `ui/icons.Icon`
     - Exports (values): `FileTree`
   - Server:
     - Uses:
@@ -8677,6 +8716,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine/saved-themes`
       - `ui/theme-engine/theme-customizer`
       - `ui/theme-engine/theme-gallery`
+      - `ui/tokens/icons`
       - `ui/tweakcn/community-browser`
       - `ui/variant-region`
   - Test helpers:
@@ -8830,6 +8870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/syntax-highlight.HighlightedCode`
           - `shell/toast.showToast`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ConfigConflictContext`
           - `ConfigConflictField`
@@ -8882,6 +8923,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings.ConfigDetailSlots`
               - `primitives/css/ui-kit.Button`
               - `primitives/launch.LaunchAgentPopover`
+              - `ui/icons.Icon`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Web:
@@ -9218,6 +9260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `shell.Shell`
+          - `ui/icons.Icon`
         - Exports (types): `SystemAgentDescriptor`
         - Exports (values):
           - `agentDetailPane`
@@ -9809,6 +9852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "allow-files"
             - Uses:
@@ -9842,6 +9886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/slot-render.defineRenderSlot`
               - `reorder.isNodeData`
               - `reorder.useReorderedEntries`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ArtifactKind`
               - `ArtifactRowProps`
@@ -9945,6 +9990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/text-editor.TextEditor`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Server:
             - Contributes: `resource.declare` "edited-files"
@@ -10109,6 +10155,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "commits-graph.graph"
             - Uses:
@@ -10154,6 +10201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/search.useTextFilter`
               - `shell/notifications.toast`
               - `tasks.useTask`
+              - `ui/icons.Icon`
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
             - Contributes: `Item.Chips` → `DependentCountItemChip`
@@ -10173,6 +10221,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/live-state.useCombinedResources`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
           - Server:
             - Uses:
               - `conversations.deleteConversation`
@@ -10199,6 +10248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `shell/notifications.toast`
               - `tasks.useActiveDependentCount`
+              - `ui/icons.Icon`
           - Server:
             - Uses:
               - `conversations.deleteConversation`
@@ -10219,6 +10269,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
           - Server:
             - Uses:
               - `conversations.deleteConversation`
@@ -10243,6 +10294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (values): `ExitMenu`
           - Cross-plugin:
             - Imported by:
@@ -10258,6 +10310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/launch.LaunchControl`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `ui/icons.Icon`
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Web:
             - Contributes: `JsonlRowActions.Item` "fork-session" → `ForkSessionAction`
@@ -10297,6 +10350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
           - Server:
             - Uses:
               - `conversations.deleteConversation`
@@ -10353,6 +10407,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/icons.Icon`
             - Exports (types):
               - `EventFilterContribution`
               - `OverlayContribution`
@@ -10447,6 +10502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/markdown.Markdown`
                   - `primitives/select-scope.ContentScope`
+                  - `ui/icons.Icon`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
@@ -10531,6 +10587,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`deferred-tools`** — Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.
                   - Web:
                     - Contributes:
@@ -10580,6 +10637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
@@ -10606,6 +10664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`hook-success`** — Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
@@ -10639,6 +10698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
@@ -10666,12 +10726,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
                       - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
+                      - `ui/icons.Icon`
                 - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "remote_session_change" → `RemoteSessionView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`session-context`** — Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
@@ -10692,6 +10754,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `ui/icons.Icon`
                 - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
@@ -10726,6 +10789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
                 - **`tool-output-notice`** — Renders the harness's notes about a tool's output — a Read that came back partial, and a Bash command whose output only the agent saw.
                   - Web:
                     - Contributes:
@@ -10734,6 +10798,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `ui/icons.Icon`
             - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
               - Web:
                 - Uses:
@@ -10857,6 +10922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
                   - `primitives/launch.LaunchAgentPopover`
                   - `primitives/slot-render.useDispatchOutcome`
+                  - `ui/icons.Icon`
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
@@ -10864,6 +10930,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/text.Text`
+                  - `ui/icons.Icon`
             - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the outline rail primitive — this plugin owns only which turns exist and how a turn maps to its row.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "outline" → `ConversationOutline`
@@ -10882,6 +10949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/text.Text`
+                  - `ui/icons.Icon`
             - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "queue-operation" → `QueueOperationRow`
@@ -10889,12 +10957,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
+                  - `ui/icons.Icon`
             - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
               - Web:
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `ui/icons.Icon`
                 - Exports (values): `QueuedPromptCard`
               - Cross-plugin:
                 - Imported by:
@@ -10909,6 +10979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
                   - `primitives/row-actions.RowActions`
                   - `primitives/slot-render.defineRenderSlot`
+                  - `ui/icons.Icon`
                 - Exports (types): `RowActionContribution`
                 - Exports (values):
                   - `CopyTextAction`
@@ -10969,6 +11040,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.ElapsedTime`
                   - `primitives/relative-time.formatElapsed`
                   - `primitives/relative-time.useNow`
+                  - `ui/icons.Icon`
                 - Exports (types):
                   - `SubagentEntry`
                   - `SubagentStateDisplay`
@@ -11044,6 +11116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `ui/icons.Icon`
             - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "task-notification" → `TaskNotificationRow`
@@ -11157,6 +11230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
+                      - `ui/icons.Icon`
                     - Exports (values): `agentReportPane`
                   - Cross-plugin:
                     - Imported by:
@@ -11208,6 +11282,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/persistent-draft.useDraft`
                       - `primitives/persistent-draft.writeDraft`
                       - `shell/notifications.toast`
+                      - `ui/icons.Icon`
                     - Exports (values): `answerQuestionDelivery`
                   - Server:
                     - Uses:
@@ -11259,6 +11334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
+                      - `ui/icons.Icon`
                 - **`page-tools`** — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes no renderer itself — one sub-plugin per tool does.
                   - Web:
                     - Uses:
@@ -11272,6 +11348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
+                      - `ui/icons.Icon`
                     - Exports (types): `PageApplyReport`
                     - Exports (values):
                       - `PageMarkdown`
@@ -11350,6 +11427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/pane.useOpenPane`
+                      - `ui/icons.Icon`
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                   - Web:
                     - Contributes:
@@ -11376,6 +11454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
+                      - `ui/icons.Icon`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Slots: `workflow-node.actions` ← `primitives.pane`
@@ -11411,6 +11490,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
+                      - `ui/icons.Icon`
                   - Cross-plugin:
                     - Imported by: `conversations/conversation-view/jsonl-viewer/subagents`
                   - Core:
@@ -11447,6 +11527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/outline/scroll-spy.useActiveInView`
                   - `primitives/slot-render.defineRenderSlot`
+                  - `ui/icons.Icon`
                 - Exports (types):
                   - `StatTone`
                   - `TranscriptRead`
@@ -11507,6 +11588,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/inline-text.InlineText`
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
                   - `primitives/select-scope.ContentScope`
+                  - `ui/icons.Icon`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
             - Contributes:
@@ -11527,6 +11609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
@@ -11572,6 +11655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.conversationPane`
               - `primitives/css/ui-kit.Button`
               - `tasks/task-draft-form.TaskDraftPopover`
+              - `ui/icons.Icon`
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
           - Web:
             - Contributes:
@@ -11629,6 +11713,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/relative-time.formatElapsed`
               - `primitives/relative-time.useNow`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "worktree-ops"
             - Uses:
@@ -11737,6 +11822,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/prompt-editor.PromptEditorSlots`
               - `primitives/usage-rank.recordUsage`
               - `primitives/usage-rank.useUsageOrder`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
@@ -11771,6 +11857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
             - Exports (values): `pushAndExitDelivery`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -11855,6 +11942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch.useLaunchConversation`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `shell/notifications.toast`
+              - `ui/icons.Icon`
             - Exports (types): `RewindMode`
             - Exports (values): `useGoBackToMessage`
           - Server:
@@ -11901,6 +11989,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.ElapsedTime`
+              - `ui/icons.Icon`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
             - Contributes: `Conversation.Header` → `StatusBadge`
@@ -11924,6 +12013,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks.useTask`
               - `tasks/task-detail.taskDetailPane`
               - `tasks/task-status.STATUS_META`
+              - `ui/icons.Icon`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Web:
             - Slots: `conv-terminal.actions` ← `primitives.pane`
@@ -11943,6 +12033,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/terminal.terminalPane`
+              - `ui/icons.Icon`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Web:
             - Contributes:
@@ -11959,6 +12050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "config"
@@ -12028,6 +12120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/pane.usePaneStore`
           - `shell.Shell`
+          - `ui/icons.Icon`
       - Plugins:
         - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources and name their rows through SidebarConversationItem, which reads the Conversation list title setting (conversation / task / short task title). Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.
           - Web:
@@ -12360,6 +12453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SelectItem`
           - `primitives/css/ui-kit.SelectTrigger`
           - `primitives/css/ui-kit.SelectValue`
+          - `ui/icons.Icon`
         - Exports (types):
           - `PrepromptItem`
           - `PrepromptSelectProps`
@@ -12407,6 +12501,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
+          - `ui/icons.Icon`
         - Exports (values): `recoveryPane`
       - Server:
         - Uses:
@@ -12489,6 +12584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `shell/notifications.toast`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `resource.declare` "conversation-summaries"
@@ -13424,6 +13520,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/perfs/boot-trace.useBootTrace`
           - `primitives/relative-time.RelativeTime`
           - `shell/notifications.toast`
+          - `ui/icons.Icon`
         - Exports (values): `BootProfileGantt`
       - Server:
         - Contributes: `fork-data-exclusion` "boot_traces"
@@ -13519,6 +13616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `ui/icons.Icon`
         - Exports (values): `broadcastsPane`
       - Server:
         - Uses:
@@ -13571,6 +13669,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/relative-time.RelativeTime`
+          - `ui/icons.Icon`
         - Exports (values): `claudeCliCallsPane`
     - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Files one rolling `config-orphans-stranded` report at boot when any real user override is stranded.
       - Web:
@@ -13598,6 +13697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/relative-time.RelativeTime`
+          - `ui/icons.Icon`
         - Exports (values): `configOrphansPane`
       - Server:
         - Contributes: `report-kind` "config-orphans-stranded"
@@ -13861,6 +13961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `ui/icons.Icon`
             - Exports (values): `liveStateEmitPane`
           - Server:
             - Uses: `infra/endpoints.implement`
@@ -14022,6 +14123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "op-rate"
@@ -14102,6 +14204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/slot-render.defineRenderSlot`
+          - `ui/icons.Icon`
         - Exports (types):
           - `DragState`
           - `GanttContainerContextValue`
@@ -14416,6 +14519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
+          - `ui/icons.Icon`
         - Exports (values): `queuePane`
       - Core:
         - Uses: `primitives/pane.defineRoute`
@@ -14637,6 +14741,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `ui/icons.Icon`
         - Exports (values): `renderProfilerPane`
       - Core:
         - Exports (types):
@@ -14702,6 +14807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/scope/tab-id.getTabId`
           - `reports.investigate`
           - `reports.Reports`
+          - `ui/icons.Icon`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
@@ -14906,6 +15012,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `reports.Reports`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "slow-op"
@@ -15043,6 +15150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
+              - `ui/icons.Icon`
     - **`stall-monitor`** — Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
       - Web:
         - Contributes:
@@ -15055,6 +15163,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "stall-monitor"
@@ -15086,6 +15195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
+          - `ui/icons.Icon`
       - Server:
         - Contributes: `report-kind` "span-stuck"
         - Uses:
@@ -15392,6 +15502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `primitives/tabbed-view.defineTabbedView`
+              - `ui/icons.Icon`
             - Exports (types): `IncidentInfo`
             - Exports (values):
               - `groupIncidents`
@@ -15421,6 +15532,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `trace-event-class` "spans"
             - Uses: `debug/trace/engine.defineTraceEventClass`
@@ -15478,6 +15590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `ui/icons.Icon`
         - Exports (values): `worktreeCleanupPane`
       - Server:
         - Contributes: `report-kind` "worktree-reap-failed"
@@ -15616,6 +15729,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (types):
           - `AvatarSpec`
           - `SvgNode`
@@ -15634,6 +15748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/avatar.Avatar`
               - `primitives/avatar.AvatarPicker`
               - `primitives/css/center.Center`
+              - `ui/icons.Icon`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -15667,6 +15782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `boolFieldType`
           - `boolIdentity`
@@ -15735,6 +15851,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/center.Center`
               - `primitives/data-view.DataViewSlots`
+              - `ui/icons.Icon`
         - **`storage`** — Boolean field type: DB storage capability — maps to a Postgres boolean column.
           - Server:
             - Contributes: `fields.storage` "bool"
@@ -15744,7 +15861,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`table`** — Boolean field type: data-view table cell (read-only check/dash cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
-            - Uses: `primitives/data-view.DataViewSlots`
+            - Uses:
+              - `primitives/data-view.DataViewSlots`
+              - `ui/icons.Icon`
         - **`text-cast`** — Boolean field type: server text→typed SQL cast capability — presents the raw TEXT storage column as ::boolean for server-delegated DataView filter/sort.
           - Server:
             - Contributes: `fields.value-text-cast` "bool"
@@ -15757,6 +15876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `colorFieldType`
           - `colorIdentity`
@@ -15793,6 +15913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `dateFieldType`
           - `dateIdentity`
@@ -15857,6 +15978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.DataViewSlots`
               - `primitives/date-picker.Calendar`
+              - `ui/icons.Icon`
           - Core:
             - Exports (types):
               - `DateAnchor`
@@ -15900,6 +16022,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `directoryPathFieldType`
           - `directoryPathIdentity`
@@ -15929,6 +16052,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `dynamicEnumFieldType`
           - `dynamicEnumIdentity`
@@ -15974,6 +16098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `enumFieldType`
           - `enumIdentity`
@@ -15990,6 +16115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
               - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
             - Contributes: `Fields.Renderer` "enum" → `Rendered`
@@ -16057,6 +16183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
           - `fields/number.numberFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `floatFieldType`
           - `floatIdentity`
@@ -16103,6 +16230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `imageFieldType`
           - `imageIdentity`
@@ -16120,6 +16248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
           - `fields/number.numberFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `intFieldType`
           - `intIdentity`
@@ -16178,6 +16307,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `jsonFieldType`
           - `jsonIdentity`
@@ -16228,6 +16358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldType`
           - `fields.FieldsRecord`
           - `fields.InferFieldsObject`
+          - `ui/icons.symbol`
         - Exports (types): `ListItem`
         - Exports (values):
           - `listFieldType`
@@ -16269,6 +16400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
           - `fields/text.textFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `multilineTextFieldType`
           - `multilineTextIdentity`
@@ -16298,6 +16430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `numberFieldType`
           - `numberIdentity`
@@ -16341,6 +16474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `objectFieldType`
           - `objectIdentity`
@@ -16379,6 +16513,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
           - `fields/text.textFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `rankFieldType`
           - `rankIdentity`
@@ -16412,6 +16547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (types):
           - `ReorderNode`
           - `ReorderTree`
@@ -16457,6 +16593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `secretFieldType`
           - `secretIdentity`
@@ -16478,6 +16615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.Input`
               - `primitives/loading.Loading`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "config-v2.secret-meta"
             - Uses:
@@ -16558,6 +16696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `stringListFieldType`
           - `stringListIdentity`
@@ -16589,6 +16728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `tagsFieldType`
           - `tagsIdentity`
@@ -16661,6 +16801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `textFieldType`
           - `textIdentity`
@@ -16745,6 +16886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
           - `fields/text.textFieldType`
+          - `ui/icons.symbol`
         - Exports (values):
           - `uuidFieldType`
           - `uuidIdentity`
@@ -16781,6 +16923,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `ui/icons.symbol`
         - Exports (types): `VariantValue`
         - Exports (values):
           - `variantFieldType`
@@ -17672,6 +17815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `generateReorderableSlots`
               - `generateSpaceRamp`
               - `generateTokenGroupVars`
+              - `iconManifestPath`
               - `isAppContent`
               - `listNamedCompositionRegistries`
               - `listReviewMarkedOverrides`
@@ -17701,6 +17845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderDetailsDoc`
               - `renderEagerTierManifest`
               - `renderFieldsEagerManifest`
+              - `renderIconManifest`
               - `renderPluginClaudeMd`
               - `renderReorderableSlotsManifest`
               - `renderSpaceRamp`
@@ -17859,6 +18004,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/auto-start`
               - `tasks/launch-options`
               - `tasks/task-draft-form`
+              - `ui/icons`
               - `ui/segmented-progress-bar/arc`
               - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
@@ -18116,7 +18262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
@@ -18170,6 +18316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `primitives/css/control-panel.ControlPanel`
       - `shell/action-bar.ActionBar`
+      - `ui/icons.Icon`
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:
@@ -18247,6 +18394,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-draft-form.draftInsert`
       - `tasks/task-draft-form.TaskDraftInsert`
       - `tasks/task-draft-form.TaskDraftPopover`
+      - `ui/icons.Icon`
     - Exports (types): `ImproveSegmentContribution`
     - Exports (values):
       - `ImproveSlots`
@@ -18793,6 +18941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list`
           - `tasks/task-preprompt`
           - `tasks/task-source-url`
+          - `ui/icons/sprites`
           - `ui/theme-engine/saved-themes`
           - `ui/theme-engine/theme-customizer`
           - `ui/theme-engine/theme-gallery`
@@ -19052,6 +19201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
+          - `ui/icons.Icon`
         - Exports (values): `eventsTestPane`
       - Server:
         - Uses:
@@ -20875,6 +21025,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
           - `primitives/ui-context.UiRegion`
+          - `ui/icons.Icon`
         - Exports (values):
           - `MillerColumns`
           - `PaneOverlayHost`
@@ -21124,6 +21275,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
           - `tasks/task-title`
           - `tasks/tasks-core`
+          - `ui/icons/sprites`
       - Central:
         - Exports (types): `CentralServedValue`
         - Exports (values): `serveValue`
@@ -21407,7 +21559,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "agent-note"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/annotations.defineAnnotationBlock`
+            - Uses:
+              - `page/annotations.defineAnnotationBlock`
+              - `ui/icons.symbol`
             - Exports (values):
               - `agentNotesBlock`
               - `agentNotesDataSchema`
@@ -21478,7 +21632,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "context"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/annotations.defineAnnotationBlock`
+            - Uses:
+              - `page/annotations.defineAnnotationBlock`
+              - `ui/icons.symbol`
             - Exports (values):
               - `humanNotesBlock`
               - `humanNotesDataSchema`
@@ -21518,7 +21674,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderInstructions`
             - Register: `defineJob('retention.page_instructions_deliveries')`
           - Core:
-            - Uses: `page/annotations.defineAnnotationBlock`
+            - Uses:
+              - `page/annotations.defineAnnotationBlock`
+              - `ui/icons.symbol`
             - Exports (types): `InstructionsData`
             - Exports (values):
               - `instructionsBlock`
@@ -21538,6 +21696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/badge.Badge`
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
         - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -21553,7 +21712,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "private-note"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/annotations.defineAnnotationBlock`
+            - Uses:
+              - `page/annotations.defineAnnotationBlock`
+              - `ui/icons.symbol`
             - Exports (values):
               - `privateNotesBlock`
               - `privateNotesDataSchema`
@@ -21572,12 +21733,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
               - `primitives/css/row.Row`
+              - `ui/icons.Icon`
             - Exports (values): `todoBlock`
           - Server:
             - Contributes: `page.block-data` "todo"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/annotations.defineAnnotationBlock`
+            - Uses:
+              - `page/annotations.defineAnnotationBlock`
+              - `ui/icons.symbol`
             - Exports (values):
               - `todoBlock`
               - `todoDataSchema`
@@ -21671,6 +21835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
+          - `ui/icons.Icon`
         - Exports (values): `AttachmentUpload`
       - Cross-plugin:
         - Imported by:
@@ -21695,6 +21860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `ui/icons.Icon`
         - Exports (values):
           - `AUDIO_TYPE`
           - `audioBlock`
@@ -21702,7 +21868,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `page.block-data` "audio"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `AUDIO_TYPE`
           - `audioBlock`
@@ -21749,6 +21917,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/text-editor/paste-images.attachmentUrl`
           - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
         - Exports (values):
           - `BOOKMARK_TYPE`
           - `bookmarkBlock`
@@ -21769,6 +21938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (types):
           - `LinkMeta`
           - `LinkPreview`
@@ -21791,6 +21961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.textDataSchema`
+          - `ui/icons.symbol`
         - Exports (values): `bulletedListBlock`
     - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
       - Web:
@@ -21816,6 +21987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/container.defineContainerBlock`
           - `page/editor.SvgNodeSchema`
+          - `ui/icons.symbol`
         - Exports (types): `CalloutColor`
         - Exports (values):
           - `CALLOUT_COLORS`
@@ -21854,12 +22026,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/syntax-highlight.SHIKI_LANGS`
           - `primitives/syntax-highlight.useDarkMode`
           - `primitives/syntax-highlight.useHighlightedHtml`
+          - `ui/icons.Icon`
         - Exports (values): `codeBlock`
       - Server:
         - Contributes: `page.block-data` "code-block"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values): `codeBlock`
     - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the two decoration seats a container may ask for — a gutter glyph that leads its first line, or the card's own name in the box's top-right corner, revealed only while the pointer is inside it (both share the static/interactive branch and the appearance popover; the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
       - Web:
@@ -21921,7 +22096,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `page.block-data` "divider"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `DIVIDER_TYPE`
           - `dividerBlock`
@@ -22011,6 +22188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.TopLevelEntry`
           - `reorder.useReorderedEntries`
           - `shell/toast.showToast`
+          - `ui/icons.Icon`
         - Exports (types):
           - `BlockAnchorProps`
           - `BlockChrome`
@@ -22521,6 +22699,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
         - Exports (values):
           - `EMBED_TYPE`
           - `embedBlock`
@@ -22528,7 +22707,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `page.block-data` "embed"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `EMBED_TYPE`
           - `embedBlock`
@@ -22553,6 +22734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `ui/icons.Icon`
         - Exports (values):
           - `FILE_TYPE`
           - `fileBlock`
@@ -22560,7 +22742,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `page.block-data` "file"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `FILE_TYPE`
           - `fileBlock`
@@ -22627,6 +22811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/undo-redo.localUndoProps`
+              - `ui/icons.Icon`
         - **`strikethrough`** — Strikethrough mark button for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `StrikethroughButton`
@@ -22655,6 +22840,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.defineBlock`
               - `page/editor.textDataSchema`
+              - `ui/icons.symbol`
             - Exports (values): `heading1Block`
         - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
           - Web:
@@ -22668,6 +22854,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.defineBlock`
               - `page/editor.textDataSchema`
+              - `ui/icons.symbol`
             - Exports (values): `heading2Block`
         - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
           - Web:
@@ -22681,6 +22868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.defineBlock`
               - `page/editor.textDataSchema`
+              - `ui/icons.symbol`
             - Exports (values): `heading3Block`
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
       - Web:
@@ -22701,12 +22889,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/overlay/image-viewer.useImageViewerTrigger`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `ui/icons.Icon`
         - Exports (values): `imageBlock`
       - Server:
         - Contributes: `page.block-data` "image"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values): `imageBlock`
     - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
       - Server:
@@ -22749,6 +22940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useCaretQuery`
+          - `ui/icons.Icon`
       - Core:
         - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
         - Exports (types): `DateMentionFields`
@@ -22963,7 +23155,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "equation"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/editor.defineBlock`
+            - Uses:
+              - `page/editor.defineBlock`
+              - `ui/icons.symbol`
             - Exports (values):
               - `EQUATION_TYPE`
               - `equationBlock`
@@ -23017,6 +23211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.textDataSchema`
+          - `ui/icons.symbol`
         - Exports (values): `numberedListBlock`
     - **`open-as-page`** — Open as page, in the block ⋮⋮ menu: opens one block — a card, a heading with its nested lines, a toggle — as a page of its own beside the current one, editable and saving to the page that holds it. Contributed into Editor.BlockMenuItem, and absent where the host declared no PageNavigation.openBlock, on a sub-page row (which already opens), and on the block a view is already zoomed into.
       - Web:
@@ -23026,6 +23221,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.useEditorScope`
           - `page/page-reference.usePageNavigation`
           - `primitives/css/row.Row`
+          - `ui/icons.Icon`
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
@@ -23048,6 +23244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/search.SearchInput`
           - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
         - Exports (values): `pageLinkBlock`
       - Server:
         - Contributes:
@@ -23065,6 +23262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `primitives/css/text.typeVar`
+          - `ui/icons.symbol`
         - Exports (values): `pageLinkBlock`
     - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
       - Web:
@@ -23142,6 +23340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/loading.Loading`
           - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
         - Exports (types): `PlaceProviderContribution`
         - Exports (values):
           - `Place`
@@ -23166,6 +23365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.defineEndpoint`
           - `page/editor.defineBlock`
           - `primitives/css/text.typeVar`
+          - `ui/icons.symbol`
         - Exports (types):
           - `PlaceData`
           - `PlaceSnapshot`
@@ -23221,6 +23421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/launch.LaunchControl`
               - `tasks/tasks-core.useTaskConversations`
+              - `ui/icons.Icon`
             - Exports (values): `promptBlock`
           - Server:
             - Contributes: `page.block-data` "prompt"
@@ -23229,6 +23430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.defineBlock`
               - `page/editor.textBlockSchema`
+              - `ui/icons.symbol`
             - Exports (values):
               - `promptBlock`
               - `promptDataSchema`
@@ -23296,12 +23498,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/container.ContainerBackdrop`
           - `page/container.ContainerNoRow`
           - `page/editor.Editor`
+          - `ui/icons.Icon`
         - Exports (values): `quoteBlock`
       - Server:
         - Contributes: `page.block-data` "quote"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/container.defineContainerBlock`
+        - Uses:
+          - `page/container.defineContainerBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `quoteBlock`
           - `quoteDataSchema`
@@ -23338,6 +23543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/syntax-highlight.HighlightedCode`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `ui/icons.Icon`
         - Exports (types):
           - `BlockDiffKind`
           - `ForestBlock`
@@ -23392,6 +23598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.defineBlock`
           - `page/editor.runsLength`
           - `page/editor.textDataSchema`
+          - `ui/icons.symbol`
         - Exports (values): `textBlock`
     - **`to-do`** — To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
       - Web:
@@ -23405,6 +23612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.textBlockSchema`
+          - `ui/icons.symbol`
         - Exports (values):
           - `toDoBlock`
           - `toDoDataSchema`
@@ -23420,6 +23628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.textBlockSchema`
+          - `ui/icons.symbol`
         - Exports (values):
           - `toggleBlock`
           - `toggleDataSchema`
@@ -23432,6 +23641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`
           - `primitives/css/row.Row`
+          - `ui/icons.Icon`
     - **`url-paste`** — Paste a URL into any text block (or drop one into an empty block) and it becomes a link at once, with a menu beside it: keep it as a link, mention it (the page's title becomes the link text), or — when the link is all the block holds — turn the block into a bookmark or embed.
       - Web:
         - Uses:
@@ -23448,6 +23658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
           - `shell/toast.showToast`
+          - `ui/icons.Icon`
     - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
@@ -23462,6 +23673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `ui/icons.Icon`
         - Exports (values):
           - `VIDEO_TYPE`
           - `videoBlock`
@@ -23469,7 +23681,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `page.block-data` "video"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses: `page/editor.defineBlock`
+        - Uses:
+          - `page/editor.defineBlock`
+          - `ui/icons.symbol`
         - Exports (values):
           - `VIDEO_TYPE`
           - `videoBlock`
@@ -24042,6 +24256,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/spacing.Stack`
+                  - `ui/icons.Icon`
             - **`render-diff`** (excluded — cascade) — Diff renderer for the structure facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
@@ -24277,6 +24492,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ExportRuntime`
           - `PluginNode`
@@ -24379,6 +24595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `ui/icons.Icon`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "Runtimes"
@@ -24407,6 +24624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/pane.useOpenPane`
+              - `ui/icons.Icon`
     - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
         - Uses:
@@ -24457,6 +24675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useLatestRef`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/shortcuts.formatShortcutLabel`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ActionForm`
           - `ItemFormChannel`
@@ -24610,6 +24829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useRoute`
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
+          - `ui/icons.Icon`
         - Exports (types):
           - `AppShellSidebarComponent`
           - `AppShellSidebarItem`
@@ -24659,6 +24879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.useControlSize`
           - `primitives/icon-picker.IconPicker`
           - `primitives/icon-picker.SvgIcon`
+          - `ui/icons.Icon`
         - Exports (types):
           - `AvatarColorPick`
           - `AvatarPickerProps`
@@ -24731,6 +24952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/row-actions.RowActions`
           - `primitives/slot-render.renderIsolated`
+          - `ui/icons.Icon`
         - Exports (types):
           - `BreadcrumbProps`
           - `BreadcrumbSegment`
@@ -24769,6 +24991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `ui/icons.Icon`
         - Exports (types):
           - `CollapsibleChevronProps`
           - `CollapsibleContentProps`
@@ -24861,6 +25084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ScrollArea`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/overlay/tooltip.Kbd`
+          - `ui/icons.Icon`
         - Exports (types): `CommandPaletteItem`
         - Exports (values): `CommandPalette`
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
@@ -24909,7 +25133,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `CommitRowSchema`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
-        - Uses: `primitives/css/ui-kit.Button`
+        - Uses:
+          - `primitives/css/ui-kit.Button`
+          - `ui/icons.Icon`
         - Exports (types): `CopyButtonProps`
         - Exports (values):
           - `CopyButton`
@@ -25451,6 +25677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
               - `ControlPanelEmptyProps`
@@ -26355,6 +26582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/commits`
               - `tasks/attempt-view`
               - `tasks/task-events`
+              - `tasks/task-graph`
               - `tasks/task-status`
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
@@ -26439,6 +26667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/icons`
               - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
@@ -26923,6 +27152,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/icons`
               - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
@@ -26934,13 +27164,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/variant-region`
         - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
           - Web:
-            - Uses: `primitives/css/ui-kit.cn`
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
             - Exports (types): `SpinnerProps`
             - Exports (values): `Spinner`
           - Cross-plugin:
             - Imported by:
               - `apps/browser/tabs`
-              - `apps/events/sources/refresh-all`
               - `apps/mail/attachments`
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
@@ -27428,6 +27659,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/quick-theme`
               - `ui/theme-engine/theme-customizer`
               - `ui/theme-engine/theme-gallery`
+              - `ui/tokens/icons`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
@@ -27449,6 +27681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.PortalThemeScopeProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
+              - `ui/icons.IconScopeProvider`
             - Exports (types):
               - `ThemeProps`
               - `ThemeSurface`
@@ -27529,6 +27762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/cost`
               - `stats/pushes`
               - `stats/responsiveness`
+              - `ui/tokens/icons`
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
             - Uses:
@@ -27543,6 +27777,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/select-scope.scopeSelectAllKeyDown`
               - `primitives/shortcuts.ShortcutDescriptor`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ButtonIconSize`
               - `ControlSize`
@@ -28005,6 +28240,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine`
               - `ui/theme-engine/theme-customizer`
               - `ui/theme-engine/theme-gallery`
+              - `ui/tokens/icons`
               - `ui/tokens/shadow`
               - `ui/tree-disclosure/column`
               - `ui/tree-disclosure/dimmed-leaf`
@@ -28142,6 +28378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ColumnDef`
           - `DataTableGroup`
@@ -28246,6 +28483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
           - `shell/toast.showToast`
+          - `ui/icons.Icon`
         - Exports (types):
           - `CellContributionMeta`
           - `CellEditorProps`
@@ -28575,6 +28813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useResolveValueCodec`
               - `primitives/latest-ref.useLatestRef`
+              - `ui/icons.Icon`
             - Exports (types):
               - `CustomColumnDefsController`
               - `CustomColumnValueIndex`
@@ -28659,6 +28898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/virtual-rows.VirtualRows`
+              - `ui/icons.Icon`
             - Exports (types):
               - `CoverContent`
               - `DataCardProps`
@@ -28855,6 +29095,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.useFlatExpandAll`
               - `primitives/tree.useTreeListContext`
               - `primitives/tree.useTreeRow`
+              - `ui/icons.Icon`
             - Exports (types): `TreeViewOptions`
         - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Arm pruning evaluates a conjunctive clause over an arm constant (typed NULL, discriminator) with the filter language's own op test, so a negative op keeps the arm. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
           - Server:
@@ -28918,6 +29159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/sortable-list.SortableItem`
               - `primitives/sortable-list.SortableList`
               - `primitives/view-switcher.useActiveViewId`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ResolvedViewInstance`
               - `ViewActionsCore`
@@ -29012,6 +29254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/popover.InlinePopoverProps`
+          - `ui/icons.Icon`
         - Exports (types):
           - `CalendarProps`
           - `DatePickerPanelProps`
@@ -29062,6 +29305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/section-card.SectionCard`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.RenderSlot`
+          - `ui/icons.Icon`
         - Exports (types):
           - `DetailSection`
           - `DetailSections`
@@ -29139,6 +29383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/persistent-draft.clearDraft`
               - `primitives/persistent-draft.readDraft`
               - `primitives/persistent-draft.writeDraft`
+              - `ui/icons.Icon`
             - Exports (types):
               - `EdgeAutoScroll`
               - `EdgeScrollSurface`
@@ -29360,6 +29605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/spacing.Stack`
           - `primitives/dom/element-size.useResizeObserver`
+          - `ui/icons.Icon`
         - Exports (types): `ExpandableProps`
         - Exports (values): `Expandable`
       - Cross-plugin:
@@ -29431,6 +29677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `ui/icons.Icon`
         - Exports (types):
           - `FolderPickerPopoverProps`
           - `FolderPickerProps`
@@ -29520,6 +29767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/shortcuts.formatShortcutLabel`
+          - `ui/icons.Icon`
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
@@ -29652,7 +29900,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SvgIcon`
       - Cross-plugin:
         - Imported by:
-          - `apps-core/app-icon`
           - `apps/pages/page-tree`
           - `conversations/agents`
           - `page/callout`
@@ -29819,6 +30066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/launch-options.pickKnownOptions`
           - `tasks/launch-options.TaskLaunch`
           - `tasks/launch-options.useLaunchOptionDefaults`
+          - `ui/icons.Icon`
         - Exports (types):
           - `LaunchAgentFormProps`
           - `LaunchAgentPopoverProps`
@@ -30222,6 +30470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
+          - `ui/tokens/icons`
           - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
           - `ui/tokens/shape`
@@ -30607,6 +30856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/shortcuts.formatShortcutLabel`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ImageViewerProps`
               - `ImageViewerTrigger`
@@ -30991,6 +31241,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.RenderSlot`
+          - `ui/icons.Icon`
         - Exports (types):
           - `AnyPane`
           - `AppNavigator`
@@ -31607,6 +31858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/css/ui-kit.Input`
           - `primitives/overlay/tooltip.Kbd`
+          - `ui/icons.Icon`
         - Exports (types):
           - `SearchInputAppearance`
           - `SearchInputProps`
@@ -31679,6 +31931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `ui/icons.Icon`
         - Exports (types):
           - `StepProps`
           - `StepState`
@@ -31885,6 +32138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/scoped-store.defineScopedStore`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ReportSyncArgs`
           - `SyncPhase`
@@ -32050,6 +32304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/text-editor.TextEditor`
               - `primitives/text-editor.TextEditorProps`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ComposerAttachButtonProps`
               - `ComposerFieldProps`
@@ -32078,6 +32333,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.DropdownMenuSeparator`
                   - `primitives/css/ui-kit.DropdownMenuTrigger`
                   - `primitives/overlay/tooltip.WithTooltip`
+                  - `ui/icons.Icon`
                 - Exports (types):
                   - `PickerPillCheckProps`
                   - `PickerPillGroupProps`
@@ -32112,6 +32368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/text-editor.registerNodeExtensionSource`
+              - `ui/icons.Icon`
             - Exports (types):
               - `ChipSurface`
               - `InlineChipContribution`
@@ -32147,6 +32404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/image-viewer.ViewerThumbnail`
               - `primitives/text-editor.registerNodeExtension`
               - `primitives/text-editor.TextEditorSlots`
+              - `ui/icons.Icon`
             - Exports (values):
               - `ATTACHMENT_MARKDOWN_RE`
               - `attachmentMarkdown`
@@ -32264,6 +32522,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/search.SearchInput`
           - `primitives/slot-render.renderIsolated`
           - `primitives/virtual-rows.VirtualRows`
+          - `ui/icons.Icon`
         - Exports (types):
           - `FlatExpandAll`
           - `RenameInputProps`
@@ -32409,6 +32668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/ui-context.collectMeta`
               - `primitives/ui-context.contributionNodeAttrs`
               - `primitives/ui-context.LINEAGE_ATTR`
+              - `ui/icons.Icon`
             - Exports (types): `ElementPickerProps`
             - Exports (values):
               - `ElementPicker`
@@ -32498,7 +32758,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversation-view/prompt-templates`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
-        - Uses: `primitives/css/toggle-chip.SegmentedControl`
+        - Uses:
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ActiveViewState`
           - `ViewSwitcherOption`
@@ -32747,6 +33009,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reorder/editor.ReorderEntry`
       - `reorder/editor.SortableReorderItem`
       - `reorder/node-types.useReorderNodeTypes`
+      - `ui/icons.Icon`
     - Exports (types):
       - `ReorderLayout`
       - `ReorderNodeData`
@@ -32785,6 +33048,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/edit-mode-signal.useEditMode`
           - `primitives/shortcuts.defineShortcut`
           - `shell/action-bar.ActionBar`
+          - `ui/icons.Icon`
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
       - Web:
         - Uses:
@@ -32801,6 +33065,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ReorderAreaCtxValue`
           - `ReorderEditorProps`
@@ -32858,6 +33123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `reorder/node-types.ReorderNodes`
+              - `ui/icons.Icon`
         - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.
           - Web:
             - Contributes: `ReorderNodes.NodeType` "spacer"
@@ -33147,6 +33413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/error-boundary.ErrorBoundary`
           - `primitives/launch.LaunchAgentPopover`
           - `reports.investigate`
+          - `ui/icons.Icon`
     - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the 'Close (state unknown)' bug), plus the Debug → Reports summary view. Live-state stale-drop report kind: validates stale-drop payloads (a live-state HTTP body dropped by the version/epoch guard while the query still holds only its placeholder — the 'Close (state unknown)' wedge), fingerprints by key + reason (excluding the volatile params/counts/versions/epochs so one wedge = one row), and renders an investigation task. Re-arms periodically (6h) since a still-wedged resource keeps dropping.
       - Web:
         - Contributes:
@@ -33348,6 +33615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
+      - `ui/icons.Icon`
     - Exports (types):
       - `ReviewProps`
       - `Source`
@@ -33393,6 +33661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
           - `review.ReviewSlots`
+          - `ui/icons.Icon`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
@@ -33422,6 +33691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `review.ReviewSlots`
+          - `ui/icons.Icon`
         - Exports (types): `FacetDiff`
         - Exports (values):
           - `PluginChangesSlots`
@@ -33487,6 +33757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes.FacetDiff`
               - `review/plugin-changes.PluginChangesSlots`
               - `review/plugin-changes.usePluginFacetDiffs`
+              - `ui/icons.Icon`
         - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.
           - Web:
             - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
@@ -33662,6 +33933,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `screenshot/draw-canvas.Stroke`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
+      - `ui/icons.Icon`
     - Exports (values):
       - `captureApp`
       - `screenshotPane`
@@ -33827,6 +34099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/persistent-draft.useDraft`
           - `shell/action-bar.ActionBar`
           - `shell/health-report.HealthReportButton`
+          - `ui/icons.Icon`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
@@ -33855,6 +34128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/row-actions.RowActions`
           - `primitives/scope/scoped-store.defineScopedStore`
           - `primitives/slot-render.renderIsolated`
+          - `ui/icons.Icon`
         - Exports (types):
           - `HealthInfo`
           - `HealthReportRow`
@@ -34010,6 +34284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/select-scope.ContentScope`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ToastArgs`
           - `ToastVariant`
@@ -34482,6 +34757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneChrome`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.useOpenPane`
+          - `ui/icons.Icon`
         - Exports (values): `attemptPane`
       - Cross-plugin:
         - Imported by:
@@ -34787,6 +35063,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.STATUS_META`
           - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
+          - `ui/icons.Icon`
       - Core:
         - Exports (types): `DepsTreeRow`
         - Exports (values):
@@ -34915,6 +35192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/launch-options.launchOptionValue`
           - `tasks/launch-options.LaunchOptionValues`
           - `tasks/launch-options.TaskLaunch`
+          - `ui/icons.Icon`
         - Exports (types):
           - `ActiveRelateContext`
           - `CardDraft`
@@ -35007,6 +35285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/tasks-core.useTaskAttempts`
+          - `ui/icons.Icon`
     - **`task-graph`** — Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
@@ -35014,6 +35293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
@@ -35028,6 +35308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-status.STATUS_META`
+          - `ui/icons.Icon`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
@@ -35175,6 +35456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `ui/icons.Icon`
         - Exports (values):
           - `STATUS_META`
           - `StatusBadge`
@@ -35644,6 +35926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
+              - `ui/icons.Icon`
         - **`slash`** — Slash breadcrumb separator — the path spelling, dimmed so it reads as a mark rather than as a character of the words beside it.
           - Web:
             - Contributes: `BreadcrumbSeparator.Variant` "Slash" → `SlashSeparator`
@@ -35651,6 +35934,380 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon).
+      - Cross-plugin:
+        - Imported by:
+          - `active-data/commit-link`
+          - `active-data/plugin-link`
+          - `active-data/prototype`
+          - `apps-core/app-icon`
+          - `apps-core/surface`
+          - `apps-core/surface/floating`
+          - `apps-core/surface/floating/wallpaper`
+          - `apps-core/surface/floating/wallpaper/upload`
+          - `apps/agent-manager/welcome`
+          - `apps/browser/shell`
+          - `apps/browser/start-page`
+          - `apps/browser/webview`
+          - `apps/chord/curriculum`
+          - `apps/chord/trainer`
+          - `apps/deploy/composition`
+          - `apps/deploy/deployments`
+          - `apps/deploy/remote-deploy`
+          - `apps/deploy/ssh-setup`
+          - `apps/events/event-list`
+          - `apps/events/shell`
+          - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
+          - `apps/home/app-cards`
+          - `apps/mail/attachments`
+          - `apps/mail/reading-pane`
+          - `apps/mail/search`
+          - `apps/mail/shell`
+          - `apps/mail/sync-status`
+          - `apps/mail/threads`
+          - `apps/pages/content-search`
+          - `apps/pages/page-tree`
+          - `apps/pages/prompt-origin`
+          - `apps/pages/trash`
+          - `apps/pages/welcome/quick-create`
+          - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/canvas`
+          - `apps/prototypes/gallery`
+          - `apps/prototypes/present`
+          - `apps/prototypes/thumbnails`
+          - `apps/sonata/library`
+          - `apps/sonata/piano-roll`
+          - `apps/sonata/progress/loop`
+          - `apps/sonata/sources/chord-grid`
+          - `apps/sonata/sources/midi`
+          - `apps/sonata/sources/ultimate-guitar`
+          - `apps/sonata/track-mixer`
+          - `apps/sonata/transport-bar`
+          - `apps/sonata/transpose`
+          - `apps/sonata/view-options`
+          - `apps/studio/compositions`
+          - `apps/studio/compositions/draft-actions`
+          - `apps/studio/compositions/entry-points`
+          - `apps/studio/compositions/release`
+          - `apps/studio/compositions/release/release-artifact`
+          - `apps/studio/contributions`
+          - `apps/studio/explorer/collapsed`
+          - `apps/studio/explorer/excluded`
+          - `apps/studio/explorer/load-bearing`
+          - `apps/website/improve`
+          - `apps/website/landing/contact`
+          - `apps/website/landing/layers`
+          - `apps/website/shell`
+          - `auth`
+          - `auth/apple-signing/setup-wizard`
+          - `backup`
+          - `backup/runs-arm`
+          - `build`
+          - `build/build-fix`
+          - `build/build-logs`
+          - `build/deployment`
+          - `code-explorer`
+          - `config_v2/settings`
+          - `config_v2/settings/conflict-agent`
+          - `conversations/agents`
+          - `conversations/conversation-view/allow-monitor`
+          - `conversations/conversation-view/artifacts`
+          - `conversations/conversation-view/branch`
+          - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/dependencies`
+          - `conversations/conversation-view/drop-and-exit`
+          - `conversations/conversation-view/drop-dependents`
+          - `conversations/conversation-view/exit`
+          - `conversations/conversation-view/exit-menu`
+          - `conversations/conversation-view/fork-conversation`
+          - `conversations/conversation-view/hold-and-exit`
+          - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/assistant-text`
+          - `conversations/conversation-view/jsonl-viewer/attachment/date`
+          - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
+          - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
+          - `conversations/conversation-view/jsonl-viewer/attachment/model`
+          - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
+          - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
+          - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
+          - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
+          - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
+          - `conversations/conversation-view/jsonl-viewer/investigate-event`
+          - `conversations/conversation-view/jsonl-viewer/meta-prompt`
+          - `conversations/conversation-view/jsonl-viewer/preprompt`
+          - `conversations/conversation-view/jsonl-viewer/queue-operation`
+          - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+          - `conversations/conversation-view/jsonl-viewer/row-actions`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
+          - `conversations/conversation-view/jsonl-viewer/system`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+          - `conversations/conversation-view/jsonl-viewer/user-text`
+          - `conversations/conversation-view/launch-prompts`
+          - `conversations/conversation-view/new-child-task`
+          - `conversations/conversation-view/op-status`
+          - `conversations/conversation-view/prompt-templates`
+          - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversation-view/rewind`
+          - `conversations/conversation-view/running-agents`
+          - `conversations/conversation-view/tasks-panel`
+          - `conversations/conversation-view/terminal-pane`
+          - `conversations/conversation-view/turn-summary`
+          - `conversations/conversations-view`
+          - `conversations/preprompts`
+          - `conversations/recover`
+          - `conversations/summary`
+          - `debug/boot-profile`
+          - `debug/broadcasts`
+          - `debug/claude-cli-calls`
+          - `debug/config-orphans`
+          - `debug/live-state-churn/emit`
+          - `debug/op-rate`
+          - `debug/profiling`
+          - `debug/queue`
+          - `debug/render-profiler`
+          - `debug/reports`
+          - `debug/slow-ops`
+          - `debug/slow-ops/pane`
+          - `debug/stall-monitor`
+          - `debug/stuck-spans`
+          - `debug/trace/pane`
+          - `debug/trace/spans`
+          - `debug/worktree-cleanup`
+          - `fields/avatar`
+          - `fields/avatar/config`
+          - `fields/bool`
+          - `fields/bool/inline`
+          - `fields/bool/table`
+          - `fields/color`
+          - `fields/date`
+          - `fields/date/filter`
+          - `fields/directory-path`
+          - `fields/dynamic-enum`
+          - `fields/enum`
+          - `fields/enum/column-config`
+          - `fields/float`
+          - `fields/image`
+          - `fields/int`
+          - `fields/json`
+          - `fields/list`
+          - `fields/multiline-text`
+          - `fields/number`
+          - `fields/object`
+          - `fields/rank`
+          - `fields/reorder-tree`
+          - `fields/secret`
+          - `fields/secret/config`
+          - `fields/string-list`
+          - `fields/tags`
+          - `fields/text`
+          - `fields/uuid`
+          - `fields/variant`
+          - `fullscreen`
+          - `improve`
+          - `infra/events-test`
+          - `layouts/miller`
+          - `page/annotations/agent-notes`
+          - `page/annotations/human-notes`
+          - `page/annotations/instructions`
+          - `page/annotations/instructions/instructions-page`
+          - `page/annotations/private-notes`
+          - `page/annotations/todo`
+          - `page/attachment-block`
+          - `page/audio`
+          - `page/bookmark`
+          - `page/bulleted-list`
+          - `page/callout`
+          - `page/code-block`
+          - `page/divider`
+          - `page/editor`
+          - `page/embed`
+          - `page/file`
+          - `page/formatting/link`
+          - `page/heading/heading-1`
+          - `page/heading/heading-2`
+          - `page/heading/heading-3`
+          - `page/image`
+          - `page/inline-date`
+          - `page/math/equation`
+          - `page/numbered-list`
+          - `page/open-as-page`
+          - `page/page-link`
+          - `page/place`
+          - `page/prompt/block`
+          - `page/quote`
+          - `page/read-only-view`
+          - `page/text`
+          - `page/to-do`
+          - `page/toggle`
+          - `page/turn-into-page`
+          - `page/url-paste`
+          - `page/video`
+          - `plugin-meta/facets/structure/render-detail`
+          - `plugin-meta/plugin-view`
+          - `plugin-meta/plugin-view/inclusion`
+          - `plugin-meta/plugin-view/sub-plugins`
+          - `primitives/action-presentation`
+          - `primitives/app-shell`
+          - `primitives/avatar`
+          - `primitives/breadcrumb`
+          - `primitives/collapsible`
+          - `primitives/command-palette`
+          - `primitives/copy-to-clipboard`
+          - `primitives/css/control-panel`
+          - `primitives/css/spinner`
+          - `primitives/css/theme-boundary`
+          - `primitives/css/ui-kit`
+          - `primitives/data-table`
+          - `primitives/data-view`
+          - `primitives/data-view/custom-columns`
+          - `primitives/data-view/gallery`
+          - `primitives/data-view/tree`
+          - `primitives/data-view/view-core`
+          - `primitives/date-picker`
+          - `primitives/detail-sections`
+          - `primitives/dom/auto-scroll`
+          - `primitives/expandable`
+          - `primitives/folder-picker`
+          - `primitives/icon-button`
+          - `primitives/launch`
+          - `primitives/overlay/image-viewer`
+          - `primitives/pane`
+          - `primitives/search`
+          - `primitives/setup-steps`
+          - `primitives/sync-status`
+          - `primitives/text-editor/composer`
+          - `primitives/text-editor/composer/picker-pill`
+          - `primitives/text-editor/inline-chip`
+          - `primitives/text-editor/paste-images`
+          - `primitives/tree`
+          - `primitives/ui-context/element-picker`
+          - `primitives/view-switcher`
+          - `reorder`
+          - `reorder/edit-mode`
+          - `reorder/editor`
+          - `reorder/node-types/overflow`
+          - `reports/launch-fix`
+          - `review`
+          - `review/code-review`
+          - `review/plugin-changes`
+          - `review/plugin-changes/api-changes`
+          - `screenshot`
+          - `shell/global-action-bar`
+          - `shell/health-report`
+          - `shell/toast`
+          - `tasks/attempt-view`
+          - `tasks/task-deps-tree`
+          - `tasks/task-draft-form`
+          - `tasks/task-events`
+          - `tasks/task-graph`
+          - `tasks/task-status`
+          - `ui/breadcrumb-separator/chevron`
+          - `ui/icons/sprites`
+          - `ui/tab-bar`
+          - `ui/theme-engine/quick-theme`
+          - `ui/theme-engine/theme-customizer`
+          - `ui/theme-toggle`
+          - `ui/tokens/icons`
+          - `ui/tokens/shadow`
+      - Web:
+        - Exports (types): `IconProps`
+        - Exports (values):
+          - `hasSprite`
+          - `Icon`
+          - `IconScopeProvider`
+          - `IconSpriteSheet`
+          - `provideSprite`
+          - `useIconStyle`
+          - `usePublishIconStyle`
+          - `useWantedStyleKeys`
+      - Server:
+        - Exports (types):
+          - `IconBody`
+          - `SymbolSets`
+        - Exports (values):
+          - `resolveIcon`
+          - `resolveSymbol`
+          - `symbolBody`
+      - Core:
+        - Exports (types):
+          - `BrandName`
+          - `BrandRef`
+          - `IconFill`
+          - `IconRef`
+          - `IconShape`
+          - `IconStyle`
+          - `IconWeight`
+          - `SpriteKey`
+          - `StyleKey`
+          - `SymbolName`
+          - `SymbolRef`
+        - Exports (values):
+          - `ALL_STYLE_KEYS`
+          - `brand`
+          - `brandId`
+          - `BRANDS_SPRITE`
+          - `coveredStyles`
+          - `DEFAULT_ICON_STYLE`
+          - `DEFAULT_STYLE_KEYS`
+          - `ICON_FILLS`
+          - `ICON_SHAPES`
+          - `ICON_WEIGHTS`
+          - `iconifyName`
+          - `isStyleKey`
+          - `parseStyleKey`
+          - `resolveSymbolStyle`
+          - `styleKeyOf`
+          - `symbol`
+          - `symbolId`
+      - Shared:
+        - Exports (values):
+          - `brandNames`
+          - `ICON_SET_PACKAGES`
+          - `installedSetVersions`
+          - `readIconSet`
+          - `readInputsHash`
+          - `renderSymbolNames`
+          - `SYMBOL_NAMES_REL_PATH`
+          - `symbolBaseNames`
+          - `symbolNamesInputsHash`
+      - Plugins:
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable.
+          - Web:
+            - Contributes: `Core.Root` → `IconSpriteHost`
+            - Uses:
+              - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
+              - `ui/icons.hasSprite`
+              - `ui/icons.IconSpriteSheet`
+              - `ui/icons.provideSprite`
+              - `ui/icons.useWantedStyleKeys`
+          - Server:
+            - Contributes: `resource.declare` "icons.sprites"
+            - Uses:
+              - `network/live.serveValue`
+              - `ui/icons.resolveIcon`
+              - `ui/icons.resolveSymbol`
+              - `ui/icons.SymbolSets`
+            - Resources: `icons.sprites` (push)
+            - Routes: `GET /api/icons/sprite/:hash/:key`
+          - Core:
+            - Uses:
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+            - Exports (types): `IconSprites`
+            - Exports (values):
+              - `IconSpritesSchema`
+              - `residentSprites`
+              - `spriteEndpoint`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.arc`, `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.pie`, `ui.segmented-progress-bar.segmented`
@@ -35809,6 +36466,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
           - `primitives/slot-render.renderIsolated`
+          - `ui/icons.Icon`
         - Exports (types):
           - `TabProps`
           - `TabStrip`
@@ -35884,7 +36542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
-          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.rich-text-palette`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.agent-manager.shell`, `apps.chord.shell`, `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -36003,6 +36661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/density`
           - `ui/tokens/font-family`
           - `ui/tokens/font-family/google-fonts`
+          - `ui/tokens/icons`
           - `ui/tokens/rich-text-palette`
           - `ui/tokens/scrollbar`
           - `ui/tokens/shadow`
@@ -36028,6 +36687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/slot-render.defineRenderSlot`
               - `shell/action-bar.ActionBar`
+              - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeScopeProvider`
               - `ui/theme-engine/theme-customizer.themeCustomizerRoute`
@@ -36119,7 +36779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.icons`, `ui.tokens.scrollbar`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-metrics`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
@@ -36147,6 +36807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeScopeProvider`
               - `ui/theme-engine.useResolvedTheme`
@@ -36176,6 +36837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
               - `ui/tokens/font-family`
+              - `ui/tokens/icons`
               - `ui/tokens/scrollbar`
               - `ui/tokens/shadow`
               - `ui/tokens/shape`
@@ -36235,6 +36897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `QuickTheme.Section` "Appearance" → `ThemeToggle`
         - Uses:
           - `primitives/css/control-panel.ControlPanel`
+          - `ui/icons.Icon`
           - `ui/theme-engine.useResolvedColorMode`
           - `ui/theme-engine.useSetColorMode`
           - `ui/theme-engine/quick-theme.QuickTheme`
@@ -36349,6 +37012,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `ui/theme-engine.ThemeEngine`
                   - `ui/theme-engine.useThemes`
                   - `ui/theme-engine.useThemeSelections`
+        - **`icons`** — Icons token group (shape, fill, active fill and stroke of the Material Symbols a scope draws; outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Icons"
+              - `ThemeCustomizer.Section` "Icons" → `IconsSection`
+              - `Core.Root` → `IconThemeBridge`
+            - Uses:
+              - `apps-core.Apps`
+              - `apps-core/theme-scope.useRootThemeScope`
+              - `config_v2.useScopeMembership`
+              - `primitives/css/row.Row`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/ui-kit.appThemeScope`
+              - `primitives/css/ui-kit.fixedThemeScope`
+              - `primitives/css/ui-kit.subThemeScope`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
+              - `ui/icons.usePublishIconStyle`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine.useResolvedColorMode`
+              - `ui/theme-engine.useResolvedTheme`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses:
+              - `ui/icons.DEFAULT_ICON_STYLE`
+              - `ui/icons.ICON_FILLS`
+              - `ui/icons.ICON_SHAPES`
+              - `ui/icons.ICON_WEIGHTS`
+              - `ui/icons.IconStyle`
+              - `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `IconsTokenValues`
+            - Exports (values):
+              - `iconsGroup`
+              - `readIconTokens`
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Rich-text palette"
@@ -36398,6 +37098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
+              - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
