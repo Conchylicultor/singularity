@@ -7,6 +7,7 @@ import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { ContributionsView } from "./components/contributions-view";
 
 export const contributionsPane = Pane.define({
+  title: "Contributions",
   route: defineRoute({ id: "contributions", segment: "contributions" }),
   app: studioApp,
   component: ContributionsBody,
@@ -15,7 +16,7 @@ export const contributionsPane = Pane.define({
 
 function ContributionsBody() {
   return (
-    <PaneChrome pane={contributionsPane} title="Contributions">
+    <PaneChrome pane={contributionsPane}>
       <ContributionsView />
     </PaneChrome>
   );

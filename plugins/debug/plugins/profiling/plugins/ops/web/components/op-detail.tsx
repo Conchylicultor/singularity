@@ -187,7 +187,7 @@ export function OpDetailBody(): ReactElement {
   const branchShort = data ? stripAttemptBranchPrefix(data.branch) : opId;
 
   return (
-    <PaneChrome pane={opDetailPane} title="Op">
+    <PaneChrome pane={opDetailPane}>
       {!data ? (
         <Placeholder tone={error ? "error" : "muted"}>
           {error ? "Op not found." : "Loading…"}

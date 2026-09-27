@@ -1,0 +1,22 @@
+// @hash a6393893eed2
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+{
+  "items": [
+    "conversations.agents:agent-avatar",
+    "primitives.pane:title",
+    // Pushes the chips to the right edge (Mist, proto-1789643584-ldt6).
+    { "type": "spacer", "id": "title-end" },
+    "conversations.conversation-preprompt:preprompt",
+    "conversations.conversation-view.allow-monitor:allow-monitor",
+    "conversations.conversation-view.model:model",
+    "conversations.conversation-view.track:track",
+    "conversations.conversation-view.track:track",
+    "conversations.conversation-view.status:status",
+    "conversations.conversation-progress:progress"
+  ]
+}

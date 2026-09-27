@@ -82,16 +82,21 @@ export const pageDetailPane = Pane.define({
   app: pagesApp,
   component: PageDetailBody,
   width: 720,
-  chrome: { title: (params) => params.pageId },
   resolve: useResolvePage,
   // Tab/document title: the page's title from the global pages resource (same
-  // source PageDetailBody renders), falling back to the pageId via chrome.title.
-  useTitle: usePageTitle,
+  // source PageDetailBody renders), falling back to the pageId. The header
+  // paints the breadcrumb trail instead.
+  title: {
+    text: usePageTitle,
+    fallback: (params) => params.pageId,
+    component: PageDetailTitle,
+  },
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });
 
 export const pagesTreePane = Pane.define({
+  title: "Pages",
   // The page tree as a Miller column, so pages can be browsed from anywhere
   // (a conversation, another app) without switching to the Pages app. The body
   // is the `Pages.Sidebar` slot itself — the very render slot the Pages app's
@@ -123,15 +128,18 @@ export const blockDetailPane = Pane.define({
   app: pagesApp,
   component: BlockDetailBody,
   width: 720,
-  chrome: { title: (params) => params.blockId },
   resolve: useResolveBlock,
-  useTitle: useBlockPaneTitle,
+  title: {
+    text: useBlockPaneTitle,
+    fallback: (params) => params.blockId,
+    component: BlockDetailTitle,
+  },
   titleOwner: true,
 });
 
 function PagesTreeBody(): ReactElement {
   return (
-    <PaneChrome pane={pagesTreePane} title="Pages">
+    <PaneChrome pane={pagesTreePane}>
       <Pages.Sidebar.Render>
         {(item) => <SidebarItem {...item} />}
       </Pages.Sidebar.Render>
@@ -188,14 +196,10 @@ function usePagesNavigation(): PageNavigation {
  */
 function PageSurface({
   pane,
-  title,
-  extra,
   overlay,
   children,
 }: {
   pane: typeof pageDetailPane | typeof blockDetailPane;
-  title: ReactNode;
-  extra?: ReactNode;
   overlay?: ReactNode;
   children: ReactNode;
 }): ReactElement {
@@ -206,10 +210,57 @@ function PageSurface({
     // scroller — outside the editor's subtree. This is the common ancestor of
     // the editor that publishes the block grid and the rail that reads it.
     <blockContentScope.Provider>
-      <PaneChrome pane={pane} title={title} extra={extra} overlay={overlay}>
+      <PaneChrome pane={pane} overlay={overlay}>
         <PageNavigationProvider value={nav}>{children}</PageNavigationProvider>
       </PaneChrome>
     </blockContentScope.Provider>
+  );
+}
+
+/** The page pane's header title: the trail of the page its route names. */
+function PageDetailTitle(): ReactElement {
+  const { pageId } = pageDetailPane.useParams();
+  return <PageTitleTrail pageId={pageId} />;
+}
+
+/**
+ * The block pane's header title: the page's trail ending in the block's crumb —
+ * or just the page's trail when the id names a page. While the block is not
+ * resolved (or no longer exists) it shows the id, as the tab does.
+ */
+function BlockDetailTitle(): ReactElement {
+  const { blockId } = blockDetailPane.useParams();
+  const target = useBlockTarget(blockId);
+  switch (target.kind) {
+    case "block":
+      return (
+        <BlockTitleTrail
+          pageId={target.pageId}
+          blockId={target.blockId}
+          type={target.type}
+        />
+      );
+    case "page":
+      return <PageTitleTrail pageId={target.pageId} />;
+    case "pending":
+    case "missing":
+    case "error":
+      return <>{blockId}</>;
+  }
+}
+
+function BlockTitleTrail({
+  pageId,
+  blockId,
+  type,
+}: {
+  pageId: string;
+  blockId: string;
+  type: string;
+}): ReactElement {
+  const crumb = useBlockCrumb(pageId, blockId, type);
+  return (
+    <PageTitleTrail pageId={pageId} leaf={{ key: blockId, label: crumb }} />
   );
 }
 
@@ -264,12 +315,6 @@ function PageBody({
   return (
     <PageSurface
       pane={pane}
-      title={<PageTitleTrail pageId={pageId} />}
-      extra={
-        <PageDetail.HeaderActions.Render>
-          {(s) => <s.component pageId={pageId} />}
-        </PageDetail.HeaderActions.Render>
-      }
       // `PageDetail.Overlay` — the widgets that float over the page (the
       // outline rail) — goes through PaneChrome's own overlay layer, beside
       // the scroller and BELOW the header. A host wrapped around `PaneChrome`
@@ -330,13 +375,7 @@ function BlockDetailBody(): ReactElement {
   const target = useBlockTarget(blockId);
   switch (target.kind) {
     case "block":
-      return (
-        <BlockBody
-          pageId={target.pageId}
-          blockId={target.blockId}
-          type={target.type}
-        />
-      );
+      return <BlockBody pageId={target.pageId} blockId={target.blockId} />;
     // A page id opened here is simply that page.
     case "page":
       return <PageBody pane={blockDetailPane} pageId={target.pageId} />;
@@ -371,20 +410,12 @@ function BlockDetailBody(): ReactElement {
 function BlockBody({
   pageId,
   blockId,
-  type,
 }: {
   pageId: string;
   blockId: string;
-  type: string;
 }): ReactElement {
-  const crumb = useBlockCrumb(pageId, blockId, type);
   return (
-    <PageSurface
-      pane={blockDetailPane}
-      title={
-        <PageTitleTrail pageId={pageId} leaf={{ key: blockId, label: crumb }} />
-      }
-    >
+    <PageSurface pane={blockDetailPane}>
       <div className="pb-2xl">
         <BlockEditor
           pageId={pageId}

@@ -1,5 +1,7 @@
 import { Pane as PaneSlots } from "./slots";
 import { paneHeaderContributions } from "./header-slot";
+import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import { paneTitleSlotGuard } from "./components/pane-title-guard";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 // A pane's identity travels WITH the pane: `Pane.define({ route: defineRoute({…}) })`
@@ -53,6 +55,8 @@ export type {
   PaneMatch,
   MatchEntry,
   PaneChromeConfig,
+  PaneTitleSpec,
+  PaneTitleHook,
   PaneToggleOpts,
   TypeMarker,
   PaneInternal,
@@ -101,5 +105,14 @@ export default {
   // The `title` item of every pane header — see `header-slot.ts` for why this is
   // a live array rewritten by each declaration pass rather than a literal.
   contributions: paneHeaderContributions,
+  // The runtime half of "the pane header is ONE slot": a render slot mounted
+  // inside the title cell throws (see `pane-title-guard.tsx`).
+  register: [
+    {
+      register() {
+        registerSlotItemMiddleware(paneTitleSlotGuard);
+      },
+    },
+  ],
   slots: PaneSlots,
 } satisfies PluginDefinition;

@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { WorktreeCleanupPanel } from "./components/worktree-cleanup-panel";
 
 export const worktreeCleanupPane = Pane.define({
+  title: "Worktree Cleanup",
   route: defineRoute({
     id: "worktree-cleanup",
     segment: "worktree-cleanup",
@@ -17,7 +18,7 @@ export const worktreeCleanupPane = Pane.define({
 
 function WorktreeCleanupBody() {
   return (
-    <PaneChrome pane={worktreeCleanupPane} title="Worktree Cleanup">
+    <PaneChrome pane={worktreeCleanupPane}>
       <WorktreeCleanupPanel />
     </PaneChrome>
   );

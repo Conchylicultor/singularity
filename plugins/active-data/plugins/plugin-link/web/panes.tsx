@@ -25,6 +25,7 @@ export const pluginConvSidePane = Pane.define({
   width: 600,
   chrome: { history: false },
   resolve: false,
+  title: { text: usePluginConvSideTitle, fallback: (p) => p.pluginId },
 });
 
 function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
@@ -33,6 +34,17 @@ function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
     indexNodes(node.children, map);
   }
   return map;
+}
+
+/** The plugin's display name from the facets tree, or undefined while it loads. */
+function usePluginConvSideTitle({
+  pluginId,
+}: {
+  pluginId: string;
+}): string | undefined {
+  const { data } = useEndpoint(getPluginFacetsTree, {});
+  if (!data) return undefined;
+  return indexNodes(data.plugins).get(pluginId)?.name ?? pluginId;
 }
 
 function PluginConvSideBody() {
@@ -45,7 +57,7 @@ function PluginConvSideBody() {
   );
 
   return (
-    <PaneChrome pane={pluginConvSidePane} title={node?.name ?? pluginId}>
+    <PaneChrome pane={pluginConvSidePane}>
       {isLoading ? (
         <Center className="h-full">
           <Loading />

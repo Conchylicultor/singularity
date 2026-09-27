@@ -21,5 +21,6 @@ export const accountsPane = Pane.define({
   route: accountsRoute,
   app: settingsApp,
   component: AccountsPane,
-  chrome: { title: "Accounts", history: true },
+  title: "Accounts",
+  chrome: { history: true },
 });

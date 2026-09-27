@@ -13,6 +13,7 @@ const logsRoute = defineRoute({
 });
 
 export const logsPane = Pane.define({
+  title: "Logs",
   route: logsRoute,
   app: debugApp,
   component: LogsBody,
@@ -25,13 +26,14 @@ export const logChannelPane = Pane.define({
     parent: logsRoute,
   }),
   app: debugApp,
+  title: { text: ({ channel }) => `Logs · ${channel}` },
   component: LogsChannelBody,
   resolve: false,
 });
 
 function LogsBody(): ReactElement {
   return (
-    <PaneChrome pane={logsPane} title="Logs">
+    <PaneChrome pane={logsPane}>
       <LogViewer />
     </PaneChrome>
   );
@@ -40,7 +42,7 @@ function LogsBody(): ReactElement {
 function LogsChannelBody(): ReactElement {
   const { channel } = logChannelPane.useParams();
   return (
-    <PaneChrome pane={logChannelPane} title={`Logs · ${channel}`}>
+    <PaneChrome pane={logChannelPane}>
       <LogViewer initialChannel={channel} />
     </PaneChrome>
   );

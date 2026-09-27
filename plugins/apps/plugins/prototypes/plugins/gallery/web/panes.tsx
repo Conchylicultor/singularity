@@ -7,6 +7,7 @@ import { PrototypeGallery } from "./components/prototype-gallery";
 
 /** The gallery root pane: bare `/prototypes`. */
 export const prototypesGalleryPane = Pane.define({
+  title: "Prototypes",
   route: prototypesGalleryRoute,
   app: prototypesApp,
   appIndex: true,
@@ -16,7 +17,7 @@ export const prototypesGalleryPane = Pane.define({
 
 function PrototypesGalleryBody() {
   return (
-    <PaneChrome pane={prototypesGalleryPane} title="Prototypes">
+    <PaneChrome pane={prototypesGalleryPane}>
       <PrototypeGallery />
     </PaneChrome>
   );

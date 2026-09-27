@@ -11,8 +11,9 @@ import noRawLocationPath from "./no-raw-location-path";
  * Three of the `ignores` allowlists are intentionally EMPTY (no central allowlist —
  * mirrors `icon-auto/no-adhoc-slot-icon-size` and `control-size/no-adhoc-control`):
  *
- * - `no-adhoc-pane-title` is precise — it fires only on an inline `<Text variant>`
- *   inside a `PaneChrome` `title=` node. A deliberate per-site override escapes via
+ * - `no-adhoc-pane-title` is precise — it fires only on a `<Text variant>` in the
+ *   JSX a same-file `Pane.define({ title: { component } })` component returns. A
+ *   deliberate per-site override escapes via
  *   `// eslint-disable-next-line pane/no-adhoc-pane-title -- reason`.
  * - `no-hint-fabrication` is precise — it fires only on a `Hint` receiver's
  *   `pick()` (a `useHint()`-sourced or `Hint<…>`-typed binding). A deliberate

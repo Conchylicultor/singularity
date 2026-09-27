@@ -3396,18 +3396,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('pages.search.reindex')`
               - `defineJob('pages.search.backfill')`
               - `defineWarmup('pages.search.backfill')`
-        - **`copy-id`** — Copy block ID button in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
+        - **`copy-id`** — Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
           - Web:
-            - Contributes: `PageDetail.HeaderActions` → `CopyIdAction`
+            - Contributes: `pageDetailPane.Actions` "copy-id" → `CopyIdAction`
             - Uses:
-              - `apps/pages/page-tree.PageDetail`
+              - `apps/pages/page-tree.pageDetailPane`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
         - **`history`** — Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
           - Web:
-            - Contributes: `PageDetail.HeaderActions` → `VersionHistoryAction`
+            - Contributes: `pageDetailPane.Actions` "history" → `VersionHistoryAction`
             - Uses:
-              - `apps/pages/page-tree.PageDetail`
+              - `apps/pages/page-tree.pageDetailPane`
               - `history/dialog.VersionHistoryDialog`
               - `infra/endpoints.useEndpoint`
               - `network/live.useLive`
@@ -3445,9 +3445,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('pages.history.schedule')`
         - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
-            - Contributes: `PageDetail.HeaderActions` → `PageKindControl`
+            - Contributes: `pageDetailPane.Actions` "page-author" → `PageKindControl`
             - Uses:
-              - `apps/pages/page-tree.PageDetail`
+              - `apps/pages/page-tree.pageDetailPane`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
@@ -3471,11 +3471,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`
-              - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-              - `pageDetailPane.Actions` ← `primitives.pane`
+              - `pageDetailPane.Actions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`, `primitives.pane`
               - `blockDetailPane.Actions` ← `primitives.pane`
               - `pagesTreePane.Actions` ← `primitives.pane`
             - Contributes:
@@ -3620,9 +3619,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `PageTree.Fields` "starred" → `StarredField`
               - `PageTree.RowActions` "star" → `StarRowAction`
-              - `PageDetail.HeaderActions` → `StarHeaderAction`
+              - `pageDetailPane.Actions` "star" → `StarHeaderAction`
             - Uses:
-              - `apps/pages/page-tree.PageDetail`
+              - `apps/pages/page-tree.pageDetailPane`
               - `apps/pages/page-tree.PageTree`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
@@ -9219,7 +9218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
           - `Shell.Sidebar` "Agents"
           - `Item.Avatar` → `AgentAvatarRow`
-          - `Conversation.Header` → `AgentAvatarTitlePrefix`
+          - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
         - Uses:
           - `conversations.useConversationById`
@@ -9227,7 +9226,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.ConversationItemConv`
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
-          - `conversations/conversation-view/header.Conversation`
           - `conversations/model-provider.ModelSelect`
           - `fields/avatar/table.avatarFieldDef`
           - `infra/endpoints.fetchEndpoint`
@@ -9259,7 +9257,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.defineItemActions`
           - `primitives/editable-field.useEditableField`
           - `primitives/icon-button.IconButton`
-          - `primitives/live-state.matchResource`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
@@ -9541,13 +9538,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
       - Web:
         - Contributes:
-          - `Conversation.Header` → `PrepromptChip`
+          - `conversationPane.Actions` "preprompt" → `PrepromptChip`
           - `Item.Chips` → `PrepromptListIcon`
         - Uses:
           - `config_v2/config-link.ConfigPopoverHeader`
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
-          - `conversations/conversation-view/header.Conversation`
           - `conversations/preprompts.PrepromptGlyph`
           - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.usePreprompt`
@@ -9592,13 +9588,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes:
-          - `Conversation.Header` → `ProgressBarToolbar`
+          - `conversationPane.Actions` "progress" → `ProgressBarToolbar`
           - `Item.Chips` → `ProgressBarRow`
         - Uses:
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
-          - `conversations/conversation-view/header.Conversation`
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/inline.Inline`
@@ -9724,21 +9719,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `tasks/task-events`
-    - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
+    - **`conversation-view`** — Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
       - Web:
         - Slots:
           - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
           - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.running-agents`, `conversations.conversation-view.turn-summary`
-          - `conversationPane.Actions` ← `primitives.pane`
-        - Contributes:
-          - `Pane.Register` "conversation"
-          - `Conversation.Header` → `ConversationTitle`
+          - `conversationPane.Actions` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`, `primitives.pane`
+        - Contributes: `Pane.Register` "conversation"
         - Uses:
           - `conversations.useConversationById`
           - `conversations/conversation-view/action-bar.ActionBarView`
-          - `conversations/conversation-view/header.Conversation`
-          - `conversations/conversation-view/header.HeaderView`
           - `conversations/conversation-view/jsonl-viewer.JsonlPane`
           - `conversations/hibernation.markConversationViewed`
           - `infra/endpoints.EndpointError`
@@ -9858,10 +9849,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/attempt-view`
         - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
           - Web:
-            - Contributes: `Conversation.Header` → `AllowMonitorChip`
+            - Contributes: `conversationPane.Actions` "allow-monitor" → `AllowMonitorChip`
             - Uses:
               - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/header.Conversation`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
@@ -10053,8 +10043,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots:
                   - `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`
-                  - `filePeekPane.Actions` ← `primitives.pane`
-                - Contributes: `Pane.Register` "file-peek"
+                  - `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`, `primitives.pane`
+                - Contributes:
+                  - `Pane.Register` "file-peek"
+                  - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
                 - Uses:
                   - `code-explorer/file-resolve.FileDisambiguation`
                   - `code-explorer/file-resolve.useResolvedFile`
@@ -10062,7 +10054,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/code.useEditedFiles`
                   - `infra/endpoints.EndpointError`
                   - `infra/endpoints.useEndpoint`
-                  - `primitives/css/clip.Clip`
                   - `primitives/css/column.Column`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
@@ -10334,25 +10325,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer.useLastAssistantEvent`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
               - `primitives/launch.LaunchControl`
-        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.
+        - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
           - Web:
-            - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`
-            - Uses:
-              - `primitives/collapsible-wrap.CollapsibleWrap`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/spacing.Stack`
-              - `primitives/slot-render.defineRenderSlot`
-            - Exports (values):
-              - `Conversation`
-              - `HeaderChip`
-              - `HeaderView`
+            - Uses: `primitives/css/badge.Badge`
+            - Exports (values): `HeaderChip`
           - Cross-plugin:
             - Imported by:
-              - `conversations/agents`
-              - `conversations/conversation-preprompt`
-              - `conversations/conversation-progress`
-              - `conversations/conversation-view`
-              - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/model`
               - `conversations/conversation-view/status`
               - `conversations/conversation-view/track`
@@ -11657,11 +11635,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-detail.taskDetailPane`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Web:
-            - Contributes: `Conversation.Header` → `ModelBadge`
+            - Contributes: `conversationPane.Actions` "model" → `ModelBadge`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/header.Conversation`
               - `conversations/conversation-view/header.HeaderChip`
         - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
           - Web:
@@ -12007,11 +11984,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Web:
-            - Contributes: `Conversation.Header` → `StatusBadge`
+            - Contributes: `conversationPane.Actions` "status" → `StatusBadge`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/header.Conversation`
               - `conversations/conversation-view/header.HeaderChip`
               - `primitives/css/badge.formatStatusLabel`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
@@ -12051,11 +12027,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/icons.Icon`
         - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
           - Web:
-            - Contributes: `Conversation.Header` → `TrackChip`
+            - Contributes: `conversationPane.Actions` "track" → `TrackChip`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/header.Conversation`
               - `conversations/conversation-view/header.HeaderChip`
               - `primitives/loading.Loading`
               - `tasks/task-track.useTaskTrack`
@@ -21048,6 +21023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.paneThemeScope`
           - `primitives/pane.usePaneMatch`
           - `primitives/pane.usePaneStore`
+          - `primitives/pane.usePaneTitle`
           - `primitives/pane.useRoute`
           - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/sortable-list.SortableItem`
@@ -25094,8 +25070,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.ReorderLayoutContext`
         - Exports (types): `CollapsibleWrapProps`
         - Exports (values): `CollapsibleWrap`
-      - Cross-plugin:
-        - Imported by: `conversations/conversation-view/header`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
       - Web:
         - Slots: `CommandPalette.Item`
@@ -25536,7 +25510,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
-              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/op-status`
@@ -26973,7 +26946,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/fork-conversation`
-              - `conversations/conversation-view/header`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
@@ -31262,7 +31234,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalForwardProvider`
-          - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/dom/in-view.useInView`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
@@ -31273,6 +31244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/scope/surface-id.SurfaceIdContext`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineRenderSlot`
+          - `primitives/slot-render.registerSlotItemMiddleware`
           - `primitives/slot-render.RenderSlot`
           - `ui/icons.Icon`
         - Exports (types):
@@ -31299,6 +31271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneScrollProps`
           - `PaneSlot`
           - `PaneStore`
+          - `PaneTitleHook`
+          - `PaneTitleSpec`
           - `PaneToggleOpts`
           - `ParsedRoute`
           - `PromoteAction`
@@ -32097,7 +32071,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/exit-menu`
-          - `conversations/conversation-view/header`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/attachment`
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
@@ -33023,7 +32996,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×212: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.WebRegister` ×210: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -33053,7 +33026,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×211: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
+    - Contributes: `ConfigV2.Register` ×209: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "block-detail.actions", "block-menu-item", "build-detail.actions", "build.actions", "card-actions", "chart", "chips", "chord-trainer.actions", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "frame-actions", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "kind", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "nav-notice", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "prototypes-present-canvas.actions", "prototypes-present.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "view-option", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

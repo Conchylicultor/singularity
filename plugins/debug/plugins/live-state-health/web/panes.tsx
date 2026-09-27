@@ -8,6 +8,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { LiveStateHealth } from "./components/live-state-health";
 
 export const liveStateHealthPane = Pane.define({
+  title: "Live State",
   route: defineRoute({
     id: "live-state-health",
     segment: "live-state",
@@ -18,7 +19,7 @@ export const liveStateHealthPane = Pane.define({
 
 function LiveStateHealthBody(): ReactElement {
   return (
-    <PaneChrome pane={liveStateHealthPane} title="Live State">
+    <PaneChrome pane={liveStateHealthPane}>
       <LiveStateHealth />
     </PaneChrome>
   );

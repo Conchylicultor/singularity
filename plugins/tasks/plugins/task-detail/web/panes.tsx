@@ -21,6 +21,7 @@ import { TaskDetail } from "./components/task-detail";
 // declarations (hoisted), so the forward reference is safe at runtime.
 
 export const tasksRootPane = Pane.define({
+  title: "Tasks",
   route: tasksRootRoute,
   app: agentManagerApp,
   component: TasksRoot,
@@ -44,8 +45,8 @@ export const taskDetailPane = Pane.define({
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
-  // Tab/document title: the task's title (same source as the header).
-  useTitle: useTaskTitle,
+  // The task's title: tab, document and header title alike.
+  title: { text: useTaskTitle },
   // Main surface: a conversation or aux pane opened under the task is a
   // drill-in — it never steals the tab title from the task.
   titleOwner: true,
@@ -56,7 +57,7 @@ function TasksRoot(): ReactElement {
   const selectedId = taskDetailPane.useRouteEntry()?.params.taskId;
 
   return (
-    <PaneChrome pane={tasksRootPane} title="Tasks">
+    <PaneChrome pane={tasksRootPane}>
       {/* This box OPENS the region — it is not a padded box with a marker on it.
           The `Inset` that used to be here is gone on purpose, and putting it
           back is the mistake to avoid: `Inset` pads without publishing, so an
@@ -82,11 +83,10 @@ function TasksRoot(): ReactElement {
 // which re-root this pane by swapping its own route param.
 function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
-  const task = useTask(taskId);
 
   return (
     <TaskDetailFlushProvider key={taskId}>
-      <PaneChrome pane={taskDetailPane} title={task?.title}>
+      <PaneChrome pane={taskDetailPane}>
         <TaskDetail taskId={taskId} />
       </PaneChrome>
     </TaskDetailFlushProvider>

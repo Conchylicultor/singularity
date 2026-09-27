@@ -39,7 +39,7 @@ escapes into another plugin's tree are forbidden.
 Three rules the scanners must keep:
 
 - **Read `route:` at depth 0** of the call body. A pane body nests objects
-  (`chrome: { title }`, `options: { … }`) spelling the very same key, and a
+  (`title: { text }`, `options: { … }`) spelling the very same key, and a
   first-match-at-any-depth read takes one of those as the identity, silently.
   The inline arm matches its `defineRoute` call by exact offset for the same
   reason — an `options: { route: defineRoute(…) }` decoy is a real call too.

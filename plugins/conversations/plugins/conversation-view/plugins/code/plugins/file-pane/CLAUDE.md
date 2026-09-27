@@ -8,8 +8,10 @@
 - Web:
   - Slots:
     - `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`
-    - `filePeekPane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "file-peek"
+    - `filePeekPane.Actions` ← `conversations.conversation-view.code.file-pane`, `primitives.pane`
+  - Contributes:
+    - `Pane.Register` "file-peek"
+    - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
   - Uses:
     - `code-explorer/file-resolve.FileDisambiguation`
     - `code-explorer/file-resolve.useResolvedFile`
@@ -17,7 +19,6 @@
     - `conversations/conversation-view/code.useEditedFiles`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.useEndpoint`
-    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

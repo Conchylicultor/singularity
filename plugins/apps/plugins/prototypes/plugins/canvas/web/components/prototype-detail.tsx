@@ -39,10 +39,7 @@ export function PrototypeDetail(): ReactElement {
   const instance = prototypeDetailPane.useRouteEntry()?.uuid;
   return (
     <PrototypeDetailProvider name={name} remember={instance}>
-      <PaneChrome
-        pane={prototypeDetailPane}
-        title={<PrototypeTitle name={name} />}
-      >
+      <PaneChrome pane={prototypeDetailPane}>
         <PrototypeCanvas />
       </PaneChrome>
     </PrototypeDetailProvider>
@@ -55,7 +52,8 @@ export function PrototypeDetail(): ReactElement {
  * the id, monospaced, only when there is no such folder (the one case it is the
  * only true thing left to say).
  */
-function PrototypeTitle({ name }: { name: string }): ReactNode {
+export function PrototypeTitle(): ReactNode {
+  const { name } = prototypeDetailPane.useParams();
   const result = useLive(prototypesList);
   const unknown = <span className="font-mono">{name}</span>;
   return matchResource(result, {

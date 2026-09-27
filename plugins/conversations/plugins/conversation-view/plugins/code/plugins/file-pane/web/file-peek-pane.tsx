@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Pane,
   PaneChrome,
@@ -6,18 +7,17 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import {
   useResolvedFile,
   FileDisambiguation,
 } from "@plugins/code-explorer/plugins/file-resolve/web";
 import { FileContent } from "./components/file-content";
-import { FileTabs } from "./components/file-tabs";
+import {
+  FilePeekHeaderProvider,
+  FilePeekTitle,
+} from "./components/file-peek-header";
 import { useFileRenderers } from "./components/use-file-renderers";
 
 /** The file's basename, minus any trailing `:line` suffix. */
@@ -33,12 +33,14 @@ export const filePeekPane = Pane.define({
   }),
   app: agentManagerApp,
   component: FilePeekPaneBody,
-  chrome: {
-    history: false,
-    // Tab/document title: the file name from the URL param, so a deep link
-    // shows the file instead of the bare app name.
-    title: ({ filePath }) => fileTitle(filePath),
+  // Tab/document title: the file name from the URL param, so a deep link
+  // shows the file instead of the bare app name. The header paints the path as
+  // a breadcrumb (FilePeekTitle); the renderer tabs beside it are a header item.
+  title: {
+    text: ({ filePath }) => fileTitle(filePath),
+    component: FilePeekTitle,
   },
+  chrome: { history: false },
   width: 600,
   resolve: false,
 });
@@ -75,66 +77,67 @@ function FilePeekPaneBody() {
         "clean");
   const renderers = useFileRenderers({ path: effectivePath, status });
 
+  // The header's title and renderer tabs read this (see file-peek-header): the
+  // requested path and no tabs until the path resolves to one file.
+  const settled =
+    resolved.status !== "loading" && resolved.status !== "ambiguous";
+  const header = useMemo(
+    () =>
+      settled
+        ? { path: effectivePath, renderers }
+        : { path: filePath, renderers: null },
+    [settled, effectivePath, filePath, renderers],
+  );
+
   if (resolved.status === "loading") {
     return (
-      <PaneChrome
-        pane={filePeekPane}
-        title={<FilepathBreadcrumb path={filePath} />}
-        titleOnly
-      >
-        <Text
-          as="div"
-          variant="body"
-          className="px-md py-sm text-muted-foreground"
-        >
-          Resolving…
-        </Text>
-      </PaneChrome>
+      <FilePeekHeaderProvider value={header}>
+        <PaneChrome pane={filePeekPane}>
+          <Text
+            as="div"
+            variant="body"
+            className="px-md py-sm text-muted-foreground"
+          >
+            Resolving…
+          </Text>
+        </PaneChrome>
+      </FilePeekHeaderProvider>
     );
   }
 
   if (resolved.status === "ambiguous") {
     return (
-      <PaneChrome
-        pane={filePeekPane}
-        title={<FilepathBreadcrumb path={filePath} />}
-        titleOnly
-      >
-        <FileDisambiguation
-          query={filePath}
-          matches={resolved.matches}
-          onSelect={(fp) =>
-            openPane(
-              filePeekPane,
-              {
-                worktree,
-                filePath: line != null ? `${fp}:${line}` : fp,
-              },
-              { mode: "swap" },
-            )
-          }
-        />
-      </PaneChrome>
+      <FilePeekHeaderProvider value={header}>
+        <PaneChrome pane={filePeekPane}>
+          <FileDisambiguation
+            query={filePath}
+            matches={resolved.matches}
+            onSelect={(fp) =>
+              openPane(
+                filePeekPane,
+                {
+                  worktree,
+                  filePath: line != null ? `${fp}:${line}` : fp,
+                },
+                { mode: "swap" },
+              )
+            }
+          />
+        </PaneChrome>
+      </FilePeekHeaderProvider>
     );
   }
 
-  const title = (
-    <Stack as={Fill} direction="row" align="center" gap="sm">
-      <Clip as="span">
-        <FilepathBreadcrumb path={effectivePath} />
-      </Clip>
-      <FileTabs {...renderers} />
-    </Stack>
-  );
-
   return (
-    <PaneChrome pane={filePeekPane} title={title} titleOnly>
-      <FileContent
-        worktree={worktree}
-        path={effectivePath}
-        line={line}
-        active={renderers.active}
-      />
-    </PaneChrome>
+    <FilePeekHeaderProvider value={header}>
+      <PaneChrome pane={filePeekPane}>
+        <FileContent
+          worktree={worktree}
+          path={effectivePath}
+          line={line}
+          active={renderers.active}
+        />
+      </PaneChrome>
+    </FilePeekHeaderProvider>
   );
 }

@@ -125,8 +125,8 @@ export function CollapsibleWrap({
   // expanded — only `overflow` flips. Because the layout height is identical,
   // the host band's `items-center` centers exactly one row the same way in both
   // states, so row 1 is pixel-stable. Collapsed clips the extra rows; expanded
-  // reveals them — they spill DOWN over the content below (the host must opt the
-  // PaneChrome band into `overflow-visible` via `headerSpill`). A maxHeight-
+  // reveals them — they spill DOWN over the content below (no ancestor between
+  // here and there may clip — see the host contract in CLAUDE.md). A maxHeight-
   // clamped box's own background can't paint overflowing content, so a measured
   // absolute backdrop draws the popover panel behind the spilled rows.
   const style: CSSProperties =

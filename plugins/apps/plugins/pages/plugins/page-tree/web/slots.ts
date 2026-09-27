@@ -37,22 +37,13 @@ export const PageDetail = {
   /** Renders every contributed section. Mounted by `pageDetailPane`. */
   Host: pageDetailSections.Host,
   /**
-   * Trailing actions in the page-detail header strip (next to the breadcrumb),
-   * e.g. a favorite/star toggle. Generic by design — contributors receive the
-   * open page's `pageId` and own their own behavior. NOT a detail section: this
-   * is page-header chrome, always visible and never collapsible.
-   */
-  HeaderActions: defineRenderSlot<{
-    component: ComponentType<{ pageId: string }>;
-  }>(),
-  /**
    * A widget floating OVER the open page — an outline rail, a reading-progress
    * indicator. The host gives it a positioning context and nothing else: a
    * contribution owns its own placement inside that box (typically a `Pin`).
    *
    * Neither of the other two seams has this shape. `Section` is an in-flow card
-   * *below* the editor, and `HeaderActions` is a button *in* the header strip;
-   * an overlay is on top of the page and is not part of its flow at all.
+   * *below* the editor, and a `pageDetailPane.Actions` item is a button *in*
+   * the header strip; an overlay is on top of the page and is not part of its flow at all.
    *
    * The host's positioning box wraps the pane, deliberately outside the pane's
    * one scroller — an absolutely-positioned child of a scroller scrolls away

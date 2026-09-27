@@ -110,7 +110,7 @@ open song's title reads it through `useCurrentSong()` (the canonical row for
 `currentSongId`, straight from `songs`, preserving the `pending`
 discriminant), and the title is *edited* in exactly one place — the inline
 `SongTitle` field, which is the player pane's TITLE node
-(`<PaneChrome title={<SongTitle/>}>`, `web/components/song-title-field.tsx`) and
+(`title: { component: SongTitle }` on its `Pane.define`, `web/components/song-title-field.tsx`) and
 patches `PATCH /api/sonata/songs/:id`
 via `updateSong`. Mirroring the `PageHeader` pattern, `matchResource` gates the
 mount so `useEditableField` only ever seeds from a settled title, and an

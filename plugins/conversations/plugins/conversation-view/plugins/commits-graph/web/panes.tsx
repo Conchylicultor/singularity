@@ -12,6 +12,7 @@ export const convCommitsGraphPane = Pane.define({
     segment: "commits",
   }),
   app: agentManagerApp,
+  title: "Commits",
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvCommitsGraphBody,
@@ -20,7 +21,7 @@ export const convCommitsGraphPane = Pane.define({
 
 function ConvCommitsGraphBody() {
   return (
-    <PaneChrome pane={convCommitsGraphPane} title="Commits">
+    <PaneChrome pane={convCommitsGraphPane}>
       <CommitsGraphBody />
     </PaneChrome>
   );

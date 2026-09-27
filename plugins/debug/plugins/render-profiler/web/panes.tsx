@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { RenderProfilerPane } from "./components/render-profiler-pane";
 
 export const renderProfilerPane = Pane.define({
+  title: "Render Profiler",
   route: defineRoute({
     id: "render-profiler",
     segment: "render-profiler",
@@ -17,7 +18,7 @@ export const renderProfilerPane = Pane.define({
 
 function RenderProfilerBody() {
   return (
-    <PaneChrome pane={renderProfilerPane} title="Render Profiler">
+    <PaneChrome pane={renderProfilerPane}>
       <RenderProfilerPane />
     </PaneChrome>
   );

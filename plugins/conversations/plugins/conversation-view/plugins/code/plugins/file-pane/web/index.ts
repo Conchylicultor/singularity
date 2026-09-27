@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { filePeekPane } from "./file-peek-pane";
 import { FilePane as FilePaneSlots } from "./slots";
+import { FilePeekTabs } from "./components/file-peek-header";
 
 export { FilePaneView } from "./components/file-pane";
 export { FileContent } from "./components/file-content";
@@ -21,6 +22,9 @@ export { useFileContent, type FileContentState } from "./use-file-content";
 
 export default {
   description: "Hosts the file-peek pane and the FilePane.Renderer slot.",
-  contributions: [Pane.Register({ pane: filePeekPane })],
+  contributions: [
+    Pane.Register({ pane: filePeekPane }),
+    filePeekPane.Actions({ id: "renderer-tabs", component: FilePeekTabs }),
+  ],
   slots: { ...FilePaneSlots, "file-peek": filePeekPane },
 } satisfies PluginDefinition;

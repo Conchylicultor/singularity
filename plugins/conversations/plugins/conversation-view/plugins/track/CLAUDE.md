@@ -12,11 +12,10 @@ not known yet (never a stand-in `Main`).
 
 - Description: Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
 - Web:
-  - Contributes: `Conversation.Header` → `TrackChip`
+  - Contributes: `conversationPane.Actions` "track" → `TrackChip`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `conversations/conversation-view/header.HeaderChip`
     - `primitives/loading.Loading`
     - `tasks/task-track.useTaskTrack`

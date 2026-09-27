@@ -1,4 +1,10 @@
-import { useEffect, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import {
   Inset,
@@ -24,6 +30,18 @@ const attachFileIcon = symbol("attach-file");
 
 function formatAddress(a: MailAddress): string {
   return a.name ? `${a.name} <${a.email}>` : a.email;
+}
+
+/**
+ * The subject the body resolved (hydrated, else the opener's envelope), handed
+ * to the header's title: the body wraps `PaneChrome`, so the title cell mounts
+ * under it. `null` while neither is known.
+ */
+const MessageSubjectContext = createContext<string | null>(null);
+
+/** The pane's header title: the message's subject, or "Message" while unknown. */
+export function MailMessageTitle(): string {
+  return useContext(MessageSubjectContext) ?? "Message";
 }
 
 /**
@@ -101,35 +119,37 @@ export function MailMessageBody(): ReactElement {
   }
 
   return (
-    <PaneChrome pane={mailMessagePane} title={subject ?? "Message"}>
-      <Inset pad="lg">
-        <Stack gap="lg">
-          <Stack gap="2xs">
-            <Text variant="heading">{subject || "(no subject)"}</Text>
-            {from && <Text variant="label">{formatAddress(from)}</Text>}
-            {to && to.length > 0 && (
-              <Text variant="caption" tone="muted">
-                to {to.map((a) => a.name ?? a.email).join(", ")}
-              </Text>
+    <MessageSubjectContext.Provider value={subject}>
+      <PaneChrome pane={mailMessagePane}>
+        <Inset pad="lg">
+          <Stack gap="lg">
+            <Stack gap="2xs">
+              <Text variant="heading">{subject || "(no subject)"}</Text>
+              {from && <Text variant="label">{formatAddress(from)}</Text>}
+              {to && to.length > 0 && (
+                <Text variant="caption" tone="muted">
+                  to {to.map((a) => a.name ?? a.email).join(", ")}
+                </Text>
+              )}
+              {internalDate && (
+                <Text variant="caption" tone="muted">
+                  <RelativeTime date={internalDate} />
+                </Text>
+              )}
+            </Stack>
+            {hydrated && hydrated.attachments.length > 0 && (
+              <Cluster>
+                {hydrated.attachments.map((att) => (
+                  <Badge key={att.id} icon={<Icon icon={attachFileIcon} />}>
+                    {att.filename}
+                  </Badge>
+                ))}
+              </Cluster>
             )}
-            {internalDate && (
-              <Text variant="caption" tone="muted">
-                <RelativeTime date={internalDate} />
-              </Text>
-            )}
+            {body}
           </Stack>
-          {hydrated && hydrated.attachments.length > 0 && (
-            <Cluster>
-              {hydrated.attachments.map((att) => (
-                <Badge key={att.id} icon={<Icon icon={attachFileIcon} />}>
-                  {att.filename}
-                </Badge>
-              ))}
-            </Cluster>
-          )}
-          {body}
-        </Stack>
-      </Inset>
-    </PaneChrome>
+        </Inset>
+      </PaneChrome>
+    </MessageSubjectContext.Provider>
   );
 }

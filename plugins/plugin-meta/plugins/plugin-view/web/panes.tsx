@@ -23,7 +23,28 @@ export const pluginViewPane = Pane.define({
   component: PluginViewBody,
   width: 600,
   resolve: false,
+  title: { text: usePluginViewTitle, fallback: "Plugin" },
 });
+
+/** The plugin's display name from the facets tree, or undefined while it loads. */
+function usePluginViewTitle({
+  pluginId,
+}: {
+  pluginId: string;
+}): string | undefined {
+  const { data } = useEndpoint(getPluginFacetsTree, {});
+  if (!data) return undefined;
+  return findNode(data.plugins, pluginId)?.name ?? pluginId;
+}
+
+function findNode(nodes: PluginNode[], id: string): PluginNode | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const hit = findNode(n.children, id);
+    if (hit) return hit;
+  }
+  return undefined;
+}
 
 function PluginViewBody() {
   const { pluginId } = pluginViewPane.useParams();
@@ -48,7 +69,7 @@ function PluginViewBody() {
 
   if (isLoading) {
     return (
-      <PaneChrome pane={pluginViewPane} title="Plugin">
+      <PaneChrome pane={pluginViewPane}>
         <Center axis="both" className="h-full">
           <Loading />
         </Center>
@@ -57,7 +78,7 @@ function PluginViewBody() {
   }
   if (error) {
     return (
-      <PaneChrome pane={pluginViewPane} title="Plugin">
+      <PaneChrome pane={pluginViewPane}>
         <Center axis="both" className="h-full p-2xl text-center">
           <Text as="div" variant="body">
             <Stack direction="col" align="center" gap="sm">
@@ -73,7 +94,7 @@ function PluginViewBody() {
   }
 
   return (
-    <PaneChrome pane={pluginViewPane} title={node?.name ?? pluginId}>
+    <PaneChrome pane={pluginViewPane}>
       <PluginDetail node={node} />
     </PaneChrome>
   );

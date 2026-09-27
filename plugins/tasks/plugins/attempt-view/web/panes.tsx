@@ -2,7 +2,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
-import { AttemptPane } from "./components/attempt-pane";
+import { AttemptPane, AttemptsTitle } from "./components/attempt-pane";
 
 function useResolveAttempt({ attemptId }: { attemptId: string }) {
   const result = useResource(attemptsResource);
@@ -19,4 +19,6 @@ export const attemptPane = Pane.define({
   component: AttemptPane,
   width: 320,
   resolve: useResolveAttempt,
+  // The header adds the task's conversation count beside the word.
+  title: { text: "Attempts", component: AttemptsTitle },
 });

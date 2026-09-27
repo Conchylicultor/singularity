@@ -35,6 +35,7 @@ import { SectionPane } from "./components/section-pane";
  * `Sonata.Home` gallery owns its scroll inside the chrome's single `PaneScroll`.
  */
 export const sonataLibraryPane = Pane.define({
+  title: "Library",
   route: defineRoute({ id: "sonata-library", segment: "" }),
   app: sonataApp,
   appIndex: true,
@@ -43,7 +44,7 @@ export const sonataLibraryPane = Pane.define({
 
 function SonataLibraryBody(): ReactElement {
   return (
-    <PaneChrome pane={sonataLibraryPane} title="Library">
+    <PaneChrome pane={sonataLibraryPane}>
       <SonataLibrarySurface />
     </PaneChrome>
   );
@@ -53,7 +54,7 @@ function SonataLibraryBody(): ReactElement {
  * The player pane at `/sonata/song/:songId` — a real URL that survives reload
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
- * optimistic `title` rides in `hint` purely as a DISPLAY value for `useTitle`
+ * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
  * (the browser-tab / tab-strip label before the live `songs` value settles) —
  * it is NOT a data source: the header title and every consumer read the
  * canonical row from `songs`. `resolve` hydrates every source for the song on
@@ -62,18 +63,20 @@ function SonataLibraryBody(): ReactElement {
 export const sonataPlayerPane = Pane.define({
   route: defineRoute({ id: "sonata-player", segment: "song/:songId" }),
   app: sonataApp,
-  // Display-only optimistic label for `useTitle` (tab/document title) before the
+  // Display-only optimistic label for `title.text` (tab/document title) before the
   // `songs` value settles. Structurally unwritable: `Hint.pick` hands it back
   // only alongside the canonical value, and it is never persisted. The title is
   // library-owned (`songs`); the shell keeps no mirror.
   hint: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
-  // Tab/document title: the canonical song name from the live `songs` value
-  // (reflects renames), falling back to the optimistic hint carried at open time
-  // while it loads. Self-contained — `useSonata()` context is
-  // unavailable at the tab-surface level where this runs.
-  useTitle: useSongTitle,
+  // Title: `text` (tab/document title) is the canonical song name from the live
+  // `songs` value (reflects renames), falling back to the optimistic hint
+  // carried at open time while it loads. Self-contained — `useSonata()` context
+  // is unavailable at the tab-surface level where it runs. The header paints
+  // `component` instead: the inline-editable title, mounted inside the pane so
+  // it may read app context.
+  title: { text: useSongTitle, component: SongTitle },
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });
@@ -178,7 +181,7 @@ function SonataPlayerSurface(): ReactElement {
     // full-width Transport progress strip stays OUT of it, in the body top (the
     // first child below), and the display + Section panels fill the rest. The
     // body is a single `h-full` column under the chrome's inert `PaneScroll`.
-    <PaneChrome pane={sonataPlayerPane} title={<SongTitle />}>
+    <PaneChrome pane={sonataPlayerPane}>
       <Column
         fill
         scrollBody={false}

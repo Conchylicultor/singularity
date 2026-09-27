@@ -204,7 +204,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/fork-conversation`
-    - `conversations/conversation-view/header`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
     - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`

@@ -20,6 +20,7 @@ import { ServerDetail } from "./slots";
 export const NEW_SERVER_ID = "new";
 
 export const serversRootPane = Pane.define({
+  title: "Servers",
   route: serversRoute,
   app: deployApp,
   // The Deploy app's index/landing pane — what its bare root (/deploy)
@@ -36,6 +37,18 @@ function useResolveServer({ serverId }: { serverId: string }) {
   return { pending: false, found: result.data.some((s) => s.id === serverId) };
 }
 
+/** "Add Server" for the create state, else the server's name once it loads. */
+function useServerTitle({
+  serverId,
+}: {
+  serverId: string;
+}): string | undefined {
+  const result = useLive(servers);
+  if (serverId === NEW_SERVER_ID) return "Add Server";
+  if (result.pending) return undefined;
+  return result.data.find((s) => s.id === serverId)?.name;
+}
+
 // Single unified server pane: `server/new` is the add form, `server/:id` is the
 // same page in edit mode. One route serves both, so adding and editing a server
 // are the same surface.
@@ -44,12 +57,13 @@ export const serverDetailPane = Pane.define({
   app: deployApp,
   component: ServerDetailBody,
   resolve: useResolveServer,
+  title: { text: useServerTitle, fallback: "Server" },
   width: 420,
 });
 
 function ServersRoot() {
   return (
-    <PaneChrome pane={serversRootPane} title="Servers">
+    <PaneChrome pane={serversRootPane}>
       <ServersList />
     </PaneChrome>
   );
@@ -62,7 +76,7 @@ function ServerDetailBody() {
 
   if (serverId === NEW_SERVER_ID) {
     return (
-      <PaneChrome pane={serverDetailPane} title="Add Server">
+      <PaneChrome pane={serverDetailPane}>
         <ServerCreateForm
           // `swap` replaces the create state with the real server in place — no
           // new column, so the pane transitions add → edit seamlessly.
@@ -76,7 +90,7 @@ function ServerDetailBody() {
 
   if (serversResult.pending) {
     return (
-      <PaneChrome pane={serverDetailPane} title="Server">
+      <PaneChrome pane={serverDetailPane}>
         <Loading variant="rows" />
       </PaneChrome>
     );
@@ -86,7 +100,7 @@ function ServerDetailBody() {
 
   if (!server) {
     return (
-      <PaneChrome pane={serverDetailPane} title="Server">
+      <PaneChrome pane={serverDetailPane}>
         <Text as="div" variant="body" className="text-muted-foreground p-lg">
           Server not found.
         </Text>
@@ -97,7 +111,7 @@ function ServerDetailBody() {
   // The whole pane body is the one section slot: identity, SSH setup and
   // deployments are peer contributions, and the host owns all of the chrome.
   return (
-    <PaneChrome pane={serverDetailPane} title={server.name}>
+    <PaneChrome pane={serverDetailPane}>
       <ServerDetail.Host server={server} />
     </PaneChrome>
   );

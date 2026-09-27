@@ -1,4 +1,4 @@
-// @hash 0e3be3905428
+// @hash 8e560ae60239
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "conversations.conversation-view.code.file-pane:renderer-tabs",
     "primitives.pane:title"
   ]
 }

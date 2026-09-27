@@ -44,6 +44,7 @@ const MAIL_THREADS_VIEW = defineDataView("mail-threads");
  * edit persists straight back into the config row.
  */
 export const mailThreadsPane = Pane.define({
+  title: "Mail",
   route: defineRoute({ id: "mail-threads", segment: "threads" }),
   app: mailApp,
   component: MailThreadsPaneView,
@@ -67,7 +68,7 @@ function MailThreadsPaneView(): ReactElement {
   const selectedRowId = threadPane.useRouteEntry()?.params.threadId;
 
   return (
-    <PaneChrome pane={mailThreadsPane} title="Mail">
+    <PaneChrome pane={mailThreadsPane}>
       <DataView<MailThread>
         storageKey={MAIL_THREADS_VIEW}
         rows={[]}

@@ -10,7 +10,8 @@ import { FloatingHeaderScroll } from "./floating-header-scroll";
 import { PaneIconAction } from "./pane-icon-action";
 import { PaneHeaderCell, type PaneHeaderItem } from "./pane-header-item";
 import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
-import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
+import { InsidePaneTitleContext } from "./pane-title-guard";
+import { usePaneEntry, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -19,32 +20,15 @@ const closeIcon = symbol("close");
 const openInFullIcon = symbol("open-in-full");
 
 interface PaneChromeProps {
+  /**
+   * The pane this chrome is for. Its header title comes from HERE — the
+   * pane's `Pane.define({ title })` — and nowhere else: `PaneChrome` accepts no
+   * header content at all. The title is PUBLISHED, not painted here: the pane's
+   * own `title` header contribution reads it off {@link PaneTitleContext} and
+   * renders it, so it is one item of the header's one slot — orderable and
+   * hideable like every other.
+   */
   pane: AnyPane;
-  /**
-   * Header title. When omitted, falls back to the pane's `chrome.title`
-   * config (string or `(params) => string`). Pass a node when the title
-   * needs loaded data (e.g. a task name) or custom layout.
-   *
-   * Either way the title is PUBLISHED, not painted here: the pane's own
-   * `title` header contribution reads the resolved value off
-   * {@link PaneTitleContext} and renders it, so it is one item of the header's
-   * one slot — orderable and hideable like every other.
-   */
-  title?: ReactNode;
-  /**
-   * Per-instance header control, joining the contributed items as one more bar
-   * occupant under the id `pane-extra`. Use for stateful, host-coupled controls
-   * (e.g. file-pane tabs) that don't fit the contribution model.
-   *
-   * Named `extra` and not `actions` because it is ONE header control, not the
-   * hover-revealed trailing cluster that `row-actions/no-raw-actions-slot`
-   * guards — that rule's vocabulary and a pane header's are two different
-   * things. A cluster owns a reveal, a popup-hold, a pointerdown guard and a
-   * pinned box, and must render through `RowActions`; this owns none of them.
-   * It is a bar occupant, measured and relocated behind the `⋯` like every
-   * contributed item beside it.
-   */
-  extra?: ReactNode;
   /**
    * Render ONLY the header's yielding cell — the pane title — and suppress
    * every contributed action occupant. For a host that renders those actions
@@ -52,27 +36,9 @@ interface PaneChromeProps {
    * standard title + expand + close chrome.
    *
    * The rule, stated once: an item with `cell` set survives, an ordinary
-   * occupant does not. `pane-extra` is an ordinary occupant and goes with them.
+   * occupant does not.
    */
   titleOnly?: boolean;
-  /**
-   * When true, the header band uses `overflow-visible` instead of the default
-   * `overflow-hidden`, letting the title (e.g. a `CollapsibleWrap`) spill its
-   * expanded rows DOWN over the content below without being clipped by the
-   * fixed-height band. Opt in only for panes whose header can reveal overflow;
-   * the band stays `h-10` so row 1 and the rest of the chrome are unaffected.
-   * Default false (clip — today's behavior for every other pane).
-   *
-   * It opens every clip boundary between the band and the title node, and there
-   * are three: the `Bar`'s own overflow, the header `AdaptiveBar`'s (the title
-   * is an occupant of it), and the node-title `<Text>` wrapper, which would
-   * otherwise auto-apply the single-line `truncate` recipe — i.e.
-   * `overflow:hidden` — because it sits in the Bar's single-line context, and
-   * re-clip the very spill this flag enables (see `PaneTitleItem`). The node
-   * then owns its own overflow; single-line leaves inside it still truncate via
-   * their own class.
-   */
-  headerSpill?: boolean;
   /**
    * The pane's non-scrolling overlay layer — widgets that float over the BODY
    * (an outline rail) rather than scroll with it. Rendered as a SIBLING of the
@@ -115,26 +81,21 @@ interface PaneChromeProps {
  */
 export function PaneChrome({
   pane,
-  title,
-  extra,
   titleOnly,
-  headerSpill,
   overlay,
   floatingHeader = false,
   children,
 }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
-  const match = usePaneMatch();
-  const fallbackTitle = chromeTitle(pane, match);
+  const entry = usePaneEntry(pane._internal);
   const layoutCtx = useContext(PaneLayoutContext);
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
   const promote = pane.usePromote();
-  const resolvedTitle = title ?? fallbackTitle;
   const titleValue = useMemo<PaneTitleValue>(
-    () => ({ title: resolvedTitle, spill: headerSpill === true }),
-    [resolvedTitle, headerSpill],
+    () => ({ pane: pane._internal, entry }),
+    [pane, entry],
   );
   // Surface-edge chrome: only when this pane header IS the surface's top chrome.
   // The first top-row header hosts the leading control (sidebar toggle); the
@@ -147,7 +108,6 @@ export function PaneChrome({
   const header = (atTop: boolean) => (
     <Bar
       tier="pane"
-      overflow={headerSpill ? "visible" : "hidden"}
       endSafeArea={reserveEnd}
       className={cn(
         layoutCtx?.dragHandleProps && "cursor-grab active:cursor-grabbing",
@@ -167,19 +127,11 @@ export function PaneChrome({
               title's yielding cell holds the leftover in front of them, so a
               header with a title reads exactly as it always has and a header
               without one costs nothing. */}
-      <AdaptiveBar
-        gap="xs"
-        label="More actions"
-        align="end"
-        spill={headerSpill}
-      >
+      <AdaptiveBar gap="xs" label="More actions" align="end">
         <PaneTitleContext.Provider value={titleValue}>
           <pane.Actions.Render>
             {(item) => renderHeaderItem(item, titleOnly)}
           </pane.Actions.Render>
-          {extra != null && !titleOnly && (
-            <AdaptiveBar.Item id="pane-extra">{extra}</AdaptiveBar.Item>
-          )}
         </PaneTitleContext.Provider>
       </AdaptiveBar>
       {chrome.promote && promote && (
@@ -245,7 +197,12 @@ function renderHeaderItem(
   if (item.cell === "yield") {
     return (
       <AdaptiveBar.Yield grow>
-        <PaneHeaderCell {...item} />
+        {/* Marks everything the title cell renders — and ONLY that: the
+            item's own slot wrapping sits outside this — so a render slot
+            mounted inside the title throws (`pane-title-guard.tsx`). */}
+        <InsidePaneTitleContext.Provider value={true}>
+          <PaneHeaderCell {...item} />
+        </InsidePaneTitleContext.Provider>
       </AdaptiveBar.Yield>
     );
   }
@@ -255,13 +212,4 @@ function renderHeaderItem(
       <PaneHeaderCell {...item} />
     </AdaptiveBar.Item>
   );
-}
-
-function chromeTitle(pane: AnyPane, match: PaneMatch | null): ReactNode {
-  const chrome = pane._internal.chrome;
-  if (chrome.title === undefined) return null;
-  if (typeof chrome.title === "string") return chrome.title;
-  const entry = match?.panes.find((e) => e.pane === pane._internal);
-  if (!entry) return null;
-  return chrome.title(entry.fullParams);
 }

@@ -31,7 +31,7 @@ page and in the sidebar still say so.
 ## Why it lives here
 
 - **Under `apps/pages`, not in a `page/**` plugin.** The header strip
-  (`PageDetail.HeaderActions`) belongs to the Pages app's page pane, which is app
+  (`pageDetailPane.Actions`) belongs to the Pages app's page pane, which is app
   chrome. The `plugins/page/**` plugins are the editor the app is built on, and
   none of them imports an `apps/**` web barrel, so the control cannot be
   contributed from there without inverting that layering.
@@ -53,9 +53,9 @@ Design: [`research/2026-09-15-page-agent-page-follow-ups.md`](../../../../../../
 
 - Description: Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
 - Web:
-  - Contributes: `PageDetail.HeaderActions` → `PageKindControl`
+  - Contributes: `pageDetailPane.Actions` "page-author" → `PageKindControl`
   - Uses:
-    - `apps/pages/page-tree.PageDetail`
+    - `apps/pages/page-tree.pageDetailPane`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`

@@ -142,6 +142,35 @@ function AttemptSection({
   );
 }
 
+/** Every attempt of the task the given attempt belongs to. */
+function taskAttemptsOf(
+  attempts: AttemptWithConversations[],
+  attemptId: string,
+): AttemptWithConversations[] {
+  const attempt = attempts.find((a) => a.id === attemptId);
+  return attempt ? attempts.filter((a) => a.taskId === attempt.taskId) : [];
+}
+
+/**
+ * The pane's header title: "Attempts" plus a badge counting the conversations
+ * across the task's attempts (none while the list loads, or when it is zero).
+ */
+export function AttemptsTitle() {
+  const { attemptId } = attemptPane.useParams();
+  const result = useResource(attemptsResource);
+  if (result.pending) return "Attempts";
+  const totalConversations = taskAttemptsOf(result.data, attemptId).reduce(
+    (sum, a) => sum + a.conversations.length,
+    0,
+  );
+  return (
+    <Inline gap="xs">
+      Attempts
+      {totalConversations > 0 && <Badge>{totalConversations}</Badge>}
+    </Inline>
+  );
+}
+
 export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
   const result = useResource(attemptsResource);
@@ -156,29 +185,13 @@ export function AttemptPane() {
 
   if (result.pending) return <Loading />;
 
-  const attempt = result.data.find((a) => a.id === attemptId) ?? null;
-
-  const taskAttempts = attempt
-    ? result.data.filter((a) => a.taskId === attempt.taskId)
-    : [];
+  const taskAttempts = taskAttemptsOf(result.data, attemptId);
 
   const handleSelect = (convId: string) =>
     openPane(conversationPane, { convId }, { mode: "push" });
 
-  const totalConversations = taskAttempts.reduce(
-    (sum, a) => sum + a.conversations.length,
-    0,
-  );
-
-  const title = (
-    <Inline gap="xs">
-      Attempts
-      {totalConversations > 0 && <Badge>{totalConversations}</Badge>}
-    </Inline>
-  );
-
   return (
-    <PaneChrome pane={attemptPane} title={title}>
+    <PaneChrome pane={attemptPane}>
       <Inset pad="sm">
         {taskAttempts.length === 0 ? (
           <Text

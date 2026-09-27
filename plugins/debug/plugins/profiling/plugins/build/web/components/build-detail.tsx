@@ -7,7 +7,6 @@ import {
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -28,10 +27,8 @@ export function BuildProfileDetailBody(): ReactElement {
     [hovered, setHovered],
   );
 
-  const title = `Build · ${stripAttemptBranchPrefix(worktree)}`;
-
   return (
-    <PaneChrome pane={buildProfileDetailPane} title={title}>
+    <PaneChrome pane={buildProfileDetailPane}>
       {!data ? (
         <Placeholder tone={error ? "error" : "muted"}>
           {error ? "Build profile unavailable." : "Loading…"}

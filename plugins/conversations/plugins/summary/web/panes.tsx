@@ -12,6 +12,7 @@ export const convSummaryPane = Pane.define({
     segment: "summary",
   }),
   app: agentManagerApp,
+  title: "Summary",
   component: ConvSummaryBody,
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { history: false, promote: false },
@@ -19,7 +20,7 @@ export const convSummaryPane = Pane.define({
 
 function ConvSummaryBody() {
   return (
-    <PaneChrome pane={convSummaryPane} title="Summary">
+    <PaneChrome pane={convSummaryPane}>
       <SummaryPane />
     </PaneChrome>
   );

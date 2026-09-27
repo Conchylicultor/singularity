@@ -3,7 +3,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   agentsRootPane,
   agentDetailPane,
@@ -47,7 +47,7 @@ export default {
       match: ({ conv }) => conv.kind === "agent",
       component: AgentAvatarRow,
     }),
-    Conversation.Header({
+    conversationPane.Actions({
       id: "agent-avatar",
       component: AgentAvatarTitlePrefix,
     }),

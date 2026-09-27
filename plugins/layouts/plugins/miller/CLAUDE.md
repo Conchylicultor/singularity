@@ -142,6 +142,7 @@ not yet supported — see the open question in
     - `primitives/pane.paneThemeScope`
     - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneStore`
+    - `primitives/pane.usePaneTitle`
     - `primitives/pane.useRoute`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/sortable-list.SortableItem`

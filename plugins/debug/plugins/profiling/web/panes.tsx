@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { GanttView } from "./components/gantt-view";
 
 export const profilingPane = Pane.define({
+  title: "Profiling",
   route: defineRoute({
     id: "debug-profiling",
     segment: "profiling",
@@ -17,7 +18,7 @@ export const profilingPane = Pane.define({
 
 function ProfilingBody() {
   return (
-    <PaneChrome pane={profilingPane} title="Profiling">
+    <PaneChrome pane={profilingPane}>
       <GanttView />
     </PaneChrome>
   );

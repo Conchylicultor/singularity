@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { BroadcastsPanel } from "./components/broadcasts-panel";
 
 export const broadcastsPane = Pane.define({
+  title: "Broadcasts",
   route: defineRoute({
     id: "debug-broadcasts",
     segment: "broadcasts",
@@ -17,7 +18,7 @@ export const broadcastsPane = Pane.define({
 
 function BroadcastsBody() {
   return (
-    <PaneChrome pane={broadcastsPane} title="Broadcasts">
+    <PaneChrome pane={broadcastsPane}>
       <BroadcastsPanel />
     </PaneChrome>
   );

@@ -13,11 +13,13 @@ export const globalFileTreePane = Pane.define({
     segment: "code/:worktree",
   }),
   app: agentManagerApp,
+  title: { text: ({ worktree }) => `Files · ${worktree}` },
   component: GlobalFileTreeChromedBody,
   resolve: false,
 });
 
 export const convFileTreePane = Pane.define({
+  title: "Files",
   route: defineRoute({
     id: "conv-file-tree",
     segment: "files",
@@ -30,9 +32,8 @@ export const convFileTreePane = Pane.define({
 });
 
 function GlobalFileTreeChromedBody() {
-  const { worktree } = globalFileTreePane.useParams();
   return (
-    <PaneChrome pane={globalFileTreePane} title={`Files · ${worktree}`}>
+    <PaneChrome pane={globalFileTreePane}>
       <GlobalFileTreeBody />
     </PaneChrome>
   );
@@ -40,7 +41,7 @@ function GlobalFileTreeChromedBody() {
 
 function ConvFileTreeChromedBody() {
   return (
-    <PaneChrome pane={convFileTreePane} title="Files">
+    <PaneChrome pane={convFileTreePane}>
       <ConvFileTreeBody />
     </PaneChrome>
   );

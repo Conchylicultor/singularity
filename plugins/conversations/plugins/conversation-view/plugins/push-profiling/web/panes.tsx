@@ -12,6 +12,7 @@ export const convPushProfilingPane = Pane.define({
     segment: "pp",
   }),
   app: agentManagerApp,
+  title: "Op Profiling",
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvPushProfilingBody,
@@ -20,7 +21,7 @@ export const convPushProfilingPane = Pane.define({
 
 function ConvPushProfilingBody() {
   return (
-    <PaneChrome pane={convPushProfilingPane} title="Op Profiling">
+    <PaneChrome pane={convPushProfilingPane}>
       <PushProfilingPaneBody />
     </PaneChrome>
   );

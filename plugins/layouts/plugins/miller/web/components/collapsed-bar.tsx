@@ -1,5 +1,6 @@
 import {
   paneThemeScope,
+  usePaneTitle,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -15,7 +16,12 @@ interface CollapsedBarProps {
 }
 
 export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
-  const title = resolveTitle(entry);
+  // The pane's own title (`Pane.define({ title })`), the same string its tab
+  // shows. A column's entry is fixed for its life (keyed by instance), so the
+  // pane's `title.text` hook order is stable.
+  const title =
+    usePaneTitle(entry.pane, entry.fullParams, entry.hint, entry.options) ??
+    entry.pane.id;
   return (
     // A collapsed column is still this pane, so it wears the pane's own theme
     // (its home app's) exactly like the expanded body does — otherwise
@@ -33,7 +39,7 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       surface="sunken"
       type="button"
       onClick={onExpand}
-      aria-label={`Expand ${title ?? entry.pane.id}`}
+      aria-label={`Expand ${title}`}
       // The collapsed rail is a rigid column in the externally-owned miller
       // flex row; `shrink-0` keeps it from being crushed.
       //
@@ -59,11 +65,4 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       </Stack>
     </Theme>
   );
-}
-
-function resolveTitle(entry: MatchEntry): string | null {
-  const t = entry.pane.chrome.title;
-  if (typeof t === "string") return t;
-  if (typeof t === "function") return t(entry.fullParams);
-  return entry.pane.id;
 }

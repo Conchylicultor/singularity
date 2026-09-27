@@ -148,6 +148,14 @@ export interface RenderSlotConfig<P> {
    * `size` on a contribution still wins (escape hatch).
    */
   controlSize?: ControlSize;
+  /**
+   * This slot is an internal part of one component — a list it draws inside
+   * itself — not a row of its own. The one effect today: the slot may render
+   * inside a pane title, which otherwise throws (the pane header is ONE slot;
+   * a second one inside its title is a row its order file cannot see). Declare
+   * it only for a component's own parts, never to place items beside a title.
+   */
+  partOfComponent?: true;
 }
 
 /**
@@ -237,7 +245,11 @@ export function defineRenderSlot<P>(
   // A render slot is visible and renders every contribution, so its order is
   // always user-curatable — there is no opt-out (a slot that shouldn't be
   // ordered is headless: `defineMountSlot`).
-  renderSlot.meta = { kind: "render", reorderable: true };
+  renderSlot.meta = {
+    kind: "render",
+    reorderable: true,
+    partOfComponent: config?.partOfComponent === true,
+  };
   const controlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({

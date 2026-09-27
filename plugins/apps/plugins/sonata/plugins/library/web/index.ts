@@ -27,7 +27,7 @@ export default {
     Sonata.Home({ id: "library", component: SongLibrary }),
     // The player pane's header. The song title is NOT here: a pane contributes
     // exactly one `title` item into its own header, and the player's title is
-    // that item's value (`<PaneChrome title={<SongTitle/>}>` in `panes.tsx`).
+    // that item's value (`title: { component: SongTitle }` in `panes.tsx`).
     sonataPlayerPane.Actions({ id: "back", component: BackToLibrary }),
     sonataPlayerPane.Actions({
       id: "display-picker",

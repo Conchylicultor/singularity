@@ -14,6 +14,7 @@ import { useReport } from "./internal/use-report";
 // declarations (hoisted), so the forward reference is safe at runtime.
 
 export const reportsPane = Pane.define({
+  title: "Reports",
   route: reportsRootRoute,
   app: debugApp,
   component: ReportsBody,
@@ -37,9 +38,20 @@ function useResolveReport({ reportId }: { reportId: string }): {
   }
 }
 
+/** The report's kind once it is read; the pane falls back to "Report" until then. */
+function useReportTitle({
+  reportId,
+}: {
+  reportId: string;
+}): string | undefined {
+  const read = useReport(reportId);
+  return read.status === "found" ? read.report.kind : undefined;
+}
+
 export const reportDetailPane = Pane.define({
   route: reportDetailRoute,
   app: debugApp,
+  title: { text: useReportTitle, fallback: "Report" },
   component: ReportDetailBody,
   width: 480,
   resolve: useResolveReport,
@@ -50,7 +62,7 @@ function ReportsBody() {
   const selectedId = reportDetailPane.useRouteEntry()?.params.reportId;
 
   return (
-    <PaneChrome pane={reportsPane} title="Reports">
+    <PaneChrome pane={reportsPane}>
       <ReportsView
         selectedId={selectedId}
         onSelect={(id) =>

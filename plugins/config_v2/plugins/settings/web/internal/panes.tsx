@@ -26,6 +26,7 @@ export const configDetailRoute = defineRoute({
 });
 
 export const configNavPane = Pane.define({
+  title: "Config",
   route: configNavRoute,
   app: settingsApp,
   component: ConfigNavBody,
@@ -33,6 +34,7 @@ export const configNavPane = Pane.define({
 });
 
 export const configDetailPane = Pane.define({
+  title: "Config Detail",
   route: configDetailRoute,
   app: settingsApp,
   component: ConfigDetailBody,
@@ -42,7 +44,7 @@ export const configDetailPane = Pane.define({
 
 function ConfigNavBody() {
   return (
-    <PaneChrome pane={configNavPane} title="Config">
+    <PaneChrome pane={configNavPane}>
       <Column
         fill
         className="h-full"
@@ -60,7 +62,7 @@ function ConfigNavBody() {
 
 function ConfigDetailBody() {
   return (
-    <PaneChrome pane={configDetailPane} title="Config Detail">
+    <PaneChrome pane={configDetailPane}>
       <ConfigDetail />
     </PaneChrome>
   );

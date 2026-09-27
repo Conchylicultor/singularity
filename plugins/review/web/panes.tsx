@@ -15,6 +15,7 @@ import { Review } from "./slots";
 import { type Source, SourceTabs, groupPushes } from "./source";
 
 export const convReviewPane = Pane.define({
+  title: "Review",
   route: defineRoute({
     id: "conv-review",
     segment: "review",
@@ -34,7 +35,7 @@ function ConvReviewBody() {
   if (!convId) return null;
 
   return (
-    <PaneChrome pane={convReviewPane} title="Review">
+    <PaneChrome pane={convReviewPane}>
       <Stack gap="none" className="h-full">
         {conversation ? (
           <AttemptSourceTabs

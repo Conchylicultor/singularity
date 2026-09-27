@@ -7,6 +7,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { StatsPanel } from "./components/stats-panel";
 
 export const statsPane = Pane.define({
+  title: "Stats",
   route: defineRoute({
     id: "stats",
     segment: "stats",
@@ -17,7 +18,7 @@ export const statsPane = Pane.define({
 
 function StatsBody() {
   return (
-    <PaneChrome pane={statsPane} title="Stats">
+    <PaneChrome pane={statsPane}>
       <StatsPanel />
     </PaneChrome>
   );

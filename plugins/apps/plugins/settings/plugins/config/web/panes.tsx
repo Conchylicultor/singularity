@@ -14,6 +14,7 @@ import { ConfigNav } from "@plugins/config_v2/plugins/settings/web";
 // preserves config-detail deep-link reloads, which reconstruct the nav column
 // from the URL segment.
 export const settingsConfigIndexPane = Pane.define({
+  title: "Config",
   route: defineRoute({ id: "settings-config-index", segment: "" }),
   app: settingsApp,
   appIndex: true,
@@ -23,7 +24,7 @@ export const settingsConfigIndexPane = Pane.define({
 
 function SettingsConfigIndexBody() {
   return (
-    <PaneChrome pane={settingsConfigIndexPane} title="Config">
+    <PaneChrome pane={settingsConfigIndexPane}>
       <ConfigNav />
     </PaneChrome>
   );

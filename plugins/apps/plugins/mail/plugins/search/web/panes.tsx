@@ -2,7 +2,10 @@ import { Pane, type, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MailSearchBody } from "./components/mail-search-body";
-import { MailMessageBody } from "./components/mail-message-reader";
+import {
+  MailMessageBody,
+  MailMessageTitle,
+} from "./components/mail-message-reader";
 
 const mailSearchRoute = defineRoute({
   id: "mail-search",
@@ -20,7 +23,7 @@ export const mailSearchPane = Pane.define({
   app: mailApp,
   width: 480,
   component: MailSearchBody,
-  chrome: { title: () => "Search" },
+  title: "Search",
 });
 
 /**
@@ -52,4 +55,8 @@ export const mailMessagePane = Pane.define({
   hint: type<MailMessage>(),
   resolve: false,
   component: MailMessageBody,
+  // The subject is known only inside the body (the opener's envelope, refined
+  // by a hydration fired on mount), so the tab reads "Message" and the header's
+  // `component` — mounted under the body — paints the subject.
+  title: { text: "Message", component: MailMessageTitle },
 });

@@ -173,8 +173,8 @@ describe("paneDeclarationsIn", () => {
       paneDeclarationsIn(`
       import { realRoute } from "./routes";
       export const p = Pane.define({
-        chrome: { title: (params) => params.id, id: "nested-id" },
-        options: { route: decoyRoute },
+        title: { text: (params) => params.id, fallback: "Item" },
+        options: { route: decoyRoute, id: "nested-id" },
         route: realRoute,
         app: someApp,
       });

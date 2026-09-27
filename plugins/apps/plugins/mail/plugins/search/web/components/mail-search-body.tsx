@@ -2,7 +2,10 @@ import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
@@ -50,7 +53,9 @@ export function MailSearchBody(): ReactElement {
     body = <Loading variant="rows" />;
   } else if (isError) {
     // The backend returns 409 when Gmail isn't connected — surface its message.
-    body = <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>;
+    body = (
+      <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
+    );
   } else if (results.length === 0 && !scroll.hasNextPage) {
     body = <Placeholder>No matches.</Placeholder>;
   } else {
@@ -65,7 +70,7 @@ export function MailSearchBody(): ReactElement {
   }
 
   return (
-    <PaneChrome pane={mailSearchPane} title="Search">
+    <PaneChrome pane={mailSearchPane}>
       <Sticky edge="top" mask>
         <Inset pad="sm">
           <SearchInput

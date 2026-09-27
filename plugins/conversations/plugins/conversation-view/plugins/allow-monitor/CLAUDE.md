@@ -12,10 +12,9 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
 
 - Description: Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
 - Web:
-  - Contributes: `Conversation.Header` → `AllowMonitorChip`
+  - Contributes: `conversationPane.Actions` "allow-monitor" → `AllowMonitorChip`
   - Uses:
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/text.Text`

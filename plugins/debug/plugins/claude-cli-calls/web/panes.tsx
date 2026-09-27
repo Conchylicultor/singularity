@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { CallsView } from "./components/calls-view";
 
 export const claudeCliCallsPane = Pane.define({
+  title: "Claude CLI Calls",
   route: defineRoute({
     id: "claude-cli-calls",
     segment: "claude-cli-calls",
@@ -17,7 +18,7 @@ export const claudeCliCallsPane = Pane.define({
 
 function CallsBody() {
   return (
-    <PaneChrome pane={claudeCliCallsPane} title="Claude CLI Calls">
+    <PaneChrome pane={claudeCliCallsPane}>
       <CallsView />
     </PaneChrome>
   );

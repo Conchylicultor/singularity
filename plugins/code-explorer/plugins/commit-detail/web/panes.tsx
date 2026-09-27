@@ -7,7 +7,7 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { CommitDiffView } from "./components/commit-diff-view";
-import { useCommitInfo, type CommitInfoState } from "./use-commit-info";
+import { useCommitInfo } from "./use-commit-info";
 
 export const commitDetailPane = Pane.define({
   route: defineRoute({
@@ -15,6 +15,13 @@ export const commitDetailPane = Pane.define({
     segment: "commit/:worktree/:sha",
   }),
   app: agentManagerApp,
+  // The subject once resolved; the short sha while loading, unknown, or
+  // unreachable — a metadata failure must not cost the pane its identity.
+  title: {
+    text: useCommitSubject,
+    fallback: ({ sha }) => shortSha(sha),
+    component: CommitTitle,
+  },
   component: CommitDetailBody,
   chrome: { history: false },
   width: 720,
@@ -29,7 +36,7 @@ function CommitDetailBody() {
   const info = useCommitInfo(worktree, sha);
 
   return (
-    <PaneChrome pane={commitDetailPane} title={commitTitle(info, sha)}>
+    <PaneChrome pane={commitDetailPane}>
       {info.kind === "not-found" ? (
         <Placeholder>{info.reason}</Placeholder>
       ) : (
@@ -39,9 +46,26 @@ function CommitDetailBody() {
   );
 }
 
-// The subject once resolved; the short sha while loading, unknown, or
-// unreachable — a metadata failure must not cost the pane its identity.
-function commitTitle(info: CommitInfoState, sha: string): ReactNode {
+function useCommitSubject({
+  worktree,
+  sha,
+}: {
+  worktree: string;
+  sha: string;
+}): string | undefined {
+  const info = useCommitInfo(worktree, sha);
+  return info.kind === "found" ? info.commit.subject : undefined;
+}
+
+function shortSha(sha: string): string {
+  return sha.slice(0, 7);
+}
+
+// The header's title: the subject, or the short sha set in mono — the same
+// cached commit read the tab title's `useCommitSubject` makes.
+function CommitTitle(): ReactNode {
+  const { worktree, sha } = commitDetailPane.useParams();
+  const info = useCommitInfo(worktree, sha);
   if (info.kind === "found") return info.commit.subject;
-  return <span className="font-mono">{sha.slice(0, 7)}</span>;
+  return <span className="font-mono">{shortSha(sha)}</span>;
 }

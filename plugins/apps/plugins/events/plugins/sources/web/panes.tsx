@@ -17,6 +17,7 @@ const eventSourcesRoute = defineRoute({
 });
 
 export const eventSourcesPane = Pane.define({
+  title: "Sources",
   route: eventSourcesRoute,
   app: eventsApp,
   component: EventSourcesPaneView,
@@ -51,8 +52,19 @@ export const eventSourceDetailPane = Pane.define({
   app: eventsApp,
   component: EventSourceDetailPaneView,
   resolve: useResolveSource,
+  title: { text: useSourceTitle, fallback: "Source" },
   width: 460,
 });
+
+/** The source's name once it is found; undefined otherwise (the fallback shows). */
+function useSourceTitle({
+  sourceId,
+}: {
+  sourceId: string;
+}): string | undefined {
+  const lookup = useEventSource(sourceId);
+  return lookup.status === "found" ? lookup.source.name : undefined;
+}
 
 function useResolveSource({ sourceId }: { sourceId: string }): {
   pending: boolean;
@@ -69,7 +81,7 @@ function useResolveSource({ sourceId }: { sourceId: string }): {
 
 function EventSourcesPaneView(): ReactNode {
   return (
-    <PaneChrome pane={eventSourcesPane} title="Sources">
+    <PaneChrome pane={eventSourcesPane}>
       <SourcesList />
     </PaneChrome>
   );
@@ -81,7 +93,7 @@ function EventSourceDetailPaneView(): ReactNode {
 
   if (lookup.status === "error") {
     return (
-      <PaneChrome pane={eventSourceDetailPane} title="Source">
+      <PaneChrome pane={eventSourceDetailPane}>
         <Placeholder tone="error">{lookup.error.message}</Placeholder>
       </PaneChrome>
     );
@@ -89,20 +101,18 @@ function EventSourceDetailPaneView(): ReactNode {
 
   if (lookup.status === "missing") {
     return (
-      <PaneChrome pane={eventSourceDetailPane} title="Source">
+      <PaneChrome pane={eventSourceDetailPane}>
         <Placeholder>This source no longer exists.</Placeholder>
       </PaneChrome>
     );
   }
-
-  const title = lookup.status === "found" ? lookup.source.name : "Source";
 
   // The whole pane body is the one section slot: Settings, Schedule, Status and
   // Runs are peer contributions and the host owns every card. Sections render
   // while the lookup is still pending — each owns its own loading state, so the
   // pane does not stall behind one gate.
   return (
-    <PaneChrome pane={eventSourceDetailPane} title={title}>
+    <PaneChrome pane={eventSourceDetailPane}>
       <EventSourceDetail.Host sourceId={sourceId} />
     </PaneChrome>
   );

@@ -4,25 +4,12 @@
 
 ## Plugin reference
 
-- Description: Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.
+- Description: HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
 - Web:
-  - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`
-  - Uses:
-    - `primitives/collapsible-wrap.CollapsibleWrap`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/spacing.Stack`
-    - `primitives/slot-render.defineRenderSlot`
-  - Exports (values):
-    - `Conversation`
-    - `HeaderChip`
-    - `HeaderView`
+  - Uses: `primitives/css/badge.Badge`
+  - Exports (values): `HeaderChip`
 - Cross-plugin:
   - Imported by:
-    - `conversations/agents`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-view`
-    - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/model`
     - `conversations/conversation-view/status`
     - `conversations/conversation-view/track`

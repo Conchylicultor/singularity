@@ -4,21 +4,17 @@
 
 ## Plugin reference
 
-- Description: Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
+- Description: Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
 - Web:
   - Slots:
     - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
     - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
     - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.running-agents`, `conversations.conversation-view.turn-summary`
-    - `conversationPane.Actions` ← `primitives.pane`
-  - Contributes:
-    - `Pane.Register` "conversation"
-    - `Conversation.Header` → `ConversationTitle`
+    - `conversationPane.Actions` ← `conversations.agents`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`, `conversations.conversation-view.track`, `primitives.pane`
+  - Contributes: `Pane.Register` "conversation"
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view/action-bar.ActionBarView`
-    - `conversations/conversation-view/header.Conversation`
-    - `conversations/conversation-view/header.HeaderView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
     - `conversations/hibernation.markConversationViewed`
     - `infra/endpoints.EndpointError`
@@ -126,7 +122,7 @@
   - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
   - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
   - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
-  - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area — and HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips share.
+  - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
   - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
   - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
   - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.

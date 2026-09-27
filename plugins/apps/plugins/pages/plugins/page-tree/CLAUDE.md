@@ -93,11 +93,10 @@ it, so an id means the same thing wherever it is clicked.
 - Web:
   - Slots:
     - `PageDetail.Section` ← `apps.pages.page-tree`
-    - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
     - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-    - `pageDetailPane.Actions` ← `primitives.pane`
+    - `pageDetailPane.Actions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`, `primitives.pane`
     - `blockDetailPane.Actions` ← `primitives.pane`
     - `pagesTreePane.Actions` ← `primitives.pane`
   - Contributes:

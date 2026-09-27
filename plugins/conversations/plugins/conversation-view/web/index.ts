@@ -1,9 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Conversation as ConversationHeader } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { conversationPane } from "./panes";
 import { Conversation as ConversationSlots } from "./slots";
-import { ConversationTitle } from "./components/conversation-title";
 
 export { Conversation } from "./slots";
 export { conversationPane } from "./panes";
@@ -17,10 +15,7 @@ export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";
 
 export default {
   description:
-    "Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.",
-  contributions: [
-    Pane.Register({ pane: conversationPane }),
-    ConversationHeader.Header({ id: "title", component: ConversationTitle }),
-  ],
+    "Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.",
+  contributions: [Pane.Register({ pane: conversationPane })],
   slots: { ...ConversationSlots, conversation: conversationPane },
 } satisfies PluginDefinition;

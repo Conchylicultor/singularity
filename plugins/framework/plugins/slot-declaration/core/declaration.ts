@@ -25,6 +25,14 @@ export interface SlotMeta {
    * reorder config directive). True for render and ordered-dispatch slots.
    */
   reorderable: boolean;
+  /**
+   * A render slot that is an internal part of ONE component — a list the
+   * component draws inside itself — rather than a row of its own. Read by the
+   * pane title guard: a render slot mounted inside a pane title throws (a
+   * second header row the order file cannot see) unless it declares this.
+   * Set through `defineRenderSlot({ partOfComponent: true })`.
+   */
+  partOfComponent?: boolean;
 }
 
 /**

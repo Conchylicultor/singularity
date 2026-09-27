@@ -12,6 +12,7 @@ export const convTerminalPane = Pane.define({
     segment: "terminal",
   }),
   app: agentManagerApp,
+  title: "Terminal",
   component: ConvTerminalBody,
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { keepMountedWhenCollapsed: true, promote: false },
@@ -19,7 +20,7 @@ export const convTerminalPane = Pane.define({
 
 function ConvTerminalBody() {
   return (
-    <PaneChrome pane={convTerminalPane} title="Terminal">
+    <PaneChrome pane={convTerminalPane}>
       <TerminalPaneBody />
     </PaneChrome>
   );

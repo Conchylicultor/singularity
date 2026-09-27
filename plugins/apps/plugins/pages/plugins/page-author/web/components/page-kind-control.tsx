@@ -18,6 +18,7 @@ import {
   setPageKind,
   type PageKind,
 } from "@plugins/page/plugins/editor/core";
+import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
 const autoAwesomeIcon = symbol("auto-awesome");
@@ -83,7 +84,7 @@ function kindFor(k: PageKind["kind"]): PageKind {
 }
 
 /**
- * The page-kind control contributed to `PageDetail.HeaderActions` — by the
+ * The page-kind control contributed to `pageDetailPane.Actions` — by the
  * user's choice, the ONLY thing on the open page that says what kind of page it
  * is: an ordinary page, an agent page (agents may write all of it), or an
  * instructions page (the human's standing instructions to agents working under
@@ -101,7 +102,8 @@ function kindFor(k: PageKind["kind"]): PageKind {
  * the button, never the button: that would claim a kind before anything is
  * known.
  */
-export function PageKindControl({ pageId }: { pageId: string }) {
+export function PageKindControl() {
+  const { pageId } = pageDetailPane.useParams();
   const size = useControlSize();
   const result = useResource(pagesResource);
   const { mutateAsync } = useEndpointMutation(setPageKind);

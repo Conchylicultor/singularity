@@ -1,4 +1,4 @@
-// @hash e42e8e917d10
+// @hash 8e560ae60239
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,16 +6,12 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
+  // The file's breadcrumb, then the renderer tabs (Code / Preview / Diff …)
+  // right beside it; the spacer keeps them there rather than letting the row
+  // pack everything to the right edge.
   "items": [
-    "conversations.agents:agent-avatar",
-    "conversations.conversation-view:title",
-    // Pushes the chips to the right edge (Mist, proto-1789643584-ldt6).
-    { "type": "spacer", "id": "title-end" },
-    "conversations.conversation-preprompt:preprompt",
-    "conversations.conversation-view.allow-monitor:allow-monitor",
-    "conversations.conversation-view.model:model",
-    "conversations.conversation-view.track:track",
-    "conversations.conversation-view.status:status",
-    "conversations.conversation-progress:progress"
+    "primitives.pane:title",
+    "conversations.conversation-view.code.file-pane:renderer-tabs",
+    { "type": "spacer", "id": "title-end" }
   ]
 }

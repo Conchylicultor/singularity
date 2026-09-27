@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { PrepromptChip } from "./components/preprompt-chip";
 import { PrepromptListIcon } from "./components/preprompt-list-icon";
@@ -10,7 +10,7 @@ export default {
   description:
     "Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback).",
   contributions: [
-    Conversation.Header({ id: "preprompt", component: PrepromptChip }),
+    conversationPane.Actions({ id: "preprompt", component: PrepromptChip }),
     Item.Chips({ id: "preprompt", component: PrepromptListIcon }),
   ],
 } satisfies PluginDefinition;

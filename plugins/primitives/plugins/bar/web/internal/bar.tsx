@@ -28,7 +28,7 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
   /**
    * `"hidden"` (default) clips a too-wide single line. `"visible"` lets a
    * title-area child (e.g. CollapsibleWrap) spill expanded rows DOWN over the
-   * content below instead of being clipped (PaneChrome's `headerSpill`).
+   * content below instead of being clipped.
    */
   overflow?: "hidden" | "visible";
   /** Element override; defaults to the tier's semantic element (`header`/`div`). */

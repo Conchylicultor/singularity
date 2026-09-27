@@ -1,0 +1,26 @@
+// @hash 6d476a18ad9c
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+{
+  // A horizontal strip read left to right. The page's title (the breadcrumb)
+  // leads, and Copy block ID sits right beside it: it is ABOUT the title — the
+  // id of the page named there, handed to an agent — not a page action. The
+  // spacer then pushes the page's own actions to the far end. Star first: it is
+  // the one-tap action, and the one whose state you read at a glance. History
+  // second — a rarer, heavier affordance. The page-kind control third: also a
+  // state you read at a glance (tinted on an agent page), but a rare switch to
+  // flip. The pane's own Expand and Close sit beyond these, painted by the pane
+  // chrome rather than this slot.
+  "items": [
+    "primitives.pane:title",
+    "apps.pages.copy-id:copy-id",
+    { "type": "spacer", "id": "page-actions" },
+    "apps.pages.starred:star",
+    "apps.pages.history:history",
+    "apps.pages.page-author:page-author"
+  ]
+}

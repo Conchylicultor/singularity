@@ -8,6 +8,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { ReadSetView } from "./components/read-set-view";
 
 export const readSetPane = Pane.define({
+  title: "Read-set",
   route: defineRoute({
     id: "debug-read-set",
     segment: "read-set",
@@ -18,7 +19,7 @@ export const readSetPane = Pane.define({
 
 function ReadSetBody(): ReactElement {
   return (
-    <PaneChrome pane={readSetPane} title="Read-set">
+    <PaneChrome pane={readSetPane}>
       <ReadSetView />
     </PaneChrome>
   );

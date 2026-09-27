@@ -10,7 +10,7 @@ entity-extensions primitive). The snapshot is intentional: the chip reflects
 exactly what the agent was launched with, even if the config preprompt is later
 edited or deleted.
 
-The header chip (`Conversation.Header` slot) reads that snapshot from the
+The header chip (a `conversationPane.Actions` item) reads that snapshot from the
 lookup-only collection `conversationPrepromptRows` (`liveCollection(
 "conversation-preprompts", { row, id: "conversationId" })`, minting
 `conversation-preprompts:rows` alone), served by `serveCollection` from the
@@ -37,13 +37,12 @@ never the reverse) and the feature fully opt-in and removable.
 - Description: Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
 - Web:
   - Contributes:
-    - `Conversation.Header` → `PrepromptChip`
+    - `conversationPane.Actions` "preprompt" → `PrepromptChip`
     - `Item.Chips` → `PrepromptListIcon`
   - Uses:
     - `config_v2/config-link.ConfigPopoverHeader`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `conversations/preprompts.PrepromptGlyph`
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.usePreprompt`

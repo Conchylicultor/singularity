@@ -1,7 +1,7 @@
 # copy-id
 
-A "Copy block ID" button in the page-detail header, next to the favorite star
-and version history. One click puts the open page's id on the clipboard, so it
+A "Copy block ID" button in the page-detail header, right after the page's
+title (placed by the spacer in the header's order file). One click puts the open page's id on the clipboard, so it
 can be pasted into a prompt for an agent's `read_page` / `edit_page` tools.
 
 A page is a block: its `pageId` is the block id those tools take. It is the
@@ -17,11 +17,11 @@ popover closes on commit).
 
 ## Plugin reference
 
-- Description: Copy block ID button in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
+- Description: Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
 - Web:
-  - Contributes: `PageDetail.HeaderActions` → `CopyIdAction`
+  - Contributes: `pageDetailPane.Actions` "copy-id" → `CopyIdAction`
   - Uses:
-    - `apps/pages/page-tree.PageDetail`
+    - `apps/pages/page-tree.pageDetailPane`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/icon-button.IconButton`
 

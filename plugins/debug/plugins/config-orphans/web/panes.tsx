@@ -12,6 +12,7 @@ export const configOrphansRoute = defineRoute({
 });
 
 export const configOrphansPane = Pane.define({
+  title: "Config Orphans",
   route: configOrphansRoute,
   app: debugApp,
   component: ConfigOrphansBody,
@@ -19,7 +20,7 @@ export const configOrphansPane = Pane.define({
 
 function ConfigOrphansBody() {
   return (
-    <PaneChrome pane={configOrphansPane} title="Config Orphans">
+    <PaneChrome pane={configOrphansPane}>
       <ConfigOrphansPanel />
     </PaneChrome>
   );

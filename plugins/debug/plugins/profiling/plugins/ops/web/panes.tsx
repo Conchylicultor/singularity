@@ -8,6 +8,7 @@ export const opDetailPane = Pane.define({
     segment: "op-profile/:opId",
   }),
   app: debugApp,
+  title: "Op",
   component: OpDetailBody,
   // Wider than the 380 the push detail used: this pane now hosts TWO Gantts
   // (the op's wait timeline and its step breakdown), and a Gantt row spends a

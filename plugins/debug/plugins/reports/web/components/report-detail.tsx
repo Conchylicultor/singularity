@@ -35,7 +35,7 @@ export function ReportDetail() {
 
   if (read.status === "pending") {
     return (
-      <PaneChrome pane={reportDetailPane} title="Report">
+      <PaneChrome pane={reportDetailPane}>
         <Loading />
       </PaneChrome>
     );
@@ -43,7 +43,7 @@ export function ReportDetail() {
 
   if (read.status !== "found") {
     return (
-      <PaneChrome pane={reportDetailPane} title="Report">
+      <PaneChrome pane={reportDetailPane}>
         <Center className="h-full">
           <Text as="div" variant="body" className="text-muted-foreground">
             {read.status === "missing"
@@ -57,7 +57,7 @@ export function ReportDetail() {
 
   const { report, refetch } = read;
   return (
-    <PaneChrome pane={reportDetailPane} title={report.kind}>
+    <PaneChrome pane={reportDetailPane}>
       <ControlSizeProvider size="xs">
         <Scroll axis="both" fill>
           <Stack gap="lg" className="p-md">

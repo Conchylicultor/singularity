@@ -9,6 +9,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { GraphView } from "./components/graph-view";
 
 export const graphCanvasPane = Pane.define({
+  title: "Plugin Graph",
   route: defineRoute({ id: "graph", segment: "graph" }),
   app: studioApp,
   component: GraphBody,
@@ -22,7 +23,7 @@ export const graphCanvasPane = Pane.define({
 function GraphBody() {
   const { focusId } = graphCanvasPane.useOptions();
   return (
-    <PaneChrome pane={graphCanvasPane} title="Plugin Graph">
+    <PaneChrome pane={graphCanvasPane}>
       <Clip className="h-full">
         <GraphView paneFocusId={focusId} />
       </Clip>

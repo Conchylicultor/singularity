@@ -25,7 +25,22 @@ export const threadPane = Pane.define({
   // list ("(no subject)") rather than a hard 404 — the list only ever opens
   // thread ids it just rendered.
   resolve: false,
+  title: { text: useThreadTitle, fallback: "Thread" },
 });
+
+/** The thread's subject once its messages load; undefined until then. */
+function useThreadTitle({
+  threadId,
+}: {
+  threadId: string;
+}): string | undefined {
+  // Same window the pane body reads (newest first), so this shares its subscription.
+  const result = useLive(threadMessages, { where: { threadId } });
+  if (result.pending) return undefined;
+  // The subject is stable across a thread; the oldest LOADED message carries it
+  // (in a thread longer than the window that is a reply, so its "Re:" form).
+  return result.data.at(-1)?.subject?.trim() || "(no subject)";
+}
 
 function ThreadPaneView(): ReactNode {
   const { threadId } = threadPane.useParams();
@@ -35,7 +50,7 @@ function ThreadPaneView(): ReactNode {
 
   if (result.pending) {
     return (
-      <PaneChrome pane={threadPane} title="Thread">
+      <PaneChrome pane={threadPane}>
         {result.error ? (
           <Center axis="both">
             <Placeholder tone="error">Couldn’t load this thread.</Placeholder>
@@ -49,11 +64,8 @@ function ThreadPaneView(): ReactNode {
 
   // The pane reads oldest→newest, so the newest-first window is reversed.
   const messages = [...result.data].reverse();
-  // The subject is stable across a thread; the oldest LOADED message carries it
-  // (in a thread longer than the window that is a reply, so its "Re:" form).
-  const subject = messages[0]?.subject?.trim() || "(no subject)";
   return (
-    <PaneChrome pane={threadPane} title={subject}>
+    <PaneChrome pane={threadPane}>
       <MessageList messages={messages} older={result} />
     </PaneChrome>
   );

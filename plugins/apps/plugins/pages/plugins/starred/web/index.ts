@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import {
   PageTree,
-  PageDetail,
+  pageDetailPane,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { StarredField } from "./components/starred-field";
 import { StarRowAction } from "./components/star-row-action";
@@ -17,6 +17,6 @@ export default {
     // One ordinary boolean of the page schema, not a band of its own.
     PageTree.Fields({ id: "starred", section: null, component: StarredField }),
     PageTree.RowActions({ id: "star", component: StarRowAction }),
-    PageDetail.HeaderActions({ id: "star", component: StarHeaderAction }),
+    pageDetailPane.Actions({ id: "star", component: StarHeaderAction }),
   ],
 } satisfies PluginDefinition;

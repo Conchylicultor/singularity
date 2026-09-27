@@ -37,6 +37,7 @@ import { EventList } from "./slots";
 const EVENTS_LIST_VIEW = defineDataView("events.list");
 
 export const eventListPane = Pane.define({
+  title: "Events",
   route: defineRoute({ id: "event-list", segment: "list" }),
   app: eventsApp,
   component: EventListPaneView,
@@ -58,7 +59,7 @@ function EventListPaneView(): ReactElement {
   const openEvent = useOpenEvent();
 
   return (
-    <PaneChrome pane={eventListPane} title="Events">
+    <PaneChrome pane={eventListPane}>
       <DataView<SourcedEvent>
         storageKey={EVENTS_LIST_VIEW}
         rows={[]}

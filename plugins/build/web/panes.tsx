@@ -6,12 +6,14 @@ import { BuildPopoverContent } from "./components/build-popover-content";
 import { BuildDetail } from "./slots";
 
 export const buildPane = Pane.define({
+  title: "Builds",
   route: buildRoute,
   app: debugApp,
   component: BuildPaneBody,
 });
 
 export const buildDetailPane = Pane.define({
+  title: "Build Run",
   route: buildDetailRoute,
   app: debugApp,
   component: BuildDetailBody,
@@ -28,7 +30,7 @@ function BuildPaneBody(): ReactElement {
   const selectedRunId = buildDetailPane.useRouteEntry()?.params.runId;
 
   return (
-    <PaneChrome pane={buildPane} title="Builds">
+    <PaneChrome pane={buildPane}>
       <BuildPopoverContent variant="pane" selectedRunId={selectedRunId} />
     </PaneChrome>
   );
@@ -38,7 +40,7 @@ function BuildDetailBody(): ReactElement {
   const { runId } = buildDetailPane.useParams();
 
   return (
-    <PaneChrome pane={buildDetailPane} title="Build Run">
+    <PaneChrome pane={buildDetailPane}>
       <BuildDetail.Host runId={runId} />
     </PaneChrome>
   );

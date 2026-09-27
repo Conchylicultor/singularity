@@ -6,9 +6,9 @@
 
 - Description: Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
 - Web:
-  - Contributes: `PageDetail.HeaderActions` → `VersionHistoryAction`
+  - Contributes: `pageDetailPane.Actions` "history" → `VersionHistoryAction`
   - Uses:
-    - `apps/pages/page-tree.PageDetail`
+    - `apps/pages/page-tree.pageDetailPane`
     - `history/dialog.VersionHistoryDialog`
     - `infra/endpoints.useEndpoint`
     - `network/live.useLive`

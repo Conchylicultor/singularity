@@ -11,5 +11,6 @@ export const googleSetupPane = Pane.define({
   }),
   app: settingsApp,
   component: GoogleSetupPane,
-  chrome: { title: "Connect Google", history: false, close: true },
+  title: "Connect Google",
+  chrome: { history: false, close: true },
 });

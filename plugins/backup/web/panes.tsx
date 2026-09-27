@@ -8,12 +8,14 @@ import { BackupPanel } from "./components/backup-panel";
 import { BackupRunDetail } from "./slots";
 
 export const backupPane = Pane.define({
+  title: "Backup",
   route: backupRoute,
   app: debugApp,
   component: BackupBody,
 });
 
 export const backupRunPane = Pane.define({
+  title: "Backup Run",
   route: backupRunRoute,
   app: debugApp,
   component: BackupRunBody,
@@ -54,7 +56,7 @@ function BackupBody(): ReactElement {
   const selectedRunId = backupRunPane.useRouteEntry()?.params.runId;
 
   return (
-    <PaneChrome pane={backupPane} title="Backup">
+    <PaneChrome pane={backupPane}>
       <BackupPanel selectedRunId={selectedRunId} />
     </PaneChrome>
   );
@@ -70,7 +72,7 @@ function BackupRunBody(): ReactElement {
   // a loading state, never an empty one — the sections are handed a run or they
   // are not rendered at all.
   return (
-    <PaneChrome pane={backupRunPane} title="Backup Run">
+    <PaneChrome pane={backupRunPane}>
       {state.status === "found" ? (
         <BackupRunDetail.Host run={state.run} />
       ) : (

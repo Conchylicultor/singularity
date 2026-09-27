@@ -21,6 +21,19 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * has read the slot definition and the host but not the order file — this rule
  * exists because that happened (the conversation header grew a `HeaderEnd`).
  *
+ * Pane headers are the case it most often meets: a pane header is ONE slot,
+ * `<pane>.Actions`. Its title comes from `Pane.define({ title })` and is painted
+ * as that slot's `primitives.pane:title` item; anything beside the title — a
+ * star, a copy-id button, the actions at the far end — is a contribution to
+ * `<pane>.Actions`, placed by a spacer in the pane's order file
+ * (`config/<plugin>/<pane>.actions.jsonc`), never a second slot rendered next to
+ * (or inside) the title.
+ *
+ * This rule only sees a split inside ONE JSX tree. A split across components —
+ * a `title.component` rendering a render slot of its own — is caught at runtime
+ * instead, by the pane title guard (`pane-title-guard.tsx` in the pane
+ * primitive), which throws inside the offending item's error boundary.
+ *
  * Detection is NAME-BASED and scope-local — no import or type resolution. Fires
  * when two `<X.Render>` elements of DIFFERENT slots sit in the same JSX tree (no
  * function boundary between them) and their nearest common ancestor is a
@@ -112,7 +125,7 @@ export default createRule({
     },
     messages: {
       splitSlotRow:
-        '`{{slot}}.Render` and `{{other}}.Render` share one row. To place some of a slot\'s items at the other end, keep ONE slot and add a spacer node to its order file (config/<plugin>/<slot>.jsonc): {"type": "spacer", "id": "<unique-id>"}. A second slot is only right when the groups are different kinds of thing, not the same kind at a different position.',
+        '`{{slot}}.Render` and `{{other}}.Render` share one row. To place some of a slot\'s items at the other end, keep ONE slot and add a spacer node to its order file (config/<plugin>/<slot>.jsonc): {"type": "spacer", "id": "<unique-id>"}. A pane header is the same rule: it is ONE slot (`<pane>.Actions`), its title comes from `Pane.define({ title })`, and anything beside the title is a contribution to that slot placed by a spacer. A second slot is only right when the groups are different kinds of thing, not the same kind at a different position.',
     },
     schema: [],
   },

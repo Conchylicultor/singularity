@@ -7,6 +7,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { MemoryPanel } from "./components/memory-panel";
 
 export const memoryPane = Pane.define({
+  title: "Memory",
   route: defineRoute({ id: "debug-memory", segment: "memory" }),
   app: debugApp,
   component: MemoryBody,
@@ -14,7 +15,7 @@ export const memoryPane = Pane.define({
 
 function MemoryBody() {
   return (
-    <PaneChrome pane={memoryPane} title="Memory">
+    <PaneChrome pane={memoryPane}>
       <MemoryPanel />
     </PaneChrome>
   );

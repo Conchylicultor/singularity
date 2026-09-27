@@ -287,7 +287,6 @@ the outcome too, with no separate code path.
     - `conversations/conversation-view/artifacts`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/exit-menu`
-    - `conversations/conversation-view/header`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`

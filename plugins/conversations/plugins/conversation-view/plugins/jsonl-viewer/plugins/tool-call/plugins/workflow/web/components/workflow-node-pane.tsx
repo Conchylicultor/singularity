@@ -1,58 +1,35 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Badge,
   formatStatusLabel,
 } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { workflowNodePane } from "../panes";
-import { useWorkflowTrace } from "../internal/use-workflow-trace";
-
-interface WorkflowInput {
-  script?: string;
-  args?: unknown;
-}
+import { useWorkflowNode } from "../internal/use-workflow-node";
 
 export function WorkflowNodePaneBody() {
   const convId = conversationPane.useRouteEntry()?.params.convId;
+  const { toolUseId, nodeId } = workflowNodePane.useParams();
+  const state = useWorkflowNode(convId, toolUseId, nodeId);
 
-  const eventsResult = useLive(jsonlEvents, { id: convId ?? "" });
-
-  if (eventsResult.pending) {
+  if (state.pending) {
     return (
-      <PaneChrome pane={workflowNodePane} title="Workflow step">
+      <PaneChrome pane={workflowNodePane}>
         <Loading />
       </PaneChrome>
     );
   }
 
-  return <WorkflowNodePaneInner events={eventsResult.data} />;
-}
-
-function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
-  const { toolUseId, nodeId } = workflowNodePane.useParams();
-
-  const event = events.find(
-    (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
-  );
-  const input =
-    event?.kind === "tool-call" ? (event.input as WorkflowInput) : null;
-
-  const { graph, status } = useWorkflowTrace(input?.script ?? "", input?.args);
-  const node = graph?.nodes.find((n) => n.id === nodeId);
-
-  const title = node?.label ?? "Workflow step";
+  const { graph, status, node } = state;
 
   return (
-    <PaneChrome pane={workflowNodePane} title={title}>
+    <PaneChrome pane={workflowNodePane}>
       <Stack gap="md" className="p-lg">
         {!node ? (
           <Text as="div" variant="body" className="text-muted-foreground">

@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
@@ -29,9 +28,52 @@ const agentsRootRoute = defineRoute({
 export const agentsRootPane = Pane.define({
   route: agentsRootRoute,
   app: agentManagerApp,
+  title: "Agents",
   component: AgentsRoot,
   width: 320,
 });
+
+type AgentLookup =
+  | { status: "pending" }
+  | { status: "found"; agent: Agent }
+  | { status: "missing" };
+
+/** One agent from the live agent rows, by id. */
+function useAgentLookup(id: string): AgentLookup {
+  const result = useLive(agentRows);
+  if (result.pending) return { status: "pending" };
+  const agent = result.data.find((a: Agent) => a.id === id);
+  return agent ? { status: "found", agent } : { status: "missing" };
+}
+
+/** The agent's name, or undefined until it is known (the title's fallback shows). */
+function useAgentName(id: string): string | undefined {
+  const lookup = useAgentLookup(id);
+  return lookup.status === "found" ? lookup.agent.name : undefined;
+}
+
+function useAgentDetailTitle({ id }: { id: string }): string | undefined {
+  return useAgentName(id);
+}
+
+function useAgentSideTitle({
+  agentId,
+}: {
+  agentId: string;
+}): string | undefined {
+  return useAgentName(agentId);
+}
+
+/** The system agent's registered name, or undefined when none has that id. */
+function useSystemAgentTitle({
+  systemId,
+}: {
+  systemId: string;
+}): string | undefined {
+  return AgentsSlots.SystemAgent.useContributions().find(
+    (d) => d.id === systemId,
+  )?.name;
+}
 
 function useResolveAgent({ id }: { id: string }) {
   const result = useLive(agentRows);
@@ -47,6 +89,7 @@ export const agentDetailPane = Pane.define({
   }),
   app: agentManagerApp,
   component: AgentDetailBody,
+  title: { text: useAgentDetailTitle, fallback: "Agent" },
   width: 360,
   resolve: useResolveAgent,
 });
@@ -59,6 +102,7 @@ export const systemAgentDetailPane = Pane.define({
   }),
   app: agentManagerApp,
   component: SystemAgentDetailBody,
+  title: { text: useSystemAgentTitle, fallback: "Unknown system agent" },
   resolve: false,
 });
 
@@ -69,6 +113,7 @@ export const agentSidePane = Pane.define({
   }),
   app: agentManagerApp,
   component: AgentSideBody,
+  title: { text: useAgentSideTitle, fallback: "Agent" },
   chrome: {
     history: false,
     promote: false,
@@ -82,7 +127,7 @@ function AgentsRoot(): ReactElement {
     systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
-    <PaneChrome pane={agentsRootPane} title="Agents">
+    <PaneChrome pane={agentsRootPane}>
       <Inset pad="lg">
         <AgentsList
           selectedId={selectedUserId}
@@ -99,14 +144,9 @@ function AgentsRoot(): ReactElement {
 
 function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
-  const agentsResult = useLive(agentRows);
-  const title = matchResource(agentsResult, {
-    pending: () => undefined,
-    ready: (agents) => agents.find((a: Agent) => a.id === id)?.name,
-  });
 
   return (
-    <PaneChrome pane={agentDetailPane} title={title}>
+    <PaneChrome pane={agentDetailPane}>
       <AgentDetail key={id} agentId={id} />
       <Stack gap="lg" className="px-xl pb-xl">
         <AgentsSlots.View.Render>
@@ -134,7 +174,7 @@ function SystemAgentDetailBody(): ReactElement {
 
   if (!descriptor) {
     return (
-      <PaneChrome pane={systemAgentDetailPane} title="Unknown system agent">
+      <PaneChrome pane={systemAgentDetailPane}>
         <Placeholder>
           No system agent registered with id <code>{systemId}</code>.
         </Placeholder>
@@ -143,7 +183,7 @@ function SystemAgentDetailBody(): ReactElement {
   }
 
   return (
-    <PaneChrome pane={systemAgentDetailPane} title={descriptor.name}>
+    <PaneChrome pane={systemAgentDetailPane}>
       <AgentsSlots.SystemAgent.Render>
         {(d) =>
           d.id === systemId ? (

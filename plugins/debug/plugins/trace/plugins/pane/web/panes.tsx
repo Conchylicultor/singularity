@@ -11,6 +11,7 @@ import { TraceDetail } from "./components/trace-detail";
 // Events tab (this plugin) + Aggregates/Cluster tabs (slow-ops) render via the
 // SlowEvents slot.
 export const slowEventsPane = Pane.define({
+  title: "Slow Events",
   route: traceListRoute,
   app: debugApp,
   component: SlowEventsBody,
@@ -18,7 +19,7 @@ export const slowEventsPane = Pane.define({
 
 function SlowEventsBody() {
   return (
-    <PaneChrome pane={slowEventsPane} title="Slow Events">
+    <PaneChrome pane={slowEventsPane}>
       <SlowEvents.Host />
     </PaneChrome>
   );
@@ -27,6 +28,7 @@ function SlowEventsBody() {
 // Detail pane (/debug/traces/x/:id): the unified Gantt for one trace. Wider than
 // the default column to fit the timeline.
 export const traceDetailPane = Pane.define({
+  title: "Trace",
   route: traceDetailRoute,
   app: debugApp,
   component: TraceDetailBody,
@@ -39,7 +41,7 @@ export const traceDetailPane = Pane.define({
 function TraceDetailBody() {
   const { id } = traceDetailPane.useParams();
   return (
-    <PaneChrome pane={traceDetailPane} title="Trace">
+    <PaneChrome pane={traceDetailPane}>
       <TraceDetail id={id} />
     </PaneChrome>
   );

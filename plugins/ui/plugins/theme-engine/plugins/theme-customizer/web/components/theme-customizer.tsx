@@ -160,7 +160,7 @@ export function ThemeCustomizerBody() {
   }, []);
 
   return (
-    <PaneChrome pane={themeCustomizerPane} title="Theme Customizer">
+    <PaneChrome pane={themeCustomizerPane}>
       <ThemeScopeProvider scopeId={effectiveScopeId}>
         <Stack gap="lg">
           <Stack gap="lg" className="px-xl pt-lg">

@@ -47,7 +47,7 @@ migrate (Resources page item 3).
     - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
     - `Shell.Sidebar` "Agents"
     - `Item.Avatar` → `AgentAvatarRow`
-    - `Conversation.Header` → `AgentAvatarTitlePrefix`
+    - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Uses:
     - `conversations.useConversationById`
@@ -55,7 +55,6 @@ migrate (Resources page item 3).
     - `conversations/conversation-ui/item.ConversationItemConv`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `conversations/model-provider.ModelSelect`
     - `fields/avatar/table.avatarFieldDef`
     - `infra/endpoints.fetchEndpoint`
@@ -87,7 +86,6 @@ migrate (Resources page item 3).
     - `primitives/data-view.defineItemActions`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`

@@ -1,4 +1,4 @@
-// @hash 0e3be3905428
+// @hash a9050ce03316
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,13 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "conversations.agents:agent-avatar",
+    "conversations.conversation-preprompt:preprompt",
+    "conversations.conversation-progress:progress",
+    "conversations.conversation-view.allow-monitor:allow-monitor",
+    "conversations.conversation-view.model:model",
+    "conversations.conversation-view.status:status",
+    "conversations.conversation-view.track:track",
     "primitives.pane:title"
   ]
 }

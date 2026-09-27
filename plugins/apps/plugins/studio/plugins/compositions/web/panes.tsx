@@ -25,6 +25,7 @@ import { CompositionDetail } from "./slots";
 // (hoisted), so the forward reference is safe at runtime.
 
 export const compositionsPane = Pane.define({
+  title: "Compositions",
   route: compositionsRoute,
   app: studioApp,
   component: CompositionsBody,
@@ -52,13 +53,14 @@ export const compositionDetailPane = Pane.define({
   // Wider than release-detail's 480: it hosts the closure plugin tree.
   width: 560,
   resolve: useResolveComposition,
-  useTitle: useCompositionTitle,
+  title: { text: useCompositionTitle },
   // Main surface: the release-run pane pushed to the right is a drill-in — it
   // never steals the tab title from the composition.
   titleOwner: true,
 });
 
 export const comparePane = Pane.define({
+  title: "Compare",
   route: defineRoute({
     id: "composition-compare",
     segment: "compare",
@@ -71,7 +73,7 @@ export const comparePane = Pane.define({
 
 function CompositionsBody(): ReactElement {
   return (
-    <PaneChrome pane={compositionsPane} title="Compositions">
+    <PaneChrome pane={compositionsPane}>
       <CompositionsList />
     </PaneChrome>
   );
@@ -105,7 +107,7 @@ function CompareBody(): ReactElement {
   }, [manifests]);
 
   return (
-    <PaneChrome pane={comparePane} title="Compare">
+    <PaneChrome pane={comparePane}>
       <CompareView />
     </PaneChrome>
   );

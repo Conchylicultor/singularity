@@ -4,7 +4,6 @@ import { markConversationViewed } from "@plugins/conversations/plugins/hibernati
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ResumeOutcome } from "@plugins/conversations/core";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
-import { HeaderView } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
@@ -68,12 +67,7 @@ export function ConversationView() {
   return (
     <>
       <ActiveRelateSync />
-      <PaneChrome
-        pane={conversationPane}
-        title={<HeaderView />}
-        titleOnly
-        headerSpill
-      >
+      <PaneChrome pane={conversationPane}>
         <Clip fill as={Stack} className="h-full">
           {/* The toolbar strip under the header. Its glyphs and counters wear
               the palette's `toolbarForeground` (the inherited text colour by

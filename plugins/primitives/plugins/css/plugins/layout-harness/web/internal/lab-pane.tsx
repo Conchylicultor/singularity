@@ -8,6 +8,7 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { Gallery } from "./gallery";
 
 export const layoutLabPane = Pane.define({
+  title: "Layout Lab",
   route: defineRoute({
     id: "layout-lab",
     segment: "layout-lab",
@@ -18,7 +19,7 @@ export const layoutLabPane = Pane.define({
 
 function LayoutLabBody(): ReactElement {
   return (
-    <PaneChrome pane={layoutLabPane} title="Layout Lab">
+    <PaneChrome pane={layoutLabPane}>
       <Gallery />
     </PaneChrome>
   );

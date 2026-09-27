@@ -66,7 +66,7 @@ export const eventSourceRunPane = Pane.define({
   app: eventsApp,
   component: EventSourceRunPaneView,
   resolve: useResolveRun,
-  useTitle: useRunTitle,
+  title: { text: useRunTitle, fallback: "Run" },
   width: 460,
 });
 
@@ -102,7 +102,7 @@ function EventSourceRunPaneView(): ReactNode {
 
   if (query.isError) {
     return (
-      <PaneChrome pane={eventSourceRunPane} title="Run">
+      <PaneChrome pane={eventSourceRunPane}>
         <Placeholder tone="error">
           {getEndpointErrorMessage(query.error)}
         </Placeholder>
@@ -111,14 +111,13 @@ function EventSourceRunPaneView(): ReactNode {
   }
 
   const run = query.data;
-  const title = run ? `${RUN_OUTCOME_LABEL[run.outcome]} run` : "Run";
 
   // The summary is the pane's own header block, not a section: it is the run
   // itself, and the sections below are what OTHER plugins have to say about it.
   // Sections render while the fetch is still in flight — each owns its own
   // loading state, so the pane does not stall behind one gate.
   return (
-    <PaneChrome pane={eventSourceRunPane} title={title}>
+    <PaneChrome pane={eventSourceRunPane}>
       <Stack gap="none">
         <Inset x="lg" t="lg">
           {run ? <RunSummary run={run} /> : <Loading variant="rows" />}

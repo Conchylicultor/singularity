@@ -11,5 +11,6 @@ export const appleSetupPane = Pane.define({
   }),
   app: settingsApp,
   component: AppleSetupPane,
-  chrome: { title: "Set up Apple Signing", history: false, close: true },
+  title: "Set up Apple Signing",
+  chrome: { history: false, close: true },
 });

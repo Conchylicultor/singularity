@@ -38,7 +38,7 @@ export const deploymentDetailPane = Pane.define({
   component: DeploymentDetailBody,
   width: 460,
   resolve: useResolveDeployment,
-  useTitle: useDeploymentTitle,
+  title: { text: useDeploymentTitle },
 });
 
 function DeploymentDetailBody(): ReactElement {

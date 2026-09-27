@@ -11,5 +11,6 @@ export const googleMapsSetupPane = Pane.define({
   }),
   app: settingsApp,
   component: GoogleMapsSetupPane,
-  chrome: { title: "Set up Google Maps", history: false, close: true },
+  title: "Set up Google Maps",
+  chrome: { history: false, close: true },
 });

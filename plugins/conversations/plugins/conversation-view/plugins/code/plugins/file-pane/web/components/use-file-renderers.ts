@@ -1,10 +1,6 @@
 import { useMemo, useState } from "react";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import {
-  FilePane,
-  resolveRenderers,
-  type ResolvedRenderer,
-} from "../slots";
+import { FilePane, resolveRenderers, type ResolvedRenderer } from "../slots";
 
 export interface FileRenderersHandle {
   resolved: ResolvedRenderer[];
@@ -29,5 +25,9 @@ export function useFileRenderers({
   const [activeId, setActiveId] = useState<string | null>(defaultId);
   const active =
     resolved.find((r) => r.contribution.id === activeId) ?? resolved[0] ?? null;
-  return { resolved, active, activeId, setActiveId };
+  // Stable identity: the file-peek header reads this through a context value.
+  return useMemo(
+    () => ({ resolved, active, activeId, setActiveId }),
+    [resolved, active, activeId],
+  );
 }

@@ -7,6 +7,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { WelcomeView } from "./components/welcome-view";
 
 export const welcomePane = Pane.define({
+  title: "Welcome",
   route: defineRoute({ id: "welcome", segment: "" }),
   app: agentManagerApp,
   // Index/landing pane for the agent-manager app, reached at its bare root
@@ -18,7 +19,7 @@ export const welcomePane = Pane.define({
 
 function WelcomeBody() {
   return (
-    <PaneChrome pane={welcomePane} title="Welcome">
+    <PaneChrome pane={welcomePane}>
       <WelcomeView />
     </PaneChrome>
   );

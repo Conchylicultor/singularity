@@ -12,12 +12,13 @@ export const tableDetailPane = Pane.define({
   component: TableDetailBody,
   width: 600,
   resolve: false,
+  title: { fallback: (params) => params.tableName },
 });
 
 function TableDetailBody() {
   const { tableName, pluginId } = tableDetailPane.useParams();
   return (
-    <PaneChrome pane={tableDetailPane} title={tableName}>
+    <PaneChrome pane={tableDetailPane}>
       <TableDetail.Host tableName={tableName} pluginId={pluginId} />
     </PaneChrome>
   );

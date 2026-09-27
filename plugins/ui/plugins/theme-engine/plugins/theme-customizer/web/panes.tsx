@@ -22,6 +22,7 @@ export const themeCustomizerRoute = defineRoute({
 export const themeCustomizerPane = Pane.define({
   route: themeCustomizerRoute,
   app: settingsApp,
+  title: "Theme Customizer",
   component: ThemeCustomizerBody,
   width: 440,
 });

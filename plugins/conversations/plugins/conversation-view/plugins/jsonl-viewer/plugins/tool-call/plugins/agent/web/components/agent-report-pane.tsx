@@ -21,7 +21,7 @@ export function AgentReportPaneBody() {
   const convId = conversationPane.useRouteEntry()?.params.convId;
 
   return (
-    <PaneChrome pane={agentReportPane} title="Sub-agent">
+    <PaneChrome pane={agentReportPane}>
       {convId === undefined ? (
         // A conversation-scoped satellite with no conversation above it: the
         // route was reached in a way this pane cannot serve. Say so rather than

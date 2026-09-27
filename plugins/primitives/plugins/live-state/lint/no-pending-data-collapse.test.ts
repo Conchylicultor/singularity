@@ -165,7 +165,7 @@ ruleTester.run(
           }
         `,
       },
-      // A pane title hook: undefined means "use the default title", which is
+      // A pane title hook: undefined means "show the title's fallback", which is
       // right while loading too.
       {
         code: `
@@ -174,16 +174,21 @@ ruleTester.run(
             if (result.pending) return undefined;
             return result.data.find((d) => d.id === id)?.name;
           }
-          export const pane = Pane.define({ useTitle: useDeploymentTitle });
+          export const pane = Pane.define({
+            title: { text: useDeploymentTitle, fallback: "Deployment" },
+          });
         `,
       },
       // Same, written inline.
       {
         code: `
           export const pane = Pane.define({
-            useTitle: ({ id }) => {
-              const r = useLive(rows, { ids: [id] });
-              return r.pending ? undefined : r.data[0]?.name;
+            title: {
+              text: ({ id }) => {
+                const r = useLive(rows, { ids: [id] });
+                return r.pending ? undefined : r.data[0]?.name;
+              },
+              fallback: "Row",
             },
           });
         `,
@@ -198,7 +203,19 @@ ruleTester.run(
             if (result.pending) return null;
             return result.data[0]?.name ?? null;
           }
-          export const pane = Pane.define({ useTitle: useTitle2 });
+          export const pane = Pane.define({ title: { text: useTitle2 } });
+        `,
+        errors: [{ messageId: "pendingCollapseReturn" }],
+      },
+      // A `text:` hook outside a `title: { … }` object is not a pane title hook.
+      {
+        code: `
+          function useLabel2({ id }) {
+            const result = useLive(rows, { ids: [id] });
+            if (result.pending) return undefined;
+            return result.data[0]?.name;
+          }
+          export const chip = defineChip({ label: { text: useLabel2 } });
         `,
         errors: [{ messageId: "pendingCollapseReturn" }],
       },

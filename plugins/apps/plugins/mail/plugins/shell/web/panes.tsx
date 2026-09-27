@@ -8,6 +8,7 @@ import { mailApp } from "../core";
 import { MailRoot } from "./components/mail-root";
 
 export const mailRootPane = Pane.define({
+  title: "Mail",
   route: defineRoute({ id: "mail-root", segment: "" }),
   app: mailApp,
   // The Mail app's index/landing pane — what bare `/mail` resolves to, instead
@@ -20,7 +21,7 @@ export const mailRootPane = Pane.define({
 
 function MailRootPane(): ReactElement {
   return (
-    <PaneChrome pane={mailRootPane} title="Mail">
+    <PaneChrome pane={mailRootPane}>
       <MailRoot />
     </PaneChrome>
   );

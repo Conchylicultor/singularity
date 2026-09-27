@@ -7,6 +7,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { ScreenshotView } from "./components/screenshot-view";
 
 export const screenshotPane = Pane.define({
+  title: "Screenshot",
   route: defineRoute({
     id: "screenshot",
     segment: "screenshot/:id",
@@ -19,7 +20,7 @@ export const screenshotPane = Pane.define({
 function ScreenshotBody() {
   const { id } = screenshotPane.useParams();
   return (
-    <PaneChrome pane={screenshotPane} title="Screenshot">
+    <PaneChrome pane={screenshotPane}>
       <ScreenshotView id={id} />
     </PaneChrome>
   );

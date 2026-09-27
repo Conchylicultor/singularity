@@ -7,13 +7,12 @@
 - Description: 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
 - Web:
   - Contributes:
-    - `Conversation.Header` → `ProgressBarToolbar`
+    - `conversationPane.Actions` "progress" → `ProgressBarToolbar`
     - `Item.Chips` → `ProgressBarRow`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/inline.Inline`

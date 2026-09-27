@@ -53,7 +53,6 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `config_v2/settings`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
-    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/op-status`

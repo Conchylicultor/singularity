@@ -33,6 +33,7 @@ export const allConversationsPane = Pane.define({
     segment: "all-conversations",
   }),
   app: agentManagerApp,
+  title: "Conversations",
   component: AllConversationsView,
   width: 720,
 });
@@ -49,7 +50,7 @@ function AllConversationsView(): ReactElement {
   });
 
   return (
-    <PaneChrome pane={allConversationsPane} title="Conversations">
+    <PaneChrome pane={allConversationsPane}>
       <DataView<Conversation>
         storageKey={ALL_CONVERSATIONS_VIEW}
         rows={[]}

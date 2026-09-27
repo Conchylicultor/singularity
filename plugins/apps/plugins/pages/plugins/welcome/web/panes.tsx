@@ -13,6 +13,7 @@ import {
 import { PagesWelcome } from "./slots";
 
 export const pagesRootPane = Pane.define({
+  title: "Pages",
   route: defineRoute({ id: "pages-root", segment: "" }),
   app: pagesApp,
   // The Pages app's index/landing pane — what bare `/pages` resolves to,
@@ -28,7 +29,7 @@ function PagesRoot(): ReactElement {
   // PaneChrome owns the vertical scroll; the body centers its content with a
   // max-width column.
   return (
-    <PaneChrome pane={pagesRootPane} title="Pages">
+    <PaneChrome pane={pagesRootPane}>
       <Inset x="2xl" y="2xl" className="mx-auto w-full max-w-2xl">
         <Stack gap="2xl">
           <Text as="p" variant="body" tone="muted">

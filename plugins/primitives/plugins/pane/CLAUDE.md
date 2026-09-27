@@ -187,7 +187,7 @@ It is absent on every route the browser rebuilt (deep link, reload,
 back/forward) and may be stale when present. **It is never a source of truth.**
 
 ```ts
-Pane.define({ …, hint: type<{ title: string }>(), useTitle: useSongTitle });
+Pane.define({ …, hint: type<{ title: string }>(), title: { text: useSongTitle } });
 
 openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title } });
 
@@ -303,17 +303,62 @@ a contribution of the same slot, so a rich header collapses into the `⋯` like
 any other, and what separates a leading group from a trailing one is a `spacer`
 node in the slot's reorder config rather than a field on the contribution.
 
-Title resolution: the `title` prop wins; otherwise PaneChrome falls back to the
-pane's `chrome.title` config (`string | (params) => string`). Use the prop when
-the title needs loaded data; use the config when it's static or derivable from
-URL params.
+### The title (`Pane.define({ title })`)
+
+A pane's title is declared ONCE, on its definition, and is the single source for
+the tab label, the browser document title and the header's title item.
+`PaneChrome` takes no title — and no header content of any kind.
+
+```tsx
+Pane.define({ …, title: "Settings" });            // shorthand for { text: "Settings" }
+Pane.define({
+  …,
+  title: {
+    text: usePageTitle,          // string | (params, hint, options) => string | undefined
+    fallback: (p) => p.pageId,   // string | (params) => string — while `text` yields undefined
+    component: PageTitleTrail,   // optional rich HEADER title (breadcrumb, editable field)
+  },
+});
+<PaneChrome pane={pageDetailPane}>…</PaneChrome>    // no title prop
+```
+
+- **`text`** is a literal or a React hook. The hook runs **outside** the owning
+  app's providers — at the tab surface, for background tabs too — so it may
+  read only its arguments (the CHAINED params, ancestors included; the `hint`
+  and `options` as values) and GLOBAL hooks (live-state resources), never
+  app-local context. Return `undefined` while the entity is not known yet.
+- **`fallback`** is what shows while `text` yields `undefined`: the generic
+  noun ("Task"), or something derived from the URL params. Never a fabricated
+  entity name.
+- **`component`** is a rich title for the HEADER only. It is mounted **inside**
+  the pane (the header's title cell, under `PaneChrome`), so it may call
+  `pane.useParams()`, read app context, and be interactive. Tab and document
+  titles still come from `text` / `fallback`, so declare `text` beside it.
+
+Resolution is one function, `usePaneTitle` (`text` → `fallback` → nothing),
+shared by the tab reporter, the collapsed Miller column and the header. The
+header's title item paints `component` when declared, else that string, else
+nothing (the yielding cell stays, empty).
+
+#### No side door into the header row
+
+The header row is ONE slot, `pane.Actions`; the title is one item of it. Every
+other control in the row is another item of that slot, and which end of the
+row it sits at is a `spacer` in the slot's order file. There is no prop to pass
+header content through (`title` / `extra` / `headerSpill` are gone — each was a
+door a second slot was smuggled through), and a `title.component` may not
+render a slot either: the pane registers a slot-item middleware that **throws**
+when a render-slot contribution mounts inside the title cell ("A render slot
+mounted inside the pane title…"). The throw lands in the offending item's error
+boundary. Plain and dispatch slots painted once inside a title (a breadcrumb's
+separator) are part of the title and are not caught.
 
 #### Tab / document title ownership (`titleOwner`)
 
 The pane's own header title (above) is distinct from the **tab/document title**.
-That one is resolved per route by the tab surface via `usePaneTitle` (the pane's
-`useTitle` hook, falling back to `chrome.title`), against the route's **title
-owner**: the FIRST pane in the route declaring `titleOwner: true`.
+That one is resolved per route by the tab surface via `usePaneTitle` against
+the route's **title owner**: the FIRST pane in the route declaring
+`titleOwner: true`.
 
 `titleOwner` marks a **main surface** — a pane whose entity is the identity of
 the page (a conversation, a task, a page, a song), as opposed to navigation
@@ -324,20 +369,19 @@ conversation pane opened as a drill-in under a task stays subordinate to it.
 Routes with no title owner fall back to the leaf pane (then the app index pane,
 then the app name).
 
-Declaring `titleOwner` without a `useTitle`/`chrome.title` that actually
-resolves would pin the tab to the app name — give the owner a title source.
+Declaring `titleOwner` without a `title` that actually resolves (`text` or
+`fallback`) would pin the tab to the app name — give the owner a title source.
 
 #### Title typography is container-owned
 
-PaneChrome wraps the title region — string **or** node — in the canonical
-`<Text variant="label">` baseline (see `pane-chrome.tsx`). A title node
+The title item wraps the title — string **or** `component` — in the canonical
+`<Text variant="label">` baseline (see `pane-title.tsx`). A title component
 therefore inherits the pane-title size and **must not set its own typography
 size** — per-segment weight/color (e.g. a breadcrumb's `font-medium`/muted)
 still composes on top, but the *size* comes from the container.
 
-Enforced by `lint/no-adhoc-pane-title` (an inline `<Text variant>` inside a
-`PaneChrome title={…}` node); raw `text-*`/`leading-*` is already banned
-everywhere by `text/no-adhoc-typography`.
+Enforced by `lint/no-adhoc-pane-title`; raw `text-*`/`leading-*` is already
+banned everywhere by `text/no-adhoc-typography`.
 
 ### `PaneScroll` — the sanctioned pane-body scroll viewport
 
@@ -407,13 +451,15 @@ directly when the trigger needs to be a popover.)
 #### The title is a contribution
 
 `pane` itself contributes one `title` item into every header
-(`primitives.pane:title`), so **nobody re-contributes a title** and authoring is
-unchanged: `chrome.title` or `<PaneChrome title={…}>`. The pane resolves it and
-publishes it on a context; the item reads it and renders `null` when there is
-none. The item is minted per declared header slot on each slot-declaration pass
-(`web/header-slot.ts`) — a slot is only NAMED by that pass, and `Pane.define`
-runs at each pane plugin's module scope, so there is no earlier moment at which
-the set of headers is knowable.
+(`primitives.pane:title`), so **nobody re-contributes a title**: authoring is
+`Pane.define({ title })` (above). `PaneChrome` publishes the pane and its match
+entry on a context; the item resolves the title from them and renders `null`
+when there is none. The item is minted per declared header slot on each
+slot-declaration pass (`web/header-slot.ts`) — a slot is only NAMED by that
+pass, and `Pane.define` runs at each pane plugin's module scope, so there is no
+earlier moment at which the set of headers is knowable. A borrowed header
+(`Pane.define({ actions })`) has one title item, which paints the title of
+whichever pane's `PaneChrome` renders it.
 
 It renders in the bar's **yielding cell** (`cell: "yield"`): excluded from the
 fit ledger, `min-w-0` so it ellipsizes instead of pushing the actions out of the
@@ -422,18 +468,20 @@ is a public, generic field — at most one per header, and the bar throws on a
 second — so a plugin can put something else there; the title is not a special
 case.
 
-The tab/document title is a different thing and is untouched: `usePaneTitle` /
-`titleOwner` read `useTitle`/`chrome.title`, never the slot.
+The tab/document title reads the same declaration through `usePaneTitle`, never
+the slot — hiding the title item in the order file leaves the tab title alone.
 
 #### When the header runs out of room
 
 The header items are the `AdaptiveBar` occupants of the row: each is asked for a
 smaller form of itself, and whatever still does not fit is **moved** — the same
-live element, never a second copy — into a panel behind a `⋯`. `PaneChrome`'s
-`extra` prop is one more occupant, id `pane-extra` — named `extra` and not
-`actions` because it is one header control, not the hover-revealed trailing
-cluster `row-actions/no-raw-actions-slot` guards. The yielding cell (the
-title) is never measured, demoted or relocated.
+live element, never a second copy — into a panel behind a `⋯`. The yielding
+cell (the title) is never measured, demoted or relocated.
+
+There is no per-instance side door into the row (see **No side door into the
+header row** above): `PaneChrome` once took `extra` and `title` nodes, and a
+whole second slot got smuggled through each — the Pages app's `HeaderActions`
+and the conversation's `Header` — so nothing could be placed beside the title.
 
 The bar's own limits apply to what you contribute — no `position: sticky` inside
 an item, and an item holding an `<iframe>` refuses to relocate.
@@ -821,7 +869,6 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.PortalForwardProvider`
-    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
@@ -832,6 +879,7 @@ See "Open questions" in the design doc.
     - `primitives/scope/surface-id.SurfaceIdContext`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/slot-render.RenderSlot`
     - `ui/icons.Icon`
   - Exports (types):
@@ -858,6 +906,8 @@ See "Open questions" in the design doc.
     - `PaneScrollProps`
     - `PaneSlot`
     - `PaneStore`
+    - `PaneTitleHook`
+    - `PaneTitleSpec`
     - `PaneToggleOpts`
     - `ParsedRoute`
     - `PromoteAction`

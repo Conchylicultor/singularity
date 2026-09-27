@@ -171,8 +171,93 @@ export function type<T>(): TypeMarker<T> {
 // Internal registry. Populated at module-load time by `Pane.define` calls.
 // ---------------------------------------------------------------------------
 
-export interface PaneChromeConfig<Params> {
-  title?: string | ((params: Params) => string);
+/**
+ * A pane title's text source: a React hook resolving the title string from the
+ * pane's CHAINED params, its optimistic `hint` and its `options`.
+ *
+ * It runs OUTSIDE the owning app's providers — at the tab surface, for
+ * background tabs too — so it may read only its arguments and GLOBAL hooks
+ * (live-state resources), never app-local context. `hint` and `options` arrive
+ * as VALUES, not hooks: this runs above the pane match context, so
+ * `useHint()`/`useOptions()` are unavailable here. Return `undefined` while the
+ * data is not known yet; the title then falls back to `fallback`.
+ */
+export type PaneTitleHook<
+  Params,
+  HintT extends object = NoHint,
+  Options extends object = NoOptions,
+> = (params: Params, hint: Hint<HintT>, options: Options) => string | undefined;
+
+/**
+ * Everything a pane's title is, declared once on `Pane.define({ title })`. The
+ * one source for the tab label, the browser document title and the pane
+ * header's title item — `PaneChrome` takes no title of its own.
+ *
+ * - `text` — the title string: a literal, or a {@link PaneTitleHook}.
+ * - `fallback` — shown while `text` yields `undefined` (a loading entity): a
+ *   literal, or derived from the chained URL params. Must not fabricate the
+ *   entity's name — it is the generic noun ("Task", "Page").
+ * - `component` — a RICH header title (a breadcrumb, an editable field). It is
+ *   mounted INSIDE the pane, in the header's title cell, so it may read
+ *   `pane.useParams()` and app context and be interactive. It replaces the text
+ *   in the header only; tab and document titles still use `text`/`fallback`.
+ *   It must not render a slot: the header row is ONE slot (`pane.Actions`), and
+ *   a render slot mounted inside the title throws.
+ */
+export interface PaneTitleSpec<
+  Params,
+  HintT extends object = NoHint,
+  Options extends object = NoOptions,
+> {
+  text?: string | PaneTitleHook<Params, HintT, Options>;
+  fallback?: string | ((params: Params) => string);
+  component?: ComponentType;
+}
+
+/** `Pane.define({ title })`: a literal is shorthand for `{ text: literal }`. */
+export type PaneTitle<
+  Params,
+  HintT extends object = NoHint,
+  Options extends object = NoOptions,
+> = string | PaneTitleSpec<Params, HintT, Options>;
+
+/** The title as stored on {@link PaneInternal}: every field erased and normalized. */
+export interface NormalizedPaneTitle {
+  /** Always present (a no-op for a pane with no `text`), so it can be called unconditionally. */
+  useText: PaneTitleHook<
+    Record<string, string>,
+    Record<string, unknown>,
+    PaneOptions
+  >;
+  fallback?: string | ((params: Record<string, string>) => string);
+  component?: ComponentType;
+}
+
+const NO_TITLE_TEXT = (): string | undefined => undefined;
+
+function normalizeTitle(
+  title:
+    PaneTitle<Record<string, string>, PaneHintBag, PaneOptions> | undefined,
+): NormalizedPaneTitle {
+  const spec: PaneTitleSpec<
+    Record<string, string>,
+    PaneHintBag,
+    PaneOptions
+  > = typeof title === "string" ? { text: title } : (title ?? {});
+  const { text } = spec;
+  return {
+    useText:
+      text === undefined
+        ? NO_TITLE_TEXT
+        : typeof text === "string"
+          ? () => text
+          : (text as NormalizedPaneTitle["useText"]),
+    fallback: spec.fallback,
+    component: spec.component,
+  };
+}
+
+export interface PaneChromeConfig {
   history?: boolean;
   /**
    * Show a close button (leftmost) that calls `pane.close()`. Defaults to
@@ -198,7 +283,6 @@ export interface PaneChromeConfig<Params> {
 }
 
 interface NormalizedChrome {
-  title?: string | ((params: Record<string, string>) => string);
   history: boolean;
   close: boolean;
   promote: boolean;
@@ -268,22 +352,11 @@ export interface PaneInternal {
   actionsSlot: PaneHeaderSlot;
   resolve?: ResolveHook<Record<string, string>> | false;
   /**
-   * Self-contained title resolver for tab labels and the browser document
-   * title. A React hook that runs OUTSIDE the owning app's providers (at the
-   * tab-surface level), so it may read only params, the pane's `hint`/`options`,
-   * and GLOBAL hooks (live-state resources) — never app-local context. Returns
-   * undefined to fall back to `chrome.title`. Normalized to always-present (a
-   * no-op default) so callers can invoke it unconditionally; see
-   * {@link usePaneTitle}.
-   *
-   * `hint` and `options` arrive as VALUES, not hooks: this runs above the pane
-   * match context, so `useHint()`/`useOptions()` are unavailable here.
+   * The pane's title, from `Pane.define({ title })` — see {@link PaneTitleSpec}.
+   * Read through {@link usePaneTitle} (text) and the header's title item
+   * (`component`, else that text).
    */
-  useTitle: (
-    params: Record<string, string>,
-    hint: Hint<Record<string, unknown>>,
-    options: PaneOptions,
-  ) => string | undefined;
+  title: NormalizedPaneTitle;
   /**
    * The literal defaults record from `Pane.define({ options })`. Merged under
    * each slot's opener-supplied partial to produce a TOTAL option set — so a
@@ -1645,6 +1718,23 @@ export function usePaneMatch(): PaneMatch | null {
   return useMatchOrThrow();
 }
 
+/**
+ * A pane's own `MatchEntry` — the instance this component renders in when it is
+ * one of that pane's, else the pane's first entry — or `null` when the pane is
+ * not in the current match. Plugin-internal (not in the barrel): `PaneChrome`
+ * reads the title's params, hint and options off it.
+ */
+export function usePaneEntry(internal: PaneInternal): MatchEntry | null {
+  const match = useMatchOrThrow();
+  const instanceId = useContext(PaneInstanceContext);
+  if (!match) return null;
+  if (instanceId !== undefined) {
+    const entry = match.panes.find((e) => e.instanceId === instanceId);
+    if (entry?.pane === internal) return entry;
+  }
+  return match.panes.find((e) => e.pane === internal) ?? null;
+}
+
 export function useCurrentPane(): PaneInternal | null {
   const match = useMatchOrThrow();
   const instanceId = useContext(PaneInstanceContext);
@@ -1938,16 +2028,8 @@ function makePaneObject(
     return entry.params;
   }
 
-  /** This pane's own MatchEntry, or null when it is not in the current match. */
   function useOwnEntry(): MatchEntry | null {
-    const match = useMatchOrThrow();
-    const instanceId = useContext(PaneInstanceContext);
-    if (!match) return null;
-    if (instanceId !== undefined) {
-      const entry = match.panes.find((e) => e.instanceId === instanceId);
-      if (entry?.pane === internal) return entry;
-    }
-    return match.panes.find((e) => e.pane === internal) ?? null;
+    return usePaneEntry(internal);
   }
 
   function useOptions(): PaneOptions {
@@ -2205,11 +2287,10 @@ function makePaneObject(
   return paneObject;
 }
 
-function normalizeChrome<Params>(
-  chrome: PaneChromeConfig<Params> | undefined,
+function normalizeChrome(
+  chrome: PaneChromeConfig | undefined,
 ): NormalizedChrome {
   return {
-    title: chrome?.title as NormalizedChrome["title"],
     history: chrome?.history ?? true,
     close: chrome?.close ?? true,
     promote: chrome?.promote ?? true,
@@ -2272,11 +2353,11 @@ type AppIndexField<Seg extends string> = Seg extends "" | "/"
 
 // The arguments to `Pane.define`. Identity (`id` / `segment` / the ancestor
 // chain) is derived from the `RouteDef`, so the only authored fields are the
-// behavior (`component`, `chrome`, `useTitle`, `input`, `width`, `resolve`).
+// behavior (`component`, `chrome`, `title`, `options`, `width`, `resolve`).
 //
 // Both of the route's param sets flow through (see `RouteDef`): `Params` is the
 // CHAINED set every ancestor contributes to, which is what a URL needs and so
-// what `useTitle` / `chrome.title` are handed (`fullParams`); the OWN set,
+// what `title.text` / `title.fallback` are handed (`fullParams`); the OWN set,
 // derived from the route's `Seg` literal, is what the pane is handed back
 // (`useParams()`, `resolve`).
 type RouteDefineArgs<
@@ -2315,21 +2396,16 @@ type RouteDefineArgs<
    * rebuilt route; never a write source.
    */
   hint?: TypeMarker<HintT>;
-  chrome?: PaneChromeConfig<Params>;
+  chrome?: PaneChromeConfig;
   /**
-   * Self-contained title resolver for tab labels and the browser document
-   * title (see {@link PaneInternal.useTitle}). A React hook: it may call global
-   * live-state hooks but must NOT depend on the owning app's context — it runs
-   * at the tab surface, above the app's component tree. Read data the pane
-   * already self-fetches (a global resource keyed by `params`), falling back to
-   * the optimistic `hint` while it loads. Falls back to `chrome.title` when it
-   * returns undefined.
+   * The pane's title — the ONE source for its tab label, the browser document
+   * title and its header's title item. A literal (`title: "Reports"`), or a
+   * {@link PaneTitleSpec}: `text` (a literal or a context-free hook reading a
+   * global resource by `params`, the `hint` while it loads), `fallback` (while
+   * `text` yields undefined) and `component` (a rich header title, mounted
+   * inside the pane). There is no other way to give a pane header a title.
    */
-  useTitle?: (
-    params: Params,
-    hint: Hint<HintT>,
-    options: Options,
-  ) => string | undefined;
+  title?: PaneTitle<Params, HintT, Options>;
   /**
    * Declares this pane a MAIN SURFACE — the entity the page is about (a
    * conversation, a task, a page), as opposed to navigation lists or auxiliary
@@ -2406,15 +2482,11 @@ function define(
     appIndex: args.appIndex ?? false,
     app: args.app,
     component: args.component,
-    chrome: normalizeChrome(
-      args.chrome as PaneChromeConfig<unknown> | undefined,
-    ),
+    chrome: normalizeChrome(args.chrome),
     width: args.width,
     actionsSlot,
     resolve,
-    useTitle:
-      (args.useTitle as PaneInternal["useTitle"] | undefined) ??
-      (() => undefined),
+    title: normalizeTitle(args.title),
     optionDefaults: args.options ?? {},
     titleOwner: args.titleOwner ?? false,
   };
@@ -2537,12 +2609,13 @@ export function useRoute(): PaneMatch | null {
 }
 
 /**
- * Resolve a pane's human-readable title for tab labels and the browser document
- * title. Calls the pane's self-contained {@link PaneInternal.useTitle} hook
- * (data-backed: a conversation tab shows the conversation name, not its id);
- * when that yields nothing, falls back to the static `chrome.title`.
+ * Resolve a pane's human-readable title — the tab label, the browser document
+ * title, and the header title of a pane with no `title.component`. Calls the
+ * pane's self-contained `title.text` hook (data-backed: a conversation tab shows
+ * the conversation name, not its id); when that yields nothing, falls back to
+ * `title.fallback`; else `undefined`.
  *
- * Because `useTitle` is a hook that varies per pane, callers MUST invoke this
+ * Because `title.text` is a hook that varies per pane, callers MUST invoke this
  * from a component keyed by the pane's id, so switching panes remounts and the
  * hook order stays stable across the component's life.
  */
@@ -2553,9 +2626,9 @@ export function usePaneTitle(
   options: PaneOptions,
 ): string | undefined {
   const hintApi = useMemo(() => makeHint(hint), [hint]);
-  const dynamic = pane.useTitle(params, hintApi, options);
+  const dynamic = pane.title.useText(params, hintApi, options);
   if (dynamic) return dynamic;
-  const fallback = pane.chrome.title;
+  const fallback = pane.title.fallback;
   return typeof fallback === "function" ? fallback(params) : fallback;
 }
 

@@ -5,6 +5,7 @@ import { releaseDetailRoute } from "@plugins/apps/plugins/studio/plugins/composi
 import { ReleaseDetail } from "./slots";
 
 export const releaseDetailPane = Pane.define({
+  title: "Release Run",
   // Identity (id / `rel/:runId` segment / the compositions ancestor) comes from
   // the route in `core/`, so a link built there and the pane it lands on cannot
   // drift.
@@ -20,7 +21,7 @@ function ReleaseDetailBody(): ReactElement | null {
   if (!runId) return null;
 
   return (
-    <PaneChrome pane={releaseDetailPane} title="Release Run">
+    <PaneChrome pane={releaseDetailPane}>
       <ReleaseDetail.Host runId={runId} />
     </PaneChrome>
   );

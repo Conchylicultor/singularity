@@ -20,6 +20,7 @@ import {
 } from "@plugins/conversations/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
+import { ConversationTitle } from "./components/conversation-title";
 
 function useResolveConversation({ convId }: { convId: string }) {
   const active = useResource(conversationsActiveResource);
@@ -66,8 +67,8 @@ export const conversationPane = Pane.define({
   width: 600,
   resolve: useResolveConversation,
   // Tab/document title: the conversation's name from the global live-state
-  // resource (same source as the header's ConversationTitle).
-  useTitle: useConversationTitle,
+  // resource. The header paints the richer ConversationTitle (same source).
+  title: { text: useConversationTitle, component: ConversationTitle },
   // Main surface: aux panes opened to the right (file peek, review, terminal)
   // never steal the tab title from the conversation.
   titleOwner: true,

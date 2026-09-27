@@ -16,6 +16,7 @@ const bootProfileRoute = defineRoute({
 });
 
 export const bootProfilePane = Pane.define({
+  title: "Boot Profile",
   route: bootProfileRoute,
   app: debugApp,
   component: BootProfileBody,
@@ -23,7 +24,7 @@ export const bootProfilePane = Pane.define({
 
 function BootProfileBody() {
   return (
-    <PaneChrome pane={bootProfilePane} title="Boot Profile">
+    <PaneChrome pane={bootProfilePane}>
       <BootProfileLive />
     </PaneChrome>
   );
@@ -32,6 +33,7 @@ function BootProfileBody() {
 // Detail pane (/debug/boot-profile/<id>): a saved snapshot re-rendered through
 // the same pure Gantt. A static prefix precedes the :id param (segment grammar).
 export const bootProfileDetailPane = Pane.define({
+  title: "Saved Boot Profile",
   route: defineRoute({
     id: "debug-boot-profile-detail",
     segment: "boot-profile/:id",
@@ -45,7 +47,7 @@ export const bootProfileDetailPane = Pane.define({
 function BootProfileDetailBody() {
   const { id } = bootProfileDetailPane.useParams();
   return (
-    <PaneChrome pane={bootProfileDetailPane} title="Saved Boot Profile">
+    <PaneChrome pane={bootProfileDetailPane}>
       <BootProfileDetail id={id} />
     </PaneChrome>
   );
@@ -53,6 +55,7 @@ function BootProfileDetailBody() {
 
 // Browse pane (Debug → Boot Profiles): the list of saved snapshots.
 export const bootProfileListPane = Pane.define({
+  title: "Boot Profiles",
   route: defineRoute({
     id: "debug-boot-profiles-list",
     segment: "boot-profiles",
@@ -63,7 +66,7 @@ export const bootProfileListPane = Pane.define({
 
 function BootProfileListBody() {
   return (
-    <PaneChrome pane={bootProfileListPane} title="Boot Profiles">
+    <PaneChrome pane={bootProfileListPane}>
       <BootProfileList />
     </PaneChrome>
   );

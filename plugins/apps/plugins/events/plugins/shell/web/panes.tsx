@@ -8,6 +8,7 @@ import { eventsApp } from "../core";
 import { EventsRoot } from "./components/events-root";
 
 export const eventsRootPane = Pane.define({
+  title: "Events",
   // No segment of its own: an index pane is reached at its app's bare root.
   route: defineRoute({ id: "events-root", segment: "" }),
   app: eventsApp,
@@ -21,7 +22,7 @@ export const eventsRootPane = Pane.define({
 
 function EventsRootPane(): ReactElement {
   return (
-    <PaneChrome pane={eventsRootPane} title="Events">
+    <PaneChrome pane={eventsRootPane}>
       <EventsRoot />
     </PaneChrome>
   );

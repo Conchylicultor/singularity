@@ -40,11 +40,12 @@
  * "not yet" the caller must check, and is allowed. The non-JSX guard still
  * keeps a component's "render nothing while loading" early-return legal.
  *
- * Carve-out: a pane `useTitle` hook (inline in a `useTitle:` property, or a
- * function declared in the file and passed as one) may return `undefined` while
- * pending. Pane's title contract defines `undefined` as "fall back to the pane's
- * default title", which is the right thing to show while loading as well as
- * when the entity is gone — so nothing wrong reaches the screen.
+ * Carve-out: a pane title hook — the `text:` of a `title: { … }` object
+ * (`Pane.define({ title: { text, fallback } })`), written inline or as a
+ * function declared in the file and passed there — may return `undefined` while
+ * pending. Pane's title contract defines `undefined` as "show the title's
+ * `fallback`", which is the right thing to show while loading as well as when
+ * the entity is gone — so nothing wrong reaches the screen.
  *
  * Carve-out (favor false negatives): `useResource(…, { select })` results are
  * sanctioned point reads where `pending ? null : q.data` is legitimate.
@@ -428,25 +429,39 @@ function propertyKeyIs(node: TSESTree.Node | undefined, key: string): boolean {
 }
 
 /**
- * Is `fn` a pane `useTitle` hook? Either written inline as the value of a
- * `useTitle:` property, or a named function whose identifier is passed as one.
+ * Is `node` the `text:` property of a `title: { … }` object — the slot a pane
+ * title hook is declared in (`Pane.define({ title: { text: useX } })`)?
+ */
+function isTitleTextProperty(node: TSESTree.Node | undefined): boolean {
+  if (!node || !propertyKeyIs(node, "text")) return false;
+  const object = node.parent;
+  return (
+    object?.type === AST_NODE_TYPES.ObjectExpression &&
+    propertyKeyIs(object.parent, "title") &&
+    (object.parent as TSESTree.Property).value === object
+  );
+}
+
+/**
+ * Is `fn` a pane title hook? Either written inline as the `text:` of a
+ * `title: { … }` object, or a named function whose identifier is passed there.
  */
 function isPaneTitleHook(context: Ctx, fn: FunctionNode): boolean {
-  if (propertyKeyIs(fn.parent, "useTitle")) return true;
+  if (isTitleTextProperty(fn.parent)) return true;
   if (fn.type !== AST_NODE_TYPES.FunctionDeclaration || !fn.id) return false;
   const variable = resolveVariable(context, fn.id);
   return (
     variable?.references.some((ref) => {
       const parent = ref.identifier.parent;
       return (
-        propertyKeyIs(parent, "useTitle") &&
+        isTitleTextProperty(parent) &&
         (parent as TSESTree.Property).value === ref.identifier
       );
     }) ?? false
   );
 }
 
-/** `undefined` returned by a pane `useTitle` hook — see the file header. */
+/** `undefined` returned by a pane title hook — see the file header. */
 function isTitleFallback(
   context: Ctx,
   at: TSESTree.Node,

@@ -1,23 +1,22 @@
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { createContext, useContext, type ReactNode } from "react";
+import { usePaneTitle, type MatchEntry, type PaneInternal } from "../pane";
 
 /**
- * The pane title, already resolved — the `title` prop if the pane passed one,
- * otherwise its `chrome.title` config — published by `PaneChrome` for the one
- * contribution that paints it.
+ * What `PaneChrome` publishes for the one contribution that paints the pane
+ * title: the pane whose header this is, and its match entry (the params, hint
+ * and options the title is resolved from).
  *
- * The title is authored exactly where it always was (`chrome.title` /
- * `<PaneChrome title={…}>`) and rendered as a header contribution like anything
- * else, so it is orderable and hideable. Those two facts meet here: the pane
- * hands the resolved title DOWN a context, and the contribution reads it — no
- * author re-contributes a title, and no header has to special-case one.
+ * The title is declared once, on `Pane.define({ title })`, and rendered as a
+ * header contribution like anything else, so it is orderable and hideable.
+ * Those two facts meet here: the pane hands itself DOWN a context, and the
+ * contribution resolves and paints the title — no author re-contributes one,
+ * and no header has to special-case it.
  */
 export interface PaneTitleValue {
-  /** `null` for a pane with no title at all — the item then renders nothing. */
-  title: ReactNode;
-  /** `PaneChrome`'s `headerSpill`: this title may paint outside the header band. */
-  spill: boolean;
+  pane: PaneInternal;
+  /** `null` when the pane is not in the current match (no params to resolve from). */
+  entry: MatchEntry | null;
 }
 
 export const PaneTitleContext = createContext<PaneTitleValue | null>(null);
@@ -26,60 +25,71 @@ export const PaneTitleContext = createContext<PaneTitleValue | null>(null);
  * The pane title as a header item (`primitives.pane:title`, contributed by this
  * plugin into every pane-header slot — see `header-slot.ts`).
  *
- * Renders `null` when the pane has no title: an item that paints nothing is
- * ordinary, and the bar sees an empty cell rather than a gap, so a title-less
- * pane header looks exactly as it did.
+ * Paints the pane's `title.component` when it declares one, else the string
+ * {@link usePaneTitle} resolves (`title.text`, then `title.fallback`) — the same
+ * string the tab shows. Renders `null` when there is none: an item that paints
+ * nothing is ordinary, and the bar sees an empty cell rather than a gap.
  */
 export function PaneTitleItem(): ReactNode {
   const resolved = useContext(PaneTitleContext);
   if (resolved === null) {
     throw new Error(
-      "PaneTitleItem rendered outside a PaneChrome: the pane title is resolved " +
-        "by the pane (its `title` prop or `chrome.title`) and published on " +
-        "PaneTitleContext, so this item only has a title to paint inside the " +
-        "header PaneChrome renders.",
+      "PaneTitleItem rendered outside a PaneChrome: the pane title is declared " +
+        "on `Pane.define({ title })` and published on PaneTitleContext by the " +
+        "header PaneChrome renders, so this item only has a title to paint there.",
     );
   }
-  const { title, spill } = resolved;
-  if (title == null || title === "") return null;
-  if (typeof title === "string") {
-    // String pane title: the cell around it yields (see `PaneHeaderItem.cell`),
-    // so a long title ellipsizes rather than crushing its siblings.
+  const { pane, entry } = resolved;
+  const Component = pane.title.component;
+  if (Component) {
     return (
-      <Text as="span" variant="label" className="truncate">
-        {title}
-      </Text>
+      <NodeTitle>
+        <Component />
+      </NodeTitle>
     );
   }
-  if (spill) {
-    // Node title in a spill-enabled header (e.g. a `CollapsibleWrap`). The
-    // bar's and the band's `overflow-visible` are not enough on their own:
-    // `NodeTitle`'s `<Text>` sits in the Bar's single-line context, so it would
-    // auto-apply the `truncate` recipe (`overflow:hidden`) and re-clip the very
-    // spill `headerSpill` opened. Reset the single-line context so the wrapper
-    // stops clipping — the node owns its own overflow, and any single-line leaf
-    // inside it (chips, a conversation title) still truncates via its own
-    // container/class.
-    return (
-      <SingleLineProvider value={false}>
-        <NodeTitle>{title}</NodeTitle>
-      </SingleLineProvider>
-    );
+  if (entry === null) {
+    // Off-route: no params to run `title.text` against — only a literal
+    // fallback can be shown honestly.
+    const { fallback } = pane.title;
+    return typeof fallback === "string" ? <TextTitle title={fallback} /> : null;
   }
-  return <NodeTitle>{title}</NodeTitle>;
+  // Keyed by pane: `title.text` is a hook that varies per pane.
+  return <ResolvedTextTitle key={pane.id} pane={pane} entry={entry} />;
+}
+
+function ResolvedTextTitle({
+  pane,
+  entry,
+}: {
+  pane: PaneInternal;
+  entry: MatchEntry;
+}): ReactNode {
+  const title = usePaneTitle(pane, entry.fullParams, entry.hint, entry.options);
+  if (title === undefined || title === "") return null;
+  return <TextTitle title={title} />;
 }
 
 /**
- * A non-string pane title (a breadcrumb, a chip row, a `CollapsibleWrap`).
+ * String pane title: the cell around it yields (see `PaneHeaderItem.cell`), so
+ * a long title ellipsizes rather than crushing its siblings.
+ */
+function TextTitle({ title }: { title: string }): ReactNode {
+  return (
+    <Text as="span" variant="label" className="truncate">
+      {title}
+    </Text>
+  );
+}
+
+/**
+ * A `title.component` (a breadcrumb, an editable field).
  *
  * It gets the SAME `label` typography baseline as a string title, so a title
  * node inherits the canonical pane-title size instead of drifting to the ambient
  * body size. The size is enforced by this container (CSS inheritance), so title
  * nodes need not — and should not — set their own; per-segment weight/color (e.g.
  * a breadcrumb's) still composes on top.
- *
- * One component for both branches — the spill branch differs only by the
- * `SingleLineProvider` around it, so the markup itself has one home.
  */
 function NodeTitle({ children }: { children: ReactNode }) {
   return (

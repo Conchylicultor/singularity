@@ -6,11 +6,10 @@
 
 - Description: Displays the conversation status as a colored badge in the toolbar.
 - Web:
-  - Contributes: `Conversation.Header` → `StatusBadge`
+  - Contributes: `conversationPane.Actions` "status" → `StatusBadge`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/header.Conversation`
     - `conversations/conversation-view/header.HeaderChip`
     - `primitives/css/badge.formatStatusLabel`
 
