@@ -1,15 +1,20 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PrototypeFrameActions } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { OpenResponsiveAction } from "./components/open-responsive-action";
 import { PresentMenu } from "./components/present-menu";
 import { prototypePresentPane } from "./panes";
 
 export default {
   description:
-    "Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, Full screen (F, which presents the selected frame), and Responsive, in a new browser tab (the page filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.",
+    "Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.",
   contributions: [
     Pane.Register({ pane: prototypePresentPane }),
     PrototypeFrameActions({ id: "present", component: PresentMenu }),
+    PrototypeFrameActions({
+      id: "open-responsive",
+      component: OpenResponsiveAction,
+    }),
   ],
   slots: {
     "prototypes-present": prototypePresentPane,

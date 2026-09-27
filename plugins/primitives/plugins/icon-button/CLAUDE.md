@@ -88,6 +88,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/prototypes/canvas`
     - `apps/prototypes/copy-id`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`

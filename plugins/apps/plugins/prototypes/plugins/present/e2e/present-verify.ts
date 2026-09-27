@@ -360,11 +360,13 @@ await withBrowser(async (h) => {
   }
   await tab.close();
 
-  // --- Responsive, in a new browser tab ------------------------------------
-  await openMenuOfA();
+  // --- Open responsive in a new tab (its own button, beside Present) -------
   const openedResponsive = context.waitForEvent("page", { timeout: 5000 });
+  await frameA.hover();
+  // Frame A's header comes first, so its button is the first one.
   await page
-    .getByRole("menuitem", { name: /Responsive, in a new browser tab/ })
+    .getByRole("button", { name: "Open responsive in a new tab" })
+    .first()
     .click();
   const rTab = await openedResponsive;
   await rTab.setViewportSize({ width: 1111, height: 777 });

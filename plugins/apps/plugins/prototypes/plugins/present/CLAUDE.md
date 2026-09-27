@@ -4,7 +4,7 @@
 frame action (`PrototypeFrameActions`), so every frame of the prototype canvas
 gets its own Present button, and the canvas knows nothing about it.
 
-The menu, headed "Present B", has four rows, ordered by how much they cover:
+The menu, headed "Present B", has three rows, ordered by how much they cover:
 
 - **In this app tab** — a `<SurfaceOverlay>` filling the tab's surface. The
   Singularity tab bar and app rail stay visible and clickable, so the user can
@@ -21,10 +21,14 @@ The menu, headed "Present B", has four rows, ordered by how much they cover:
 - **Full screen** (`F`) — the viewport overlay, also handed to the browser's
   Fullscreen API. Escape exits fullscreen (the browser handles it), and the
   resulting `fullscreenchange` closes the overlay, so one key still leaves.
-- **Responsive, in a new browser tab** — the new-browser-tab page, but at the
-  Responsive size (`present/<id>/<version>/responsive`) whatever size the
-  canvas is at: at Fit that is the page laid out at the tab's own width,
-  filling it. A source frame opens its own `href`, which already is that.
+
+**Open responsive in a new tab** is a second frame action of its own, beside
+the menu (`OpenResponsiveAction`): one click opens the new-browser-tab page at
+the Responsive size (`present/<id>/<version>/responsive`) whatever size the
+canvas is at — at Fit that is the page laid out at the tab's own width, filling
+it. A source frame opens its own `href`, which already is that, and the button
+is disabled when it has none. Both it and the menu's new-browser-tab icon go
+through `BrowserTabOpener` (`components/frame-link.tsx`).
 
 **`F` presents the selected frame** in full screen. Only the selected frame's
 menu registers the key (a surface-scoped shortcut, silent in text fields), and
@@ -93,12 +97,13 @@ Exit: closing the tab is how you leave.
 
 ## Plugin reference
 
-- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, Full screen (F, which presents the selected frame), and Responsive, in a new browser tab (the page filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.
+- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks.
 - Web:
   - Slots: `prototypes-present.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "prototypes-present"
     - `PrototypeFrameActions` "present" → `PresentMenu`
+    - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps-core/tabs.useSurfaceFocused`
@@ -143,6 +148,7 @@ Exit: closing the tab is how you leave.
     - `primitives/embed.embedUrl`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
