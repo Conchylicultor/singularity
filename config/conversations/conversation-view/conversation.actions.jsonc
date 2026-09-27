@@ -1,4 +1,4 @@
-// @hash a6393893eed2
+// @hash a9050ce03316
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -14,7 +14,6 @@
     "conversations.conversation-preprompt:preprompt",
     "conversations.conversation-view.allow-monitor:allow-monitor",
     "conversations.conversation-view.model:model",
-    "conversations.conversation-view.track:track",
     "conversations.conversation-view.track:track",
     "conversations.conversation-view.status:status",
     "conversations.conversation-progress:progress"

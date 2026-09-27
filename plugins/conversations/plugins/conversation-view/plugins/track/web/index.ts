@@ -5,5 +5,7 @@ import { TrackChip } from "./components/track-chip";
 export default {
   description:
     "Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.",
-  contributions: [conversationPane.Actions({ id: "track", component: TrackChip })],
+  contributions: [
+    conversationPane.Actions({ id: "track", component: TrackChip }),
+  ],
 } satisfies PluginDefinition;
