@@ -3,7 +3,8 @@
  * the footer signs off with it on every page, and one address declared twice is
  * one address that drifts.
  */
-export const SOURCE_URL = "https://github.com/Conchylicultor/singularity";
+const REPO = "Conchylicultor/singularity";
+export const SOURCE_URL = `https://github.com/${REPO}`;
 
 /**
  * The one address the site publishes. Every reach-out on the site goes here —
@@ -19,3 +20,18 @@ export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
  * point at different repositories.
  */
 export const ISSUES_URL = `${SOURCE_URL}/issues/new`;
+
+/**
+ * The one command that installs equin on a Mac: the repository's own
+ * `install.sh`, piped from its `main` branch. Derived from the same repository
+ * as `SOURCE_URL`, so the page cannot offer one repository's installer beside
+ * another's source.
+ */
+export const INSTALL_COMMAND = `curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | bash`;
+
+/**
+ * Where an installed equin answers: the main namespace behind the local gateway.
+ * Every copy lives at the same address, so the site can name it.
+ */
+export const LOCAL_APP_HOST = "singularity.localhost:9000";
+export const LOCAL_APP_URL = `http://${LOCAL_APP_HOST}`;

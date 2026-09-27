@@ -10,7 +10,7 @@ export { WebsiteApps } from "./slots";
 
 export default {
   description:
-    "The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Apps nav link, and the WebsiteApps.Section slot the page is written into.",
+    "The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteApps.Section slot the page is written into.",
   contributions: [
     // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
     // mints no slot of its own and is deliberately absent from `slots:` — the

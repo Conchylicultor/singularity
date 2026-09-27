@@ -365,6 +365,7 @@ to reconcile them; they never needed reconciling.
     - `apps/website/landing/layers`
     - `apps/website/landing/screenshot`
     - `apps/website/landing/story-link`
+    - `apps/website/pages/download`
     - `apps/website/shell`
     - `auth`
     - `auth/apple-signing/setup-wizard`

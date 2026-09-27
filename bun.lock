@@ -1099,8 +1099,16 @@
       "name": "@singularity/plugin-apps-website-pages-apps",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/pages/plugins/download": {
+      "name": "@singularity/plugin-apps-website-pages-download",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/pages/plugins/foundations": {
       "name": "@singularity/plugin-apps-website-pages-foundations",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/guide": {
+      "name": "@singularity/plugin-apps-website-pages-guide",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/pages/plugins/story": {
@@ -6447,7 +6455,11 @@
 
     "@singularity/plugin-apps-website-pages-apps": ["@singularity/plugin-apps-website-pages-apps@workspace:plugins/apps/plugins/website/plugins/pages/plugins/apps"],
 
+    "@singularity/plugin-apps-website-pages-download": ["@singularity/plugin-apps-website-pages-download@workspace:plugins/apps/plugins/website/plugins/pages/plugins/download"],
+
     "@singularity/plugin-apps-website-pages-foundations": ["@singularity/plugin-apps-website-pages-foundations@workspace:plugins/apps/plugins/website/plugins/pages/plugins/foundations"],
+
+    "@singularity/plugin-apps-website-pages-guide": ["@singularity/plugin-apps-website-pages-guide@workspace:plugins/apps/plugins/website/plugins/pages/plugins/guide"],
 
     "@singularity/plugin-apps-website-pages-story": ["@singularity/plugin-apps-website-pages-story@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story"],
 

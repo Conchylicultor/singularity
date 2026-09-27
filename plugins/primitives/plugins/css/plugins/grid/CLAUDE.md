@@ -82,6 +82,7 @@ Shared (both paths):
     - `apps/website/landing/contact`
     - `apps/website/landing/hero`
     - `apps/website/landing/layers`
+    - `apps/website/pages/download`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/health-monitor`

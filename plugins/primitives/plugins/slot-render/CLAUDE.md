@@ -276,6 +276,7 @@ the outcome too, with no separate code path.
     - `apps/studio/shell`
     - `apps/website/pages/apps`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/guide`
     - `apps/website/pages/story`
     - `apps/website/shell`
     - `config_v2/fields`

@@ -16,7 +16,7 @@ it.
 
 ## Plugin reference
 
-- Description: The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Apps nav link, and the WebsiteApps.Section slot the page is written into.
+- Description: The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteApps.Section slot the page is written into.
 - Web:
   - Slots: `WebsiteApps.Section`
   - Contributes:

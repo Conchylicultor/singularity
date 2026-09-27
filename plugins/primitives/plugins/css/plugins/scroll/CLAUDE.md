@@ -60,6 +60,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `apps/studio/compositions/release/release-logs`
     - `apps/studio/contributions`
     - `apps/studio/contributions/tables/sample-rows`
+    - `apps/website/pages/download`
     - `build`
     - `build/build-logs`
     - `build/deployment`

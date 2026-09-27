@@ -565,8 +565,20 @@
       "parent": null
     },
     {
+      "paneId": "website-download",
+      "segment": "download",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-foundations",
       "segment": "foundations",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "website-guide",
+      "segment": "guide",
       "appIndex": false,
       "parent": null
     },

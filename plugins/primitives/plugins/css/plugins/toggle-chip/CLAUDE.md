@@ -53,6 +53,7 @@ anonymous index signature. See
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release`
     - `apps/studio/graph`
+    - `apps/website/pages/download`
     - `build/serve-composition`
     - `config_v2/fields`
     - `config_v2/settings`

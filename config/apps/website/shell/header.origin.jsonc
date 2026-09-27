@@ -1,4 +1,4 @@
-// @hash fda8bb56495b
+// @hash 4595f664dcb3
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,9 @@
   "items": [
     "apps.website.improve:improve",
     "apps.website.pages.apps:apps",
+    "apps.website.pages.download:download",
+    "apps.website.pages.foundations:foundations",
+    "apps.website.pages.guide:guide",
     "apps.website.pages.story:story",
     "apps.website.shell:wordmark",
     "apps.website.shell:github",
