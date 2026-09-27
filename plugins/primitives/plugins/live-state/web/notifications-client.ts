@@ -16,17 +16,36 @@ import { noteResourceTxAcks } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
 import { updateDelayReportSink } from "./update-delay-reporter";
 
+/**
+ * The identity this document's client holds its subscriptions under — minted
+ * once per JavaScript realm, never read from storage.
+ *
+ * The server keys sub ownership by it (`sub` / `unsub` / `unsub-tab` and the
+ * `sub-batch complete:true` reconciliation all release by it), so it must name
+ * exactly ONE client. The browser-tab id (`getTabId()`) does not: it lives in
+ * `sessionStorage`, which a same-origin iframe of the app (a prototype's Real
+ * app frame, any `?embed=` document) shares with its host. Keyed by it, the
+ * frame's `pagehide` `unsub-tab` released every sub the HOST held — the server
+ * stopped pushing while the host still believed it was subscribed, and a
+ * conversation's transcript froze until the sub happened to cycle.
+ */
+const REALM_HOLDER_ID = crypto.randomUUID();
+
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
 // decoupled from the notifications WS, so traces still flush even when the WS
-// pipeline this watches is wedged. Each line is stamped with the tab id so a
-// multi-tab leader/follower trail is attributable.
+// pipeline this watches is wedged. Each line is stamped `[tabId/holder]`: the
+// browser tab, then the client inside it — a host document and its embedded
+// frames share the first and never the second.
 //
 // Always-on lines are low-volume (transitions and silent-drop anomalies — the
 // exact failure signatures). The per-frame successful apply is high-volume and
 // gated behind a dev-only localStorage flag (see verboseTraceOn).
 function trace(line: string): void {
-  clientLog("live-state", `[${getTabId()}] ${line}`);
+  clientLog(
+    "live-state",
+    `[${getTabId()}/${REALM_HOLDER_ID.slice(0, 8)}] ${line}`,
+  );
 }
 
 // Dev-only verbose toggle for the high-volume per-apply trace. Read straight
@@ -448,11 +467,12 @@ export class NotificationsClient {
     ...args: Parameters<typeof fetch>
   ) => ReturnType<typeof fetch>;
   /**
-   * This tab's stable id, stamped on every sub/unsub frame so the server can
-   * track which tab holds which sub (the per-tab bookkeeping behind `unsub-tab`
-   * and the `sub-batch complete:true` reconciliation). Injection seam for tests
-   * (two "tabs" in one jsdom page share sessionStorage, so the real getTabId()
-   * would collide); production always uses getTabId().
+   * The holder id stamped on every sub/unsub frame so the server can track
+   * which client holds which sub (the per-holder bookkeeping behind `unsub-tab`
+   * and the `sub-batch complete:true` reconciliation) — `REALM_HOLDER_ID`, one
+   * per document, never a storage-backed id (see its doc for the incident).
+   * The wire field keeps its historical name `tabId`. Injection seam for tests
+   * that run two "tabs" in one jsdom realm, which would otherwise share it.
    */
   private tabId: string;
   /** `pagehide` handler (best-effort tab departure), removed in `destroy()`. */
@@ -489,7 +509,7 @@ export class NotificationsClient {
     // Socket factory must be set before channelFor (openChannel reads it).
     this.makeSocket = hooks?.makeSocket ?? ((u) => new SharedWebSocket(u));
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
-    this.tabId = hooks?.tabId ?? getTabId();
+    this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
     this.channelFor("worktree");

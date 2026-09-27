@@ -272,6 +272,31 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(departures[0]!.tabId).toBe("tab-X");
   });
 
+  test("the default holder id is per document, never the sessionStorage tab id an embedded frame shares", async () => {
+    // A same-origin iframe of the app shares its host's sessionStorage — and so
+    // `getTabId()`. Keyed by it, the frame's pagehide `unsub-tab` released every
+    // sub the HOST held, freezing the host's live resources server-side.
+    sessionStorage.setItem("singularity.tabId", "shared-with-embedded-frames");
+    const hub = createTransportHub();
+    const qc = new QueryClient();
+    const client = new NotificationsClient(qc, {
+      makeSocket: hub.makeSocket(hub.tab()),
+    });
+    clients.push(client);
+    await flush();
+    const socket = hub.server.all()[0]!;
+    socket.open();
+
+    client.observe("k", {}, undefined, pushSchema);
+    const holder = subFrames(socket, "k")[0]!.tabId;
+    expect(holder).toBeTypeOf("string");
+    expect(holder).not.toBe("shared-with-embedded-frames");
+
+    window.dispatchEvent(new Event("pagehide"));
+    const departures = socket.sentJson().filter((m) => m.op === "unsub-tab");
+    expect(departures[0]!.tabId).toBe(holder);
+  });
+
   describe("client-requested acks (requestAcks)", () => {
     const subAcksFrames = (socket: FakeWebSocket): Record<string, unknown>[] =>
       socket.sentJson().filter((m) => m.op === "sub-acks");
