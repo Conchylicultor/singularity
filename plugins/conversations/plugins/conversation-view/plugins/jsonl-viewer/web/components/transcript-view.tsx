@@ -147,7 +147,10 @@ export interface TranscriptViewProps {
    * turn). Never wire it to "something started working": see `useStickyScroll`.
    */
   followKey?: number | string | boolean;
-  /** Shown in place of the rows when the transcript holds no events. */
+  /**
+   * Shown in place of the rows when the transcript holds no events. It sits in
+   * a column that fills the pane: give it `growClass()` to take the height.
+   */
   empty?: ReactNode;
   /**
    * Pinned beside the scroller, inside the pane's positioning frame — a
@@ -229,8 +232,14 @@ function TranscriptViewInner({
         className={`h-full transition-opacity ${dimmed ? "opacity-50" : ""}`}
       >
         {events.length === 0 ? (
-          <Text as="div" variant="caption" className="text-muted-foreground">
-            <Stack gap="none" className="px-md py-sm">
+          // Fills the scroller, so an `empty` that grows (`growClass()`) can
+          // centre itself in the pane rather than sit on its first line.
+          <Text
+            as="div"
+            variant="caption"
+            className="h-full text-muted-foreground"
+          >
+            <Stack gap="none" className="min-h-full px-md py-sm">
               {empty}
               {children}
             </Stack>

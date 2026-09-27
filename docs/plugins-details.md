@@ -10273,7 +10273,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
               - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
+              - `primitives/css/grow.growClass`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -24965,6 +24967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
+              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/boot-profile`
@@ -25505,6 +25508,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
             - Imported by:
+              - `conversations/conversation-view/jsonl-viewer`
               - `debug/profiling`
               - `debug/timeline`
               - `primitives/css/fill`

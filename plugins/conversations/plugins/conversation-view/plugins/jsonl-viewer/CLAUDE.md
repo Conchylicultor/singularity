@@ -124,7 +124,9 @@ back.
     - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
     - `conversations/conversation-view/pending-turn.usePendingTurns`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grow.growClass`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

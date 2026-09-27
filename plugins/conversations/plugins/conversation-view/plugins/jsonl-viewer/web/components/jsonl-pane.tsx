@@ -10,6 +10,8 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -34,6 +36,56 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
         Working for <ElapsedTime since={new Date(startAt)} />
       </Text>
     </Stack>
+  );
+}
+
+/**
+ * A conversation with nothing in it yet: one quiet line centred in the pane,
+ * a little above the middle, with the composer below as the only control. A
+ * conversation that ended without a transcript says so instead of inviting a
+ * first message.
+ */
+function BlankTranscript({ ended }: { ended: boolean }) {
+  return (
+    <Center className={`${growClass()} pb-2xl`}>
+      <Stack gap="xs" align="center">
+        <Text as="div" variant="label" tone="muted">
+          {ended ? "No transcript" : "Nothing here yet"}
+        </Text>
+        {!ended && (
+          <Text as="div" variant="caption" tone="faint">
+            The first message starts the agent.
+          </Text>
+        )}
+      </Stack>
+    </Center>
+  );
+}
+
+/**
+ * The agent is up but has not written its first line: the working indicator,
+ * where the blank hint was, instead of alone in the pane's top corner.
+ */
+function StartingTranscript({ startAt }: { startAt: number | null }) {
+  return (
+    <Center className={`${growClass()} pb-2xl`}>
+      <Stack gap="sm" align="center">
+        <BouncingDots />
+        <Text as="div" variant="label" tone="muted">
+          Starting the agent
+        </Text>
+        {startAt != null && (
+          <Text
+            as="div"
+            variant="caption"
+            tone="faint"
+            className="tabular-nums"
+          >
+            <ElapsedTime since={new Date(startAt)} />
+          </Text>
+        )}
+      </Stack>
+    </Center>
   );
 }
 
@@ -78,6 +130,13 @@ function JsonlPaneInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
   }, [isWorking]);
 
+  // Working with nothing written yet: the pane's empty state shows it.
+  const isStarting =
+    isWorking &&
+    events.length === 0 &&
+    pendingTurns.length === 0 &&
+    !conversation.waitingFor;
+
   return (
     <TranscriptView
       events={events}
@@ -89,10 +148,15 @@ function JsonlPaneInner({
       // reading user to the bottom.
       followKey={pendingTurns.length}
       dimmed={isGone}
+      // A queued turn or a pending prompt already fills the empty pane; with
+      // neither, it holds the starting indicator or the blank hint, centred.
       empty={
-        <span>
-          No transcript yet. Claude may not have written its session log.
-        </span>
+        pendingTurns.length > 0 ||
+        !!conversation.waitingFor ? null : isStarting ? (
+          <StartingTranscript startAt={workingStartAt} />
+        ) : (
+          <BlankTranscript ended={isGone} />
+        )
       }
       // The readings pinned at the foot of the pane (context/output usage, the
       // token budget, …) are Overlay contributions — see the
@@ -102,7 +166,7 @@ function JsonlPaneInner({
       // view draws via `useTranscriptEvents()`.
       overlay={<JsonlViewer.Overlay.Render />}
     >
-      {isWorking && workingStartAt != null && (
+      {isWorking && !isStarting && workingStartAt != null && (
         <WorkingIndicator startAt={workingStartAt} />
       )}
       {!isWorking && !!conversation.waitingFor && (
