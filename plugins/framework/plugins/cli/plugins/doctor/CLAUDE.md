@@ -15,7 +15,10 @@ important case is Bun itself missing. It runs from the checkout it checks (cwd):
 
 What it checks: not root; Xcode command-line tools (macOS) and a working git;
 mise installed and active in the shell (`MISE_SHELL` set, or its shims on PATH —
-tool install dirs on PATH do not count, since `mise run` adds them itself); the
+tool install dirs on PATH do not count, since `mise run` adds them itself); every
+shim resolving (a symlink loop or a missing target is named with
+`mise reshim --force`); shims NOT installing tools on first use
+(`not_found_auto_install` off — `mise run setup` sets it); the
 locked toolchain installed (`mise install --dry-run-code`, tools named by
 `mise ls --missing`); Claude Code installed (same lookup as `resolveClaudeBin()` in
 `infra/paths/server/internal/bins.ts`, kept in step by `doctor.test.ts`) and
@@ -37,6 +40,13 @@ The running app asks the Claude Code half again on its own — sign-outs and
 uninstalls happen between builds — through `infra/claude-cli/plugins/availability`
 (the health report's Claude Code row, and a refusal with the fix before any
 launch).
+
+The two shim checks come from one incident (2026-09-27): an agent ran `bun` in
+a cloned third-party repo pinning another Bun, the shim installed it, and the
+reshim that followed — run from inside the shim — linked every shim to
+`shims/bun` and that to itself, so no backend could start. Shims that never
+install cannot reshim; the loop check names the state if it happens anyway.
+[`research/2026-09-27-global-mise-shim-self-loop.md`](../../../../../../research/2026-09-27-global-mise-shim-self-loop.md).
 
 Git hooks are not checked: mise's `setup` task sets `core.hooksPath` on every
 `mise install`.

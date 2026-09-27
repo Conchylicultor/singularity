@@ -104,6 +104,34 @@ else
       "$activate"
   fi
 
+  # Every shim is a symlink to the mise binary. A reshim run by mise while it
+  # was itself started as a shim (mise 2026.9.x takes its own path from how it
+  # was invoked) points every shim at shims/<tool>, and that one at itself:
+  # nothing on the toolchain can start, and backends die with a bare
+  # `posix_spawn: No such file or directory`. Seen 2026-09-27
+  # (research/2026-09-27-global-mise-shim-self-loop.md). A link that does not
+  # resolve (`-e` follows it: a loop or a missing target) is broken either way.
+  broken=""
+  for shim in "$shims"/*; do
+    if [ -L "$shim" ] && [ ! -e "$shim" ]; then broken="$broken ${shim##*/}"; fi
+  done
+  if [ -n "$broken" ]; then
+    miss "mise shims do not resolve (a symlink loop, or mise moved):$broken" \
+      "No bun, go or tmux can start through them (backends fail with posix_spawn ENOENT)." \
+      "$mise_bin reshim --force"
+  fi
+
+  # A shim run in a directory whose mise config asks for a release that is not
+  # installed (a cloned third-party repo) installs it on the spot — and that
+  # install's reshim is what writes the loop above. Shims must never install:
+  # the toolchain is installed explicitly (`mise install`, `toolchain upgrade`).
+  # `mise run setup` turns it off, machine-wide.
+  if [ "$("$mise_bin" settings get not_found_auto_install 2>/dev/null)" = "true" ]; then
+    miss "mise shims install missing tools on first use" \
+      "A \`bun\` run inside any repo that pins another release installs it, and the reshim that follows can loop every shim." \
+      "mise run setup"
+  fi
+
   # The ceiling keeps a worktree from also reading main's mise.toml (see
   # plugins/toolchain/shared/mise.ts).
   if ! MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" install --dry-run-code >/dev/null 2>&1; then
