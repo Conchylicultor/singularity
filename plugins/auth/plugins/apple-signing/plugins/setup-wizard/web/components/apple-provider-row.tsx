@@ -4,9 +4,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { configV2Resource } from "@plugins/config_v2/core";
+import { configValues } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { Auth } from "@plugins/auth/web";
 import type { AuthProviderRowProps } from "@plugins/auth/web";
@@ -19,9 +18,17 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
 
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
-  const storePath = reg?.storePath ?? "";
-  const metaResult = useLive(configSecretMeta, { path: storePath });
-  const cfgResult = useResource(configV2Resource, { path: storePath });
+  // The config is registered by apple-signing itself, so a missing
+  // registration is a wiring bug — never "still loading". Both reads skip
+  // (nothing subscribed), then the render throws.
+  const path = reg ? { path: reg.storePath } : null;
+  const metaResult = useLive(configSecretMeta, path);
+  const cfgResult = useLive(configValues, path);
+  if (!reg) {
+    throw new Error(
+      `[apple-signing setup] the "apple-signing" config has no web registration.`,
+    );
+  }
 
   if (!provider) return null;
   const icon = provider.icon;
@@ -38,7 +45,7 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
           <Body
             secretMeta={metaResult.data}
             cfg={
-              (cfgResult.data ?? {}) as {
+              cfgResult.data as {
                 signingIdentity?: string;
                 ascKeyId?: string;
                 ascIssuerId?: string;

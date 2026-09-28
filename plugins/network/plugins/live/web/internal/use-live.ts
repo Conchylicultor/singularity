@@ -122,14 +122,15 @@ function listShape<Row, F, S extends string>(
  */
 /**
  * A value's params argument: absent for a param-less value (`P` is
- * `Record<string, never>` — no declared name), required (the declared names,
- * each a string) otherwise.
+ * `Record<string, never>` — no declared name), required otherwise — the
+ * declared names (each a string, an optional one may be left out), or `null`
+ * when there is no subject to read yet.
  */
 type LiveValueArgs<P> = string extends keyof P
   ? []
   : [keyof P] extends [never]
     ? []
-    : [params: P];
+    : [params: P | null];
 
 // The window overload comes FIRST: an argument like `where: or(...)` is a
 // generic call TypeScript checks once, against the first overload's contextual
@@ -158,10 +159,19 @@ export function useLive<Row>(
  *   when the boot snapshot preloaded it). `params` is required exactly when the
  *   value declares params. A central value (`origin: "central"`) reads the
  *   same way; its descriptor routes the subscription to the central socket.
+ * - `useLive(value, null)` — a param'd value whose subject has not ARRIVED yet
+ *   (an id another read is still loading): `pending` with no error for as long
+ *   as it is `null`, and nothing is read — no subscription, no HTTP read, not a
+ *   pending mount. A value whose subject is not known yet is not known yet;
+ *   one that will NEVER arrive (a missing registration, a legacy record with no
+ *   id) is a settled answer the caller renders or throws on itself, never a
+ *   `null` read left spinning.
  */
 export function useLive<T, P extends Record<string, string>>(
   value: LiveValue<T, P, LiveValueOrigin>,
-  ...params: LiveValueArgs<P>
+  // `NoInfer`: `P` is the declaration's — a `{ path } | null` argument must not
+  // narrow it past a declared optional param.
+  ...params: LiveValueArgs<NoInfer<P>>
 ): ResourceResult<T>;
 export function useLive<Row, F, S extends string>(
   source:
@@ -169,18 +179,28 @@ export function useLive<Row, F, S extends string>(
     | LiveRowsCollection<Row>
     | LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
   query?:
-    LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | Record<string, string>,
+    | LiveQuery<F, S>
+    | LiveGroupQuery<F>
+    | LiveIdsQuery
+    | Record<string, string>
+    | null,
 ): LiveListResult<unknown> | ResourceResult<unknown> {
   // A declaration never changes kind between renders (it is a module-level
   // const), so the branch below keeps the hook order stable.
   if ("live" in source) {
+    // `null` is the substrate's skip; `useResource` canonicalizes the params
+    // (an absent optional one is one tuple however it is spelled).
     // eslint-disable-next-line react-hooks/rules-of-hooks -- the declaration's kind is fixed for a call site: a module-level const never switches between a value and a collection
-    return useResource(source, query as Record<string, string> | undefined);
+    return useResource(
+      source,
+      query as Record<string, string> | null | undefined,
+    );
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
   return useCollection(
     source,
-    query as LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
+    (query ?? undefined) as
+      LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
   );
 }
 
@@ -286,19 +306,19 @@ const NOT_FOUND: { pending: false; found: false } = {
  * a determinate answer, never a spinner. Reads the `:rows` point sibling, so it
  * ignores every window filter and bound: it answers "does this row exist".
  *
- * A `null` id (nothing to look up yet) is `found: false` from the first render.
+ * A `null` id (nothing to look up yet) is `found: false` from the first render
+ * and reads nothing (the substrate's skip — no subscription, not a pending
+ * mount): no id names no row.
  */
 export function useLiveRow<Row>(
   collection: LiveRowsCollection<Row>,
   id: string | null,
 ): LiveRowResult<Row> {
-  // A null id reads the EMPTY id set, `{ ids: "" }`: a legal tuple, one per
-  // collection, refcounted and shared by every null reader, which the server
-  // answers with `[]` and no query. `useResource` has no skip option on
-  // purpose: a public skip would be a value skip too, and it would have to
-  // disarm the pending-mount count and the cold-start prime.
-  const idsKey = collection.rows.point.encode(id === null ? [] : [id]).ids;
-  const params = useMemo(() => ({ ids: idsKey }), [idsKey]);
+  const idsKey = id === null ? null : collection.rows.point.encode([id]).ids;
+  const params = useMemo(
+    () => (idsKey === null ? null : { ids: idsKey }),
+    [idsKey],
+  );
   const result = useResource(collection.rows, params);
   const absent = id === null;
   // The result keeps its identity until what it is built from changes, like

@@ -3,6 +3,8 @@ export { liveValue } from "./internal/live-value";
 export type {
   LiveCentralValueSpec,
   LiveParamValueSpec,
+  LivePreloadedParamValue,
+  LivePreloadedParamValueSpec,
   LiveValue,
   LiveValueOrigin,
   LiveValueParams,

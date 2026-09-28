@@ -47,7 +47,9 @@ useLiveRow(eventSources, sourceId);                                   // one row
   constructors (`liveText(Schema)`, `liveNumber()`, `liveBoolean()`,
   `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
   type (tsc), and `and` / `or` / `column` / `op` / `operand` cannot be column
-  names (they spell a filter tree).
+  names (they spell a filter tree). None of the three descriptors has a
+  placeholder (`initialData?: never`, as on a `liveValue`): a window, id set or
+  grouping not loaded yet is `pending`, never `[]`.
 - **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { row, id })`
   — a collection mints `key:rows` alone: a table whose rows are only ever read by
   id (one row per mounted block: `todo-block-task`, `page-block-doc`). Every
@@ -144,12 +146,9 @@ useLiveRow(eventSources, sourceId);                                   // one row
   `found: false` means the row is not in the collection — never "outside the
   window".
   - **A `null` id** (nothing to look up yet) is `{ pending: false, found:
-    false }` from the FIRST render. It still reads a tuple — the empty id set
-    `{ ids: "" }`, one per collection, shared by every null reader, answered
-    with `[]` and no query — so it counts as a pending mount until that `[]`
-    lands. `useResource` has deliberately no skip option: a public skip would
-    skip values too, and would have to disarm the pending-mount count and the
-    cold-start prime.
+    false }` from the FIRST render, and reads nothing: the substrate's skip
+    (`useResource(desc, null)` — no subscription, no HTTP read or cold-start
+    prime, not a pending mount), the same one a value's `useLive(v, null)` uses.
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
@@ -174,8 +173,13 @@ export const notificationsUnread = liveValue("notifications.unread", {
 });
 export const taskDetail = liveValue("task-detail", {
   schema: TaskDetailSchema,
-  params: ["id"],                        // → P = { id: string }; preload is `never` here
+  params: ["id"],                        // → P = { id: string }
   // load: "on-demand",                  — opt out of push (slow loader; tabs refetch over HTTP)
+});
+export const configValues = liveValue("config-v2.values", {
+  schema: ConfigValuesSchema,
+  params: ["path", "scopeId?"],          // → P = { path: string; scopeId?: string }
+  preload: "boot-and-keep",              // a param'd preload: the server names the tuples
 });
 
 // server/ — serve
@@ -185,9 +189,17 @@ export const unreadServed = serveValue(notificationsUnread, {
 });
 // contributions: [...unreadServed.declare]
 
+// server/ — a param'd preload names its boot tuples
+export const configValuesServed = serveValue(configValues, {
+  source: "external",
+  loader: ({ path, scopeId }) => resolve(path, scopeId),
+  preloadParams: () => [{ path: "a" }, { path: "a", scopeId: "app:x" }],
+});
+
 // web/ — read
 useLive(notificationsUnread);            // ResourceResult<T>
 useLive(taskDetail, { id });             // params required iff declared
+useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, pending
 ```
 
 - **Declare.** The key is a positional string literal (the scanners read it).
@@ -195,11 +207,27 @@ useLive(taskDetail, { id });             // params required iff declared
   generic to restate). There is **no `initial`**: not known yet is `pending`,
   never a stand-in — the descriptor has no `initialData` (an optimistic read of
   a value is `useOptimisticResource(value, params?, options)`, pending until the
-  first value — see below). `preload` is typed `never`
-  beside `params`: only a param-less value has a default tuple the server can
-  load before a tab names one. A preloaded value sets `defaultParams: {}`, the
-  tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
-  discriminant `useLive` dispatches on.
+  first value — see below). `live: "value"` is the discriminant `useLive`
+  dispatches on.
+  - **An optional param** is declared with a trailing `?` (`"scopeId?"` →
+    `scopeId?: string`); the descriptor records the bare names in `params` and
+    the optional ones in `optionalParams`. An optional param is present iff it
+    is a non-empty string: `canonicalParams` (`packages/canonical-params`, one
+    copy for the browser and the resource runtime) drops an `undefined`
+    or `""` one wherever params enter the substrate — `useResource`'s entry (the
+    subscription, the HTTP fallback URL, the prime, the query key),
+    `hydrateResource`, `useOptimisticResource` — and the resource runtime does
+    the same on the server (every incoming frame, the HTTP read, `notify`,
+    each mapped `recomputeOn` tuple), as does `preloadParams` — so
+    `{ path }`, `{ path, scopeId: undefined }` and `{ path, scopeId: "" }` are
+    ONE tuple, and a notify can never miss the tuple a read holds.
+  - **The default tuple.** A param-less preloaded value sets
+    `defaultParams: {}`, the tuple both the boot snapshot and `useLive(v)` use.
+    A PARAMETERIZED value has none, so it is branded
+    (`preloadsParams: true`, `LivePreloadedParamValue`) and its `serveValue`
+    must pass `preloadParams: () => P[] | Promise<P[]>` (tsc, and a throw at
+    serve time for an untyped caller; any other value may not pass it) — see
+    Preload below.
 - **Load (delivery mode).** `load` defaults to `"push"` (the value is
   recomputed and pushed); `"on-demand"` is the runtime's `invalidate` — the
   server never ships the value over the socket, and each tab reads it over
@@ -210,8 +238,16 @@ useLive(taskDetail, { id });             // params required iff declared
   client waited forever for a sub-ack value the server never sent).
 - **Preload.** `"boot"`: hydrated by the boot snapshot before first paint
   (settled on the first render), the owning plugin pinned eager, and a
-  DB-backed one L2-persisted. `"boot-and-keep"`: the same, plus the client
-  cache is never garbage-collected (`gcTime: Infinity`) — for small values read
+  DB-backed param-less one L2-persisted. A parameterized one is an ENUMERATED
+  preload: the boot snapshot loads every tuple its `preloadParams` names — the
+  loader alone per tuple, through the resource's own `load` (no flight, no
+  commit watermark, no profiler span: nothing compares these values
+  causally) — ships them under `tuples[key]`, and the client hydrates each; it
+  is never L2-persisted (an L2 row is one param-less tuple per key). Enumerate
+  exactly what first paint reads: every tuple is loaded on every page load.
+  A central value is never preloaded. `"boot-and-keep"`: the same, plus the
+  client cache is never garbage-collected (`gcTime: Infinity`, for every tuple
+  of the key, hydrated or observed) — for small values read
   by surfaces that mount late.
 - **Serve.** `source` is required and says where the truth lives:
   - `"db"`: the loader's read-set is captured at the DB pool chokepoint; a change
@@ -240,7 +276,10 @@ useLive(taskDetail, { id });             // params required iff declared
     always recomputes its `{}` tuple, so its version moves even with no tab
     subscribed. The mapped form is one per-tuple edge; `params` is typed
     against that upstream's params (the array is a const tuple, inferred per
-    element).
+    element). It compiles to the runtime's value-aware `map`, so every notify
+    of the upstream computes the upstream's value even with nobody subscribed
+    to it — prefer one notify fan-out over a mapped edge for values that move
+    together (config's documents, conflicts and tiers).
   - **`whileSubscribed(params, notify?) → stop | Promise<stop>`**: start
     something for as long as a tuple has a subscriber, return what stops it —
     one function, so a start without its stop cannot be written. The external
@@ -248,7 +287,10 @@ useLive(taskDetail, { id });             // params required iff declared
     Paired in `shared/compile-value.ts` over the runtime's 0→1 / N→0 hooks: an
     async start is awaited on the subscribe path, and a last unsubscribe that
     arrives first runs the stop after the start resolves. A failed start has
-    nothing to stop (the runtime reports it).
+    nothing to stop (the runtime reports it). Nothing watches the source between
+    a stop and the next start, and nothing needs to: the runtime opens every
+    subscription span with a fresh version, so a tab reconnecting after the gap
+    never gets `up-to-date` for a value it read before it (`resource-runtime/CLAUDE.md`).
   - **`revalidate`** (both arms): the ETag signature, passed through
     (read path only; co-produce it with the loader, e.g. `createSignedMemo`).
   - Not spelled: `ackChannel` (an optimistic reader asks for acks on its own
@@ -262,13 +304,26 @@ useLive(taskDetail, { id });             // params required iff declared
   `declare`. Each `serveValue` rejects the other origin's value (tsc). Both
   compile options through `shared/compile-value.ts`, so they cannot drift.
 - **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
-  `useResource`; the params object is the canonical tuple). A value with no
+  `useResource`, which canonicalizes the params). A value with no
   placeholder makes no HTTP fetch on mount — the WS sub-ack fills it (the
   query stays disabled until a value lands; `refetch()` still works).
+  - **No subject yet — `useLive(value, null)`** (a param'd value only — tsc):
+    the read is `{ pending: true, error: null }` for as long as the params are
+    `null`, and NOTHING is read — no subscription, no HTTP read or prime, and
+    it is not a pending mount (the page is not waiting on the server for it).
+    A value whose subject has not arrived is not known yet. A subject that
+    will NEVER arrive (a missing registration, a legacy record with no id) is
+    a settled answer: the caller renders it or throws — it never leaves a
+    `null` read spinning. The old workaround, a `""` stand-in
+    (`{ id: x ?? "" }`), subscribed a real tuple the server loaded for nothing;
+    the `live/no-sentinel-param` lint rejects it at a `useLive` /
+    `useLiveRow` call.
 
 ## Old spellings — lint `no-legacy-resource-spelling`
 
-Contributed by `lint/` (repo-wide). It flags every import of an old spelling
+Contributed by `lint/` (repo-wide), beside `live/no-sentinel-param` (a `""`
+stand-in for a param that has not arrived — see Values → Read). It flags every
+import of an old spelling
 from the barrel that exports it — named or aliased, `export { … } from`, or a
 read off the barrel's module object (a namespace import or an awaited
 `import()`, by member or by destructuring, resolved through scope):
@@ -390,10 +445,8 @@ grouped under the wave or item that removes it
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
-    - `primitives/live-state.keyedResourceDescriptor`
     - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourcePreload`
     - `primitives/live-state.WindowParams`
@@ -420,6 +473,8 @@ grouped under the wave or item that removes it
     - `LiveOrderBy`
     - `LiveParamValueSpec`
     - `LivePreload`
+    - `LivePreloadedParamValue`
+    - `LivePreloadedParamValueSpec`
     - `LiveQuery`
     - `LiveReservedColumn`
     - `LiveRowSchema`

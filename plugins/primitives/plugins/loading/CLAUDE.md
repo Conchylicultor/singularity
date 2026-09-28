@@ -192,6 +192,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `tasks/task-graph`
     - `tasks/task-list`
     - `tasks/task-track`
+    - `ui/theme-engine/quick-theme`
+    - `ui/theme-engine/theme-customizer`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
     - `ui/tokens/color-adjust`

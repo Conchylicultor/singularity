@@ -52,4 +52,65 @@ describe("liveValue", () => {
     const bad: NonNullable<typeof v.__params> = { id: "a" };
     expect(bad).toBeDefined();
   });
+
+  test('a trailing "?" declares an optional param: P marks it optional, the descriptor lists it', () => {
+    const v = liveValue("test.live-value.optional", {
+      schema: S,
+      params: ["path", "scopeId?"],
+    });
+    expect(v.params).toEqual(["path", "scopeId"]);
+    expect(v.optionalParams).toEqual(["scopeId"]);
+    const base: NonNullable<typeof v.__params> = { path: "a" };
+    const scoped: NonNullable<typeof v.__params> = { path: "a", scopeId: "s" };
+    expect([base, scoped]).toHaveLength(2);
+    // @ts-expect-error — the required name stays required
+    const bad: NonNullable<typeof v.__params> = { scopeId: "s" };
+    expect(bad).toBeDefined();
+    // A value with no optional name carries no list.
+    expect(
+      liveValue("test.live-value.required-only", { schema: S, params: ["id"] })
+        .optionalParams,
+    ).toBeUndefined();
+  });
+
+  test("a bad param name throws (empty, inner ?, duplicate)", () => {
+    for (const params of [["?"], ["a?b"], ["id", "id?"]] as const) {
+      expect(() =>
+        liveValue(`test.live-value.bad-${params.join("-")}`, {
+          schema: S,
+          params: params as unknown as readonly [string, ...string[]],
+        }),
+      ).toThrow(/bad param name/);
+    }
+  });
+
+  test("a parameterized value may be preloaded: no default tuple, and it is branded preloadsParams", () => {
+    const v = liveValue("test.live-value.param-preload", {
+      schema: S,
+      params: ["path", "scopeId?"],
+      preload: "boot-and-keep",
+    });
+    expect(v.preload).toBe("boot-and-keep");
+    expect(v.preloadsParams).toBe(true);
+    expect(v.defaultParams).toBeUndefined();
+    // A param-less preload is not branded (it has its `{}` default tuple).
+    expect(
+      "preloadsParams" in
+        liveValue("test.live-value.boot-unbranded", {
+          schema: S,
+          preload: "boot",
+        }),
+    ).toBe(false);
+  });
+
+  test("a central value cannot be preloaded", () => {
+    expect(() =>
+      liveValue("test.live-value.central-preload", {
+        schema: S,
+        origin: "central",
+        // `preload` is `never` on a central value (tsc) — an untyped caller here.
+        preload: "boot" as never,
+      }),
+    ).toThrow(/central value cannot be preloaded/);
+  });
 });

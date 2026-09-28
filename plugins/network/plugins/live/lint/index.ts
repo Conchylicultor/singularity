@@ -1,9 +1,11 @@
 import noLegacyResourceSpelling from "./no-legacy-resource-spelling";
+import noSentinelParam from "./no-sentinel-param";
 
 export default {
   name: "live",
   rules: {
     "no-legacy-resource-spelling": noLegacyResourceSpelling,
+    "no-sentinel-param": noSentinelParam,
   },
   ignores: {
     // Two kinds of entry. `index.test.ts` holds both to the disk: a glob's
@@ -27,8 +29,9 @@ export default {
       // network/live. Each file sits under the LAST wave or item that still
       // needs it (· names the resources that keep it there), and each wave's
       // barrier deletes its group. Wave 7 moves only substrate, so it has none.
-      // What is left after Wave 7 is the tree (item 3), the revision ticks
-      // (item 7) and config (item 9) — the living inventory of those items.
+      // What is left after Wave 7 is the tree (item 3) and the revision ticks
+      // (item 7) — the living inventory of those items (config, item 9, has
+      // migrated).
 
       // Item 3 (tree) — stays until the tree migrates.
       // · agent-launches
@@ -140,25 +143,6 @@ export default {
       "plugins/runs/server/internal/revision-resource.ts",
       "plugins/runs/web/components/runs-data-view.tsx",
       "plugins/runs/web/internal/use-run.ts",
-
-      // Item 9 (config) — stays until config migrates.
-      // · config-v2.conflicts
-      "plugins/config_v2/plugins/settings/web/internal/use-conflicts.ts",
-      // · config-v2.conflicts, config-v2.scopes, config-v2.tiers,
-      //   config-v2.values
-      "plugins/config_v2/core/internal/resource.ts",
-      "plugins/config_v2/server/internal/resource.ts",
-      // · config-v2.scopes
-      "plugins/config_v2/plugins/settings/web/components/scope-tabs.tsx",
-      "plugins/config_v2/web/internal/use-scope-membership.ts",
-      // · config-v2.scopes, config-v2.values
-      "plugins/config_v2/web/internal/use-config.ts",
-      // · config-v2.tiers
-      "plugins/config_v2/plugins/settings/web/internal/use-tiers.ts",
-      // · config-v2.values
-      "plugins/auth/plugins/apple-signing/plugins/setup-wizard/web/components/apple-provider-row.tsx",
-      "plugins/auth/plugins/apple-signing/plugins/setup-wizard/web/components/apple-setup-pane.tsx",
-      "plugins/config_v2/plugins/settings/web/components/config-detail.tsx",
     ],
   },
 };

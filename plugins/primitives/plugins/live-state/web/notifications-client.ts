@@ -296,11 +296,13 @@ interface ActiveSub {
   /**
    * Highest server version (state-change count) this sub has applied. `-1` =
    * nothing applied yet — the baseline a fresh or replayed sub starts from, so
-   * the first sub-ack always passes the `<=` staleness guard (including a
-   * never-notified resource's version-0 sub-ack). The server bumps the version
-   * only on a real notify, never on (re)subscribe. Both `lastAckVersion` and
-   * `liveFrameSeq` below are derived from this stream and are what the missed-
-   * update watchdog (`probeMissedUpdates`) actually reads.
+   * the first sub-ack always passes the `<=` staleness guard. The server bumps
+   * the version on a real notify, and once more when a tuple's subscription
+   * span opens (its first subscriber after none) — never on a resubscribe of a
+   * tuple it still holds, so a same-socket replay reports the version it
+   * already had. Both `lastAckVersion` and `liveFrameSeq` below are derived
+   * from this stream and are what the missed-update watchdog
+   * (`probeMissedUpdates`) actually reads.
    */
   version: number;
   /**
@@ -407,6 +409,14 @@ interface SocketChannel {
    * takes the full path and re-learns. Undefined until the first ack.
    */
   serverEpoch?: string;
+  /**
+   * How many times this channel's socket has opened. A replay on a NEW socket
+   * re-baselines by design: the server released the old socket's tuples, so
+   * each opens a fresh tracking span at a fresh, higher version whether or not
+   * anything changed. `probeMissedUpdates` reads it to tell that apart from a
+   * frame the live socket really missed.
+   */
+  opens: number;
 }
 
 export class NotificationsClient {
@@ -647,6 +657,12 @@ export class NotificationsClient {
    * Comparing the sub-ack version (not the running `version`) excludes any live
    * frame that arrives during the settle window; the `liveFrameSeq` guard closes
    * the residual ~1-RTT race where a notify lands between the re-sub and its ack.
+   *
+   * A sub whose channel's socket (re)opened during the probe is never a miss:
+   * the probe's batch (queued while the socket was down, flushed onto the new
+   * one) or the reopen's own replay lands on a socket the server holds nothing
+   * for, so every tuple opens a new tracking span at a higher version — a
+   * re-baseline, not a frame the live socket dropped.
    */
   async probeMissedUpdates(settleMs = 1_500): Promise<MissedFrame[]> {
     const before: {
@@ -654,6 +670,7 @@ export class NotificationsClient {
       socket: SocketKind;
       prevVersion: number;
       prevLiveSeq: number;
+      prevOpens: number;
     }[] = [];
     for (const [kind, channel] of Object.entries(this.channels) as [
       SocketKind,
@@ -665,6 +682,7 @@ export class NotificationsClient {
           socket: kind,
           prevVersion: sub.version,
           prevLiveSeq: sub.liveFrameSeq,
+          prevOpens: channel.opens,
         });
       }
     }
@@ -683,8 +701,11 @@ export class NotificationsClient {
     const missed: MissedFrame[] = [];
     for (const b of before) {
       // Re-look up by id: a refcount-0 sub may have torn down mid-probe.
-      const sub = this.channels[b.socket]?.subs.get(b.id);
+      const channel = this.channels[b.socket];
+      const sub = channel?.subs.get(b.id);
       if (!sub) continue;
+      // Reopened mid-probe: a re-baseline, never a miss (see the doc above).
+      if (channel!.opens !== b.prevOpens) continue;
       if (
         b.prevVersion >= 0 &&
         sub.lastAckVersion > b.prevVersion &&
@@ -1252,8 +1273,12 @@ export class NotificationsClient {
       subs: new Map(),
       pendingTeardown: new Map(),
       ackInterest: new Map(),
+      opens: 0,
     };
-    channel.ws.onopen = () => this.replaySubs(channel);
+    channel.ws.onopen = () => {
+      channel.opens++;
+      this.replaySubs(channel);
+    };
     channel.ws.onmessage = (ev) => {
       let msg: ServerMsg;
       try {
@@ -1475,10 +1500,10 @@ export class NotificationsClient {
       // Gate on the local sub entry exactly like every other frame: the shared
       // socket broadcasts to every tab, and a pre-upgrade server's params-less
       // frame (`msg.params` undefined) won't match a live sub → safe drop. When
-      // this tab DOES hold the sub, drive the HTTP-fallback refetch via
-      // applyInvalidate — its own outcome sets q.error naturally (500
-      // loader-failed / 404 → ResourceHttpError) or heals if transient — instead
-      // of leaving the resource wedged `pending` forever with `error: null`.
+      // this tab DOES hold the sub, run the HTTP fallback read — its own
+      // outcome sets q.error naturally (500 loader-failed / 404 →
+      // ResourceHttpError) or heals if transient — instead of leaving the
+      // resource wedged `pending` forever with `error: null`.
       // NOTE: handleResourceHttp runs no `authorize` check today; moot with zero
       // authorize resources, a follow-up composes with this invalidate flow when
       // the authorize seam ships.
@@ -1489,7 +1514,7 @@ export class NotificationsClient {
         );
         return;
       }
-      this.applyInvalidate(msg.key, msg.params);
+      this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
     }
     if (msg.kind === "ack") {
@@ -1740,8 +1765,14 @@ export class NotificationsClient {
   ): void {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
-    // base. If the cache has no value yet, force a fresh full snapshot.
-    if (this.queryClient.getQueryData(queryKey) === undefined) {
+    // base. If the cache holds no server-vouched value yet, force a fresh full
+    // snapshot. "Vouched", not "defined": a descriptor's placeholder
+    // (`initialData`, the tree's `[]`) is defined but is no base — a scoped
+    // delta (no `order`) merged onto it would settle the read on a false empty
+    // list, and adopting this delta's version would then drop the tab's own
+    // sub-ack as stale. It happens whenever another tab's subscription on the
+    // shared socket draws a delta before this tab's sub-ack lands.
+    if (!this.hasAppliedValue(key, params)) {
       trace(
         `applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`,
       );
@@ -1814,6 +1845,38 @@ export class NotificationsClient {
   private applyInvalidate(key: string, params: ResourceParams): void {
     void this.queryClient.invalidateQueries({
       queryKey: queryKeyFor(key, params),
+    });
+  }
+
+  /**
+   * The sub failed server-side: read the value over HTTP now, whatever the
+   * query's `enabled`. Not `invalidateQueries` — it refetches only ENABLED
+   * queries, and a descriptor with no placeholder (a `liveValue`, a
+   * collection's window / `:rows` / `:groups`) is disabled until its first
+   * value, so a first-sub failure would sit `pending` with no error forever.
+   * `prefetchQuery` fetches it anyway through the same version-guarded read as
+   * the query's own `queryFn`, and never rejects: a failure lands in the
+   * query's error state (`q.error`, the one error channel), a success heals it.
+   */
+  private fetchAfterSubError(
+    channel: SocketChannel,
+    key: string,
+    params: ResourceParams,
+  ): void {
+    const schema = this.schemas.get(key);
+    if (!schema) {
+      // A held sub always registered its schema in observe(), with the entry.
+      throw new Error(
+        `[notifications] no schema registered for key="${key}" on sub-error.`,
+      );
+    }
+    const origin: ResourceOrigin | undefined =
+      channel === this.channels.central ? "central" : undefined;
+    void this.queryClient.prefetchQuery({
+      queryKey: queryKeyFor(key, params),
+      queryFn: () =>
+        this.fetchOverHttp(key, params, origin, schema, "fallback"),
+      staleTime: 0,
     });
   }
 }

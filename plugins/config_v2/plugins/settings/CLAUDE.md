@@ -112,7 +112,6 @@ contributor that hands a conflict to an agent.
     - `primitives/diff-view.TextDiff`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`

@@ -31,6 +31,7 @@
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

@@ -21,9 +21,9 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import {
-  configV2ServerResource,
-  configV2ConflictServerResource,
-  configV2TiersServerResource,
+  configConflictServed,
+  configTiersServed,
+  configValuesServed,
   getDescriptorByStorePath,
   getHierarchyPath,
   markRegistryReady,
@@ -277,9 +277,7 @@ function refreshEntry(descriptor: ConfigDescriptor, entry: CacheEntry): void {
   // publishes.
   if (entry.scopeId) refreshScopeMembers(entry.storePath);
 
-  notifyValues(entry.storePath, entry.scopeId);
-  notifyConflicts(entry.storePath, entry.scopeId);
-  notifyTiers(entry.storePath, entry.scopeId);
+  notifyDocument(entry.storePath, entry.scopeId);
 }
 
 // Build a fully-wired cache entry for (descriptor, scopeId): scoped paths,
@@ -349,58 +347,42 @@ async function buildEntry(
   return entry;
 }
 
-// Notify config values for a (storePath, scopeId) change. A BASE change also
-// re-renders every currently-un-forked scope (they resolve base live), so emit a
-// per-scope notify for each known scope without a forked entry. A scoped change
-// targets only that scope.
-function notifyValues(storePath: string, scopeId: string): void {
+// The per-document live values: each keyed `{ path, scopeId? }`, each a
+// function of the same file trio, so each moves whenever the document does.
+const perDocument = [
+  configValuesServed,
+  configConflictServed,
+  configTiersServed,
+];
+
+// THE document fan-out for a (storePath, scopeId) change — the one call every
+// writer makes after its write (the three per-document values used to be
+// notified by three copies of this loop). It derives the tuples the change
+// moved ONCE — a scoped change its own tuple; a BASE change the base tuple plus
+// every known scope with no config of its own (it resolves base live) — and
+// notifies each per-document value for each, so no writer can move the
+// document and forget its conflicts or tiers. The two aggregates are refreshed
+// here too — each diffs what it last published and notifies only on a flip.
+function notifyDocument(storePath: string, scopeId: string): void {
   // Modified-count is computed off effective BASE values for this descriptor, so
-  // recompute just this path (scope-independent); refreshModifiedCount notifies the
-  // whole-map resource only when its count actually changed.
+  // recompute just this path (scope-independent).
   refreshModifiedCount(storePath);
+  const tuples: { path: string; scopeId?: string }[] = [];
   if (scopeId) {
-    configV2ServerResource.notify({ path: storePath, scopeId });
-    return;
-  }
-  configV2ServerResource.notify({ path: storePath });
-  const descriptor = getDescriptorByStorePath(storePath);
-  for (const sid of knownScopeIds) {
-    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
-    configV2ServerResource.notify({ path: storePath, scopeId: sid });
-  }
-}
-
-function notifyTiers(storePath: string, scopeId: string): void {
-  if (scopeId) {
-    configV2TiersServerResource.notify({ path: storePath, scopeId });
-    return;
-  }
-  configV2TiersServerResource.notify({ path: storePath });
-  const descriptor = getDescriptorByStorePath(storePath);
-  for (const sid of knownScopeIds) {
-    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
-    configV2TiersServerResource.notify({ path: storePath, scopeId: sid });
-  }
-}
-
-// Notify the per-descriptor conflicts resource for a (storePath, scopeId) change.
-// The conflicts loader is keyed by `{ path, scopeId? }`, so notify only this
-// descriptor's path. A scoped change re-notifies only that scope; a BASE change
-// also re-notifies every known un-forked scope of THIS path, which resolves base
-// live (mirrors notifyValues/notifyTiers). refreshConflictLocations then pushes the
-// aggregate conflict-locations set if THIS path's membership flipped — a latency
-// optimization only; that resource re-derives from disk on every load.
-function notifyConflicts(storePath: string, scopeId: string): void {
-  if (scopeId) {
-    configV2ConflictServerResource.notify({ path: storePath, scopeId });
+    tuples.push({ path: storePath, scopeId });
   } else {
-    configV2ConflictServerResource.notify({ path: storePath });
+    tuples.push({ path: storePath });
     const descriptor = getDescriptorByStorePath(storePath);
     for (const sid of knownScopeIds) {
       if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
-      configV2ConflictServerResource.notify({ path: storePath, scopeId: sid });
+      tuples.push({ path: storePath, scopeId: sid });
     }
   }
+  for (const served of perDocument) {
+    for (const tuple of tuples) served.notify(tuple);
+  }
+  // A latency optimization only: conflict-locations re-derives from disk on
+  // every load.
   refreshConflictLocations(storePath);
 }
 
@@ -414,9 +396,7 @@ export function notifyDescriptorScopeChange(
   scopeId: string,
 ): void {
   refreshScopeMembers(storePath);
-  notifyValues(storePath, scopeId);
-  notifyConflicts(storePath, scopeId);
-  notifyTiers(storePath, scopeId);
+  notifyDocument(storePath, scopeId);
 }
 
 function getEntry(
@@ -604,7 +584,7 @@ export async function setConfig<
     if (subs) {
       for (const cb of subs) cb(entry.values);
     }
-    notifyValues(entry.storePath, entry.scopeId);
+    notifyDocument(entry.storePath, entry.scopeId);
     return;
   }
 
@@ -722,7 +702,7 @@ export async function resetConfigByPath(
       if (subs) {
         for (const cb of subs) cb(entry.values);
       }
-      notifyValues(entry.storePath, entry.scopeId);
+      notifyDocument(entry.storePath, entry.scopeId);
     }
     return;
   }

@@ -7545,7 +7545,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
@@ -8585,12 +8584,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
-    - Contributes: `Core.Boot`
     - Uses:
-      - `infra/endpoints.fetchEndpoint`
       - `infra/endpoints.useEndpointMutation`
-      - `primitives/live-state.hydrateResource`
-      - `primitives/live-state.useResource`
+      - `network/live.useLive`
+      - `primitives/live-state.mapResource`
     - Exports (types): `ConfigRegistration`
     - Exports (values):
       - `ConfigV2`
@@ -8657,7 +8654,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
-      - `primitives/live-state.resourceDescriptor`
     - Exports (types):
       - `ConfigDescriptor`
       - `ConfigListVisitor`
@@ -8690,24 +8686,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `appScopeId`
       - `codeConfigProxy`
       - `computeHash`
+      - `configConflict`
       - `configConflictLocations`
       - `configFileOwner`
       - `configModifiedCounts`
-      - `configSnapshot`
+      - `configScopes`
+      - `configTiers`
       - `configV2ConflictEntrySchema`
       - `configV2ConflictLocationsSchema`
       - `configV2ConflictMapSchema`
-      - `configV2ConflictResource`
       - `configV2ConflictsSchema`
       - `configV2ModifiedCountsSchema`
-      - `configV2Resource`
       - `configV2ScopesMapSchema`
-      - `configV2ScopesResource`
       - `configV2ScopesSchema`
-      - `configV2TiersResource`
       - `configV2TiersSchema`
       - `configV2ValidationIssueSchema`
       - `configV2ValuesSchema`
+      - `configValues`
       - `defineConfig`
       - `deleteScope`
       - `effective`
@@ -8970,7 +8965,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/diff-view.TextDiff`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useCombinedResources`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -17420,6 +17414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`resource-runtime`**
       - Core:
         - Uses:
+          - `packages/canonical-params.canonicalParams`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
         - Exports (types):
@@ -18039,6 +18034,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/shell`
               - `build`
               - `code-explorer`
+              - `config_v2`
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
               - `conversations/conversation-ui/row`
@@ -18058,6 +18054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/render-profiler`
               - `improve/element-picker`
               - `infra/events-test`
+              - `network/live`
               - `page/annotations`
               - `page/annotations/agent-access`
               - `page/annotations/agent-notes/agent-page`
@@ -18365,7 +18362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
-          - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
+          - `Core.Boot` ← `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
@@ -21218,10 +21215,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live/filter.Filterable`
           - `network/live/filter.FilterScalar`
           - `network/live/filter.LIST_MAX`
-          - `primitives/live-state.keyedResourceDescriptor`
           - `primitives/live-state.PointParams`
           - `primitives/live-state.registerResourceDescriptor`
-          - `primitives/live-state.resourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourcePreload`
           - `primitives/live-state.WindowParams`
@@ -21248,6 +21243,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LiveOrderBy`
           - `LiveParamValueSpec`
           - `LivePreload`
+          - `LivePreloadedParamValue`
+          - `LivePreloadedParamValueSpec`
           - `LiveQuery`
           - `LiveReservedColumn`
           - `LiveRowSchema`
@@ -21462,6 +21459,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`canonical-params`** — One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one. The single rule both ends of the live-state wire apply (the browser's useResource and the resource runtime), so they cannot drift.
+      - Cross-plugin:
+        - Imported by: `framework/resource-runtime`
+      - Core:
+        - Exports (values): `canonicalParams`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Cross-plugin:
         - Imported by:
@@ -30343,7 +30345,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/present`
           - `apps/sonata/library`
           - `apps/studio/compositions/release`
-          - `auth/apple-signing/setup-wizard`
           - `build`
           - `build/deployment`
           - `code-explorer/code-api`
@@ -30581,6 +30582,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-list`
           - `tasks/task-track`
+          - `ui/theme-engine/quick-theme`
+          - `ui/theme-engine/theme-customizer`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
           - `ui/tokens/color-adjust`
@@ -36879,6 +36882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
               - `primitives/slot-render.defineRenderSlot`
               - `shell/action-bar.ActionBar`
               - `ui/icons.Icon`
@@ -36997,6 +37001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`

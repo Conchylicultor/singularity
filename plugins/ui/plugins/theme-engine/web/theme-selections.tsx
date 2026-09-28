@@ -101,17 +101,19 @@ export function whenNoScopeSelects(themeId: ThemeId): Promise<void> {
 /** Reports one scope's choice into the store while mounted. */
 function ScopeReporter({ scopeId }: { scopeId: string | undefined }) {
   // The desktop always owns its choice; an app only once it has its own doc.
-  // Membership is boot-hydrated (resident); in the unreachable-after-boot
-  // window where it is unknown, an app reads as inheriting — the same
-  // fallback `useConfig` itself makes for an unknown membership.
+  // Membership is preloaded and kept, so it is known on the first frame after a
+  // successful boot; while it is not, an app's report is pending — whether it
+  // inherits is exactly what is unknown.
   const member = useScopeMembership(themeSelectionConfig, scopeId);
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
-  const owns = scopeId === undefined || member;
+  const owns: boolean | "unknown" =
+    scopeId === undefined ? true : member.pending ? "unknown" : member.data;
 
   useLayoutEffect(() => {
     const key = keyOf(scopeId);
     let report: ScopeReport;
-    if (!owns) report = { kind: "inherits" };
+    if (owns === "unknown") report = { kind: "pending" };
+    else if (!owns) report = { kind: "inherits" };
     else if (selection.pending) report = { kind: "pending" };
     else report = { kind: "selects", themeId: selection.data.theme };
     reports.set(key, report);

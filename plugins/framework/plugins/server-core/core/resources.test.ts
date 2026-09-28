@@ -62,3 +62,36 @@ describe("assertPreloadedResourcesDeclared", () => {
     expect(assertPreloadedResourcesDeclared).not.toThrow(named);
   });
 });
+
+// Every read a contribution token publishes works on `Resource.Declare` —
+// each used to be copied by hand onto a wrapper, and two were missing at
+// runtime while still type-checking.
+describe("Resource.Declare reads", () => {
+  const key = "server-core-test.declare-reads";
+  const served = defineResource(
+    { key, schema: z.number(), preload: "boot" },
+    { mode: "push", loader: () => 1 },
+  );
+  const plugins = [
+    { id: "test/plugin", contributions: [Resource.Declare(served)] },
+  ];
+  const payload = { key, mode: "push", preload: "boot" };
+
+  test("from() reads the payload off plugin definitions — and only the payload", () => {
+    const [declared] = Resource.Declare.from(plugins);
+    expect(declared).toMatchObject(payload);
+    expect("loader" in declared!).toBe(false);
+  });
+
+  test("getContributionsIfCollected() and getContributions() agree after collection", () => {
+    collectContributions(plugins);
+    const mine = (cs: readonly { key: string }[] | undefined) =>
+      cs?.filter((c) => c.key === key);
+    expect(mine(Resource.Declare.getContributionsIfCollected())).toEqual(
+      mine(Resource.Declare.getContributions()),
+    );
+    expect(mine(Resource.Declare.getContributions())).toEqual([
+      expect.objectContaining(payload),
+    ]);
+  });
+});

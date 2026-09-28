@@ -87,8 +87,8 @@ const USER_OVERRIDE = configDir.file(targetNamespace(), STORE_PATH);
  * debounced config write, then the server's config file-watcher noticing the new
  * file and re-reading it. Asserting on a fixed timer — or even on the override
  * file appearing, which only proves hop one — races the second and reports a
- * false "did not persist". The config snapshot endpoint is the real barrier, so
- * poll THAT.
+ * false "did not persist". The config document's own HTTP read is the real
+ * barrier, so poll THAT.
  *
  * The budget is generous on purpose: the second hop is a `@parcel/watcher`
  * event, and on a loaded host it is not prompt. Measured at **103s** on this
@@ -104,15 +104,18 @@ async function awaitServerResolves(
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await page.request.get(pathUrl("/api/config-v2/snapshot"));
+    // The live value's HTTP read of the base document — what a tab's
+    // `useConfig` resolves to (`config-v2.values`, `{ path }`).
+    const res = await page.request.get(
+      pathUrl(
+        `/api/resources/config-v2.values?path=${encodeURIComponent(STORE_PATH)}`,
+      ),
+    );
     if (res.ok()) {
       const body = (await res.json()) as {
-        global: Record<
-          string,
-          { views?: { id: string; view: Record<string, unknown> }[] }
-        >;
+        value: { views?: { id: string; view: Record<string, unknown> }[] };
       };
-      const views = body.global[STORE_PATH]?.views ?? [];
+      const views = body.value.views ?? [];
       const inbox = views.find((v) => v.id === "inbox");
       if (inbox && predicate(inbox.view)) return true;
     }

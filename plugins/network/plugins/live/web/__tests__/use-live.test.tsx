@@ -18,6 +18,7 @@ import { z } from "zod";
 import {
   NotificationsProvider,
   getNotificationsClient,
+  hydrateResource,
   pendingMountSnapshot,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -460,7 +461,7 @@ describe("useLiveRow", () => {
     expect(result.current).toEqual({ pending: false, found: false });
   });
 
-  it("a null id is not found on the first render, and observes only the empty id set", async () => {
+  it("a null id is not found on the first render, reads nothing, and is not a pending mount", () => {
     const c = collection();
     const client = makeClient();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
@@ -473,20 +474,12 @@ describe("useLiveRow", () => {
       return r;
     });
     expect(seen[0]).toEqual({ pending: false, found: false });
-    expect(
-      observe.mock.calls
-        .filter(([key]) => key.startsWith(c.key))
-        .map(([key, params]) => [key, params]),
-    ).toEqual([[`${c.key}:rows`, { ids: "" }]]);
+    // The substrate's skip: no subscription at all.
+    expect(observe.mock.calls.filter(([key]) => key.startsWith(c.key))).toEqual(
+      [],
+    );
     observe.mockRestore();
-
-    // The empty tuple is a real read: it counts as a pending mount until the
-    // server's `[]` lands, and that answer changes nothing the hook returns.
-    expect(pendingMountSnapshot().pending).toBe(before + 1);
-    act(() => {
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "" }), []);
-    });
-    await waitFor(() => expect(pendingMountSnapshot().pending).toBe(before));
+    expect(pendingMountSnapshot().pending).toBe(before);
     for (const r of seen) expect(r).toEqual({ pending: false, found: false });
     unmount();
   });
@@ -727,38 +720,142 @@ describe("useLive — value", () => {
     });
   });
 
-  it("types: params are required iff declared; preload is never beside params", () => {
+  it("null (no subject yet): pending with no error, nothing read, not a pending mount — until params arrive", async () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: ["id"],
+    });
+    const client = makeClient();
+    const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+    const before = pendingMountSnapshot().pending;
+    let id: string | null = null;
+    const { result, rerender } = mount(client, () =>
+      useLive(v, id === null ? null : { id }),
+    );
+    expect(result.current).toMatchObject({ pending: true, error: null });
+    expect(observe.mock.calls.filter(([key]) => key === v.key)).toEqual([]);
+    expect(pendingMountSnapshot().pending).toBe(before);
+    // The skipped query can never fetch: refetch is a no-op.
+    await result.current.refetch();
+    expect(
+      client
+        .getQueryCache()
+        .findAll({ queryKey: [v.key] })
+        .every((q) => q.state.fetchStatus === "idle"),
+    ).toBe(true);
+
+    id = "a";
+    rerender();
+    expect(
+      observe.mock.calls
+        .filter(([key]) => key === v.key)
+        .map(([, params]) => params),
+    ).toEqual([{ id: "a" }]);
+    observe.mockRestore();
+    act(() => {
+      client.setQueryData(queryKeyFor(v.key, { id: "a" }), {
+        errors: 1,
+        warnings: 0,
+      });
+    });
+    await waitFor(() => expect(result.current.pending).toBe(false));
+  });
+
+  it("an absent optional param is one tuple however it is spelled", () => {
+    const v = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: ["path", "scopeId?"],
+    });
+    const client = makeClient();
+    const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+    // Seeded under the canonical `{ path }` — every spelling reads it.
+    client.setQueryData(queryKeyFor(v.key, { path: "p" }), {
+      errors: 7,
+      warnings: 0,
+    });
+    const { result } = mount(client, () => [
+      useLive(v, { path: "p" }),
+      useLive(v, { path: "p", scopeId: undefined }),
+      useLive(v, { path: "p", scopeId: "" }),
+    ]);
+    for (const r of result.current) expect(r.pending).toBe(false);
+    const subs = observe.mock.calls
+      .filter(([key]) => key === v.key)
+      .map(([, params]) => params);
+    expect(subs).toEqual([{ path: "p" }, { path: "p" }, { path: "p" }]);
+    observe.mockRestore();
+  });
+
+  it('"boot-and-keep": a hydrated tuple nobody has observed outlives the default gcTime; "boot" does not', () => {
+    vi.useFakeTimers();
+    try {
+      const kept = liveValue(`test.use-live.value.${seq++}`, {
+        schema: Unread,
+        params: ["path"],
+        preload: "boot-and-keep",
+      });
+      const plain = liveValue(`test.use-live.value.${seq++}`, {
+        schema: Unread,
+        preload: "boot",
+      });
+      // What the boot snapshot does, on the app's default client.
+      hydrateResource(kept, { path: "a" }, { errors: 1, warnings: 0 });
+      hydrateResource(plain, {}, { errors: 2, warnings: 0 });
+      // Past React Query's default gcTime (5 min), nothing mounted.
+      vi.advanceTimersByTime(10 * 60_000);
+      const seen: boolean[][] = [];
+      renderHook(
+        () => {
+          const r = [
+            useLive(kept, { path: "a" }).pending,
+            useLive(plain).pending,
+          ];
+          seen.push(r);
+          return r;
+        },
+        {
+          wrapper: ({ children }: { children: ReactNode }) => (
+            <NotificationsProvider>{children}</NotificationsProvider>
+          ),
+        },
+      );
+      expect(seen[0]).toEqual([false, true]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("types: params are required iff declared; null (no subject yet) only for a param'd value", () => {
     const bare = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
     const keyed = liveValue(`test.use-live.value.${seq++}`, {
       schema: Unread,
       params: ["id"],
+    });
+    const optional = liveValue(`test.use-live.value.${seq++}`, {
+      schema: Unread,
+      params: ["path", "scopeId?"],
     });
     // Never called — the assertions are the `@ts-expect-error`s.
     const useTypeOnly = () => {
       useLive(bare);
       // @ts-expect-error — a param-less value takes no params
       useLive(bare, { id: "x" });
+      // @ts-expect-error — a param-less value always has its subject
+      useLive(bare, null);
       useLive(keyed, { id: "x" });
+      useLive(keyed, null);
       // @ts-expect-error — a parameterized value's params are required
       useLive(keyed);
       // @ts-expect-error — only the declared names
       useLive(keyed, { other: "x" });
-      // With the origin overloads the error lands on the call's first line, so
-      // the call stays on one line.
-      // prettier-ignore
-      // @ts-expect-error — a parameterized value cannot be preloaded
-      liveValue("test.use-live.never", { schema: Unread, params: ["id"], preload: "boot" });
+      useLive(optional, { path: "p" });
+      useLive(optional, { path: "p", scopeId: "s" });
+      useLive(optional, { path: "p", scopeId: undefined });
+      const maybe: { path: string } | null = null;
+      useLive(optional, maybe);
+      // @ts-expect-error — an optional param does not make a required one optional
+      useLive(optional, { scopeId: "s" });
     };
     expect(typeof useTypeOnly).toBe("function");
-  });
-
-  it("a parameterized value refuses a preload at runtime too (untyped callers)", () => {
-    expect(() =>
-      liveValue("test.use-live.bad", {
-        schema: Unread,
-        params: ["id"],
-        preload: "boot" as never,
-      }),
-    ).toThrow(/cannot be preloaded/);
   });
 });

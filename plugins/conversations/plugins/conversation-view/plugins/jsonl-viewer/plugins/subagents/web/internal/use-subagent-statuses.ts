@@ -126,8 +126,11 @@ export type ConversationSubagents =
 export function useConversationSubagents(
   conversationId: string | null,
 ): ConversationSubagents {
-  const activity = useLive(subagentActivity, { id: conversationId ?? "" });
-  const events = useLive(jsonlEvents, { id: conversationId ?? "" });
+  // No conversation yet: both reads are skipped (nothing subscribed) and stay
+  // pending, as the gate below reports.
+  const params = conversationId === null ? null : { id: conversationId };
+  const activity = useLive(subagentActivity, params);
+  const events = useLive(jsonlEvents, params);
   const conversation = useConversationById(conversationId);
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.

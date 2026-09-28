@@ -397,7 +397,8 @@ function mergeKeyedDeltaLocal(
  *
  * Version guard mirrors `notifications-client.ts` `handleServerMessage` (~L862):
  * APPLY a frame iff `frame.version > version`. Baseline is `-1` ("nothing applied
- * yet"), so the very first frame (a sub-ack reporting version 0) is accepted.
+ * yet"), so the very first frame is accepted — a first sub-ack reports the fresh
+ * version (≥ 1) its tuple's tracking span opened with (`registerSubOnSocket`).
  */
 export interface ClientView {
   readonly value: unknown;

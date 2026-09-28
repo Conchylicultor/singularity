@@ -1,9 +1,8 @@
 import { useCallback } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
-  configV2ConflictResource,
+  configConflict,
   configConflictLocations,
 } from "@plugins/config_v2/core";
 import type {
@@ -20,10 +19,7 @@ export function useConflict(
   storePath: string,
   scopeId?: string,
 ): ResourceResult<ConfigV2ConflictEntry | null> {
-  return useResource(configV2ConflictResource, {
-    path: storePath,
-    ...(scopeId ? { scopeId } : {}),
-  });
+  return useLive(configConflict, { path: storePath, scopeId });
 }
 
 // Every conflicting storePath mapped to WHERE it conflicts (base and/or named

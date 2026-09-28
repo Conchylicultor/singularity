@@ -11,6 +11,7 @@ import {
 import {
   QueryClient,
   QueryClientProvider,
+  skipToken,
   useQuery,
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import type { ChannelStatuses } from "./notifications-client";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type { ResourceDescriptor } from "../core";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 
@@ -131,22 +133,36 @@ export function useNotificationsClient(): NotificationsClient {
 }
 
 // Seed the default query client's cache for a resource before any component
-// observes it. Used at boot to hydrate values (e.g. config) so the first render
-// reads real data synchronously instead of `pending`/defaults — no flash, no
-// Suspense. Writes the SAME default client NotificationsProvider uses (no
-// `queryClient` prop) via the SAME queryKeyFor consumers use, so a later
+// observes it. Used at boot (the boot snapshot) so the first render reads real
+// data synchronously instead of `pending` — no flash, no Suspense. Writes the
+// SAME default client NotificationsProvider uses (no `queryClient` prop) via the
+// SAME queryKeyFor (over the same canonical params) consumers use, so a later
 // useResource adopts the seeded entry (its non-zero dataUpdatedAt makes
 // `pending` false immediately). The schema registry (NotificationsClient) is
 // untouched — only applyUpdate reads it, and that fires only after a mounted
 // useResource calls observe(), which registers the schema first.
+//
+// A `"boot-and-keep"` key is made resident HERE, before the query exists:
+// `setQueryData` builds the query with the client's defaults, and its
+// constructor arms the GC timer (5 min) — so `useResource`'s own `gcTime:
+// Infinity` (applied only once an observer mounts) would come too late for a
+// tuple nobody opens within 5 minutes of boot. A query default registered on
+// the key prefix `[key]` reaches every tuple of the key as it is built.
 export function hydrateResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params: P | undefined,
   value: unknown,
 ): void {
   const parsed = resource.schema.parse(value);
-  getDefaultQueryClient().setQueryData(
-    queryKeyFor(resource.key, params),
+  const client = getDefaultQueryClient();
+  if (resource.preload === "boot-and-keep") {
+    client.setQueryDefaults([resource.key], { gcTime: Infinity });
+  }
+  client.setQueryData(
+    queryKeyFor(
+      resource.key,
+      params && canonicalParams(params, resource.optionalParams),
+    ),
     parsed,
   );
 }
@@ -169,7 +185,10 @@ export function hydrateQuery(queryKey: unknown[], data: unknown): void {
  * of shipping nothing. Pair it with a `useResource` on the same tuple.
  */
 export function useResourceAcks<P extends ResourceParams = ResourceParams>(
-  resource: Pick<ResourceDescriptor<unknown, P>, "key" | "origin">,
+  resource: Pick<
+    ResourceDescriptor<unknown, P>,
+    "key" | "origin" | "optionalParams"
+  >,
   params?: P,
 ): void {
   const notifications = useContext(NotificationsContext);
@@ -179,7 +198,10 @@ export function useResourceAcks<P extends ResourceParams = ResourceParams>(
     );
   }
   const { key, origin } = resource;
-  const paramsJson = JSON.stringify(params ?? {});
+  // The same canonical tuple `useResource` subscribes — see `canonicalParams`.
+  const paramsJson = JSON.stringify(
+    canonicalParams(params ?? {}, resource.optionalParams),
+  );
   useEffect(
     () =>
       notifications.requestAcks(
@@ -241,22 +263,51 @@ export interface UseResourceOptions<T, S> {
   gate?: boolean;
 }
 
+/**
+ * The read's canonical params (`canonicalParams`), `{}` when absent or skipped —
+ * one identity per canonical tuple, so every effect keyed on it re-runs only
+ * when the tuple does.
+ */
+function useCanonicalParams(
+  params: ResourceParams | null | undefined,
+  optional: readonly string[] | undefined,
+): ResourceParams {
+  const json = JSON.stringify(
+    params == null ? {} : canonicalParams(params, optional),
+  );
+  return useMemo(() => JSON.parse(json) as ResourceParams, [json]);
+}
+
+/** A skipped read (`params === null`) has nothing to refetch. */
+const SKIPPED_REFETCH = (): Promise<void> => Promise.resolve();
+/** The second query-key element of a skipped read — never a params object. */
+const SKIPPED_KEY = "\0skipped";
+
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
 // `data` is only accessible after narrowing `result.pending === false`.
 // The generic T is inferred from the ResourceDescriptor — casting silently hides type
 // mismatches between the resource payload and your assumption.
+//
+// `params === null` is the substrate's SKIP — "there is no subject to read yet"
+// (public spelling: `useLive(value, null)`, `useLiveRow(c, null)`). Every hook
+// still runs (the call site's hook order is stable while its params flip), but
+// nothing is read: no subscription, no HTTP read or cold-start prime, and no
+// pending-mount count (the page is not waiting on the server for it). The query
+// sits on a per-key skip key whose `queryFn` is React Query's `skipToken`, so no
+// refetch path can run it. The result is the pending arm with no error, for as
+// long as the params stay `null`.
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
-  params?: P,
+  params?: P | null,
 ): ResourceResult<T>;
 export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
-  params: P | undefined,
+  params: P | undefined | null,
   options: UseResourceOptions<T, S>,
 ): ResourceResult<S>;
 export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
-  params?: P,
+  params?: P | null,
   options?: UseResourceOptions<T, S>,
 ): ResourceResult<T | S> {
   const notifications = useContext(NotificationsContext);
@@ -265,7 +316,10 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   }
   const key = resource.key;
   const origin = resource.origin;
-  const p = (params ?? ({} as P)) as ResourceParams;
+  const skipped = params === null;
+  // Canonical: one logical read is one tuple on every path it takes (the sub,
+  // the HTTP fallback URL, the prime, the query key) — see `canonicalParams`.
+  const p = useCanonicalParams(params, resource.optionalParams);
 
   // Measure mount→settle so a domain plugin can report slow resources. Reported
   // once, the first time `pending` flips true→false (see effect below).
@@ -276,37 +330,49 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const select = options?.select;
   const gate = options?.gate === true;
 
-  // Refcount sub/unsub on mount/unmount.
+  // Refcount sub/unsub on mount/unmount. `p` keeps its identity per canonical
+  // tuple (`useCanonicalParams`), so it is a stable dep however callers spell
+  // their params object.
+  const keyOf = resource.keyed?.keyOf;
   useEffect(() => {
+    if (skipped) return;
     startRef.current = performance.now();
-    notifications.observe(key, p, origin, schema, resource.keyed?.keyOf);
+    notifications.observe(key, p, origin, schema, keyOf);
     return () => notifications.unobserve(key, p, origin);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
-  }, [notifications, key, origin, schema, JSON.stringify(p)]);
+  }, [notifications, key, origin, schema, keyOf, skipped, p]);
 
   // `gate`: keep the subscription un-scoped until this (key, params) has
   // settled once, so the pending→settled flip is guaranteed to re-render (a
   // select-scoped sub flips silently when the slice is identical across the
   // boundary). Keyed by query key so a param change re-gates.
-  const keyStr = JSON.stringify(queryKeyFor(key, p));
+  // A skipped read's key is per resource key (never shared across descriptors,
+  // whose options differ) and can never collide with a params tuple.
+  const queryKey = skipped ? [key, SKIPPED_KEY] : queryKeyFor(key, p);
+  const keyStr = JSON.stringify(queryKey);
   const [settledKey, setSettledKey] = useState<string | null>(null);
-  const selectActive = select !== undefined && (!gate || settledKey === keyStr);
+  const selectActive =
+    !skipped && select !== undefined && (!gate || settledKey === keyStr);
 
   const q = useQuery({
-    queryKey: queryKeyFor(key, p),
+    queryKey,
     // THE single HTTP write path: version-guarded, shared with the cold-start
     // prime (notifications-client.ts `fetchOverHttp`). Runs as the WS-down
     // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
     // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
-    queryFn: () =>
-      notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
+    // A skipped read has nothing to fetch: `skipToken` keeps every refetch path
+    // (a manual one, `refetchQueries`, the on-demand `enabled` default) off it.
+    queryFn: skipped
+      ? skipToken
+      : () => notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
     // A typed placeholder, never a value: seeded at epoch 0 so
     // `dataUpdatedAt === 0` means only the placeholder has been seen. A
     // descriptor without one (a `liveValue`) seeds nothing — the query simply
     // has no data, still `dataUpdatedAt === 0`, still `pending`.
-    initialData: resource.initialData as NonUndefinedGuard<T>,
+    initialData: (skipped
+      ? undefined
+      : resource.initialData) as NonUndefinedGuard<T>,
     initialDataUpdatedAt: 0,
     // With no placeholder, React Query would fetch on mount (a query with no
     // data always loads). The WS sub-ack is what fills the cache — the HTTP
@@ -318,7 +384,9 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // An on-demand resource is the exception: its value NEVER rides the socket
     // (no sub-ack value, only `invalidate` frames), so HTTP is its read path,
     // not a fallback — it fetches on mount like any enabled query.
-    ...(resource.initialData === undefined && resource.load !== "on-demand"
+    ...(!skipped &&
+    resource.initialData === undefined &&
+    resource.load !== "on-demand"
       ? {
           enabled: (query: { state: { data: unknown } }) =>
             query.state.data !== undefined,
@@ -332,11 +400,12 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // on every push), defeating the documented slice-selector dedup. This is
     // strictly stronger dedup, never weaker.
     structuralSharing: dateAwareReplaceEqualDeep,
-    // A `"boot-and-keep"` resource (and config's legacy `resident` pair) is
-    // never garbage-collected: its boot-hydrated value must survive the windows
-    // where nothing observes it, otherwise the next mount reads
-    // `dataUpdatedAt === 0` — pending again, long after boot said it was known.
-    ...(resource.preload === "boot-and-keep" || resource.resident
+    // A `"boot-and-keep"` resource is never garbage-collected: its value must
+    // survive the windows where nothing observes it, otherwise the next mount
+    // reads `dataUpdatedAt === 0` — pending again, long after boot said it was
+    // known. A tuple the boot hydrated got the same default before it was built
+    // (`hydrateResource`); this covers one a tab subscribes without a hydrate.
+    ...(!skipped && resource.preload === "boot-and-keep"
       ? { gcTime: Infinity }
       : {}),
     // With a selector, narrow re-renders to the selected slice: structural
@@ -356,8 +425,8 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // `if (r.pending)` gate correct under a transient error for free; the
   // internal branches below key off `hasValue`, not `pending`, so an error does
   // not re-select `initialData`, re-prime, or re-time the mount→settle metric.
-  const hasValue = q.dataUpdatedAt !== 0;
-  const error = q.error as Error | null;
+  const hasValue = !skipped && q.dataUpdatedAt !== 0;
+  const error = skipped ? null : (q.error as Error | null);
   const pending = !hasValue || error !== null;
 
   // Cold-start accelerator: if this resource mounts before the live-state
@@ -371,13 +440,12 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // reconciles via the shared version guard.
   const primedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (hasValue) return;
+    if (hasValue || skipped) return;
     if (notifications.hasEverBeenReady(origin)) return;
     if (primedKeyRef.current === keyStr) return;
     primedKeyRef.current = keyStr;
     void notifications.primeFromHttp(key, p, origin);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect
-  }, [hasValue, keyStr, notifications, key, origin, JSON.stringify(p)]);
+  }, [hasValue, skipped, keyStr, notifications, key, origin, p]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
@@ -389,10 +457,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // change). The page-wide count is how a page load or a navigation knows it is
   // on screen — see pending-mount-tracker.ts. Keyed on `hasValue`, not
   // `pending`: a transient error does not make the page "loading again".
+  // A skipped read waits on nothing, so it is never counted.
   useEffect(() => {
-    if (hasValue) return;
+    if (hasValue || skipped) return;
     return notePendingMount(key);
-  }, [hasValue, key, keyStr]);
+  }, [hasValue, skipped, key, keyStr]);
 
   // Report the mount→settle duration once, the first time this resource leaves
   // `pending`. live-state stays threshold-agnostic — the registered reporter (a
@@ -421,8 +490,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
         transportWaitMs,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect above
-  }, [hasValue, key, JSON.stringify(p)]);
+  }, [hasValue, notifications, key, p]);
 
   // Gate transition render (settled, but the select-scoped sub not applied
   // yet): apply the selector manually so callers always see the slice type.
@@ -445,18 +513,20 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // `refetchRef.current` at call time.
   return useMemo(
     (): ResourceResult<T | S> =>
-      pending
-        ? {
-            pending: true,
-            error,
-            stale,
-            refetch: () => refetchRef.current().then(() => {}),
-          }
-        : {
-            pending: false,
-            data,
-            refetch: () => refetchRef.current().then(() => {}),
-          },
-    [pending, data, error, stale],
+      skipped
+        ? { pending: true, error: null, refetch: SKIPPED_REFETCH }
+        : pending
+          ? {
+              pending: true,
+              error,
+              stale,
+              refetch: () => refetchRef.current().then(() => {}),
+            }
+          : {
+              pending: false,
+              data,
+              refetch: () => refetchRef.current().then(() => {}),
+            },
+    [skipped, pending, data, error, stale],
   );
 }

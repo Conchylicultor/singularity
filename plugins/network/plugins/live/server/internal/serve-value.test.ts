@@ -12,6 +12,7 @@ import {
   createResourceRuntime,
   type ResourceParams,
 } from "@plugins/framework/plugins/resource-runtime/core";
+import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { compileValue } from "../../shared/compile-value";
 import { serveValue } from "./serve-value";
@@ -277,5 +278,131 @@ describe("serveValue", () => {
     expect(served.declare[0]).toMatchObject({ key: v.key, mode: "invalidate" });
     expect(served.declare[0]!.preload).toBeUndefined();
     served.notify();
+  });
+
+  test("a param'd preloaded value must name its boot tuples; the Declare loads them, canonical", async () => {
+    const v = liveValue(key("served-param-preload"), {
+      schema: Count,
+      params: ["path", "scopeId?"],
+      preload: "boot-and-keep",
+    });
+    // Never called — the assertion is the `@ts-expect-error`.
+    const typeOnly = () =>
+      // @ts-expect-error — `preloadParams` is required for a param'd preloaded value
+      serveValue(v, { source: "external", loader: () => ({ n: 1 }) });
+    expect(typeof typeOnly).toBe("function");
+    // …and an untyped caller is refused at serve time.
+    expect(() =>
+      (serveValue as (v: unknown, o: unknown) => unknown)(v, {
+        source: "external",
+        loader: () => ({ n: 1 }),
+      }),
+    ).toThrow(/must pass `preloadParams`/);
+
+    const served = serveValue(v, {
+      source: "external",
+      loader: ({ scopeId }) => {
+        if (scopeId === "broken") throw new Error("boom");
+        return { n: scopeId === undefined ? 0 : 1 };
+      },
+      preloadParams: () => [
+        { path: "a" },
+        { path: "a", scopeId: "" },
+        { path: "a", scopeId: "s" },
+        { path: "a", scopeId: "broken" },
+      ],
+    });
+    expect(served.declare[0]).toMatchObject({
+      key: v.key,
+      preload: "boot-and-keep",
+    });
+    // A contribution's payload fields read back as `unknown`.
+    const load = served.declare[0]!.preloadTuples as
+      (() => Promise<unknown[]>) | undefined;
+    expect(load).toBeDefined();
+    // The same canonical tuples a read subscribes (`""` is an absent optional),
+    // each loaded and settled on its own.
+    expect(await load!()).toEqual([
+      { params: { path: "a" }, ok: true, value: { n: 0 } },
+      { params: { path: "a" }, ok: true, value: { n: 0 } },
+      { params: { path: "a", scopeId: "s" }, ok: true, value: { n: 1 } },
+      {
+        params: { path: "a", scopeId: "broken" },
+        ok: false,
+        error: expect.any(Error),
+      },
+    ]);
+  });
+
+  test("preloadParams is refused on any other value", () => {
+    const v = liveValue(key("served-plain-preload-params"), {
+      schema: Count,
+      params: ["id"],
+    });
+    const typeOnly = () =>
+      serveValue(v, {
+        source: "external",
+        loader: () => ({ n: 1 }),
+        // @ts-expect-error — only a param'd value declared `preload` names boot tuples
+        preloadParams: () => [{ id: "a" }],
+      });
+    expect(typeof typeOnly).toBe("function");
+    expect(() =>
+      (serveValue as (v: unknown, o: unknown) => unknown)(v, {
+        source: "external",
+        loader: () => ({ n: 1 }),
+        preloadParams: () => [{ id: "a" }],
+      }),
+    ).toThrow(/only for a/);
+  });
+
+  test("notify is canonical: every spelling of an absent optional param reaches the one tuple", async () => {
+    const v = liveValue(key("served-optional-notify"), {
+      schema: Count,
+      params: ["path", "scopeId?"],
+    });
+    let n = 0;
+    const served = serveValue(v, {
+      source: "external",
+      loader: () => ({ n: n++ }),
+    });
+    const frames: Frame[] = [];
+    const handler = notificationsWsHandler as any;
+    const ws = {
+      send(raw: string) {
+        const f = JSON.parse(raw) as Frame;
+        if (f.kind !== "ping" && f.key === v.key) frames.push(f);
+      },
+    };
+    handler.open(ws);
+    const until = async (pred: () => boolean, what: string) => {
+      for (let i = 0; i < 200; i++) {
+        if (pred()) return;
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      throw new Error(`timed out waiting for ${what}`);
+    };
+    handler.message(
+      ws,
+      JSON.stringify({ op: "sub", key: v.key, params: { path: "a" } }),
+    );
+    await until(() => frames.some((f) => f.kind === "sub-ack"), "sub-ack");
+    for (const spelling of [
+      { path: "a", scopeId: "" },
+      { path: "a", scopeId: undefined } as unknown as { path: string },
+    ]) {
+      const before = frames.filter((f) => f.kind === "update").length;
+      served.notify(spelling);
+      await until(
+        () => frames.filter((f) => f.kind === "update").length > before,
+        "update",
+      );
+    }
+    expect(
+      frames
+        .filter((f) => f.kind === "update")
+        .every((f) => f.params?.scopeId === undefined),
+    ).toBe(true);
+    handler.close(ws);
   });
 });

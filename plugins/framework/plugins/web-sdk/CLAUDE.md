@@ -305,7 +305,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 - Web:
   - Slots:
     - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
-    - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
+    - `Core.Boot` ← `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
 - Core:
   - Uses:
     - `framework/plugin-id.asPluginId`

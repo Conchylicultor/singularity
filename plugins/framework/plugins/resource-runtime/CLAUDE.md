@@ -15,12 +15,27 @@ never see this plugin directly.
 Plugins do not call it to add live state: they declare with `network/live`'s
 `liveValue` / `liveCollection` and serve with `serveValue` / `serveCollection`,
 which compile to `defineResource` (`plugins/network/plugins/live/CLAUDE.md`). The
-only direct callers left are that substrate and the tree / revision-tick / config
-resources (Resources page items 3 / 7 / 9). `mode` has no default: a non-keyed
+only direct callers left are that substrate and the tree / revision-tick
+resources (Resources page items 3 / 7). `mode` has no default: a non-keyed
 definition states `push` or `invalidate` (the flat `DefineResourceInput` and the
 two-arg `ServerResourceOptions` require it; the keyed `KeyedServerResourceOptions`
 has none), because the old implicit `invalidate` was a delivery choice nobody
 made.
+
+**Optional params have one spelling.** A contract may declare `optionalParams`
+(a `liveValue`'s `"scopeId?"`, threaded through the two-arg form onto the
+registry entry). The runtime canonicalizes a tuple's params where they ENTER it —
+every `sub` / `sub-batch` / `unsub` / `sub-acks` frame, the HTTP read, `notify`,
+and each tuple a `dependsOn` map derives — dropping an `undefined` value and a `""`
+for a declared-optional name (`canonicalTuple`). So `paramsKey`, the loader and
+subscriber routing only ever see one tuple for `{ path }`, `{ path, scopeId: "" }`
+and `{ path, scopeId: undefined }`. Every frame sent back ECHOES the canonical
+tuple, so a sender must canonicalize the same way to match them — live-state's
+client does, with the very same function (`packages/canonical-params`, one copy
+for both ends); a frame that arrives non-canonical is reported once per key.
+`loadResourceByKey`, `measureSubscribeCycle` and the `Resource.load` handle
+canonicalize too. The flat one-arg forms take no `optionalParams` (tsc): the rule
+comes from the shared client descriptor. Pinned by `runtime-optional-params.test.ts`.
 
 **Flush is level-parallel.** `flushNotifies` walks the dependsOn DAG grouped by
 longest-path depth (`rebuildDag` stamps `entry.depth`; every edge strictly
@@ -61,7 +76,9 @@ inside the runtime — `reportError` is additive, never the only report. Wait
 attribution: `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
 It is **acyclic**: besides `zod` and `bun` types it imports only
-`@plugins/packages/plugins/inflight/core` (a leaf), which does double duty here:
+`@plugins/packages/plugins/inflight/core` (a leaf) — and the leaf
+`@plugins/packages/plugins/canonical-params/core`, the params rule it shares with
+the browser (see *Optional params* above) — and `inflight` does double duty here:
 read-path single-flight coalescing, and the correctness-bearing freshness floor
 (`notBefore`) the push path uses to refuse a flight that started before the change
 it is announcing — see *Flight freshness* below. It declares its own local
@@ -126,7 +143,7 @@ record (see `research/2026-07-03-global-scoped-membership-m5.md` and
   **bounded ordered window** (`WHERE … ORDER BY … LIMIT n`). `windowIdsOf(params)`
   returns the bounded ordered id list; the entry's loader at the same params MUST
   be the matching windowed query — so the FULL branch (no snapshot, sticky-FULL,
-  self-heal after a short-circuited resub) is **bounded by construction**: "FULL"
+  a subscribed tuple whose sub-ack load failed) is **bounded by construction**: "FULL"
   means the window loader, never a whole-collection sweep. A membership change
   costs O(changed) + O(window), never O(collection).
 - **`membership: { kind: "point", idsOf }`** — the params tuple names an
@@ -401,8 +418,20 @@ push-mode sub used to run the full loader behind the 6-slot read-admission gate.
   version equals the current per-pk counter, and the resource does not declare
   `revalidate`, the server answers `up-to-date` from memory — **zero loader runs,
   zero gate slots**. The invariant this leans on: *for a non-`revalidate` resource,
-  the per-pk version counter is its complete change signal* — every state change
-  routes through `flushNotifies`, which bumps it. The epoch restriction exists
+  the per-pk version counter is its complete change signal WITHIN A TRACKING SPAN*
+  — while the tuple has a subscriber, every state change routes through
+  `flushNotifies`, which bumps it. Outside one nothing does: the change feed routes
+  to subscribed tuples only (a param'd tuple with none admits nothing), and a
+  `whileSubscribed` watcher stops at the last unsubscribe. So **every span opens
+  with a fresh version** — `registerSubOnSocket` bumps it on the global 0→1 — and a
+  version minted before (acked to a tab whose socket then dropped, or read over
+  HTTP while nobody subscribed) can never match again. A first sub-ack therefore
+  reports ≥ 1. A reconnect replay on a NEW socket, after the old one's `close`
+  released its tuples, takes the full path exactly like a post-restart one; a
+  replay on the same socket (the missed-update probe) registers before it
+  reconciles, keeps its span, and still short-circuits. Pinned by
+  `runtime-tracking-span.test.ts`; design:
+  `research/2026-09-27-global-live-substrate-gaps.md`. The epoch restriction exists
   because `entry.versions` is per-boot in-memory state (nothing restores it across
   restarts), so a cross-boot version echo is incomparable; a post-restart replay
   takes the full path and re-baselines. `revalidate` resources are exempt — their
@@ -423,11 +452,12 @@ push-mode sub used to run the full loader behind the 6-slot read-admission gate.
   whole set in one frame: entries are registered synchronously FIRST, then
   `complete:true` releases everything that tab held and did not restate — so an
   identical replay never transits 1→0→1 (no lifecycle-hook churn, no keyed-snapshot
-  eviction), while a closed pane's stale subs are reconciled away. Already-current
-  entries collapse into ONE `up-to-date-batch` frame; the rest serve as individual
-  sub-acks. `op:"unsub-tab"` is the best-effort tab departure (client `pagehide`).
-  A keyed sub that short-circuits does NOT re-seed an evicted snapshot; the next
-  notify finds no snapshot and ships a FULL update — self-healing by construction.
+  eviction, no new tracking span), while a closed pane's stale subs are reconciled
+  away. Already-current entries collapse into ONE `up-to-date-batch` frame; the
+  rest serve as individual sub-acks. `op:"unsub-tab"` is the best-effort tab
+  departure (client `pagehide`). A short-circuit never lands on an evicted keyed
+  snapshot: eviction happens only at N→0, and the resub after it opens a new span,
+  so it takes the full path and re-seeds.
 
 **A read frame reports a version observed BEFORE the load.** `serveSub` has always
 read the per-pk counter ahead of its flight; `handleResourceHttp` does the same (the
@@ -447,8 +477,8 @@ only; the HTTP path still has no version short-circuit.
 alongside `key`: the shared-socket client broadcasts every frame to every tab, so
 it must gate `sub-error` on the local sub entry exactly like `update`/`delta`,
 which requires matching params. A params-less legacy frame matches no live sub and
-is safely dropped. On a match the client runs `applyInvalidate(key, params)` — see
-`live-state/CLAUDE.md`.
+is safely dropped. On a match the client runs its HTTP fallback read on that
+query (`fetchAfterSubError`) — see `live-state/CLAUDE.md`.
 
 ## Profiling seams (all optional; central binds none)
 
@@ -493,7 +523,9 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `runtime-ack-channel.test.ts`, `runtime-revalidate.test.ts`,
   `runtime-stale-flight.test.ts` (a drain refusing a pre-commit flight),
   `runtime-to-subscribed.test.ts` (a `toSubscribed` edge reaches exactly the
-  subscribed downstream tuples).
+  subscribed downstream tuples), `runtime-tracking-span.test.ts` (a replay after
+  a tracking gap is never `up-to-date`), `runtime-optional-params.test.ts` (one
+  tuple per spelling of an absent optional param).
   Note `controllable()` resolves at RELEASE time, so it structurally cannot model
   a SELECT that already ran; any test about stale-flight joins must use
   `snapshotControllable()`, which captures at INVOCATION time.
@@ -524,6 +556,7 @@ and those plugins' `CLAUDE.md`.
 
 - Core:
   - Uses:
+    - `packages/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
     - `packages/semaphore.createSemaphore`
   - Exports (types):

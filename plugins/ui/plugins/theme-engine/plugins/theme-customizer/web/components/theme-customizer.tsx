@@ -22,6 +22,7 @@ import {
   TokenModeContext,
   type TokenMode,
 } from "../internal/token-mode-context";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 // Pickers for pluggable-component variants (sidebar framing, progress bar, …),
 // each registered via `ThemeEngine.VariantGroup`. Scope follows the surrounding
@@ -140,9 +141,7 @@ export function ThemeCustomizerBody() {
   const scopeId = appId ? `app:${appId}` : undefined;
   // "Has its own theme" = this app has its own theme selection document
   // (committed git scope OR runtime fork). The toggle means that membership.
-  const forked = useScopeMembership(themeSelectionConfig, scopeId);
-  // Edits route to the app scope only once it has its own theme; else they target base.
-  const effectiveScopeId = forked && scopeId ? scopeId : undefined;
+  const membership = useScopeMembership(themeSelectionConfig, scopeId);
 
   useEffect(() => {
     if (tokenMode === "dark") {
@@ -158,6 +157,21 @@ export function ThemeCustomizerBody() {
       document.documentElement.classList.toggle("dark", wasDark);
     };
   }, []);
+
+  // Which scope an edit lands in is exactly what membership decides, so nothing
+  // is editable until it is known (preloaded: settled after a successful boot).
+  // Under a transient error the last-known answer stands, so the panel (and its
+  // search text) is not torn down.
+  const forked = membership.pending ? membership.stale : membership.data;
+  if (forked === undefined) {
+    return (
+      <PaneChrome pane={themeCustomizerPane}>
+        <Loading />
+      </PaneChrome>
+    );
+  }
+  // Edits route to the app scope only once it has its own theme; else they target base.
+  const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
   return (
     <PaneChrome pane={themeCustomizerPane}>

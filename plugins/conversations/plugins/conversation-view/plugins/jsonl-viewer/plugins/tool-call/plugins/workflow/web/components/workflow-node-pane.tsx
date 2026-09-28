@@ -26,6 +26,18 @@ export function WorkflowNodePaneBody() {
     );
   }
 
+  // A step belongs to a conversation's transcript: opened with no
+  // conversation in the route, the pane says so.
+  if (!state.conversation) {
+    return (
+      <PaneChrome pane={workflowNodePane}>
+        <Text as="div" variant="body" className="text-muted-foreground">
+          Open this step from its conversation.
+        </Text>
+      </PaneChrome>
+    );
+  }
+
   const { graph, status, node } = state;
 
   return (

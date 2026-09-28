@@ -8,7 +8,8 @@ promise. There is **no `<Suspense>` boundary
 anywhere in the app** — a genuinely suspending read (`React.lazy`,
 `useSuspenseQuery`) must wrap itself in its own. To avoid a first-paint flash of
 default values, seed the cache **before render** with `hydrateResource(resource,
-params, value)` (canonical use: config_v2's `Core.Boot` task).
+params, value)` (canonical use: the boot snapshot's `Core.Boot` task, which hydrates
+every preloaded tuple — config's documents included).
 
 **Hydration expires unless the resource says otherwise.** React Query garbage-collects a
 query with no mounted observer after `gcTime` (5 min), so a boot-hydrated value for a
@@ -20,24 +21,51 @@ not a theoretical window: it is why a `<DataView>` opened mid-session could clai
 **One flag: `preload`** (`ResourcePreload = "boot" | "boot-and-keep"`, absent ⇒ on
 first mount), declared on the shared descriptor (`liveValue` / `liveCollection` spec, or
 the old factories' trailing options) and read by every runtime reader: the boot snapshot
-keys and the L2 persist set (`preload !== undefined`, via `Resource.Declare`), the
+keys and the L2 persist set (`preload !== undefined` via `Resource.Declare` — minus an
+enumerated preload, whose Declare carries `preloadTuples`), the
 eager-tier generator (through the resource vocabulary), and the client's `gcTime`.
 `"boot-and-keep"` is `"boot"` plus a resident cache (`gcTime: Infinity`) — only for
 values small and universally read enough to hold for the tab's lifetime; never for
-large collections. The one legacy flag left is **`resident: true`**, config only (its
-values + scopes resources, which hydrate N tuples through config's own boot task, so
-they cannot honestly be `"boot-and-keep"`) — deleted when config hydration folds into
-the boot snapshot.
+large collections. Resident means EVERY tuple of the key, observed or not:
+`hydrateResource` registers `setQueryDefaults([key], { gcTime: Infinity })` before it
+seeds, because `setQueryData` builds the query with the client's defaults and its
+constructor arms the 5-minute GC timer — `useResource`'s own `gcTime: Infinity`
+(applied when an observer mounts) would come too late for a tuple nobody opens within
+5 minutes of boot. A parameterized `liveValue` may be preloaded as well; its served
+half names the tuples (`preloadParams` — see `network/live/CLAUDE.md`). The legacy
+`resident: true` flag is gone (config was its last user).
+
+**One tuple per logical read (`canonicalParams`, `packages/canonical-params`).** An `undefined`-valued param
+is dropped, and so is a `""` for a param the descriptor declares optional
+(`optionalParams`, a `liveValue`'s `"scopeId?"`). `useResource`, `useResourceAcks` and
+`hydrateResource` canonicalize on entry, so the subscription, the HTTP fallback URL
+(`URLSearchParams` would write `"undefined"`), the prime and the query key all name the
+same tuple. The resource runtime applies the same function on the server and echoes
+the canonical tuple in every frame (`resource-runtime/CLAUDE.md`), so the two ends
+cannot key a tuple differently.
+
+**`params === null` is the skip.** `useResource(resource, null)` reads nothing: every
+hook still runs, but no `observe`, no HTTP read or prime (the query's `queryFn` is
+React Query's `skipToken`, on a per-key skip key), and no pending-mount count; the
+result is `{ pending: true, error: null }`. Public spellings: `useLive(value, null)` and
+`useLiveRow(c, null)` (network/live).
 
 **`initialData` is optional.** It was only ever a typed placeholder seeded at
-`dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`) seeds
-nothing and is still `pending` until the first value; its query stays disabled until a
-value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it). The
+`dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`, and a
+`liveCollection`'s window, `:rows` and `:groups`) seeds nothing and is still `pending`
+until the first value; its query stays disabled until a value lands, so it makes no
+HTTP fetch on mount (the WS sub-ack fills it). The
 exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
 mode): its value never rides the socket, so HTTP is its read path and it fetches on
 mount. `load` sits on the shared descriptor so server and client cannot disagree.
-The descriptors that still carry one (window, point, groups, tree, tick, config)
-keep it for their plain readers only: no optimistic read takes a placeholder.
+A disabled query is skipped by `invalidateQueries`, so a `sub-error` does not
+invalidate: the client fetches that query directly (`prefetchQuery`, the same
+version-guarded read), and its failure is the query's error — never a read left
+`pending` with no error. It stays in that error until a push, a reconnect replay
+or a `refetch()`: React Query's retry-on-mount does not reach a disabled query
+(a placeholder query used to retry when remounted). The descriptors that still carry a placeholder are the
+tree and tick ones (Resources page items 3 / 7), for their plain
+readers only: no optimistic read takes a placeholder.
 `useOptimisticResource` reads a declaration (a `liveValue`, or a collection's
 `{ ids }`), whose overlay has no base — and no `dispatch` — until a real value
 lands, so it stays `pending` instead.
@@ -81,7 +109,13 @@ reset + send in one task, so an `observe()` can't interleave). Each entry echoes
 the sub's pre-reset version; `epoch` is the server boot identity learned from
 ack frames. A same-boot server answers every already-current entry from its
 in-memory version counter in one `up-to-date-batch` — no loader, no
-read-admission slot (see `resource-runtime/CLAUDE.md`). `complete:true` makes
+read-admission slot — but only for a tuple it kept tracking since that version:
+one it released (the old socket's `close` ran before this replay) opened a new
+tracking span with a fresh version on re-subscribe, so its echo misses and it
+gets a full sub-ack (see `resource-runtime/CLAUDE.md`). For the same reason the
+missed-update probe (`probeMissedUpdates`) never counts a sub whose channel's
+socket reopened during its settle window (`SocketChannel.opens`): that higher
+version is a re-baseline, not a frame the live socket dropped. `complete:true` makes
 the batch the server's whole truth for THIS tab, so subs the tab dropped while
 disconnected are reconciled away; a `pagehide` listener sends a best-effort
 `{op:"unsub-tab"}` per channel so a closing tab's subs release immediately
@@ -100,14 +134,19 @@ acks, tabId}` — no re-sub, no sub-ack. The server ORs the tabs sharing a
 socket. The one caller is `useOptimisticResource`; the received frame is only
 noted into the tx-ack registry, exactly as before.
 
-The old per-sub replay **stagger was deleted deliberately**: same-boot replays
-short-circuit server-side for ~0 cost and post-restart replays are bounded by
-the server's read-admission gate + single-flight dedup — the correct layer for
-herd control, not client-side pacing.
+The old per-sub replay **stagger was deleted deliberately**: same-socket replays
+short-circuit server-side for ~0 cost, and post-restart replays (and reconnects
+the server already released) are bounded by the server's read-admission gate +
+single-flight dedup — the correct layer for herd control, not client-side
+pacing.
 
 **Recovery resubs never echo state** (`forceFullResub`): a delta with no base or
 with drift clears the etag AND resets `version`/`lastAckVersion` to -1 before
-sending a version-less sub. The baseline reset is load-bearing — the broken
+sending a version-less sub. "No base" means no server-vouched value
+(`hasAppliedValue`), never merely an `undefined` cache: a placeholder (the
+tree's `[]`) is not a base, and a scoped delta merged onto it — which another
+tab's subscription on the shared socket can draw before this tab's sub-ack —
+would settle the read on a false empty list. The baseline reset is load-bearing — the broken
 delta already advanced `entry.version` (the guard adopts before dispatch), so
 without it the recovery sub-ack at that same version would be `<=`-dropped and
 the cache would never heal (pinned by the "BUG A" tests).
@@ -170,15 +209,16 @@ report's Connection row). It resets to 0 on any socket status change, so a dead
 server's stall never outlives its connection; listeners fire only when it moves.
 Pinned by `notifications-heartbeat.test.ts`.
 
-**`sub-error` frames carry `params` and heal through `applyInvalidate`.** The
+**`sub-error` frames carry `params` and heal through the HTTP read.** The
 frame is `{ kind, id?, key, params, reason }`; `params` exists so the
 shared-socket broadcast is gated on the local sub entry exactly like every other
 frame (a params-less legacy frame won't match a live sub → safe drop). When the
-entry exists the client calls `applyInvalidate(key, params)`: the HTTP fallback
-refetch runs and **its own outcome** sets `q.error` (a 500 loader-failed / 404
-unknown-key surfaces as `ResourceHttpError`) or heals a transient failure —
-reusing the single existing error channel rather than touching queryClient
-internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
+entry exists the client calls `fetchAfterSubError`: the HTTP fallback read runs
+on that query — `prefetchQuery`, which, unlike `invalidateQueries`, also reaches
+a query disabled for lack of a placeholder — and **its own outcome** sets
+`q.error` (a 500 loader-failed / 404 unknown-key surfaces as `ResourceHttpError`)
+or heals a transient failure — reusing the single existing error channel rather
+than touching queryClient internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
 check — moot today with zero `authorize` resources.)
 
 ## Resource schemas
@@ -609,8 +649,8 @@ pass `gate: true` (next section).
 
 ## Slice selectors (`useResource(resource, params, { select })`)
 
-**`useResource` only** — it remains for the tree / revision-tick / config
-readers (Resources page items 3 / 7 / 9). `useLive` has no `select`: one row of a
+**`useResource` only** — it remains for the tree / revision-tick readers
+(Resources page items 3 / 7). `useLive` has no `select`: one row of a
 collection is `useLiveRow(c, id)` (a point read, so a change elsewhere never
 reaches it), and a derivation of a value is a `useMemo` over its settled data.
 
@@ -760,7 +800,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/studio/compositions/release`
-    - `auth/apple-signing/setup-wizard`
     - `build`
     - `build/deployment`
     - `code-explorer/code-api`

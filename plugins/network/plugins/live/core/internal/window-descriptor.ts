@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
-  keyedResourceDescriptor,
+  registerResourceDescriptor,
   type PointParams,
+  type ResourceDescriptor,
   type ResourcePreload,
   type WindowParams,
   type WindowSelector,
@@ -40,6 +41,11 @@ import type {
 // logical window under two paramsKeys, doubling every per-tuple state).
 // `liveCollection` replaces the window's limit-only codec with its query codec,
 // which holds the same two properties.
+//
+// Neither descriptor has a placeholder (`initialData`), exactly like a
+// `liveValue`: a window or id set not loaded yet is `pending`, never `[]`. So
+// each is minted here and registered directly, not through
+// `keyedResourceDescriptor`, whose placeholder is a required argument.
 
 function assertWindowLimit(limit: number, context: string): void {
   if (!Number.isSafeInteger(limit) || limit <= 0) {
@@ -53,11 +59,31 @@ function pkKeyOf<Row>(pkField: keyof Row & string): (row: unknown) => string {
   return (row) => String((row as Record<string, unknown>)[pkField]);
 }
 
+/** A keyed row-array descriptor with no placeholder, registered for boot hydration. */
+function keyedRows<Row, P extends Record<string, string>>(
+  key: string,
+  rowSchema: ZodParser<Row>,
+  pkField: keyof Row & string,
+  opts: { preload?: ResourcePreload } = {},
+): ResourceDescriptor<Row[], P> & {
+  keyed: { keyOf: (row: unknown) => string };
+  initialData?: never;
+} {
+  const d = {
+    key,
+    schema: z.array(rowSchema),
+    keyed: { keyOf: pkKeyOf(pkField) },
+    ...opts,
+  };
+  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
+  return d;
+}
+
 /**
  * Declare a bounded ordered-window keyed resource whose rows are a flat SQL
- * query result. Wraps `keyedResourceDescriptor` (schema stays
- * `z.array(rowSchema)`, so a reader still gets `Row[]` and the keyed delta wire
- * is unchanged), attaches the window codec + the canonical `defaultParams`
+ * query result. A keyed row-array descriptor (schema `z.array(rowSchema)`, so a
+ * reader still gets `Row[]` and the keyed delta wire is unchanged) plus the
+ * window codec + the canonical `defaultParams`
  * tuple, and records `queryPk` for the server-side drift assertion. The
  * matching server half is `windowQueryResource(descriptor, spec)`, which
  * `serveCollection` calls.
@@ -87,13 +113,7 @@ export function windowQueryResourceDescriptor<Row>(
     return { limit: Number(raw) };
   };
 
-  const d = keyedResourceDescriptor<Row[], WindowParams>(
-    key,
-    z.array(rowSchema),
-    [],
-    pkKeyOf(pkField),
-    rest,
-  );
+  const d = keyedRows<Row, WindowParams>(key, rowSchema, pkField, rest);
   return Object.assign(d, {
     defaultParams: encode(),
     window: { defaultLimit, encode, decode },
@@ -137,11 +157,6 @@ export function pointQueryResourceDescriptor<Row>(
     return raw === "" ? [] : raw.split(",");
   };
 
-  const d = keyedResourceDescriptor<Row[], PointParams>(
-    key,
-    z.array(rowSchema),
-    [],
-    pkKeyOf(pkField),
-  );
+  const d = keyedRows<Row, PointParams>(key, rowSchema, pkField);
   return Object.assign(d, { point: { encode, decode }, queryPk: pkField });
 }

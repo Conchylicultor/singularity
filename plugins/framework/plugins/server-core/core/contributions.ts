@@ -7,8 +7,13 @@ export type ServerContribution = {
 
 type Collected<P> = P & { _pluginId?: string; _pluginDescription?: string };
 
-export interface ServerContributionToken<P> {
-  (props: P): ServerContribution;
+/**
+ * A contribution kind. `P` is the payload every read returns; `I` is what a
+ * contributor passes — `P` itself, unless the token was defined with a
+ * `project` that derives the payload from it (see `defineServerContribution`).
+ */
+export interface ServerContributionToken<P, I = P> {
+  (input: I): ServerContribution;
   /**
    * Every contribution of this kind, as `collectContributions` gathered them at
    * boot. Throws in a process that never collected — a CLI or a headless test —
@@ -41,17 +46,45 @@ function stripKind<P>({ _kind: _, ...rest }: ServerContribution): P {
   return rest as P;
 }
 
+/**
+ * Define a contribution kind. The token is the whole kind — its call and every
+ * read (`getContributions`, `getContributionsIfCollected`, `from`) come from
+ * here, so never wrap a token to change what a contribution carries: a wrapper
+ * has to re-attach each read by hand, and one it forgets still type-checks.
+ * Pass `project` instead — the contributor then passes an `I`, and the kind
+ * stores (and every read returns) `project(input)`: `Resource.Declare` takes a
+ * whole `Resource` and keeps `{ key, mode, preload }`.
+ */
 export function defineServerContribution<P>(
   debugName: string,
   opts?: { docLabel?: (props: P) => string | undefined },
-): ServerContributionToken<P> {
+): ServerContributionToken<P>;
+export function defineServerContribution<P, I>(
+  debugName: string,
+  opts: {
+    docLabel?: (props: P) => string | undefined;
+    /** The payload a contributor's input declares. */
+    project: (input: I) => P;
+  },
+): ServerContributionToken<P, I>;
+export function defineServerContribution<P, I>(
+  debugName: string,
+  opts?: {
+    docLabel?: (props: P) => string | undefined;
+    project?: (input: I) => P;
+  },
+): ServerContributionToken<P, I> {
   const kind = Symbol(debugName);
+  const project = opts?.project ?? ((input: I) => input as unknown as P);
 
-  const token = ((props: P) => ({
-    _kind: kind,
-    _doc: { label: opts?.docLabel?.(props as P) },
-    ...props,
-  })) as unknown as ServerContributionToken<P>;
+  const token = ((input: I) => {
+    const props = project(input);
+    return {
+      _kind: kind,
+      _doc: { label: opts?.docLabel?.(props) },
+      ...props,
+    };
+  }) as unknown as ServerContributionToken<P, I>;
 
   token.getContributionsIfCollected = () =>
     byKind === null

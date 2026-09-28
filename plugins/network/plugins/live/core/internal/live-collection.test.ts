@@ -44,6 +44,10 @@ describe("liveCollection — lookup-only (no default window)", () => {
     expect(resourceDescriptorByKey("test.live-collection.full:groups")).toBe(
       c.groups,
     );
+    // None of the three has a placeholder: not loaded yet is `pending`, never
+    // `[]` — exactly a `liveValue`.
+    for (const d of [c.window, c.rows, c.groups])
+      expect("initialData" in d).toBe(false);
   });
 
   test("types: a window field without `default`, and any preload, are tsc errors", () => {

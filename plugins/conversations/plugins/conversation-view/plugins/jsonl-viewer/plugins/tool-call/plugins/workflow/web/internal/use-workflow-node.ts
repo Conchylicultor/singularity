@@ -10,8 +10,12 @@ interface WorkflowInput {
 
 export type WorkflowNodeState =
   | { pending: true }
+  // No conversation pane above this one: there is no transcript to read
+  // (skipped), a settled answer — never a spinner.
+  | { pending: false; conversation: false }
   | {
       pending: false;
+      conversation: true;
       graph: TracedGraph | null;
       status: TraceStatus;
       node: TracedNode | undefined;
@@ -30,7 +34,10 @@ export function useWorkflowNode(
   toolUseId: string,
   nodeId: string,
 ): WorkflowNodeState {
-  const eventsResult = useLive(jsonlEvents, { id: convId ?? "" });
+  const eventsResult = useLive(
+    jsonlEvents,
+    convId === undefined ? null : { id: convId },
+  );
   // The trace hook runs unconditionally, so the script is read here without an
   // early return; a pending transcript has no script yet (and is reported as
   // pending below, never as an empty trace).
@@ -44,9 +51,10 @@ export function useWorkflowNode(
 
   const { graph, status } = useWorkflowTrace(input?.script ?? "", input?.args);
 
+  if (convId === undefined) return { pending: false, conversation: false };
   if (eventsResult.pending) return { pending: true };
   const node = graph?.nodes.find((n) => n.id === nodeId);
-  return { pending: false, graph, status, node };
+  return { pending: false, conversation: true, graph, status, node };
 }
 
 /**
@@ -64,5 +72,5 @@ export function useWorkflowNodeTitle({
   nodeId: string;
 }): string | undefined {
   const state = useWorkflowNode(convId, toolUseId, nodeId);
-  return state.pending ? undefined : state.node?.label;
+  return state.pending || !state.conversation ? undefined : state.node?.label;
 }

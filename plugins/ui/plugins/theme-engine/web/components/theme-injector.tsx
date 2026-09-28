@@ -355,8 +355,11 @@ export function ScopedAppTheme({
   const scopeId = appThemeScope(appId);
   const ownsTheme = useScopeMembership(themeSelectionConfig, scopeId);
   // Hooks above run unconditionally (Rules of Hooks); only the emitted tree
-  // branches — unmounting the blocks removes their <style> elements.
-  if (!ownsTheme || scopeId === rootScopeId) return null;
+  // branches — unmounting the blocks removes their <style> elements. No block
+  // while membership is unknown (preloaded, so only a failed boot has that
+  // window): the app's surface wears the root theme until it is known.
+  if (ownsTheme.pending) return null;
+  if (!ownsTheme.data || scopeId === rootScopeId) return null;
   return <ScopeStyles scopeId={scopeId} scopeToken={scopeId} />;
 }
 

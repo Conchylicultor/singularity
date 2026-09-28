@@ -67,7 +67,7 @@ function FilePeekPaneBody() {
       ? resolved.path
       : filePath;
 
-  const filesResult = useEditedFiles(convId ?? "");
+  const filesResult = useEditedFiles(convId ?? null);
   // `status` is a derived renderer hint, so an unknown file set (pending or an
   // unresolved worktree) safely defaults to "clean" — no display surface here.
   const status =

@@ -17,8 +17,9 @@ const createRule = ESLintUtils.RuleCreator(
  * pairs: `liveValue` / `serveValue` / `useLive`, and `liveCollection` /
  * `serveCollection` / `useLive` / `useLiveRow`. The old spellings stay only as
  * the substrate the new ones compile to, and for the resources a later item
- * moves (the tree, the revision ticks, config — see
- * research/2026-09-27-global-live-resources-phase3-bulk-migration.md).
+ * moves (the tree and the revision ticks — see
+ * research/2026-09-27-global-live-resources-phase3-bulk-migration.md; config
+ * migrated in research/2026-09-27-global-config-live-values-optional-params.md).
  *
  * Flags every import of an old spelling from the barrel that exports it — a
  * named import (aliases included), an `export { … } from` re-export — and every

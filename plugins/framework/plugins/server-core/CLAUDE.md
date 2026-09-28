@@ -160,12 +160,13 @@ contributions: [...unreadServed.declare],
 
 Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive` / `useLiveRow`.
 
-**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. A plugin calls them directly only for the resources not yet on the unified API — the tasks / conversations / pages tree, the revision ticks and config (Resources page items 3 / 7 / 9), declared with `resourceDescriptor` / `keyedResourceDescriptor` / `queryResourceDescriptor` (the tree also serves through `infra/query-resource`'s `queryResource`) — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those old forms:
+**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. A plugin calls them directly only for the resources not yet on the unified API — the tasks / conversations / pages tree and the revision ticks (Resources page items 3 / 7), declared with `resourceDescriptor` / `keyedResourceDescriptor` / `queryResourceDescriptor` (the tree also serves through `infra/query-resource`'s `queryResource`) — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those old forms:
 
 - A resource registers when `defineResource` runs; `Resource.Declare(resource)` in `contributions` is its declaration (what `...served.declare` spreads).
 - **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.
 - The two-arg form `defineResource(descriptor, serverOpts)` reads `key`, `schema` and keyed-ness (`mode: "keyed"` + `keyOf`) from the client descriptor; a keyed descriptor takes `KeyedServerResourceOptions`, which has no `mode`, and `ServerResourceOptions.mode` excludes `"keyed"`, so a keyed resource cannot drift from its client. The flat one-arg form is push/invalidate only.
 - A DB-backed resource has no `notify()` (the change feed routes commits by the loader's read-set); `defineExternalResource` is the only way to get one.
+- **`Resource.Declare`'s payload** is `{ key, mode, preload?, preloadTuples? }`. `preloadTuples` is set only by `network/live`'s `serveValue`, for a PARAMETERIZED value declared `preload`: it names and loads the tuples the boot snapshot ships (`tuples[key]`). A Declare carrying it is an enumerated preload — the boot snapshot loads it through that function, and L2 (`live-state-snapshot`) neither persists nor force-recomputes the key.
 
 ### Handlers
 

@@ -71,7 +71,7 @@ describe("watermark — full frames carry it", () => {
 
     await h.subscribe("r");
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
-    await h.subscribe("r", {}, { version: 0, epoch: ack.epoch });
+    await h.subscribe("r", {}, { version: ack.version, epoch: ack.epoch });
     const utd = h.frames.find((f) => f.kind === "up-to-date")!;
     expect("watermark" in utd).toBe(false);
   });

@@ -36,9 +36,23 @@ key(s): …") plus a console error, rather than silently dropping that resource'
 hydration. (`report()` is a direct keepalive POST because the crash collector's
 window listeners are not mounted yet during the boot window.)
 
-Scope is **param-less global** resources only — the server can't know a client's
-route params at snapshot time. Route-parametrized resources self-heal via their
-normal sub-ack.
+Two kinds of preload, told apart by the `Resource.Declare` payload alone:
+
+- **Default tuple** — a param-less resource, or a collection's default window
+  (`defaultParams`). Shipped in `resources[key]`, served from the L2 persisted
+  row when there is one, else loaded at the descriptor's `defaultParams`.
+- **Enumerated** — a parameterized `liveValue` declared `preload`, whose
+  `serveValue` names its tuples (`preloadParams`); the Declare carries
+  `preloadTuples`, which loads each through the resource's own `load` (the
+  loader alone, sequential per key — no flight, no commit watermark: nothing
+  compares these values causally). Shipped in `tuples[key]` as
+  `{ params, value }`; the client hydrates each. Never L2-persisted. Config's
+  documents are the first user.
+
+A route-parametrized resource nobody enumerates self-heals via its normal sub-ack.
+A load that fails is omitted from the snapshot and reported (server error
+reporter); a value the client schema rejects is skipped and reported (one bad
+entry never stops the others from hydrating).
 
 This plugin no longer runs a server-side warm-up. Cold boot is now a pure
 snapshot read: `live-state-snapshot` persists each boot-critical resource's value
@@ -51,8 +65,9 @@ no usable persisted read-set yet). See
 How it works:
 
 - **Snapshot endpoint** `GET /api/resources/boot-snapshot` returns
-  `{ resources: Record<key, value> }` — every boot-critical resource loaded in
-  one request (a failed loader is omitted, not fatal).
+  `{ resources: Record<key, value>, tuples: Record<key, { params, value }[]>,
+  timings }` — every preloaded resource loaded in one request (a failed loader
+  is omitted and reported, not fatal).
 - **Client boot task** (`Core.Boot`) fetches that snapshot once and, for each key
   it ships, resolves the descriptor via `resourceDescriptorByKey` and
   `hydrateResource`s it before first render — no flash, no WS round-trip. Any

@@ -10,8 +10,8 @@ import { chordSoundConfig } from "../../shared/config";
  * What the loop is heard with right now: the song and the piano, each on or
  * off at its own level.
  *
- * Plain `useConfig`, not `useConfigResult`: the config document is hydrated
- * into the boot snapshot and its resource is resident, and the value is a
+ * Plain `useConfig`, not `useConfigResult`: the config document is preloaded
+ * by the boot snapshot and kept for the tab's lifetime, and the value is a
  * preference, not a claim about the learner's data — for one frame the worst
  * it can do is play at the default level.
  */

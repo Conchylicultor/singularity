@@ -2,6 +2,7 @@ import type { ServerWebSocket } from "bun";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { createHash, randomUUID } from "node:crypto";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   buildSnapshot,
@@ -383,6 +384,18 @@ export interface ResourceDefinition<
    * server-side; `"boot-and-keep"` differs only on the client (resident cache).
    */
   preload?: "boot" | "boot-and-keep";
+  /**
+   * The param names that may be absent (a `liveValue`'s `"scopeId?"`), threaded
+   * from the shared client descriptor through the two-arg form. An optional
+   * param is present iff it is a non-empty string, so the runtime drops an
+   * `undefined` or `""` one wherever params ENTER it — a `sub` / `sub-batch` /
+   * `unsub` / `sub-acks` frame, the HTTP read, `notify` — and every spelling of
+   * "absent" names ONE tuple (its `paramsKey`, its loader call, its
+   * subscribers). The frames sent back echo that canonical tuple, so the client
+   * must canonicalize the same way — it does, with the same function
+   * (`packages/canonical-params`).
+   */
+  optionalParams?: readonly string[];
 }
 
 /**
@@ -482,6 +495,7 @@ export type DefineResourceInput<
   | "scopedMembership"
   | "membership"
   | "preload"
+  | "optionalParams"
 > & {
   mode: "push" | "invalidate";
   identityTable?: string;
@@ -517,6 +531,8 @@ export interface ResourceContract<
    * `@plugins/primitives/plugins/live-state/core`.
    */
   preload?: "boot" | "boot-and-keep";
+  /** Optional param names — see `ResourceDefinition.optionalParams`. */
+  optionalParams?: readonly string[];
   /** Phantom — carries `P` for inference, mirroring the client descriptor. */
   readonly __params?: P;
 }
@@ -626,6 +642,9 @@ function contractToDefinition<T, P extends ResourceParams>(
     mode,
     keyOf: contract.keyed?.keyOf,
     preload: contract.preload,
+    ...(contract.optionalParams !== undefined
+      ? { optionalParams: contract.optionalParams }
+      : {}),
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     identityTable: opts.identityTable,
@@ -781,6 +800,8 @@ interface PendingNotify {
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
+  /** Optional param names — see `ResourceDefinition.optionalParams`. */
+  optionalParams?: readonly string[];
   /**
    * True when declared via `defineExternalResource` — the resource's truth lives
    * outside Postgres, so a hand-`notify()` is legitimate. The backstop check
@@ -847,13 +868,17 @@ interface RegistryEntry {
    */
   orderSigs?: Map<string, Map<string, string>>;
   /**
-   * Monotonic count of state changes (notifies) per params-tuple. Bumped ONLY
-   * in flushNotifies — a real state change. sub-acks and the HTTP fallback
-   * REPORT this value without bumping (a read is not a change), so a forced
-   * resync (which re-subscribes every sub) does not make the version appear to
-   * advance. The client's probeMissedUpdates compares it across a hidden→visible
-   * resync to detect frames it missed while hidden — that only works if
-   * subscribing is inert.
+   * Monotonic count of state changes (notifies) per params-tuple. Bumped in
+   * flushNotifies — a real state change — and once when a tracking span opens
+   * (the global 0→1 in `registerSubOnSocket`: nothing tracked the tuple before
+   * it, so no earlier version may match again). sub-acks and the HTTP fallback
+   * REPORT this value without bumping (a read is not a change), and a
+   * resubscribe of a tuple the server still holds opens no span — so a forced
+   * resync on the same socket (which re-subscribes every sub) does not make the
+   * version appear to advance. The client's probeMissedUpdates compares it
+   * across a hidden→visible resync to detect frames it missed while hidden;
+   * it skips a channel whose socket reopened mid-probe, where the replay opens
+   * new spans by design.
    */
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
@@ -1199,8 +1224,11 @@ export interface ResourceRuntime {
    *   takes `KeyedServerResourceOptions`, any other `ServerResourceOptions`).
    */
   defineExternalResource: {
+    // No `optionalParams` on the flat form: the spelling rule must come from the
+    // shared client descriptor (the two-arg form), or the client would key
+    // tuples the server's echoes never match.
     <T, P extends ResourceParams = ResourceParams>(
-      def: ResourceDefinition<T, P>,
+      def: ResourceDefinition<T, P> & { optionalParams?: never },
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
@@ -1575,6 +1603,47 @@ export function createResourceRuntime(
   function reportLoaderError(context: string, err: unknown): void {
     console.error(`[resources] ${context}`, err);
     opts.reportError?.(context, err);
+  }
+
+  // A tuple's canonical params for `entry` — the shared rule
+  // (`canonicalParams`: an `undefined` value dropped, and a `""` for a
+  // declared-optional param — see `ResourceDefinition.optionalParams`), the
+  // SAME function the browser applies, so the tuple this runtime echoes is the
+  // one the client keyed. Applied where params ENTER the runtime, so every later
+  // step — `paramsKey`, the loader, subscriber routing — sees one spelling.
+  function canonicalTuple(
+    entry: Pick<RegistryEntry, "optionalParams">,
+    params: ResourceParams,
+  ): ResourceParams {
+    return canonicalParams(params, entry.optionalParams);
+  }
+
+  /**
+   * `canonicalTuple` for a frame's key, when the key is registered. A frame whose
+   * params were not already canonical is reported once per key: the frames sent
+   * back echo the canonical tuple, which that sender's own keying cannot match.
+   */
+  const nonCanonicalReported = new Set<string>();
+  function canonicalFor(
+    key: string | undefined,
+    params: ResourceParams | undefined,
+  ): ResourceParams | undefined {
+    if (key === undefined || params === null || typeof params !== "object") {
+      return params;
+    }
+    const entry = registry.get(key);
+    if (!entry) return params;
+    const canonical = canonicalTuple(entry, params);
+    if (canonical !== params && !nonCanonicalReported.has(key)) {
+      nonCanonicalReported.add(key);
+      reportLoaderError(
+        `non-canonical params for ${key}`,
+        new Error(
+          `a client subscribed ${JSON.stringify(params)}; the runtime keys (and echoes) ${JSON.stringify(canonical)} — canonicalize with canonicalParams before sending`,
+        ),
+      );
+    }
+    return canonical;
   }
 
   function paramsKey(params: ResourceParams): string {
@@ -2231,6 +2300,9 @@ export function createResourceRuntime(
     const entry: RegistryEntry = {
       key: def.key,
       mode,
+      ...(def.optionalParams !== undefined
+        ? { optionalParams: def.optionalParams }
+        : {}),
       externalSource,
       schema: def.schema as ZodParser<unknown>,
       loader: def.loader as (
@@ -2276,16 +2348,15 @@ export function createResourceRuntime(
       preload: def.preload,
       async load(params: P): Promise<T> {
         // Parse here too: this handle method is the one load path that bypasses
-        // `timedLoad`, so it must validate to keep the guarantee total.
-        return def.schema.parse(await def.loader(params));
+        // `timedLoad`, so it must validate to keep the guarantee total — and
+        // canonicalize, as every entry point does.
+        return def.schema.parse(
+          await def.loader(canonicalTuple(entry, params) as P),
+        );
       },
       notify(params?: P, opts?: { affectedIds?: string[] }): void {
         const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
-        scheduleNotify(
-          entry,
-          (params ?? ({} as P)) as ResourceParams,
-          affected,
-        );
+        scheduleNotify(entry, (params ?? {}) as ResourceParams, affected);
       },
     };
   }
@@ -2329,7 +2400,7 @@ export function createResourceRuntime(
   // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
   // a keyed contract takes plain `KeyedServerResourceOptions`.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P>,
+    def: ResourceDefinition<T, P> & { optionalParams?: never },
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: KeyedResourceContract<T, P>,
@@ -2506,7 +2577,7 @@ export function createResourceRuntime(
 
   function scheduleNotify(
     entry: RegistryEntry,
-    params: ResourceParams,
+    rawParams: ResourceParams,
     affected: Set<string> | null,
     opts?: {
       source?: "hand" | "feed" | "synthetic";
@@ -2519,6 +2590,9 @@ export function createResourceRuntime(
       changedAt?: number;
     },
   ): void {
+    // The funnel for `notify`, the change feed, `triggerResourcePush` and the
+    // L2 recompute: one canonical tuple, however the caller spelled it.
+    const params = canonicalTuple(entry, rawParams);
     const pk = paramsKey(params);
     // Self-verification recorder (cascade is byte-identical regardless of source).
     const source = opts?.source ?? "hand";
@@ -2917,7 +2991,9 @@ export function createResourceRuntime(
         if (result === SKIP_EDGE) continue; // nothing relevant changed → skip edge
         downAffected = result;
       }
-      for (const dp of derived) {
+      for (const raw of derived) {
+        // A mapped tuple is canonical too, however the map spelled it.
+        const dp = canonicalTuple(down, raw);
         mergePending(
           down.pendingNotifies,
           paramsKey(dp),
@@ -3896,6 +3972,18 @@ export function createResourceRuntime(
         }>;
       };
       if (m.kind === "pong") return;
+      // Canonical from here on (see `canonicalTuple`): a frame's params name the
+      // tuple the rest of the runtime keys. Every frame sent back echoes that
+      // canonical tuple, so a sender that did NOT canonicalize (live-state's
+      // client does) would match none of them — reported, once per key.
+      m.params = canonicalFor(m.key, m.params);
+      if (Array.isArray(m.entries)) {
+        for (const e of m.entries) {
+          if (e !== null && typeof e === "object") {
+            e.params = canonicalFor(e.key, e.params);
+          }
+        }
+      }
       if (m.op === "sub") {
         void handleSub(state, m);
         return;
@@ -3944,6 +4032,17 @@ export function createResourceRuntime(
   // registration was the GLOBAL 0→1 transition — the caller then owes the
   // (possibly async) `onFirstSubscribe` exactly once. `acks` is the frame's
   // restated ack flag for this tab (see `SocketSubRecord.ackTabs`).
+  //
+  // The GLOBAL 0→1 also opens a new TRACKING SPAN, with a fresh version. A tuple
+  // is tracked only while subscribed: the change feed routes to subscribed
+  // tuples (a param'd one with none admits nothing), and a `whileSubscribed`
+  // watcher stops at the last unsubscribe. So a version minted before this
+  // span — last acked to a tab before its socket dropped, or read over HTTP
+  // while nobody subscribed — says nothing about changes during the gap. The
+  // bump makes every such version lower than every version of this span, so
+  // the short-circuit below (`handleSub` / `handleSubBatch`) can only match a
+  // version this span minted: a first subscriber is never `up-to-date`, and a
+  // later one only when nothing changed since its version, all of it tracked.
   function registerSubOnSocket(
     state: SocketState,
     entry: RegistryEntry,
@@ -3969,6 +4068,7 @@ export function createResourceRuntime(
     if (alreadyHeldBySocket) return { firstGlobal: false };
     const prev = entry.subCounts.get(pk) ?? 0;
     entry.subCounts.set(pk, prev + 1);
+    if (prev === 0) entry.versions.set(pk, (entry.versions.get(pk) ?? 0) + 1);
     return { firstGlobal: prev === 0 };
   }
 
@@ -4045,7 +4145,9 @@ export function createResourceRuntime(
     // value was produced under. If the epoch is THIS boot and the version equals
     // the current per-pk counter, nothing changed since that value shipped — for
     // a non-revalidate resource the version counter is its complete change
-    // signal (every state change routes through flushNotifies, which bumps it).
+    // signal WITHIN a tracking span (every state change of a subscribed tuple
+    // routes through flushNotifies, which bumps it), and a matching version is
+    // always this span's: each span opens with a fresh one (`registerSubOnSocket`).
     // Answer `up-to-date` from memory: ZERO loader runs, ZERO read-admission
     // slots — the cure for the chronic full-set replay storms (each replayed
     // push-mode sub used to run the FULL loader behind the 6-slot gate; see
@@ -4054,6 +4156,12 @@ export function createResourceRuntime(
     //   - same boot epoch — `entry.versions` is per-boot in-memory state, so a
     //     cross-boot version echo is incomparable (post-restart replays take the
     //     full path and re-baseline);
+    //   - the same tracking span — never the subscriber that OPENS a span
+    //     (`firstGlobal`: nobody tracked the tuple before it), and never an echo
+    //     of a version minted before the span (the bump at the global 0→1). So
+    //     a replay on a NEW socket, after the old one's close released the
+    //     tuple, takes the full path like a post-restart one; a replay on the
+    //     same socket registers before it reconciles and keeps its span;
     //   - non-`revalidate` resources — a revalidatable resource's freshness
     //     authority is its ETag signature (probed below), not the version
     //     counter (its truth may live outside the notify stream, e.g. git).
@@ -4065,6 +4173,7 @@ export function createResourceRuntime(
     // that fixes the cross-boot cache-poisoning drop (Fix B).
     const currentVersion = entry.versions.get(pk) ?? 0;
     if (
+      !firstGlobal &&
       !entry.revalidate &&
       m.epoch === bootEpoch &&
       typeof m.version === "number" &&
@@ -4104,9 +4213,11 @@ export function createResourceRuntime(
     // watchdog — the probe re-subscribes every sub, so the version always
     // appeared to advance even when nothing was missed. Mirrors
     // handleResourceHttp (also unbumped). The version advances only in
-    // flushNotifies. A never-notified pk reports 0; the client's -1 "nothing
-    // applied yet" baseline still accepts that sub-ack. Read up front because
-    // both the `up-to-date` short-circuit and the loader-path sub-ack report it.
+    // flushNotifies and when a tracking span opens (the global 0→1 in
+    // `registerSubOnSocket`, before this runs) — so a first sub-ack reports at
+    // least 1, which the client's -1 "nothing applied yet" baseline accepts.
+    // Read up front because both the `up-to-date` short-circuit and the
+    // loader-path sub-ack report it.
     const version = entry.versions.get(pk) ?? 0;
 
     // Conditional revalidation (ETag / 304 semantics): if this resource declares
@@ -4342,27 +4453,17 @@ export function createResourceRuntime(
     for (const p of prepared) {
       const version = p.entry.versions.get(p.pk) ?? 0;
       if (
+        !p.firstGlobal &&
         !p.entry.revalidate &&
         m.epoch === bootEpoch &&
         typeof p.version === "number" &&
         p.version === version
       ) {
-        // Same short-circuit as `handleSub`, collected into one batch frame. A
-        // 0→1 entry still owes its lifecycle hook — fired detached so the batch
-        // answer stays one synchronous frame (the socket is already registered,
-        // so any change the hook's work triggers pushes to it normally).
+        // Same short-circuit as `handleSub`, collected into one batch frame.
+        // Never a 0→1 entry: its registration opened a tracking span, so it —
+        // and its `onFirstSubscribe` — always takes the full path below.
         recordSubShortCircuit(p.key);
         upToDate.push({ id: p.id, key: p.key, params: p.params, version });
-        if (p.firstGlobal && p.entry.onFirstSubscribe) {
-          const hook = p.entry.onFirstSubscribe;
-          void (async () => {
-            try {
-              await hook(p.params);
-            } catch (err) {
-              reportLoaderError(`onFirstSubscribe failed for ${p.key}`, err);
-            }
-          })();
-        }
         continue;
       }
       void (async () => {
@@ -4475,8 +4576,8 @@ export function createResourceRuntime(
       // reconstructs its persisted value FROM the snapshot — so it must survive
       // N→0, or the next change would degrade to a needless FULL. Bounded to
       // opted-in persisted resources; bounded-membership entries (never
-      // persisted) evict like any other keyed entry and self-heal via the
-      // bounded FULL branch on the next change.
+      // persisted) evict like any other keyed entry — the resubscribe opens a
+      // new tracking span, so it takes the full path and re-seeds.
       const keepSnapshot =
         isUnboundedWindow(entry) &&
         !entry.externalSource &&
@@ -4535,8 +4636,10 @@ export function createResourceRuntime(
   ): Promise<Response> {
     const key = entry.key;
     const url = new URL(req.url);
-    const resourceParams: ResourceParams = {};
-    for (const [k, v] of url.searchParams) resourceParams[k] = v;
+    const rawParams: ResourceParams = {};
+    for (const [k, v] of url.searchParams) rawParams[k] = v;
+    // `?scopeId=` names the same tuple as no `scopeId` for an optional param.
+    const resourceParams = canonicalTuple(entry, rawParams);
 
     // Conditional revalidation: compute the signature ONCE, BEFORE the value, and
     // use it for the If-None-Match/304 short-circuit — a match means the caller's
@@ -4761,7 +4864,10 @@ export function createResourceRuntime(
     // Bare value: this caller has no ETag to seed and none to report. Any read-path
     // subscriber that coalesces onto the flight it starts adopts its `undefined`
     // etag and stamps none (see `handleSub`).
-    const { value } = await getResourceValue(entry, params ?? {});
+    const { value } = await getResourceValue(
+      entry,
+      canonicalTuple(entry, params ?? {}),
+    );
     return value;
   }
 
@@ -4779,7 +4885,7 @@ export function createResourceRuntime(
   ): Promise<{ onFirstSubscribeMs: number; loaderMs: number }> {
     const entry = registry.get(key);
     if (!entry) throw new Error(`unknown resource key: ${key}`);
-    const p = params ?? {};
+    const p = canonicalTuple(entry, params ?? {});
     const t0 = performance.now();
     await entry.onFirstSubscribe?.(p);
     const onFirstSubscribeMs = performance.now() - t0;

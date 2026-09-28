@@ -149,6 +149,9 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     );
     await h.subscribe("up");
     await h.subscribe("down");
+    const downBase = h.frames.find(
+      (f) => f.kind === "sub-ack" && f.key === "down",
+    )!.version!;
     downLoads.length = 0;
 
     // A scoped change to up_t: `up` recomputes and cascades to `down` with an empty
@@ -166,7 +169,8 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     expect(h.pushesFor("down")).toHaveLength(0); // no frame
 
     // …and the version was NOT bumped. Read it straight from the `_debug` payload:
-    // an unbumped pk has no entry in `versions` (bumps happen only in flushNotifies).
+    // the pk still holds the version its tracking span opened with — the one the
+    // sub-ack reported (after that, bumps happen only in flushNotifies).
     const debug = await h.runtime.handleResourceHttp(
       new Request("http://x/api/resources/_debug"),
       { key: "_debug" },
@@ -175,11 +179,11 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
       resources: Array<{ key: string; versions: Record<string, number> }>;
     };
     const downRow = body.resources.find((r) => r.key === "down")!;
-    expect(downRow.versions).toEqual({}); // never bumped
+    expect(downRow.versions).toEqual({ "{}": downBase }); // never bumped
 
-    // A LATER real (FULL) change to up_t propagates and bumps `down` from base 0 to
-    // 1 — proving the empty-scoped no-op left the version untouched (else this
-    // would be version 2).
+    // A LATER real (FULL) change to up_t propagates and bumps `down` from its
+    // sub-ack's version to the next one — proving the empty-scoped no-op left
+    // the version untouched (else this would be one higher).
     downValue = [{ id: "d", n: 2 }];
     h.runtime.applyDbChange({
       table: "up_t",
@@ -193,6 +197,6 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     expect(downLoads).toEqual(["FULL"]);
     const downPushes = h.pushesFor("down");
     expect(downPushes).toHaveLength(1);
-    expect(downPushes[0]!.version).toBe(1);
+    expect(downPushes[0]!.version).toBe(downBase + 1);
   });
 });

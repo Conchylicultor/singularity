@@ -8,17 +8,17 @@ export type {
   OriginDefaultsFrom,
 } from "./internal/types";
 export {
-  configV2Resource,
+  configValues,
   configV2ValuesSchema,
   configV2ValidationIssueSchema,
   configV2ConflictEntrySchema,
   configV2ConflictsSchema,
-  configV2ConflictResource,
+  configConflict,
   configV2TiersSchema,
-  configV2TiersResource,
+  configTiers,
   configV2ScopesSchema,
   configV2ScopesMapSchema,
-  configV2ScopesResource,
+  configScopes,
   configV2ConflictLocationsSchema,
   configV2ConflictMapSchema,
   configConflictLocations,
@@ -60,7 +60,6 @@ export {
   deleteScope,
   forkDescriptorScope,
   removeDescriptorScope,
-  configSnapshot,
 } from "./internal/endpoints";
 export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
 export { withOverrideLegend } from "./internal/override-legend";

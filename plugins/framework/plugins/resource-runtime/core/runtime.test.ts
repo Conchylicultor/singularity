@@ -106,6 +106,7 @@ describe("flushNotifies — level-parallel", () => {
       loader: async () => 1,
     });
     await h.subscribe("ver");
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
 
     r.notify();
     await tick();
@@ -113,7 +114,7 @@ describe("flushNotifies — level-parallel", () => {
     await tick();
 
     const sent = h.pushesFor("ver");
-    expect(sent.map((f) => f.version)).toEqual([1, 2]);
+    expect(sent.map((f) => f.version)).toEqual([base + 1, base + 2]);
   });
 
   test("a notify arriving mid-flush is re-drained, once, after the in-flight flush", async () => {

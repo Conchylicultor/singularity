@@ -1,17 +1,14 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Apps } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import {
   scopeAppId,
-  configV2ScopesResource,
+  configScopes,
   forkDescriptorScope,
 } from "@plugins/config_v2/core";
-import type {
-  ConfigV2ConflictLocations,
-  ConfigV2ScopesMap,
-} from "@plugins/config_v2/core";
+import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -42,20 +39,12 @@ export function ScopeTabs({
 }) {
   const apps = Apps.App.useContributions();
   const scopeDisplay = useScopeDisplay();
-  // One global scopes-map subscription, `select`ed to this descriptor's list.
-  const selectScopes = useCallback(
-    (map: ConfigV2ScopesMap) => map[storePath] ?? [],
-    [storePath],
-  );
-  const scopesRes = useResource(
-    configV2ScopesResource,
-    {},
-    { select: selectScopes },
-  );
-  // `{}` initialData → never pending; gate anyway so the tab bar paints only
-  // settled data (no flash of a Base-only bar before known scopes resolve).
+  // One global scopes-map subscription (preloaded and kept); this
+  // descriptor's list is its entry. Gate so the tab bar paints only settled
+  // data (no flash of a Base-only bar before known scopes resolve).
+  const scopesRes = useLive(configScopes);
   if (scopesRes.pending) return <Loading />;
-  const scopes = scopesRes.data;
+  const scopes = scopesRes.data[storePath] ?? [];
 
   return (
     <Stack direction="row" gap="2xs" align="center" wrap>

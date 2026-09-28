@@ -27,7 +27,8 @@ describe("windowQueryResourceDescriptor", () => {
     expect(win.keyed.keyOf({ id: "a" })).toBe("a");
     expect(win.queryPk).toBe("id");
     expect(win.preload).toBe("boot");
-    expect(win.initialData).toEqual([]);
+    // No placeholder: a window not loaded yet is `pending`, never `[]`.
+    expect("initialData" in win).toBe(false);
     expect(win.schema.parse([{ id: "a" }])).toEqual([{ id: "a" }]);
   });
 

@@ -193,6 +193,7 @@ describe("recomputeResource", () => {
       loader: async () => 1,
     });
     await h.subscribe("k");
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
 
     h.runtime.recomputeResource("k");
     await tick();
@@ -200,7 +201,7 @@ describe("recomputeResource", () => {
     const pushes = h.pushesFor("k");
     expect(pushes).toHaveLength(1);
     expect(pushes[0]!.kind).toBe("update"); // a FULL value push
-    expect(pushes[0]!.version).toBe(1);
+    expect(pushes[0]!.version).toBe(base + 1);
   });
 
   test("is a no-op for an unknown key (never throws)", async () => {

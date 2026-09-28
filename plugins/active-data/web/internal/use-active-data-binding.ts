@@ -49,15 +49,12 @@ export function useActiveDataBinding<T>(
   schema: ZodParser<T>,
 ): ActiveDataBindingHandle<T> {
   const identity = useActiveDataIdentity();
-  // Without an identity there is no conversation to read, but the hook must
-  // still run: it subscribes the dead `{ conversationId: "" }` tuple, and the
-  // handle below reports `pending` for as long as `identity` is null. (A value
-  // read has no skip spelling yet — the value-params sentinel follow-up.)
+  // Without an identity there is no conversation to read: the read is skipped
+  // (nothing subscribed), and the handle below reports `pending` with
+  // `enabled: false` — a caller renders a legacy log's widget off `enabled`.
   const resource = useLive(
     activeDataBindings,
-    identity
-      ? { conversationId: identity.conversationId }
-      : { conversationId: "" },
+    identity ? { conversationId: identity.conversationId } : null,
   );
 
   const value = useMemo<T | null>(() => {

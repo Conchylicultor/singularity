@@ -3,7 +3,11 @@ import {
   defineResource,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
-import type { LiveValue } from "@plugins/network/plugins/live/core";
+import type {
+  LivePreloadedParamValue,
+  LiveValue,
+} from "@plugins/network/plugins/live/core";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
   registerValue,
   type LiveValueSource,
@@ -49,6 +53,22 @@ export type ServedExternalValue<
 // biome-ignore lint/suspicious/noExplicitAny: an upstream of any payload/params.
 type AnyServed = ServedValueBase<any, any>;
 
+/** Any other worktree value: its `serveValue` takes no `preloadParams`. */
+type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
+  preloadsParams?: never;
+};
+
+/**
+ * The tuples a parameterized preloaded value hydrates at boot. It has no
+ * default tuple, so the server names them: the boot snapshot loads each one
+ * (the loader stays the only source of the value) and the client hydrates it
+ * before first paint. Enumerate exactly what first paint reads — every tuple is
+ * loaded on every page load.
+ */
+interface PreloadParamsOption<P> {
+  preloadParams: () => P[] | Promise<P[]>;
+}
+
 /**
  * Serve a worktree `liveValue` (a central one is served by
  * `network/live/central`'s `serveValue` — passing it here is a tsc error).
@@ -73,26 +93,92 @@ export function serveValue<
   P extends Record<string, string>,
   const R extends readonly AnyServed[] = [],
 >(
-  value: LiveValue<T, P>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R>,
+  value: LivePreloadedParamValue<T, P>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+    PreloadParamsOption<NoInfer<P>>,
 ): ServedValue<T, P>;
 export function serveValue<
   T,
   P extends Record<string, string>,
   const R extends readonly AnyServed[] = [],
 >(
-  value: LiveValue<T, P>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R>,
+  value: LivePreloadedParamValue<T, P>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> &
+    PreloadParamsOption<NoInfer<P>>,
+): ServedExternalValue<T, P>;
+export function serveValue<
+  T,
+  P extends Record<string, string>,
+  const R extends readonly AnyServed[] = [],
+>(
+  value: PlainValue<T, P>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> & {
+    preloadParams?: never;
+  },
+): ServedValue<T, P>;
+export function serveValue<
+  T,
+  P extends Record<string, string>,
+  const R extends readonly AnyServed[] = [],
+>(
+  value: PlainValue<T, P>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> & {
+    preloadParams?: never;
+  },
 ): ServedExternalValue<T, P>;
 export function serveValue<T, P extends Record<string, string>>(
-  value: LiveValue<T, P>,
-  opts: ServeValueOptions<T, P, LiveValueSource, readonly AnyServed[]>,
+  value: LiveValue<T, P> & { preloadsParams?: true },
+  opts: ServeValueOptions<T, P, LiveValueSource, readonly AnyServed[]> & {
+    preloadParams?: () => P[] | Promise<P[]>;
+  },
 ): ServedValue<T, P> | ServedExternalValue<T, P> {
+  // The pairing tsc enforces, for an untyped caller: a param'd preloaded value
+  // names its boot tuples, and nothing else may.
+  if ((value.preloadsParams === true) !== (opts.preloadParams !== undefined)) {
+    throw new Error(
+      value.preloadsParams === true
+        ? `serveValue("${value.key}"): a parameterized value declared \`preload\` ` +
+            `must pass \`preloadParams\` — the boot snapshot has no default tuple ` +
+            `to load for it.`
+        : `serveValue("${value.key}"): \`preloadParams\` is only for a ` +
+            `parameterized value declared \`preload\`.`,
+    );
+  }
   const { resource, compiled } = registerValue(
     { defineResource, defineExternalResource },
     value,
     opts,
   );
+  const enumerate = opts.preloadParams;
+  const optional = value.optionalParams;
+  // The boot snapshot's read of an enumerated preload. Each tuple is canonical
+  // (the tuple a read subscribes — `canonicalParams`) and is loaded through the
+  // resource's own `load` (the loader + schema parse), sequentially and settled
+  // on its own. Deliberately NOT the runtime's flight path: that captures a
+  // commit watermark (one DB query) per load, a floor nothing reads for a value
+  // that is only hydrated.
+  const preloadTuples =
+    enumerate === undefined
+      ? undefined
+      : async () => {
+          const out: (
+            | { params: P; ok: true; value: unknown }
+            | { params: P; ok: false; error: unknown }
+          )[] = [];
+          for (const raw of await enumerate()) {
+            const params = canonicalParams(raw, optional);
+            try {
+              out.push({
+                params,
+                ok: true,
+                value: await resource.load(params),
+              });
+            } catch (error) {
+              out.push({ params, ok: false, error });
+            }
+          }
+          return out;
+        };
   const base = {
     key: resource.key,
     mode: resource.mode,
@@ -104,14 +190,23 @@ export function serveValue<T, P extends Record<string, string>>(
       ? { unbounded: compiled.unbounded }
       : {}),
     keys: [value.key],
-    declare: [ResourceContribution.Declare(resource)] as [
-      ReturnType<typeof ResourceContribution.Declare>,
-    ],
+    declare: [
+      ResourceContribution.Declare({
+        key: resource.key,
+        mode: resource.mode,
+        ...(resource.preload !== undefined
+          ? { preload: resource.preload }
+          : {}),
+        ...(preloadTuples !== undefined ? { preloadTuples } : {}),
+      }),
+    ] as [ReturnType<typeof ResourceContribution.Declare>],
   };
   if ("notify" in resource && compiled.external) {
     const served: ServedExternalValue<T, P> = {
       ...base,
-      // Only the params: `affectedIds` is a keyed concept.
+      // Only the params: `affectedIds` is a keyed concept. The runtime
+      // canonicalizes them, so a notify reaches the tuple a read subscribed
+      // however an absent optional param is spelled (`undefined`, `""`, left out).
       notify: (params?: P) => resource.notify(params),
     };
     return served;

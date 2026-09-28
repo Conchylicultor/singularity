@@ -418,4 +418,39 @@ describe("NotificationsClient — reconnect + resync", () => {
       ackVersion: 9,
     });
   });
+
+  test("H7: a socket that reopens during the probe re-baselines — its higher sub-ack versions are never reported as missed", async () => {
+    // Waking from sleep: the probe fires on visibilitychange while the socket
+    // is (about to be) down. The server released the old socket's tuples, so on
+    // the new socket every tuple opens a fresh tracking span at a HIGHER
+    // version even though nothing changed — a re-baseline, not a dropped frame.
+    const { client, hub, socket, qc } = await setup();
+    client.observe("k", {}, undefined, pushSchema);
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v1" },
+      version: 1,
+    });
+
+    socket.serverClose();
+    const probe = client.probeMissedUpdates(1_500);
+
+    // The reconnect lands inside the settle window (backoff = 500ms here).
+    await vi.advanceTimersByTimeAsync(500);
+    const socket2 = nextSocket(hub);
+    socket2.open();
+    socket2.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "v1" },
+      version: 2, // the new span's version: nothing changed
+    });
+    expect(qc.getQueryData(["k"])).toEqual({ status: "v1" });
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(await probe).toEqual([]);
+  });
 });

@@ -27,9 +27,11 @@ export interface ReorderHoistedConfig {
 }
 
 /**
- * Reads a reorderable slot's `items` tree + `setConfig` writer. This is the
- * ONLY live-state subscription the reorder middleware makes (`config-v2.values`),
- * once per render site.
+ * Reads a reorderable slot's `items` tree + `setConfig` writer. Its config read
+ * is the only live-state read the reorder middleware makes, once per render
+ * site: the slot's `config-v2.values` document plus the shared, param-less
+ * `config-v2.scopes` map every config read observes (refcounted — one
+ * subscription per tab).
  */
 export function useReorderConfig(
   descriptor: ConfigDescriptor,

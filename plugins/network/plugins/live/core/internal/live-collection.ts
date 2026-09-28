@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
-  resourceDescriptor,
+  registerResourceDescriptor,
   type ResourceDescriptor,
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
@@ -78,12 +78,13 @@ export interface LiveGroupCodec<F> {
 /**
  * `${key}:groups` — a plain (non-keyed) push value per grouping query. Every
  * groupable column's values share the wire schema (any scalar or NULL); the
- * server validates each value against the row schema's field.
+ * server validates each value against the row schema's field. No placeholder:
+ * a grouping not loaded yet is `pending`, never `[]`.
  */
 export type LiveGroupsDescriptor<F> = ResourceDescriptor<
   LiveGroup<FilterScalar>[],
   LiveGroupParams
-> & { keyed?: never; groups: LiveGroupCodec<F> };
+> & { keyed?: never; initialData?: never; groups: LiveGroupCodec<F> };
 
 /**
  * A collection's row schema: a zod OBJECT, so its keys can be read — the server
@@ -303,19 +304,18 @@ function fullCollection<Row, F, S extends string>(
     encode: codec.encodeGroups,
     decode: codec.decodeGroups,
   };
-  const groups = Object.assign(
-    resourceDescriptor<LiveGroup<FilterScalar>[], LiveGroupParams>(
-      `${key}:groups`,
-      z.array(
-        z.object({
-          value: z.union([z.string(), z.number(), z.boolean()]).nullable(),
-          count: z.number().int().nonnegative(),
-        }),
-      ),
-      [],
+  // Minted and registered here, like the window and `:rows`: no placeholder.
+  const groups: LiveGroupsDescriptor<F> = {
+    key: `${key}:groups`,
+    schema: z.array(
+      z.object({
+        value: z.union([z.string(), z.number(), z.boolean()]).nullable(),
+        count: z.number().int().nonnegative(),
+      }),
     ),
-    { groups: groupCodec },
-  );
+    groups: groupCodec,
+  };
+  registerResourceDescriptor(groups as ResourceDescriptor<unknown>);
   return {
     ...base,
     window,

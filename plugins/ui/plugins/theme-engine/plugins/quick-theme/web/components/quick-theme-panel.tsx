@@ -9,6 +9,7 @@ import {
   ThemeScopeProvider,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { QuickTheme } from "../slots";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -69,7 +70,12 @@ export function QuickThemePanel({
 }) {
   const activeApp = useActiveApp();
   const scopeId = activeApp ? `app:${activeApp.id}` : undefined;
-  const forked = useScopeMembership(themeSelectionConfig, scopeId);
+  const membership = useScopeMembership(themeSelectionConfig, scopeId);
+  // Which scope a pick lands in is what membership decides: nothing to pick
+  // until it is known (preloaded: settled after a successful boot). Under a
+  // transient error the last-known answer stands.
+  const forked = membership.pending ? membership.stale : membership.data;
+  if (forked === undefined) return <Loading />;
   const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
   return (

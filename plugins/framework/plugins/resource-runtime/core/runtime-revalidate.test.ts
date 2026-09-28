@@ -545,7 +545,7 @@ describe("conditional revalidation — a push etag rides only the update frame",
       revalidate: async () => String(gitState),
     });
 
-    await h.subscribe("r"); // sub-ack v0, value "v1", etag sig("1")
+    await h.subscribe("r"); // sub-ack: value "v1", etag sig("1")
     ctl.setValue("v2");
     gitState = 2; // the change: value and signature advance together
     r.notify();
@@ -608,8 +608,9 @@ describe("conditional revalidation — a push etag rides only the update frame",
     await h.subscribe("r"); // sub-ack parked on the blocked loader
     expect(h.frames).toHaveLength(0);
 
-    // Bumps the version to 1 and starts its own load: since the flight-freshness
-    // fix the drain refuses the sub's older flight rather than coalescing onto it
+    // Bumps the version past the parked sub-ack's and starts its own load: since
+    // the flight-freshness fix the drain refuses the sub's older flight rather
+    // than coalescing onto it
     // (`research/2026-08-08-global-live-state-flight-freshness.md`). Both loads
     // park on the same block, so the race being timed is unchanged — what this
     // case measures is `sendUpdate`'s no-await branch, not the sharing.
@@ -622,7 +623,7 @@ describe("conditional revalidation — a push etag rides only the update frame",
 
     const update = h.frames.find((f) => f.kind === "update")!;
     const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(update.seq).toBeLessThan(subAck.seq); // push (v1) hits the wire first
+    expect(update.seq).toBeLessThan(subAck.seq); // the push hits the wire first
     expect("etag" in update).toBe(false); // no revalidate ⇒ no etag on the frame
   });
 });

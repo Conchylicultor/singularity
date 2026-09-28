@@ -289,6 +289,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `apps/website/shell`
     - `build`
     - `code-explorer`
+    - `config_v2`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`
     - `conversations/conversation-ui/row`
@@ -308,6 +309,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `debug/render-profiler`
     - `improve/element-picker`
     - `infra/events-test`
+    - `network/live`
     - `page/annotations`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes/agent-page`

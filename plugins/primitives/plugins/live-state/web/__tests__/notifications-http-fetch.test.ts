@@ -31,7 +31,7 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));
 
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   createTransportHub,
@@ -39,6 +39,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web/testing";
 import {
   NotificationsClient,
+  ResourceHttpError,
   ResourceStaleReadError,
   queryKeyFor,
 } from "../notifications-client";
@@ -643,5 +644,62 @@ describe("NotificationsClient — HTTP fetch path", () => {
     );
     expect(applied).toEqual({ status: "v7" });
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v7" });
+  });
+
+  // A sub-error reaches a query that has no value AND no placeholder — a
+  // `liveValue`, a collection's window / `:rows` / `:groups`. `useResource`
+  // keeps such a query disabled until its first value, and
+  // `invalidateQueries` skips disabled queries, so the fallback read must be
+  // run on the query directly: its outcome is the query's error state (or
+  // heals it), never a read left `pending` with no error.
+  describe("sub-error on a placeholder-less query with no value yet", () => {
+    async function observeDisabled() {
+      const env = await setup();
+      env.client.observe("nv", {}, undefined, pushSchema);
+      // `useResource`'s options for a descriptor with no `initialData`.
+      const observer = new QueryObserver(env.qc, {
+        queryKey: queryKeyFor("nv", {}),
+        queryFn: () =>
+          env.client.fetchOverHttp("nv", {}, undefined, pushSchema, "fallback"),
+        enabled: (query) => query.state.data !== undefined,
+      });
+      const unsubscribe = observer.subscribe(() => {});
+      return { ...env, unsubscribe };
+    }
+
+    test("a failing HTTP read becomes the query's error", async () => {
+      const { qc, socket, fetchQueue, fetchCalls, unsubscribe } =
+        await observeDisabled();
+      fetchQueue.push(makeResponse({ status: 500 }));
+      socket.serverSend({
+        kind: "sub-error",
+        key: "nv",
+        params: {},
+        reason: "loader-failed",
+      });
+      await flush();
+      expect(fetchCalls.map((c) => c.url)).toEqual(["/api/resources/nv"]);
+      expect(qc.getQueryState(queryKeyFor("nv", {}))?.error).toBeInstanceOf(
+        ResourceHttpError,
+      );
+      unsubscribe();
+    });
+
+    test("a succeeding HTTP read heals it", async () => {
+      const { qc, socket, fetchQueue, unsubscribe } = await observeDisabled();
+      fetchQueue.push(
+        makeResponse({ body: { value: { status: "ok" }, version: 1 } }),
+      );
+      socket.serverSend({
+        kind: "sub-error",
+        key: "nv",
+        params: {},
+        reason: "loader-failed",
+      });
+      await flush();
+      expect(qc.getQueryData(queryKeyFor("nv", {}))).toEqual({ status: "ok" });
+      expect(qc.getQueryState(queryKeyFor("nv", {}))?.error).toBeNull();
+      unsubscribe();
+    });
   });
 });

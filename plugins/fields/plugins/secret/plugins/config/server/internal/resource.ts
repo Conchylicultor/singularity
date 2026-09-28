@@ -15,12 +15,14 @@ export const configSecretMetaServed = serveValue(configSecretMeta, {
   loader: async ({ path }) => {
     const allDescriptors = getAllDescriptors();
     const entry = allDescriptors.find(([p]) => p === path);
-    // An unknown path answers "no secret fields". That includes the `""` the
-    // setup wizards subscribe with before their registration is known — a
-    // value has no skip, so that sentinel stays until values get one
-    // (research/2026-09-27-global-live-resources-phase3-bulk-migration.md,
-    // "Sentinel params").
-    if (!entry) return {};
+    // An unregistered path is a bug in the reader (a reader with no path yet
+    // skips the read — `useLive(configSecretMeta, null)`): fail loudly rather
+    // than answer "no secret fields" for a descriptor that does not exist.
+    if (!entry) {
+      throw new Error(
+        `[config-v2] no descriptor registered for secret-meta path "${path}"`,
+      );
+    }
     const [, descriptor] = entry;
     const result: ConfigV2SecretMeta = {};
     for (const [key, field] of Object.entries(descriptor.fields)) {

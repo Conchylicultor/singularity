@@ -14,8 +14,6 @@ export type ResourcePreload = "boot" | "boot-and-keep";
 /** The trailing options of the old descriptor factories. */
 export interface ResourceDescriptorOptions {
   preload?: ResourcePreload;
-  /** Config only — see `ResourceDescriptor.resident`. */
-  resident?: true;
 }
 
 export interface ResourceDescriptor<
@@ -41,9 +39,11 @@ export interface ResourceDescriptor<
    * `useOptimisticResource` reads a declaration and stays `pending` until the
    * first authoritative value.
    *
-   * Absent (a `liveValue`) ⇒ no placeholder at all: the query simply has no
-   * data until the first authoritative value, still `pending` at
-   * `dataUpdatedAt === 0`. Not known yet is a state, not a stand-in value.
+   * Absent (a `liveValue`, a `liveCollection`'s window / `:rows` / `:groups`)
+   * ⇒ no placeholder at all: the query simply has no data until the first
+   * authoritative value, still `pending` at `dataUpdatedAt === 0`. Not known
+   * yet is a state, not a stand-in value. Only the tree and tick descriptors
+   * still seed one (Resources page items 3 / 7).
    */
   initialData?: T;
   /**
@@ -59,11 +59,16 @@ export interface ResourceDescriptor<
    *
    * - `"boot"`: the boot snapshot hydrates its default tuple (`defaultParams`,
    *   else `{}`) before first paint, the owning plugin is pinned to the eager
-   *   load tier, and a DB-backed one is L2-persisted for instant cold boot.
-   * - `"boot-and-keep"`: `"boot"`, and the client also keeps the cached value
-   *   resident for the tab's lifetime (`gcTime: Infinity`), so a surface that
-   *   mounts late never re-enters a loading window boot already closed. Only for
-   *   values small and universally read enough to hold that long.
+   *   load tier, and a DB-backed one is L2-persisted for instant cold boot. A
+   *   PARAMETERIZED `liveValue` may be preloaded too: its server half enumerates
+   *   the tuples to hydrate (`serveValue`'s `preloadParams`), and it is never
+   *   L2-persisted.
+   * - `"boot-and-keep"`: `"boot"`, and the client also keeps every cached tuple
+   *   of the key resident for the tab's lifetime (`gcTime: Infinity`, set as a
+   *   query default before the first tuple is built — hydrated or observed), so
+   *   a surface that mounts late never re-enters a loading window boot already
+   *   closed. Only for values small and universally read enough to hold that
+   *   long.
    *
    * Declared here — on the shared descriptor — so build-time codegen can
    * statically see which plugin owns a preloaded descriptor (the eager-tier
@@ -82,14 +87,13 @@ export interface ResourceDescriptor<
    */
   load?: "on-demand";
   /**
-   * Config only — deleted by Resources page item 9 (config hydration folds into
-   * the boot snapshot). Keeps the cached value resident (`gcTime: Infinity`)
-   * like `preload: "boot-and-keep"`, for config's two resources, which hydrate
-   * N param tuples through config's own boot task rather than the boot
-   * snapshot's single default tuple — so they cannot honestly say
-   * `"boot-and-keep"` yet. Every other resource spells it through `preload`.
+   * The param names that may be absent (a `liveValue`'s `"scopeId?"`). An
+   * optional param is present iff it is a non-empty string: `canonicalParams`
+   * drops an `undefined` or `""` one, wherever params enter the substrate, so
+   * `{ path }`, `{ path, scopeId: undefined }` and `{ path, scopeId: "" }` are
+   * one tuple. Absent ⇒ every declared param is required.
    */
-  resident?: true;
+  optionalParams?: readonly string[];
   /**
    * Default params tuple boot paths use when a caller names none — e.g. a
    * `liveCollection`'s window (its window descriptor sets it to the encoded
@@ -113,8 +117,8 @@ const byKey = new Map<string, ResourceDescriptor<unknown>>();
 /**
  * Register a descriptor in the key→descriptor map boot hydration resolves
  * against. Every factory here calls it; exported for the descriptor factories
- * other plugins own (`network/live`'s `liveValue`), which build a descriptor
- * shape these factories do not (no `initialData`). A plugin DECLARING a
+ * other plugins own (`network/live`'s `liveValue` and `liveCollection`), which
+ * build a descriptor shape these factories do not (no `initialData`). A plugin DECLARING a
  * resource never calls it — it goes through a factory of the resource
  * vocabulary, which is what the build scanners can see.
  */

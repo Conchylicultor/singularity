@@ -132,6 +132,9 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
   test("version/value pairing: no frame carrying version N carries a value read before the commit that produced N", async () => {
     const { h, ctl, feedFull } = staleFlightHarness();
     await h.subscribe("s", {}, { socket: 0 });
+    // The version this tuple's tracking span opened with (socket 0 was its
+    // first subscriber). Socket 1 joins the same span, so it reports it too.
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
 
     ctl.block();
     const parked = h.subscribe("s", {}, { socket: 1 });
@@ -147,20 +150,20 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     await parked;
     await tick();
 
-    // Version 0 is the pre-commit state (both sub-acks report it — a READ frame
-    // reports a version observed before its load, so a pre-commit value can only
-    // ever ride an equally old version). Version 1 is minted BY the commit, and
-    // every frame carrying it must carry rows that reflect it.
+    // Version `base` is the pre-commit state (both sub-acks report it — a READ
+    // frame reports a version observed before its load, so a pre-commit value
+    // can only ever ride an equally old version). Version `base + 1` is minted BY
+    // the commit, and every frame carrying it must carry rows that reflect it.
     const cv = makeClientView(keyOf);
     for (const frame of h.framesFor(0)) {
       cv.apply(frame);
-      if (frame.version === 1) {
-        // Applying every v1 frame in order must leave the client at POST — the
+      if (frame.version === base + 1) {
+        // Applying every such frame in order must leave the client at POST — the
         // frame asserted "this is the state as of the change", so it has to be.
         expect(cv.value).toEqual(POST);
       }
     }
-    expect(h.framesFor(0).some((f) => f.version === 1)).toBe(true);
+    expect(h.framesFor(0).some((f) => f.version === base + 1)).toBe(true);
   });
 
   test("a drain does NOT supersede a flight that started after its own notify (the floor is `notBefore`, not `never join`)", async () => {

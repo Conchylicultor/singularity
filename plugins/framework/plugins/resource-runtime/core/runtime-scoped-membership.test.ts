@@ -252,7 +252,8 @@ describe("scopedMembership — no-op window", () => {
     const m = membershipHarness();
     m.table.set("a", { n: 1, where: true });
     m.table.set("b", { n: 1, where: true });
-    await m.h.subscribe("rows"); // version 0
+    await m.h.subscribe("rows");
+    const base = m.h.frames.find((f) => f.kind === "sub-ack")!.version!;
     m.loaderCalls.length = 0;
 
     // UPDATE that does not change content: refill returns the identical row → the
@@ -261,14 +262,15 @@ describe("scopedMembership — no-op window", () => {
     await tick();
     expect(deltas(m.h)).toHaveLength(0);
 
-    // A subsequent REAL change is version 1 — proving the no-op left it at 0.
+    // A subsequent REAL change is the sub-ack's version + 1 — proving the no-op
+    // left the counter where the sub-ack found it.
     m.update("a", (cell) => {
       cell.n = 5;
     });
     await tick();
     const ds = deltas(m.h);
     expect(ds).toHaveLength(1);
-    expect(ds[0]!.version).toBe(1);
+    expect(ds[0]!.version).toBe(base + 1);
   });
 });
 
@@ -616,11 +618,12 @@ test("a membership delta carries upserts, deletes, order and a version", async (
   const m = membershipHarness();
   m.table.set("a", { n: 1, where: true });
   await m.h.subscribe("rows");
+  const ack = m.h.frames.find((f) => f.kind === "sub-ack")!;
   m.insert("b", 2);
   await tick();
   const frame = deltas(m.h)[0] as RecordedFrame;
   expect(frame.kind).toBe("delta");
-  expect(frame.version).toBe(1);
+  expect(frame.version).toBe(ack.version! + 1); // the first change after the sub-ack
   expect(frame.order).toEqual(["a", "b"]);
   expect(frame.upserts).toEqual([["b", { id: "b", n: 2 }]]);
   expect(frame.deletes).toEqual([]);

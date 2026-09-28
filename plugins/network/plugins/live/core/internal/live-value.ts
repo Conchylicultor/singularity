@@ -18,10 +18,26 @@ import type { LivePreload } from "./live-collection";
 // is `pending` until the first authoritative value lands — or settled on its
 // first render when the boot snapshot preloaded it.
 
-/** The params object a value's declared param names derive: every name → a string. */
-export type LiveValueParams<N extends readonly string[]> = {
-  [K in N[number]]: string;
-};
+/** A declared param name without its optional marker: `"scopeId?"` → `"scopeId"`. */
+type RequiredParamName<N extends string> = N extends `${string}?` ? never : N;
+type OptionalParamName<N extends string> = N extends `${infer B}?` ? B : never;
+
+/**
+ * The params object a value's declared param names derive: every name → a
+ * string, and a name declared with a trailing `?` (`"scopeId?"`) → an optional
+ * one. An optional param is present iff it is a non-empty string: the
+ * substrate drops an `undefined` or `""` one wherever params enter it
+ * (`canonicalParams`), so `{ path }` and `{ path, scopeId: undefined }` name
+ * one tuple.
+ */
+export type LiveValueParams<N extends readonly string[]> = Simplify<
+  { [R in RequiredParamName<N[number]>]: string } & {
+    [O in OptionalParamName<N[number]>]?: string;
+  }
+>;
+
+/** One object type out of an intersection (keeps each key's `?`). */
+type Simplify<T> = { [K in keyof T]: T[K] };
 
 /**
  * Which process serves a value: a worktree backend (the default), or the
@@ -53,7 +69,11 @@ export type LiveValue<
 > &
   OriginField<O> & {
     live: "value";
-    /** The declared param names — `P`'s keys. Empty for a param-less value. */
+    /**
+     * The declared param names — `P`'s keys, without the optional marker.
+     * Empty for a param-less value. The optional ones are also in
+     * `optionalParams`.
+     */
     params: readonly (keyof P & string)[];
     /** Absent ⇒ loaded on first mount (the declaration's `"none"`). */
     preload?: ResourcePreload;
@@ -101,13 +121,15 @@ export interface LiveCentralValueSpec<T> {
 }
 
 /**
- * A parameterized value. `preload` is `never`: a preloaded value needs a default
- * tuple the server can load before any tab names one, and only a param-less
- * value has one.
+ * A parameterized value, not preloaded (see {@link LivePreloadedParamValueSpec}
+ * for one that is).
  */
 export interface LiveParamValueSpec<T, N extends readonly string[]> {
   schema: ZodParser<T>;
-  /** The param names — a const tuple; derives `P` (each name → a string). */
+  /**
+   * The param names — a const tuple; derives `P` (each name → a string; a name
+   * ending in `?` → an optional one, see {@link LiveValueParams}).
+   */
   params: N;
   preload?: never;
   /** Default `"push"` (see {@link LiveValueLoad}). */
@@ -115,6 +137,37 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: "central";
 }
+
+/**
+ * A parameterized value preloaded at boot. It has no default tuple, so the
+ * SERVER names the tuples to hydrate: its `serveValue` must pass
+ * `preloadParams` (a tsc error otherwise — the returned value's `preload` is
+ * required, which is what `serveValue` keys the requirement on). The boot
+ * snapshot loads each enumerated tuple and the client hydrates it before first
+ * paint; `"boot-and-keep"` keeps every tuple of the key resident. Never
+ * L2-persisted (L2 rows are one param-less tuple per key). A worktree value only.
+ */
+export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
+  schema: ZodParser<T>;
+  /** As on {@link LiveParamValueSpec}. */
+  params: N;
+  preload: ResourcePreload;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
+  origin?: undefined;
+}
+
+/**
+ * A PARAMETERIZED preloaded value (`liveValue` with `params` and `preload`). It
+ * has no default tuple, so `preloadsParams` brands it: its `serveValue` must
+ * enumerate the tuples to hydrate (`preloadParams` — a tsc error without it,
+ * and a throw at serve time for an untyped caller). The brand is a real field,
+ * read by that throw.
+ */
+export type LivePreloadedParamValue<
+  T,
+  P extends Record<string, string>,
+> = LiveValue<T, P> & { preload: ResourcePreload; preloadsParams: true };
 
 /**
  * Declare a live value.
@@ -126,8 +179,13 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
  * });
  * export const taskDetail = liveValue("task-detail", {
  *   schema: TaskDetailSchema,
- *   params: ["id"],                  // → P = { id: string }; no preload
+ *   params: ["id"],                  // → P = { id: string }
  *   load: "on-demand",               // "push" (default) | "on-demand"
+ * });
+ * export const configValues = liveValue("config-v2.values", {
+ *   schema: ConfigValuesSchema,
+ *   params: ["path", "scopeId?"],    // → P = { path: string; scopeId?: string }
+ *   preload: "boot-and-keep",        // the served half enumerates the tuples
  * });
  * ```
  *
@@ -150,6 +208,10 @@ export function liveValue<T>(
 ): LiveValue<T, Record<string, never>>;
 export function liveValue<T, const N extends readonly [string, ...string[]]>(
   key: string,
+  spec: LivePreloadedParamValueSpec<T, N>,
+): LivePreloadedParamValue<T, LiveValueParams<N>>;
+export function liveValue<T, const N extends readonly [string, ...string[]]>(
+  key: string,
   spec: LiveParamValueSpec<T, N> & { origin: "central" },
 ): LiveValue<T, LiveValueParams<N>, "central">;
 export function liveValue<T, const N extends readonly [string, ...string[]]>(
@@ -161,18 +223,19 @@ export function liveValue<T>(
   spec:
     | LiveValueSpec<T>
     | LiveCentralValueSpec<T>
-    | LiveParamValueSpec<T, readonly string[]>,
+    | LiveParamValueSpec<T, readonly string[]>
+    | LivePreloadedParamValueSpec<T, readonly string[]>,
 ): LiveValue<T, Record<string, string>, LiveValueOrigin> {
-  const params = spec.params ?? [];
+  const { params, optionalParams } = parseParamNames(key, spec.params ?? []);
   const preload =
     spec.preload === undefined || spec.preload === "none"
       ? undefined
       : spec.preload;
-  if (preload !== undefined && params.length > 0) {
-    // Unreachable from typed code (`preload` is `never` beside `params`).
+  if (preload !== undefined && spec.origin === "central") {
+    // Unreachable from typed code (`preload` is `never` on a central value).
     throw new Error(
-      `liveValue("${key}"): a parameterized value cannot be preloaded — the ` +
-        `server has no default tuple to load before a tab names one.`,
+      `liveValue("${key}"): a central value cannot be preloaded — the boot ` +
+        `snapshot is a worktree backend's read.`,
     );
   }
   const value: LiveValue<T, Record<string, string>, LiveValueOrigin> = {
@@ -180,10 +243,46 @@ export function liveValue<T>(
     schema: spec.schema,
     live: "value",
     params,
+    ...(optionalParams.length > 0 ? { optionalParams } : {}),
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
-    ...(preload !== undefined ? { preload, defaultParams: {} } : {}),
+    // A param-less preload has ONE tuple, `{}` — the one `useLive(value)`
+    // reads. A param'd one has none: its server half enumerates them.
+    ...(preload !== undefined
+      ? {
+          preload,
+          ...(params.length === 0
+            ? { defaultParams: {} }
+            : { preloadsParams: true as const }),
+        }
+      : {}),
     ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
+}
+
+/**
+ * Split declared param names into the bare names and the optional ones (a
+ * trailing `?`). Throws on a name tsc cannot reject: empty, a `?` anywhere but
+ * the end, or a duplicate.
+ */
+function parseParamNames(
+  key: string,
+  declared: readonly string[],
+): { params: string[]; optionalParams: string[] } {
+  const params: string[] = [];
+  const optionalParams: string[] = [];
+  for (const raw of declared) {
+    const optional = raw.endsWith("?");
+    const name = optional ? raw.slice(0, -1) : raw;
+    if (name === "" || name.includes("?") || params.includes(name)) {
+      throw new Error(
+        `liveValue("${key}"): bad param name "${raw}" — each is a non-empty, ` +
+          `unique name, optionally ending in one "?".`,
+      );
+    }
+    params.push(name);
+    if (optional) optionalParams.push(name);
+  }
+  return { params, optionalParams };
 }

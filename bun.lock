@@ -3445,6 +3445,10 @@
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/canonical-params": {
+      "name": "@singularity/plugin-packages-canonical-params",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/flock": {
       "name": "@singularity/plugin-packages-flock",
       "version": "0.0.1",
@@ -7584,6 +7588,8 @@
     "@singularity/plugin-network-live-filter": ["@singularity/plugin-network-live-filter@workspace:plugins/network/plugins/live/plugins/filter"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-canonical-params": ["@singularity/plugin-packages-canonical-params@workspace:plugins/packages/plugins/canonical-params"],
 
     "@singularity/plugin-packages-flock": ["@singularity/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
 

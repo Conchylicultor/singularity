@@ -4,9 +4,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { configV2Resource, setConfigField } from "@plugins/config_v2/core";
+import { configValues, setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -41,13 +40,22 @@ export function AppleSetupPane() {
 
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
-  const storePath = reg?.storePath ?? "";
-  const metaResult = useLive(configSecretMeta, { path: storePath });
-  const cfgResult = useResource(configV2Resource, { path: storePath });
+  // The config is registered by apple-signing itself, so a missing
+  // registration is a wiring bug — never "still loading". Both reads skip
+  // (nothing subscribed), then the render throws.
+  const path = reg ? { path: reg.storePath } : null;
+  const metaResult = useLive(configSecretMeta, path);
+  const cfgResult = useLive(configValues, path);
+  if (!reg) {
+    throw new Error(
+      `[apple-signing setup] the "apple-signing" config has no web registration.`,
+    );
+  }
+  const storePath = reg.storePath;
 
   if (metaResult.pending || cfgResult.pending) return <Loading />;
   const secretMeta = metaResult.data;
-  const cfg = (cfgResult.data ?? {}) as {
+  const cfg = cfgResult.data as {
     signingIdentity?: string;
     ascKeyId?: string;
     ascIssuerId?: string;
@@ -94,7 +102,7 @@ export function AppleSetupPane() {
   }
 
   async function handleSaveManualIdentity() {
-    if (!storePath || !manualIdentity) return;
+    if (!manualIdentity) return;
     await fetchEndpoint(
       setConfigField,
       {},
@@ -110,7 +118,6 @@ export function AppleSetupPane() {
   }
 
   async function handleSaveApiKey() {
-    if (!storePath) return;
     setSavingKey(true);
     try {
       if (p8Pem)

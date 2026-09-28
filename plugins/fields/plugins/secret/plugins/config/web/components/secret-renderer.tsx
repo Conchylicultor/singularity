@@ -36,23 +36,28 @@ const SecretRenderer = defineFieldShape({
     const [editing, setEditing] = useState(false);
     const { local, setLocal, focus } = useLocalValue(value);
 
+    // Outside a config field (an event source's config form renders field
+    // shapes with no ConfigFieldContext) there is no stored config secret to
+    // describe: nothing is read, and the field is a plain secret input.
     const metaResult = useLive(
       configSecretMeta,
-      ctx ? { path: ctx.storePath } : { path: "" },
+      ctx ? { path: ctx.storePath } : null,
     );
 
-    // Not-known-yet is a state to render, never a value to stand in for: a
-    // pending read reported as `isSet: false` would show the password input for
-    // a secret that IS configured, then swap under the user.
-    if (metaResult.pending) {
-      return {
-        kind: "value",
-        fit: "field",
-        control: <Loading variant="text" />,
-      };
+    let isSet = false;
+    if (ctx !== null) {
+      // Not-known-yet is a state to render, never a value to stand in for: a
+      // pending read reported as `isSet: false` would show the password input
+      // for a secret that IS configured, then swap under the user.
+      if (metaResult.pending) {
+        return {
+          kind: "value",
+          fit: "field",
+          control: <Loading variant="text" />,
+        };
+      }
+      isSet = metaResult.data[ctx.fieldKey]?.set ?? false;
     }
-
-    const isSet = metaResult.data[ctx?.fieldKey ?? ""]?.set ?? false;
     if (isSet && !editing) {
       return {
         kind: "value",

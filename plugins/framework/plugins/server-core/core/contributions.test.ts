@@ -35,6 +35,45 @@ describe("ServerContributionToken.from", () => {
   });
 });
 
+describe("a projected token", () => {
+  // The contributor passes more than the kind keeps; every read — before and
+  // after collection — returns the projected payload, and none is missing.
+  const Projected = defineServerContribution<
+    { name: string },
+    { name: string; loader: () => void }
+  >("test.projected", {
+    project: (input) => ({ name: input.name }),
+  });
+  const plugins = [
+    {
+      id: "p",
+      contributions: [Projected({ name: "x", loader: () => undefined })],
+    },
+  ];
+
+  const projected = (cs: readonly object[] | undefined) =>
+    cs?.map((c) => ({
+      name: (c as { name: string }).name,
+      hasLoader: "loader" in c,
+    }));
+
+  test("from() returns the projected payload", () => {
+    expect(projected(Projected.from(plugins))).toEqual([
+      { name: "x", hasLoader: false },
+    ]);
+  });
+
+  test("getContributions and getContributionsIfCollected return it too", () => {
+    collectContributions(plugins);
+    expect(projected(Projected.getContributions())).toEqual([
+      { name: "x", hasLoader: false },
+    ]);
+    expect(projected(Projected.getContributionsIfCollected())).toEqual([
+      { name: "x", hasLoader: false },
+    ]);
+  });
+});
+
 describe("after collectContributions", () => {
   test("getContributions and getContributionsIfCollected agree; an absent kind is []", () => {
     collectContributions([{ id: "p", contributions: [Alpha({ name: "a" })] }]);

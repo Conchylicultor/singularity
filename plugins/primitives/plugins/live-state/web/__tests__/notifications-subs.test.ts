@@ -191,6 +191,44 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(qc.getQueryData(["rk"])).toEqual([{ id: "a", n: 1 }]); // healed
   });
 
+  test("a placeholder is no base: a scoped delta before this tab's sub-ack → forced resub, never a false empty list", async () => {
+    const { client, socket, qc } = await setup();
+    client.observe("rk", {}, undefined, keyedSchema, keyOf);
+    // A descriptor's placeholder (the tree's `[]`), seeded at epoch 0 exactly as
+    // `useResource`'s `initialData` is: defined, never server-vouched.
+    qc.setQueryData(["rk"], [], { updatedAt: 0 });
+    const before = subFrames(socket, "rk").length;
+
+    // Another tab's subscription on the shared socket drew a SCOPED delta (no
+    // `order`) for this tuple before this tab's own sub-ack landed.
+    socket.serverSend({
+      kind: "delta",
+      key: "rk",
+      params: {},
+      upserts: [["a", { id: "a", n: 2 }]],
+      deletes: [],
+      version: 3,
+    });
+    expect(qc.getQueryState(["rk"])?.dataUpdatedAt).toBe(0); // not settled on []
+    expect(subFrames(socket, "rk")).toHaveLength(before + 1); // forced full resub
+
+    // The recovery sub-ack applies (baselines reset), whatever this delta's version.
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "rk",
+      params: {},
+      value: [
+        { id: "a", n: 2 },
+        { id: "b", n: 1 },
+      ],
+      version: 3,
+    });
+    expect(qc.getQueryData(["rk"])).toEqual([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
+  });
+
   test("delta-drift → forced resub: an order id resolvable from neither upserts nor base ⇒ cache unchanged, etag cleared, resub, recovery applies (BUG A)", async () => {
     const { client, socket, qc } = await setup();
     client.observe("rk", {}, undefined, keyedSchema, keyOf);
@@ -408,13 +446,15 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   });
 
   // sub-error handling (Fix D): a sub-error names the (key, params) it failed
-  // for, so the client drives the HTTP-fallback refetch via invalidateQueries —
-  // its outcome sets q.error / heals — instead of absorbing the frame and
-  // wedging the resource pending forever. Gated on a live local sub, like every
-  // other broadcast frame.
-  test("sub-error with params for a held sub → invalidateQueries for exactly that query key", async () => {
+  // for, so the client runs the HTTP fallback read on exactly that query — its
+  // outcome sets q.error / heals — instead of absorbing the frame and wedging
+  // the resource pending forever. A direct fetch (`prefetchQuery`), not
+  // `invalidateQueries`, which skips a disabled (placeholder-less, valueless)
+  // query — pinned end-to-end in notifications-http-fetch.test.ts. Gated on a
+  // live local sub, like every other broadcast frame.
+  test("sub-error with params for a held sub → fetches exactly that query key", async () => {
     const { client, socket, qc } = await setup();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    const fetchQuery = vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
     client.observe("k", { id: "c1" }, undefined, pushSchema);
 
     socket.serverSend({
@@ -423,15 +463,16 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       params: { id: "c1" },
       reason: "loader-failed",
     });
-    expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate.mock.calls[0]![0]).toEqual({
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+    expect(fetchQuery.mock.calls[0]![0]).toMatchObject({
       queryKey: ["k", { id: "c1" }],
+      staleTime: 0,
     });
   });
 
-  test("sub-error for a non-held key → dropped, no invalidate (broadcast-gate pin)", async () => {
+  test("sub-error for a non-held key → dropped, no fetch (broadcast-gate pin)", async () => {
     const { socket, qc } = await setup();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    const fetchQuery = vi.spyOn(qc, "prefetchQuery");
     // The shared socket broadcasts every frame to every tab; a tab that never
     // observed the key must not act on its sub-error.
     socket.serverSend({
@@ -440,12 +481,12 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       params: {},
       reason: "unknown-key",
     });
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(fetchQuery).not.toHaveBeenCalled();
   });
 
-  test("legacy params-less sub-error frame → dropped safely (no throw, no invalidate)", async () => {
+  test("legacy params-less sub-error frame → dropped safely (no throw, no fetch)", async () => {
     const { client, socket, qc } = await setup();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    const fetchQuery = vi.spyOn(qc, "prefetchQuery");
     client.observe("k", { id: "c1" }, undefined, pushSchema);
     // A pre-upgrade server omits `params`; the client computes paramsKey({}) which
     // cannot match the non-empty-params sub → safe drop, never a throw.
@@ -456,7 +497,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
         reason: "legacy",
       } as unknown as Record<string, unknown>),
     ).not.toThrow();
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(fetchQuery).not.toHaveBeenCalled();
   });
 
   // Commit-watermark adoption (Rule B′ client half). The registry is

@@ -334,8 +334,10 @@ export function compileValue<
 /**
  * `recomputeOn` → `dependsOn`. A bare upstream recomputes every subscribed
  * tuple — except on a param-less value, whose one tuple `{}` is recomputed
- * whether or not a tab holds it right now: a recompute is also what advances
- * its version, and a later subscriber must not be told its old copy is current.
+ * whether or not a tab holds it right now: an L2-persisted value, or one a
+ * downstream maps, must follow its upstream with no subscriber. (A tab's old
+ * copy needs no recompute to be refused: the runtime opens every subscription
+ * span with a fresh version.)
  */
 function compileRecomputeOn<P extends Record<string, string>>(
   value: { key: string; params: readonly string[] },

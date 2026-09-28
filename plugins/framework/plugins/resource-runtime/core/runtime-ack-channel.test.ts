@@ -318,6 +318,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     const p = makePoint();
     p.table.set("a", 1);
     await p.h.subscribe("pt", { ids: "a" }, { acks: true });
+    const base = p.h.frames.find((f) => f.kind === "sub-ack")!.version!;
 
     // A change entirely OUTSIDE the tuple's id set: value untouched, ack ships.
     p.table.set("z", 9);
@@ -329,11 +330,12 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     expect((ack[0] as { ackTx?: string[] }).ackTx).toEqual(["1100"]);
     expect(ack[0]!.params).toEqual({ ids: "a" });
 
-    // The ack-only cycle bumped NO version: the first real change ships at 1.
+    // The ack-only cycle bumped NO version: the first real change ships at the
+    // sub-ack's version + 1.
     p.table.set("a", 2);
     p.feed("U", ["a"], "1101");
     await tick();
-    expect(deltas(p.h, "pt").at(-1)!.version).toBe(1);
+    expect(deltas(p.h, "pt").at(-1)!.version).toBe(base + 1);
 
     // Nobody asked: the empty intersection stays a total no-op.
     const q = makePoint();
@@ -383,6 +385,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     table.set("a", 1);
     table.set("b", 2);
     await h.subscribe("win", {}, { acks: true }); // window [a, b]
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
 
     // Entrant sorting PAST the tail: net-zero — no frame, but the ack ships.
     table.set("z", 9);
@@ -393,11 +396,12 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       (acks(h, "win").at(-1) as { ackTx?: string[] } | undefined)?.ackTx,
     ).toEqual(["1200"]);
 
-    // No version was consumed: the first real change ships at version 1.
+    // No version was consumed: the first real change ships at the sub-ack's
+    // version + 1.
     table.set("a", 0);
     feed("U", ["a"], "1201");
     await tick();
-    expect(deltas(h, "win").at(-1)!.version).toBe(1);
+    expect(deltas(h, "win").at(-1)!.version).toBe(base + 1);
   });
 
   test("an ack frame reaches only subscribers of the tuple; zero subscribers ⇒ nothing", async () => {

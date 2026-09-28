@@ -9,15 +9,10 @@ import {
   useEndpoint,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import {
-  useCombinedResources,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import {
-  configV2Resource,
-  removeDescriptorScope,
-} from "@plugins/config_v2/core";
+import { configValues, removeDescriptorScope } from "@plugins/config_v2/core";
 import type {
   ConfigV2ConflictEntry,
   ConfigV2ConflictLocations,
@@ -137,9 +132,9 @@ function ConfigDetailInner({
   const conflictLocationsOf = useConflictLocationsOf();
   const locations = conflictLocationsOf(registration.storePath);
 
-  const valuesRes = useResource(configV2Resource, {
+  const valuesRes = useLive(configValues, {
     path: registration.storePath,
-    ...(scopeId ? { scopeId } : {}),
+    scopeId,
   });
   const conflictRes = useConflict(registration.storePath, scopeId);
   const tiersRes = useTiers(registration.storePath, scopeId);

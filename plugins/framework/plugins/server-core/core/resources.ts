@@ -89,34 +89,47 @@ export type RecomputeIntent = RtRecomputeIntent;
 // never by naming a specific resource. See research/2026-06-14-global-cold-load-instant-boot.md
 // and research/2026-09-25-global-live-values.md.
 //
-// Declare takes ONE arg — the resource — and builds its contribution payload
-// explicitly from the resource's own `key`/`mode`/`preload`. There is no opts
-// param, so a stale `Declare(r, { preload: "boot" })` is a compile error that
-// forces the flag onto the descriptor factory call. The underlying token still
-// owns the registry and the generic `getContributions()` read side.
+// Declare takes ONE arg — the resource — and its token projects the payload
+// explicitly from the resource's own `key`/`mode`/`preload` (a `Resource`
+// carries its loader too, which must not ride the contribution). There is no
+// opts param, so a stale `Declare(r, { preload: "boot" })` is a compile error
+// that forces the flag onto the descriptor factory call.
+//
+// `preloadTuples` is the one server-only preload field: a PARAMETERIZED
+// preloaded value has no default tuple, so its served half names AND loads the
+// tuples the boot snapshot ships (network/live's `serveValue`, which requires an
+// enumeration for such a value and builds this from it). Present ⇒ an
+// enumerated preload: the boot snapshot ships every tuple it returns, and L2
+// neither persists nor force-recomputes the key (its rows are one param-less
+// tuple per key). Each tuple settles on its own — a failed one is omitted and
+// reported, never the whole key.
 type ResourceDeclarePayload = {
   key: string;
   mode: ResourceMode;
   preload?: "boot" | "boot-and-keep";
+  preloadTuples?: () => Promise<
+    (
+      | { params: ResourceParams; ok: true; value: unknown }
+      | { params: ResourceParams; ok: false; error: unknown }
+    )[]
+  >;
 };
-
-const declareToken = defineServerContribution<ResourceDeclarePayload>(
-  "resource.declare",
-  { docLabel: (r) => r.key },
-);
-
-const declareResource = ((resource: ResourceDeclarePayload) =>
-  declareToken({
-    key: resource.key,
-    mode: resource.mode,
-    preload: resource.preload,
-  })) as typeof declareToken & {
-  (resource: ResourceDeclarePayload): ReturnType<typeof declareToken>;
-};
-declareResource.getContributions = declareToken.getContributions;
 
 export const Resource = {
-  Declare: declareResource,
+  Declare: defineServerContribution<
+    ResourceDeclarePayload,
+    ResourceDeclarePayload
+  >("resource.declare", {
+    docLabel: (r) => r.key,
+    project: (resource) => ({
+      key: resource.key,
+      mode: resource.mode,
+      preload: resource.preload,
+      ...(resource.preloadTuples !== undefined
+        ? { preloadTuples: resource.preloadTuples }
+        : {}),
+    }),
+  }),
 };
 
 // Maps a captured read-set relation to its identity base table for the `_debug`

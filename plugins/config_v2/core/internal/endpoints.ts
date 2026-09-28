@@ -1,28 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { configV2ValuesSchema } from "./resource";
-
-// One-shot snapshot fetched at boot to hydrate the client cache before first
-// paint, so config reads never flash defaults and never suspend.
-//
-// `global` is every descriptor's resolved GLOBAL (no-scope) config, keyed by
-// storePath. `scopes` is every USER-LAYER scope with its own config (a committed
-// git scope, a runtime fork, OR a plain scoped write) — the same predicate the
-// live `configV2ScopesResource` uses, so a warm reload of any app with its own
-// theme paints scoped on the first frame. The config_v2 boot task hydrates both.
-export const configSnapshot = defineEndpoint({
-  route: "GET /api/config-v2/snapshot",
-  response: z.object({
-    global: z.record(configV2ValuesSchema),
-    scopes: z.array(
-      z.object({
-        scopeId: z.string(),
-        path: z.string(),
-        values: configV2ValuesSchema,
-      }),
-    ),
-  }),
-});
 
 export const setConfigField = defineEndpoint({
   route: "POST /api/config-v2/set-field",

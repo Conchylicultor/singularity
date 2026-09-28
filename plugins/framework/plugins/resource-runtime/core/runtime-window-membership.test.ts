@@ -22,8 +22,10 @@
  *     upsert / delete / entrant-append all per tuple; foreign ids ship nothing;
  *   - bounded entries are EXCLUDED from persistence even when `shouldPersist`
  *     says yes, and their snapshot evicts on N→0 (contrast: the alias persists);
- *   - the evicted-snapshot self-heal ships a FULL update built from the entry's
- *     own (bounded) loader;
+ *   - a resub after N→0 re-seeds the evicted snapshot from a full (bounded)
+ *     sub-ack, so the next change is incremental again;
+ *   - a subscribed tuple with no snapshot (its sub-ack load failed) self-heals
+ *     with a FULL update built from the entry's own (bounded) loader;
  *   - registration guards: membership XOR scopedMembership, keyed + identityTable
  *     required.
  *
@@ -64,6 +66,7 @@ function windowHarness(
   const { table, members } = makeTable();
   const loaderCalls: string[] = [];
   let windowIdsOfCalls = 0;
+  let failFullLoads = false;
   const h = createHarness({ readSet: () => ["row_table"], ...runtimeOpts });
   h.runtime.defineResource(
     { key: "win", schema: rowsSchema, keyed: { keyOf } },
@@ -81,6 +84,7 @@ function windowHarness(
       loader: (_p, c) => {
         if (c === undefined) {
           loaderCalls.push("FULL");
+          if (failFullLoads) throw new Error("window read failed");
           return members().slice(0, limit);
         }
         loaderCalls.push([...c.affectedIds].sort().join(","));
@@ -119,6 +123,10 @@ function windowHarness(
     members,
     loaderCalls,
     windowIdsOf: () => windowIdsOfCalls,
+    /** Make every FULL (window) load throw until switched back off. */
+    failFullLoads: (on: boolean) => {
+      failFullLoads = on;
+    },
     feed,
     insert,
     update,
@@ -163,6 +171,7 @@ describe("window membership — entrant", () => {
     w.table.set("a", { n: 1, where: true });
     w.table.set("b", { n: 2, where: true });
     await w.h.subscribe("win"); // window full: [a,b]
+    const base = w.h.frames.find((f) => f.kind === "sub-ack")!.version!;
     w.loaderCalls.length = 0;
 
     w.insert("z", 99); // beyond the tail — not a member of this window
@@ -174,14 +183,15 @@ describe("window membership — entrant", () => {
     expect(w.windowIdsOf()).toBe(1);
     expect(deltas(w.h)).toHaveLength(0);
 
-    // A subsequent REAL change is version 1 — the no-op left the counter at 0.
+    // A subsequent REAL change is the sub-ack's version + 1 — the no-op left the
+    // counter where the sub-ack found it.
     w.update("a", (c) => {
       c.n = 0;
     });
     await tick();
     const ds = deltas(w.h);
     expect(ds).toHaveLength(1);
-    expect(ds[0]!.version).toBe(1);
+    expect(ds[0]!.version).toBe(base + 1);
   });
 
   test("squeeze-out: an entrant displacing the tail drops it via order alone", async () => {
@@ -275,6 +285,7 @@ describe("window membership — leaver + tail backfill", () => {
     w.table.set("b", { n: 2, where: true });
     w.table.set("d", { n: 4, where: true }); // beyond the tail
     await w.h.subscribe("win"); // window [a,b]
+    const base = w.h.frames.find((f) => f.kind === "sub-ack")!.version!;
     w.loaderCalls.length = 0;
 
     w.del("d"); // a window is a prefix of the total order — d is outside it
@@ -288,7 +299,8 @@ describe("window membership — leaver + tail backfill", () => {
       c.n = 0;
     });
     await tick();
-    expect(deltas(w.h)[0]!.version).toBe(1); // no-op left the counter at 0
+    // The no-op left the counter where the sub-ack found it.
+    expect(deltas(w.h)[0]!.version).toBe(base + 1);
   });
 });
 
@@ -384,8 +396,8 @@ describe("window membership — persistence exclusion + eviction", () => {
   });
 });
 
-describe("window membership — evicted-snapshot self-heal is bounded", () => {
-  test("a short-circuited resub with an evicted snapshot self-heals via the entry's own bounded FULL loader", async () => {
+describe("window membership — a missing snapshot is rebuilt from the bounded loader", () => {
+  test("a resub after N→0 is a full sub-ack that re-seeds the evicted snapshot: the next change ships an incremental delta", async () => {
     const w = windowHarness(2);
     w.table.set("a", { n: 1, where: true });
     w.table.set("b", { n: 2, where: true });
@@ -397,9 +409,53 @@ describe("window membership — evicted-snapshot self-heal is bounded", () => {
       { id: "b", n: 2 },
     ]); // bounded sub-ack
 
-    await w.h.unsub("win"); // N→0 evicts the snapshot; the version survives
-    await w.h.subscribe("win", {}, { version: 0, epoch: ack.epoch });
-    expect(w.h.frames.filter((f) => f.kind === "up-to-date")).toHaveLength(1);
+    // N→0 evicts the snapshot. The resub echoes the version it held, but it
+    // opens a new tracking span: never `up-to-date`, always the full path —
+    // one bounded window read, whose value re-seeds the snapshot.
+    await w.h.unsub("win");
+    w.loaderCalls.length = 0;
+    await w.h.subscribe("win", {}, { version: ack.version, epoch: ack.epoch });
+    expect(w.h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
+    const acks = w.h.frames.filter((f) => f.kind === "sub-ack");
+    expect(acks).toHaveLength(2);
+    expect(acks[1]!.version).toBeGreaterThan(ack.version!);
+    expect(w.loaderCalls).toEqual(["FULL"]);
+    w.loaderCalls.length = 0;
+
+    w.update("a", (c) => {
+      c.n = 0;
+    });
+    await tick();
+
+    // The snapshot is back: a pure in-place change is one scoped refill and one
+    // upsert — never a FULL reload or an `update`.
+    expect(w.loaderCalls).toEqual(["a"]);
+    expect(w.h.frames.some((f) => f.kind === "update")).toBe(false);
+    const ds = deltas(w.h);
+    expect(ds).toHaveLength(1);
+    expect(ds[0]!.upserts).toEqual([["a", { id: "a", n: 0 }]]);
+    expect(ds[0]!.version).toBe(acks[1]!.version! + 1);
+
+    const cv = makeClientView(keyOf);
+    cv.applyAll(w.h.frames);
+    expect(cv.value).toEqual([
+      { id: "a", n: 0 },
+      { id: "b", n: 2 },
+    ]);
+    expect(cv.driftResubs).toBe(0);
+  });
+
+  test("a subscribed tuple whose sub-ack load failed (no snapshot) self-heals via the entry's own bounded FULL loader", async () => {
+    const w = windowHarness(2);
+    w.table.set("a", { n: 1, where: true });
+    w.table.set("b", { n: 2, where: true });
+    w.table.set("d", { n: 4, where: true });
+    // The sub registers, but its load throws: `sub-error`, and no snapshot is
+    // ever seeded for this still-subscribed tuple.
+    w.failFullLoads(true);
+    await w.h.subscribe("win");
+    expect(w.h.frames.map((f) => f.kind)).toEqual(["sub-error"]);
+    w.failFullLoads(false);
     w.loaderCalls.length = 0;
 
     w.update("a", (c) => {

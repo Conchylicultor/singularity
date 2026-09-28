@@ -4,8 +4,9 @@
  *
  * `research/2026-04-15-global-sse-lifecycle-mental-model-v3.md` §9 (H5) prescribes
  * "test by racing a `notify()` against a fresh `sub` in a unit test". A fresh
- * subscription reads its sub-ack version up front (a read never bumps —
- * `runtime.ts:1952`) and then parks on the loader; meanwhile a concurrent push
+ * subscription reads its sub-ack version up front — the fresh one its
+ * registration opened the tuple's tracking span with; the read itself never
+ * bumps (`serveSub`) — and then parks on the loader; meanwhile a concurrent push
  * bumps the version and ships a newer frame. The invariant the client leans on:
  * the stale sub-ack (older version) can NEVER overwrite the newer push, because
  * the WS version guard applies a frame iff `frame.version > entry.version`
@@ -65,13 +66,15 @@ describe("H5 — notify races a fresh sub", () => {
 
     // Fresh subscribe whose loader parks. Registration (refcount + sub entry) is
     // synchronous — before the loader await — so this socket IS a subscriber by
-    // the time the notify flushes, and the sub-ack version (0) is read up front.
+    // the time the notify flushes, and the sub-ack's version (the fresh one its
+    // tracking span opened with) is read up front.
     ctl.block();
     ctl.setValue("B");
     await h.subscribe("r"); // sub-ack parked on the blocked loader
     expect(h.frames).toHaveLength(0); // nothing sent yet
 
-    // Notify while parked: the flush bumps the version to 1 and starts its OWN
+    // Notify while parked: the flush bumps the version past the sub-ack's one
+    // and starts its OWN
     // load — the parked sub's flight began before this notify, so the drain
     // refuses it (freshness floor). Both loads park on the same block, so no
     // frame is sent until release. Pre-2026-08-08 the drain joined the sub's
@@ -87,14 +90,15 @@ describe("H5 — notify races a fresh sub", () => {
     ctl.release();
     await tick();
 
-    // Two frames: the push (update v1) sent BEFORE the stale sub-ack (v0) — the
-    // race. The sub-ack's version (0) is not strictly greater than the push's (1),
-    // so the client version-drops it.
+    // Two frames: the push (update at base + 1) sent BEFORE the stale sub-ack
+    // (at base, the version it read before parking) — the race. The sub-ack's
+    // version is not strictly greater than the push's, so the client
+    // version-drops it.
     const update = h.frames.find((f) => f.kind === "update")!;
     const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(update.version).toBe(1);
+    const base = subAck.version!;
+    expect(update.version).toBe(base + 1);
     expect(update.value).toBe("B");
-    expect(subAck.version).toBe(0);
     // Send order, not a wire invariant: `sendUpdate` broadcasts with no await
     // while `handleSub` yields a microtask after its flight, so the push wins in
     // this harness. It guards that no-await property (the reason `sendUpdate`
@@ -108,7 +112,7 @@ describe("H5 — notify races a fresh sub", () => {
     const cv = makeClientView();
     cv.applyAll(h.frames);
     expect(cv.value).toBe("B");
-    expect(cv.version).toBe(1); // monotonic — never regressed to the sub-ack's 0
+    expect(cv.version).toBe(base + 1); // monotonic — never regressed to the sub-ack's
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -122,7 +126,8 @@ describe("H5 — notify races a fresh sub", () => {
       loader: ctl.loader,
     });
 
-    await h.subscribe("r"); // sub-ack v0, value A (loader open)
+    await h.subscribe("r"); // sub-ack at the span's fresh version, value A
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
     ctl.setValue("B");
     r.notify(); // now a real change
     await tick();
@@ -130,10 +135,11 @@ describe("H5 — notify races a fresh sub", () => {
     const cv = makeClientView();
     cv.applyAll(h.frames);
     expect(cv.value).toBe("B");
-    expect(cv.version).toBe(1);
+    expect(cv.version).toBe(base + 1);
     expect(cv.driftResubs).toBe(0);
-    // sub-ack (v0) then update (v1) — versions strictly increasing in send order.
-    expect(h.frames.map((f) => f.version)).toEqual([0, 1]);
+    // sub-ack (base) then update (base + 1) — versions strictly increasing in
+    // send order.
+    expect(h.frames.map((f) => f.version)).toEqual([base, base + 1]);
   });
 
   test("H5c: keyed — a fresh sub races a FULL update, then a subsequent delta merges without drift", async () => {
@@ -207,11 +213,12 @@ describe("H5 — notify races a fresh sub", () => {
     expect(supersedes).toEqual(["rows"]);
     expect(fullLoads).toBe(2);
 
-    // First race: a FULL update (v1) before the stale sub-ack (v0).
-    const firstUpdate = h.frames.find((f) => f.kind === "update")!;
-    expect(firstUpdate.version).toBe(1);
+    // First race: a FULL update (base + 1) before the stale sub-ack (base, the
+    // version it read before parking).
     const staleAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(staleAck.version).toBe(0);
+    const base = staleAck.version!;
+    const firstUpdate = h.frames.find((f) => f.kind === "update")!;
+    expect(firstUpdate.version).toBe(base + 1);
 
     // A SUBSEQUENT scoped change ships a delta the client must merge onto the base
     // the sub-ack's re-seed left behind — at worst an older one, never a newer,
@@ -231,17 +238,17 @@ describe("H5 — notify races a fresh sub", () => {
 
     const deltas = h.pushesFor("rows").filter((f) => f.kind === "delta");
     expect(deltas).toHaveLength(1);
-    expect(deltas[0]!.version).toBe(2);
+    expect(deltas[0]!.version).toBe(base + 2);
 
     // The client, fed every frame, converges to server truth: a=3 (from the delta)
-    // and b=1, at version 2, with zero drift-resubs (the base was never missing).
+    // and b=1, at base + 2, with zero drift-resubs (the base was never missing).
     const cv = makeClientView(keyOf);
     cv.applyAll(h.frames);
     expect(cv.value).toEqual([
       { id: "a", n: 3 },
       { id: "b", n: 1 },
     ]);
-    expect(cv.version).toBe(2);
+    expect(cv.version).toBe(base + 2);
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -255,8 +262,10 @@ describe("H5 — notify races a fresh sub", () => {
       loader: ctl.loader,
     });
 
-    await h.subscribe("r", {}, { socket: 0 }); // A: sub-ack v0
-    // Block, notify → the flush parks on A's push load (version already bumped to 1).
+    await h.subscribe("r", {}, { socket: 0 }); // A: sub-ack at the span's version
+    const base = h.frames.find((f) => f.kind === "sub-ack")!.version!;
+    // Block, notify → the flush parks on A's push load (version already bumped
+    // to base + 1).
     ctl.block();
     ctl.setValue(9);
     r.notify();
@@ -267,20 +276,21 @@ describe("H5 — notify races a fresh sub", () => {
     ctl.release();
     await tick();
 
-    // A lost no frame: it still received exactly its push (update v1).
+    // A lost no frame: it still received exactly its push (update at base + 1).
     const aPushes = h.pushesFor("r", 0);
     expect(aPushes).toHaveLength(1);
     expect(aPushes[0]!.kind).toBe("update");
-    expect(aPushes[0]!.version).toBe(1);
+    expect(aPushes[0]!.version).toBe(base + 1);
 
-    // Both sockets' clients converge to the same server truth (value 9, v1).
+    // Both sockets' clients converge to the same server truth (value 9 at
+    // base + 1). B joined A's tracking span, so its sub opened no new one.
     const a = makeClientView();
     a.applyAll(h.framesFor(0));
     const b = makeClientView();
     b.applyAll(h.framesFor(1));
     expect(a.value).toBe(9);
-    expect(a.version).toBe(1);
+    expect(a.version).toBe(base + 1);
     expect(b.value).toBe(9);
-    expect(b.version).toBe(1); // B read the already-bumped version at its mid-flush sub
+    expect(b.version).toBe(base + 1); // B read the already-bumped version at its mid-flush sub
   });
 });

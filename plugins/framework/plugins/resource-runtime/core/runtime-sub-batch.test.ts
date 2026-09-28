@@ -35,18 +35,22 @@ describe("sub-batch — whole-set replay for one tab", () => {
       });
     }
 
-    // Prime a + b on the tab (learning the epoch); c stays never-subscribed.
+    // Prime a + b on the tab (learning the epoch and each sub-ack's version);
+    // c stays never-subscribed.
     await h.subscribeBatch([{ key: "a" }, { key: "b" }], { tabId: "t1" });
-    const epoch = h.frames.find((f) => f.kind === "sub-ack")!.epoch!;
-    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(2);
+    const primed = h.frames.filter((f) => f.kind === "sub-ack");
+    expect(primed).toHaveLength(2);
+    const epoch = primed[0]!.epoch!;
+    const versionOf = (key: string) =>
+      primed.find((f) => f.key === key)!.version!;
     h.frames.length = 0;
 
     // Replay: a + b echo their current version → batched up-to-date; c is new
     // (no version) → an individual full sub-ack.
     await h.subscribeBatch(
       [
-        { key: "a", version: 0 },
-        { key: "b", version: 0 },
+        { key: "a", version: versionOf("a") },
+        { key: "b", version: versionOf("b") },
         { key: "c" },
       ],
       { tabId: "t1", epoch },
@@ -56,7 +60,8 @@ describe("sub-batch — whole-set replay for one tab", () => {
     expect(batches).toHaveLength(1); // ONE frame for both current entries
     expect(batches[0]!.epoch).toBe(epoch);
     expect(batches[0]!.entries!.map((e) => e.key).sort()).toEqual(["a", "b"]);
-    for (const e of batches[0]!.entries!) expect(e.version).toBe(0);
+    for (const e of batches[0]!.entries!)
+      expect(e.version).toBe(versionOf(e.key));
 
     const acks = h.frames.filter((f) => f.kind === "sub-ack");
     expect(acks).toHaveLength(1);
@@ -82,22 +87,30 @@ describe("sub-batch — whole-set replay for one tab", () => {
     await h.subscribeBatch([{ key: "k1" }, { key: "k2" }], { tabId: "t1" });
     expect(first).toHaveBeenCalledTimes(2); // the genuine 0→1s
     expect(last).toHaveBeenCalledTimes(0);
-    const epoch = h.frames.find((f) => f.kind === "sub-ack")!.epoch!;
+    const acks = h.frames.filter((f) => f.kind === "sub-ack");
+    const epoch = acks[0]!.epoch!;
+    const versionOf = (key: string) =>
+      acks.find((f) => f.key === key)!.version!;
 
     // Identical replay: registration precedes reconciliation, so nothing ever
-    // dips to 0 — no hook churn, no keyed-snapshot eviction, no re-loads.
+    // dips to 0 — no hook churn, no keyed-snapshot eviction, no re-loads (both
+    // entries keep their tracking span, so their echoes short-circuit).
     await h.subscribeBatch(
       [
-        { key: "k1", version: 0 },
-        { key: "k2", version: 0 },
+        { key: "k1", version: versionOf("k1") },
+        { key: "k2", version: versionOf("k2") },
       ],
       { tabId: "t1", epoch },
     );
     expect(first).toHaveBeenCalledTimes(2); // unchanged
     expect(last).toHaveBeenCalledTimes(0); // never a 1→0→1 transit
+    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(2); // no re-loads
 
     // A replay that DROPS k2 releases it (the tab no longer wants it).
-    await h.subscribeBatch([{ key: "k1", version: 0 }], { tabId: "t1", epoch });
+    await h.subscribeBatch([{ key: "k1", version: versionOf("k1") }], {
+      tabId: "t1",
+      epoch,
+    });
     expect(last).toHaveBeenCalledTimes(1);
     expect(last.mock.calls[0]![0]).toEqual({});
     expect(first).toHaveBeenCalledTimes(2); // k1 stayed up the whole time

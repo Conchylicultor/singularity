@@ -163,9 +163,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // be decided by how far a background ingest job happens to have got. The
   // subscription is per attempt because the standing is a fact about this attempt
   // and nothing else.
-  const workResult = useLive(attemptWork, {
-    attemptId: conversation?.attemptId ?? "",
-  });
+  // Skipped (still pending) until the conversation — and with it the attempt
+  // id — has loaded; the gate below keeps the neutral "Exit" meanwhile.
+  const workResult = useLive(
+    attemptWork,
+    conversation?.attemptId ? { attemptId: conversation.attemptId } : null,
+  );
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
   // render — the value is only consumed below after the `!conversation` guard.

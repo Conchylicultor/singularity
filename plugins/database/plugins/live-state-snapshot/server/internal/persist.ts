@@ -10,11 +10,15 @@ import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-vie
 import { removeReadSetTable } from "@plugins/infra/plugins/runtime-profiler/core";
 import { emitReadSetShrink } from "./read-set-shrink-hook";
 
-// The set of resource keys L2 persists: preloaded AND DB-backed. `preload` is read
-// GENERICALLY from the shared Resource.Declare collection (never by naming a
-// resource — collection-consumer separation), exactly like boot-snapshot's
-// `preloadedKeys`. The `!externalSource` half is enforced in the runtime's
-// `drainEntry` (it has the live `entry.externalSource`); the injected
+// The set of resource keys L2 persists: preloaded (with ONE default tuple) AND
+// DB-backed. `preload` is read GENERICALLY from the shared Resource.Declare
+// collection (never by naming a resource — collection-consumer separation), like
+// boot-snapshot's `preloadedKeys`. An ENUMERATED preload (a parameterized value
+// whose Declare carries `preloadTuples`) is excluded: an L2 row is one
+// param-less tuple per key, so its N tuples cannot be persisted, and a boot
+// recompute at `{}` (below, for a key with no persisted read-set) would name a
+// tuple it does not have. The `!externalSource` half is enforced in the
+// runtime's `drainEntry` (it has the live `entry.externalSource`); the injected
 // `shouldPersist` only needs the preload membership test. The contribution set is
 // fixed at module load, so caching it once is correct.
 let preloadedSet: Set<string> | null = null;
@@ -22,7 +26,7 @@ export function preloadedKeys(): Set<string> {
   if (!preloadedSet) {
     preloadedSet = new Set(
       Resource.Declare.getContributions()
-        .filter((c) => c.preload !== undefined)
+        .filter((c) => c.preload !== undefined && c.preloadTuples === undefined)
         .map((c) => c.key),
     );
   }

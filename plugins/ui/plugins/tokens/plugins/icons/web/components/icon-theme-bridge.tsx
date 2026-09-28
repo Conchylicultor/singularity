@@ -64,7 +64,9 @@ export function IconThemeBridge() {
 function AppScope({ appId }: { appId: string }) {
   const scope = appThemeScope(appId);
   const ownsTheme = useScopeMembership(themeSelectionConfig, scope);
-  if (!ownsTheme) return null;
+  // While membership is unknown the scope publishes nothing, like a scope
+  // whose theme is still loading.
+  if (ownsTheme.pending || !ownsTheme.data) return null;
   return <SelectedScope themeScope={scope} publishAs={scope} />;
 }
 

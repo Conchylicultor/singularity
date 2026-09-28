@@ -38,9 +38,10 @@ surface asserts (which views/items exist, whether a mode is on): defaults are a 
 answer, so a consumer cannot tell "the user configured nothing" from "we don't know yet".
 Those reads use **`useConfigResult(myConfig)`**, which returns live-state's
 `{ pending: true } | { pending: false, data }` and makes the unknown window a state to
-render (`live-state/no-pending-data-collapse` lints the collapse). Both resources are
-`resident`, so the boot hydration is never evicted and `pending` after a successful boot is
-unreachable rather than merely rare.
+render (`live-state/no-pending-data-collapse` lints the collapse). Both live values it reads
+(`configValues`, `configScopes`) are `preload: "boot-and-keep"`: every document a first
+paint can read rides the boot snapshot and is never evicted, so `pending` after a
+successful boot is unreachable rather than merely rare.
 
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
 cache. `watchConfig(myConfig, cb)` notifies on changes.
@@ -97,16 +98,16 @@ A descriptor's config can be customized **per app** straight from version contro
 
 This is the base-override workflow (Layer 1) one path segment deeper. Any registered descriptor can be git-scoped — it does **not** need `scope: "app"` (that marker only governs the theme "Customize for app" fork-all-descriptors UX).
 
-**Reading a scoped value (consumer):** thread the app scope yourself — `config_v2` is app-agnostic. `useConfig(cfg, { scopeId: appId ? \`app:${appId}\` : undefined })` with `appId = useCurrentAppId()`. Committed scopes are pre-hydrated in the boot snapshot, so the scoped value paints on the first frame (no flash). On the server, `getConfig(cfg, "app:<id>")`.
+**Reading a scoped value (consumer):** thread the app scope yourself — `config_v2` is app-agnostic. `useConfig(cfg, { scopeId: appId ? \`app:${appId}\` : undefined })` with `appId = useCurrentAppId()`. Every scope with its own config is preloaded by the boot snapshot (with the scopes map that decides it), so the scoped value paints on the first frame (no flash). On the server, `getConfig(cfg, "app:<id>")`.
 
 **Scoped read/write are symmetric.** Both ends key off the **same** server predicate, `scopeHasOwnConfig(descriptor, scopeId)` (the scope's origin OR override exists), so they can never disagree:
 
-- **Read.** `useConfig` decides whether to read the scoped key purely from membership in the live `configV2ScopesResource` (`config-v2.scopes`, keyed by `{ path }`), recomputed from `scopeHasOwnConfig` on every scoped-file change — so a scope counts whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. While the list loads it falls back to the global value, never `descriptor.defaults`. `useScopeForked` remains a read hook for the theme "Customize for app" toggle but does **not** gate `useConfig`.
+- **Read.** `useConfig` decides whether to read the scoped document purely from membership in the live `configScopes` map (`config-v2.scopes`, param-less: every server-registered storePath → its scope ids), recomputed from `scopeHasOwnConfig` on every scoped-file change — so a scope counts whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. A non-member scope's read is skipped (`useLive(configValues, null)`) and the global document is used; a member's document not settled yet falls back to the global value, never `descriptor.defaults`. While the map itself is unknown a scoped read is `pending` (preloaded, so only after a failed boot). The same map lists every registered path, which is how `useConfigResult` throws on a web-only half-registration. `useScopeMembership` returns the membership as a `ResourceResult<boolean>` (the theme "Customize for app" toggle reads it) but does **not** gate `useConfig`.
 - **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope with **no own config yet** auto-snapshots the current base into that scope's origin (the same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. A write when no **base** origin exists at all still throws "run ./singularity build".
 
 **Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` recomputed each build, so its non-overridden fields track the git base as of the last build, not a runtime base edit. A runtime user fork layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global. The fork wins only while its hash matches: committing (or changing) the scope rewrites the scope's origin under a runtime fork, so the fork goes stale — the committed value takes effect and the user sees a conflict, exactly as for a base override.
 
-**Per-app scopes in settings:** the config detail pane is scope-aware — a **Base** tab plus one tab per customized app (live from `configV2ScopesResource`); selecting a tab re-keys every read and write to that `scopeId`. **`+` App** forks a new per-descriptor customization (`fork-descriptor-scope`); **Stop customizing** (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin.
+**Per-app scopes in settings:** the config detail pane is scope-aware — a **Base** tab plus one tab per customized app (live from `configScopes`); selecting a tab re-keys every read and write to that `scopeId`. **`+` App** forks a new per-descriptor customization (`fork-descriptor-scope`); **Stop customizing** (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin.
 
 ### Hash chain
 
@@ -231,7 +232,7 @@ or touches the body. Consumer: reorder's `reorderDirectiveDescriptor`
 
   These events are a **push-latency** mechanism, not a correctness one — an event can be missed (an out-of-band writer parcel doesn't observe, a dropped fsevent, a path no `CacheEntry` registered). **Never treat "no event" as "no change"**: derived state must be founded on the disk, per the fingerprint memo below.
 
-- **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from disk → replace `CacheEntry.values` → notify subscribers + values/conflicts/tiers). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the `/api/config-v2/snapshot` boot hydration — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
+- **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from disk → replace `CacheEntry.values` → notify subscribers + `notifyDocument`). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the boot snapshot's preload of it — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
 
 ### Agent-write ledger (config an automated session overwrote)
 
@@ -269,7 +270,11 @@ ledger.
 
 Three aggregate live resources summarize all ~180 descriptors at once. They are cheap because none of them re-reads every config file per load — but they arrive at that in two *different* ways, and the difference is load-bearing.
 
-Two of them are param-less live values (`network/live`): `configConflictLocations` and `configModifiedCounts`, declared with `liveValue` in `core/internal/resource.ts` and served with `serveValue(…, { source: "external" })` in `server/internal/resource.ts` — external because their truth is the files on disk, which no change feed sees. Their push paths call `configConflictLocationsServed.notify()` / `configModifiedCountsServed.notify()`. Neither is preloaded. While one is pending the attention dots render nothing, and the config nav renders its loading state until both have landed — its Modified / Conflict fields decide which rows a filtered view (the authored "Conflicts" view) keeps, so rows shown before then would claim "no conflicts". `config-v2.scopes`, `.values`, `.conflicts` and `.tiers` stay on the old descriptors until config's own migration (Resources page item 9: the optional `scopeId` param has no `liveValue` spelling yet).
+All of config's live resources are live values (`network/live`), declared with `liveValue` in `core/internal/resource.ts` and served with `serveValue(…, { source: "external" })` in `server/internal/resource.ts` — external because their truth is the files on disk, which no change feed sees:
+
+- `configValues` (`config-v2.values`, `{ path, scopeId? }` — `"scopeId?"` is an optional param; absent or `""` names the base document) and `configScopes` (`config-v2.scopes`, param-less) are `preload: "boot-and-keep"`. `configValuesServed`'s `preloadParams` names every registered `{ path }` plus every `{ path, scopeId }` in the SAME `scopeMembers` map `configScopes` is read from, so the scoped documents hydrated and the membership that selects them cannot disagree. This replaced config's own `Core.Boot` task, its `GET /api/config-v2/snapshot` endpoint and the `resident` flag (Resources page item 9).
+- `configConflict` (`config-v2.conflicts`) and `configTiers` (`config-v2.tiers`), `{ path, scopeId? }`, move in lock-step with the document. Every writer calls ONE fan-out, `notifyDocument(storePath, scopeId)` (`registry.ts`): it derives the tuples a change moved once (a scoped change its own tuple; a base change the base tuple plus every known scope with no config of its own) and notifies all three per-document values for each, then refreshes modified-counts and conflict-locations.
+- `configConflictLocations` and `configModifiedCounts` (param-less) push through `configConflictLocationsServed.notify()` / `configModifiedCountsServed.notify()`. Neither is preloaded. While one is pending the attention dots render nothing, and the config nav renders its loading state until both have landed — its Modified / Conflict fields decide which rows a filtered view (the authored "Conflicts" view) keeps, so rows shown before then would claim "no conflicts".
 
 **`config-v2.conflict-locations` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives, for every descriptor, WHICH scopes conflict (base and/or each on-disk app scope) through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge, its tooltip, the scope-tab dots and the detail banner can't disagree. It reports scope ids rather than a boolean on purpose: a badge that only knows "somewhere" sends the user to a detail pane that opens on a clean Base and shows nothing. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `statSync`s, not 3 read+parse+hash. `inode` is what makes it airtight — `jsoncConfigProxy.write` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
 
@@ -300,12 +305,10 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Web:
   - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
-  - Contributes: `Core.Boot`
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/live-state.hydrateResource`
-    - `primitives/live-state.useResource`
+    - `network/live.useLive`
+    - `primitives/live-state.mapResource`
   - Exports (types): `ConfigRegistration`
   - Exports (values):
     - `ConfigV2`
@@ -372,7 +375,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `fields/object/config.isObjectFieldDef`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `ConfigDescriptor`
     - `ConfigListVisitor`
@@ -405,24 +407,23 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `appScopeId`
     - `codeConfigProxy`
     - `computeHash`
+    - `configConflict`
     - `configConflictLocations`
     - `configFileOwner`
     - `configModifiedCounts`
-    - `configSnapshot`
+    - `configScopes`
+    - `configTiers`
     - `configV2ConflictEntrySchema`
     - `configV2ConflictLocationsSchema`
     - `configV2ConflictMapSchema`
-    - `configV2ConflictResource`
     - `configV2ConflictsSchema`
     - `configV2ModifiedCountsSchema`
-    - `configV2Resource`
     - `configV2ScopesMapSchema`
-    - `configV2ScopesResource`
     - `configV2ScopesSchema`
-    - `configV2TiersResource`
     - `configV2TiersSchema`
     - `configV2ValidationIssueSchema`
     - `configV2ValuesSchema`
+    - `configValues`
     - `defineConfig`
     - `deleteScope`
     - `effective`

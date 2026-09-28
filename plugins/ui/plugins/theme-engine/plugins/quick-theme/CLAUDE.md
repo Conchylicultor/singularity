@@ -59,6 +59,7 @@ itself stays a pane concern — this surface only follows the choice made there.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/action-bar.ActionBar`
     - `ui/icons.Icon`

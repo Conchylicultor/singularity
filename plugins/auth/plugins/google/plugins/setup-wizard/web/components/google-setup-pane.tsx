@@ -41,9 +41,20 @@ export function GoogleSetupPane() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "auth-google");
-  const storePath = reg?.storePath ?? "";
-  const metaResult = useLive(configSecretMeta, { path: storePath });
+  const metaResult = useLive(
+    configSecretMeta,
+    reg ? { path: reg.storePath } : null,
+  );
   const status = useAccountStatus("google");
+  // The config is registered by auth/google itself, so a missing registration
+  // is a wiring bug — never "still loading": the read above skipped, and the
+  // render throws.
+  if (!reg) {
+    throw new Error(
+      `[google setup] the "auth-google" config has no web registration.`,
+    );
+  }
+  const storePath = reg.storePath;
   if (metaResult.pending) return <Loading />;
   const secretMeta = metaResult.data;
   const credentialsSaved =
@@ -55,7 +66,6 @@ export function GoogleSetupPane() {
   }
 
   async function handleSaveCredentials() {
-    if (!storePath) return;
     setSaving(true);
     try {
       if (clientId)

@@ -1,20 +1,26 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 
 export const configV2ValuesSchema = z.record(z.unknown());
 export type ConfigV2Values = z.infer<typeof configV2ValuesSchema>;
 
-// `resident`: every descriptor's resolved document is hydrated once, before
-// first paint (the config boot task). Config surfaces mount at any point in the
-// session — a sidebar toggled open an hour in — so an evicted cache entry would
-// put `useConfig` back in `pending` there, and a config read has no honest
-// stand-in for "unknown" (its defaults are a legitimate value). Small documents,
-// read by everything: hold them for the tab's lifetime.
-export const configV2Resource = resourceDescriptor<
-  ConfigV2Values,
-  { path: string; scopeId?: string }
->("config-v2.values", configV2ValuesSchema, {}, { resident: true });
+// One descriptor's resolved document — `{ path }` is its base (global) document,
+// `{ path, scopeId }` a scope's own. `scopeId` is optional: absent (or `""`, the
+// server's base scope) names the base tuple, so every spelling of "base" is one
+// subscription.
+//
+// `"boot-and-keep"`: every document a first paint can read — each registered
+// `{ path }` plus each `{ path, scopeId }` with its own config — rides the boot
+// snapshot (the served half enumerates them) and is hydrated before first
+// paint, and every tuple stays resident: config surfaces mount at any point in
+// the session (a sidebar toggled open an hour in), and a config read has no
+// honest stand-in for "unknown" (its defaults are a legitimate value). Small
+// documents, read by everything.
+export const configValues = liveValue("config-v2.values", {
+  schema: configV2ValuesSchema,
+  params: ["path", "scopeId?"],
+  preload: "boot-and-keep",
+});
 
 // A single structured validation failure. `path` is the zod issue path as an
 // array (`["items", 6]`) so consumers can drill the offending value out of the
@@ -57,23 +63,26 @@ export type ConfigV2ConflictEntry = z.infer<typeof configV2ConflictEntrySchema>;
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 
-// Per-descriptor conflict, keyed by `{ path, scopeId? }` (mirrors
-// configV2TiersResource's key). Returns the single descriptor's conflict entry
-// for the selected scope, or null when it has no conflict. Keying by path means
-// a change to one descriptor recomputes only that descriptor — the detail page
-// subscribes to exactly the path it shows, never the whole ~180-descriptor map.
-export const configV2ConflictResource = resourceDescriptor<
-  ConfigV2ConflictEntry | null,
-  { path: string; scopeId?: string }
->("config-v2.conflicts", configV2ConflictEntrySchema.nullable(), null);
+// Per-descriptor conflict, keyed by `{ path, scopeId? }` (as `configValues`).
+// The single descriptor's conflict entry for the selected scope, or null when it
+// has no conflict. Keying by path means a change to one descriptor recomputes
+// only that descriptor — the detail page subscribes to exactly the path it
+// shows, never the whole ~180-descriptor map. Recomputed in lock-step with
+// `configValues` (its served half's `recomputeOn`).
+export const configConflict = liveValue("config-v2.conflicts", {
+  schema: configV2ConflictEntrySchema.nullable(),
+  params: ["path", "scopeId?"],
+});
 
 export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
 export type ConfigV2Tiers = z.infer<typeof configV2TiersSchema>;
 
-export const configV2TiersResource = resourceDescriptor<
-  ConfigV2Tiers,
-  { path: string; scopeId?: string }
->("config-v2.tiers", configV2TiersSchema, {});
+// Which layer supplied each field of one descriptor's document for one scope —
+// keyed and recomputed exactly like `configConflict`.
+export const configTiers = liveValue("config-v2.tiers", {
+  schema: configV2TiersSchema,
+  params: ["path", "scopeId?"],
+});
 
 // The list of scopeIds a single descriptor is customized for (has its own
 // config — a propagated git scope or a runtime fork). This is the per-descriptor
@@ -81,26 +90,26 @@ export const configV2TiersResource = resourceDescriptor<
 export const configV2ScopesSchema = z.array(z.string());
 export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
 
-// The whole membership map: storePath → scopeIds (paths with no scopes are
-// omitted). Keyed by `{}` (one global subscription, shared per tab) rather than
-// per-`{ path }`, so the many useConfig/useScopeMembership consumers (the theme
-// injector subscribes one per token descriptor) collapse to a single sub that
-// replays once per WS reconnect instead of paths × tabs. Consumers `select`
-// their own path's slice, so a change to one descriptor's scopes only re-renders
-// that descriptor's readers. Computed server-side from an in-memory map (no
-// per-load filesystem walk).
+// The whole membership map: EVERY server-registered storePath → the scopeIds it
+// has its own config for (`[]` for none). Two answers in one value:
+// - which paths the server registered (a path missing here is a web-only
+//   half-registration — `useConfigResult` throws on it);
+// - the scoped-vs-global decision every `useConfig` read keys off.
+// Param-less (one global subscription, shared per tab) rather than per-`{ path }`,
+// so the many useConfig/useScopeMembership consumers (the theme injector
+// subscribes one per token descriptor) collapse to a single sub. Computed
+// server-side from an in-memory map (no per-load filesystem walk). Changes only
+// when a scope is forked, unforked, or first written.
 export const configV2ScopesMapSchema = z.record(configV2ScopesSchema);
 export type ConfigV2ScopesMap = z.infer<typeof configV2ScopesMapSchema>;
 
-// Resident for the same reason as the values resource above: it is the
-// authoritative scoped-vs-global decision every `useConfig` read keys off, so
-// losing it re-introduces the global→scoped flash the boot hydration removed.
-export const configV2ScopesResource = resourceDescriptor<ConfigV2ScopesMap, {}>(
-  "config-v2.scopes",
-  configV2ScopesMapSchema,
-  {},
-  { resident: true },
-);
+// `"boot-and-keep"` for the same reason as `configValues`: hydrated before first
+// paint and never evicted, so a scoped reader paints its scope on the first
+// frame (no global→scoped flash) whenever it mounts.
+export const configScopes = liveValue("config-v2.scopes", {
+  schema: configV2ScopesMapSchema,
+  preload: "boot-and-keep",
+});
 
 // WHERE one descriptor conflicts: its base document, and/or the named app scopes
 // it is customized for. Never a bare boolean — a warning badge that cannot say
@@ -118,7 +127,7 @@ export type ConfigV2ConflictLocations = z.infer<
 // storePath → where it conflicts. Only conflicting paths are present, so
 // membership answers "does this row warn?" and the value answers "about what?".
 // Powers the nav-row warning badge, the scope-tab dots and the rail/sidebar
-// attention dots — distinct from configV2ConflictResource, which carries ONE
+// attention dots — distinct from configConflict, which carries ONE
 // descriptor's conflict entry (the full origin/override documents) for ONE scope.
 export const configV2ConflictMapSchema = z.record(
   configV2ConflictLocationsSchema,

@@ -11,6 +11,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type {
   LiveCollection,
   LiveValue,
@@ -258,8 +259,16 @@ function resolveForm<Data, Vars>(
 // the ids codec) builds an equal object each render.
 function useStableParams(
   params: Record<string, string> | undefined,
+  optional: readonly string[] | undefined,
 ): Record<string, string> | undefined {
-  const json = params === undefined ? null : JSON.stringify(params);
+  // Canonical (`canonicalParams`), so every key this hook derives from the
+  // params — its QueryCache subscription, send lane, tx-ack and watermark
+  // lookups — names the tuple `useResource` subscribes, however an absent
+  // optional param is spelled.
+  const json =
+    params === undefined
+      ? null
+      : JSON.stringify(canonicalParams(params, optional));
   return useMemo(
     () =>
       json === null ? undefined : (JSON.parse(json) as Record<string, string>),
@@ -272,7 +281,7 @@ function useOptimisticCore<Data, Vars>(
   rawParams: Record<string, string> | undefined,
   options: OptimisticOptions<Data, Vars>,
 ): OptimisticResult<Data, Vars> {
-  const params = useStableParams(rawParams);
+  const params = useStableParams(rawParams, resource.optionalParams);
   const { apply, mutate, onError, label, describeOp } = options;
   // Narrow on the object (not a destructure) so TS keeps the union correlation:
   // when `options.isConfirmedBy` is truthy, `options` is the paired arm and

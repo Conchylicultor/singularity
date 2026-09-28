@@ -1,11 +1,9 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   forkScope as forkScopeEndpoint,
   deleteScope as deleteScopeEndpoint,
   forkDescriptorScope as forkDescriptorScopeEndpoint,
   removeDescriptorScope as removeDescriptorScopeEndpoint,
-  configSnapshot as configSnapshotEndpoint,
 } from "../core";
 import {
   initConfigWatcher,
@@ -13,12 +11,12 @@ import {
 } from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
 import {
-  configV2ServerResource,
-  configV2ConflictServerResource,
-  configV2ScopesServerResource,
+  configValuesServed,
+  configConflictServed,
+  configScopesServed,
   configConflictLocationsServed,
   configModifiedCountsServed,
-  configV2TiersServerResource,
+  configTiersServed,
 } from "./internal/resource";
 import {
   handleForkScope,
@@ -26,7 +24,6 @@ import {
   handleForkDescriptorScope,
   handleRemoveDescriptorScope,
 } from "./internal/scope-handlers";
-import { handleConfigSnapshot } from "./internal/snapshot-handler";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
@@ -64,19 +61,18 @@ export type { FieldStorageProvider } from "./internal/field-storage-providers";
 export default {
   description: "Typed JSONC config handles for server plugins.",
   contributions: [
-    Resource.Declare(configV2ServerResource),
-    Resource.Declare(configV2ConflictServerResource),
-    Resource.Declare(configV2ScopesServerResource),
+    ...configValuesServed.declare,
+    ...configConflictServed.declare,
+    ...configScopesServed.declare,
     ...configConflictLocationsServed.declare,
     ...configModifiedCountsServed.declare,
-    Resource.Declare(configV2TiersServerResource),
+    ...configTiersServed.declare,
   ],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,
     [forkDescriptorScopeEndpoint.route]: handleForkDescriptorScope,
     [removeDescriptorScopeEndpoint.route]: handleRemoveDescriptorScope,
-    [configSnapshotEndpoint.route]: handleConfigSnapshot,
   },
   // Blocking: the config registry must be built before resources resolve, so
   // config-driven loaders don't briefly serve empty during a hot-swap.

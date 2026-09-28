@@ -1,12 +1,11 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
-  configV2ValuesSchema,
-  configV2ConflictEntrySchema,
-  configV2TiersSchema,
-  configV2ScopesMapSchema,
+  configValues,
+  configConflict,
+  configTiers,
+  configScopes,
   configConflictLocations,
   configModifiedCounts,
   hasConflict,
@@ -85,8 +84,8 @@ function whenRegistryReady<A, R>(
 }
 
 // Resolve a descriptor's effective values for a scope, with storage-provider
-// (secret) fields redacted to their defaults before leaving the server. Shared
-// by the per-key resource loader and the boot snapshot so redaction can't drift.
+// (secret) fields redacted to their defaults before leaving the server — the one
+// place a config document is made fit for the browser.
 function resolveRedactedConfig(
   descriptor: ConfigDescriptor,
   scopeId?: string,
@@ -104,13 +103,15 @@ function resolveRedactedConfig(
   return redacted;
 }
 
-export const configV2ServerResource = defineExternalResource<
-  ConfigV2Values,
-  { path: string; scopeId?: string }
->({
-  key: "config-v2.values",
-  mode: "push",
-  schema: configV2ValuesSchema,
+// One descriptor's document for one scope. Preloaded: the boot snapshot loads
+// every tuple a first paint can read — each registered `{ path }` plus each
+// `{ path, scopeId }` with its own config — named by `preloadParams` from the
+// SAME `scopeMembers` map the `config-v2.scopes` value is read from, so the
+// scopes a reader decides on and the scoped documents hydrated for it cannot
+// disagree. Pushed by the registry's one document fan-out (`notifyDocument`),
+// together with the conflicts and tiers of the same tuple.
+export const configValuesServed = serveValue(configValues, {
+  source: "external",
   loader: whenRegistryReady(({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) {
@@ -122,43 +123,18 @@ export const configV2ServerResource = defineExternalResource<
     }
     return resolveRedactedConfig(descriptor, scopeId);
   }),
-});
-
-export interface ConfigSnapshotResult {
-  global: Record<string, ConfigV2Values>;
-  scopes: { scopeId: string; path: string; values: ConfigV2Values }[];
-}
-
-// Boot-time snapshot the client hydrates its cache from so config reads render
-// real values on first paint (no flash, no Suspense).
-//
-// `global` is every descriptor's resolved GLOBAL (no-scope) config, keyed by
-// storePath. `scopes` is every USER-LAYER scope that has its own config (a
-// committed git scope, a runtime fork, OR a plain scoped write) — enumerated via
-// the same `discoverScopeIds` + `scopeHasOwnConfig` predicate the live
-// `configV2ScopesResource` uses, so the snapshot and the live resource can never
-// disagree. Hydrating all scope kinds uniformly means a warm reload of any app
-// with its own theme (committed or runtime-forked) paints scoped on frame 0.
-export async function getConfigSnapshot(): Promise<ConfigSnapshotResult> {
-  await registryReady;
-  const global: Record<string, ConfigV2Values> = {};
-  const scopes: { scopeId: string; path: string; values: ConfigV2Values }[] =
-    [];
-  for (const [path, descriptor] of descriptorByPath) {
-    global[path] = resolveRedactedConfig(descriptor);
-    const hierarchyPath = hierarchyByDescriptor.get(descriptor);
-    if (!hierarchyPath) continue;
-    for (const sid of discoverScopeIds(hierarchyPath)) {
-      if (!scopeHasOwnConfig(descriptor, sid)) continue;
-      scopes.push({
-        scopeId: sid,
-        path,
-        values: resolveRedactedConfig(descriptor, sid),
-      });
+  preloadParams: async () => {
+    await registryReady;
+    const tuples: { path: string; scopeId?: string }[] = [];
+    for (const path of descriptorByPath.keys()) {
+      tuples.push({ path });
+      for (const scopeId of scopeMembers.get(path) ?? []) {
+        tuples.push({ path, scopeId });
+      }
     }
-  }
-  return { global, scopes };
-}
+    return tuples;
+  },
+});
 
 // The three user-layer files a descriptor's conflict state is a function of, for
 // one scope. `scopeId` undefined → base config (paths land exactly where they do
@@ -345,13 +321,12 @@ function derivedDescriptorConflict(
 // The detail-pane banner. Routed through the same memo as the aggregate below so
 // the two surfaces share one code path AND one cache — they read the identical
 // value for a descriptor, not two independently-derived ones.
-export const configV2ConflictServerResource = defineExternalResource<
-  ConfigV2ConflictEntry | null,
-  { path: string; scopeId?: string }
->({
-  key: "config-v2.conflicts",
-  mode: "push",
-  schema: configV2ConflictEntrySchema.nullable(),
+//
+// Notified in lock-step with the document: the registry's one fan-out
+// (`notifyDocument`) notifies the values, conflicts and tiers of every tuple a
+// change moves, so no writer can move one and forget the others.
+export const configConflictServed = serveValue(configConflict, {
+  source: "external",
   loader: whenRegistryReady(({ path, scopeId }) =>
     derivedDescriptorConflict(path, scopeId),
   ),
@@ -359,14 +334,18 @@ export const configV2ConflictServerResource = defineExternalResource<
 
 // The whole scope-membership map, read from the in-memory cache (no filesystem
 // walk per load). Refreshed via refreshScopeMembers whenever a scoped file moves.
-export const configV2ScopesServerResource = defineExternalResource<
-  ConfigV2ScopesMap,
-  {}
->({
-  key: "config-v2.scopes",
-  mode: "push",
-  schema: configV2ScopesMapSchema,
-  loader: whenRegistryReady(() => Object.fromEntries(scopeMembers)),
+// EVERY registered path is present (`[]` when it has no scope of its own): the
+// map is also the client's list of server-registered paths.
+export const configScopesServed = serveValue(configScopes, {
+  source: "external",
+  loader: whenRegistryReady((): ConfigV2ScopesMap =>
+    Object.fromEntries(
+      [...descriptorByPath.keys()].map((path) => [
+        path,
+        scopeMembers.get(path) ?? [],
+      ]),
+    ),
+  ),
 });
 
 // Recompute one descriptor's scope membership from the AUTHORITATIVE disk
@@ -387,7 +366,7 @@ export function refreshScopeMembers(storePath: string): void {
     ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
   if (ids.length > 0) scopeMembers.set(storePath, ids);
   else scopeMembers.delete(storePath);
-  if (changed) configV2ScopesServerResource.notify({});
+  if (changed) configScopesServed.notify();
 }
 
 // WHERE a descriptor conflicts — its base document and/or the app scopes it is
@@ -668,13 +647,9 @@ function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
   return tiers;
 }
 
-export const configV2TiersServerResource = defineExternalResource<
-  ConfigV2Tiers,
-  { path: string; scopeId?: string }
->({
-  key: "config-v2.tiers",
-  mode: "push",
-  schema: configV2TiersSchema,
+// Notified in lock-step with the document, exactly like `configConflictServed`.
+export const configTiersServed = serveValue(configTiers, {
+  source: "external",
   loader: whenRegistryReady(({ path, scopeId }) => computeTiers(path, scopeId)),
 });
 

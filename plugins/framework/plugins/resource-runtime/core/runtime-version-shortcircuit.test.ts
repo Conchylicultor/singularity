@@ -6,17 +6,22 @@
  * is answered `up-to-date` from the in-memory per-pk version counter when the
  * epoch is THIS boot and the version matches — NO loader run, NO read-admission
  * slot. For a non-`revalidate` resource the version counter is its complete
- * change signal (every state change routes through flushNotifies, which bumps
- * it), so same-boot + same-version ⇒ the client's value is current. This is
- * what makes a chronic full-set sub replay cost ~0 instead of ~250 gated loader
- * runs per tab. See
+ * change signal within one tracking span (every state change of a subscribed
+ * tuple routes through flushNotifies, which bumps it), and every span opens with
+ * a fresh version — so same-boot + same-version ⇒ the client's value is current.
+ * This is what makes a chronic full-set sub replay cost ~0 instead of ~250 gated
+ * loader runs per tab. See
  * research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md
  * Findings 2–3.
  *
  * Restrictions pinned here: wrong/absent epoch → full path (versions are
  * per-boot in-memory state, incomparable across restarts); version mismatch →
  * full path; `revalidate` resources are exempt (their freshness authority is
- * the ETag signature, whose truth may live outside the notify stream).
+ * the ETag signature, whose truth may live outside the notify stream); a resub
+ * after the tuple went N→0 is never short-circuited (its span is new). Every
+ * short-circuit below is a resub on a socket that still holds the tuple. The
+ * span rule itself — each way an untracked gap used to be answered
+ * `up-to-date` — is pinned by `runtime-tracking-span.test.ts`.
  */
 
 import { test, expect, describe, mock } from "bun:test";
@@ -47,27 +52,29 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
       },
     });
 
-    // Fresh sub → full sub-ack carrying the boot epoch (the client learns it).
+    // Fresh sub → full sub-ack carrying the boot epoch (the client learns it)
+    // and `base`, the fresh version the tuple's tracking span opened with.
     await h.subscribe("r");
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(ack.version).toBe(0);
+    const base = ack.version!;
     expect(typeof ack.epoch).toBe("string");
     expect(loads).toBe(1);
 
-    // A notify advances the version to 1 (the client applies the update).
+    // A notify advances the version to base + 1 (the client applies the update).
     r.notify();
     await tick();
     const update = h.frames.find((f) => f.kind === "update")!;
-    expect(update.version).toBe(1);
+    expect(update.version).toBe(base + 1);
     expect(loads).toBe(2);
 
-    // Replayed sub echoing (epoch, version=1) → up-to-date from memory: no
-    // loader run, no read-admission slot (the gate's onWait never fired again),
-    // and the short-circuit hook fired.
+    // Replayed sub echoing (epoch, base + 1) on the socket that still holds the
+    // tuple (same span) → up-to-date from memory: no loader run, no
+    // read-admission slot (the gate's onWait never fired again), and the
+    // short-circuit hook fired.
     const gateWaitsBefore = onReadGateWait.mock.calls.length;
-    await h.subscribe("r", {}, { version: 1, epoch: ack.epoch });
+    await h.subscribe("r", {}, { version: base + 1, epoch: ack.epoch });
     const utd = h.frames.find((f) => f.kind === "up-to-date")!;
-    expect(utd.version).toBe(1);
+    expect(utd.version).toBe(base + 1);
     expect(utd.epoch).toBe(ack.epoch);
     expect("value" in utd).toBe(false);
     expect(loads).toBe(2); // loader did NOT run
@@ -90,13 +97,15 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     });
 
     await h.subscribe("r");
+    const { version } = h.frames.find((f) => f.kind === "sub-ack")!;
     expect(loads).toBe(1);
 
-    // Wrong epoch (a previous boot's): the version echo is incomparable.
-    await h.subscribe("r", {}, { version: 0, epoch: "some-older-boot" });
+    // Wrong epoch (a previous boot's): the version matches, but the echo is
+    // incomparable.
+    await h.subscribe("r", {}, { version, epoch: "some-older-boot" });
     expect(loads).toBe(2);
     // Absent epoch (an old client): same.
-    await h.subscribe("r", {}, { version: 0 });
+    await h.subscribe("r", {}, { version });
     expect(loads).toBe(3);
     expect(h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
     expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(3);
@@ -116,14 +125,15 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     });
 
     await h.subscribe("r");
-    const epoch = h.frames.find((f) => f.kind === "sub-ack")!.epoch!;
-    r.notify(); // version → 1; the client that echoes 0 below is behind
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    const base = ack.version!;
+    r.notify(); // version → base + 1; the client that echoes `base` below is behind
     await tick();
 
-    await h.subscribe("r", {}, { version: 0, epoch });
+    await h.subscribe("r", {}, { version: base, epoch: ack.epoch });
     const acks = h.frames.filter((f) => f.kind === "sub-ack");
     expect(acks).toHaveLength(2);
-    expect(acks[1]!.version).toBe(1); // served fresh at the current version
+    expect(acks[1]!.version).toBe(base + 1); // served fresh at the current version
     expect(h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
   });
 
@@ -152,76 +162,11 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     await h.subscribe(
       "edited",
       {},
-      { version: 0, epoch: ack.epoch, etag: "stale" },
+      { version: ack.version, epoch: ack.epoch, etag: "stale" },
     );
     expect(loads).toBe(2);
     expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(2);
     expect(h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
-  });
-
-  test("keyed: a short-circuited resub with an evicted snapshot self-heals — the next notify ships a FULL update", async () => {
-    // releaseSubRefcount evicts `snapshots` (not `versions`) on N→0. A resub
-    // that short-circuits therefore skips the snapshot re-seed; the next notify
-    // finds hadSnapshot === false and ships a FULL update — correct and
-    // self-healing, and the client converges.
-    const h = createHarness({ readSet: () => ["row_table"] });
-    const ctl = controllable<{ id: string; n: number }[]>([
-      { id: "a", n: 1 },
-      { id: "b", n: 1 },
-    ]);
-    h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
-      {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) =>
-          c
-            ? ctl.value.filter((row) => c.affectedIds.includes(row.id))
-            : ctl.loader(),
-      },
-    );
-
-    await h.subscribe("rows");
-    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(ack.version).toBe(0);
-
-    // N→0 evicts the keyed snapshot; the version counter survives.
-    await h.unsub("rows");
-
-    // Resub echoing (epoch, version) → short-circuit: up-to-date, NO snapshot
-    // re-seed (that is the point — no loader ran).
-    await h.subscribe("rows", {}, { version: 0, epoch: ack.epoch });
-    expect(h.frames.filter((f) => f.kind === "up-to-date")).toHaveLength(1);
-    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(1);
-
-    // A subsequent scoped change finds no snapshot → the runtime reloads FULL
-    // and ships a value-carrying update (never a delta onto a missing base).
-    ctl.setValue([
-      { id: "a", n: 2 },
-      { id: "b", n: 1 },
-    ]);
-    h.runtime.applyDbChange({
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
-    await tick();
-
-    const update = h.frames.find((f) => f.kind === "update")!;
-    expect(update.version).toBe(1);
-    expect(h.frames.some((f) => f.kind === "delta")).toBe(false);
-
-    // The client converges to server truth across the whole frame history.
-    const cv = makeClientView(keyOf);
-    cv.applyAll(h.frames);
-    expect(cv.value).toEqual([
-      { id: "a", n: 2 },
-      { id: "b", n: 1 },
-    ]);
-    expect(cv.version).toBe(1);
-    expect(cv.driftResubs).toBe(0);
   });
 
   test("acks carry the boot epoch, stable across frames; _debug counts short-circuits per key", async () => {
@@ -234,9 +179,9 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     });
 
     await h.subscribe("r");
-    const epoch = h.frames.find((f) => f.kind === "sub-ack")!.epoch!;
-    await h.subscribe("r", {}, { version: 0, epoch });
-    await h.subscribe("r", {}, { version: 0, epoch });
+    const { version, epoch } = h.frames.find((f) => f.kind === "sub-ack")!;
+    await h.subscribe("r", {}, { version, epoch });
+    await h.subscribe("r", {}, { version, epoch });
     const utds = h.frames.filter((f) => f.kind === "up-to-date");
     expect(utds).toHaveLength(2);
     for (const f of utds) expect(f.epoch).toBe(epoch); // one epoch per boot
@@ -286,5 +231,104 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     expect(body.value).toBe("val");
     expect(body.epoch).toBe(ackEpoch);
     expect(loads).toBe(1);
+  });
+});
+
+describe("keyed: an evicted snapshot is never left behind a short-circuit", () => {
+  function keyedRows(failFull: () => boolean = () => false) {
+    const h = createHarness({ readSet: () => ["row_table"] });
+    const ctl = controllable<{ id: string; n: number }[]>([
+      { id: "a", n: 1 },
+      { id: "b", n: 1 },
+    ]);
+    h.runtime.defineResource(
+      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: (_p, c) => {
+          if (c)
+            return ctl.value.filter((row) => c.affectedIds.includes(row.id));
+          if (failFull()) throw new Error("rows read failed");
+          return ctl.loader();
+        },
+      },
+    );
+    const changeA = (n: number) => {
+      ctl.setValue([
+        { id: "a", n },
+        { id: "b", n: 1 },
+      ]);
+      h.runtime.applyDbChange({
+        table: "row_table",
+        op: "U",
+        ids: ["a"],
+        origin: "row_table",
+        identityBase: "row_table",
+      });
+    };
+    return { h, changeA };
+  }
+
+  test("a resub after N→0 takes the full path: its sub-ack re-seeds the evicted snapshot, so the next change ships a scoped delta", async () => {
+    // releaseSubRefcount evicts `snapshots` (not `versions`) on N→0. The resub
+    // that follows opens a new tracking span with a fresh version, so the echo
+    // of the old one cannot match: a full sub-ack, whose value re-seeds the
+    // snapshot. (A short-circuit here used to skip that re-seed.)
+    const { h, changeA } = keyedRows();
+    await h.subscribe("rows");
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+
+    await h.unsub("rows");
+    await h.subscribe("rows", {}, { version: ack.version, epoch: ack.epoch });
+    expect(h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
+    const acks = h.frames.filter((f) => f.kind === "sub-ack");
+    expect(acks).toHaveLength(2);
+    expect(acks[1]!.version).toBe(ack.version! + 1); // the new span's version
+
+    // The snapshot is back, so a scoped change diffs against it: one upsert,
+    // no FULL `update`.
+    changeA(2);
+    await tick();
+    expect(h.frames.some((f) => f.kind === "update")).toBe(false);
+    const deltas = h.pushesFor("rows").filter((f) => f.kind === "delta");
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0]!.upserts).toEqual([["a", { id: "a", n: 2 }]]);
+    expect(deltas[0]!.version).toBe(acks[1]!.version! + 1);
+
+    // The client converges to server truth across the whole frame history.
+    const cv = makeClientView(keyOf);
+    cv.applyAll(h.frames);
+    expect(cv.value).toEqual([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
+    expect(cv.version).toBe(acks[1]!.version! + 1);
+    expect(cv.driftResubs).toBe(0);
+  });
+
+  test("a subscribed pk with no snapshot (its sub-ack load failed) self-heals — the next notify ships a FULL update", async () => {
+    // The one way left for a subscribed keyed pk to hold no snapshot: its
+    // sub-ack's load threw (`sub-error`), so nothing seeded it. A scoped change
+    // then finds no base and the runtime reloads FULL, shipping a value-carrying
+    // update (never a delta onto a missing base).
+    let failFull = true;
+    const { h, changeA } = keyedRows(() => failFull);
+    await h.subscribe("rows");
+    expect(h.frames.map((f) => f.kind)).toEqual(["sub-error"]);
+    failFull = false;
+
+    changeA(2);
+    await tick();
+
+    expect(h.frames.filter((f) => f.kind === "update")).toHaveLength(1);
+    expect(h.frames.some((f) => f.kind === "delta")).toBe(false);
+    const cv = makeClientView(keyOf);
+    cv.applyAll(h.frames);
+    expect(cv.value).toEqual([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
+    expect(cv.driftResubs).toBe(0);
   });
 });

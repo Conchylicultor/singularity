@@ -7,10 +7,13 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // `hydrateResource(...)`s each one, so the first render reads real data instead
 // of `pending`/defaults — no flash, no WS round-trip.
 //
-// Scope: param-less GLOBAL resources only (the server can't know a client's
-// route params at snapshot time). A failed loader is omitted from the map (not
-// fatal) — that key simply falls back to its normal WS sub-ack, now fast because
-// the same tables were warmed server-side at boot.
+// `resources` holds the DEFAULT-TUPLE preloads (a param-less resource, a
+// collection's default window — hydrated at the descriptor's `defaultParams`).
+// `tuples` holds the ENUMERATED preloads: a parameterized value whose served half
+// names the tuples to hydrate (`preloadParams`), each shipped with its params —
+// the server knows those at boot even though no route has named them. A failed
+// loader is omitted (not fatal, but reported) — that tuple falls back to its
+// normal WS sub-ack.
 //
 // NOTE: the plan's `version` per entry is intentionally omitted — `hydrateResource`
 // doesn't consume it and the version-aware sub-skip (Phase D) is out of scope.
@@ -23,6 +26,15 @@ export const bootSnapshot = defineEndpoint({
   route: "GET /api/resources/boot-snapshot",
   response: z.object({
     resources: z.record(z.string(), z.unknown()),
+    tuples: z.record(
+      z.string(),
+      z.array(
+        z.object({
+          params: z.record(z.string(), z.string()),
+          value: z.unknown(),
+        }),
+      ),
+    ),
     timings: z.record(
       z.string(),
       z.object({
