@@ -43,7 +43,7 @@ const STATUS_OPTIONS = (
   Object.entries(STATUS_META) as [TaskStatus, { label: string }][]
 ).map(([value, meta]) => ({ value, label: meta.label }));
 
-export const taskFields: FieldDef<TaskListItem>[] = [
+const taskFields: FieldDef<TaskListItem>[] = [
   {
     id: "title",
     label: "Title",
@@ -71,6 +71,18 @@ export const taskFields: FieldDef<TaskListItem>[] = [
     cell: (t) => <RelativeTime date={t.updatedAt} />,
   },
 ];
+
+/**
+ * THE task field schema: the base fields plus every `Tasks.Fields` contributor
+ * (track, category, …). Every task DataView spreads this one value into its
+ * props/bundle, so a surface cannot take the base fields without the
+ * contributed ones — the drift that left the deps-tree without the track
+ * column. `taskFields` stays module-private on purpose.
+ */
+export const taskFieldSchema = {
+  fields: taskFields,
+  fieldExtensions: Tasks.Fields,
+};
 
 // No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
 // local render state owned by the data-view primitive — never a domain field —

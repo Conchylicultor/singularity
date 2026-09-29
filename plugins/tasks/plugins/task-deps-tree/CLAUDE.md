@@ -54,15 +54,12 @@ now"), the opposite of the monotone one here.
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
-    - `tasks.patchTask`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-list.buildTreeOptions`
     - `tasks/task-list.clusterTaskHierarchy`
-    - `tasks/task-list.taskFields`
+    - `tasks/task-list.taskFieldSchema`
     - `tasks/task-list.Tasks`
-    - `tasks/task-status.STATUS_META`
-    - `tasks/task-status.StatusBadge`
     - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
 - Core:

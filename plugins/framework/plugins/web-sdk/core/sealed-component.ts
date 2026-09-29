@@ -7,7 +7,10 @@ declare const SEALED: unique symbol;
 /** Opaque, non-renderable component handle returned by useContributions(). */
 export type SealedComponent<P = unknown> = {
   readonly [SEALED]: true;
-  readonly __props?: P;
+  // Phantom in PARAMETER position: a component that renders any `P` can stand
+  // in where a narrower `P` is expected (contravariant, like the ComponentType
+  // it seals). A bare `__props?: P` made it covariant — the reverse.
+  readonly __props?: (props: P) => void;
 };
 
 /**

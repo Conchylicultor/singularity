@@ -209,11 +209,22 @@ export interface ItemActionsDescriptor<TRow> {
  * contributor that doesn't need them (e.g. Sonata's play-count, which closes over
  * its own live resource) simply ignores them.
  */
+/** Method-position parameter ⇒ checked bivariantly (see `FieldExtensionProps.rowKey`). */
+type BivariantRowKey<TRow> = {
+  key(row: TRow, index: number): string;
+}["key"];
+
 export interface FieldExtensionProps<TRow> {
   /** Which surface this DataView is (the `defineDataView` id). */
   storageKey: DataViewId;
-  /** How to identify a row — used to key per-row data. */
-  rowKey: (row: TRow, index: number) => string;
+  /** How to identify a row — used to key per-row data. Bivariant on purpose:
+   *  with a plain `(row: TRow) => …` this one member made the whole descriptor
+   *  invariant, so a surface whose rows EXTEND `R` (the deps tree's
+   *  `DepsTreeRow extends TaskListItem`) could not take extensions declared for
+   *  `R`. Sound: a contributor only ever keys rows the host handed it, which are
+   *  the host's own. `render` stays strict, so the reverse (an extension for a
+   *  narrower row on a wider surface) is still a type error. */
+  rowKey: BivariantRowKey<TRow>;
   /** Hand the host this contributor's extra fields (called in render — the
    *  component is mounted, so it may load hook-backed data first). */
   render: (fields: FieldDef<TRow>[]) => ReactNode;

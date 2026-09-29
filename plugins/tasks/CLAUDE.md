@@ -139,7 +139,6 @@
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/task-dependencies`
-    - `tasks/task-deps-tree`
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-graph`

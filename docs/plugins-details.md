@@ -34838,7 +34838,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/auto-start`
       - `tasks/auto-start/launch-option`
       - `tasks/task-dependencies`
-      - `tasks/task-deps-tree`
       - `tasks/task-description`
       - `tasks/task-detail`
       - `tasks/task-graph`
@@ -35189,15 +35188,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
-          - `tasks.patchTask`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-list.buildTreeOptions`
           - `tasks/task-list.clusterTaskHierarchy`
-          - `tasks/task-list.taskFields`
+          - `tasks/task-list.taskFieldSchema`
           - `tasks/task-list.Tasks`
-          - `tasks/task-status.STATUS_META`
-          - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
           - `ui/icons.Icon`
       - Core:
@@ -35497,7 +35493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `buildTreeOptions`
           - `clusterTaskHierarchy`
-          - `taskFields`
+          - `taskFieldSchema`
           - `Tasks`
           - `TasksListView`
       - Cross-plugin:

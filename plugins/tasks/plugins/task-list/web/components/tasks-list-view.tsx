@@ -1,10 +1,19 @@
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
+import {
+  tasksResource,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Tasks } from "../slots";
 import {
-  taskFields,
+  taskFieldSchema,
   taskHierarchy,
   buildTreeOptions,
 } from "../internal/tasks-data-view";
@@ -24,7 +33,7 @@ export function TasksListView({
       {(rows) => (
         <DataView<TaskListItem>
           rows={rows}
-          fields={taskFields}
+          {...taskFieldSchema}
           rowKey={(t) => t.id}
           views={["tree", "list"]}
           defaultView="tree"
@@ -35,7 +44,6 @@ export function TasksListView({
           hierarchy={taskHierarchy}
           viewOptions={{ tree: buildTreeOptions({}), list: {} }}
           itemActions={Tasks.TaskActions}
-          fieldExtensions={Tasks.Fields}
           emptyState="No tasks yet."
         />
       )}

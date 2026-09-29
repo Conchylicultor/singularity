@@ -6,8 +6,7 @@
       "name": "Dependencies",
       "source": "deps",
       "view": {
-        "type": "tree",
-        "visibleFields": ["title"]
+        "type": "tree"
       }
     },
     {

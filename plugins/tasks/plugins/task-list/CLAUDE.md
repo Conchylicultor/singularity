@@ -36,7 +36,7 @@
   - Exports (values):
     - `buildTreeOptions`
     - `clusterTaskHierarchy`
-    - `taskFields`
+    - `taskFieldSchema`
     - `Tasks`
     - `TasksListView`
 - Cross-plugin:

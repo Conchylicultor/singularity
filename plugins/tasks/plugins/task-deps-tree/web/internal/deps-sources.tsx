@@ -9,7 +9,7 @@ import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { moveTaskInDepsTree } from "@plugins/tasks/core";
 import {
   Tasks,
-  taskFields,
+  taskFieldSchema,
   clusterTaskHierarchy,
   buildTreeOptions,
 } from "@plugins/tasks/plugins/task-list/web";
@@ -17,7 +17,7 @@ import {
   buildDepsTree,
   type DepsTreeRow,
 } from "@plugins/tasks/plugins/task-deps-tree/core";
-import { depsTreeFields, depsTreeOptions } from "./deps-tree-fields";
+import { depsTreeOptions } from "./deps-tree-options";
 import { DepsActions } from "./deps-actions";
 
 /** The host props the deps-tree section threads to both sources. */
@@ -76,7 +76,7 @@ export function DepsSource({
     <>
       {render<DepsTreeRow>({
         rows,
-        fields: depsTreeFields,
+        ...taskFieldSchema,
         rowKey: (r) => r.id,
         hierarchy: depsHierarchy,
         viewOptions: { tree: depsTreeOptions },
@@ -112,7 +112,7 @@ export function CreatedSource({
     <>
       {render<TaskListItem>({
         rows,
-        fields: taskFields,
+        ...taskFieldSchema,
         rowKey: (t) => t.id,
         hierarchy: clusterTaskHierarchy,
         viewOptions: { tree: treeOptions },
