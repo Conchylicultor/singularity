@@ -36,22 +36,31 @@ The agent that picks up the task will design and plan the solution itself.
 Good: "Login button unresponsive on mobile". Bad: "Fix login button by
 adding a touchstart handler in auth.tsx".
 
-## track (required) — decide it for every task
+## track (required) — is it on the critical path?
 
-- \`main\`: the NEXT STEPS of the feature you are working on — work that
-  continues it. Main-track tasks are spliced into the dependency chain and
-  auto-started (\`autostart\`, default "opus") once the task they wait on is
-  done. Chain several with \`target\` (see below).
+Decide it for every task with ONE question: is the feature you are working
+on unfinished until this task is done?
 
-- \`sidequest\`: everything else you noticed along the way — follow-ups,
-  caveats, bugs, cleanup, ideas. A sidequest runs after the target (default:
+- \`main\` — yes, it is ON THE CRITICAL PATH: a remaining step without which
+  the feature is not done. Main-track tasks are spliced into the dependency
+  chain and auto-started (\`autostart\`, default "opus") once the task they
+  wait on is done. Chain several with \`target\` (see below).
+
+- \`sidequest\` — no, it is OFF the critical path: every follow-up the feature
+  can ship without — improvements, caveats, cleanup, unrelated bugs, ideas,
+  "while I was here" findings. A sidequest runs after the target (default:
   your current task) but is NEVER spliced into its chain (the target's
   dependents do not wait on it) and is NEVER auto-started by an agent: passing
   \`autostart\` with a sidequest is an error. A human arms it later if wanted.
   No \`target\` chaining needed: file each sidequest on its own, in parallel.
   A sidequest cannot be a \`prerequisite\` (it would block the main track).
 
-## relation (main track)
+Being a follow-up of your work does NOT make a task main — every filed task
+comes after something. Only the critical path decides. When unsure, file a
+sidequest: a misfiled main task launches an agent on its own; a misfiled
+sidequest just waits for a human to promote it.
+
+## relation (dependency direction — independent of the track)
 
 Controls how the new task connects to the target:
 
@@ -79,7 +88,7 @@ Controls how the new task connects to the target:
 
 If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
 
-**Sidequests** — independent follow-ups, no chaining, no autostart:
+**Sidequests** — off the critical path, no chaining, no autostart:
 
   { "title": "Flaky retry in upload test", "track": "sidequest" }
   { "title": "Dead helper left in utils.ts", "track": "sidequest" }
@@ -122,14 +131,16 @@ the dependency graph.`,
           "do this for any non-mechanical task, even if a broader plan already exists.",
       ),
     track: TaskTrackSchema.describe(
-      "`main`: a next step of the current feature — chained and auto-started. " +
-        "`sidequest`: a follow-up, caveat, bug or cleanup — runs after the target, never spliced into its chain, never auto-started.",
+      "`main`: on the critical path — the current feature is unfinished until it is done; chained and auto-started. " +
+        "`sidequest`: off the critical path — any follow-up, caveat, bug or cleanup the feature can ship without; " +
+        "runs after the target, never spliced into its chain, never auto-started. When unsure, `sidequest`.",
     ),
     relation: z
       .enum(["followup", "prerequisite"])
       .default("followup")
       .describe(
-        "`followup` (default): new task depends on target, target's dependents rewired (main) or left alone (sidequest). " +
+        "Dependency direction only — says nothing about the track. " +
+          "`followup` (default): new task depends on target, target's dependents rewired (main) or left alone (sidequest). " +
           "`prerequisite` (main only): target depends on new task, target's deps transfer.",
       ),
     target: z

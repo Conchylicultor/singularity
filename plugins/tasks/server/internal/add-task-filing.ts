@@ -57,7 +57,7 @@ export function assertTrackAllows(input: AddTaskInput): void {
     throw new Error(
       "A sidequest cannot be filed with `autostart`: sidequests are never auto-started by an agent " +
         '(a human arms one from the task detail). Drop `autostart`, or file it with track "main" ' +
-        "if it is really the next step of the feature.",
+        "if it really is on the critical path of the feature.",
     );
   }
   if (input.relation === "prerequisite") {

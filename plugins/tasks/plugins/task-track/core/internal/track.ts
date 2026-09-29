@@ -5,9 +5,11 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
  * The closed set of task tracks, as plain data (not a registry — no plugin
  * adds a track):
  *
- * - `main`: the next steps of a feature. Chained into the dependency graph and
- *   auto-started when an agent files them.
- * - `sidequest`: an independent follow-up (a caveat, a bug, cleanup). Runs
+ * - `main`: on a feature's critical path — the feature is unfinished until it
+ *   is done. Chained into the dependency graph and auto-started when an agent
+ *   files them.
+ * - `sidequest`: off the critical path (a follow-up, a caveat, a bug,
+ *   cleanup — anything the feature can ship without). Runs
  *   after the task it was filed from, is never spliced into its chain and is
  *   never auto-started by an agent (a human may still arm one).
  */
@@ -45,13 +47,13 @@ export const TRACK_META: Record<
 > = {
   main: {
     label: "Main",
-    hint: "Main track: a next step of the feature, chained and auto-started.",
+    hint: "Main track: on the feature's critical path, chained and auto-started.",
     variant: "primary",
     chipClass: "bg-primary/15 text-primary border-primary/30",
   },
   sidequest: {
     label: "Sidequest",
-    hint: "Sidequest: an independent follow-up. Never spliced into the chain, never auto-started by an agent.",
+    hint: "Sidequest: off the critical path. Never spliced into the chain, never auto-started by an agent.",
     variant: "info",
     chipClass: "bg-info/15 text-info border-info/30",
   },
