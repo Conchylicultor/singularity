@@ -30,7 +30,8 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const menuIcon = symbol("menu");
+const leftPanelOpenIcon = symbol("left-panel-open");
+const leftPanelCloseIcon = symbol("left-panel-close");
 
 // Local shimmer atom (was components/ui/skeleton.tsx — deleted; feature code
 // uses the `loading` primitive's <Loading> variants instead).
@@ -292,7 +293,9 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile, open, openMobile } = useSidebar();
+  // The icon names what a click will do, from the same state toggleSidebar flips.
+  const isOpen = isMobile ? openMobile : open;
 
   return (
     <Button
@@ -307,7 +310,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <Icon icon={menuIcon} />
+      <Icon icon={isOpen ? leftPanelCloseIcon : leftPanelOpenIcon} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

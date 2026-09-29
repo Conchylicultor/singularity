@@ -2,7 +2,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { convFileTreePane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const folderOpenIcon = symbol("folder-open");
+const folderIcon = symbol("folder");
 
 export function ConvTreeButton() {
   const { isOpen, toggle } = convFileTreePane.useToggle({});
@@ -10,7 +10,7 @@ export function ConvTreeButton() {
   // No `size` → inherits the toolbar's density, matching the other action icons.
   return (
     <IconButton
-      icon={folderOpenIcon}
+      icon={folderIcon}
       label="File explorer"
       variant={isOpen ? "secondary" : "ghost"}
       aria-pressed={isOpen}

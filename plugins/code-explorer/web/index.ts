@@ -18,7 +18,7 @@ export default {
     Shell.Sidebar({
       id: "code-explorer",
       title: "Explorer",
-      icon: symbol("folder-open"),
+      icon: symbol("folder"),
       opens: opensPane(globalFileTreePane, { worktree: "main" }),
     }),
     Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),

@@ -5,7 +5,7 @@ import { Review } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const rateReviewIcon = symbol("rate-review");
+const differenceIcon = symbol("difference");
 
 export function ReviewButton() {
   const { convId } = conversationPane.useParams();
@@ -21,7 +21,7 @@ export function ReviewButton() {
       onClick={toggle}
       className="gap-xs"
     >
-      <Icon icon={rateReviewIcon} />
+      <Icon icon={differenceIcon} />
       {sections.map((s) => {
         const S = s.summary;
         return S ? (

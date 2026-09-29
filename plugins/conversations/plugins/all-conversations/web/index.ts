@@ -16,7 +16,7 @@ export default {
     Shell.Sidebar({
       id: "all-conversations",
       title: "Conversations",
-      icon: symbol("forum"),
+      icon: symbol("chat-bubble"),
       opens: opensPane(allConversationsPane, {}),
     }),
   ],
