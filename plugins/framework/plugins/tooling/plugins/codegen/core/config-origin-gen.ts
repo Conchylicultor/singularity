@@ -37,6 +37,10 @@ import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { HASH_RE } from "./git-layer-config";
 import { mainBundle } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
+import {
+  applyConfigMigrations,
+  type AppliedConfigMigration,
+} from "@plugins/config_v2/plugins/ledger/core";
 
 interface DiscoveredConfig {
   hierarchyPath: string;
@@ -662,9 +666,14 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
 export async function propagateConfigToUser(opts: {
   root: string;
   userConfigDir: string;
-}): Promise<void> {
+}): Promise<{ migrations: AppliedConfigMigration[] }> {
   const configs = await discoverConfigs(opts.root);
   const { userConfigDir } = opts;
+
+  // Saved values follow a config's shape change BEFORE propagation compares
+  // them: replay every config migration this namespace has not applied yet.
+  // Returned, so the build can say what it rewrote.
+  const migrations = applyConfigMigrations({ userConfigDir, configs });
 
   for (const { hierarchyPath, descriptor } of configs) {
     const gitOrigin = fileConfigProxy(
@@ -806,4 +815,5 @@ export async function propagateConfigToUser(opts: {
       }
     }
   }
+  return { migrations };
 }

@@ -8,6 +8,7 @@ import {
 import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { StoredModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 // Physical tables only. Leaf in the schema dependency graph (no cross-plugin
@@ -28,11 +29,11 @@ export const _agents = deriveUpdatedAt(
       // A model choice: a family ("sonnet" — its newest version at launch) or a
       // pinned version. NULL = the default choice.
       model: parsedText("model", StoredModelChoiceSchema),
-      // Avatar key (icon + color) into the avatar primitive's registry. Both
-      // null = use the default robot/violet avatar.
-      icon: text("icon"),
+      // Avatar: a picked Material Symbols name (checked against the installed
+      // sets on every read and write) + a colour key. Both null = the default
+      // robot-arm/violet avatar.
+      icon: parsedText("icon", SavedSymbolNameSchema),
       iconColor: text("icon_color"),
-      iconSvgNodes: text("icon_svg_nodes"),
       rank: rankText("rank").notNull(),
       createdAt: timestamp("created_at", { withTimezone: true })
         .defaultNow()
@@ -51,7 +52,6 @@ export const _agents = deriveUpdatedAt(
       model: true,
       icon: true,
       iconColor: true,
-      iconSvgNodes: true,
       rank: true,
       id: false,
       createdAt: false,

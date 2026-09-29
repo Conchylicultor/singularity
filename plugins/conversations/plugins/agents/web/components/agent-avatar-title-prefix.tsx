@@ -7,7 +7,6 @@ import {
   Avatar,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import {
@@ -18,16 +17,6 @@ import {
 } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-
-function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SvgNode[];
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return null;
-  }
-}
 
 export function AgentAvatarTitlePrefix() {
   const { convId } = conversationPane.useParams();
@@ -53,7 +42,6 @@ export function AgentAvatarTitlePrefix() {
         <Avatar
           icon={DEFAULT_AGENT_AVATAR.icon}
           color={DEFAULT_AGENT_AVATAR.color}
-          svgNodes={DEFAULT_AGENT_AVATAR.svgNodes}
         />
       </button>
     );
@@ -102,9 +90,6 @@ function AgentAvatarTitlePrefixInner({
       <Avatar
         icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
         color={agent?.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-        svgNodes={
-          parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes
-        }
         fallbackKey={agent?.id}
       />
     </button>

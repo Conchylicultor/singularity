@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { StoredModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -14,9 +15,10 @@ export const AgentSchema = z.object({
   prompt: z.string().nullable(),
   // A family ("sonnet" — its newest version) or a pinned version; null = default.
   model: StoredModelChoiceSchema.nullable(),
-  icon: z.string().nullable(),
+  // A picked Material Symbols name (drawn as a runtime symbol); null = the
+  // default avatar.
+  icon: SavedSymbolNameSchema.nullable(),
   iconColor: z.string().nullable(),
-  iconSvgNodes: z.string().nullable(),
   rank: RankSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

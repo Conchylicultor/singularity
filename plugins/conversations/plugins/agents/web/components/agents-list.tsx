@@ -9,7 +9,6 @@ import {
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
 import { avatarFieldDef } from "@plugins/fields/plugins/avatar/plugins/table/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -42,16 +41,6 @@ const AGENTS_LIST_VIEW = defineDataView("agents-list");
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
-}
-
-function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SvgNode[];
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return null;
-  }
 }
 
 // Fields are listed explicitly rather than spread: a key the body schema doesn't
@@ -124,8 +113,6 @@ export function AgentsList({
             avatar: (a) => ({
               icon: a.icon ?? DEFAULT_AGENT_AVATAR.icon,
               color: a.iconColor ?? DEFAULT_AGENT_AVATAR.color,
-              svgNodes:
-                parseSvgNodes(a.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes,
               fallbackKey: a.id,
             }),
           }),

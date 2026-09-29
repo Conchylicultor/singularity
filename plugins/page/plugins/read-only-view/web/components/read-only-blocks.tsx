@@ -1,5 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
@@ -266,15 +267,16 @@ function MediaBlock({
  * the target may not even be published.
  */
 function SubPageChip({ data }: { data: Record<string, unknown> }) {
-  const iconNodes = Array.isArray(data.iconSvgNodes)
-    ? (data.iconSvgNodes as Parameters<typeof PageIcon>[0]["nodes"])
-    : null;
+  const icon =
+    typeof data.icon === "string" && isSavedSymbolName(data.icon)
+      ? data.icon
+      : null;
   const title =
     typeof data.title === "string" && data.title ? data.title : "Untitled";
   return (
     <Inset x="md" y="xs">
       <Inline gap="xs">
-        <PageIcon nodes={iconNodes} className="text-muted-foreground size-4" />
+        <PageIcon icon={icon} className="text-muted-foreground size-4" />
         <Text className="font-medium">{title}</Text>
       </Inline>
     </Inset>

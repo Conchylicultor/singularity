@@ -5,9 +5,11 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { forwardRef } from "react";
-import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import {
+  runtimeSymbol,
+  type IconRef,
+  type SavedSymbolName,
+} from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AvatarShape } from "../../core";
 import {
@@ -21,12 +23,15 @@ import {
 } from "../internal/presentation";
 
 export interface AvatarProps extends DensityControlled {
-  icon?: string | null;
-  color?: string | null;
-  svgNodes?: SvgNode[] | null;
   /**
-   * A glyph named in code (an app's icon), drawn in the theme's icon style when
-   * there are no stored `svgNodes`. Not persisted — stored avatars carry `svgNodes`.
+   * The saved icon — a Material Symbols name the user picked — drawn as a
+   * runtime symbol in the surrounding theme's icon style.
+   */
+  icon?: SavedSymbolName | null;
+  color?: string | null;
+  /**
+   * A glyph named in code (an app's icon), drawn when there is no saved `icon`.
+   * Not persisted.
    */
   symbol?: IconRef | null;
   /** Box outline. Defaults to `circle`. */
@@ -36,7 +41,7 @@ export interface AvatarProps extends DensityControlled {
   /** Used as a stable key for the deterministic color fallback when `color` is null. */
   fallbackKey?: string;
   /**
-   * Single character rendered centered when there is no icon/svg, so the disc is
+   * Single character rendered centered when there is no icon, so the disc is
    * never blank. Only the first char is used, uppercased. Providing this also
    * tints the disc via the deterministic auto-color (from `fallbackKey`) unless
    * an explicit `color` is set or `colorless` is true.
@@ -119,7 +124,6 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   {
     icon,
     color,
-    svgNodes,
     symbol,
     shape = "circle",
     statusDot,
@@ -134,10 +138,11 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   const size = useControlSize();
   const presentation = useAvatarPresentation();
   const sz = geometryFor(presentation, size);
-  const hasSvg = svgNodes != null && svgNodes.length > 0;
+  const drawn: IconRef | null =
+    icon != null ? runtimeSymbol(icon) : (symbol ?? null);
   const glyph = fallbackGlyph ? fallbackGlyph.charAt(0).toUpperCase() : null;
   const filled =
-    !colorless && (hasSvg || symbol != null || color != null || glyph != null);
+    !colorless && (drawn != null || color != null || glyph != null);
   const pick = filled
     ? avatarColorPick(color, fallbackKey ?? icon ?? undefined)
     : null;
@@ -161,10 +166,8 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         className,
       )}
     >
-      {hasSvg ? (
-        <SvgIcon nodes={svgNodes!} className={sz.icon} />
-      ) : symbol ? (
-        <Icon icon={symbol} className={sz.icon} />
+      {drawn ? (
+        <Icon icon={drawn} className={sz.icon} />
       ) : glyph ? (
         <span className={glyphClass}>{glyph}</span>
       ) : null}

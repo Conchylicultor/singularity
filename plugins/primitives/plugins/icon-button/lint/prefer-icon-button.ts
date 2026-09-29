@@ -34,8 +34,7 @@ const createRule = ESLintUtils.RuleCreator(
  *      `JSXElement`, AND
  *   3. that child's tag identifier resolves (via scope → import binding) to
  *      the icons primitive's `<Icon>` (`@plugins/ui/plugins/icons/web`) — the
- *      `IconButton.icon` contract — or, inside the icon picker, a react-icons
- *      glyph, AND
+ *      `IconButton.icon` contract, AND
  *   4. the `<Button>` is NOT a render-target prop value (`trigger={<Button…/>}`
  *      / `render={<Button…/>}`), which legitimately keeps a bare Button.
  *
@@ -48,7 +47,7 @@ const createRule = ESLintUtils.RuleCreator(
  * resolve the `@plugins/*` alias. No auto-fix (the label text can't be inferred).
  */
 
-const ICON_MODULES = /^(react-icons(\/|$)|@plugins\/ui\/plugins\/icons\/web$)/;
+const ICON_MODULES = /^@plugins\/ui\/plugins\/icons\/web$/;
 
 /**
  * Resolve a JSX child-element's tag identifier to the module it was imported

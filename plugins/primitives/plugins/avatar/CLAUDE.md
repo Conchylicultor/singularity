@@ -59,14 +59,17 @@ a colour without importing web code.
   - `shape`: `circle` (default, `rounded-full`) or `squircle` (the
     `rounded-squircle` utility — 26% of the box, a proportional shape outside
     the `--radius` scale like `rounded-full`).
-  - `icon`: key into `AVATAR_ICONS` (e.g. `"robot"`, `"rocket"`).
+  - `icon`: a saved Material Symbols name (`SavedSymbolName`, e.g.
+    `"smart-toy"`), drawn as a runtime symbol (`runtimeSymbol`) in the
+    surrounding theme scope's icon style — so a stored avatar restyles with
+    the theme. `symbol` is the code-named alternative (an app's icon).
   - `color`: key into `AVATAR_COLORS` (Tailwind hue names). Falls back to a
     deterministic auto-color derived from `fallbackKey` (or `icon`) when null.
   - `statusDot`: a Tailwind background class (e.g. `bg-amber-500`). When
     set, renders a small dot bottom-right with a ring matching the surface
     bg, like Slack's presence indicator.
   - `fallbackGlyph`: a single character (first char used, uppercased) rendered
-    centered when there is no icon/svg, so the disc is never blank. Sized per
+    centered when there is no icon, so the disc is never blank. Sized per
     density via the box's own `text-*` class. Providing it also tints the
     disc via the deterministic auto-color (unless `color` is set or `colorless`).
   - `fallbackKey`: stable key feeding the deterministic auto-color hash.
@@ -85,11 +88,11 @@ a colour without importing web code.
 
 ## Relationship to `icon-picker`
 
-The icon registry, search grid, `SvgNode` storage format, and server-side SVG
-resolution live in the [`icon-picker`](../icon-picker/CLAUDE.md) primitive.
-`avatar` composes `<IconPicker>` and adds only its own concerns: the colored
-disc (`<Avatar>`), the color palette, and `AvatarSpec` (icon + color +
-`svgNodes`). The `SvgNode` type is imported from `icon-picker/core`.
+The Material Symbols browse/search grid lives in the
+[`icon-picker`](../icon-picker/CLAUDE.md) primitive. `avatar` composes
+`<IconPicker>` and adds only its own concerns: the colored disc (`<Avatar>`),
+the color palette, and `AvatarSpec` (a picked `SavedSymbolName` + a colour).
+Nothing about the drawing is stored — `<Icon>` draws the name.
 
 ## Why a separate primitive
 
@@ -103,7 +106,7 @@ color palette.
 
 ## Plugin reference
 
-- Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+- Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
 - Web:
   - Uses:
     - `primitives/css/cluster.Cluster`
@@ -114,7 +117,6 @@ color palette.
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/icon-picker.IconPicker`
-    - `primitives/icon-picker.SvgIcon`
     - `ui/icons.Icon`
   - Exports (types):
     - `AvatarColorPick`
@@ -129,8 +131,6 @@ color palette.
     - `AvatarPresentationProvider`
     - `avatarSoftClass`
     - `DEFAULT_AGENT_AVATAR`
-- Server:
-  - Uses: `primitives/icon-picker.resolveIconSvgNodes`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/reading-pane`

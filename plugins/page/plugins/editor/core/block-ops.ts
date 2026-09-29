@@ -1128,8 +1128,8 @@ function applySplit(
   // Tail data: `op.tailData` is the authoritative per-type-transformed payload
   // (e.g. a checked to-do → unchecked tail), resolved at the intent layer.
   // Absent, the origin's data is inherited — but ONLY when the tail is the SAME
-  // type. `data` belongs to a type: carrying a callout's `{icon, color,
-  // iconSvgNodes}` onto a `text` tail hands the write boundary a payload its
+  // type. `data` belongs to a type: carrying a callout's `{icon, color}`
+  // onto a `text` tail hands the write boundary a payload its
   // strict schema rejects outright (400 `Unrecognized key(s)`), which is exactly
   // what a container's `splitChildWhenExpanded: {childType: "text"}` produces on
   // every Enter. A cross-type tail therefore starts from `{}` and lets the

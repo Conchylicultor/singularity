@@ -5,6 +5,7 @@ import type {
   OriginDefaultsFrom,
 } from "./types";
 import type { FieldsRecord } from "@plugins/fields/core";
+import type { ConfigMigration } from "./config-migration";
 import { fieldsToZodObject } from "@plugins/fields/core";
 
 interface DefineConfigOpts<F extends FieldsRecord> {
@@ -13,6 +14,7 @@ interface DefineConfigOpts<F extends FieldsRecord> {
   scope?: "app";
   source?: ConfigSource;
   overrideLegend?: readonly string[];
+  migrations?: readonly ConfigMigration[];
   requiresAuthoredOverride?: {
     guidance: string[];
     seedWhen?: (defaults: Record<string, unknown>) => boolean;
@@ -47,6 +49,13 @@ export function defineConfig<const F extends FieldsRecord>(
   // instructions — an empty `guidance` would produce a bare marker the author
   // has no way to act on, so it is a defect at declaration time, not a silent
   // degradation at build time.
+  const ids = (opts.migrations ?? []).map((m) => m.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(
+      `defineConfig: "${opts.name ?? "config"}" declares a migration id twice (${ids.join(", ")}).`,
+    );
+  }
+
   if (opts.requiresAuthoredOverride?.guidance.length === 0) {
     throw new Error(
       `defineConfig: "${opts.name ?? "config"}" sets requiresAuthoredOverride with empty guidance — supply the prose the author is meant to act on.`,
@@ -72,6 +81,7 @@ export function defineConfig<const F extends FieldsRecord>(
     scope: opts.scope,
     source: opts.source ?? "manual",
     overrideLegend: opts.overrideLegend,
+    migrations: opts.migrations ?? [],
     requiresAuthoredOverride: opts.requiresAuthoredOverride,
   });
 }

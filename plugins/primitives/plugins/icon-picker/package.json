@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-icon-picker",
-  "description": "Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.",
+  "description": "Searchable, categorized picker over the Material Symbols set (vendored Google metadata, windowed runtime-symbol grid), plus the frozen classic Material Icons \u2192 Symbols table saved icons migrated through.",
   "private": true,
   "version": "0.0.1"
 }

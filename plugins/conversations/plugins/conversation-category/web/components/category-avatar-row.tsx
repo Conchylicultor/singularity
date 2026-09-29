@@ -39,16 +39,13 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
       ? rows.data.get(avatarCategoryId)?.item
       : undefined;
   const avatar = item ? avatars[item] : undefined;
-  const hasIcon =
-    avatar?.icon != null ||
-    (avatar?.svgNodes != null && avatar.svgNodes.length > 0);
+  const hasIcon = avatar?.icon != null;
 
   // Without a category icon, fall back to a title-glyph on a deterministic
   // tint instead of a blank disc (rows must never appear empty).
   return (
     <Avatar
       icon={avatar?.icon ?? null}
-      svgNodes={avatar?.svgNodes ?? null}
       statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
       colorless={hasIcon}
       fallbackGlyph={hasIcon ? undefined : (conv.title?.trim()[0] ?? "?")}

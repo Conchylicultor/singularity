@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { calloutBlock, calloutDataSchema } from "./callout-block";
 
 /**
- * The callout is a VOID container: `{icon, iconSvgNodes, color}` and nothing
+ * The callout is a VOID container: `{icon, color}` and nothing
  * else. These cases pin the DERIVATION, not the shape — `acceptsText` and the
  * `text` lens are computed by `defineBlock` from `"text" in schema.shape`, so a
  * regression that re-adds a `text` field to the schema silently makes the
@@ -16,22 +16,33 @@ describe("calloutDataSchema (void)", () => {
     const strict = calloutDataSchema.strict().safeParse({
       text: [{ text: "hello" }],
       icon: null,
-      iconSvgNodes: null,
       color: "info",
     });
     expect(strict.success).toBe(false);
   });
 
-  it("parses to exactly {icon, iconSvgNodes, color}", () => {
+  it("parses to exactly {icon, color}", () => {
     const parsed = calloutDataSchema.parse({});
-    expect(Object.keys(parsed).sort()).toEqual(["color", "icon", "iconSvgNodes"]);
-    expect(parsed).toEqual({ icon: null, iconSvgNodes: null, color: "default" });
+    expect(Object.keys(parsed).sort()).toEqual(["color", "icon"]);
+    expect(parsed).toEqual({ icon: null, color: "default" });
   });
 
-  it("empty() is exactly the three appearance fields", () => {
+  it("rejects a classic Material Icons key and a stored drawing", () => {
+    expect(
+      calloutDataSchema.safeParse({ icon: "lightbulb_outline" }).success,
+    ).toBe(false);
+    expect(
+      calloutDataSchema.strict().safeParse({ icon: null, iconSvgNodes: null })
+        .success,
+    ).toBe(false);
+    expect(String(calloutDataSchema.parse({ icon: "lightbulb" }).icon)).toBe(
+      "lightbulb",
+    );
+  });
+
+  it("empty() is exactly the two appearance fields", () => {
     expect(calloutBlock.empty?.()).toEqual({
       icon: null,
-      iconSvgNodes: null,
       color: "default",
     });
   });

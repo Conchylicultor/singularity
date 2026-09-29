@@ -62,6 +62,9 @@ never the reverse) and the feature fully opt-in and removable.
   - Uses:
     - `conversations.conversationCreated`
     - `conversations/preprompts.resolvePrepromptItem`
+    - `database.db`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
@@ -69,6 +72,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `tasks/task-preprompt.getTaskPreprompt`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
+    - `ui/icons/sprites.defineSavedIconSource`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
   - Exports (values):

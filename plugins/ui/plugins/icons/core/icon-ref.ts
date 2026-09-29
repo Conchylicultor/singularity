@@ -13,11 +13,32 @@ export interface BrandRef {
 }
 
 /**
+ * A Material Symbols base name a USER picked and something stored (an agent's
+ * avatar, a page icon), as opposed to one written in code. Only a parse that
+ * checked it against the installed sets mints it (`SavedSymbolNameSchema`,
+ * `ui/icons/saved-names`), so a stored name is always one `<Icon>` can draw.
+ */
+export type SavedSymbolName = string & {
+  readonly __brand: "SavedSymbolName";
+};
+
+/**
+ * A saved symbol. Unlike a {@link SymbolRef} its name is not in the build's
+ * icon manifest, so the sprites do not carry it: `<Icon>` draws it from the
+ * runtime symbol store (resident for every name a saved-icon source reports,
+ * fetched on demand otherwise). It follows the scope's style like any symbol.
+ */
+export interface RuntimeSymbolRef {
+  readonly kind: "runtime-symbol";
+  readonly name: SavedSymbolName;
+}
+
+/**
  * An icon as DATA: which glyph, never how it looks. `<Icon icon={…}/>` draws it
  * in the style the surrounding theme scope picks, so a slot takes an `IconRef`
  * rather than a component.
  */
-export type IconRef = SymbolRef | BrandRef;
+export type IconRef = SymbolRef | BrandRef | RuntimeSymbolRef;
 
 /**
  * A Material Symbols icon by its base name (`"forum"`, `"open-in-new"`). The
@@ -32,4 +53,14 @@ export function symbol(name: SymbolName): SymbolRef {
 /** A brand mark by its Simple Icons slug (`"github"`, `"notion"`). String literal only, like {@link symbol}. */
 export function brand(name: BrandName): BrandRef {
   return { kind: "brand", name };
+}
+
+/**
+ * A saved (user-picked) symbol. Takes a {@link SavedSymbolName} — a name a
+ * parse checked — rather than a literal, so it is its own constructor, outside
+ * `icons/literal-icon-name` and the manifest scan: its glyph is loaded at
+ * runtime instead of shipping in the sprites.
+ */
+export function runtimeSymbol(name: SavedSymbolName): RuntimeSymbolRef {
+  return { kind: "runtime-symbol", name };
 }

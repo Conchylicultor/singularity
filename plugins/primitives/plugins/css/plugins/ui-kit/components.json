@@ -10,7 +10,6 @@
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "react-icons/md",
   "rtl": false,
   "aliases": {
     "components": "@plugins/primitives/plugins/css/plugins/ui-kit/web/components",

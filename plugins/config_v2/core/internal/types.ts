@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { FieldsRecord, InferFieldsObject } from "@plugins/fields/core";
+import type { ConfigMigration } from "./config-migration";
 
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -75,6 +76,11 @@ export interface ConfigDescriptor<
   // an author editing the file deletes what they don't need today. The block is
   // build-owned: hand edits inside it are overwritten.
   readonly overrideLegend?: readonly string[];
+  // One-time rewrites of this config's SAVED values after the shape its fields
+  // store changed, applied by the build to each namespace's user layer once
+  // (see `defineConfigMigration`). In declaration order; never remove one that
+  // may not have run everywhere yet.
+  readonly migrations?: readonly ConfigMigration[];
   readonly requiresAuthoredOverride?: {
     guidance: string[];
     // "Is there anything here to author?" — the descriptor's own answer, asked

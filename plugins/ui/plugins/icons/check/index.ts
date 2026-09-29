@@ -9,7 +9,9 @@ import {
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   SYMBOL_NAMES_REL_PATH,
+  SYMBOL_NAME_LIST_REL_PATH,
   installedSetVersions,
+  readListInputsHash,
   readInputsHash,
   symbolNamesInputsHash,
 } from "../shared";
@@ -20,24 +22,26 @@ const REGEN_NAMES =
 const symbolNamesInSync: Check = {
   id: "icons:symbol-names-in-sync",
   description:
-    "icons/core/symbol-names.generated.ts was generated from the installed @iconify-json sets",
+    "icons/core/symbol-names.generated.ts and the saved-names runtime list were generated from the installed @iconify-json sets",
   async run() {
-    const file = join(await getWorktreeRoot(), SYMBOL_NAMES_REL_PATH);
-    if (!existsSync(file)) {
-      return {
-        ok: false,
-        message: `${SYMBOL_NAMES_REL_PATH} is missing`,
-        hint: REGEN_NAMES,
-      };
-    }
-    const stamped = readInputsHash(readFileSync(file, "utf8"));
+    const root = await getWorktreeRoot();
     const expected = symbolNamesInputsHash(installedSetVersions());
-    if (stamped !== expected) {
-      return {
-        ok: false,
-        message: `${SYMBOL_NAMES_REL_PATH} is stale (file=${stamped ?? "none"}, installed=${expected})`,
-        hint: REGEN_NAMES,
-      };
+    for (const [rel, read] of [
+      [SYMBOL_NAMES_REL_PATH, readInputsHash],
+      [SYMBOL_NAME_LIST_REL_PATH, readListInputsHash],
+    ] as const) {
+      const file = join(root, rel);
+      if (!existsSync(file)) {
+        return { ok: false, message: `${rel} is missing`, hint: REGEN_NAMES };
+      }
+      const stamped = read(readFileSync(file, "utf8"));
+      if (stamped !== expected) {
+        return {
+          ok: false,
+          message: `${rel} is stale (file=${stamped ?? "none"}, installed=${expected})`,
+          hint: REGEN_NAMES,
+        };
+      }
     }
     return { ok: true };
   },

@@ -10,12 +10,11 @@ export const BUILDER_VERSION = 6;
 /**
  * Inline allowlist: npm PACKAGES bundled *into* consumers instead of vendored.
  * Only provably-stateless packages where whole-package vendoring is harmful
- * belong here. `react-icons`: the full `react-icons/md` is ~2 MB; the monolith
- * tree-shakes to the used union, and per-plugin inlining + tree-shaking keeps
- * that property. Icons are pure components (the repo never uses `IconContext`,
- * the package's only module state), so N inlined copies are safe.
+ * belong here (a huge package each consumer uses a sliver of, with no module
+ * state, so N tree-shaken copies are safe). Empty today: its one member,
+ * `react-icons`, left the repo when saved icons moved to Material Symbols.
  */
-export const INLINE_PACKAGES: ReadonlySet<string> = new Set(["react-icons"]);
+export const INLINE_PACKAGES: ReadonlySet<string> = new Set<string>();
 
 /**
  * Vendor specifiers force-included even when no first-party source imports them
@@ -46,7 +45,9 @@ export const FORCED_VENDOR_SPECS: ReadonlyArray<string> = [
  *   bundles; no browser code path ever calls them (`runAssetMirrorPrewarm`
  *   lives in asset-mirror's server barrel).
  */
-export const BROWSER_UNREACHABLE_DYNAMIC_KINDS: ReadonlySet<string> = new Set(["prewarm"]);
+export const BROWSER_UNREACHABLE_DYNAMIC_KINDS: ReadonlySet<string> = new Set([
+  "prewarm",
+]);
 
 /** The folder-barrel kind of a `@plugins/<path>/<kind>` specifier (its last segment), or null. */
 export function barrelKindOf(specifier: string): string | null {

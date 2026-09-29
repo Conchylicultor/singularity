@@ -20,7 +20,7 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
 - **React 19** + **TypeScript**
 - **Tailwind CSS v4** — `@tailwindcss/vite` plugin; the global stylesheet
   (`app.css`) lives in `primitives/ui-kit` and is imported from `web/main.tsx`.
-- **Material Symbols** — Icons, as `symbol("…")` data drawn by `<Icon>` from inline SVG sprites (`ui/icons`); not Lucide, and react-icons only inside `primitives/icon-picker`
+- **Material Symbols** — Icons, as `symbol("…")` data drawn by `<Icon>` from inline SVG sprites (`ui/icons`); not Lucide, not react-icons (saved icons are runtime symbols)
 
 ## Structure
 
@@ -87,16 +87,13 @@ not a meaningful question when each plugin is its own artifact. The two surfaces
 above measure real loads instead of predicted ones; nothing reconstructs the
 "what is inside this chunk" view.
 
-**Never namespace-import a big icon package.** A dynamic or `import * as` namespace
-import of `react-icons/md` (`mdModule[key]`) forces Rollup to retain *every* icon
-(the package is un-tree-shakeable through a namespace) and, because hundreds of
-barrels also import named icons eagerly, drags the whole ~2 MB set onto the eager
-boot path (once measured at **417 KB gzip = 62 % of the entry chunk**). App icons
-no longer come from react-icons at all (`icon-safety/no-react-icons`: they are
-Material Symbols sprites, `ui/icons`); inside `primitives/icon-picker`, its one
-remaining user, import named icons or render stored `SvgNode` data. Enforced by the
-`icon-safety/no-namespace-react-icons` lint rule; the sole exemption is the
-build-time `gen-icon-svg-map.ts` (never bundled).
+**Never ship an icon package.** A namespace import of `react-icons/md`
+(`mdModule[key]`) once dragged the whole ~2 MB set onto the eager boot path
+(**417 KB gzip = 62 % of the entry chunk**). Icons are now data: Material
+Symbols names drawn by `<Icon>` from inline sprites holding only the names in
+use (`ui/icons`), and saved (user-picked) icons are runtime symbols fetched per
+visible name. react-icons is uninstalled; `icon-safety/no-react-icons` keeps it
+out.
 
 The eager-cost surfaces for this are the **Debug → Boot Profile** pane (the
 request→first-paint *timeline*), the Boot Gantt, and the `client-boot` trace

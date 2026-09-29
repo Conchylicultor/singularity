@@ -1,17 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { IconPicker, type IconPickerProps, type IconSelection } from "./components/icon-picker";
-export { SvgIcon, type SvgIconProps } from "./components/svg-icon";
-export {
-  extractSvgNodes,
-  loadFullIconSet,
-  type SvgNode,
-  type FullIconSet,
-  type FullIconEntry,
-  type FullIconCategory,
-} from "./internal/icons";
+export { IconPicker, type IconPickerProps } from "./components/icon-picker";
 
 export default {
-  description: "Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.",
+  description:
+    "Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.",
   contributions: [],
 } satisfies PluginDefinition;

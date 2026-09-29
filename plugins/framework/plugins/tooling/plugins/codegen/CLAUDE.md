@@ -18,6 +18,8 @@
     - `config_v2.REVIEW_MARKER`
     - `config_v2.stringifyConfigValue`
     - `config_v2.withOverrideLegend`
+    - `config_v2/ledger.AppliedConfigMigration`
+    - `config_v2/ledger.applyConfigMigrations`
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`

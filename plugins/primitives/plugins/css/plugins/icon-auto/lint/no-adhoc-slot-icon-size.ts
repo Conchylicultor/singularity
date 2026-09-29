@@ -25,7 +25,7 @@ const createRule = ESLintUtils.RuleCreator(
  *   4. The slotted element is a BARE GLYPH: no children (self-closing/empty) AND
  *      its tag is either `svg` or a Capitalized component (`MdX`/`Icon`/…), never
  *      a lowercase intrinsic host (`span`/`div`/…). This rejects layout-box and
- *      spacer wrappers without needing a react-icons name list.
+ *      spacer wrappers without needing an icon name list.
  *   5. Its `className` carries a hardcoded size token (`size-\d`/`h-\d`/`w-\d`
  *      after variant-prefix strip), as harvested by the shared class-token walk
  *      below — which also resolves a same-file object/array MAP alias indexed in

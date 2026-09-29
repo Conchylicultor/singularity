@@ -152,7 +152,6 @@ export function AppGrid() {
           leading: true,
           avatar: (a) => ({
             icon: null,
-            svgNodes: null,
             symbol: a.icon.symbol,
             color: a.icon.color ?? null,
             shape: "squircle",

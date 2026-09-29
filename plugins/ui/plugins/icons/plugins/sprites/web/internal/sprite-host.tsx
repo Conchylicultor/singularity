@@ -10,10 +10,20 @@ import {
 import {
   IconSpriteSheet,
   hasSprite,
+  installRuntimeSymbolLoader,
+  provideRuntimeSymbols,
   provideSprite,
   useWantedStyleKeys,
 } from "@plugins/ui/plugins/icons/web";
-import { residentSprites, spriteEndpoint, type IconSprites } from "../../core";
+import {
+  residentSprites,
+  runtimeSymbolsEndpoint,
+  savedIconSprites,
+  spriteEndpoint,
+  type IconSprites,
+  type SavedIconSprites,
+} from "../../core";
+import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
 
 function spriteKey(key: string): SpriteKey {
   if (key === BRANDS_SPRITE || isStyleKey(key)) return key;
@@ -41,8 +51,60 @@ async function fetchSprite(key: StyleKey, hash: string): Promise<string> {
  */
 export function IconSpriteHost() {
   const resident = useLive(residentSprites);
-  if (resident.pending) return <IconSpriteSheet />;
-  return <LoadedSprites resident={resident.data} />;
+  const saved = useLive(savedIconSprites);
+  if (resident.pending || saved.pending) return <IconSpriteSheet />;
+  return <LoadedSprites resident={resident.data} saved={saved.data} />;
+}
+
+async function fetchRuntimeSymbols(
+  hash: string,
+  key: StyleKey,
+  names: readonly string[],
+): Promise<string> {
+  const svg = await fetchEndpoint(
+    runtimeSymbolsEndpoint,
+    { hash, key },
+    // Idempotent and content-addressed, like a sprite.
+    {
+      query: { names: names.join(",") },
+      retry: { retries: 3, backoffMs: 300 },
+    },
+  );
+  return await svg.text();
+}
+
+/**
+ * Holds the resident saved-icon symbols and installs the runtime-symbol loader:
+ * every name `<Icon>` wants in a style no chunk holds is batched (one fetch per
+ * style key per frame) and appended to the sheet. A failed batch is thrown into
+ * this contribution's error boundary, like a failed sprite.
+ */
+function useSavedSymbols(saved: SavedIconSprites, fail: (err: Error) => void) {
+  useLayoutEffect(() => {
+    for (const [key, markup] of Object.entries(saved.sprites)) {
+      const styleKey = spriteKey(key);
+      if (styleKey === BRANDS_SPRITE) {
+        throw new Error("[icons] the saved-icon sprites hold no brands");
+      }
+      provideRuntimeSymbols(
+        `saved-${styleKey}`,
+        markup,
+        saved.names.map((name) => ({ styleKey, name })),
+      );
+    }
+  }, [saved]);
+
+  const { symbolsHash } = saved;
+  useEffect(() => {
+    const loader = createRuntimeSymbolLoader({
+      fetchSymbols: (key, names) =>
+        fetchRuntimeSymbols(symbolsHash, key, names),
+      schedule: (flush) => void requestAnimationFrame(flush),
+      onLoaded: provideRuntimeSymbols,
+      onError: fail,
+    });
+    return installRuntimeSymbolLoader(loader.request);
+  }, [symbolsHash, fail]);
 }
 
 /**
@@ -53,9 +115,16 @@ export function IconSpriteHost() {
  * boundary, rather than leaving that style's icons on the default glyphs with
  * no word said.
  */
-function LoadedSprites({ resident }: { resident: IconSprites }) {
+function LoadedSprites({
+  resident,
+  saved,
+}: {
+  resident: IconSprites;
+  saved: SavedIconSprites;
+}) {
   const wanted = useWantedStyleKeys();
   const [failure, setFailure] = useState<Error | null>(null);
+  useSavedSymbols(saved, setFailure);
   if (failure) throw failure;
 
   // A layout effect: the store update re-renders the sheet (and every icon

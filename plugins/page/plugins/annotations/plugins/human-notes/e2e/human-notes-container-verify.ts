@@ -553,7 +553,7 @@ async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
       const callout = await post({
         parentId: parent,
         type: "callout",
-        data: { icon: null, iconSvgNodes: null, color: "info" },
+        data: { icon: null, color: "info" },
       });
       const calloutHead = await text(callout.id, "text", "callout head");
       const nested = await humanCard(callout.id);

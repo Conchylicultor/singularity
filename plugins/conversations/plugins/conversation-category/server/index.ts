@@ -1,4 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+// Registers the configured icons' saved-icon source (module eval).
+import "./internal/saved-icons";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";

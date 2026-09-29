@@ -91,6 +91,14 @@ export function symbolId(styleKey: StyleKey, name: string): string {
   return `ms-${styleKey}-${name}`;
 }
 
+/**
+ * The `<symbol>` id of a RUNTIME (saved) symbol in one style. Its own prefix, so
+ * a name that is also in the manifest never yields two elements with one id.
+ */
+export function runtimeSymbolId(styleKey: StyleKey, name: string): string {
+  return `msr-${styleKey}-${name}`;
+}
+
 /** The sprite `<symbol>` id of a brand mark. */
 export function brandId(name: string): string {
   return `si-${name}`;

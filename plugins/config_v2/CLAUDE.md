@@ -133,6 +133,30 @@ A three-way merge needs the **base** — the origin the override was written aga
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
 
+### Config migrations (saved values after a shape change)
+
+When the shape a field STORES changes (a value re-spelled, a key renamed), the
+user layer — not in git — must be rewritten once per namespace. Declare it on
+the descriptor:
+
+```ts
+defineConfig({
+  migrations: [defineConfigMigration({ id: "saved-icons-to-symbols", apply: (doc) => … })],
+  fields: { … },
+});
+```
+
+`./singularity build` (`propagateConfigToUser`, before it propagates) applies
+every migration the namespace has not applied yet to that config's origin,
+override and ancestor documents, base and `@app/<id>` scopes, and records it in
+`.config-migrations-applied.json`; a namespace with no saved config records
+them without running. Hash chains are kept (a rewritten origin gets its new
+hash and its override is re-stamped), so overrides stay in force. `apply` must
+be idempotent; never delete a migration that may not have run everywhere. The
+committed `config/` files are rewritten by hand in the same diff. The ledger
+engine (`runConfigLedger`, `rewriteConfigFiles`) is `config_v2/plugins/ledger`,
+shared with plugin moves.
+
 ### Plugin moves and stranded overrides
 
 A config's user-layer path is its plugin's id, so moving a plugin moves where its saved settings must live. `./singularity plugin move` records every move in a committed ledger, and each build replays it onto its own namespace's user dir before propagation — folder moved, saved reorder keys re-rooted, `// @hash` chain kept so overrides stay in force. See `plugins/plugin-meta/plugins/relocate/CLAUDE.md` ("Saved settings follow the move").
@@ -378,6 +402,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
   - Exports (types):
     - `ConfigDescriptor`
     - `ConfigListVisitor`
+    - `ConfigMigration`
     - `ConfigProxy`
     - `ConfigSource`
     - `ConfigV2ConflictEntry`
@@ -425,6 +450,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `configV2ValuesSchema`
     - `configValues`
     - `defineConfig`
+    - `defineConfigMigration`
     - `deleteScope`
     - `effective`
     - `forkDescriptorScope`
@@ -494,6 +520,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `backup/targets/local`
     - `build`
     - `config_v2/config-link`
+    - `config_v2/ledger`
     - `config_v2/settings`
     - `conversations`
     - `conversations/conversation-category`
@@ -524,7 +551,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/host/duress`
     - `integrations/gmail`
     - `plugin-meta/composition`
-    - `plugin-meta/relocate`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`
@@ -552,6 +578,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 - Sub-plugins:
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
+  - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the @hash chain.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
     - Plugins:
       - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).

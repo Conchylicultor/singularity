@@ -1,103 +1,74 @@
-import type { IconType } from "react-icons";
-import type { SvgNode } from "../../core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
+import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 
-export type { SvgNode };
-
-export function extractSvgNodes(Icon: IconType): SvgNode[] {
-  const el = (Icon as (props: Record<string, never>) => { props: { children: unknown } })({});
-  return extractChildren(el.props.children);
+export interface SymbolEntry {
+  readonly name: SavedSymbolName;
+  /** The name as words (`smart toy`), for the tooltip and search. */
+  readonly label: string;
+}
+export interface SymbolCategory {
+  readonly label: string;
+  readonly entries: readonly SymbolEntry[];
+}
+export interface SymbolSet {
+  readonly categories: readonly SymbolCategory[];
+  readonly count: number;
+  search(query: string): SymbolEntry[];
 }
 
-function extractChildren(children: unknown): SvgNode[] {
-  if (!children) return [];
-  const arr = Array.isArray(children) ? children : [children];
-  return arr
-    .filter((c: unknown): c is { type: string; props: Record<string, unknown> } =>
-      typeof c === "object" && c !== null && "props" in c,
-    )
-    .filter((c) => !(c.props.fill === "none" && typeof c.props.d === "string" && c.props.d.startsWith("M0 0")))
-    .map((c) => ({
-      tag: c.type,
-      attr: Object.fromEntries(
-        Object.entries(c.props).filter(([k]) => k !== "children"),
-      ) as Record<string, string>,
-      child: extractChildren(c.props.children),
+let cached: Promise<SymbolSet> | null = null;
+
+/**
+ * The picker's data — every Material Symbols name Google's metadata lists (and
+ * the installed sets draw), by category, with its search tags. Loaded on first
+ * call (~1 MB of JSON, its own chunk), then kept. The glyphs are not in it:
+ * each cell draws through `<Icon>`'s runtime symbols, so only visible rows load.
+ */
+export function loadSymbolSet(): Promise<SymbolSet> {
+  cached ??= import("./symbols-metadata.json").then(({ default: meta }) => {
+    type Rich = SymbolEntry & { haystack: string };
+    const categories = meta.categories.map((label) => ({
+      label,
+      entries: [] as Rich[],
     }));
-}
-
-// ---------------------------------------------------------------------------
-// Official MD category display labels.
-// ---------------------------------------------------------------------------
-
-export const CATEGORY_LABELS: Record<string, string> = {
-  action: "Action", alert: "Alerts", av: "Media", communication: "Communication",
-  content: "Content", device: "Device", editor: "Editor", file: "Files",
-  hardware: "Hardware", image: "Images", maps: "Maps", navigation: "Navigation",
-  notification: "Notifications", social: "Social", toggle: "Toggle",
-};
-
-// ---------------------------------------------------------------------------
-// Full icon set — dynamically loaded on demand (generated SvgNode map + metadata
-// JSON). Only used by the IconPicker for browsing/searching. Rendered from the
-// stored SvgNode data (via <SvgIcon/>), so the ~2 000-icon react-icons/md bundle
-// is never pulled into the picker chunk.
-// ---------------------------------------------------------------------------
-
-export interface FullIconEntry { key: string; svgNodes: SvgNode[]; label: string }
-export interface FullIconCategory { label: string; entries: FullIconEntry[] }
-export interface FullIconSet {
-  categories: FullIconCategory[];
-  search: (query: string) => FullIconEntry[];
-}
-
-let _fullSetCache: FullIconSet | null = null;
-
-export async function loadFullIconSet(): Promise<FullIconSet> {
-  if (_fullSetCache) return _fullSetCache;
-
-  // Lazy import of the OWN CORE BARREL (not the deep generated file): in
-  // artifact mode own-core imports are rewritten to the external
-  // `@plugins/primitives/plugins/icon-picker/core` specifier, which the barrel
-  // closure composes into a mapped, lazily-fetched artifact — the import-map
-  // twin of the monolith's lazy chunk. A deep import would rewrite to the same
-  // specifier but fail as a missing export.
-  const [{ ICON_SVG_MAP }, { default: meta }] = await Promise.all([
-    import("../../core"),
-    import("./icon-metadata.json"),
-  ]);
-
-  const svgMap = ICON_SVG_MAP as Record<string, SvgNode[]>;
-  const metaTyped = meta as Record<string, { category: string; tags: string[] }>;
-
-  type RichEntry = FullIconEntry & { category: string; tags: string[] };
-  const entries: RichEntry[] = [];
-
-  for (const [mdName, { category, tags }] of Object.entries(metaTyped)) {
-    const svgNodes = svgMap[mdName];
-    if (!svgNodes) continue;
-    entries.push({ key: mdName, svgNodes, label: mdName.replace(/_/g, " "), category, tags });
-  }
-
-  const catMap = new Map<string, FullIconEntry[]>();
-  for (const { key, svgNodes, label, category } of entries) {
-    const catLabel = CATEGORY_LABELS[category] ?? category;
-    if (!catMap.has(catLabel)) catMap.set(catLabel, []);
-    catMap.get(catLabel)!.push({ key, svgNodes, label });
-  }
-
-  const categories: FullIconCategory[] = Array.from(catMap.entries()).map(([label, es]) => ({ label, entries: es }));
-
-  const search = (query: string): FullIconEntry[] => {
-    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!words.length) return [];
-    return entries
-      .filter(({ key, label, tags }) => {
-        const haystack = [key, label, ...tags].join(" ").toLowerCase();
-        return words.every((w) => haystack.includes(w));
-      })
-      .map(({ key, svgNodes, label }) => ({ key, svgNodes, label }));
-  };
-
-  _fullSetCache = { categories, search };
-  return _fullSetCache;
+    const all: Rich[] = [];
+    for (const [name, category, tags] of meta.icons as [
+      string,
+      number,
+      string,
+    ][]) {
+      if (!isSavedSymbolName(name)) {
+        throw new Error(
+          `[icon-picker] "${name}" is not in the installed sets — regenerate symbols-metadata.json`,
+        );
+      }
+      const label = name.replace(/-/g, " ");
+      const entry: Rich = { name, label, haystack: `${name} ${label} ${tags}` };
+      const bucket = categories[category];
+      if (!bucket) {
+        throw new Error(`[icon-picker] "${name}" has no category ${category}`);
+      }
+      bucket.entries.push(entry);
+      all.push(entry);
+    }
+    return {
+      categories,
+      count: all.length,
+      search(query: string): SymbolEntry[] {
+        const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [];
+        const hits = all.filter((e) =>
+          words.every((w) => e.haystack.includes(w)),
+        );
+        // Names that say the query come before names only tagged with it.
+        const named = (e: Rich) => words.every((w) => e.label.includes(w));
+        return [...hits.filter(named), ...hits.filter((e) => !named(e))];
+      },
+    };
+  });
+  // A failed load is not kept: the next picker to mount tries again.
+  cached.catch(() => {
+    cached = null;
+  });
+  return cached;
 }

@@ -1,7 +1,7 @@
 # callout
 
-A callout is a **void container**. Its payload is `{icon, iconSvgNodes, color}`
-and nothing else — no `text`. Its content IS its children, which are ordinary
+A callout is a **void container**. Its payload is `{icon, color}` —
+`icon` a saved Material Symbols name, drawn as a runtime symbol — and nothing else — no `text`. Its content IS its children, which are ordinary
 blocks of any type that do not know they are inside it:
 
 ```
@@ -30,7 +30,7 @@ boundary's strict parse rejects a stray `text` outright.
 
 Read that plugin's doc for what each flag buys and why they cannot be declared
 piecemeal. This file therefore declares nothing but the callout's identity and
-its `{icon, iconSvgNodes, color}` appearance payload — and the two shells it
+its `{icon, color}` appearance payload — and the two shells it
 composes:
 
 - **The frame** (`web/components/callout-frame.tsx`) paints the tint, over the
@@ -82,8 +82,8 @@ generically (`page/container`'s *The glyph is appearance; the rail is structure*
 The callout contributes none of that: "Remove callout" derives from the handle's
 own `label`.
 
-What is left here is what only exists by virtue of the `{icon, iconSvgNodes,
-color}` payload — colour, icon, Reset, in
+What is left here is what only exists by virtue of the `{icon, color}`
+payload — colour, icon, Reset, in
 `web/components/callout-appearance.tsx`. It renders in **both** places, by
 design: as the `sections` handed `ContainerAnchor` and as the
 `BlockFrameMeta.menu` on the same `Editor.BlockFrame` registration. Both go
@@ -157,12 +157,18 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
   - Exports (values): `calloutBlock`
 - Server:
   - Contributes: `page.block-data` "callout"
-  - Uses: `page/editor.Editor`
+  - Uses:
+    - `database.db`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
+    - `page/editor.Editor`
+    - `page/editor.liveBlocks`
+    - `ui/icons/sprites.defineSavedIconSource`
 - Core:
   - Uses:
     - `page/container.defineContainerBlock`
-    - `page/editor.SvgNodeSchema`
     - `ui/icons.symbol`
+    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types): `CalloutColor`
   - Exports (values):
     - `CALLOUT_COLORS`

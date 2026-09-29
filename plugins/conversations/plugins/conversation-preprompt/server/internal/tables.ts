@@ -7,7 +7,7 @@ import { conversationPrepromptShape } from "../../shared/schemas";
 // exactly what the agent was launched with, even if the config item later
 // changes or is deleted. The body column is named `prompt_text` to avoid any
 // ambiguity with the SQL `text` type, but the TS field stays `text`. `icon`
-// holds the chosen avatar spec (icon key + color + rendered svg nodes), or
+// holds the chosen avatar spec (a Material Symbols name + color), or
 // null when the preprompt has no icon. The row itself is declared once, as
 // `conversationPrepromptShape` in `shared/schemas.ts`.
 export const conversationPreprompt = defineExtension(

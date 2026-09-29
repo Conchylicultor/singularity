@@ -53,7 +53,7 @@ export function RecentPagesSection(): ReactElement | null {
         <Clip className="rounded-lg">
           <Stack gap="none" className="divide-y">
             {recent.map((page) => {
-              const { title, iconSvgNodes } = pageData(page);
+              const { title, icon } = pageData(page);
               return (
                 <Stack
                   key={page.id}
@@ -71,7 +71,7 @@ export function RecentPagesSection(): ReactElement | null {
                   }
                 >
                   <PageIcon
-                    nodes={iconSvgNodes}
+                    icon={icon}
                     className={cn("size-5 text-muted-foreground", rigidClass())}
                   />
                   <Fill as="span">

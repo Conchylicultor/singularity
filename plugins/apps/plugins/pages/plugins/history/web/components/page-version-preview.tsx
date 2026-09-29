@@ -18,7 +18,7 @@ import {
   buildDiff,
   type PageSnapshot,
 } from "../internal/build-diff";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/web";
+import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const descriptionIcon = symbol("description");
@@ -64,9 +64,11 @@ export function PageVersionPreview({
 
   const diff = buildDiff(snap.blocks, current.data);
 
-  const iconNodes = Array.isArray(snap.page.iconSvgNodes)
-    ? (snap.page.iconSvgNodes as SvgNode[])
-    : null;
+  const savedIcon = snap.page.icon;
+  const icon =
+    typeof savedIcon === "string" && isSavedSymbolName(savedIcon)
+      ? savedIcon
+      : null;
 
   return (
     <Stack gap="md">
@@ -74,11 +76,7 @@ export function PageVersionPreview({
           edge (`C + BLOCK_INSET`), while `ReadOnlyBlocks` stays flush at `C`. */}
       <Inset x={BLOCK_INSET}>
         <Line className="gap-sm">
-          <PageIcon
-            nodes={iconNodes}
-            fallback={descriptionIcon}
-            className="size-6"
-          />
+          <PageIcon icon={icon} fallback={descriptionIcon} className="size-6" />
           <Text as="h2" variant="title">
             {snap.page.title || "Untitled"}
           </Text>

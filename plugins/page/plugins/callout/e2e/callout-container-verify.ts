@@ -1,6 +1,6 @@
 // Callout-as-VOID-container verification.
 //
-// A callout owns no text. It is an ANCHOR: a `{icon, iconSvgNodes, color}` row
+// A callout owns no text. It is an ANCHOR: a `{icon, color}` row
 // that renders no line of its own, whose content IS its children — ordinary
 // blocks of any type that do not know they are inside it. Everything that used
 // to be a callout special case is now a plain operation on a plain block, and
@@ -374,7 +374,7 @@ await withBrowser(async (h) => {
         post({
           parentId: pageId,
           type: "callout",
-          data: { icon: null, iconSvgNodes: null, color },
+          data: { icon: null, color },
         });
       const text = (parentId: string, type: string, body: string) =>
         post({ parentId, type, data: { text: [{ text: body }] } });

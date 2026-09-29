@@ -69,10 +69,10 @@ export async function buildPageSearchDoc(
     .map((b) => textOf(b))
     .filter((t) => t.length > 0)
     .join("\n");
-  const iconSvgNodes = data.iconSvgNodes;
+  const icon = data.icon;
 
   const contentHash = createHash("sha256")
-    .update(JSON.stringify({ title, body, iconSvgNodes: iconSvgNodes ?? null }))
+    .update(JSON.stringify({ title, body, icon }))
     .digest("hex");
 
   return {
@@ -83,7 +83,7 @@ export async function buildPageSearchDoc(
       title,
       body,
       route: "/pages/page/" + pageId,
-      metadata: { iconSvgNodes, contentHash },
+      metadata: { icon, contentHash },
     },
   };
 }

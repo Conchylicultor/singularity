@@ -10,36 +10,60 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { MdClose, MdSearch } from "react-icons/md";
-import { SvgIcon } from "./svg-icon";
+import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
-  loadFullIconSet,
-  type SvgNode,
-  type FullIconSet,
-  type FullIconEntry,
+  runtimeSymbol,
+  symbol,
+  type SavedSymbolName,
+} from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  loadSymbolSet,
+  type SymbolEntry,
+  type SymbolSet,
 } from "../internal/icons";
 
-export interface IconSelection {
-  /** The Material Design icon key (e.g. `"rocket"`). */
-  key: string;
-  /** The icon's extracted SVG child-tree, ready to store and render. */
-  svgNodes: SvgNode[];
-}
+const closeIcon = symbol("close");
+const searchIcon = symbol("search");
+
+const COLUMNS = 9;
 
 export interface IconPickerProps {
-  /** Currently-selected icon key, highlighted in the grid. */
-  value: string | null;
-  /** Fired when an icon is picked, with its key and extracted SVG nodes. */
-  onSelect: (selection: IconSelection) => void;
+  /** Currently-selected icon, highlighted in the grid. */
+  value: SavedSymbolName | null;
+  /** Fired with the picked Material Symbols name — what the caller stores. */
+  onSelect: (name: SavedSymbolName) => void;
   className?: string;
 }
 
+type GridRow =
+  | { kind: "header"; key: string; label: string }
+  | { kind: "icons"; key: string; entries: readonly SymbolEntry[] };
+
+function rowsOf(
+  groups: readonly { label: string | null; entries: readonly SymbolEntry[] }[],
+): GridRow[] {
+  const rows: GridRow[] = [];
+  for (const { label, entries } of groups) {
+    if (label !== null) rows.push({ kind: "header", key: `h:${label}`, label });
+    for (let i = 0; i < entries.length; i += COLUMNS) {
+      const slice = entries.slice(i, i + COLUMNS);
+      rows.push({ kind: "icons", key: `r:${slice[0]!.name}`, entries: slice });
+    }
+  }
+  return rows;
+}
+
 /**
- * Searchable, categorized grid of the full Material Design icon set. Loads the
- * icon registry lazily on first mount, so callers should only mount it when the
- * picker is visible (e.g. inside an open popover). Renders just the icon block
+ * Searchable, categorized grid of the Material Symbols set. Loads the picker
+ * data lazily on first mount, so callers should only mount it when the picker
+ * is visible (e.g. inside an open popover). Renders just the icon block
  * (header + search + grid) — surface chrome (popover, color rows) is the
  * caller's responsibility.
+ *
+ * The grid is windowed (`VirtualRows`) and every cell is an `<Icon>` on a
+ * runtime symbol, so only the rows on screen fetch their glyphs — in the
+ * surrounding scope's icon style, the style the picked icon will be drawn in.
  *
  * That includes the CONTENT INSET: this block applies none of its own, so it
  * lands on whatever rail its host establishes. Inside a `ControlPanel` that is
@@ -49,23 +73,26 @@ export interface IconPickerProps {
  */
 export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   const [query, setQuery] = useState("");
-  const [fullSet, setFullSet] = useState<FullIconSet | null>(null);
+  const [set, setSet] = useState<SymbolSet | null>(null);
+  const [failure, setFailure] = useState<Error | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  if (failure) throw failure;
 
   useEffect(() => {
-    void loadFullIconSet().then(setFullSet);
+    void loadSymbolSet().then(setSet, (err: unknown) =>
+      setFailure(err instanceof Error ? err : new Error(String(err))),
+    );
   }, []);
 
-  const pickIcon = (entry: FullIconEntry) => {
-    onSelect({ key: entry.key, svgNodes: entry.svgNodes });
-  };
-
   const isSearching = query.trim().length > 0;
-  const searchResults: FullIconEntry[] =
-    isSearching && fullSet ? fullSet.search(query) : [];
-  const iconCount = fullSet
-    ? fullSet.categories.reduce((n, cat) => n + cat.entries.length, 0)
-    : 0;
+  const results = isSearching && set ? set.search(query) : [];
+  const rows = set
+    ? rowsOf(
+        isSearching
+          ? [{ label: null, entries: results }]
+          : set.categories.map((c) => ({ label: c.label, entries: c.entries })),
+      )
+    : [];
 
   return (
     <Stack gap="xs" className={className}>
@@ -76,17 +103,17 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
             role the primitive gives that one. */}
         <SectionLabel as="span">
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on the "loading…" suffix next to the label text */}
-          Icon{!fullSet && <span className="ml-1 opacity-50">· loading…</span>}
+          Icon{!set && <span className="ml-1 opacity-50">· loading…</span>}
         </SectionLabel>
-        {fullSet && (
+        {set && (
           <span className="text-3xs text-muted-foreground/50">
-            {iconCount} icons
+            {set.count} icons
           </span>
         )}
       </Stack>
       <div className="relative">
         <Pin to="left" offset="sm" decorative>
-          <MdSearch className="size-3.5 text-muted-foreground" />
+          <Icon icon={searchIcon} className="size-3.5 text-muted-foreground" />
         </Pin>
         <input
           ref={searchRef}
@@ -100,63 +127,57 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           <Pin to="right" offset="sm">
             <button
               type="button"
+              aria-label="Clear search"
               onClick={() => {
                 setQuery("");
                 searchRef.current?.focus();
               }}
               className="text-muted-foreground hover:text-foreground"
             >
-              <MdClose className="size-3.5" />
+              <Icon icon={closeIcon} className="size-3.5" />
             </button>
           </Pin>
         )}
       </div>
 
       {/* Icon grid */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between conditional category blocks inside a scroll container; not a plain flex stack */}
-      <Scroll className="max-h-64 space-y-2">
-        {!fullSet ? (
+      <Scroll className="max-h-64">
+        {!set ? (
           <Loading label="Loading icons…" className="py-2xl text-center" />
-        ) : isSearching ? (
-          searchResults.length > 0 ? (
-            <Grid cols={9} gap="xs">
-              {searchResults.map((entry) => (
-                <IconBtn
-                  key={entry.key}
-                  entry={entry}
-                  selected={value === entry.key}
-                  onPick={pickIcon}
-                />
-              ))}
-            </Grid>
-          ) : (
-            <Text
-              as="p"
-              variant="caption"
-              className="py-lg text-center text-muted-foreground"
-            >
-              No icons match &ldquo;{query}&rdquo;
-            </Text>
-          )
+        ) : isSearching && results.length === 0 ? (
+          <Text
+            as="p"
+            variant="caption"
+            className="py-lg text-center text-muted-foreground"
+          >
+            No icons match &ldquo;{query}&rdquo;
+          </Text>
         ) : (
-          fullSet.categories.map((cat) => (
-            <div key={cat.label}>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset between a category label and its icon grid */}
-              <SectionLabel className="mb-1 text-3xs text-muted-foreground/60">
-                {cat.label}
-              </SectionLabel>
-              <Grid cols={9} gap="xs">
-                {cat.entries.map((entry) => (
-                  <IconBtn
-                    key={entry.key}
-                    entry={entry}
-                    selected={value === entry.key}
-                    onPick={pickIcon}
-                  />
-                ))}
-              </Grid>
-            </div>
-          ))
+          <VirtualRows<GridRow>
+            items={rows}
+            estimateSize={32}
+            getKey={(row) => row.key}
+          >
+            {(row) =>
+              row.kind === "header" ? (
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- a category label's offset above its first icon row
+                <SectionLabel className="pb-1 pt-2 text-3xs text-muted-foreground/60">
+                  {row.label}
+                </SectionLabel>
+              ) : (
+                <Grid cols={COLUMNS} gap="xs" className="pb-xs">
+                  {row.entries.map((entry) => (
+                    <IconBtn
+                      key={entry.name}
+                      entry={entry}
+                      selected={value === entry.name}
+                      onPick={onSelect}
+                    />
+                  ))}
+                </Grid>
+              )
+            }
+          </VirtualRows>
         )}
       </Scroll>
     </Stack>
@@ -168,24 +189,24 @@ function IconBtn({
   selected,
   onPick,
 }: {
-  entry: FullIconEntry;
+  entry: SymbolEntry;
   selected: boolean;
-  onPick: (e: FullIconEntry) => void;
+  onPick: (name: SavedSymbolName) => void;
 }) {
   return (
     <button
       type="button"
-      aria-label={entry.key}
+      aria-label={entry.label}
       aria-pressed={selected}
-      title={entry.key.replace(/_/g, " ")}
-      onClick={() => onPick(entry)}
+      title={entry.label}
+      onClick={() => onPick(entry.name)}
       className={cn(
         "size-7 rounded-md text-foreground/80 hover:bg-accent",
         selected && "bg-accent text-foreground ring-1 ring-ring",
       )}
     >
       <Center>
-        <SvgIcon nodes={entry.svgNodes} className="size-4" />
+        <Icon icon={runtimeSymbol(entry.name)} className="size-4" />
       </Center>
     </button>
   );

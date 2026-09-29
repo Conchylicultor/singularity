@@ -7,7 +7,7 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import { PageLinkEdgeSchema } from "../../core/schemas";
 import {
@@ -17,9 +17,8 @@ import {
 import type { PageLinkEdge } from "../../core/schemas";
 import { _pageLinks } from "./tables";
 
-// `data->>'title'` / `data->'iconSvgNodes'`: the source page's title and icon
-// SVG tree live in the `type="page"` block's `data` JSON. `->` (not `->>`)
-// keeps the icon tree as JSON so it deserializes back to an array.
+// `data->>'title'` / `data->>'icon'`: the source page's title and icon (a
+// Material Symbols name) live in the `type="page"` block's `data` JSON.
 //
 // Both carry the decoder their declared type comes from, so the projection is
 // `BacklinkRow` by construction rather than by a cast — `->` hands back whatever
@@ -27,8 +26,8 @@ import { _pageLinks } from "./tables";
 // parsing rather than asserting. `orderBy` reuses the same expression object;
 // the decoder rides along and is simply never invoked there.
 const titleExpr = sql`${liveBlocks.data} ->> 'title'`.mapWith(String);
-const iconSvgNodesExpr = sql`${liveBlocks.data} -> 'iconSvgNodes'`.mapWith(
-  nullable(parsed(z.array(SvgNodeSchema), "backlinks.iconSvgNodes")),
+const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
+  nullable(parsed(SavedSymbolNameSchema, "backlinks.icon")),
 );
 
 // The source pages that link TO `pageId`, ordered by title. A db-arm value: the
@@ -47,7 +46,7 @@ export const pageBacklinksServed = serveValue(pageBacklinks, {
       .select({
         id: liveBlocks.id,
         title: titleExpr,
-        iconSvgNodes: iconSvgNodesExpr,
+        icon: iconExpr,
       })
       .from(_pageLinks)
       // A trashed source page's edges are dropped by the trash hook; the LIVE

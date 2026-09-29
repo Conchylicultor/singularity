@@ -51,7 +51,7 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
       leading={
         <Center as="span" className="size-3.5">
           <PageIcon
-            nodes={data?.iconSvgNodes}
+            icon={data?.icon}
             fallback={linkIcon}
             className="size-3.5"
           />

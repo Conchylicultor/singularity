@@ -47,7 +47,7 @@ describe("createInlineAudit", () => {
       auditOf([
         "\0commonjsHelpers.js",
         "\0vite/preload-helper",
-        "/repo/node_modules/react-icons/md/index.mjs",
+        "/repo/node_modules/some-pkg/dist/index.mjs",
         "/repo/plugins/x/node_modules/some-dep/index.js",
         "virtual:some-plugin",
         "/repo/plugins/x/fixtures/index.ts",

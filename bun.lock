@@ -25,7 +25,6 @@
         "react": "^19.1.0",
         "react-diff-view": "^3.3.3",
         "react-dom": "^19.1.0",
-        "react-icons": "^5.5.0",
         "react-markdown": "^9.0.1",
         "react-resizable-panels": "^4.10.0",
         "rehype-raw": "^7.0.0",
@@ -1295,6 +1294,9 @@
     },
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
+    },
+    "plugins/config_v2/plugins/ledger": {
+      "name": "@singularity/plugin-config_v2-ledger",
     },
     "plugins/config_v2/plugins/settings": {
       "name": "@singularity/plugin-config_v2-settings",
@@ -5184,6 +5186,10 @@
       "name": "@singularity/plugin-ui-icons",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/icons/plugins/saved-names": {
+      "name": "@singularity/plugin-ui-icons-saved-names",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/icons/plugins/sprites": {
       "name": "@singularity/plugin-ui-icons-sprites",
       "version": "0.0.1",
@@ -6558,6 +6564,8 @@
     "@singularity/plugin-config_v2-config-link": ["@singularity/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
+
+    "@singularity/plugin-config_v2-ledger": ["@singularity/plugin-config_v2-ledger@workspace:plugins/config_v2/plugins/ledger"],
 
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
@@ -8387,6 +8395,8 @@
 
     "@singularity/plugin-ui-icons": ["@singularity/plugin-ui-icons@workspace:plugins/ui/plugins/icons"],
 
+    "@singularity/plugin-ui-icons-saved-names": ["@singularity/plugin-ui-icons-saved-names@workspace:plugins/ui/plugins/icons/plugins/saved-names"],
+
     "@singularity/plugin-ui-icons-sprites": ["@singularity/plugin-ui-icons-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites"],
 
     "@singularity/plugin-ui-segmented-progress-bar": ["@singularity/plugin-ui-segmented-progress-bar@workspace:plugins/ui/plugins/segmented-progress-bar"],
@@ -9654,8 +9664,6 @@
     "react-dom": ["react-dom@19.2.5", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.5" } }, "sha512-J5bAZz+DXMMwW/wV3xzKke59Af6CHY7G4uYLN1OvBcKEsWOs4pQExj86BBKamxl/Ik5bx9whOrvBlSDfWzgSag=="],
 
     "react-error-boundary": ["react-error-boundary@6.1.1", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-BrYwPOdXi5mqkk5lw+Uvt0ThHx32rCt3BkukS4X23A2AIWDPSGX6iaWTc0y9TU/mHDA/6qOSGel+B2ERkOvD1w=="],
-
-    "react-icons": ["react-icons@5.6.0", "", { "peerDependencies": { "react": "*" } }, "sha512-RH93p5ki6LfOiIt0UtDyNg/cee+HLVR6cHHtW3wALfo+eOHTp8RnU2kRkI6E+H19zMIs03DyxUG/GfZMOGvmiA=="],
 
     "react-is": ["react-is@18.3.1", "", {}, "sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg=="],
 

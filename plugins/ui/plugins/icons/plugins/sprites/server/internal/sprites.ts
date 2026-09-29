@@ -1,6 +1,4 @@
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
 import type { IconifyJSON } from "@iconify/types";
 import {
   ALL_STYLE_KEYS,
@@ -15,6 +13,12 @@ import {
 } from "@plugins/ui/plugins/icons/server";
 import { buildSprite } from "./build-sprite";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
+import {
+  PACKAGE,
+  installedVersion,
+  readSet,
+  withSymbolSets,
+} from "./symbol-sets";
 
 /**
  * Where each sprite's glyphs come from. Every symbol sprite is built from BOTH
@@ -22,16 +26,6 @@ import { ICON_MANIFEST } from "./icon-manifest.generated";
  * has it, which may be the other weight.
  */
 type SetKey = "symbols" | typeof BRANDS_SPRITE;
-
-const PACKAGE = {
-  regular: "@iconify-json/material-symbols",
-  light: "@iconify-json/material-symbols-light",
-  brands: "@iconify-json/simple-icons",
-} as const;
-
-function packageFile(pkg: string, file: string): string {
-  return fileURLToPath(import.meta.resolve(`${pkg}/${file}`));
-}
 
 function setOf(key: SpriteKey): SetKey {
   return key === BRANDS_SPRITE ? BRANDS_SPRITE : "symbols";
@@ -45,17 +39,11 @@ export const manifestHash: string = createHash("sha256")
   .update(JSON.stringify(ICON_MANIFEST))
   .update(
     Object.values(PACKAGE)
-      .map((pkg) => {
-        const { version } = JSON.parse(
-          readFileSync(packageFile(pkg, "package.json"), "utf8"),
-        ) as { version: string };
-        return `${pkg}@${version}`;
-      })
+      .map((pkg) => `${pkg}@${installedVersion(pkg)}`)
       .join("\n"),
   )
   .digest("hex")
   .slice(0, 16);
-
 function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {
   return new Map([
     [
@@ -92,10 +80,6 @@ function symbolSprites(sets: SymbolSets): Map<SpriteKey, string> {
   return out;
 }
 
-async function readSet(pkg: string): Promise<IconifyJSON> {
-  return (await Bun.file(packageFile(pkg, "icons.json")).json()) as IconifyJSON;
-}
-
 // One build per sprite group per process, memoized: the ~10 MB sets are
 // parsed once, every sprite they yield is kept (a few hundred KB), and the
 // parsed sets are dropped. The manifest and node_modules cannot change under a
@@ -110,11 +94,7 @@ async function loadSet(key: SetKey): Promise<Map<SpriteKey, string>> {
     }
     return brandSprite(await readSet(PACKAGE.brands));
   }
-  const [regular, light] = await Promise.all([
-    readSet(PACKAGE.regular),
-    readSet(PACKAGE.light),
-  ]);
-  return symbolSprites({ regular, light });
+  return await withSymbolSets(symbolSprites);
 }
 
 export async function spriteFor(key: SpriteKey): Promise<string> {

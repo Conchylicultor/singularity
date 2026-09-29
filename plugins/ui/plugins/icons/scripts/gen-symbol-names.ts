@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 /**
  * Generates `core/symbol-names.generated.ts` — the `SymbolName` and `BrandName`
- * unions `symbol()` / `brand()` accept — from the installed Iconify JSON sets.
+ * unions `symbol()` / `brand()` accept — from the installed Iconify JSON sets,
+ * and the runtime name list saved names are checked against
+ * (`plugins/saved-names/core/internal/symbol-names.json`).
  * Run it after upgrading one of those packages; the `icons:symbol-names-in-sync`
  * check fails until you do.
  *
@@ -12,6 +14,8 @@ import { writeGenerated } from "@plugins/framework/plugins/tooling/plugins/codeg
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   SYMBOL_NAMES_REL_PATH,
+  SYMBOL_NAME_LIST_REL_PATH,
+  renderSymbolNameList,
   brandNames,
   symbolBaseNames,
   installedSetVersions,
@@ -19,7 +23,8 @@ import {
   renderSymbolNames,
 } from "../shared";
 
-const file = join(await getWorktreeRoot(), SYMBOL_NAMES_REL_PATH);
+const root = await getWorktreeRoot();
+const file = join(root, SYMBOL_NAMES_REL_PATH);
 const symbols = symbolBaseNames(
   readIconSet("@iconify-json/material-symbols"),
   readIconSet("@iconify-json/material-symbols-light"),
@@ -32,6 +37,10 @@ await writeGenerated({
     symbols,
     brands,
   }),
+});
+await writeGenerated({
+  file: join(root, SYMBOL_NAME_LIST_REL_PATH),
+  content: renderSymbolNameList({ versions: installedSetVersions(), symbols }),
 });
 console.log(
   `Generated ${SYMBOL_NAMES_REL_PATH} — ${symbols.length} symbols, ${brands.length} brands`,

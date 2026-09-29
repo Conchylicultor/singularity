@@ -20,6 +20,26 @@ export const ICON_SET_PACKAGES = [
 export const SYMBOL_NAMES_REL_PATH =
   "plugins/ui/plugins/icons/core/symbol-names.generated.ts";
 
+/**
+ * The same names as RUNTIME data, for the membership parse a saved (user-picked)
+ * name goes through. A separate file in its own plugin (`saved-names`), so only
+ * the plugins that validate a stored name ship it — the core barrel every
+ * surface loads carries types only. JSON, not a `*.generated.ts` module: like
+ * the unions it is written by the hand-run generator, never by a build stage,
+ * so it is not one of the build's pre-barrel manifests.
+ */
+export const SYMBOL_NAME_LIST_REL_PATH =
+  "plugins/ui/plugins/icons/plugins/saved-names/core/internal/symbol-names.json";
+
+/** The shape of {@link SYMBOL_NAME_LIST_REL_PATH}. */
+export interface SymbolNameList {
+  /** The same stamp as the unions', checked by `icons:symbol-names-in-sync`. */
+  inputsHash: string;
+  from: string;
+  /** Every SymbolName, space-separated. */
+  names: string;
+}
+
 const HASH_RE = /\/\/ @inputs-hash ([a-f0-9]+)/;
 
 function packageDir(pkg: string): string {
@@ -135,4 +155,22 @@ export function renderSymbolNames(inputs: {
     `export type BrandName =\n${union(inputs.brands)};`,
     "",
   ].join("\n");
+}
+
+export function renderSymbolNameList(inputs: {
+  versions: readonly string[];
+  symbols: readonly string[];
+}): string {
+  const list: SymbolNameList = {
+    inputsHash: symbolNamesInputsHash(inputs.versions),
+    from: inputs.versions.join(", "),
+    names: inputs.symbols.join(" "),
+  };
+  return `${JSON.stringify(list, null, 2)}\n`;
+}
+
+/** The inputs hash a generated name list was stamped with, or undefined when it has none. */
+export function readListInputsHash(json: string): string | undefined {
+  const parsed = JSON.parse(json) as Partial<SymbolNameList>;
+  return typeof parsed.inputsHash === "string" ? parsed.inputsHash : undefined;
 }

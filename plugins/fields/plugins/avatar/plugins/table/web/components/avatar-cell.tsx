@@ -12,7 +12,7 @@ import type {
  *  render-time only: `fallbackKey` seeds the derived colour when `color` is
  *  null, `shape` picks the outline (an app icon is a squircle; people and
  *  agents stay circles), and `symbol` is a glyph named in code (an app's icon)
- *  drawn when there are no stored `svgNodes` — none is part of the persisted
+ *  drawn when there is no saved `icon` — none is part of the persisted
  *  {@link AvatarSpec}. */
 export type AvatarFieldData = AvatarSpec & {
   fallbackKey?: string;
@@ -36,13 +36,12 @@ function isNullOr(v: unknown, check: (v: unknown) => boolean): boolean {
 
 function isAvatarFieldData(data: unknown): data is AvatarFieldData {
   if (typeof data !== "object" || data === null) return false;
-  if (!("icon" in data && "color" in data && "svgNodes" in data)) return false;
+  if (!("icon" in data && "color" in data)) return false;
   const isString = (v: unknown) => typeof v === "string";
   const isShape = (v: unknown) => v === "circle" || v === "squircle";
   return (
     isNullOr(data.icon, isString) &&
     isNullOr(data.color, isString) &&
-    isNullOr(data.svgNodes, Array.isArray) &&
     (!("fallbackKey" in data) ||
       data.fallbackKey === undefined ||
       isString(data.fallbackKey)) &&
@@ -65,7 +64,6 @@ export function AvatarCell(props: TableCellProps): ReactNode {
     <Avatar
       icon={data.icon}
       color={data.color}
-      svgNodes={data.svgNodes}
       symbol={data.symbol}
       fallbackKey={data.fallbackKey}
       shape={data.shape}

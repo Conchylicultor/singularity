@@ -1,4 +1,6 @@
 export { defineConfig } from "./internal/define-config";
+export { defineConfigMigration } from "./internal/config-migration";
+export type { ConfigMigration } from "./internal/config-migration";
 export type {
   Disposable,
   JsonValue,

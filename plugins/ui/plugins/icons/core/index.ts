@@ -1,5 +1,11 @@
-export { brand, symbol } from "./icon-ref";
-export type { BrandRef, IconRef, SymbolRef } from "./icon-ref";
+export { brand, runtimeSymbol, symbol } from "./icon-ref";
+export type {
+  BrandRef,
+  IconRef,
+  RuntimeSymbolRef,
+  SavedSymbolName,
+  SymbolRef,
+} from "./icon-ref";
 export type { BrandName, SymbolName } from "./symbol-names.generated";
 export { coveredStyles, resolveSymbolStyle } from "./fallback";
 export {
@@ -14,6 +20,7 @@ export {
   iconifyName,
   isStyleKey,
   parseStyleKey,
+  runtimeSymbolId,
   styleKeyOf,
   symbolId,
 } from "./style";

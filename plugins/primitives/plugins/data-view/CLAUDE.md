@@ -1053,7 +1053,7 @@ re-declare what its type already said.
 `FieldDef.value` is the **comparable** projection — sort, filter, search and
 group-by all read it — so it is scalar. `FieldDef.values` is the multi-value
 twin for tags. `FieldDef.data?: (row) => unknown` is the third projection:
-**structured and display-only**, e.g. an avatar spec `{ icon, color, svgNodes }`.
+**structured and display-only**, e.g. an avatar spec `{ icon, color }`.
 
 - **Read only by the field type's cell.** `useResolveCell` computes
   `data: field.data?.(row)` itself and hands it on as `TableCellProps.data`

@@ -294,6 +294,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversation-category`
+    - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
@@ -327,6 +328,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
     - `page/block-text-write`
+    - `page/callout`
     - `page/editor`
     - `page/editor-collab`
     - `page/inline-date`

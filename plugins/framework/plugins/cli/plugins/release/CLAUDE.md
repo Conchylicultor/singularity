@@ -16,7 +16,7 @@ from the declaration.
 Step 1 spawns a **fresh** `bun bin/index.ts build --hermetic --composition <n>`
 process instead of calling the artifact phase in-process. That is not a
 convenience — this module statically imports plugin barrels
-(`resolveIconSvgNodes`, `runAssetMirrorPrewarm`, `propagateConfigToUser`,
+(`symbolBody`, `runAssetMirrorPrewarm`, `propagateConfigToUser`,
 `buildPluginTree`), and ESM imports evaluate before the action body runs, so by
 the time `release` starts Bun's module cache has those barrels **frozen**. The
 build's `setPreBarrelImportGuard` can then never fire, `generateConfigOrigins`

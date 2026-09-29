@@ -5,22 +5,11 @@ import {
   Avatar,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { agentLaunchesResource, agentRows } from "../../shared/resources";
-
-function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SvgNode[];
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return null;
-  }
-}
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const launchesResult = useResource(agentLaunchesResource);
@@ -34,9 +23,6 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
-      svgNodes={
-        parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes
-      }
       statusDot={statusDotPaintClass(CONV_STATUS_DOT[conv.status])}
       title={agent?.name}
       colorless

@@ -7,7 +7,6 @@ export {
   samePageKind,
   withPageKind,
   PageCoverSchema,
-  SvgNodeSchema,
   PAGE_BLOCK_TYPE,
   PAGES_TRASH_SOURCE,
   PAGE_BLOCKS_TRASH_SOURCE,

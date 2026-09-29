@@ -12,22 +12,17 @@ const addIcon = symbol("add");
 const AvatarRenderer = defineFieldShape({
   type: avatarFieldType,
   useShape: ({ value, onChange }) => {
-    // An unset avatar ({icon,color,svgNodes} all null) would render as a blank
-    // muted disc with no interior — invisible against the surface. Show a dashed
+    // An unset avatar ({icon,color} both null) would render as a blank muted
+    // disc with no interior — invisible against the surface. Show a dashed
     // "add" placeholder so the trigger always reads as a clickable affordance.
-    const isEmpty =
-      value.icon == null &&
-      value.color == null &&
-      (value.svgNodes == null || value.svgNodes.length === 0);
+    const isEmpty = value.icon == null && value.color == null;
     return {
       kind: "value",
       fit: "inline",
       control: (
         <AvatarPicker
           value={value}
-          onChange={(next) =>
-            onChange({ icon: next.icon, color: next.color, svgNodes: null })
-          }
+          onChange={(next) => onChange({ icon: next.icon, color: next.color })}
         >
           {isEmpty ? (
             <Center
@@ -37,11 +32,7 @@ const AvatarRenderer = defineFieldShape({
               <Icon icon={addIcon} className="size-4" />
             </Center>
           ) : (
-            <Avatar
-              icon={value.icon}
-              color={value.color}
-              svgNodes={value.svgNodes}
-            />
+            <Avatar icon={value.icon} color={value.color} />
           )}
         </AvatarPicker>
       ),

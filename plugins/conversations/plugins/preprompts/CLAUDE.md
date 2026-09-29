@@ -31,6 +31,8 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
+    - `ui/icons/sprites.defineSavedIconSource`
   - Exports (values):
     - `resolvePreprompt`
     - `resolvePrepromptItem`

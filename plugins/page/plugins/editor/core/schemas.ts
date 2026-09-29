@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { defineBlock, type BlockAuthor } from "./define-block";
 import type { BlockMarkdown } from "./markdown";
 
@@ -46,19 +46,6 @@ export function asBlockData(data: Record<string, unknown>): BlockData {
 export const StoredBlockDataSchema: ZodParser<BlockData> = z
   .record(z.string(), z.unknown())
   .transform(asBlockData);
-
-// Recursive validator for the icon-picker SvgNode storage format. The `data`
-// jsonb column stores the tree natively (no JSON-string wrapping), so a page
-// can render its icon without importing the react-icons bundle. Exported so
-// other page-domain surfaces that surface a page icon (e.g. the backlinks
-// index) validate it the same way.
-export const SvgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
-  z.object({
-    tag: z.string(),
-    attr: z.record(z.string()),
-    child: z.array(SvgNodeSchema),
-  }),
-);
 
 // A block is the single node type. A page is just a block of `type="page"` whose
 // `data` is `{ title, icon }`; content blocks carry their own payload in `data`.
@@ -131,10 +118,10 @@ export const PageCoverSchema = z.discriminatedUnion("type", [
 ]);
 export type PageCover = z.infer<typeof PageCoverSchema>;
 
-// The `data` payload of a `type="page"` block. `icon` is the Material Design
-// icon key (e.g. "rocket"); `iconSvgNodes` is its extracted SVG tree, rendered
-// directly so display surfaces don't ship the icon registry. Both null = no
-// icon (a default glyph is shown instead). `cover` is the optional page cover
+// The `data` payload of a `type="page"` block. `icon` is the Material Symbols
+// name the user picked (e.g. "rocket"), drawn by `<Icon>` as a runtime symbol
+// in the surrounding theme's style; null = no icon (a default glyph is shown
+// instead). `cover` is the optional page cover
 // (absent on legacy rows — decodes to `undefined`, no data migration).
 // `author: "agent"` marks an AGENT-AUTHORED page — a sub-page whose whole
 // content an agent may write (`<agent-page>` in markdown). Absent means the
@@ -160,8 +147,7 @@ export type PageCover = z.infer<typeof PageCoverSchema>;
 // can be chosen by, where a nested object could not be.
 export const PageDataSchema = z.object({
   title: z.string(),
-  icon: z.string().nullable(),
-  iconSvgNodes: z.array(SvgNodeSchema).nullable().optional(),
+  icon: SavedSymbolNameSchema.nullable(),
   cover: PageCoverSchema.nullable().optional(),
   author: z.literal("agent").optional(),
   instructions: z.literal(true).optional(),

@@ -131,7 +131,6 @@ migrate (Resources page item 3).
     - `infra/query-resource.compileEdges`
     - `infra/query-resource.rel`
     - `network/live.serveValue`
-    - `primitives/icon-picker.resolveIconSvgNodesJson`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
@@ -143,6 +142,7 @@ migrate (Resources page item 3).
     - `tasks/tasks-core.conversationsView`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.listConversationsForDisplay`
+    - `ui/icons/sprites.defineSavedIconSource`
   - DB schema:
     - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
     - `plugins/conversations/plugins/agents/server/internal/schema.ts`
@@ -181,6 +181,7 @@ migrate (Resources page item 3).
     - `infra/endpoints.defineEndpoint`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
+    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `Agent`
     - `AgentLaunch`

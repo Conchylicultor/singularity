@@ -19,7 +19,7 @@ function SegmentLabel({ page }: { page: Block }): ReactElement {
   const data = pageData(page);
   return (
     <Inline gap="2xs">
-      <PageIcon nodes={data.iconSvgNodes} className="size-3.5" />
+      <PageIcon icon={data.icon} className="size-3.5" />
       {data.title || "Untitled"}
     </Inline>
   );

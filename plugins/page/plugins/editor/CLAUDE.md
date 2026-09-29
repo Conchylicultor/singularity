@@ -271,7 +271,7 @@ the pull and both landed on one x. One count where two are needed.
 
 A frame-contributing block can go one step further and own **no line of its own**:
 `BlockHandle.anchor` says its content *is* its children. The callout is the one
-today — a void `{icon, iconSvgNodes, color}` payload whose first line is an
+today — a void `{icon, color}` payload whose first line is an
 ordinary `text` child, so converting that child to a heading cannot touch the
 container, and Enter inside it is a plain sibling split rather than a second
 callout.
@@ -3872,7 +3872,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/dom/dom-selection.selectionRect`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
-    - `primitives/icon-picker.SvgIcon`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.liveStateSocketKind`
@@ -4026,6 +4025,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`
@@ -4036,6 +4037,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
+    - `ui/icons/sprites.defineSavedIconSource`
   - DB schema:
     - `plugins/page/plugins/editor/server/internal/tables-events.ts`
     - `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -4112,6 +4114,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/tree.isDescendant`
     - `primitives/tree.selectionRoots`
     - `primitives/tree.subtreeIds`
+    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `Block`
     - `BlockAudience`
@@ -4255,7 +4258,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SetPageKindBodySchema`
     - `sortMarks`
     - `splitRuns`
-    - `SvgNodeSchema`
     - `textBlockSchema`
     - `textDataSchema`
     - `textOf`

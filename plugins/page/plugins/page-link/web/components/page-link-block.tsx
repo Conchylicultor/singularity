@@ -227,7 +227,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         icon={
           <Center as="span" className="size-4 text-muted-foreground">
             <PageIcon
-              nodes={targetData?.iconSvgNodes}
+              icon={targetData?.icon}
               fallback={linkIcon}
               className="size-4"
             />

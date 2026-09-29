@@ -22,7 +22,6 @@ export const handleCreate = implement(createAgent, async ({ body }) => {
     model: body.model ?? null,
     icon: body.icon ?? null,
     iconColor: body.iconColor ?? null,
-    iconSvgNodes: body.iconSvgNodes ?? null,
     rank: rank.toJSON(),
   });
   // No parent force-expand here: expand/collapse is device-local view state owned

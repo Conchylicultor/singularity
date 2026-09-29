@@ -30,7 +30,7 @@ describe("what it keeps", () => {
   test("every key survives, whichever block type wrote it", () => {
     // A callout's payload and a to-do's payload have nothing in common; the
     // decoder has heard of neither and must hand both back whole.
-    const callout = { icon: "bulb", color: "amber", iconSvgNodes: null };
+    const callout = { icon: "lightbulb", color: "amber" };
     const todo = { text: [{ text: "ship it" }], checked: true };
     expect(_blocks.data.mapFromDriverValue(callout)).toEqual(callout);
     expect(_blocks.data.mapFromDriverValue(todo)).toEqual(todo);

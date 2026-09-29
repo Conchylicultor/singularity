@@ -1,32 +1,23 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import type { AvatarSpec, SvgNode } from "@plugins/fields/plugins/avatar/core";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
-// Snapshot of the chosen preprompt avatar (icon key + color + rendered svg
-// nodes), and the decoder for the `conversations_ext_preprompt.icon` column.
+// Snapshot of the chosen preprompt avatar (a Material Symbols name + color),
+// and the decoder for the `conversations_ext_preprompt.icon` column.
 //
 // The TYPE is the canonical `AvatarSpec` — a type-only import, so it is erased
 // and this module never loads the avatar field plugin's runtime. Annotating the
 // schema `ZodParser<AvatarSpec>` is what pins the two together: a shape that
 // drifts from the interface stops compiling here.
-//
-// `SvgNode` is recursive through `child`, so its schema needs `z.lazy`.
-const SvgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
-  z.object({
-    tag: z.string(),
-    attr: z.record(z.string()),
-    child: z.array(SvgNodeSchema),
-  }),
-);
 const AvatarSpecSchema: ZodParser<AvatarSpec> = z.object({
-  icon: z.string().nullable(),
+  icon: SavedSymbolNameSchema.nullable(),
   color: z.string().nullable(),
-  svgNodes: z.array(SvgNodeSchema).nullable(),
 });
 // The wire/row field is nullable (a preprompt may have no icon). `nullable()`
 // leaves the column's `.notNull()` off, and the jsonb decoder is handed the
@@ -35,7 +26,7 @@ const AvatarSpecSchema: ZodParser<AvatarSpec> = z.object({
 const prepromptIconField = nullable(
   jsonField({
     schema: AvatarSpecSchema,
-    default: { icon: null, color: null, svgNodes: null },
+    default: { icon: null, color: null },
   }),
 );
 export type PrepromptIcon = AvatarSpec | null;

@@ -9,6 +9,12 @@ export {
 } from "./internal/style-store";
 export { hasSprite, provideSprite } from "./internal/sprite-store";
 export { IconSpriteSheet } from "./internal/sprite-sheet";
+export {
+  hasRuntimeSymbol,
+  installRuntimeSymbolLoader,
+  provideRuntimeSymbols,
+} from "./internal/runtime-symbol-store";
+export type { RuntimeSymbolEntry } from "./internal/runtime-symbol-store";
 
 export default {
   description:

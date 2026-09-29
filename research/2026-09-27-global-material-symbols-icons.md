@@ -21,7 +21,8 @@ Goal:
 Out of scope (own task): remapping **saved** icons (agents `icon` +
 `icon_svg_nodes`, avatar config fields, page icons) and moving the icon
 picker onto Symbols. They keep rendering their stored `SvgNode`s unchanged
-until then.
+until then. Done in
+[`2026-09-27-global-saved-icons-material-symbols.md`](2026-09-27-global-saved-icons-material-symbols.md).
 
 ## Decisions (settled with the user)
 

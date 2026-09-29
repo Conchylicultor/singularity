@@ -125,6 +125,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `conversations.conversationTurnCompleted`
     - `conversations.readConversationTurns`
     - `database.db`
@@ -139,6 +140,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
+    - `ui/icons/sprites.defineSavedIconSource`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
   - Exports (types): `CategoryDescriptor`
   - Exports (values):

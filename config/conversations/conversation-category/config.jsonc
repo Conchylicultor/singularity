@@ -8,14 +8,14 @@
       "name": "Type",
       "hint": "What kind of work this conversation is. If nothing else clearly fits, pick \"Other\".",
       "items": [
-        { "id": "type-general", "name": "General question", "hint": "", "avatar": { "icon": "question_mark", "color": "sky" } },
-        { "id": "type-feature-small", "name": "Feature (small)", "hint": "", "avatar": { "icon": "star_outline", "color": "amber" } },
-        { "id": "type-feature-big", "name": "Feature (big)", "hint": "", "avatar": { "icon": "star_rate", "color": "amber" } },
+        { "id": "type-general", "name": "General question", "hint": "", "avatar": { "icon": "question-mark", "color": "sky" } },
+        { "id": "type-feature-small", "name": "Feature (small)", "hint": "", "avatar": { "icon": "star", "color": "amber" } },
+        { "id": "type-feature-big", "name": "Feature (big)", "hint": "", "avatar": { "icon": "star-rate", "color": "amber" } },
         { "id": "type-infra-small", "name": "Infra (small)", "hint": "", "avatar": { "icon": "factory", "color": "emerald" } },
         { "id": "type-infra-load-bearing", "name": "Infra (load bearing)", "hint": "", "avatar": { "icon": "factory", "color": "emerald" } },
-        { "id": "type-bug-small", "name": "Bug (small)", "hint": "", "avatar": { "icon": "bug_report", "color": "rose" } },
-        { "id": "type-bug-critical", "name": "Bug (critical)", "hint": "", "avatar": { "icon": "bug_report", "color": "rose" } },
-        { "id": "type-other", "name": "Other", "hint": "", "avatar": { "icon": "question_mark", "color": "sky" } }
+        { "id": "type-bug-small", "name": "Bug (small)", "hint": "", "avatar": { "icon": "bug-report", "color": "rose" } },
+        { "id": "type-bug-critical", "name": "Bug (critical)", "hint": "", "avatar": { "icon": "bug-report", "color": "rose" } },
+        { "id": "type-other", "name": "Other", "hint": "", "avatar": { "icon": "question-mark", "color": "sky" } }
       ]
     }
   ]

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { QuickFindDialog } from "@plugins/search/plugins/quick-find/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -35,12 +35,21 @@ export function PagesSearch() {
           openPane(pageDetailPane, { pageId: r.entityId }, { mode: "push" });
           setOpen(false);
         }}
-        renderIcon={(r) => (
-          <PageIcon
-            nodes={r.metadata?.iconSvgNodes as SvgNode[] | null | undefined}
-            className="size-4"
-          />
-        )}
+        renderIcon={(r) => {
+          // Search metadata is untyped JSON; the reindexer writes the page's
+          // saved icon name under `icon`.
+          const icon: unknown = r.metadata?.icon;
+          return (
+            <PageIcon
+              icon={
+                typeof icon === "string" && isSavedSymbolName(icon)
+                  ? icon
+                  : null
+              }
+              className="size-4"
+            />
+          );
+        }}
       />
     </>
   );

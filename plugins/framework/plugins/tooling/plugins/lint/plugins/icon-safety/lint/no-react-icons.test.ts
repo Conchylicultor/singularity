@@ -1,13 +1,12 @@
 /**
- * Tests for the icon-safety react-icons rules: `no-react-icons` bans every
- * react-icons import outside primitives/icon-picker, `no-namespace-react-icons`
- * only has work inside it, and `no-robot-icon` catches the robot symbols.
+ * Tests for the icon-safety rules: `no-react-icons` bans every react-icons
+ * import, the icon picker included, and `no-robot-icon` catches the robot
+ * symbols.
  */
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
 import noReactIcons from "./no-react-icons";
-import noNamespaceReactIcons from "./no-namespace-react-icons";
 import noRobotIcon from "./no-robot-icon";
 
 type Rule = Parameters<RuleTester["run"]>[1];
@@ -29,9 +28,13 @@ ruleTester.run("no-react-icons", noReactIcons as unknown as Rule, {
       code: `import { symbol } from "@plugins/ui/plugins/icons/core";`,
       filename: ELSEWHERE,
     },
-    { code: `import { MdClose } from "react-icons/md";`, filename: PICKER },
   ],
   invalid: [
+    {
+      code: `import { MdClose } from "react-icons/md";`,
+      filename: PICKER,
+      errors: [{ messageId: "reactIcons" }],
+    },
     {
       code: `import { MdClose } from "react-icons/md";`,
       filename: ELSEWHERE,
@@ -54,25 +57,6 @@ ruleTester.run("no-react-icons", noReactIcons as unknown as Rule, {
     },
   ],
 });
-
-ruleTester.run(
-  "no-namespace-react-icons",
-  noNamespaceReactIcons as unknown as Rule,
-  {
-    valid: [
-      { code: `import { MdClose } from "react-icons/md";`, filename: PICKER },
-      // Outside the picker, no-react-icons already reports the import.
-      { code: `import * as md from "react-icons/md";`, filename: ELSEWHERE },
-    ],
-    invalid: [
-      {
-        code: `import * as md from "react-icons/md";`,
-        filename: PICKER,
-        errors: [{ messageId: "namespaceImport" }],
-      },
-    ],
-  },
-);
 
 ruleTester.run("no-robot-icon", noRobotIcon as unknown as Rule, {
   valid: [

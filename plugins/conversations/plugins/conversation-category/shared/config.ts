@@ -1,11 +1,46 @@
-import { defineConfig } from "@plugins/config_v2/core";
+import {
+  defineConfig,
+  defineConfigMigration,
+  type JsonValue,
+} from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
-import { avatarField } from "@plugins/fields/plugins/avatar/plugins/config/core";
+import {
+  avatarField,
+  migrateClassicAvatar,
+} from "@plugins/fields/plugins/avatar/plugins/config/core";
 import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 
+type JsonObject = { [key: string]: JsonValue };
+const isObject = (v: JsonValue | undefined): v is JsonObject =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** `categories[].items[].avatar` onto Material Symbols names (see migrateClassicAvatar). */
+const remapItemAvatars = defineConfigMigration({
+  id: "saved-icons-to-symbols",
+  apply: (doc) => {
+    if (!isObject(doc) || !Array.isArray(doc.categories)) return doc;
+    return {
+      ...doc,
+      categories: doc.categories.map((category) =>
+        isObject(category) && Array.isArray(category.items)
+          ? {
+              ...category,
+              items: category.items.map((item) =>
+                isObject(item) && item.avatar !== undefined
+                  ? { ...item, avatar: migrateClassicAvatar(item.avatar) }
+                  : item,
+              ),
+            }
+          : category,
+      ),
+    };
+  },
+});
+
 export const conversationCategoryConfig = defineConfig({
+  migrations: [remapItemAvatars],
   fields: {
     autoClassify: boolField({
       default: true,

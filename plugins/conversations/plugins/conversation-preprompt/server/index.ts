@@ -3,6 +3,8 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationCreated } from "@plugins/conversations/server";
 import { conversationPrepromptRowsServed } from "./internal/resource";
 import { recordPrepromptJob } from "./internal/record-job";
+// Registers the launch snapshots' saved-icon source (module eval).
+import "./internal/saved-icons";
 
 export { conversationPreprompt } from "./internal/tables";
 export { recordConversationPreprompt } from "./internal/record";

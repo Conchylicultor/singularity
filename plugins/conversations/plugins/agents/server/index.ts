@@ -1,4 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
+// Registers the agents' saved-icon source (module eval).
+import "./internal/saved-icons";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
@@ -14,7 +16,6 @@ import { handleListLaunches } from "./internal/handle-list-launches";
 import { agentLaunchesResource, agentRowsServed } from "./internal/resources";
 import { agents } from "./internal/views";
 import { taskLatestConversationSpec } from "./internal/rollup-spec";
-import { backfillAgentSvgNodes } from "./internal/backfill-svg";
 import {
   listAgents,
   createAgent,
@@ -60,7 +61,4 @@ export default {
     DerivedTable(taskLatestConversationSpec),
     TaskCategory({ id: "agents", label: "Agents", order: 2 }),
   ],
-  onReady: async () => {
-    await backfillAgentSvgNodes();
-  },
 } satisfies ServerPluginDefinition;

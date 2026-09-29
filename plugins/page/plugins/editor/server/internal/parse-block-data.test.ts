@@ -279,7 +279,6 @@ const decoratedPage = {
   data: {
     title: "Findings",
     icon: "rocket",
-    iconSvgNodes: null,
     cover: null,
   },
 };

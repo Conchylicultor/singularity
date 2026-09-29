@@ -1,62 +1,48 @@
-import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  SYMBOLS_METADATA_REL_PATH,
+  SymbolsMetadataSchema,
+  symbolsMetadataContentHash,
+  symbolsMetadataInputsHash,
+} from "../shared/symbols-metadata";
 
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-const HERE = dirname(new URL(import.meta.url).pathname);
-const CORE_INTERNAL = resolve(HERE, "../core/internal");
-const WEB_INTERNAL = resolve(HERE, "../web/internal");
-const GENERATED_PATH = join(CORE_INTERNAL, "icon-svg-map.generated.ts");
-const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
-
-function computeInputsHash(metadataContent: string, reactIconsVersion: string): string {
-  const h = createHash("sha256");
-  h.update(metadataContent);
-  h.update(reactIconsVersion);
-  return h.digest("hex").slice(0, 16);
-}
+const REGEN =
+  "Run `./singularity run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts` and commit the result.";
 
 const check: Check = {
-  id: "icon-svg-map-in-sync",
-  description: "icon-svg-map.generated.ts matches current react-icons/md + icon-metadata.json",
+  id: "icon-picker:symbols-metadata-in-sync",
+  description:
+    "icon-picker/web/internal/symbols-metadata.json was generated for the installed Material Symbols sets and not edited by hand",
   async run() {
-    let generated: string;
-    try {
-      generated = readFileSync(GENERATED_PATH, "utf-8");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    const file = join(await getWorktreeRoot(), SYMBOLS_METADATA_REL_PATH);
+    if (!existsSync(file)) {
       return {
         ok: false,
-        message: "icon-svg-map.generated.ts does not exist",
-        hint: "Run: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
+        message: `${SYMBOLS_METADATA_REL_PATH} is missing`,
+        hint: REGEN,
       };
     }
-
-    const hashMatch = generated.match(/\/\/ @inputs-hash ([a-f0-9]+)/);
-    if (!hashMatch) {
+    const data = SymbolsMetadataSchema.parse(
+      JSON.parse(readFileSync(file, "utf8")),
+    );
+    const inputs = symbolsMetadataInputsHash();
+    if (data.inputsHash !== inputs) {
       return {
         ok: false,
-        message: "icon-svg-map.generated.ts is missing the @inputs-hash header",
-        hint: "Regenerate: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
+        message: `${SYMBOLS_METADATA_REL_PATH} is stale (file=${data.inputsHash}, installed sets=${inputs})`,
+        hint: REGEN,
       };
     }
-    const fileHash = hashMatch[1];
-
-    const metadataContent = readFileSync(METADATA_PATH, "utf-8");
-    const pkgPath = require.resolve("react-icons/package.json");
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    const expectedHash = computeInputsHash(metadataContent, pkg.version);
-
-    if (fileHash !== expectedHash) {
+    if (data.contentHash !== symbolsMetadataContentHash(data)) {
       return {
         ok: false,
-        message: `icon-svg-map.generated.ts is stale (file=${fileHash}, expected=${expectedHash})`,
-        hint: "Regenerate: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
+        message: `${SYMBOLS_METADATA_REL_PATH} was edited by hand (its content no longer matches its hash)`,
+        hint: REGEN,
       };
     }
-
     return { ok: true };
   },
 };

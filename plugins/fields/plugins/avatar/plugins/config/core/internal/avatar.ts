@@ -1,36 +1,20 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import {
-  getFieldResolver,
-  type FieldDef,
-  type FieldMeta,
-  pickMeta,
-} from "@plugins/fields/core";
+import { type FieldDef, type FieldMeta, pickMeta } from "@plugins/fields/core";
 import {
   avatarFieldType,
   type AvatarSpec,
-  type SvgNode,
 } from "@plugins/fields/plugins/avatar/core";
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 
-const svgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
-  z.object({
-    tag: z.string(),
-    attr: z.record(z.string()),
-    child: z.array(svgNodeSchema),
-  }),
-);
-
-const avatarSpecSchema = z
-  .object({
-    icon: z.string().nullable(),
-    color: z.string().nullable(),
-    svgNodes: z.array(svgNodeSchema).nullable().optional(),
-  })
-  .transform((val): AvatarSpec => {
-    const resolver = getFieldResolver("avatar");
-    if (resolver) return resolver(val) as AvatarSpec;
-    return { icon: val.icon, color: val.color, svgNodes: val.svgNodes ?? null };
-  }) as ZodParser<AvatarSpec>;
+// A stored avatar: `icon` is a Material Symbols name the installed sets draw.
+// A saved config still holding a classic key (`star_outline`) is migrated at
+// build time (the owning config's `migrations`), never decoded here — a classic
+// key fails this parse.
+const avatarSpecSchema: ZodParser<AvatarSpec> = z.object({
+  icon: SavedSymbolNameSchema.nullable(),
+  color: z.string().nullable(),
+});
 
 export interface AvatarFieldDef extends FieldDef<AvatarSpec> {
   readonly type: typeof avatarFieldType;
@@ -42,7 +26,7 @@ export function avatarField(
   return Object.freeze({
     type: avatarFieldType,
     schema: avatarSpecSchema,
-    defaultValue: opts?.default ?? { icon: null, color: null, svgNodes: null },
+    defaultValue: opts?.default ?? { icon: null, color: null },
     meta: pickMeta(opts),
   });
 }

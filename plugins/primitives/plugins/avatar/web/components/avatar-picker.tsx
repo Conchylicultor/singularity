@@ -7,18 +7,17 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import type { AvatarColor } from "../../core";
 import { AVATAR_COLOR_KEYS, AVATAR_COLORS } from "../internal/colors";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
 
+/** A stored avatar: a picked Material Symbols name and a colour key. */
 export interface AvatarSpec {
-  icon: string | null;
+  icon: SavedSymbolName | null;
   color: string | null;
-  svgNodes: SvgNode[] | null;
 }
 
 export interface AvatarPickerProps {
@@ -93,9 +92,7 @@ export function AvatarPicker({
       <ControlPanel.Section>
         <IconPicker
           value={value.icon}
-          onSelect={({ key, svgNodes }) =>
-            void onChange({ ...value, icon: key, svgNodes })
-          }
+          onSelect={(icon) => void onChange({ ...value, icon })}
         />
       </ControlPanel.Section>
 
@@ -104,9 +101,7 @@ export function AvatarPicker({
           <ControlPanel.Row
             muted
             icon={<Icon icon={closeIcon} />}
-            onSelect={() =>
-              void onChange({ icon: null, color: null, svgNodes: null })
-            }
+            onSelect={() => void onChange({ icon: null, color: null })}
           >
             Clear
           </ControlPanel.Row>

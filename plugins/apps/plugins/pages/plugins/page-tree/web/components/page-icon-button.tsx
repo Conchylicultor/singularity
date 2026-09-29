@@ -5,17 +5,15 @@ import {
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
 
 export interface PageIconValue {
-  icon: string | null;
-  iconSvgNodes: SvgNode[] | null;
+  icon: SavedSymbolName | null;
 }
 
 /**
@@ -39,7 +37,7 @@ export function PageIconPicker({
   trigger: ReactElement;
 }) {
   const [open, setOpen] = useState(false);
-  const hasIcon = value.iconSvgNodes != null && value.iconSvgNodes.length > 0;
+  const hasIcon = value.icon != null;
 
   return (
     <ControlPanelPopover
@@ -54,8 +52,8 @@ export function PageIconPicker({
       <ControlPanel.Section>
         <IconPicker
           value={value.icon}
-          onSelect={({ key, svgNodes }) => {
-            void onChange({ icon: key, iconSvgNodes: svgNodes });
+          onSelect={(icon) => {
+            void onChange({ icon });
             setOpen(false);
           }}
         />
@@ -66,7 +64,7 @@ export function PageIconPicker({
             muted
             icon={<Icon icon={closeIcon} />}
             onSelect={() => {
-              void onChange({ icon: null, iconSvgNodes: null });
+              void onChange({ icon: null });
               setOpen(false);
             }}
           >
@@ -109,7 +107,7 @@ export function PageIconButton({
           )}
         >
           <Center className="size-full">
-            <PageIcon nodes={value.iconSvgNodes} className="size-[4.5rem]" />
+            <PageIcon icon={value.icon} className="size-[4.5rem]" />
           </Center>
         </button>
       }

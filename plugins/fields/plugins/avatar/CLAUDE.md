@@ -3,15 +3,17 @@
 The **avatar** field type of the unified fields primitive — a single value
 identifying an icon + color disc.
 
-This barrel registers ONLY the `FieldIdentity` (label "Avatar", `MdFace` icon,
-identity `coerce` to the icon key for sorting) in the `fields.identity`
-registry. The value type is `AvatarSpec` (`icon` / `color` / pre-rendered
-`svgNodes`), exported from this core for type-only cross-plugin use.
+This barrel registers ONLY the `FieldIdentity` (label "Avatar", `face` icon,
+identity `coerce` to the icon name for sorting) in the `fields.identity`
+registry. The value type is `AvatarSpec` (`icon`: a saved Material Symbols name
+— `SavedSymbolName`, drawn by `<Icon>` as a runtime symbol — and `color`),
+exported from this core for type-only cross-plugin use. Nothing about the
+drawing is stored, so a saved avatar follows its theme scope's icon style.
 
 The config-render capability — the `avatarField` factory plus the icon+color
-picker renderer contributed to the frozen `config-v2.fields.renderer` slot, and
-the zod `avatarSpecSchema` carrying the `getFieldResolver("avatar")` transform —
-lives in the `plugins/config` sub-plugin.
+picker renderer contributed to the frozen `config-v2.fields.renderer` slot — and
+`migrateClassicAvatar` (the one-avatar rewrite a config's migration uses) live
+in the `plugins/config` sub-plugin.
 
 The DataView capability — the read-only `AvatarCell` contributed to
 `data-view.cell`, and `avatarFieldDef`, the typed helper that declares an avatar
@@ -30,10 +32,9 @@ sub-plugin.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `ui/icons.SavedSymbolName`
     - `ui/icons.symbol`
-  - Exports (types):
-    - `AvatarSpec`
-    - `SvgNode`
+  - Exports (types): `AvatarSpec`
   - Exports (values):
     - `avatarFieldType`
     - `avatarIdentity`

@@ -20,6 +20,8 @@ import {
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
 import { resolvePageTitleAnnotations } from "./internal/page-title-annotations";
+// Registers the page icons' saved-icon source (module eval).
+import "./internal/saved-icons";
 import {
   pageBlockHandle,
   PAGES_TRASH_SOURCE,

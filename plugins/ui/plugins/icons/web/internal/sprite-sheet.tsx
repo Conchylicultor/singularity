@@ -1,4 +1,5 @@
 import { useSprites } from "./sprite-store";
+import { useRuntimeSymbolChunks } from "./runtime-symbol-store";
 
 /**
  * The page's sprites, inline: a hidden container holding one `<svg>` per
@@ -14,6 +15,7 @@ import { useSprites } from "./sprite-store";
  */
 export function IconSpriteSheet() {
   const sprites = useSprites();
+  const runtime = useRuntimeSymbolChunks();
   return (
     <div hidden data-icon-sprites="">
       {sprites.map(([key, markup]) => (
@@ -22,6 +24,15 @@ export function IconSpriteSheet() {
           data-sprite={key}
           // The markup is the server's own `<svg>` of `<symbol>`s, built from the
           // Iconify JSON in node_modules — never user input.
+          dangerouslySetInnerHTML={{ __html: markup }}
+        />
+      ))}
+      {runtime.map(([chunkId, markup]) => (
+        <div
+          key={chunkId}
+          data-runtime-symbols={chunkId}
+          // The server's own `<svg>` of `<symbol>`s, built from the Iconify JSON
+          // for names it checked against the installed sets — never user markup.
           dangerouslySetInnerHTML={{ __html: markup }}
         />
       ))}

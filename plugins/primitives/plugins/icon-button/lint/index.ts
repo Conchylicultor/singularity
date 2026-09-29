@@ -7,7 +7,7 @@ import preferIconButton from "./prefer-icon-button";
  * as `error`.
  *
  * No `ignores`: the rule is precise (fires only on a standalone
- * `<Button aspect="icon">` whose only child is a react-icons glyph). Genuine
+ * `<Button aspect="icon">` whose only child is an `<Icon>` glyph). Genuine
  * keep-bare one-offs (e.g. a per-model glyph size IconButton can't express)
  * carry a per-site `// eslint-disable-next-line icon-button/prefer-icon-button -- <reason>`.
  */

@@ -1,18 +1,16 @@
 import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 
 const faceIcon = symbol("face");
 
-export interface SvgNode {
-  tag: string;
-  attr: Record<string, string>;
-  child: SvgNode[];
-}
-
+/**
+ * A stored avatar: a Material Symbols name the user picked (drawn by `<Icon>`
+ * as a runtime symbol, in the surrounding theme's icon style) and a colour key.
+ * Both null = no avatar chosen.
+ */
 export interface AvatarSpec {
-  icon: string | null;
+  icon: SavedSymbolName | null;
   color: string | null;
-  svgNodes: SvgNode[] | null;
 }
 
 export const avatarFieldType = defineFieldType<AvatarSpec>("avatar");

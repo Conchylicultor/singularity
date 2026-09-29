@@ -55,6 +55,10 @@ namespace has not applied (recorded in its `.plugin-moves-applied.json`):
 - every rewritten default gets its new `// @hash`, and each override anchored to
   the old hash is re-stamped, so overrides stay in force instead of going stale.
 
+The marker, the fresh-namespace rule and the hash re-stamping are the shared
+config ledger's (`config_v2/plugins/ledger`), which config migrations
+(`defineConfigMigration`) ride too.
+
 So a namespace's settings change exactly when its code does: the worktree that
 moved the plugin on its next build, main on its auto-build after the push, new
 worktrees by forking main's already-migrated dir, older worktrees when they
@@ -69,8 +73,9 @@ moving anything.
 - Description: `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
 - Core:
   - Uses:
-    - `config_v2.computeHash`
-    - `config_v2.JsonValue`
+    - `config_v2/ledger.rewriteConfigFiles`
+    - `config_v2/ledger.runConfigLedger`
+    - `config_v2/ledger.walkConfigFiles`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`

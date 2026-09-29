@@ -32,7 +32,7 @@ const lightbulbIcon = symbol("lightbulb");
  * full icon picker's grid.
  */
 export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
-  const { iconSvgNodes, color } = readCalloutAppearance(data);
+  const { icon, color } = readCalloutAppearance(data);
 
   return (
     <ContainerAnchor
@@ -43,7 +43,7 @@ export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
       panel="picker"
       glyph={
         <PageIcon
-          nodes={iconSvgNodes}
+          icon={icon}
           fallback={lightbulbIcon}
           className={cn("size-5", COLOR_TEXT[color])}
         />

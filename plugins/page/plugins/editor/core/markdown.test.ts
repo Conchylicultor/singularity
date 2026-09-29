@@ -47,7 +47,7 @@ import { loadBlockHandles } from "./testing";
 //
 // The load is a TOP-LEVEL `await`, deliberately not a `beforeAll`: it takes
 // ~11 s (it builds the enriched plugin tree, then evaluates 28 web barrels,
-// `lexical` and `react-icons` among them), and Bun's default per-test timeout is
+// `lexical` among them), and Bun's default per-test timeout is
 // 5 s, which nothing in this repo overrides. At module scope no test timer
 // covers it; inside a hook one would, and every run would fail on the clock.
 const handles = await loadBlockHandles();
@@ -732,15 +732,8 @@ describe("the derived tag: the nine types that used to serialize to a blank line
     const forest: SerializedBlock[] = [
       {
         type: "callout",
-        // A whole `SvgNode`: the real icon payload is a recursive
-        // `{tag, attr, child}` record, and the JSON `data` attribute is what
-        // carries it — an attribute value is a string both ways, so nothing
-        // nested could be a plain one.
-        data: {
-          icon: "info",
-          iconSvgNodes: [{ tag: "path", attr: { d: "M0 0" }, child: [] }],
-          color: "warning",
-        },
+        // Both appearance fields are strings, so both are plain attributes.
+        data: { icon: "info", color: "warning" },
         expanded: true,
         children: [node("text", { text: runs("Watch out.") })],
       },
@@ -748,8 +741,7 @@ describe("the derived tag: the nine types that used to serialize to a blank line
     const md = serialize(forest);
     expect(md).toBe(
       [
-        '<callout icon="info" color="warning" data="{\\"iconSvgNodes\\":' +
-          '[{\\"tag\\":\\"path\\",\\"attr\\":{\\"d\\":\\"M0 0\\"},\\"child\\":[]}]}">',
+        '<callout icon="info" color="warning">',
         "  Watch out.",
         "</callout>",
       ].join("\n"),
@@ -776,7 +768,7 @@ describe("the derived tag: the nine types that used to serialize to a blank line
 
   test("every previously-dropped type survives a round trip", () => {
     const forest: SerializedBlock[] = [
-      node("callout", { icon: null, iconSvgNodes: null, color: "default" }),
+      node("callout", { icon: null, color: "default" }),
       node("image", { attachmentId: "a1" }),
       node("video", { attachmentId: "a2", mime: "video/mp4" }),
       node("audio", { attachmentId: "a3", mime: "audio/mpeg" }),
@@ -2171,10 +2163,6 @@ describe("round-trip property (fuzzed forest)", () => {
       type: "callout",
       data: (r) => ({
         icon: r() < 0.5 ? null : "info",
-        // A whole recursive `SvgNode`, which is what the real schema takes —
-        // the JSON `data` attribute is the only thing that could carry it.
-        iconSvgNodes:
-          r() < 0.5 ? null : [{ tag: "path", attr: { d: "M0 0" }, child: [] }],
         color: CALLOUT_COLORS[Math.floor(r() * CALLOUT_COLORS.length)]!,
       }),
       children: true,

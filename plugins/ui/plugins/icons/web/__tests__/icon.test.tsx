@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
-import { brand, symbol } from "../../core/icon-ref";
+import {
+  brand,
+  runtimeSymbol,
+  symbol,
+  type SavedSymbolName,
+} from "../../core/icon-ref";
 import type { IconStyle } from "../../core/style";
 import { Icon } from "../internal/icon";
 import { IconScopeProvider } from "../internal/icon-scope";
 import { usePublishIconStyle } from "../internal/style-store";
 import { provideSprite } from "../internal/sprite-store";
+import { provideRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 /**
  * Which sprite symbol `<Icon>` points at: its scope's style (else the root's,
@@ -106,5 +112,39 @@ describe("<Icon>", () => {
         </>,
       ),
     ).toThrow(/two publishers/);
+  });
+});
+
+describe("<Icon> on a runtime (saved) symbol", () => {
+  const home = runtimeSymbol("home" as SavedSymbolName);
+
+  it("draws nothing until some style's symbol is held — a loading box, not a wrong glyph", () => {
+    const { container } = render(<Icon icon={home} className="size-4" />);
+    expect(container.querySelector("svg")?.getAttribute("width")).toBe("1em");
+    expect(hrefOf(container)).toBeNull();
+  });
+
+  it("draws the default style's symbol while the wanted style's loads, then the wanted one", () => {
+    act(() =>
+      provideRuntimeSymbols("test-default", "<svg></svg>", [
+        { styleKey: "default-outline-400", name: "home" },
+      ]),
+    );
+    function Themed() {
+      return (
+        <IconScopeProvider scope="app-runtime">
+          <Publish scope="app-runtime" style={rounded} />
+          <Icon icon={home} />
+        </IconScopeProvider>
+      );
+    }
+    const { container } = render(<Themed />);
+    expect(hrefOf(container)).toBe("#msr-default-outline-400-home");
+    act(() =>
+      provideRuntimeSymbols("test-rounded", "<svg></svg>", [
+        { styleKey: "rounded-filled-300", name: "home" },
+      ]),
+    );
+    expect(hrefOf(container)).toBe("#msr-rounded-filled-300-home");
   });
 });

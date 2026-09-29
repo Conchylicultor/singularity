@@ -146,7 +146,7 @@ await withBrowser(async (h) => {
       const box = await post({
         parentId: pageId,
         type: "callout",
-        data: { icon: null, iconSvgNodes: null, color: "info" },
+        data: { icon: null, color: "info" },
       });
       const text = (parentId: string, body: string) =>
         post({ parentId, type: "text", data: { text: [{ text: body }] } });

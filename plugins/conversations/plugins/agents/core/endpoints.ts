@@ -1,3 +1,4 @@
+import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
@@ -19,9 +20,8 @@ export const CreateAgentBodySchema = z.object({
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
   model: ModelChoiceSchema.nullable().optional(),
-  icon: z.string().nullable().optional(),
+  icon: SavedSymbolNameSchema.nullable().optional(),
   iconColor: z.string().nullable().optional(),
-  iconSvgNodes: z.string().nullable().optional(),
 });
 export type CreateAgentBody = z.infer<typeof CreateAgentBodySchema>;
 
@@ -32,9 +32,8 @@ export const UpdateAgentBodySchema = z.object({
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
   model: ModelChoiceSchema.nullable().optional(),
-  icon: z.string().nullable().optional(),
+  icon: SavedSymbolNameSchema.nullable().optional(),
   iconColor: z.string().nullable().optional(),
-  iconSvgNodes: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
 });
 export type UpdateAgentBody = z.infer<typeof UpdateAgentBodySchema>;

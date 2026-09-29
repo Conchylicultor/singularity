@@ -63,7 +63,7 @@ export function Backlinks({ documentId }: BacklinksProps) {
           leading: (row: BacklinkRow) => (
             <Center as="span" className="size-4 text-muted-foreground">
               <PageIcon
-                nodes={row.iconSvgNodes}
+                icon={row.icon}
                 fallback={linkIcon}
                 className="size-4"
               />

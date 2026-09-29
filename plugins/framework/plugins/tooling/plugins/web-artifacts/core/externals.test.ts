@@ -44,11 +44,6 @@ describe("makeArtifactExternal (web artifact of tasks/plugins/task-detail)", () 
     expect(external("@xyflow/react")).toBe(true);
   });
 
-  test("inline-allowlisted packages are inlined (any subpath)", () => {
-    expect(external("react-icons/md")).toBe(false);
-    expect(external("react-icons")).toBe(false);
-  });
-
   test("relative / absolute / virtual ids are never external", () => {
     expect(external("./components/detail")).toBe(false);
     expect(external("../shared/protocol")).toBe(false);

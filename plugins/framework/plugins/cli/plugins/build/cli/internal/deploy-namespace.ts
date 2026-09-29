@@ -512,9 +512,17 @@ export async function deployNamespace(
     "propagateConfig",
     "build:codegen",
     "propagate config to user",
-    () => {
+    async () => {
       console.log("Propagating config to user...");
-      return propagateConfigToUser({ root, userConfigDir: configDir.file(ns) });
+      const { migrations } = await propagateConfigToUser({
+        root,
+        userConfigDir: configDir.file(ns),
+      });
+      for (const m of migrations) {
+        console.log(
+          `Config migration ${m.key}: rewrote ${m.rewritten.length} saved config file(s)`,
+        );
+      }
     },
   );
 

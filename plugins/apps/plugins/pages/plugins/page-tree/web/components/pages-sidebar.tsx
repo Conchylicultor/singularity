@@ -96,7 +96,7 @@ export function PagesSidebar() {
     () => ({
       tree: {
         leadingIcon: (b: PageRow) => (
-          <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
+          <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
         // No `rowMenu`: "Add page below" is an ordinary item action
         // (`AddPageBelowAction`) contributed to `PageTree.RowActions`, so the row
@@ -123,7 +123,7 @@ export function PagesSidebar() {
       // Favorites (a filtered `list` view) gets the same page icon + density.
       list: {
         leading: (b: PageRow) => (
-          <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
+          <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
         size: "sm" as const,
       },

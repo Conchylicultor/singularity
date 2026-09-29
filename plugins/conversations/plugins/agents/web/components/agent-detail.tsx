@@ -22,7 +22,6 @@ import {
   AvatarPicker,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -34,7 +33,7 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 import { agentLaunchesResource, agentRows } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const playArrowIcon = symbol("play-arrow");
@@ -43,23 +42,12 @@ type Patch = Partial<{
   name: string;
   prompt: string | null;
   model: ModelChoice | null;
-  icon: string | null;
+  icon: SavedSymbolName | null;
   iconColor: string | null;
-  iconSvgNodes: string | null;
 }>;
 
 async function patchAgent(id: string, patch: Patch) {
   await fetchEndpoint(updateAgent, { id }, { body: patch });
-}
-
-function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SvgNode[];
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return null;
-  }
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
@@ -129,9 +117,6 @@ function AgentDetailInner({
     }
   };
 
-  const agentSvgNodes =
-    parseSvgNodes(agent.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes;
-
   return (
     <Inset pad="xl">
       <Stack gap="lg">
@@ -140,16 +125,9 @@ function AgentDetailInner({
             value={{
               icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
               color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
-              svgNodes: agentSvgNodes,
             }}
             onChange={(next) =>
-              save({
-                icon: next.icon,
-                iconColor: next.color,
-                iconSvgNodes: next.svgNodes
-                  ? JSON.stringify(next.svgNodes)
-                  : null,
-              })
+              save({ icon: next.icon, iconColor: next.color })
             }
             triggerLabel="Pick agent avatar"
           >
@@ -159,7 +137,6 @@ function AgentDetailInner({
               <Avatar
                 icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
                 color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-                svgNodes={agentSvgNodes}
                 statusDot={
                   latestStatus
                     ? statusDotPaintClass(CONV_STATUS_DOT[latestStatus])

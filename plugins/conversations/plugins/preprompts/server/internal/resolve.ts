@@ -6,7 +6,7 @@ export interface ResolvedPreprompt {
   id: string;
   title: string;
   prompt: string;
-  /** Chosen icon/color (svgNodes resolved server-side). `null` when unset. */
+  /** Chosen icon/color. `null` when no icon is picked. */
   icon: AvatarSpec | null;
 }
 
@@ -25,9 +25,9 @@ export function resolvePrepromptItem(
   if (!item) return undefined;
   const prompt = item.prompt.trim();
   if (!prompt) return undefined;
-  // Only carry a meaningful icon (one with rendered svg nodes); the
-  // avatarField default is an all-null spec which would render a blank disc.
-  const icon = item.icon?.svgNodes?.length ? item.icon : null;
+  // Only carry a meaningful icon (one with a picked name); the avatarField
+  // default is an all-null spec which would render a blank disc.
+  const icon = item.icon?.icon != null ? item.icon : null;
   return { id: item.id, title: item.title, prompt, icon };
 }
 
@@ -37,6 +37,8 @@ export function resolvePrepromptItem(
  * first user turn in that case (fail-soft, never crashes a launch over a
  * dangling reference).
  */
-export function resolvePreprompt(id: string | null | undefined): string | undefined {
+export function resolvePreprompt(
+  id: string | null | undefined,
+): string | undefined {
   return resolvePrepromptItem(id)?.prompt;
 }

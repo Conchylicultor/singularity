@@ -2,7 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 import { calloutBlock, CALLOUT_COLORS, type CalloutColor } from "../../core";
 
@@ -16,8 +16,7 @@ const COLOR_SWATCH: Record<CalloutColor, string> = {
 };
 
 export interface CalloutIconChange {
-  icon: string | null;
-  iconSvgNodes: SvgNode[] | null;
+  icon: SavedSymbolName | null;
   color: CalloutColor;
 }
 
@@ -27,7 +26,7 @@ export function readCalloutAppearance(data: unknown): CalloutIconChange {
   if (parsed.success) return parsed.data;
   // An unparseable payload still gets a glyph, just the default one — exactly as
   // `CalloutFrame` still paints a box in the default tint.
-  return { icon: null, iconSvgNodes: null, color: "default" };
+  return { icon: null, color: "default" };
 }
 
 /**
@@ -49,12 +48,12 @@ export function CalloutAppearanceFor({
   api: BlockEditorAPI;
   close: () => void;
 }) {
-  const { icon, iconSvgNodes, color } = readCalloutAppearance(data);
+  const { icon, color } = readCalloutAppearance(data);
   return (
     <CalloutAppearance
       color={color}
       icon={icon}
-      onChange={(next) => api.update({ icon, iconSvgNodes, color, ...next })}
+      onChange={(next) => api.update({ icon, color, ...next })}
       close={close}
     />
   );
@@ -81,7 +80,7 @@ export function CalloutAppearance({
   close,
 }: {
   color: CalloutColor;
-  icon: string | null;
+  icon: SavedSymbolName | null;
   onChange: (next: Partial<CalloutIconChange>) => void;
   close: () => void;
 }) {
@@ -112,8 +111,8 @@ export function CalloutAppearance({
       <ControlPanel.Section>
         <IconPicker
           value={icon}
-          onSelect={({ key, svgNodes }) => {
-            onChange({ icon: key, iconSvgNodes: svgNodes });
+          onSelect={(name) => {
+            onChange({ icon: name });
             close();
           }}
         />
@@ -128,7 +127,7 @@ export function CalloutAppearance({
         <ControlPanel.Row
           muted
           onSelect={() => {
-            onChange({ icon: null, iconSvgNodes: null, color: "default" });
+            onChange({ icon: null, color: "default" });
             close();
           }}
         >

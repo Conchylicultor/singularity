@@ -130,7 +130,7 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  *
  * `release` IS THE PROCESS-ISOLATION CASE, and it measures as designed. It needs
  * stage 2, and its body statically imports plugin barrels (`propagateConfigToUser`
- * via codegen, `resolveIconSvgNodes`, `runAssetMirrorPrewarm`, …), so running
+ * via codegen, `symbolBody`, `runAssetMirrorPrewarm`, …), so running
  * the pipeline in-process would be the hazard. It SPAWNS `build --hermetic`
  * instead, so its run closure holds no live writer call and is not a regenerator;
  * the child is a fresh `build` process, held to both rules above in its own
@@ -165,8 +165,9 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  * `checks/core` and `barrel-import/core`, which the CLI cannot stop importing
  * without losing the ability to run checks or resolve its own data dirs.
  * Reopening that is a separate task, not a hole in this one.
- * `icon-picker/…/icon-svg-map.generated.ts` is produced by a hand-run script,
- * never by a build stage, so no build run can invalidate a frozen copy of it.
+ * `ui/icons/…/symbol-name-list.generated.ts` and `icon-picker/…/symbols-metadata.json`
+ * are produced by hand-run scripts, never by a build stage, so no build run can
+ * invalidate a frozen copy of them.
  *
  * KNOWN LIMITS, stated rather than papered over: this is a STATIC measurement.
  *   - An `import()` whose specifier is COMPUTED at runtime is invisible to the

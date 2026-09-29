@@ -22,22 +22,25 @@
 // Each applied entry is recorded in the namespace's marker file, so an entry is
 // replayed once — even if a later plugin reuses the old id. A namespace whose
 // dir does not exist yet records every entry as applied: it has nothing to move.
+// The ledger mechanics (marker, fresh namespace, hash re-stamping) are the
+// shared config ledger's (`config_v2/plugins/ledger`), which config
+// migrations ride too.
 
 import {
   existsSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   renameSync,
   rmdirSync,
-  writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { parse as parseJsonc, type ParseError } from "jsonc-parser";
-import { z } from "zod";
-import { computeHash, type JsonValue } from "@plugins/config_v2/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import { scanReorderItemRefs } from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import {
+  rewriteConfigFiles,
+  runConfigLedger,
+  walkConfigFiles,
+} from "@plugins/config_v2/plugins/ledger/core";
 import {
   movedPluginId,
   pluginMoveKey,
@@ -49,10 +52,6 @@ import {
  *  so neither the config registry nor the orphan audit ever reads it. */
 export const APPLIED_MOVES_FILE = ".plugin-moves-applied.json";
 
-const appliedSchema = z.object({ applied: z.array(z.string()) });
-
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
-
 export interface AppliedMove {
   move: PluginMove;
   /** Files moved from the old slash path to the new one (dir-relative). */
@@ -61,30 +60,6 @@ export interface AppliedMove {
   kept: string[];
   /** Files whose reorder keys or hash header were rewritten. */
   rewritten: string[];
-}
-
-function readApplied(file: string): Set<string> {
-  if (!existsSync(file)) return new Set();
-  return new Set(
-    appliedSchema.parse(JSON.parse(readFileSync(file, "utf8"))).applied,
-  );
-}
-
-function writeApplied(file: string, applied: Set<string>): void {
-  writeFileSync(
-    file,
-    `${JSON.stringify({ applied: [...applied] }, null, 2)}\n`,
-  );
-}
-
-/** Every file under `dir`, relative to it, forward-slash separated. */
-function walkFiles(dir: string, rel = "", out: string[] = []): string[] {
-  for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
-    const r = rel === "" ? e.name : `${rel}/${e.name}`;
-    if (e.isDirectory()) walkFiles(dir, r, out);
-    else if (e.isFile()) out.push(r);
-  }
-  return out;
 }
 
 /** Remove every empty dir under (and including) `dir`, deepest first. */
@@ -103,7 +78,7 @@ function moveTree(
   const moved: string[] = [];
   const kept: string[] = [];
   if (!existsSync(src)) return { moved, kept };
-  for (const rel of walkFiles(src)) {
+  for (const rel of walkConfigFiles(src)) {
     const to = join(dst, rel);
     if (existsSync(to)) {
       kept.push(rel);
@@ -116,19 +91,6 @@ function moveTree(
   pruneEmptyDirs(src);
   return { moved, kept };
 }
-
-function parseContent(file: string, text: string): JsonValue {
-  const errors: ParseError[] = [];
-  const value = parseJsonc(text, errors, { allowTrailingComma: true }) as
-    JsonValue | undefined;
-  if (errors.length > 0 || value === undefined) {
-    throw new Error(`plugin moves: ${file} is not valid JSONC`);
-  }
-  return value;
-}
-
-const isSnapshot = (f: string) =>
-  f.endsWith(".origin.jsonc") || f.endsWith(".ancestor.jsonc");
 
 /** `text` with every reorder key naming the moved subtree re-rooted. */
 function rewriteKeys(file: string, text: string, move: PluginMove): string {
@@ -143,40 +105,6 @@ function rewriteKeys(file: string, text: string, move: PluginMove): string {
   return out;
 }
 
-function setHash(text: string, hash: string): string {
-  return text.replace(HASH_RE, `// @hash ${hash}\n`);
-}
-
-/** Steps 2 and 3 over every `.jsonc` in the namespace dir. */
-function rewriteNamespace(dir: string, move: PluginMove): string[] {
-  const files = walkFiles(dir).filter((f) => f.endsWith(".jsonc"));
-  const texts = new Map<string, string>();
-  for (const f of files) texts.set(f, readFileSync(join(dir, f), "utf8"));
-
-  const next = new Map<string, string>();
-  const rehash = new Map<string, string>();
-  // Snapshots first: they produce the old → new hash pairs overrides follow.
-  for (const f of [...files].sort(
-    (a, b) => Number(isSnapshot(b)) - Number(isSnapshot(a)),
-  )) {
-    const text = texts.get(f)!;
-    let out = rewriteKeys(f, text, move);
-    const header = HASH_RE.exec(out)?.[1];
-    if (isSnapshot(f)) {
-      if (out !== text && header !== undefined) {
-        const hash = computeHash(parseContent(f, out));
-        rehash.set(header, hash);
-        out = setHash(out, hash);
-      }
-    } else if (header !== undefined && rehash.has(header)) {
-      out = setHash(out, rehash.get(header)!);
-    }
-    if (out !== text) next.set(f, out);
-  }
-  for (const [f, text] of next) writeFileSync(join(dir, f), text);
-  return [...next.keys()].sort();
-}
-
 /**
  * Apply every ledger entry of the checkout at `root` that the namespace config
  * dir `userConfigDir` has not applied yet, in ledger order. Throws (failing the
@@ -188,28 +116,24 @@ export function applyPluginMoves(opts: {
   userConfigDir: string;
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
-  const moves = readPluginMoves(root);
-  const markerFile = join(userConfigDir, APPLIED_MOVES_FILE);
-  const fresh = !existsSync(userConfigDir);
-  mkdirSync(userConfigDir, { recursive: true });
-  const applied = readApplied(markerFile);
-  const out: AppliedMove[] = [];
-
-  for (const move of moves) {
-    const key = pluginMoveKey(move);
-    if (applied.has(key)) continue;
-    if (!fresh) {
-      const { moved, kept } = moveTree(
-        join(userConfigDir, asPath(move.from)),
-        join(userConfigDir, asPath(move.to)),
-      );
-      const rewritten = rewriteNamespace(userConfigDir, move);
-      out.push({ move, moved, kept, rewritten });
-    }
-    applied.add(key);
-    writeApplied(markerFile, applied);
-  }
-  return out;
+  return runConfigLedger({
+    userConfigDir,
+    markerFile: APPLIED_MOVES_FILE,
+    fresh: !existsSync(userConfigDir),
+    entries: readPluginMoves(root).map((move) => ({
+      key: pluginMoveKey(move),
+      apply: (dir): AppliedMove => {
+        const { moved, kept } = moveTree(
+          join(dir, asPath(move.from)),
+          join(dir, asPath(move.to)),
+        );
+        const rewritten = rewriteConfigFiles(dir, {
+          rewrite: (f, text) => rewriteKeys(f, text, move),
+        });
+        return { move, moved, kept, rewritten };
+      },
+    })),
+  }).map(({ result }) => result);
 }
 
 /** Namespaces under `configRoot` with user config still at `from`'s slash path. */

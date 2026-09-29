@@ -48,7 +48,7 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // one does), so there is no node here worth holding.
   const focusRef = useRef<RowFocus>(null);
   const page = pageData(block);
-  const { title, iconSvgNodes } = page;
+  const { title, icon } = page;
   // What KIND of page this is — an agent-authored one, say — is another
   // plugin's answer, read off the page's own data: a tint for the row and
   // perhaps a chip naming something about it. This row knows no kind.
@@ -126,7 +126,7 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         actionsAlwaysVisible={chip !== null}
         icon={
           <Center as="span" className="text-muted-foreground size-4">
-            <PageIcon nodes={iconSvgNodes} className="size-4" />
+            <PageIcon icon={icon} className="size-4" />
           </Center>
         }
       >

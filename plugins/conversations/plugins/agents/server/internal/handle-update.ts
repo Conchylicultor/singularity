@@ -21,14 +21,9 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   if (body.model === null || typeof body.model === "string") {
     patch.model = body.model;
   }
-  if (body.icon === null || typeof body.icon === "string") {
-    patch.icon = body.icon;
-  }
+  if (body.icon !== undefined) patch.icon = body.icon;
   if (body.iconColor === null || typeof body.iconColor === "string") {
     patch.iconColor = body.iconColor;
-  }
-  if (body.iconSvgNodes === null || typeof body.iconSvgNodes === "string") {
-    patch.iconSvgNodes = body.iconSvgNodes;
   }
   if (body.parentId === null || typeof body.parentId === "string") {
     if (body.parentId === id) {

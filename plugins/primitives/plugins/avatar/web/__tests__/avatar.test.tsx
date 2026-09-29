@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { Avatar } from "../components/avatar";
 import { avatarColorPick, avatarFlatClass } from "../internal/colors";
 import {
@@ -10,7 +11,7 @@ import {
 
 afterEach(cleanup);
 
-const svgNodes = [{ tag: "path", attr: { d: "M0 0h24v24H0z" }, child: [] }];
+const face = parseSavedSymbolName("face");
 
 function box(container: HTMLElement): HTMLElement {
   const el = container.firstElementChild;
@@ -21,7 +22,7 @@ function box(container: HTMLElement): HTMLElement {
 // jsdom evaluates no stylesheet, so these pin the class contract.
 describe("Avatar badge (default presentation)", () => {
   it("renders today's density-ramp disc with the soft paint", () => {
-    const { container } = render(<Avatar color="rose" svgNodes={svgNodes} />);
+    const { container } = render(<Avatar color="rose" icon={face} />);
     expect(box(container).className).toBe(
       "relative inline-flex shrink-0 items-center justify-center @container-[size] rounded-full size-8 bg-categorical-4/15 text-categorical-4",
     );
@@ -72,7 +73,7 @@ describe("Avatar tile presentation", () => {
 
   it("fills its parent with the flat paint and a 46% glyph", () => {
     const { container } = renderTile(
-      <Avatar fallbackKey="home" svgNodes={svgNodes} shape="squircle" />,
+      <Avatar fallbackKey="home" icon={face} shape="squircle" />,
     );
     const el = box(container);
     expect(el.classList).toContain("size-full");

@@ -292,7 +292,7 @@ line a container owns IS selecting the container* in
 ## What stays with each container
 
 Everything with a per-instance payload behind it: the callout's colour swatches,
-icon picker and Reset (driven by its `{icon, iconSvgNodes, color}` data), and the
+icon picker and Reset (driven by its `{icon, color}` data), and the
 context card's fixed glyph and dashed look. A container with no appearance
 contributes no `sections` and no `menu` — it does not inherit a picker it has no
 field to write to, and it loses nothing structural by it.

@@ -78,7 +78,7 @@ function PageHeaderInner({
   titleRef?: Ref<CaretSurface>;
 }) {
   const data = page ? pageData(page) : undefined;
-  const hasIcon = data?.iconSvgNodes != null && data.iconSvgNodes.length > 0;
+  const hasIcon = data?.icon != null;
   const hasCover = data?.cover != null;
 
   const { mutateAsync } = useEndpointMutation(updateBlock);
@@ -94,21 +94,14 @@ function PageHeaderInner({
     },
   });
 
-  const iconValue: PageIconValue = {
-    icon: data?.icon ?? null,
-    iconSvgNodes: data?.iconSvgNodes ?? null,
-  };
+  const iconValue: PageIconValue = { icon: data?.icon ?? null };
 
   const saveIcon = async (next: PageIconValue) => {
     if (!page) return;
     await mutateAsync({
       params: { id: pageId },
       body: {
-        data: {
-          ...pageData(page),
-          icon: next.icon,
-          iconSvgNodes: next.iconSvgNodes,
-        },
+        data: { ...pageData(page), icon: next.icon },
       },
     });
   };

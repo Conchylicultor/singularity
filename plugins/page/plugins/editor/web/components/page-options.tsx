@@ -57,7 +57,7 @@ export function usePageOptions(
 function PageOptionIcon({ page }: { page: Block }) {
   return (
     <Center as="span" className="size-4 text-muted-foreground">
-      <PageIcon nodes={pageData(page).iconSvgNodes} className="size-4" />
+      <PageIcon icon={pageData(page).icon} className="size-4" />
     </Center>
   );
 }

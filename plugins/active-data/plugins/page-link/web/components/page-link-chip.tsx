@@ -53,9 +53,7 @@ export function PageLinkChip({
       }
       // `icon-auto`: the chip's slot owns the glyph size (PageIcon otherwise
       // defaults to a fixed size-4, which would override it).
-      leading={
-        <PageIcon nodes={pageData(page).iconSvgNodes} className="icon-auto" />
-      }
+      leading={<PageIcon icon={pageData(page).icon} className="icon-auto" />}
     >
       {title}
     </LinkChip>

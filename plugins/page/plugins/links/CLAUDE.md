@@ -62,8 +62,8 @@ source-page edit.
 - Core:
   - Uses:
     - `network/live.liveValue`
-    - `page/editor.SvgNodeSchema`
     - `primitives/live-state.resourceDescriptor`
+    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `BacklinkRow`
     - `PageLinkEdge`

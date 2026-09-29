@@ -1,5 +1,12 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
-import { isIconPicker, isReactIcons } from "./react-icons-source";
+
+/** A `react-icons` module specifier (`react-icons`, `react-icons/md`, …). */
+function isReactIcons(source: unknown): boolean {
+  return (
+    typeof source === "string" &&
+    (source === "react-icons" || source.startsWith("react-icons/"))
+  );
+}
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -8,9 +15,10 @@ const createRule = ESLintUtils.RuleCreator(
 /**
  * Icons are data: `symbol("…")` / `brand("…")` from `ui/icons/core`, drawn by
  * `<Icon>` in the style the theme scope picks. A react-icons component hard-codes
- * one style (and a second icon set beside the sprites), so it is banned
- * everywhere except `primitives/icon-picker`, whose saved-icon storage still
- * extracts `SvgNode`s from react-icons/md.
+ * one style (and a second icon set beside the sprites). The package is no
+ * longer installed — saved (user-picked) icons are Material Symbols names too,
+ * drawn by `<Icon>` as runtime symbols — so this rule is the guard that keeps
+ * it from coming back.
  */
 export default createRule({
   name: "no-react-icons",
@@ -18,7 +26,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow react-icons outside primitives/icon-picker — icons are symbol()/brand() IconRefs drawn by <Icon>.",
+        "Disallow react-icons — icons are symbol()/brand() IconRefs drawn by <Icon>.",
     },
     schema: [],
     messages: {
@@ -30,7 +38,6 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
-    if (isIconPicker(context.filename)) return {};
     const check = (node: TSESTree.Node, source: unknown): void => {
       if (isReactIcons(source))
         context.report({ node, messageId: "reactIcons" });
