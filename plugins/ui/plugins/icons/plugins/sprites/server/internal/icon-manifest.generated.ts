@@ -251,6 +251,7 @@ export const ICON_MANIFEST: {
     "swap-vert",
     "sync-problem",
     "tab",
+    "table",
     "table-chart",
     "table-rows",
     "tablet-mac",

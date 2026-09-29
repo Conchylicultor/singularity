@@ -548,6 +548,19 @@ function NodeView({
         ) : null}
       </>
     );
+  } else if (contribution?.view) {
+    // A text-less type that declared its own STATIC rendering on its
+    // `Editor.Block` registration (the table). Generic: this arm names no block
+    // type, and the view arrives already bound to the handle's `parse`, so it
+    // is handed the stored `data` untouched. Must precede the text-like arm for
+    // the same reason the anchor arm does — the data carries no `text`, so the
+    // type would otherwise land on the placeholder card.
+    body = (
+      <>
+        <contribution.view data={node.data} />
+        {children}
+      </>
+    );
   } else if (isTextLike(contribution) && hasText(data)) {
     body = (
       <>
@@ -681,6 +694,8 @@ function ForestView({
  *    its first child. No block type is named here.
  *  - Self-contained media (image, code-block, divider) render a faithful static
  *    equivalent, and sub-pages render as an inert icon+title chip.
+ *  - A text-less type that registers a `view` (the table) renders through it —
+ *    the block's own static rendering, dispatched without naming the type.
  *  - Exotic blocks (embed, equation, bookmark, audio, video, file) render a clean
  *    labeled placeholder card — the documented fidelity gap.
  */

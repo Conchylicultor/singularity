@@ -1,4 +1,4 @@
-import { useMemo, type ComponentType } from "react";
+import { createElement, useMemo, type ComponentType } from "react";
 import {
   defineSlot,
   defineSlotFacade,
@@ -70,6 +70,35 @@ export interface BlockMeta {
    * is where the requirement is expressed.
    */
   caret?: BlockCaretPlacement;
+  /**
+   * A text-less type's STATIC rendering, for surfaces that mount no editor (the
+   * read-only renderer: version history, the public site). Already bound to the
+   * handle — it takes the stored `data` as `unknown` and parses it through
+   * `block.parse` before the registered component sees it — so a reader
+   * renders it without naming the type or knowing its shape. See
+   * `BlockRegistration`'s text-less arm, where it is written typed.
+   */
+  view?: BlockView;
+}
+
+/** A block type's static rendering as STORED: bound to its handle's `parse`. */
+export type BlockView = ComponentType<{ data: unknown }>;
+
+/**
+ * Bind a typed static view to its handle: the stored component parses `data`
+ * through the handle, so the registered one only ever sees the type's own
+ * shape. `parse` throws on data the schema rejects — the same loud failure the
+ * editable renderer's own `handle.parse(block.data)` gives.
+ */
+function bindView<T>(
+  handle: BlockHandle<T>,
+  View: ComponentType<{ data: T }>,
+): BlockView {
+  function BoundBlockView({ data }: { data: unknown }) {
+    return createElement(View, { data: handle.parse(data) });
+  }
+  BoundBlockView.displayName = `BlockView(${handle.type})`;
+  return BoundBlockView;
 }
 
 /**
@@ -98,7 +127,7 @@ interface BlockRegistrationBase {
  * concrete lens is bivariantly assignable to; nothing calls it through here.
  */
 type TextBearingHandle = BlockHandle<unknown> & { text(data: never): RichText };
-type TextLessHandle = BlockHandle<unknown> & { text?: undefined };
+type TextLessHandle<T = unknown> = BlockHandle<T> & { text?: undefined };
 /**
  * A container ANCHOR, the one text-less shape that renders no LINE of its own —
  * `BlockRow` returns before the dispatch for it, so it has no row for a caret to
@@ -141,12 +170,13 @@ type AnchorHandle = TextLessHandle & { anchor: true };
  * today, which is why the shared-renderer fix would otherwise be complete in
  * fact rather than by construction.
  */
-export type BlockRegistration =
+export type BlockRegistration<T = unknown> =
   | (BlockRegistrationBase & {
       block: TextBearingHandle;
       chrome?: BlockChrome;
       component?: never;
       caret?: never;
+      view?: never;
       excludeFromReorder?: never;
     })
   // A container anchor: no line, so no caret to place. Listed BEFORE the general
@@ -157,10 +187,11 @@ export type BlockRegistration =
       component: ComponentType<BlockRendererProps>;
       chrome?: never;
       caret?: never;
+      view?: never;
       excludeFromReorder?: boolean;
     })
   | (BlockRegistrationBase & {
-      block: TextLessHandle;
+      block: TextLessHandle<T>;
       component: ComponentType<BlockRendererProps>;
       chrome?: never;
       /**
@@ -171,6 +202,14 @@ export type BlockRegistration =
        * types that silently had neither.
        */
       caret: BlockCaretPlacement;
+      /**
+       * The type's static rendering, for surfaces that mount no editor (see
+       * {@link BlockMeta.view}). Typed against the handle's OWN data — the
+       * slot binds it to `block.parse`, so the component never sees a raw blob.
+       * Optional: a type without one renders as the read-only surface's
+       * placeholder card.
+       */
+      view?: ComponentType<{ data: T }>;
       excludeFromReorder?: boolean;
     });
 
@@ -341,9 +380,14 @@ export const Editor = {
    * to `BlockRegistration`'s union.
    */
   Block: defineSlotFacade(
-    (reg: BlockRegistration) =>
+    <T>(reg: BlockRegistration<T>) =>
       blockSlot({
         ...reg,
+        // Only the text-less arm may carry a `view` (the other two type it
+        // `never`), so its `block` is that arm's `TextLessHandle<T>`.
+        view: reg.view
+          ? bindView(reg.block as TextLessHandle<T>, reg.view)
+          : undefined,
         // The one and only binding of the shared text renderer to a block type.
         // A text-bearing registration cannot name a `component` (typed `never`),
         // so this default is unconditional for all of them — which is precisely

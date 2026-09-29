@@ -131,6 +131,7 @@ offsets expressible on the semantic ramp.
     - `page/image`
     - `page/place`
     - `page/read-only-view`
+    - `page/table`
     - `page/video`
     - `primitives/app-shell`
     - `primitives/data-view/gallery`

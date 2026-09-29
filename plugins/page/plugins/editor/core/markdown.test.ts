@@ -599,6 +599,227 @@ describe("code fence", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Line run: a block with no closing delimiter (the GFM table)
+// ---------------------------------------------------------------------------
+//
+// `markdown.lineRun` is the orchestrator's third claim kind, and the `table`
+// block is its declarer. What is under test is the ORCHESTRATOR's half — which
+// lines make up a run, what a decline does, how the run ends — so every case
+// goes through `parse` / `serialize` over the real registry. The cell grammar
+// itself (splitting, the table-level escapes) is `page/table`'s own suite.
+
+describe("line run", () => {
+  /** A table node, cells given as plain strings. */
+  const table = (
+    header: string[],
+    rows: string[][] = [],
+    align: ("left" | "center" | "right" | null)[] = header.map(() => null),
+  ): SerializedBlock =>
+    node("table", {
+      align,
+      header: header.map(runs),
+      rows: rows.map((row) => row.map(runs)),
+    });
+
+  test("parses a header, a delimiter row and body rows into ONE table", () => {
+    const md = ["| a | b |", "| --- | --- |", "| 1 | 2 |", "| 3 | 4 |"].join(
+      "\n",
+    );
+    const forest = parse(md);
+    expect(forest).toEqual([
+      table(
+        ["a", "b"],
+        [
+          ["1", "2"],
+          ["3", "4"],
+        ],
+      ),
+    ]);
+    expect(serialize(forest)).toBe(md);
+  });
+
+  test("alignment comes from the delimiter row, and is written back canonically", () => {
+    const forest = parse("| a | b | c | d |\n|-|:---|---:|:------:|");
+    expect(forest).toEqual([
+      table(["a", "b", "c", "d"], [], [null, "left", "right", "center"]),
+    ]);
+    expect(serialize(forest)).toBe(
+      "| a | b | c | d |\n| --- | :-- | --: | :-: |",
+    );
+  });
+
+  test("a pipe inside a cell is escaped, and comes back as a pipe", () => {
+    const forest = [table(["a|b"], [["x | y"]])];
+    const md = serialize(forest);
+    expect(md).toBe("| a\\|b |\n| --- |\n| x \\| y |");
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("marks and inline escapes survive inside a cell", () => {
+    const forest = [
+      node("table", {
+        align: [null],
+        header: [[{ text: "bold", marks: ["bold"] }]],
+        rows: [[runs("a*b \\ c")]],
+      }),
+    ];
+    const md = serialize(forest);
+    expect(md).toBe("| **bold** |\n| --- |\n| a\\*b \\\\ c |");
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("a pipe inside a PROTECTED span does not split the cell", () => {
+    const math: MarkdownContext = {
+      ...mdCtx,
+      protectedSpans: [/\\\((.+?)\\\)/],
+    };
+    const md = "| \\(a|b\\) | c |\n| --- | --- |";
+    const forest = parseMarkdownToForest(md, math);
+    expect(forest).toEqual([table(["\\(a|b\\)", "c"])]);
+    expect(serializeForestToMarkdown(forest, math)).toBe(md);
+  });
+
+  test("a soft break in a cell is `\\n`, in EVERY dialect", () => {
+    const forest = [table(["x\ny"])];
+    expect(serialize(forest)).toBe("| x\\ny |\n| --- |");
+    expect(parse(serialize(forest))).toEqual(forest);
+    // The clipboard dialect writes a real newline for a paragraph's break —
+    // inside a cell that would end the row, so the cell keeps the escape.
+    expect(serializeForestToMarkdown(forest, pasteCtx)).toBe(
+      "| x\\ny |\n| --- |",
+    );
+  });
+
+  test("ragged rows are padded / truncated to the header's width", () => {
+    const forest = parse(
+      ["| a | b |", "| --- | --- |", "| 1 |", "| 1 | 2 | 3 |"].join("\n"),
+    );
+    expect(forest).toEqual([
+      table(
+        ["a", "b"],
+        [
+          ["1", ""],
+          ["1", "2"],
+        ],
+      ),
+    ]);
+    expect(serialize(forest)).toBe(
+      ["| a | b |", "| --- | --- |", "| 1 |  |", "| 1 | 2 |"].join("\n"),
+    );
+  });
+
+  test("a body cell that reads as a delimiter cell is escaped, so it cannot start a table", () => {
+    const forest = [table(["h"], [["x"], ["---"]])];
+    const md = serialize(forest);
+    expect(md).toBe("| h |\n| --- |\n| x |\n| \\--- |");
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("no delimiter row ⇒ the run DECLINES and every line is prose", () => {
+    const md = "| a | b |\n| c | d |";
+    const forest = parse(md);
+    expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
+    expect(forest.map(dataText)).toEqual(["| a | b |", "| c | d |"]);
+    // Lenient parse, canonical serialize: written back, they are escaped.
+    expect(serialize(forest)).toBe("\\| a | b |\n\\| c | d |");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a declined first line does not stop the table that starts on the next", () => {
+    const forest = parse("| stray |\n| a |\n| --- |\n| 1 |");
+    expect(forest.map((b) => b.type)).toEqual(["text", "table"]);
+    expect(forest[1]).toEqual(table(["a"], [["1"]]));
+  });
+
+  test("a paragraph opening with `|` round-trips through the `\\|` escape", () => {
+    const forest = [node("text", { text: runs("| not a table") })];
+    expect(serialize(forest)).toBe("\\| not a table");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a table at a DEEPER indent is a child, not a continuation", () => {
+    const md = [
+      "| a |",
+      "| --- |",
+      "| 1 |",
+      "  | x |",
+      "  | --- |",
+      "  | 2 |",
+    ].join("\n");
+    const forest = parse(md);
+    expect(forest).toEqual([
+      { ...table(["a"], [["1"]]), children: [table(["x"], [["2"]])] },
+    ]);
+    expect(serialize(forest)).toBe(md);
+  });
+
+  test("two ADJACENT tables stay two: a row followed by a delimiter row starts the next", () => {
+    const forest = [
+      table(["a", "b"], [["1", "2"]]),
+      table(["c"], [["3"], ["4"]]),
+      table(["d"]),
+      table(["e"]),
+    ];
+    const md = serialize(forest);
+    expect(md).toBe(
+      [
+        "| a | b |",
+        "| --- | --- |",
+        "| 1 | 2 |",
+        "| c |",
+        "| --- |",
+        "| 3 |",
+        "| 4 |",
+        "| d |",
+        "| --- |",
+        "| e |",
+        "| --- |",
+      ].join("\n"),
+    );
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("a table inside a tag body", () => {
+    const forest: SerializedBlock[] = [
+      {
+        type: "context",
+        data: {},
+        expanded: true,
+        children: [
+          table(["a"], [["1"]]),
+          node("text", { text: runs("after") }),
+        ],
+      },
+    ];
+    const md = serialize(forest);
+    expect(md).toBe(
+      [
+        "<human>",
+        "  | a |",
+        "  | --- |",
+        "  | 1 |",
+        "  after",
+        "</human>",
+      ].join("\n"),
+    );
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("a blank line ends the run", () => {
+    const forest = parse("| a |\n| --- |\n\n| 1 |");
+    expect(forest.map((b) => b.type)).toEqual(["table", "text", "text"]);
+    expect(forest[0]).toEqual(table(["a"]));
+    expect(dataText(forest[2]!)).toBe("| 1 |");
+  });
+
+  test("a line run is a single-line claim to the escape authority", () => {
+    expect(markdownLineClaim("| a | b |", mdCtx)).toBe("table");
+    expect(markdownLineClaim("  | a", mdCtx)).toBe("table");
+    expect(markdownLineClaim("\\| a | b |", mdCtx)).toBeUndefined();
+  });
+});
+
 describe("equation", () => {
   test("`$$expr` parses into `expression` (never `text`)", () => {
     const forest = parse("$$x^2 + 1");
@@ -1222,12 +1443,15 @@ describe("typingPrefixes never reach the markdown pipeline", () => {
     // `quote` WRAPS the line on a typed `| ` (a container's typed prefix is a
     // wrap), and `| ` is exactly a table row's opening in markdown. Had it been a
     // `markdownPrefixes` entry, `derivedParsePrefixes` would claim both lines and
-    // the pasted table would arrive as two quotes with the pipes eaten. Tables
-    // have no block type yet, so the honest answer is prose — verbatim, so
-    // nothing is lost.
+    // the pasted table would arrive as two quotes with the pipes eaten. The
+    // lines belong to the `table` block's line run instead: one table, no quote.
     const forest = parse(["| a | b |", "| - | - |"].join("\n"));
-    expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
-    expect(forest.map(dataText)).toEqual(["| a | b |", "| - | - |"]);
+    expect(forest.map((b) => b.type)).toEqual(["table"]);
+    expect(forest[0]!.data).toEqual({
+      align: [null, null],
+      header: [runs("a"), runs("b")],
+      rows: [],
+    });
   });
 
   test("`| ` is a conversion prefix but not a markdown one", () => {
@@ -2014,6 +2238,7 @@ describe("round-trip property (fuzzed forest)", () => {
     ...new Set(
       handles.flatMap((h) => [
         ...(h.markdown?.parseLine?.claims ?? []),
+        ...(h.markdown?.lineRun?.claims ?? []),
         ...(h.markdownPrefixes ?? []).map((prefix) => prefix + "x"),
       ]),
     ),
@@ -2241,6 +2466,30 @@ describe("round-trip property (fuzzed forest)", () => {
       }),
       children: false,
     },
+    // A GFM table: a LINE RUN, the one claim kind with no closing line. Cells
+    // come from the same alphabet as every paragraph (so a cell can open with a
+    // claimed line, hold a soft break or a mark), plus the three shapes only a
+    // table cares about: a literal `|`, a cell reading as a delimiter cell, and
+    // an empty one. Children allowed — a table's children nest below it by
+    // indent, which is exactly the boundary the run collector must respect.
+    {
+      type: "table",
+      data: (r) => {
+        const width = 1 + Math.floor(r() * 3);
+        const aligns = ["left", "center", "right", null] as const;
+        const row = (): RichText[] =>
+          Array.from({ length: width }, () => tableCell(r));
+        return {
+          align: Array.from(
+            { length: width },
+            () => aligns[Math.floor(r() * aligns.length)]!,
+          ),
+          header: row(),
+          rows: Array.from({ length: Math.floor(r() * 3) }, row),
+        };
+      },
+      children: true,
+    },
     {
       type: "bookmark",
       data: (r) => ({
@@ -2284,6 +2533,18 @@ describe("round-trip property (fuzzed forest)", () => {
     const claim = CLAIM_LINES[Math.floor(r() * CLAIM_LINES.length)]!;
     const body = words[Math.floor(r() * words.length)]!;
     return [{ text: r() < 0.3 ? claim : claim + " " + body }];
+  }
+
+  /** One table cell: a paragraph's text, or one of the table-only shapes. */
+  function tableCell(r: () => number): RichText {
+    const roll = r();
+    if (roll < 0.15) return [];
+    if (roll < 0.3) {
+      const w = words[Math.floor(r() * words.length)]!;
+      return [{ text: r() < 0.5 ? `${w}|${w}` : `| ${w} |` }];
+    }
+    if (roll < 0.38) return [{ text: r() < 0.5 ? "---" : ":-:" }];
+    return pick(r);
   }
 
   function pick(r: () => number): RichText {

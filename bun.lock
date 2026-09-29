@@ -3831,6 +3831,10 @@
       "name": "@singularity/plugin-page-sub-page",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/table": {
+      "name": "@singularity/plugin-page-table",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/text": {
       "name": "@singularity/plugin-page-text",
       "version": "0.0.1",
@@ -7821,6 +7825,8 @@
     "@singularity/plugin-page-read-only-view": ["@singularity/plugin-page-read-only-view@workspace:plugins/page/plugins/read-only-view"],
 
     "@singularity/plugin-page-sub-page": ["@singularity/plugin-page-sub-page@workspace:plugins/page/plugins/sub-page"],
+
+    "@singularity/plugin-page-table": ["@singularity/plugin-page-table@workspace:plugins/page/plugins/table"],
 
     "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 

@@ -50,6 +50,7 @@
     { "type": "header", "label": "Advanced", "items": [
       "page.prompt.block:prompt",
       "page.code-block:code-block",
+      "page.table:table",
       "page.math.equation:equation",
       "page.page-link:page-link",
       "page.sub-page:page"

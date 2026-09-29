@@ -10,6 +10,7 @@ export {
 } from "./slots";
 export type {
   BlockContribution,
+  BlockView,
   BlockFrameMeta,
   BlockDecoration,
   BlockDecorationSeat,
@@ -110,6 +111,9 @@ export type { VoidCaret, VoidCaretOptions } from "./components/void-caret";
 // write is debounced and records nothing, and the void-caret registration is
 // made from inside so a caller cannot forget it.
 export { useBlockPlainText, BlockTextArea } from "./components/block-text-area";
+// The page's own markdown dialect bound to the live registry, for a block that
+// edits its markdown SOURCE in place (the table's source mode).
+export { usePageMarkdownContext } from "./internal/page-markdown-context";
 export type {
   BlockPlainText,
   BlockPlainTextControl,

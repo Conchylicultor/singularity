@@ -140,6 +140,21 @@ export interface MdSerializeCtx {
    */
   md(text: RichText | string): string;
   /**
+   * {@link md} forced into the ESCAPED soft-break dialect, whatever the
+   * context's own: a soft break is always the two characters `\n`. For a
+   * block whose syntax needs a run to stay on ONE line in every dialect — a
+   * table cell, where a real newline would end the row. `md` alone would emit
+   * one in the clipboard dialect.
+   */
+  mdLine(text: RichText | string): string;
+  /**
+   * The conversion's protected spans ({@link MarkdownContext.protectedSpans}):
+   * the inline decorator tokens whose bytes must survive verbatim. For a block
+   * whose OWN syntax splits a line (a table's `|` cell separators), so it can
+   * refuse to split inside `\(a|b\)` or a `[[page:…]]` token.
+   */
+  protectedSpans: RegExp[];
+  /**
    * Flatten runs (or a legacy string) to plain text, dropping marks and escaping
    * nothing. The raw escape hatch, for a block type whose syntax is not inline
    * markdown at all (a fenced body, a LaTeX expression).
@@ -168,6 +183,12 @@ export interface MdSerializeCtx {
 export interface MdParseCtx {
   /** Parse inline markdown (marks, links, colors) into canonical runs. */
   runs(text: string): RichText;
+  /**
+   * The conversion's protected spans — the parse twin of
+   * {@link MdSerializeCtx.protectedSpans}, for a block that splits a line
+   * before handing its pieces to {@link runs}.
+   */
+  protectedSpans: RegExp[];
 }
 
 /**
@@ -395,6 +416,44 @@ export interface BlockMarkdown<T> {
     parseFenced(info: string, body: string, ctx: MdParseCtx): T;
   };
   /**
+   * A RUN of consecutive lines with no closing delimiter — a GFM table, whose
+   * rows simply stop. Neither `parseLine` (one line) nor `fence` (open…close)
+   * can say that.
+   *
+   * The walk collects the lines that follow the first one at the SAME indent,
+   * non-blank, each `matches`-ing on its own (a deeper line is a child, never a
+   * continuation), and hands them to `parse`, which takes the LONGEST prefix it
+   * accepts and says how many lines that was. The walk then continues on the
+   * rest of the run, so one run can hold several blocks back to back. `null`
+   * DECLINES: the first line falls to prose (and re-serializes escaped —
+   * lenient parse, canonical serialize).
+   *
+   * Line-local on purpose. `matches` is the whole of this claim as far as the
+   * claim authority is concerned — the serializer's escape asks "who would take
+   * this ONE line", and a predicate over one line answers it exactly. A
+   * declaration that needed the next line to decide would not be escapable.
+   *
+   * Every line `serialize` emits must `matches` (asserted in our own dialect):
+   * a line that did not would end the run early and come back as a sibling.
+   */
+  lineRun?: {
+    /**
+     * Sample FIRST lines this claimer takes — the same declaration
+     * `parseLine.claims` is, read by the same escape check. At least one.
+     */
+    claims: readonly string[];
+    /** Does this ONE line belong to a run? Probed a line at a time. */
+    matches(line: string): boolean;
+    /**
+     * Parse the longest accepted PREFIX of `lines` (dedented, all `matches`),
+     * reporting how many it consumed (at least 1); `null` ⇒ decline.
+     */
+    parse(
+      lines: readonly string[],
+      ctx: MdParseCtx,
+    ): { data: T; consumed: number } | null;
+  };
+  /**
    * `parseLine` dispatch order (desc) — only to disambiguate overlapping prefixes
    * (e.g. to-do beats bulleted-list for `- [ ] x`). Default 0; ties keep
    * registration order.
@@ -419,7 +478,10 @@ type Handle = BlockHandle<unknown>;
  * constant, because `runs` now closes over the context's `protectedSpans`.
  */
 function parseCtxFor(ctx: MarkdownContext): MdParseCtx {
-  return { runs: (text) => parseInlineMarkdown(text, ctx.protectedSpans) };
+  return {
+    runs: (text) => parseInlineMarkdown(text, ctx.protectedSpans),
+    protectedSpans: ctx.protectedSpans,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1002,6 +1064,12 @@ interface FenceClaimer {
   fence: NonNullable<BlockMarkdown<unknown>["fence"]>;
 }
 
+/** A handle declaring a line-run form, bound to that declaration. */
+interface RunClaimer {
+  handle: Handle;
+  lineRun: NonNullable<BlockMarkdown<unknown>["lineRun"]>;
+}
+
 /** A non-`defaultText` handle with its resolved single-line parser. */
 interface LineClaimer {
   handle: Handle;
@@ -1012,12 +1080,14 @@ interface LineClaimer {
 /**
  * The parse-side dispatch for one handle set, in the order a line is offered to
  * it: the fence arm first (a fence's opening line is its own claim and its body
- * is opaque), then the non-`defaultText` claimers by `precedence` desc — a
- * stable sort, so ties keep registration order — and last the default-text
- * handle, which never claims and always accepts.
+ * is opaque), then the line-run arm (its first line is its claim — see
+ * `BlockMarkdown.lineRun`), then the non-`defaultText` claimers by `precedence`
+ * desc — a stable sort, so ties keep registration order — and last the
+ * default-text handle, which never claims and always accepts.
  */
 interface Claimers {
   fences: FenceClaimer[];
+  runs: RunClaimer[];
   lines: LineClaimer[];
   /** THE plain-paragraph type; `undefined` in a composition shipping none. */
   fallback: Handle | undefined;
@@ -1028,6 +1098,9 @@ function claimersOf(handles: Handle[]): Claimers {
     fences: handles
       .filter((h) => h.markdown?.fence)
       .map((h) => ({ handle: h, fence: h.markdown!.fence! })),
+    runs: handles
+      .filter((h) => h.markdown?.lineRun)
+      .map((h) => ({ handle: h, lineRun: h.markdown!.lineRun! })),
     lines: handles
       .filter((h) => !h.defaultText)
       .map((h) => ({
@@ -1049,11 +1122,12 @@ function claimersOf(handles: Handle[]): Claimers {
  * the REAL context and REFUSES LOUDLY if the two disagree, so the assumption is
  * checked on every line rather than trusted.
  */
-const PROBE_PARSE_CTX: MdParseCtx = { runs: () => [] };
+const PROBE_PARSE_CTX: MdParseCtx = { runs: () => [], protectedSpans: [] };
 
 /** Which entry of a {@link Claimers} takes one line. */
 type Claim =
   | { kind: "fence"; handle: Handle; fence: FenceClaimer["fence"] }
+  | { kind: "run"; handle: Handle; lineRun: RunClaimer["lineRun"] }
   | { kind: "line"; handle: Handle; claimer: LineClaimer }
   | { kind: "prose"; handle: Handle };
 
@@ -1075,6 +1149,11 @@ function claimOf(line: string, claimers: Claimers): Claim | undefined {
   const content = lineContent(line);
   const fence = claimers.fences.find((f) => content.startsWith(f.fence.open));
   if (fence) return { kind: "fence", handle: fence.handle, fence: fence.fence };
+  // A line run is still a SINGLE-LINE claim here: its first line `matches`.
+  // Whether the run then parses is the walk's business (a decline falls to
+  // prose), exactly as a fence's opening line claims before its body is read.
+  const run = claimers.runs.find((r) => r.lineRun.matches(content));
+  if (run) return { kind: "run", handle: run.handle, lineRun: run.lineRun };
   for (const claimer of claimers.lines) {
     if (claimer.parse(content, PROBE_PARSE_CTX) !== null)
       return { kind: "line", handle: claimer.handle, claimer };
@@ -1154,20 +1233,40 @@ function claimSafeLines(
   const first = lines[0]!;
 
   if (assertExact) {
-    // ONE LINE, and `code-block` is the one exemption: a `fence` is
+    // ONE LINE, unless the type declares a multi-line form: a `fence` is
     // self-delimiting, so its lines 2..n are read back as part of the same
-    // block. Any OTHER multi-line output fans one block out into siblings at
+    // block, and a `lineRun` reads back every line that `matches` at its
+    // indent. Any OTHER multi-line output fans one block out into siblings at
     // its own indent, indistinguishable from blocks nobody wrote — the soft
     // break's bug, still live for `equation`, which serializes `"$$" +
     // expression` straight out of a textarea. The comment at the call site
     // claimed this property already held; this is what makes it true.
-    if (lines.length > 1 && handle.markdown?.fence === undefined) {
+    const lineRun = handle.markdown?.lineRun;
+    if (
+      lines.length > 1 &&
+      handle.markdown?.fence === undefined &&
+      lineRun === undefined
+    ) {
       throw new Error(
         `markdown: a "${handle.type}" block emitted ${lines.length} lines, but only a type ` +
-          "declaring a `markdown.fence` may — every other type's lines 2..n come back as " +
-          "sibling blocks nobody wrote. A soft break inside run text is already spelled `\\n`; " +
-          "anything else multi-line needs a fence or a tag.",
+          "declaring a `markdown.fence` or a `markdown.lineRun` may — every other type's lines " +
+          "2..n come back as sibling blocks nobody wrote. A soft break inside run text is " +
+          "already spelled `\\n`; anything else multi-line needs a fence, a line run or a tag.",
       );
+    }
+    // A line run is read back only as far as its lines `matches`: one that
+    // does not ends the run there, and every line after it comes back as a
+    // sibling block nobody wrote.
+    if (lineRun !== undefined) {
+      const stray = lines.find((l) => !lineRun.matches(l));
+      if (stray !== undefined) {
+        throw new Error(
+          `markdown: a "${handle.type}" block emitted the line ${JSON.stringify(stray)}, which its ` +
+            "own `markdown.lineRun.matches` rejects — the run would end there on the way back " +
+            "and the rest would parse as other blocks. Every line a line-run type writes must " +
+            "match its own run.",
+        );
+      }
     }
     // NEVER OPENS WITH `<`. The claim authority skips the tag branch on purpose
     // (`claimTag` is multi-line and can decline after consuming nothing, so it
@@ -1476,6 +1575,58 @@ export function parseMarkdownToForest(
         type: claim.handle.type,
         data: fence.parseFenced(info, body.join("\n"), parseCtx),
       });
+      continue;
+    }
+
+    // Line run (a table): the lines that follow at the SAME indent, non-blank,
+    // each matching on its own. The indent compare is explicit — a deeper line
+    // is a child of whatever this run parses to, never a continuation of it.
+    // The type takes the longest prefix it accepts; whatever it leaves is
+    // offered to the loop again, so one run can hold several blocks.
+    if (claim?.kind === "run") {
+      const { lineRun } = claim;
+      const run: string[] = [content];
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = lines[j]!;
+        if (next.trim() === "") break;
+        const nextWs = /^(\s*)/.exec(next)![1]!;
+        if (nextWs.replace(/\t/g, "  ").length !== indent) break;
+        const nextContent = next.slice(nextWs.length);
+        if (!lineRun.matches(nextContent)) break;
+        run.push(nextContent);
+      }
+      const parsed = lineRun.parse(run, parseCtx);
+      flushBlanks(indent);
+      if (parsed === null) {
+        // DECLINED: the first line is prose, verbatim — never the escaped
+        // branch below, since nothing was escaped. The serializer writes it
+        // back escaped (lenient parse, canonical serialize).
+        if (fallback !== undefined) {
+          tokens.push({
+            indent,
+            type: fallback.type,
+            data: {
+              ...(fallback.empty?.() ?? {}),
+              text: parseCtx.runs(content),
+            },
+          });
+        }
+        i++;
+        continue;
+      }
+      if (
+        !Number.isInteger(parsed.consumed) ||
+        parsed.consumed < 1 ||
+        parsed.consumed > run.length
+      ) {
+        throw new Error(
+          `markdown: "${claim.handle.type}"'s \`markdown.lineRun.parse\` reported consuming ` +
+            `${parsed.consumed} of the ${run.length} line(s) it was handed. It takes a PREFIX of ` +
+            "the run — at least its first line, never more than it was given — or declines with `null`.",
+        );
+      }
+      tokens.push({ indent, type: claim.handle.type, data: parsed.data });
+      i += parsed.consumed;
       continue;
     }
 
@@ -1973,6 +2124,8 @@ export function serializeForestToMarkdown(
   const claimers = claimersOf(ctx.handles);
   const md = (text: RichText | string): string =>
     serializeInlineMarkdown(runsOf(text), ctx.protectedSpans, ctx.softBreaks);
+  const mdLine = (text: RichText | string): string =>
+    serializeInlineMarkdown(runsOf(text), ctx.protectedSpans, "escaped");
 
   // Returns the lines for ONE sibling list, at depth 0; the caller indents. The
   // recursion carries the nesting rather than a `depth` counter so a tag can
@@ -1994,6 +2147,8 @@ export function serializeForestToMarkdown(
       const h = byType.get(n.type);
       const serializeCtx: MdSerializeCtx = {
         md,
+        mdLine,
+        protectedSpans: ctx.protectedSpans,
         plain: plainOf,
         ordinal,
         id: n.id,

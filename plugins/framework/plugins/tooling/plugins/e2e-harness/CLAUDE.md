@@ -330,6 +330,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `page/place`
     - `page/prompt/block`
     - `page/quote`
+    - `page/table`
     - `page/url-paste`
     - `primitives/adaptive-bar`
     - `primitives/css/control-panel`

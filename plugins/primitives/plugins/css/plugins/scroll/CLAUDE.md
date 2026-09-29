@@ -108,6 +108,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `infra/events-test`
     - `page/page-link`
     - `page/place`
+    - `page/table`
     - `plugin-meta/plugin-health`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/file-tree`

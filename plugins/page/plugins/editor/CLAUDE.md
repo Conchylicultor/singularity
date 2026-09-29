@@ -3692,7 +3692,7 @@ gains no generator fails the suite instead of quietly going untested.
     paragraph on the way back, the very loss this closes.
   - **Two asserts, our dialect only** (the clipboard is deliberately lossy and
     must never throw during a Cmd+C): a `lines`-branch block emits ONE line
-    unless it declares a `markdown.fence` (`equation`'s `"$$" + expression` fans
+    unless it declares a `markdown.fence` or a `markdown.lineRun` (`equation`'s `"$$" + expression` fans
     a multi-line formula into sibling blocks otherwise), and a `lines` line never
     opens with `<` — which is what lets the claim authority skip the multi-line
     tag branch honestly.
@@ -3714,6 +3714,34 @@ gains no generator fails the suite instead of quietly going untested.
   [`research/2026-09-20-page-markdown-line-claim-escape.md`](../../../../research/2026-09-20-page-markdown-line-claim-escape.md)
   and
   [`research/2026-09-20-page-markdown-claims-against-real-registry.md`](../../../../research/2026-09-20-page-markdown-claims-against-real-registry.md).
+- **A block with no closing line is a LINE RUN** (`markdown.lineRun`), the
+  third claim kind beside `parseLine` (one line) and `fence` (open…close). A GFM
+  table is the shape: its rows simply stop. It declares `claims` (sample first
+  lines, read by `markdown-claims-are-escapable` exactly like
+  `parseLine.claims`), a LINE-LOCAL `matches(line)`, and
+  `parse(lines, ctx) → { data, consumed } | null`.
+  - **To the claim authority it is still a single-line claim**: `claimOf` asks
+    `matches` of the first line (after fences, before the `parseLine`
+    claimers), so the escape needs nothing new — a paragraph opening with `|`
+    is written `\|…` and read back as prose, like any other claimed line.
+  - **The walk collects the run**: the following lines at the SAME indent
+    (compared explicitly, so a deeper table is a child, never a
+    continuation), non-blank, each `matches`-ing on its own. `parse` takes
+    the longest prefix it accepts and says how many lines that was; the walk
+    offers the rest to itself again, so one run can hold several blocks back
+    to back. `null` declines: the FIRST line is prose (re-serialized escaped —
+    lenient parse, canonical serialize) and the walk moves on one line.
+  - **Serialize** may emit several lines, and the one-line assert exempts a
+    line-run type as it does a fence — but in our dialect every emitted line
+    must `matches`, or the run would end there and the rest come back as
+    siblings nobody wrote.
+  - **Two ctx fields exist for it**: `protectedSpans` on both `MdParseCtx` and
+    `MdSerializeCtx` (a table must not split a cell inside `\(a|b\)` or a
+    `[[page:…]]` token), and `MdSerializeCtx.mdLine(runs)` — `md` forced into
+    the escaped soft-break dialect, so a cell's break is `\n` even on the
+    clipboard, where a real newline would end the row.
+  - The core still names no block type; `page/table` is the declarer, and its
+    CLAUDE.md states the table's own rules (adjacent tables, the cell escapes).
 
 ### The page tags
 
@@ -3832,7 +3860,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots:
-    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.map`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.table`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
     - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -3945,6 +3973,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockTextPluginProps`
     - `BlockTextSelection`
     - `BlockTextTokenExtension`
+    - `BlockView`
     - `CaretFlightAbortReason`
     - `CaretFlightAbortReport`
     - `CaretSurface`
@@ -4019,6 +4048,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useFrameHovered`
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
+    - `usePageMarkdownContext`
     - `usePageOptions`
     - `useSelectionControl`
     - `useSetFrameHover`
@@ -4351,6 +4381,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/quote`
     - `page/read-only-view`
     - `page/sub-page`
+    - `page/table`
     - `page/text`
     - `page/to-do`
     - `page/toggle`

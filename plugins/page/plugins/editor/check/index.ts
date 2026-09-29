@@ -543,7 +543,7 @@ const blockPrefixesUnique: Check = {
 const markdownClaimsAreEscapable: Check = {
   id: "page.editor:markdown-claims-are-escapable",
   description:
-    "every line a block type declares it claims (`markdown.parseLine.claims`, `markdownPrefixes`) is claimed by that type, and stops being claimed once escaped with one leading backslash",
+    "every line a block type declares it claims (`markdown.parseLine.claims`, `markdown.lineRun.claims`, `markdownPrefixes`) is claimed by that type, and stops being claimed once escaped with one leading backslash",
   async run(): Promise<CheckResult> {
     const collected = await collectBlockHandles();
     if (!collected.ok) {
@@ -586,6 +586,13 @@ const markdownClaimsAreEscapable: Check = {
           field: "markdown.parseLine.claims",
           line,
         });
+      for (const line of handle.markdown?.lineRun?.claims ?? [])
+        samples.push({
+          pluginId,
+          type: handle.type,
+          field: "markdown.lineRun.claims",
+          line,
+        });
       for (const prefix of handle.markdownPrefixes ?? [])
         samples.push({
           pluginId,
@@ -603,7 +610,8 @@ const markdownClaimsAreEscapable: Check = {
         ok: false,
         message:
           `${collected.handles.length} block handle(s) were read, but not one of them declares a ` +
-          "line it claims (`markdown.parseLine.claims` / `markdownPrefixes`), so the escape was " +
+          "line it claims (`markdown.parseLine.claims` / `markdown.lineRun.claims` / " +
+          "`markdownPrefixes`), so the escape was " +
           "NOT verified. This is a check/tooling failure, not a clean pass.",
       };
     }

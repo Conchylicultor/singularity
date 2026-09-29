@@ -684,6 +684,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/place/map-layer`
     - `page/prompt/block`
     - `page/read-only-view`
+    - `page/table`
     - `page/video`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/db-schema/render-detail`

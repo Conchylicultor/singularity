@@ -372,6 +372,7 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
     - `page/prompt/block`
     - `page/quote`
     - `page/read-only-view`
+    - `page/table`
     - `page/text`
     - `page/to-do`
     - `page/toggle`
