@@ -4,17 +4,17 @@ import {
   RAW_RETENTION_DAYS,
   REPORT_ROWS_PER_DIMENSION,
   TOTAL_DIMENSION,
-  ZERO_METRICS,
+  ZERO_ADDITIVE_METRICS,
   addMetrics,
   addMonths,
   planPeriods,
   reportSourceFor,
+  type AdditiveMetrics,
   type AnalyticsFilter,
   type AnalyticsQuery,
   type AnalyticsQueryResult,
   type AnalyticsReport,
   type Dimension,
-  type Metrics,
   type PeriodReport,
   type ReportPeriod,
   type ReportRow,
@@ -25,7 +25,10 @@ import {
   metricsOf,
   rawDailyRows,
   rawHourlyTotals,
+  visitorCounts,
   type KeyedRow,
+  type VisitorGrouping,
+  type VisitorRow,
 } from "./aggregate-sql";
 import type { AnalyticsDb } from "./collect";
 
@@ -36,6 +39,9 @@ import type { AnalyticsDb } from "./collect";
  * - `totals` source: `analytics_daily` for the days it holds, plus raw rows for
  *   the days not rolled up yet (today, and any night the rollup missed), at
  *   most one filter — a second one is refused, not approximated.
+ *
+ * Either way, unique visitors are counted distinct over each period, row and
+ * bucket from the same visits (`visitorCounts`), never summed per day.
  */
 export async function runAnalyticsQuery(
   dbx: AnalyticsDb,
@@ -80,20 +86,36 @@ async function periodData(
   period: ReportPeriod,
   filters: readonly AnalyticsFilter[],
 ): Promise<PeriodData> {
-  const daily = await dailyRows(dbx, source, period, filters);
+  const visitors = (groupBy: VisitorGrouping) =>
+    visitorCounts(dbx, {
+      from: period.from,
+      to: period.to,
+      filters,
+      source,
+      groupBy,
+    });
+  const [daily, hourly, summaryVisitors, rowVisitors, bucketVisitors] =
+    await Promise.all([
+      dailyRows(dbx, source, period, filters),
+      period.granularity === "hour"
+        ? rawHourlyTotals(dbx, { day: period.from, filters })
+        : null,
+      visitors({ kind: "total" }),
+      visitors({ kind: "dimension" }),
+      visitors({ kind: "bucket", granularity: period.granularity }),
+    ]);
   const totals = daily.filter((r) => r.dimension === TOTAL_DIMENSION);
-  const seriesRows =
-    period.granularity === "hour"
-      ? await rawHourlyTotals(dbx, { day: period.from, filters })
-      : totals;
   return {
     period: {
       from: period.from,
       to: period.to,
-      summary: sumMetrics(totals),
-      series: denseSeries(period, seriesRows),
+      summary: {
+        visitors: summaryVisitors[0]?.visitors ?? 0,
+        ...sumMetrics(totals),
+      },
+      series: denseSeries(period, hourly ?? totals, bucketVisitors),
     },
-    rows: topRows(daily),
+    rows: topRows(daily, rowVisitors),
   };
 }
 
@@ -140,10 +162,10 @@ async function totalsSourceRows(
   return [...stored, ...notRolledUp];
 }
 
-function sumMetrics(rows: readonly Metrics[]): Metrics {
-  return rows.reduce<Metrics>(
+function sumMetrics(rows: readonly AdditiveMetrics[]): AdditiveMetrics {
+  return rows.reduce<AdditiveMetrics>(
     (acc, row) => addMetrics(acc, metricsOf(row)),
-    ZERO_METRICS,
+    ZERO_ADDITIVE_METRICS,
   );
 }
 
@@ -151,19 +173,24 @@ function sumMetrics(rows: readonly Metrics[]): Metrics {
 function denseSeries(
   period: ReportPeriod,
   totals: readonly KeyedRow[],
+  visitors: readonly VisitorRow[],
 ): PeriodReport["series"] {
-  const byBucket = new Map<string, Metrics>();
+  const byBucket = new Map<string, AdditiveMetrics>();
   for (const row of totals) {
     const bucket =
       period.granularity === "month" ? addMonths(row.key, 0) : row.key;
     byBucket.set(
       bucket,
-      addMetrics(byBucket.get(bucket) ?? ZERO_METRICS, metricsOf(row)),
+      addMetrics(byBucket.get(bucket) ?? ZERO_ADDITIVE_METRICS, metricsOf(row)),
     );
   }
+  const visitorsByBucket = new Map(visitors.map((r) => [r.key, r.visitors]));
   return period.buckets.map((bucket) => ({
     bucket,
-    metrics: byBucket.get(bucket) ?? ZERO_METRICS,
+    metrics: {
+      visitors: visitorsByBucket.get(bucket) ?? 0,
+      ...(byBucket.get(bucket) ?? ZERO_ADDITIVE_METRICS),
+    },
   }));
 }
 
@@ -176,9 +203,20 @@ function rankRows(a: ReportRow, b: ReportRow): number {
   );
 }
 
-/** Sum the per-day rows by (dimension, value) and keep each dimension's top rows. */
-function topRows(daily: readonly KeyedRow[]): Record<Dimension, ReportRow[]> {
-  const byDimension = new Map<Dimension, Map<string, Metrics>>(
+const rowKey = (dimension: string, value: string) => `${dimension}\t${value}`;
+
+/**
+ * Sum the per-day rows by (dimension, value), attach each one's distinct
+ * visitors over the period, and keep each dimension's top rows.
+ */
+function topRows(
+  daily: readonly KeyedRow[],
+  visitors: readonly VisitorRow[],
+): Record<Dimension, ReportRow[]> {
+  const visitorsByRow = new Map(
+    visitors.map((r) => [rowKey(r.dimension, r.value), r.visitors]),
+  );
+  const byDimension = new Map<Dimension, Map<string, AdditiveMetrics>>(
     DIMENSIONS.map((d) => [d, new Map()]),
   );
   for (const row of daily) {
@@ -188,15 +226,27 @@ function topRows(daily: readonly KeyedRow[]): Record<Dimension, ReportRow[]> {
       throw new Error(`analytics: unknown dimension ${row.dimension}`);
     values.set(
       row.value,
-      addMetrics(values.get(row.value) ?? ZERO_METRICS, metricsOf(row)),
+      addMetrics(
+        values.get(row.value) ?? ZERO_ADDITIVE_METRICS,
+        metricsOf(row),
+      ),
     );
   }
   const rows = {} as Record<Dimension, ReportRow[]>;
   for (const dimension of DIMENSIONS) {
     rows[dimension] = [
-      ...(byDimension.get(dimension) ?? new Map<string, Metrics>()),
+      ...(byDimension.get(dimension) ?? new Map<string, AdditiveMetrics>()),
     ]
-      .map(([value, metrics]) => ({ value, ...metrics }))
+      .map(([value, metrics]) => {
+        // Both sides read the same visits, so a row with metrics has visitors.
+        const rowVisitors = visitorsByRow.get(rowKey(dimension, value));
+        if (rowVisitors === undefined) {
+          throw new Error(
+            `analytics: ${dimension}=${value} has metrics but no visitor count`,
+          );
+        }
+        return { value, visitors: rowVisitors, ...metrics };
+      })
       .sort(rankRows)
       .slice(0, REPORT_ROWS_PER_DIMENSION);
   }

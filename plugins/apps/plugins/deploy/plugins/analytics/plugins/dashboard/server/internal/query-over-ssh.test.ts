@@ -5,12 +5,12 @@ import type {
 } from "@plugins/infra/plugins/ssh/server";
 import {
   DIMENSIONS,
-  ZERO_METRICS,
   analyticsQueryEndpoint,
   type AnalyticsQuery,
   type AnalyticsQueryResult,
   type AnalyticsReport,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { ZERO_METRICS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing";
 import {
   analyticsCurlArgv,
   mapSshAnswer,

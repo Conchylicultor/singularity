@@ -1,9 +1,24 @@
 import type { Metrics } from "./query";
 
 /**
- * Rates derived from additive {@link Metrics}. Each is `null` when its
- * denominator is zero — "no visits" has no bounce rate, it is not 0%.
+ * Rates derived from {@link Metrics}. Each is `null` when its denominator is
+ * zero — "no visits" has no bounce rate, it is not 0%.
  */
+
+/**
+ * The metrics that add up across days. `visitors` is deliberately absent: one
+ * visitor spans many days, so a sum of daily visitors overcounts — it is
+ * counted distinct over the whole span instead (`visitorCounts`, server).
+ */
+export type AdditiveMetrics = Omit<Metrics, "visitors">;
+
+export const ZERO_ADDITIVE_METRICS: AdditiveMetrics = {
+  visits: 0,
+  pageviews: 0,
+  bounces: 0,
+  durationMs: 0,
+  events: 0,
+};
 
 export const ZERO_METRICS: Metrics = {
   visitors: 0,
@@ -14,10 +29,12 @@ export const ZERO_METRICS: Metrics = {
   events: 0,
 };
 
-/** Field-wise sum; exact because every metric is additive. */
-export function addMetrics(a: Metrics, b: Metrics): Metrics {
+/** Field-wise sum; exact because every one of these is additive. */
+export function addMetrics(
+  a: AdditiveMetrics,
+  b: AdditiveMetrics,
+): AdditiveMetrics {
   return {
-    visitors: a.visitors + b.visitors,
     visits: a.visits + b.visits,
     pageviews: a.pageviews + b.pageviews,
     bounces: a.bounces + b.bounces,

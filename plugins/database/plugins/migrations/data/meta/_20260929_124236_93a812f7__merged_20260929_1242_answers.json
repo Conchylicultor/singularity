@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:analytics_visits.visitor_id",
+      "entityType": "column",
+      "entityName": "visitor_id",
+      "action": "rename",
+      "from": "visitor_hash"
+    }
+  ]
+}

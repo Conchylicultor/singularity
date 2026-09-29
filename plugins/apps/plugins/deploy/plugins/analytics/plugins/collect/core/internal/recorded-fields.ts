@@ -42,8 +42,8 @@ export const RECORDED_COLUMNS = [
   "events",
   "eventName",
   "eventProps",
-  // identity within one day
-  "visitorHash",
+  // identity while the visitor keeps returning
+  "visitorId",
 ] as const;
 export type RecordedColumn = (typeof RECORDED_COLUMNS)[number];
 
@@ -129,10 +129,10 @@ export const RECORDED_FIELDS = [
     columns: ["engagedMs", "exitEngagedMs"],
   },
   {
-    name: "visitor_hash",
+    name: "visitor_id",
     description:
-      "Hash of IP + browser + site + a salt replaced every midnight UTC",
-    columns: ["visitorHash"],
+      "A random id, found again on each return through a hash of IP + browser + site + that day's salt; forgotten after 30 days without a visit",
+    columns: ["visitorId"],
   },
 ] as const satisfies readonly RecordedField[];
 
@@ -140,6 +140,6 @@ export const RECORDED_FIELDS = [
 export const NEVER_RECORDED = [
   "IP addresses or the full user-agent string",
   "Cookies, localStorage, or anything left on the visitor's device",
-  "Who someone is across days: the visitor hash changes at midnight",
+  "Who someone is after 30 days away: older salts are deleted, so a returning visitor gets a new id",
   "Query strings, form input, or page content",
 ] as const;

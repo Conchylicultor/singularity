@@ -1,10 +1,10 @@
 import {
   DIMENSIONS,
-  ZERO_METRICS,
   type AnalyticsReport,
   type Metrics,
   type ReportRow,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { ZERO_METRICS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing";
 
 export function metrics(partial: Partial<Metrics>): Metrics {
   return { ...ZERO_METRICS, ...partial };

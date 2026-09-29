@@ -70,6 +70,7 @@ export {
   DaySchema,
   GRANULARITIES,
   GranularitySchema,
+  IDENTITY_WINDOW_DAYS,
   RAW_RETENTION_DAYS,
   addDays,
   addMonths,
@@ -113,7 +114,7 @@ export type {
   SeriesPoint,
 } from "./internal/query";
 export {
-  ZERO_METRICS,
+  ZERO_ADDITIVE_METRICS,
   addMetrics,
   averageTimeOnPageMs,
   averageVisitDurationMs,
@@ -122,6 +123,7 @@ export {
   viewsPerVisit,
   visitorShare,
 } from "./internal/metrics";
+export type { AdditiveMetrics } from "./internal/metrics";
 export {
   NEVER_RECORDED,
   RECORDED_COLUMNS,

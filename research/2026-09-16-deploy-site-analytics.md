@@ -10,7 +10,7 @@ Decisions already made:
 - Tier: **standard**. Stored fields: timestamp, host, kind, path, referring site, referring page path, campaign tags, language, device/browser/OS families, time on page, custom events, and the daily visitor hash. `country` is kept as a column but stays empty for now. IP-to-country lookup becomes a follow-up task.
 - Custom events on the equin site: the Improve popup opens, the element picker is used, and "Show me" is clicked (which plays the replay).
 - Retention: per-visit rows are kept **90 days**. **Daily totals are kept forever**, and they include the counts for every single filter. So clicking one row still filters any past range, and stacking a second filter works only on the last 90 days.
-- Never recorded: IP addresses, the full user-agent string, cookies or local storage, query strings, or anything that links a visitor across days.
+- Never recorded: IP addresses, the full user-agent string, cookies or local storage, query strings, or anything that links a visitor across days. *(Superseded 2026-09-29: a returning visitor now keeps one random id while they return within 30 days — see `2026-09-29-apps-analytics-sliding-visitor-identity.md`.)*
 
 ## Facts the design rests on
 

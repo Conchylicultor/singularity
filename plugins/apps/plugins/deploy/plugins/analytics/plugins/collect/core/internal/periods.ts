@@ -20,6 +20,14 @@ export type Granularity = z.infer<typeof GranularitySchema>;
  */
 export const RAW_RETENTION_DAYS = 90;
 
+/**
+ * How long a visitor may stay away and still be recognised as the same
+ * visitor. The salts (and the hash → visitor links) of the last this-many days
+ * are kept; older ones are deleted by the nightly rollup, after which a
+ * visitor absent that long can no longer be linked to anything.
+ */
+export const IDENTITY_WINDOW_DAYS = 30;
+
 export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const DaySchema = z.string().regex(DAY_PATTERN);
 

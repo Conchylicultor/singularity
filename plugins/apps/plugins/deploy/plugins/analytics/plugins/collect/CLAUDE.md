@@ -6,14 +6,28 @@ about SSH, the deploy UI, or any particular site.
 
 ## Data model
 
-- `analytics_salts` — one random salt per UTC day. The rollup deletes every salt
-  before today, so a past day's visitor hashes cannot be recomputed.
+- `analytics_salts` — one random salt per UTC day, kept `IDENTITY_WINDOW_DAYS`
+  (30). The rollup deletes older ones, so those days' visitor hashes cannot be
+  recomputed.
+- `analytics_visitor_links` — `(day, hash) → visitor_id`, pruned with its salt.
+  A visitor's first hit of a day hashes them under every retained salt and
+  follows the newest link to their id (else mints a random UUID), then writes
+  today's link. So a visitor keeps one id while they return within 30 days, and
+  is forgotten after 30 days away. Design:
+  `research/2026-09-29-apps-analytics-sliding-visitor-identity.md`.
 - `analytics_visits` / `analytics_hits` — raw rows, kept `RAW_RETENTION_DAYS`
-  (90). A visit is a run of activity from one daily hash with no gap of 30
-  minutes. It is attributed to the UTC day it **started**.
+  (90). A visit is a run of activity from one visitor with no gap of 30
+  minutes (it may cross midnight). It is attributed to the UTC day it
+  **started**.
 - `analytics_daily` — forever. One row per (day, filter level, dimension, value),
   where a level is unfiltered (`none`) or exactly one `(dimension, value)` filter.
-  Every metric is additive, so any range is a sum.
+  Every column is additive, so any range is a sum.
+- `analytics_visit_members` — forever. Each visit's `(dimension, value)` pairs
+  and its `visitor_id`, written by the rollup. Unique visitors are **not**
+  additive (one visitor spans days), so `visitorCounts` counts them distinct
+  over the whole period / row / bucket from these (plus raw rows for days not
+  rolled up). `AdditiveMetrics` (core) leaves `visitors` out, so summing them
+  across days is a type error.
 
 ## One membership definition
 
@@ -36,17 +50,18 @@ totals equals the same report from raw rows — pinned by the parity test in
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
   non-perWorktree cron installs only on main, and a deployed release is never main.
-- Retention's `beforeDelete` throws for any day without totals, so raw rows are
-  never deleted before they are summed.
-- Visits and hits are excluded from the change-feed: public traffic writes them,
-  and nothing renders them live.
+- Retention's `beforeDelete` throws for any day without totals or memberships,
+  so raw rows are never deleted before they are summed.
+- Visits, hits, visitor links and memberships are excluded from the
+  change-feed: public traffic (or the rollup) writes them, and nothing renders
+  them live.
 - `RECORDED_FIELDS` (core) is what "What one visit records" renders.
   `server/internal/recorded-columns.ts` fails to compile if the stored columns and
   that list disagree.
 - **Country.** `openVisit` looks the client IP up with `lookupCountry`
   ([`apps/deploy/analytics/ip-country`](../ip-country/CLAUDE.md)), an
   in-memory binary search over a local DB-IP snapshot, and stores only the
-  resulting code. The IP is used for that lookup and the daily hash, then
+  resulting code. The IP is used for that lookup and the daily hashes, then
   dropped; it is never stored and never sent anywhere. Only a new visit looks
   up; a hit joining a live visit keeps its country. `(none)` in the report
   counts unlisted addresses (private, reserved) **and** visits recorded before
@@ -58,11 +73,13 @@ totals equals the same report from raw rows — pinned by the parity test in
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts, 90-day visits and hits, forever daily totals at every single-filter level), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `change-feed-exclusion` "analytics_visits"
     - `change-feed-exclusion` "analytics_hits"
+    - `change-feed-exclusion` "analytics_visitor_links"
+    - `change-feed-exclusion` "analytics_visit_members"
   - Uses:
     - `apps/deploy/analytics/host-only.hostOnly`
     - `apps/deploy/analytics/host-only.requestClientIp`
@@ -95,6 +112,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
+    - `AdditiveMetrics`
     - `AnalyticsFilter`
     - `AnalyticsQuery`
     - `AnalyticsQueryResult`
@@ -166,6 +184,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `GRANULARITIES`
     - `GranularitySchema`
     - `HIT_DIMENSIONS`
+    - `IDENTITY_WINDOW_DAYS`
     - `MAX_COLLECT_BODY_BYTES`
     - `MAX_ENGAGED_MS`
     - `MAX_EVENT_PROP_KEY_LENGTH`
@@ -204,12 +223,15 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `viewsPerVisit`
     - `VISIT_DIMENSIONS`
     - `visitorShare`
-    - `ZERO_METRICS`
+    - `ZERO_ADDITIVE_METRICS`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/website/improve`
     - `apps/website/shell`
   - Endpoint callers: `host-only`
+- Test helpers:
+  - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
+    - `ZERO_METRICS`
 
 <!-- AUTOGENERATED:END -->

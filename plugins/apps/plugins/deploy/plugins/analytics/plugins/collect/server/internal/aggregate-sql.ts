@@ -7,9 +7,10 @@ import {
   TOTAL_DIMENSION,
   UNFILTERED_LEVEL,
   VISIT_DIMENSIONS,
+  type AdditiveMetrics,
   type AnalyticsFilter,
   type DailyDimension,
-  type Metrics,
+  type Granularity,
   type VisitDimension,
 } from "../../core";
 import type { AnalyticsDb } from "./collect";
@@ -98,9 +99,12 @@ function visitsAndMemberships(where: SQL): SQL {
     )`;
 }
 
-/** The additive metric columns, over membership alias `mm` and visit alias `k`. */
+/**
+ * The additive metric columns, over membership alias `mm` and visit alias `k`.
+ * Unique visitors are not among them: they do not add up across days, and are
+ * counted by {@link visitorCounts} over the whole span instead.
+ */
 const metricColumns = sql`
-  count(DISTINCT k.visitor_hash)::int AS "visitors",
   count(DISTINCT k.id)::int AS "visits",
   sum(mm.pageviews)::int AS "pageviews",
   (count(DISTINCT k.id) FILTER (WHERE k.pageviews = 1))::int AS "bounces",
@@ -108,7 +112,6 @@ const metricColumns = sql`
   sum(mm.events)::int AS "events"`;
 
 const MetricsRow = {
-  visitors: z.coerce.number().int(),
   visits: z.coerce.number().int(),
   pageviews: z.coerce.number().int(),
   bounces: z.coerce.number().int(),
@@ -116,9 +119,8 @@ const MetricsRow = {
   events: z.coerce.number().int(),
 };
 
-export function metricsOf(row: Metrics): Metrics {
+export function metricsOf(row: AdditiveMetrics): AdditiveMetrics {
   return {
-    visitors: row.visitors,
     visits: row.visits,
     pageviews: row.pageviews,
     bounces: row.bounces,
@@ -133,7 +135,7 @@ const DailyRowSchema = z.object({
   value: z.string(),
   ...MetricsRow,
 });
-/** Metrics of one (key, dimension, value); `key` is a UTC day or an hour bucket. */
+/** Additive metrics of one (key, dimension, value); `key` is a UTC day or an hour bucket. */
 export type KeyedRow = z.infer<typeof DailyRowSchema>;
 
 /** Keep the visits that have EVERY filter's value. */
@@ -152,6 +154,10 @@ const isRolledUp = sql`EXISTS (
   SELECT 1 FROM analytics_daily d
   WHERE d.day = v.day AND d.filter_dim = ${UNFILTERED_LEVEL}
     AND d.filter_value = '' AND d.dimension = ${TOTAL_DIMENSION}
+)`;
+
+const hasMembers = sql`EXISTS (
+  SELECT 1 FROM analytics_visit_members s WHERE s.day = v.day
 )`;
 
 /**
@@ -226,7 +232,7 @@ export async function dailyTotalsRows(
     row: DailyRowSchema,
     query: sql`
       SELECT day::text AS "key", dimension, value,
-        visitors, visits, pageviews, bounces, duration_ms AS "durationMs", events
+        visits, pageviews, bounces, duration_ms AS "durationMs", events
       FROM analytics_daily
       WHERE filter_dim = ${filterDim} AND filter_value = ${filterValue}
         AND day BETWEEN ${opts.from} AND ${opts.to}
@@ -236,8 +242,9 @@ export async function dailyTotalsRows(
 
 /**
  * Replace `day`'s daily totals — every level (unfiltered and every single
- * filter a visit that day had) — with a fresh sum of its raw rows, atomically.
- * Safe to rerun; a day with no visits ends with no rows.
+ * filter a visit that day had) — and its visit memberships with a fresh sum of
+ * its raw rows, atomically. Safe to rerun; a day with no visits ends with no
+ * rows.
  */
 export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
   await dbx.transaction(async (tx) => {
@@ -246,21 +253,140 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
       WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
       INSERT INTO analytics_daily
         (day, filter_dim, filter_value, dimension, value,
-         visitors, visits, pageviews, bounces, duration_ms, events)
+         visits, pageviews, bounces, duration_ms, events)
       SELECT k.day, f.dim, f.value, mm.dim, mm.value, ${metricColumns}
       FROM m f
         JOIN m mm ON mm.visit_id = f.visit_id
         JOIN base k ON k.id = f.visit_id
       WHERE f.dim <> ${TOTAL_DIMENSION} AND mm.dim <> ${UNFILTERED_LEVEL}
       GROUP BY k.day, f.dim, f.value, mm.dim, mm.value`);
+    await tx.execute(
+      sql`DELETE FROM analytics_visit_members WHERE day = ${day}`,
+    );
+    await tx.execute(sql`
+      WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
+      INSERT INTO analytics_visit_members (visit_id, day, visitor_id, dim, value)
+      SELECT DISTINCT mm.visit_id, b.day, b.visitor_id, mm.dim, mm.value
+      FROM m mm JOIN base b ON b.id = mm.visit_id
+      WHERE mm.dim <> ${UNFILTERED_LEVEL}`);
   });
+}
+
+/**
+ * Where {@link visitorCounts} reads memberships from — the same split as the
+ * report's additive rows, so a row's visitors and its other metrics always
+ * come from the same visits:
+ * - `raw`: the raw visits of every day in the span;
+ * - `totals`: the stored memberships of rolled-up days, plus the raw visits of
+ *   the days not rolled up yet (today, a missed night).
+ */
+export type MembershipSource = "raw" | "totals";
+
+/** How {@link visitorCounts} groups: the whole span, each (dimension, value), or each series bucket. */
+export type VisitorGrouping =
+  | { kind: "total" }
+  | { kind: "dimension" }
+  | { kind: "bucket"; granularity: Granularity };
+
+const VisitorRowSchema = z.object({
+  key: z.string(),
+  dimension: DailyDimensionSchema,
+  value: z.string(),
+  visitors: z.coerce.number().int(),
+});
+export type VisitorRow = z.infer<typeof VisitorRowSchema>;
+
+/**
+ * Distinct visitors over days `from..to`, among the visits that have EVERY
+ * filter's value. Counted over the whole span, never summed per day: a
+ * visitor keeps one id while they keep returning, so they count once however
+ * many days they came.
+ */
+export async function visitorCounts(
+  dbx: AnalyticsDb,
+  opts: {
+    from: string;
+    to: string;
+    filters: readonly AnalyticsFilter[];
+    source: MembershipSource;
+    groupBy: VisitorGrouping;
+  },
+): Promise<VisitorRow[]> {
+  const inSpan = sql`v.day BETWEEN ${opts.from} AND ${opts.to}`;
+  const rawArm = sql`
+    SELECT mm.visit_id, b.day, b.started_at, b.visitor_id, mm.dim, mm.value
+    FROM m mm JOIN base b ON b.id = mm.visit_id
+    WHERE mm.dim <> ${UNFILTERED_LEVEL}`;
+  const mem =
+    opts.source === "raw"
+      ? sql`WITH ${visitsAndMemberships(inSpan)}, mem AS (${rawArm})`
+      : sql`WITH ${visitsAndMemberships(sql`${inSpan} AND NOT ${isRolledUp}`)},
+        mem AS (
+          SELECT s.visit_id, s.day, NULL::timestamptz AS started_at, s.visitor_id, s.dim, s.value
+          FROM analytics_visit_members s
+          WHERE s.day BETWEEN ${opts.from} AND ${opts.to}
+          UNION ALL ${rawArm}
+        )`;
+  const kept = opts.filters.map(
+    (f) =>
+      sql`EXISTS (SELECT 1 FROM mem mf WHERE mf.visit_id = mm.visit_id AND mf.dim = ${f.dimension} AND mf.value = ${f.value})`,
+  );
+  const [key, dimScope, groupBy] = visitorGrouping(opts.groupBy, opts.source);
+  return executeRows(dbx, {
+    label: "analytics.visitorCounts",
+    row: VisitorRowSchema,
+    query: sql`
+      ${mem}
+      SELECT ${key} AS "key", mm.dim AS "dimension", mm.value AS "value",
+        count(DISTINCT mm.visitor_id)::int AS "visitors"
+      FROM mem mm
+      WHERE ${dimScope}${kept.length === 0 ? sql`` : sql` AND ${sql.join(kept, sql` AND `)}`}
+      GROUP BY ${groupBy}`,
+  });
+}
+
+function visitorGrouping(
+  grouping: VisitorGrouping,
+  source: MembershipSource,
+): [key: SQL, dimScope: SQL, groupBy: SQL] {
+  const total = sql`mm.dim = ${TOTAL_DIMENSION}`;
+  switch (grouping.kind) {
+    case "total":
+      return [sql`''`, total, sql`mm.dim, mm.value`];
+    case "dimension":
+      return [
+        sql`''`,
+        sql`mm.dim <> ${TOTAL_DIMENSION}`,
+        sql`mm.dim, mm.value`,
+      ];
+    case "bucket": {
+      const key = bucketKey(grouping.granularity, source);
+      return [key, total, sql`1, mm.dim, mm.value`];
+    }
+  }
+}
+
+function bucketKey(granularity: Granularity, source: MembershipSource): SQL {
+  switch (granularity) {
+    case "hour":
+      // Stored memberships keep the day, not the hour: an hourly series only
+      // exists for a single recent day, which the raw source always covers.
+      if (source !== "raw")
+        throw new Error("analytics: an hourly series needs the raw source");
+      return sql`to_char(date_trunc('hour', mm.started_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD"T"HH24":00:00Z"')`;
+    case "day":
+      return sql`mm.day::text`;
+    case "month":
+      return sql`to_char(date_trunc('month', mm.day), 'YYYY-MM-DD')`;
+  }
 }
 
 const DayRow = z.object({ day: z.string() });
 
 /**
- * Completed days (before `today`) that have visits but no summary row: a
- * night the rollup did not run. The rollup backfills them.
+ * Completed days (before `today`) that have visits but no summary row or no
+ * memberships: a night the rollup did not run (or ran before memberships
+ * existed). The rollup backfills them.
  */
 export async function daysMissingTotals(
   dbx: AnalyticsDb,
@@ -271,13 +397,14 @@ export async function daysMissingTotals(
     row: DayRow,
     query: sql`
       SELECT DISTINCT v.day::text AS day FROM analytics_visits v
-      WHERE v.day < ${today} AND NOT ${isRolledUp}
+      WHERE v.day < ${today}
+        AND (NOT ${isRolledUp} OR NOT ${hasMembers})
       ORDER BY 1`,
   });
   return rows.map((r) => r.day);
 }
 
-/** Which of `days` have their summary row. */
+/** Which of `days` have their summary row and their memberships. */
 export async function rolledUpDays(
   dbx: AnalyticsDb,
   days: readonly string[],
@@ -287,10 +414,11 @@ export async function rolledUpDays(
     label: "analytics.rolledUpDays",
     row: DayRow,
     query: sql`
-      SELECT day::text AS day FROM analytics_daily
-      WHERE filter_dim = ${UNFILTERED_LEVEL} AND filter_value = ''
-        AND dimension = ${TOTAL_DIMENSION}
-        AND day IN (${sql.join(
+      SELECT v.day::text AS day FROM analytics_daily v
+      WHERE v.filter_dim = ${UNFILTERED_LEVEL} AND v.filter_value = ''
+        AND v.dimension = ${TOTAL_DIMENSION}
+        AND ${hasMembers}
+        AND v.day IN (${sql.join(
           days.map((d) => sql`${d}`),
           sql`, `,
         )})`,

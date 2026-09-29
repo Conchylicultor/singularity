@@ -12,9 +12,9 @@ import { analyticsHits, analyticsVisits } from "./tables";
 markCascadeBounded(analyticsHits, analyticsVisits);
 
 /**
- * Refuse to delete raw visits of a day that has no daily totals: once raw rows
- * are gone they can never be summed, so deleting first would lose the day for
- * good. Throwing leaves the rows for the next sweep, after the rollup heals.
+ * Refuse to delete raw visits of a day that has no daily totals or no visit
+ * memberships: once raw rows are gone they can never be summed (nor their
+ * visitors counted), so deleting first would lose the day for good. Throwing leaves the rows for the next sweep, after the rollup heals.
  */
 export async function assertDaysRolledUp(
   dbx: AnalyticsDb,
@@ -25,7 +25,7 @@ export async function assertDaysRolledUp(
   const missing = unique.filter((day) => !done.has(day));
   if (missing.length > 0) {
     throw new Error(
-      `analytics retention: refusing to delete raw visits of days with no daily totals (${missing.join(", ")}) — the rollup has not summed them`,
+      `analytics retention: refusing to delete raw visits of days with no daily totals or memberships (${missing.join(", ")}) — the rollup has not summed them`,
     );
   }
 }

@@ -1,8 +1,10 @@
-import { randomBytes } from "node:crypto";
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { randomBytes, randomUUID } from "node:crypto";
+import { and, desc, eq, gt, gte, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { IpCountryResult } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
 import {
+  IDENTITY_WINDOW_DAYS,
+  addDays,
   channelOf,
   utcDay,
   type CollectBody,
@@ -12,7 +14,12 @@ import {
   type PageviewBody,
 } from "../../core";
 import { parseReferrer, primaryLanguage, visitorHash } from "./request-context";
-import { analyticsHits, analyticsSalts, analyticsVisits } from "./tables";
+import {
+  analyticsHits,
+  analyticsSalts,
+  analyticsVisitorLinks,
+  analyticsVisits,
+} from "./tables";
 import { isBotUserAgent, parseUserAgent } from "./user-agent";
 import { liveVisitCutoff } from "./visit-grouping";
 
@@ -46,8 +53,9 @@ function countryOf(lookupCountry: CountryLookup, ip: string): string | null {
 
 /**
  * Record one collect body. Bots are ignored before anything touches the DB.
- * Pageviews and events find or open the visitor's visit under a per-hash
- * advisory lock, so two hits racing from one page load land in ONE visit.
+ * Pageviews and events resolve the visitor and find or open their visit under
+ * a per-hash advisory lock, so two hits racing from one page load land in ONE
+ * visit of ONE visitor.
  */
 export async function recordCollect(
   dbx: AnalyticsDb,
@@ -70,32 +78,113 @@ export async function recordCollect(
 
 // ── salt ─────────────────────────────────────────────────────────────────
 
-// Per-handle memo of today's salt: one read per UTC day per process instead of
-// one per hit. Keyed by the handle so a test DB never sees the app DB's salt.
-const saltMemo = new WeakMap<object, { day: string; salt: string }>();
+/**
+ * The oldest day whose salt (and hash → visitor links) is still kept on
+ * `today`. A visitor whose last visit is older than this is forgotten.
+ */
+export function firstIdentityDay(today: string): string {
+  return addDays(today, -IDENTITY_WINDOW_DAYS);
+}
 
-/** Today's salt, created on first use. Concurrent creators converge on one row. */
-export async function dailySalt(
+interface DaySalt {
+  day: string;
+  salt: string;
+}
+
+// Per-handle memo of the window's salts: one read per UTC day per process
+// instead of one per hit. Keyed by the handle so a test DB never sees the app
+// DB's salts.
+const saltMemo = new WeakMap<object, { day: string; salts: DaySalt[] }>();
+
+/**
+ * Every retained salt on `today`, newest first — today's first, created on
+ * first use (concurrent creators converge on one row).
+ */
+export async function windowSalts(
   dbx: AnalyticsDb,
-  day: string,
-): Promise<string> {
+  today: string,
+): Promise<DaySalt[]> {
   const memo = saltMemo.get(dbx);
-  if (memo?.day === day) return memo.salt;
+  if (memo?.day === today) return memo.salts;
   await dbx
     .insert(analyticsSalts)
-    .values({ day, salt: randomBytes(32).toString("hex") })
+    .values({ day: today, salt: randomBytes(32).toString("hex") })
     .onConflictDoNothing();
-  const [row] = await dbx
-    .select({ salt: analyticsSalts.salt })
+  const salts = await dbx
+    .select({ day: analyticsSalts.day, salt: analyticsSalts.salt })
     .from(analyticsSalts)
-    .where(eq(analyticsSalts.day, day));
-  if (!row) {
+    .where(
+      and(
+        gte(analyticsSalts.day, firstIdentityDay(today)),
+        lte(analyticsSalts.day, today),
+      ),
+    )
+    .orderBy(desc(analyticsSalts.day));
+  if (salts[0]?.day !== today) {
     throw new Error(
-      `analytics: salt for ${day} vanished right after it was ensured`,
+      `analytics: salt for ${today} vanished right after it was ensured`,
     );
   }
-  saltMemo.set(dbx, { day, salt: row.salt });
-  return row.salt;
+  saltMemo.set(dbx, { day: today, salts });
+  return salts;
+}
+
+// ── visitor ──────────────────────────────────────────────────────────────
+
+interface VisitorKey {
+  today: string;
+  /** Today's hash — the advisory-lock key and today's link. */
+  hash: string;
+  /** The visitor's hash under every retained salt, newest day first. */
+  hashes: { day: string; hash: string }[];
+}
+
+async function visitorKeyFor(
+  dbx: AnalyticsDb,
+  host: string,
+  ctx: CollectContext,
+): Promise<VisitorKey> {
+  const today = utcDay(ctx.now);
+  const hashes = (await windowSalts(dbx, today)).map(({ day, salt }) => ({
+    day,
+    hash: visitorHash({ salt, ip: ctx.ip, userAgent: ctx.userAgent, host }),
+  }));
+  const [first] = hashes;
+  if (!first) throw new Error("analytics: no salt for today");
+  return { today, hash: first.hash, hashes };
+}
+
+/**
+ * The visitor's id. The newest link among the visitor's hashes under every
+ * retained salt wins: today's (the common case), else the last day they came
+ * within the window. Neither → a new random id. Today's link is written so
+ * the rest of the day is a single-row hit, and the chain slides forward: as
+ * long as they return within the window, they keep their id.
+ *
+ * Runs under the visitor's advisory lock, so a burst of first hits of the day
+ * agrees on one id.
+ */
+async function resolveVisitor(tx: Tx, key: VisitorKey): Promise<string> {
+  const [found] = await tx
+    .select({
+      day: analyticsVisitorLinks.day,
+      visitorId: analyticsVisitorLinks.visitorId,
+    })
+    .from(analyticsVisitorLinks)
+    .where(
+      sql`(${analyticsVisitorLinks.day}, ${analyticsVisitorLinks.hash}) IN (${sql.join(
+        key.hashes.map((h) => sql`(${h.day}::date, ${h.hash})`),
+        sql`, `,
+      )})`,
+    )
+    .orderBy(desc(analyticsVisitorLinks.day))
+    .limit(1);
+  if (found?.day === key.today) return found.visitorId;
+  const visitorId = found?.visitorId ?? randomUUID();
+  await tx
+    .insert(analyticsVisitorLinks)
+    .values({ day: key.today, hash: key.hash, visitorId });
+  return visitorId;
 }
 
 // ── visits ───────────────────────────────────────────────────────────────
@@ -116,7 +205,7 @@ async function withVisitorLock<T>(
 
 async function findLiveVisitId(
   tx: Tx,
-  hash: string,
+  visitorId: string,
   now: Date,
 ): Promise<string | null> {
   const [row] = await tx
@@ -124,7 +213,7 @@ async function findLiveVisitId(
     .from(analyticsVisits)
     .where(
       and(
-        eq(analyticsVisits.visitorHash, hash),
+        eq(analyticsVisits.visitorId, visitorId),
         gt(analyticsVisits.lastAt, liveVisitCutoff(now)),
       ),
     )
@@ -136,7 +225,7 @@ async function findLiveVisitId(
 async function openVisit(
   tx: Tx,
   opts: {
-    hash: string;
+    visitorId: string;
     host: string;
     path: string;
     referrer: string | undefined;
@@ -150,7 +239,7 @@ async function openVisit(
   const [row] = await tx
     .insert(analyticsVisits)
     .values({
-      visitorHash: opts.hash,
+      visitorId: opts.visitorId,
       day: utcDay(ctx.now),
       startedAt: ctx.now,
       lastAt: ctx.now,
@@ -175,15 +264,6 @@ async function openVisit(
   return row.id;
 }
 
-async function hashFor(
-  dbx: AnalyticsDb,
-  host: string,
-  ctx: CollectContext,
-): Promise<string> {
-  const salt = await dailySalt(dbx, utcDay(ctx.now));
-  return visitorHash({ salt, ip: ctx.ip, userAgent: ctx.userAgent, host });
-}
-
 // ── hits ─────────────────────────────────────────────────────────────────
 
 async function recordPageview(
@@ -192,12 +272,13 @@ async function recordPageview(
   ctx: CollectContext,
   lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
-  const hash = await hashFor(dbx, body.host, ctx);
-  return withVisitorLock(dbx, hash, async (tx) => {
+  const key = await visitorKeyFor(dbx, body.host, ctx);
+  return withVisitorLock(dbx, key.hash, async (tx) => {
+    const visitorId = await resolveVisitor(tx, key);
     const visitId =
-      (await findLiveVisitId(tx, hash, ctx.now)) ??
+      (await findLiveVisitId(tx, visitorId, ctx.now)) ??
       (await openVisit(tx, {
-        hash,
+        visitorId,
         host: body.host,
         path: body.path,
         referrer: body.referrer,
@@ -227,8 +308,8 @@ async function recordPageview(
 
 /**
  * An event joins the visitor's live visit. With none (the tab sat open past
- * the 30-minute gap, or the salt rotated at midnight) it opens one at the
- * event's page: an event is still a sign someone is there.
+ * the 30-minute gap) it opens one at the event's page: an event is still a
+ * sign someone is there.
  */
 async function recordEvent(
   dbx: AnalyticsDb,
@@ -236,12 +317,13 @@ async function recordEvent(
   ctx: CollectContext,
   lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
-  const hash = await hashFor(dbx, body.host, ctx);
-  return withVisitorLock(dbx, hash, async (tx) => {
+  const key = await visitorKeyFor(dbx, body.host, ctx);
+  return withVisitorLock(dbx, key.hash, async (tx) => {
+    const visitorId = await resolveVisitor(tx, key);
     const visitId =
-      (await findLiveVisitId(tx, hash, ctx.now)) ??
+      (await findLiveVisitId(tx, visitorId, ctx.now)) ??
       (await openVisit(tx, {
-        hash,
+        visitorId,
         host: body.host,
         path: body.path,
         referrer: undefined,

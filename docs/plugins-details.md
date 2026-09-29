@@ -1249,11 +1249,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts, 90-day visits and hits, forever daily totals at every single-filter level), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `change-feed-exclusion` "analytics_visits"
                   - `change-feed-exclusion` "analytics_hits"
+                  - `change-feed-exclusion` "analytics_visitor_links"
+                  - `change-feed-exclusion` "analytics_visit_members"
                 - Uses:
                   - `apps/deploy/analytics/host-only.hostOnly`
                   - `apps/deploy/analytics/host-only.requestClientIp`
@@ -1286,6 +1288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
                   - `infra/endpoints.defineEndpoint`
                 - Exports (types):
+                  - `AdditiveMetrics`
                   - `AnalyticsFilter`
                   - `AnalyticsQuery`
                   - `AnalyticsQueryResult`
@@ -1357,6 +1360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `GRANULARITIES`
                   - `GranularitySchema`
                   - `HIT_DIMENSIONS`
+                  - `IDENTITY_WINDOW_DAYS`
                   - `MAX_COLLECT_BODY_BYTES`
                   - `MAX_ENGAGED_MS`
                   - `MAX_EVENT_PROP_KEY_LENGTH`
@@ -1395,13 +1399,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `viewsPerVisit`
                   - `VISIT_DIMENSIONS`
                   - `visitorShare`
-                  - `ZERO_METRICS`
+                  - `ZERO_ADDITIVE_METRICS`
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
                   - `apps/website/improve`
                   - `apps/website/shell`
                 - Endpoint callers: `host-only`
+              - Test helpers:
+                - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
+                  - `ZERO_METRICS`
             - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
               - Web:
                 - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`

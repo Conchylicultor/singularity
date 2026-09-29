@@ -69,13 +69,14 @@ export function reportSourceFor(
 // ── The report ───────────────────────────────────────────────────────────
 
 /**
- * Additive counts — summing two periods' metrics is exact. Rates (bounce rate,
- * views per visit, average duration, conversion) are derived from these by the
- * helpers in `metrics.ts`.
+ * A period's (or a row's, or a bucket's) counts. Every field except `visitors`
+ * is additive — summing two days' values is exact (see `AdditiveMetrics` in
+ * `metrics.ts`). Rates (bounce rate, views per visit, average duration,
+ * conversion) are derived from these by the helpers in `metrics.ts`.
  *
- * - `visitors` — distinct daily visitor hashes, summed over days (the hash
- *   resets at midnight UTC, so a visitor counts once per day they came). On an
- *   hourly series point: distinct within the hour.
+ * - `visitors` — distinct visitor ids over the whole period / row / bucket. An
+ *   id persists while its visitor keeps returning within 30 days, so someone
+ *   who came on ten days counts once. NOT additive: it is counted, never summed.
  * - `visits` / `pageviews` / `events` — counts.
  * - `bounces` — visits with exactly one pageview.
  * - `durationMs` — summed visit duration: from the visit's first page to its

@@ -4,8 +4,8 @@ import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { addDays, utcDay } from "../../core";
 import { daysMissingTotals, rollupDay } from "./aggregate-sql";
-import type { AnalyticsDb } from "./collect";
-import { analyticsSalts } from "./tables";
+import { firstIdentityDay, type AnalyticsDb } from "./collect";
+import { analyticsSalts, analyticsVisitorLinks } from "./tables";
 
 /**
  * How many completed days every run recomputes, whether or not they already
@@ -18,8 +18,9 @@ export const ROLLUP_RECOMPUTE_DAYS = 2;
 /**
  * One rollup run as of `now`: recompute the last {@link ROLLUP_RECOMPUTE_DAYS}
  * completed days, backfill any older completed day that has visits but no
- * totals, then delete every salt before today so yesterday's visitor hashes
- * can never be recomputed. Returns the days it summed.
+ * totals or memberships, then delete every salt and hash → visitor link older
+ * than the identity window, so a visitor absent that long can never be linked
+ * again. Returns the days it summed.
  */
 export async function runRollup(
   dbx: AnalyticsDb,
@@ -35,7 +36,11 @@ export async function runRollup(
   for (const day of days) {
     await rollupDay(dbx, day);
   }
-  await dbx.delete(analyticsSalts).where(lt(analyticsSalts.day, today));
+  const oldest = firstIdentityDay(today);
+  await dbx.delete(analyticsSalts).where(lt(analyticsSalts.day, oldest));
+  await dbx
+    .delete(analyticsVisitorLinks)
+    .where(lt(analyticsVisitorLinks.day, oldest));
   return { days };
 }
 

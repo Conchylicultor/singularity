@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   createTestDb,
@@ -28,13 +28,22 @@ import {
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server/testing";
 import {
   UNFILTERED_LEVEL,
+  addDays,
   type AnalyticsFilter,
+  type AnalyticsQuery,
+  type AnalyticsReport,
   type CollectResponse,
 } from "../../core";
 import { CollectBodySchema } from "../../core/internal/collect-body";
 import { DimensionSchema } from "../../core/internal/dimensions";
-import { rawDailyRows, dailyTotalsRows, type KeyedRow } from "./aggregate-sql";
-import { recordCollect } from "./collect";
+import {
+  rawDailyRows,
+  dailyTotalsRows,
+  visitorCounts,
+  type KeyedRow,
+  type VisitorRow,
+} from "./aggregate-sql";
+import { firstIdentityDay, recordCollect } from "./collect";
 import { runAnalyticsQuery } from "./report";
 import { assertDaysRolledUp } from "./retention";
 import { runRollup } from "./rollup";
@@ -42,10 +51,17 @@ import {
   analyticsDaily,
   analyticsHits,
   analyticsSalts,
+  analyticsVisitMembers,
+  analyticsVisitorLinks,
   analyticsVisits,
 } from "./tables";
 
 const DAY = "2026-09-10";
+
+const canonicalVisitors = (rows: VisitorRow[]) =>
+  [...rows].sort((a, b) =>
+    `${a.dimension}\t${a.value}`.localeCompare(`${b.dimension}\t${b.value}`),
+  );
 const NEXT = "2026-09-11";
 const at = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00Z`);
 
@@ -243,7 +259,7 @@ describe("collect", () => {
       country: "FR",
     });
     expect(a2).toMatchObject({ pageviews: 1, channel: "Direct" });
-    expect(a1!.visitorHash).toBe(a2!.visitorHash);
+    expect(a1!.visitorId).toBe(a2!.visitorId);
     expect(b).toMatchObject({
       channel: "Campaign",
       utmCampaign: "launch",
@@ -276,10 +292,24 @@ describe("rollup", () => {
     ({ days: rolled } = await runRollup(t.db, at(NEXT, "00:15")));
   });
 
-  test("sums the completed day and deletes salts before today", async () => {
+  test("sums the completed day and keeps salts inside the identity window", async () => {
     expect(rolled).toContain(DAY);
     const salts = await t.db.select().from(analyticsSalts);
-    expect(salts.filter((s) => s.day < NEXT)).toEqual([]);
+    expect(salts.map((s) => s.day)).toContain(DAY);
+  });
+
+  test("materialises each visit's memberships with its visitor", async () => {
+    const totals = await t.db
+      .select()
+      .from(analyticsVisitMembers)
+      .where(
+        and(
+          eq(analyticsVisitMembers.day, DAY),
+          eq(analyticsVisitMembers.dim, "total"),
+        ),
+      );
+    expect(totals).toHaveLength(4);
+    expect(new Set(totals.map((m) => m.visitorId)).size).toBe(3);
   });
 
   test("the unfiltered summary line", async () => {
@@ -290,7 +320,6 @@ describe("rollup", () => {
         sql`${analyticsDaily.day} = ${DAY} AND ${analyticsDaily.filterDim} = 'none' AND ${analyticsDaily.dimension} = 'total'`,
       );
     expect(total).toMatchObject({
-      visitors: 3,
       visits: 4,
       pageviews: 6,
       bounces: 2, // A's second visit and B's single page
@@ -345,6 +374,18 @@ describe("rollup", () => {
       expect({ level, rows: canonical(stored) }).toEqual({
         level,
         rows: canonical(raw),
+      });
+      const visitors = (source: "raw" | "totals") =>
+        visitorCounts(t.db, {
+          from: DAY,
+          to: DAY,
+          filters,
+          source,
+          groupBy: { kind: "dimension" },
+        }).then(canonicalVisitors);
+      expect({ level, visitors: await visitors("totals") }).toEqual({
+        level,
+        visitors: await visitors("raw"),
       });
     }
   });
@@ -496,5 +537,185 @@ describe("retention guard", () => {
       .from(analyticsHits)
       .where(eq(analyticsHits.visitId, visit.id));
     expect(hits).toEqual([]);
+  });
+});
+
+describe("sliding identity", () => {
+  // Every day after the rollup has run for the one before, as in production.
+  const START = "2026-10-01";
+  const DAILY = { ip: "198.51.100.7", ua: UA.firefoxLinux };
+
+  async function night(day: string): Promise<void> {
+    await runRollup(t.db, at(day, "00:15"));
+  }
+
+  async function report(
+    query: AnalyticsQuery,
+    now: Date,
+  ): Promise<AnalyticsReport> {
+    const result = await runAnalyticsQuery(t.db, query, now);
+    if (result.kind !== "report") throw new Error("expected a report");
+    return result.report;
+  }
+
+  async function visitorIdsOn(path: string): Promise<string[]> {
+    const rows = await t.db
+      .selectDistinct({ id: analyticsVisits.visitorId })
+      .from(analyticsVisits)
+      .where(eq(analyticsVisits.entryPath, path));
+    return rows.map((r) => r.id);
+  }
+
+  beforeAll(async () => {
+    // One reader, every day for 40 days, on a page nobody else visits.
+    for (let i = 0; i < 40; i++) {
+      const day = addDays(START, i);
+      await night(day);
+      await hit(
+        { kind: "pageview", host, path: "/daily" },
+        DAILY,
+        at(day, "09:00"),
+      );
+    }
+  });
+
+  test("a visitor returning every day keeps one id", async () => {
+    expect(await visitorIdsOn("/daily")).toHaveLength(1);
+  });
+
+  test("they count once over 30 days and over 12 months, visits still count each day", async () => {
+    const now = at(addDays(START, 40), "12:00");
+    await night(addDays(START, 40));
+    const filters = [{ dimension: "page", value: "/daily" }] as const;
+    const month = await report(
+      { range: "30d", compare: false, filters: [...filters] },
+      now,
+    );
+    expect(month.source).toBe("raw");
+    expect(month.current.summary.visitors).toBe(1);
+    expect(month.current.summary.visits).toBeGreaterThan(1);
+    expect(month.rows.page.find((r) => r.value === "/daily")?.visitors).toBe(1);
+
+    const year = await report(
+      { range: "12m", compare: false, filters: [...filters] },
+      now,
+    );
+    expect(year.source).toBe("totals");
+    expect(year.current.summary).toMatchObject({ visitors: 1, visits: 40 });
+    // A month bucket counts the visitor once, however many days they came.
+    const october = year.current.series.find((p) => p.bucket === "2026-10-01");
+    expect(october?.metrics).toMatchObject({ visitors: 1, visits: 31 });
+  });
+
+  test("away 30 days they are recognised; away 31 they are a new visitor", async () => {
+    const X = "2027-01-01";
+    const back30 = { ip: "198.51.100.30", ua: UA.chromeMac };
+    const back31 = { ip: "198.51.100.31", ua: UA.chromeMac };
+    await night(X);
+    await hit(
+      { kind: "pageview", host, path: "/back30" },
+      back30,
+      at(X, "09:00"),
+    );
+    await hit(
+      { kind: "pageview", host, path: "/back31" },
+      back31,
+      at(X, "09:00"),
+    );
+    for (let i = 1; i <= 30; i++) await night(addDays(X, i));
+    await hit(
+      { kind: "pageview", host, path: "/back30" },
+      back30,
+      at(addDays(X, 30), "09:00"),
+    );
+    // Tonight's rollup deletes day X's salt and links.
+    await night(addDays(X, 31));
+    await hit(
+      { kind: "pageview", host, path: "/back31" },
+      back31,
+      at(addDays(X, 31), "09:00"),
+    );
+    expect(await visitorIdsOn("/back30")).toHaveLength(1);
+    expect(await visitorIdsOn("/back31")).toHaveLength(2);
+
+    const today = addDays(X, 31);
+    const salts = await t.db.select().from(analyticsSalts);
+    expect(salts.every((s) => s.day >= firstIdentityDay(today))).toBe(true);
+    const links = await t.db.select().from(analyticsVisitorLinks);
+    expect(links.every((l) => l.day >= firstIdentityDay(today))).toBe(true);
+  });
+
+  test("a visit across midnight stays one visit", async () => {
+    const D = "2027-03-01";
+    const owl = { ip: "198.51.100.99", ua: UA.safariIphone };
+    await night(D);
+    await hit({ kind: "pageview", host, path: "/owl" }, owl, at(D, "23:50"));
+    await night(addDays(D, 1));
+    await hit(
+      { kind: "pageview", host, path: "/owl-2" },
+      owl,
+      at(addDays(D, 1), "00:05"),
+    );
+    const visits = await t.db
+      .select()
+      .from(analyticsVisits)
+      .where(eq(analyticsVisits.entryPath, "/owl"));
+    expect(visits).toHaveLength(1);
+    expect(visits[0]).toMatchObject({
+      pageviews: 2,
+      exitPath: "/owl-2",
+      day: D,
+    });
+  });
+
+  test("a filter past the raw window matches within one visit, not across a visitor's days", async () => {
+    const S = "2027-05-01";
+    const who = { ip: "198.51.100.50", ua: UA.firefoxLinux };
+    await night(S);
+    await hit(
+      {
+        kind: "pageview",
+        host,
+        path: "/searched",
+        referrer: "https://www.google.com/",
+      },
+      who,
+      at(S, "09:00"),
+    );
+    await night(addDays(S, 1));
+    await hit(
+      { kind: "pageview", host, path: "/direct-only" },
+      who,
+      at(addDays(S, 1), "09:00"),
+    );
+    await night(addDays(S, 2));
+    const year = await report(
+      {
+        range: "12m",
+        compare: false,
+        filters: [{ dimension: "channel", value: "Search" }],
+      },
+      at(addDays(S, 2), "12:00"),
+    );
+    expect(year.source).toBe("totals");
+    const pages = year.rows.page.map((r) => r.value);
+    expect(pages).toContain("/searched");
+    expect(pages).not.toContain("/direct-only");
+  });
+
+  test("the retention guard wants memberships too", async () => {
+    const day = addDays(START, 1);
+    await assertDaysRolledUp(t.db, [day]);
+    await t.db
+      .delete(analyticsVisitMembers)
+      .where(eq(analyticsVisitMembers.day, day));
+    const outcome = await assertDaysRolledUp(t.db, [day]).then(
+      () => "resolved",
+      (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    );
+    expect(outcome).toContain(day);
+    // The next rollup heals it.
+    await night(addDays(START, 45));
+    await assertDaysRolledUp(t.db, [day]);
   });
 });
