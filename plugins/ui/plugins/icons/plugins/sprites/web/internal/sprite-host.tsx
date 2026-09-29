@@ -54,7 +54,10 @@ export function IconSpriteHost() {
   const saved = useLive(savedIconSprites);
   // A failed read renders the empty sheet too (icons draw as empty boxes);
   // live-state's resource-error sink reports the failure.
-  if (resident.status !== "ready" || saved.status !== "ready") {
+  if (resident.status === "loading" || resident.status === "error") {
+    return <IconSpriteSheet />;
+  }
+  if (saved.status === "loading" || saved.status === "error") {
     return <IconSpriteSheet />;
   }
   return <LoadedSprites resident={resident.data} saved={saved.data} />;
