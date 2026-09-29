@@ -139,6 +139,15 @@ test("served-baseline forces the reorder layer", () => {
   expect(baseline.entryPoints).toContain("reorder.**");
 });
 
+test("served-baseline forces the overscroll hint", () => {
+  // The rubber-band installs itself from Core.Root and nothing imports it, so a
+  // soft-only overscroll-hint drops out of every served bundle and the browser's
+  // native bounce takes over — revealing the near-black `html` floor above the
+  // page (equin.ai shipped that way).
+  const baseline = byName("served-baseline");
+  expect(baseline.entryPoints).toContain("primitives.dom.overscroll-hint.**");
+});
+
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {
   const names = new Set(seeds.map((s) => s.name));
   for (const s of seeds) {

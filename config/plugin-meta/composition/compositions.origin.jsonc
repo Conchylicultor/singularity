@@ -1,4 +1,4 @@
-// @hash 62315c06c639
+// @hash 098b9a77f2f6
 {
   "manifests": [
     {
@@ -375,7 +375,8 @@
         "ui.tokens.font-family.**",
         "ui.tokens.sidebar-palette.**",
         "ui.tokens.shadow.**",
-        "ui.tokens.chart.**"
+        "ui.tokens.chart.**",
+        "primitives.dom.overscroll-hint.**"
       ],
       "selectedContributors": [],
       "extends": [],

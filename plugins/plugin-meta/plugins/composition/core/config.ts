@@ -331,6 +331,13 @@ export const compositionsConfig = defineConfig({
           // it. equin.ai shipped that way — the hero's wash, its headline
           // gradient and the developers' dot all read `--chart-1`.
           "ui.tokens.chart",
+          // The app's own rubber-band, installed from Core.Root and imported by
+          // nobody — the same dead-end shape as the toast host and reorder. Left
+          // out, a served app falls back to the browser's native bounce, which
+          // pulls the whole document off the top and shows the `html` loading
+          // floor (`Canvas`, near-black) above the page instead of the page's
+          // own top edge. equin.ai shipped that way.
+          "primitives.dom.overscroll-hint",
         ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
