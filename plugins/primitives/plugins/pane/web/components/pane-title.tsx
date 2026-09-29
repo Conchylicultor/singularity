@@ -26,7 +26,7 @@ export const PaneTitleContext = createContext<PaneTitleValue | null>(null);
  * plugin into every pane-header slot — see `header-slot.ts`).
  *
  * Paints the pane's `title.component` when it declares one, else the string
- * {@link usePaneTitle} resolves (`title.text`, then `title.fallback`) — the same
+ * {@link usePaneTitle} resolves (`title.useText`, then `title.fallback`) — the same
  * string the tab shows. Renders `null` when there is none: an item that paints
  * nothing is ordinary, and the bar sees an empty cell rather than a gap.
  */
@@ -49,12 +49,12 @@ export function PaneTitleItem(): ReactNode {
     );
   }
   if (entry === null) {
-    // Off-route: no params to run `title.text` against — only a literal
+    // Off-route: no params to run `title.useText` against — only a literal
     // fallback can be shown honestly.
     const { fallback } = pane.title;
     return typeof fallback === "string" ? <TextTitle title={fallback} /> : null;
   }
-  // Keyed by pane: `title.text` is a hook that varies per pane.
+  // Keyed by pane: `title.useText` is a hook that varies per pane.
   return <ResolvedTextTitle key={pane.id} pane={pane} entry={entry} />;
 }
 

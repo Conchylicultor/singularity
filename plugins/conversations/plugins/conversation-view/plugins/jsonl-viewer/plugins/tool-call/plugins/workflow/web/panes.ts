@@ -11,9 +11,9 @@ export const workflowNodePane = Pane.define({
   app: agentManagerApp,
   component: WorkflowNodePaneBody,
   // The step's label; `convId` comes from the conversation pane above this one.
-  title: { text: useWorkflowNodeTitle, fallback: "Workflow step" },
+  title: { useText: useWorkflowNodeTitle, fallback: "Workflow step" },
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { history: false, promote: false },
   width: 600,
-  resolve: false,
+  useResolve: false,
 });

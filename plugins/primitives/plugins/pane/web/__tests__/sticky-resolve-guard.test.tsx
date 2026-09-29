@@ -33,7 +33,7 @@ const testApp = defineApp({
 let resolveResult: ResolveResult = { status: "pending" };
 
 // A real defined pane: `Pane.define` registers it in the internal→object map
-// that the Not-Found fallback chrome (`paneObjectFor`) consults. `resolve` reads
+// that the Not-Found fallback chrome (`paneObjectFor`) consults. `useResolve` reads
 // the module-level `resolveResult`, so the test owns the resolve outcome.
 const testRoute = defineRoute({
   id: "sticky-guard-test",
@@ -42,7 +42,7 @@ const testRoute = defineRoute({
 const testPane = Pane.define({
   route: testRoute,
   app: testApp,
-  resolve: () => resolveResult,
+  useResolve: () => resolveResult,
   component: () => <div data-testid="pane-body">resolved</div>,
 });
 

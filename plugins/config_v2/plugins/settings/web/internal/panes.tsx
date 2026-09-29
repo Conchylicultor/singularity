@@ -39,7 +39,7 @@ export const configDetailPane = Pane.define({
   app: settingsApp,
   component: ConfigDetailBody,
   width: 500,
-  resolve: false,
+  useResolve: false,
 });
 
 function ConfigNavBody() {

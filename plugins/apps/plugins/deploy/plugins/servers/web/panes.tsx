@@ -65,8 +65,8 @@ export const serverDetailPane = Pane.define({
   route: serverDetailRoute,
   app: deployApp,
   component: ServerDetailBody,
-  resolve: useResolveServer,
-  title: { text: useServerTitle, fallback: "Server" },
+  useResolve: useResolveServer,
+  title: { useText: useServerTitle, fallback: "Server" },
   width: 420,
 });
 

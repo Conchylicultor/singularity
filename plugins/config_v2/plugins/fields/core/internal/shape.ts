@@ -1,5 +1,6 @@
 import type React from "react";
 import type { FieldDef, FieldsRecord, FieldType } from "@plugins/fields/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * One pickable choice, as DATA.
@@ -104,5 +105,5 @@ export interface FieldShapeRenderer<T = unknown> {
    * once some other condition holds keeps that hook behind a component of its
    * own and returns a `value` / `block` arm carrying it.
    */
-  readonly useShape: (props: FieldShapeProps<T>) => FieldShape;
+  readonly useShape: Hook<(props: FieldShapeProps<T>) => FieldShape>;
 }

@@ -12,6 +12,7 @@ import type {
   ThemeId,
   TokenGroupDescriptor,
 } from "../core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface VariantGroupContribution {
   id: string;
@@ -64,12 +65,12 @@ export type ThemeSourceContribution =
   | {
       kind: "resident";
       id: string;
-      useThemes: () => ResourceResult<Theme[]>;
+      useThemes: Hook<() => ResourceResult<Theme[]>>;
     }
   | {
       kind: "browse";
       id: string;
-      useEntries: () => ResourceResult<ThemeSourceEntry[]>;
+      useEntries: Hook<() => ResourceResult<ThemeSourceEntry[]>>;
       /**
        * Save the entry and resolve to the resident theme it became — already
        * in `useThemes()` when this settles, so the caller can select it

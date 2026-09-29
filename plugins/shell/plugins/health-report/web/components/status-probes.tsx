@@ -3,6 +3,7 @@ import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/w
 import type { HealthStatus } from "../../core";
 import { HealthReport } from "../slots";
 import { HealthStore, withStatus, withoutStatus } from "../internal/store";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /** What a check whose hook threw reports: grey, never green. */
 const CRASHED: HealthStatus = {
@@ -41,7 +42,7 @@ function StatusProbe({
   useStatus,
 }: {
   id: string;
-  useStatus: () => HealthStatus;
+  useStatus: Hook<() => HealthStatus>;
 }): ReactNode {
   const status = useStatus();
   usePublishStatus(id, status);

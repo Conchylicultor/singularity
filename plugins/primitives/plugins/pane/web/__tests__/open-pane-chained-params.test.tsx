@@ -44,7 +44,7 @@ const convRoute = defineRoute({ id: "chain-conv", segment: "c/:convId" });
 const convPane = Pane.define({
   route: convRoute,
   app: chainApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 
@@ -56,7 +56,7 @@ const serverRoute = defineRoute({
 const serverPane = Pane.define({
   route: serverRoute,
   app: chainApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 const depRoute = defineRoute({
@@ -67,7 +67,7 @@ const depRoute = defineRoute({
 const depPane = Pane.define({
   route: depRoute,
   app: chainApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 
@@ -86,7 +86,7 @@ const itemRoute = defineRoute({
 const itemPane = Pane.define({
   route: itemRoute,
   app: chainApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

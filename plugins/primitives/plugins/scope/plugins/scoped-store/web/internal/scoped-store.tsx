@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { DependencyList, ReactNode } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * Per-`<Provider>`-instance external store — the sanctioned replacement for the
@@ -49,9 +50,9 @@ export interface ScopedStoreHandle<S> {
    * synchronous reads/writes that must not trigger a React render. Throws when
    * used outside the handle's own `<Provider>`.
    */
-  useStoreApi(): ScopedStore<S>;
+  useStoreApi: Hook<() => ScopedStore<S>>;
   /** Reactive whole-state read — re-renders the caller on every change. */
-  useStore(): S;
+  useStore: Hook<() => S>;
   /**
    * Derived read with re-render bailout — a hand-rolled
    * `useSyncExternalStoreWithSelector`. Re-renders the caller ONLY when
@@ -63,11 +64,13 @@ export interface ScopedStoreHandle<S> {
    * For selectors that build a FRESH object each call (so `Object.is` can never
    * match), pass an `isEqual` that compares by value.
    */
-  useSelector<T>(
-    selector: (state: S) => T,
-    deps: DependencyList,
-    isEqual?: (a: T, b: T) => boolean,
-  ): T;
+  useSelector: Hook<
+    <T>(
+      selector: (state: S) => T,
+      deps: DependencyList,
+      isEqual?: (a: T, b: T) => boolean,
+    ) => T
+  >;
 }
 
 function resolve<S>(initial: S | (() => S)): S {

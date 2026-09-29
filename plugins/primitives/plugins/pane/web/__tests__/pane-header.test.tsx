@@ -104,25 +104,25 @@ function headerCase(id: string, title?: PaneTitle<Record<string, never>>) {
 const titled = headerCase("titled", "A title");
 const untitled = headerCase("untitled");
 const pending = headerCase("pending", {
-  text: () => undefined,
+  useText: () => undefined,
   fallback: "Generic noun",
 });
 const rich = headerCase("rich", {
-  text: "Tab text",
+  useText: "Tab text",
   component: () => <b>rich-title</b>,
 });
 const withPart = headerCase("part", {
-  text: "Tab text",
+  useText: "Tab text",
   component: () => (
     <PartSlot.Render>{() => <span>own-part</span>}</PartSlot.Render>
   ),
 });
 const withPlain = headerCase("plain", {
-  text: "Tab text",
+  useText: "Tab text",
   component: () => <PlainSlotOnce />,
 });
 const smuggling = headerCase("smuggling", {
-  text: "Tab text",
+  useText: "Tab text",
   component: () => (
     <SmuggledSlot.Render>{() => <span>second-row</span>}</SmuggledSlot.Render>
   ),

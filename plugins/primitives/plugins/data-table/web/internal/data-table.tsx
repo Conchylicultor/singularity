@@ -27,6 +27,7 @@ import type {
 } from "./types";
 import { useDataTable } from "./use-data-table";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
@@ -34,7 +35,7 @@ const unfoldMoreIcon = symbol("unfold-more");
 
 /** No-op decoration hook so `DataTableRow` always calls a hook unconditionally
  *  (rules-of-hooks), whether or not the consumer supplied `useRowDecoration`. */
-const noRowDecoration = (): DataTableRowDecoration | undefined => undefined;
+const useNoRowDecoration = (): DataTableRowDecoration | undefined => undefined;
 
 /** Above this row count the table windows its rows via the shared virtualizer
  *  (keeps the subgrid + sticky header; only the visible slice is in the DOM).
@@ -134,7 +135,7 @@ export function DataTable<TRow>({
   // identical rows. The optional `measure` handle is supplied only by the
   // virtualized branch (tanstack's measureElement reads the data-index). Routed
   // through `DataTableRow` (a component) so per-row decoration may call hooks.
-  const decorate = useRowDecoration ?? noRowDecoration;
+  const useDecorate = useRowDecoration ?? useNoRowDecoration;
   const renderRow = (
     row: TRow,
     i: number,
@@ -150,7 +151,7 @@ export function DataTable<TRow>({
       onRowClick={onRowClick}
       rowActions={rowActions}
       rowPersistentActions={rowPersistentActions}
-      useRowDecoration={decorate}
+      useRowDecoration={useDecorate}
       measure={measure}
     />
   );
@@ -258,10 +259,9 @@ function DataTableRow<TRow>({
   onRowClick: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
-  useRowDecoration: (
-    row: TRow,
-    index: number,
-  ) => DataTableRowDecoration | undefined;
+  useRowDecoration: Hook<
+    (row: TRow, index: number) => DataTableRowDecoration | undefined
+  >;
   measure?: { ref: (el: Element | null) => void; index: number };
 }): ReactNode {
   const decoration = useRowDecoration(row, index);

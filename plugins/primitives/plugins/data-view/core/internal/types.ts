@@ -13,6 +13,7 @@ import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
 import type { HostedToolbar, ToolbarArrangement } from "./toolbar-arrangement";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -193,7 +194,7 @@ export interface ItemActionsDescriptor<TRow> {
   Row: ComponentType<ItemActionProps<TRow> & { zone?: ItemActionZone }>;
   /** Which zones actually have a contribution — so a view never paints an empty
    *  cluster for a zone nothing contributed to. */
-  useZones: () => Record<ItemActionZone, boolean>;
+  useZones: Hook<() => Record<ItemActionZone, boolean>>;
 }
 
 /**
@@ -240,15 +241,17 @@ export interface FieldExtensionProps<TRow> {
  */
 export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
   /** All contributed field-extension components (sealed, like any slot). */
-  useContributions: () => SealContributions<{
-    id: string;
-    /** The heading this contributor's fields are listed under (`null` = they are
-     *  ordinary fields of the host's own schema). The host STAMPS it onto every
-     *  field the contributor returns — see `FieldDef.section`. */
-    section: string | null;
-    component: ComponentType<FieldExtensionProps<TRow>>;
-    order?: number;
-  }>[];
+  useContributions: Hook<
+    () => SealContributions<{
+      id: string;
+      /** The heading this contributor's fields are listed under (`null` = they are
+       *  ordinary fields of the host's own schema). The host STAMPS it onto every
+       *  field the contributor returns — see `FieldDef.section`. */
+      section: string | null;
+      component: ComponentType<FieldExtensionProps<TRow>>;
+      order?: number;
+    }>[]
+  >;
 }
 
 /**

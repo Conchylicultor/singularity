@@ -1,6 +1,7 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * The web half of a place provider — everything the BLOCK needs to talk about a
@@ -33,7 +34,7 @@ export interface PlaceProviderContribution {
    * literal, never conditionally): the block branches on whether it exists to
    * keep both arms rules-of-hooks clean.
    */
-  useReady?: () => boolean;
+  useReady?: Hook<() => boolean>;
 }
 
 export const Place = {

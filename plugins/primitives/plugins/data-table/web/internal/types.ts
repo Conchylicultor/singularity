@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SortState } from "./use-data-table";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface ColumnDef<TRow> {
   id: string;
@@ -103,10 +104,9 @@ export interface DataTableProps<TRow> {
    * and windowed. Inert when absent. The name must start with `use` (it is
    * invoked as a hook). Stable per mount.
    */
-  useRowDecoration?: (
-    row: TRow,
-    index: number,
-  ) => DataTableRowDecoration | undefined;
+  useRowDecoration?: Hook<
+    (row: TRow, index: number) => DataTableRowDecoration | undefined
+  >;
   /**
    * Row keys that must stay mounted when scrolled out of the window — an
    * in-flight drag source, whose `useDraggable` would otherwise unregister

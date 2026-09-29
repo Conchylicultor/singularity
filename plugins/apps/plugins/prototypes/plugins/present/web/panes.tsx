@@ -61,7 +61,7 @@ export function presentPath({
 export const prototypePresentPane = Pane.define({
   route: prototypePresentRoute,
   app: prototypesApp,
-  resolve: false,
+  useResolve: false,
   component: PresentPage,
   width: 720,
 });
@@ -90,7 +90,7 @@ export function presentCanvasPath(name: string, canvas: string): string {
 export const prototypePresentCanvasPane = Pane.define({
   route: prototypePresentCanvasRoute,
   app: prototypesApp,
-  resolve: false,
+  useResolve: false,
   component: PresentCanvasPage,
   width: 720,
 });

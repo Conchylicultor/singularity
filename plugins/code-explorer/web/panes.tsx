@@ -13,9 +13,9 @@ export const globalFileTreePane = Pane.define({
     segment: "code/:worktree",
   }),
   app: agentManagerApp,
-  title: { text: ({ worktree }) => `Files · ${worktree}` },
+  title: { useText: ({ worktree }) => `Files · ${worktree}` },
   component: GlobalFileTreeChromedBody,
-  resolve: false,
+  useResolve: false,
 });
 
 export const convFileTreePane = Pane.define({

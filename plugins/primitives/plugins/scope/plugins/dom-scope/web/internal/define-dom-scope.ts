@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * The DOM node that belongs to ONE mounted instance.
@@ -97,11 +98,11 @@ export interface DomScopeHandle<T extends HTMLElement = HTMLElement> {
    * owner an error at the one place the ref is supposed to go. An owner that also
    * needs the imperative sample takes `useScopeApi()` beside this.
    */
-  usePublishRef(): (node: T | null) => void;
+  usePublishRef: Hook<() => (node: T | null) => void>;
   /** The ONLY render-path read. Subscribed. Throws outside the Provider. */
-  useRoot(): DomScopeRoot<T>;
+  useRoot: Hook<() => DomScopeRoot<T>>;
   /** The imperative half, for a reader's event handlers. Throws outside. */
-  useScopeApi(): DomScopeApi<T>;
+  useScopeApi: Hook<() => DomScopeApi<T>>;
 }
 
 /** One frozen identity, so an unattached reader never re-renders on identity. */

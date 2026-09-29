@@ -37,7 +37,7 @@ const testRoute = defineRoute({ id: "iso-test", segment: "iso/:id" });
 const testPane = Pane.define({
   route: testRoute,
   app: testApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

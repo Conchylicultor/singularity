@@ -87,12 +87,12 @@ export const pageDetailPane = Pane.define({
   app: pagesApp,
   component: PageDetailBody,
   width: 720,
-  resolve: useResolvePage,
+  useResolve: useResolvePage,
   // Tab/document title: the page's title from the global pages resource (same
   // source PageDetailBody renders), falling back to the pageId. The header
   // paints the breadcrumb trail instead.
   title: {
-    text: usePageTitle,
+    useText: usePageTitle,
     fallback: (params) => params.pageId,
     component: PageDetailTitle,
   },
@@ -140,9 +140,9 @@ export const blockDetailPane = Pane.define({
   app: pagesApp,
   component: BlockDetailBody,
   width: 720,
-  resolve: useResolveBlock,
+  useResolve: useResolveBlock,
   title: {
-    text: useBlockPaneTitle,
+    useText: useBlockPaneTitle,
     fallback: (params) => params.blockId,
     component: BlockDetailTitle,
   },

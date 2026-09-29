@@ -36,14 +36,14 @@ const conversationRoute = defineRoute({
 const conversationPaneDef = Pane.define({
   route: conversationRoute,
   app: agentManagerApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 const fileRoute = defineRoute({ id: "file-pane", segment: "f/:path" });
 const filePaneDef = Pane.define({
   route: fileRoute,
   app: agentManagerApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

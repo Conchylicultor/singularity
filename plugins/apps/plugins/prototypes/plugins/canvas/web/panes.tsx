@@ -30,10 +30,10 @@ function usePrototypeTitle({ name }: { name: string }): string | undefined {
 export const prototypeDetailPane = Pane.define({
   route: prototypeDetailRoute,
   app: prototypesApp,
-  resolve: false,
+  useResolve: false,
   component: PrototypeDetail,
   title: {
-    text: usePrototypeTitle,
+    useText: usePrototypeTitle,
     fallback: (params) => params.name,
     component: PrototypeTitle,
   },

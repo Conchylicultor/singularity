@@ -13,7 +13,7 @@ export const releaseDetailPane = Pane.define({
   app: studioApp,
   component: ReleaseDetailBody,
   width: 480,
-  resolve: false,
+  useResolve: false,
 });
 
 function ReleaseDetailBody(): ReactElement | null {

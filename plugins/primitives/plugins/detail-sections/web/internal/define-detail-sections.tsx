@@ -11,6 +11,7 @@ import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * Pane-level layout options. Deliberately NOT a chrome switch — the card is not
@@ -49,7 +50,7 @@ interface DetailSectionCommon<EntityProps> {
    * it rendered nothing. Emptiness must therefore be DECLARED here, where the
    * host can act on it before painting.
    */
-  useAvailable?: (props: EntityProps) => boolean;
+  useAvailable?: Hook<(props: EntityProps) => boolean>;
 }
 
 /** A section with a body: a collapsible card, chevron and all. */
@@ -59,7 +60,7 @@ interface DetailSectionWithBody<
   /** The body. Receives the pane's entity props. */
   component: ComponentType<EntityProps>;
   /** First-render open state when the user has no persisted choice yet. */
-  useDefaultOpen?: (props: EntityProps) => boolean;
+  useDefaultOpen?: Hook<(props: EntityProps) => boolean>;
 }
 
 /**
@@ -288,7 +289,7 @@ export function defineDetailSections<
     entityProps,
     Body,
   }: SectionProps & {
-    useDefaultOpen: (props: EntityProps) => boolean;
+    useDefaultOpen: Hook<(props: EntityProps) => boolean>;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
     const defaultOpen = useDefaultOpen(entityProps);
@@ -345,7 +346,7 @@ export function defineDetailSections<
     section,
     entityProps,
   }: SectionProps & {
-    useAvailable: (props: EntityProps) => boolean;
+    useAvailable: Hook<(props: EntityProps) => boolean>;
   }): ReactNode {
     return useAvailable(entityProps) ? (
       <OpenStateSection section={section} entityProps={entityProps} />

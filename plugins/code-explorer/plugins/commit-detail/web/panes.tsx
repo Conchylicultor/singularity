@@ -18,7 +18,7 @@ export const commitDetailPane = Pane.define({
   // The subject once resolved; the short sha while loading, unknown, or
   // unreachable — a metadata failure must not cost the pane its identity.
   title: {
-    text: useCommitSubject,
+    useText: useCommitSubject,
     fallback: ({ sha }) => shortSha(sha),
     component: CommitTitle,
   },
@@ -26,7 +26,7 @@ export const commitDetailPane = Pane.define({
   chrome: { history: false },
   width: 720,
   // A git sha is not an app entity the router can validate.
-  resolve: false,
+  useResolve: false,
 });
 
 function CommitDetailBody() {

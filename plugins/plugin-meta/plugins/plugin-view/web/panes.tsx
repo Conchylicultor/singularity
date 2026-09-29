@@ -22,8 +22,8 @@ export const pluginViewPane = Pane.define({
   app: studioApp,
   component: PluginViewBody,
   width: 600,
-  resolve: false,
-  title: { text: usePluginViewTitle, fallback: "Plugin" },
+  useResolve: false,
+  title: { useText: usePluginViewTitle, fallback: "Plugin" },
 });
 
 /** The plugin's display name from the facets tree, or undefined while it loads. */

@@ -41,7 +41,7 @@ const detailRoute = defineRoute({
 const detailPane = Pane.define({
   route: detailRoute,
   app: optApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 
@@ -50,7 +50,7 @@ const kidRoute = defineRoute({ id: "opt-kid", segment: "kid/:id" });
 const kidPane = Pane.define({
   route: kidRoute,
   app: optApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 
@@ -63,21 +63,21 @@ const shortRoute = defineRoute({ id: "opt-short", segment: "t/:a" });
 const shortPane = Pane.define({
   route: shortRoute,
   app: optApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 const longRoute = defineRoute({ id: "opt-long", segment: "t/:a/:b" });
 const longPane = Pane.define({
   route: longRoute,
   app: optApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 const convRoute = defineRoute({ id: "opt-conv", segment: "c/:convId" });
 const convPane = Pane.define({
   route: convRoute,
   app: optApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

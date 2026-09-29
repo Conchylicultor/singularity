@@ -60,7 +60,7 @@ function SonataLibraryBody(): ReactElement {
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
  * (the browser-tab / tab-strip label before the live `songs` value settles) —
  * it is NOT a data source: the header title and every consumer read the
- * canonical row from `songs`. `resolve` hydrates every source for the song on
+ * canonical row from `songs`. `useResolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
 export const sonataPlayerPane = Pane.define({
@@ -71,7 +71,7 @@ export const sonataPlayerPane = Pane.define({
   // only alongside the canonical value, and it is never persisted. The title is
   // library-owned (`songs`); the shell keeps no mirror.
   hint: type<{ title: string }>(),
-  resolve: useSonataPlayerResolve,
+  useResolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
   // Title: `text` (tab/document title) is the canonical song name from the live
   // `songs` value (reflects renames), falling back to the optimistic hint
@@ -79,7 +79,7 @@ export const sonataPlayerPane = Pane.define({
   // is unavailable at the tab-surface level where it runs. The header paints
   // `component` instead: the inline-editable title, mounted inside the pane so
   // it may read app context.
-  title: { text: useSongTitle, component: SongTitle },
+  title: { useText: useSongTitle, component: SongTitle },
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });

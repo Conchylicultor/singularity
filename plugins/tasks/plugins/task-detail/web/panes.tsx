@@ -55,9 +55,9 @@ export const taskDetailPane = Pane.define({
   app: agentManagerApp,
   component: TaskDetailBody,
   width: 480,
-  resolve: useResolveTask,
+  useResolve: useResolveTask,
   // The task's title: tab, document and header title alike.
-  title: { text: useTaskTitle },
+  title: { useText: useTaskTitle },
   // Main surface: a conversation or aux pane opened under the task is a
   // drill-in — it never steals the tab title from the task.
   titleOwner: true,

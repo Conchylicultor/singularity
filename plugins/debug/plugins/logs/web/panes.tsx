@@ -26,9 +26,9 @@ export const logChannelPane = Pane.define({
     parent: logsRoute,
   }),
   app: debugApp,
-  title: { text: ({ channel }) => `Logs · ${channel}` },
+  title: { useText: ({ channel }) => `Logs · ${channel}` },
   component: LogsChannelBody,
-  resolve: false,
+  useResolve: false,
 });
 
 function LogsBody(): ReactElement {

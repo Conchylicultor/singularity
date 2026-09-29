@@ -34,11 +34,11 @@ export const mailSearchPane = Pane.define({
  * `:messageId` param satisfies the pane router's "params need a static prefix"
  * rule.
  *
- * `resolve: false` opts out of route-resolution: the pane self-fetches by
+ * `useResolve: false` opts out of route-resolution: the pane self-fetches by
  * `messageId` and owns its own loading / not-found / error states in the body,
  * so there is no live-state resource to gate reload/deep-link against. Mirrors
  * `code-explorer`'s `globalFileTreePane` (`segment: "code/:worktree"`,
- * `resolve: false`).
+ * `useResolve: false`).
  */
 export const mailMessagePane = Pane.define({
   route: defineRoute({
@@ -53,10 +53,10 @@ export const mailMessagePane = Pane.define({
   // link / reload, where hydration fills the header instead. Never a write
   // source: `Hint.pick` only ever yields it beside the hydrated value.
   hint: type<MailMessage>(),
-  resolve: false,
+  useResolve: false,
   component: MailMessageBody,
   // The subject is known only inside the body (the opener's envelope, refined
   // by a hydration fired on mount), so the tab reads "Message" and the header's
   // `component` — mounted under the body — paints the subject.
-  title: { text: "Message", component: MailMessageTitle },
+  title: { useText: "Message", component: MailMessageTitle },
 });

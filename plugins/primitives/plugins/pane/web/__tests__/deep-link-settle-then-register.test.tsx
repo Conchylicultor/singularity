@@ -31,7 +31,7 @@ const targetRoute = defineRoute({ id: "st-target", segment: "thing/:id" });
 const targetPane = Pane.define({
   route: targetRoute,
   app: testApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

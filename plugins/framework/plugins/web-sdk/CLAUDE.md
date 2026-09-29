@@ -212,7 +212,7 @@ const terminalRoute = defineRoute({ id: "terminal", segment: "terminal/:worktree
 export const terminalPane = Pane.define({
   route: terminalRoute,
   app: agentManagerApp, // mandatory: the app this pane BELONGS to (its AppRef)
-  resolve: useResolveWorktree, // required: the segment has a `:param`
+  useResolve: useResolveWorktree, // required: the segment has a `:param`
   component: () => {
     const { worktree } = terminalPane.useParams();
     return <TerminalComponent worktree={worktree} />;

@@ -6,7 +6,7 @@ import { sonataPlayerPane } from "./panes";
  * Open a song into the player. Navigates (via the pane router) to the player
  * pane at `/sonata/song/:songId`, replacing the route (`mode:"root"`) so the
  * player fills the surface. The optimistic title rides in `input` so the header
- * shows immediately. Source hydration runs in the player pane's `resolve` hook
+ * shows immediately. Source hydration runs in the player pane's `useResolve` hook
  * (`useSonataPlayerResolve`) — including on direct navigation / reload — so this
  * hook just opens the pane.
  *

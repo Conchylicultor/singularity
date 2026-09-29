@@ -6,6 +6,7 @@ import type { AuthAccountState } from "@plugins/auth/core";
 import { Auth, type AuthScopeRequirement } from "../slots";
 import { missingScopes } from "../scopes";
 import { GrantAccessButton } from "./grant-access-button";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * Surfaces a "Grant access" affordance for every consumer-declared scope
@@ -62,7 +63,7 @@ function GatedNotice({
   requirement,
   status,
 }: {
-  useEnabled: () => boolean;
+  useEnabled: Hook<() => boolean>;
   requirement: AuthScopeRequirement;
   status: AuthAccountState;
 }) {

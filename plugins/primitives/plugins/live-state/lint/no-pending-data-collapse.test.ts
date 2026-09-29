@@ -175,7 +175,7 @@ ruleTester.run(
             return result.data.find((d) => d.id === id)?.name;
           }
           export const pane = Pane.define({
-            title: { text: useDeploymentTitle, fallback: "Deployment" },
+            title: { useText: useDeploymentTitle, fallback: "Deployment" },
           });
         `,
       },
@@ -184,7 +184,7 @@ ruleTester.run(
         code: `
           export const pane = Pane.define({
             title: {
-              text: ({ id }) => {
+              useText: ({ id }) => {
                 const r = useLive(rows, { ids: [id] });
                 return r.pending ? undefined : r.data[0]?.name;
               },
@@ -229,11 +229,11 @@ ruleTester.run(
             if (result.pending) return null;
             return result.data[0]?.name ?? null;
           }
-          export const pane = Pane.define({ title: { text: useTitle2 } });
+          export const pane = Pane.define({ title: { useText: useTitle2 } });
         `,
         errors: [{ messageId: "pendingCollapseReturn" }],
       },
-      // A `text:` hook outside a `title: { … }` object is not a pane title hook.
+      // A `useText:` hook outside a `title: { … }` object is not a pane title hook.
       {
         code: `
           function useLabel2({ id }) {
@@ -241,7 +241,7 @@ ruleTester.run(
             if (result.pending) return undefined;
             return result.data[0]?.name;
           }
-          export const chip = defineChip({ label: { text: useLabel2 } });
+          export const chip = defineChip({ label: { useText: useLabel2 } });
         `,
         errors: [{ messageId: "pendingCollapseReturn" }],
       },

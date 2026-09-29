@@ -245,7 +245,7 @@ function objectArgBody(
 /**
  * Offset just past a **top-level** `<field>:` in an already-masked object body,
  * or null when the field is absent. Nested `{}` / `[]` / `()` blocks are skipped
- * whole, so a `title: { text: … }` or an `options: { id: … }` can never shadow
+ * whole, so a `title: { useText: … }` or an `options: { id: … }` can never shadow
  * the key being read — the depth-0 rule, which is not optional here: a pane body
  * carries nested objects that spell the very same keys.
  *

@@ -1,5 +1,6 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldDef } from "@plugins/fields/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface DynamicEnumOption {
   readonly value: string;
@@ -8,7 +9,7 @@ export interface DynamicEnumOption {
 
 export interface DynamicEnumOptionsContribution {
   field: FieldDef;
-  useOptions: () => readonly DynamicEnumOption[];
+  useOptions: Hook<() => readonly DynamicEnumOption[]>;
 }
 
 export const DynamicEnum = {

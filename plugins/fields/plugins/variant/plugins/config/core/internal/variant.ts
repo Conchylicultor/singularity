@@ -10,6 +10,7 @@ import {
   variantFieldType,
   type VariantValue,
 } from "@plugins/fields/plugins/variant/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /** A single registered variant: its display label + the FieldsRecord shaping
  *  its payload (everything but the `type` discriminant). */
@@ -26,7 +27,7 @@ export interface VariantFieldDef extends FieldDef<VariantValue> {
    * Omitted on the server build (opaque storage there). Optional so the shared
    * descriptor stays server-safe.
    */
-  readonly useVariants?: () => Map<string, VariantEntry>;
+  readonly useVariants?: Hook<() => Map<string, VariantEntry>>;
 }
 
 export function variantField(

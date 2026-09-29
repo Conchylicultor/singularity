@@ -11,7 +11,7 @@ export const tableDetailPane = Pane.define({
   app: studioApp,
   component: TableDetailBody,
   width: 600,
-  resolve: false,
+  useResolve: false,
   title: { fallback: (params) => params.tableName },
 });
 

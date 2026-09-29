@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * The answer a `display:"code"` contribution gives when the host asks "is this
@@ -51,6 +52,6 @@ export function claimed<T>(value: T): CodeClaim<T> {
  * cannot resolve" has no representable rendering.
  */
 export interface CodeResolver<T> {
-  useClaim: (text: string) => CodeClaim<T>;
+  useClaim: Hook<(text: string) => CodeClaim<T>>;
   component: ComponentType<{ content: string; value: T }>;
 }

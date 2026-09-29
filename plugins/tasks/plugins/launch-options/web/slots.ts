@@ -4,6 +4,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core";
 import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * What every launch control receives. Controlled on purpose: the HOST owns
@@ -128,7 +129,7 @@ export interface TaskLaunchOption<V> {
    * draft-only — self-describing, so there is no `hosts: [...]` knob to keep in
    * sync with what the plugin actually implements.
    */
-  useTaskBinding?: (taskId: string) => LaunchBinding<V>;
+  useTaskBinding?: Hook<(taskId: string) => LaunchBinding<V>>;
   /** Short value description folded into the post-submit toast. */
   summarize?: (value: V) => string | null;
 }

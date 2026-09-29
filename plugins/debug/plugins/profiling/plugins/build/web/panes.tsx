@@ -10,8 +10,8 @@ export const buildProfileDetailPane = Pane.define({
   }),
   app: debugApp,
   title: {
-    text: ({ worktree }) => `Build · ${stripAttemptBranchPrefix(worktree)}`,
+    useText: ({ worktree }) => `Build · ${stripAttemptBranchPrefix(worktree)}`,
   },
   component: BuildProfileDetailBody,
-  resolve: false,
+  useResolve: false,
 });

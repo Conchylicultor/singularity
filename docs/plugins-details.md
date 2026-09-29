@@ -17604,6 +17604,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`upstream`** — `./singularity upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
+    - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
+      - Core:
+        - Exports (types): `Hook`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:

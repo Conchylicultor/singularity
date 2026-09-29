@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 // ---------------------------------------------------------------------------
 // Installed sinks — the slot a HIGHER layer fills and a LOWER layer calls.
@@ -53,9 +54,9 @@ export interface InstallSink<T> {
   /** Install an implementation. Returns a disposer restoring the PREVIOUS occupant. */
   install(value: T): () => void;
   /** Reactive read. */
-  useValue(): T | null;
+  useValue: Hook<() => T | null>;
   /** Reactive presence — the ONLY presence answer available to a render path. */
-  useInstalled(): boolean;
+  useInstalled: Hook<() => boolean>;
   /** One-shot sample. Event handlers and effects ONLY (lint-enforced). */
   peek(): T | null;
   /** One-shot sample that throws, naming the sink, when nothing is installed. */
@@ -66,7 +67,7 @@ export interface InstallSink<T> {
 export interface FilledInstallSink<T> {
   readonly name: string;
   install(value: T): () => void;
-  useValue(): T;
+  useValue: Hook<() => T>;
   peek(): T;
 }
 

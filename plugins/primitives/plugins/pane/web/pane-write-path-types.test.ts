@@ -43,7 +43,7 @@ const paramfulRoute = defineRoute({ id: "wtp-paramful", segment: "wtp/:foo" });
 const paramful = Pane.define({
   route: paramfulRoute,
   app: testApp,
-  resolve: false,
+  useResolve: false,
   component: Dummy,
 });
 
@@ -115,7 +115,7 @@ const routeChild = Pane.define({
   app: testApp,
   // OWN params — the resolve guard is handed `entry.params`, which
   // `extractOwnParams` filtered to this pane's own segment names.
-  resolve: ({ cid }: { cid: string }): ResolveResult => ({
+  useResolve: ({ cid }: { cid: string }): ResolveResult => ({
     status: cid !== "" ? "found" : "missing",
   }),
   component: Dummy,

@@ -35,7 +35,7 @@ ruleTester.run(
             return <span className="font-medium">Crumb</span>;
           }
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
       },
@@ -44,7 +44,7 @@ ruleTester.run(
         code: `
           const CrumbTitle = () => <Text as="span">Crumb</Text>;
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
       },
@@ -71,7 +71,7 @@ ruleTester.run(
         code: `
           import { CrumbTitle } from "./crumb-title";
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
       },
@@ -83,7 +83,7 @@ ruleTester.run(
             return <span>{useLabel()}</span>;
           }
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
       },
@@ -100,7 +100,7 @@ ruleTester.run(
             );
           }
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
         errors: [{ messageId: "adhocPaneTitle" }],
@@ -115,7 +115,7 @@ ruleTester.run(
             </>
           );
           export const pane = Pane.define({
-            title: { text: "Crumb", component: CrumbTitle },
+            title: { useText: "Crumb", component: CrumbTitle },
           });
         `,
         errors: [

@@ -97,9 +97,9 @@ export const agentDetailPane = Pane.define({
   }),
   app: agentManagerApp,
   component: AgentDetailBody,
-  title: { text: useAgentDetailTitle, fallback: "Agent" },
+  title: { useText: useAgentDetailTitle, fallback: "Agent" },
   width: 360,
-  resolve: useResolveAgent,
+  useResolve: useResolveAgent,
 });
 
 export const systemAgentDetailPane = Pane.define({
@@ -110,8 +110,8 @@ export const systemAgentDetailPane = Pane.define({
   }),
   app: agentManagerApp,
   component: SystemAgentDetailBody,
-  title: { text: useSystemAgentTitle, fallback: "Unknown system agent" },
-  resolve: false,
+  title: { useText: useSystemAgentTitle, fallback: "Unknown system agent" },
+  useResolve: false,
 });
 
 export const agentSidePane = Pane.define({
@@ -121,12 +121,12 @@ export const agentSidePane = Pane.define({
   }),
   app: agentManagerApp,
   component: AgentSideBody,
-  title: { text: useAgentSideTitle, fallback: "Agent" },
+  title: { useText: useAgentSideTitle, fallback: "Agent" },
   chrome: {
     history: false,
     promote: false,
   },
-  resolve: false,
+  useResolve: false,
 });
 
 function AgentsRoot(): ReactElement {

@@ -42,8 +42,8 @@
  * "not yet" the caller must check, and is allowed. The non-JSX guard still
  * keeps a component's "render nothing while loading" early-return legal.
  *
- * Carve-out: a pane title hook — the `text:` of a `title: { … }` object
- * (`Pane.define({ title: { text, fallback } })`), written inline or as a
+ * Carve-out: a pane title hook — the `useText:` of a `title: { … }` object
+ * (`Pane.define({ title: { useText, fallback } })`), written inline or as a
  * function declared in the file and passed there — may return `undefined` while
  * pending. Pane's title contract defines `undefined` as "show the title's
  * `fallback`", which is the right thing to show while loading as well as when
@@ -431,11 +431,11 @@ function propertyKeyIs(node: TSESTree.Node | undefined, key: string): boolean {
 }
 
 /**
- * Is `node` the `text:` property of a `title: { … }` object — the slot a pane
- * title hook is declared in (`Pane.define({ title: { text: useX } })`)?
+ * Is `node` the `useText:` property of a `title: { … }` object — the slot a pane
+ * title hook is declared in (`Pane.define({ title: { useText: useX } })`)?
  */
 function isTitleTextProperty(node: TSESTree.Node | undefined): boolean {
-  if (!node || !propertyKeyIs(node, "text")) return false;
+  if (!node || !propertyKeyIs(node, "useText")) return false;
   const object = node.parent;
   return (
     object?.type === AST_NODE_TYPES.ObjectExpression &&
@@ -445,7 +445,7 @@ function isTitleTextProperty(node: TSESTree.Node | undefined): boolean {
 }
 
 /**
- * Is `fn` a pane title hook? Either written inline as the `text:` of a
+ * Is `fn` a pane title hook? Either written inline as the `useText:` of a
  * `title: { … }` object, or a named function whose identifier is passed there.
  */
 function isPaneTitleHook(context: Ctx, fn: FunctionNode): boolean {

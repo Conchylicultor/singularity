@@ -39,10 +39,10 @@ function useReportTitle({
 export const reportDetailPane = Pane.define({
   route: reportDetailRoute,
   app: debugApp,
-  title: { text: useReportTitle, fallback: "Report" },
+  title: { useText: useReportTitle, fallback: "Report" },
   component: ReportDetailBody,
   width: 480,
-  resolve: useResolveReport,
+  useResolve: useResolveReport,
 });
 
 function ReportsBody() {

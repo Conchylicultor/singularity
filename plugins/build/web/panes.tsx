@@ -18,7 +18,7 @@ export const buildDetailPane = Pane.define({
   app: debugApp,
   component: BuildDetailBody,
   width: 480,
-  resolve: false,
+  useResolve: false,
 });
 
 function BuildPaneBody(): ReactElement {

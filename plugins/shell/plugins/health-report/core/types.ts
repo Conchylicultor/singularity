@@ -1,5 +1,6 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /** A known verdict about one health check. */
 export type HealthState = "ok" | "attention" | "critical";
@@ -56,7 +57,7 @@ export interface StatusRow extends RowCommon {
   kind: "status";
   /** The row's name ("Connection", "Job queue"). */
   title: string;
-  useStatus: () => HealthStatus;
+  useStatus: Hook<() => HealthStatus>;
   /**
    * Presentational content under the summary, shown while the report is open
    * (per-class fill bars). It sits inside the row's click target when the row
@@ -80,7 +81,7 @@ export interface InfoRow extends RowCommon {
   kind: "info";
   icon: IconRef;
   /** Called only while the report is open. */
-  useInfo: () => HealthInfo;
+  useInfo: Hook<() => HealthInfo>;
   glance?: never;
   component?: never;
 }

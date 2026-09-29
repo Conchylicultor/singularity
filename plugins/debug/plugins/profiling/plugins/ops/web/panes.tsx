@@ -17,5 +17,5 @@ export const opDetailPane = Pane.define({
   // ticks overprinted each other into mush. 560 leaves the track ~330px, which
   // the ticks resolve cleanly.
   width: 560,
-  resolve: false,
+  useResolve: false,
 });

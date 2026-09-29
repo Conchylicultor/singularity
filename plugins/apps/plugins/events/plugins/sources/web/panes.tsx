@@ -52,8 +52,8 @@ export const eventSourceDetailPane = Pane.define({
   route: eventSourceDetailRoute,
   app: eventsApp,
   component: EventSourceDetailPaneView,
-  resolve: useResolveSource,
-  title: { text: useSourceTitle, fallback: "Source" },
+  useResolve: useResolveSource,
+  title: { useText: useSourceTitle, fallback: "Source" },
   width: 460,
 });
 

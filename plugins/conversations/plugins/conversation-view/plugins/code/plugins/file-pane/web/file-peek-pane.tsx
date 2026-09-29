@@ -38,12 +38,12 @@ export const filePeekPane = Pane.define({
   // shows the file instead of the bare app name. The header paints the path as
   // a breadcrumb (FilePeekTitle); the renderer tabs beside it are a header item.
   title: {
-    text: ({ filePath }) => fileTitle(filePath),
+    useText: ({ filePath }) => fileTitle(filePath),
     component: FilePeekTitle,
   },
   chrome: { history: false },
   width: 600,
-  resolve: false,
+  useResolve: false,
 });
 
 function FilePeekPaneBody() {

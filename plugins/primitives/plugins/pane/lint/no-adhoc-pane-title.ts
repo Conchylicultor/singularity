@@ -13,7 +13,7 @@ const createRule = ESLintUtils.RuleCreator(
  * Pane-title typography guardrail.
  *
  * The pane title item owns the pane-title typography: it wraps the title —
- * `title.text` string OR `title.component` — in the canonical
+ * `title.useText` string OR `title.component` — in the canonical
  * `<Text variant="label">` baseline, so any text a title component renders
  * inherits the right size by CSS inheritance (see `pane-title.tsx`). A title
  * component therefore must NOT set its own typography size; doing so

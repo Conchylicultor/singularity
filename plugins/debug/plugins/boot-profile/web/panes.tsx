@@ -40,7 +40,7 @@ export const bootProfileDetailPane = Pane.define({
     parent: bootProfileRoute,
   }),
   app: debugApp,
-  resolve: false,
+  useResolve: false,
   component: BootProfileDetailBody,
 });
 

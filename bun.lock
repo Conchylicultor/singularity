@@ -4494,6 +4494,10 @@
         "dagre": "^0.8.5",
       },
     },
+    "plugins/framework/plugins/hook-value": {
+      "name": "@singularity/plugin-framework-hook-value",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/hover-reveal": {
       "name": "@singularity/plugin-primitives-hover-reveal",
       "version": "0.0.1",
@@ -8127,6 +8131,8 @@
     "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
 
     "@singularity/plugin-primitives-graph-canvas": ["@singularity/plugin-primitives-graph-canvas@workspace:plugins/primitives/plugins/graph-canvas"],
+
+    "@singularity/plugin-framework-hook-value": ["@singularity/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
 
     "@singularity/plugin-primitives-hover-reveal": ["@singularity/plugin-primitives-hover-reveal@workspace:plugins/primitives/plugins/hover-reveal"],
 

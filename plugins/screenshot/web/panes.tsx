@@ -14,7 +14,7 @@ export const screenshotPane = Pane.define({
   }),
   app: agentManagerApp,
   component: ScreenshotBody,
-  resolve: false,
+  useResolve: false,
 });
 
 function ScreenshotBody() {

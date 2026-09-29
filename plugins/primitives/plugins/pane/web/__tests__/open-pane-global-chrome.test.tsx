@@ -45,7 +45,7 @@ const detailRoute = defineRoute({ id: "chrome-detail", segment: "d/:id" });
 const detailPane = Pane.define({
   route: detailRoute,
   app: testApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 

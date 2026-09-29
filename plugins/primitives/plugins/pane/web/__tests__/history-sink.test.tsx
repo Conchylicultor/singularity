@@ -55,7 +55,7 @@ const childRoute = defineRoute({ id: "hist-child", segment: "c/:id" });
 const childPane = Pane.define({
   route: childRoute,
   app: testApp,
-  resolve: false,
+  useResolve: false,
   component: () => null,
 });
 // A pane that opts OUT of history (`chrome.history: false`) — its open/close

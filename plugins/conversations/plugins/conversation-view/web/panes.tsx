@@ -73,10 +73,10 @@ export const conversationPane = Pane.define({
   app: agentManagerApp,
   component: ConversationView,
   width: 600,
-  resolve: useResolveConversation,
+  useResolve: useResolveConversation,
   // Tab/document title: the conversation's name from the global live-state
   // resource. The header paints the richer ConversationTitle (same source).
-  title: { text: useConversationTitle, component: ConversationTitle },
+  title: { useText: useConversationTitle, component: ConversationTitle },
   // Main surface: aux panes opened to the right (file peek, review, terminal)
   // never steal the tab title from the conversation.
   titleOwner: true,

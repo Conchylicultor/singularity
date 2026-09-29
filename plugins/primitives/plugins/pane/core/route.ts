@@ -273,7 +273,7 @@ export function segmentMatchPatterns(segment: string): string[] {
  * - The OWN set — only the `:name`s in THIS route's `segment`. That is what the
  *   runtime hands a pane back: `MatchEntry.params` is own-only (the accumulated
  *   set lives beside it in `fullParams`), so a pane's `useParams()` and its
- *   `resolve` hook see own params and nothing else.
+ *   `useResolve` hook see own params and nothing else.
  *
  * The own set is NOT a second type parameter of its own: it is a function of
  * the `segment` this route already carries, which is why `segment` is typed by
@@ -309,10 +309,10 @@ export interface RouteDef<
  * outer call's contextual type is an unresolved `Seg` type parameter, which
  * widens the inner `segment` literal all the way back to `string`.
  * `RouteParams<string>` is then `{}`, so the pane silently resolves PARAMLESS:
- * `useParams()` returns nothing and `resolve` types as FORBIDDEN on a route
+ * `useParams()` returns nothing and `useResolve` types as FORBIDDEN on a route
  * that plainly has a `:param`. `const` preserves the literal through the
  * contextual type, so the inline form means what it reads as, and "paramful
- * pane written inline with no `resolve`" becomes a compile error instead of a
+ * pane written inline with no `useResolve`" becomes a compile error instead of a
  * silently paramless pane.
  *
  * Nothing already written changes shape: every call site passes a literal to a

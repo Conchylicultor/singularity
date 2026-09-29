@@ -10,7 +10,7 @@ import { sonataPlayerPane } from "./panes";
  * click in the visible library the two coincide. Mirrors `useOpenSong`'s open
  * call exactly: `mode:"root"` replaces the route with the player and the
  * optimistic title rides in `input` so the header shows immediately. Source
- * hydration runs in the player pane's `resolve` hook (`useSonataPlayerResolve`).
+ * hydration runs in the player pane's `useResolve` hook (`useSonataPlayerResolve`).
  */
 export function openSongImperative(song: { id: string; title: string }): void {
   openPane(

@@ -1,6 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { CodeClaim, CodeResolver } from "./claim";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 // There is no `display:"inline"` arm: an inline chip (a bare substring spliced
 // into text) is declared to `InlineChip.Tag` in
@@ -66,7 +67,7 @@ export interface ActiveDataCodeContribution {
 export function codeTag<T>(spec: {
   id: string;
   pattern: RegExp;
-  useClaim: (text: string) => CodeClaim<T>;
+  useClaim: Hook<(text: string) => CodeClaim<T>>;
   component: ComponentType<{ content: string; value: T }>;
 }): ActiveDataCodeContribution {
   return {

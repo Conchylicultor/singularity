@@ -23,8 +23,8 @@ export const threadPane = Pane.define({
   // No existence gate: a missing/deleted thread resolves to an empty message
   // list ("(no subject)") rather than a hard 404 — the list only ever opens
   // thread ids it just rendered.
-  resolve: false,
-  title: { text: useThreadTitle, fallback: "Thread" },
+  useResolve: false,
+  title: { useText: useThreadTitle, fallback: "Thread" },
 });
 
 /** The thread's subject once its messages load; undefined until then. */

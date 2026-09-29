@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { DynamicEnum, type DynamicEnumOption } from "../internal/slots";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
  * The whole options-resolving control, as ONE element handed to the panel's
@@ -65,7 +66,7 @@ function ResolvedEnum({
   value,
   onChange,
 }: {
-  useOptions: () => readonly DynamicEnumOption[];
+  useOptions: Hook<() => readonly DynamicEnumOption[]>;
   value: string;
   onChange: (value: string) => void;
 }) {

@@ -53,8 +53,8 @@ export const compositionDetailPane = Pane.define({
   component: CompositionDetailBody,
   // Wider than release-detail's 480: it hosts the closure plugin tree.
   width: 560,
-  resolve: useResolveComposition,
-  title: { text: useCompositionTitle },
+  useResolve: useResolveComposition,
+  title: { useText: useCompositionTitle },
   // Main surface: the release-run pane pushed to the right is a drill-in — it
   // never steals the tab title from the composition.
   titleOwner: true,

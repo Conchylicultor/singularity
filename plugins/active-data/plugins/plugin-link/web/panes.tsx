@@ -24,8 +24,8 @@ export const pluginConvSidePane = Pane.define({
   component: PluginConvSideBody,
   width: 600,
   chrome: { history: false },
-  resolve: false,
-  title: { text: usePluginConvSideTitle, fallback: (p) => p.pluginId },
+  useResolve: false,
+  title: { useText: usePluginConvSideTitle, fallback: (p) => p.pluginId },
 });
 
 function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {

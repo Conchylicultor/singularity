@@ -49,7 +49,7 @@ export const taskDetailPane = Pane.define({
   route: taskDetailRoute,
   app: agentManagerApp,
   component: TaskDetail,
-  resolve: useResolveTask,   // required: the route has a `:param`
+  useResolve: useResolveTask,   // required: the route has a `:param`
 });
 ```
 
@@ -91,9 +91,12 @@ Rules:
   when the rest of the URL then parses to nothing — but a URL whose next part
   belongs to a pane that has not loaded yet reads as the optional value. Change
   it from inside the pane with `pane.useSetParams()` (below), not a `swap`.
-- `resolve` is required exactly when the route's own segment has a `:param`, and
+- `useResolve` is required exactly when the route's own segment has a `:param`, and
   forbidden when it does not — a paramful pane must be able to say "no such
-  entity". Opt out with `resolve: false`. The hook returns a `ResolveResult`:
+  entity". Opt out with `useResolve: false`. The key is `use`-named because its
+  value is a hook (a `Hook<…>`-branded field, see `primitives/hook-value`): the
+  guard calls it as `useResolve(params)`, so the React Compiler treats the call
+  as a hook and never memoizes it. The hook returns a `ResolveResult`:
   `pending` / `error` (with an optional `retry`) / `missing` / `found` — the
   vocabulary by-id domain reads (`useRun`, `useReport`) already speak, so those
   are returned as is. Over a live read use `resolveFrom(result, isFound)`, over
@@ -181,7 +184,7 @@ Declare the **defaults**, not a type. The default *is* the deep-link value,
 stated once:
 
 ```ts
-Pane.define({ route: fileRoute, app, component: FileBody, options: { compact: false }, resolve });
+Pane.define({ route: fileRoute, app, component: FileBody, options: { compact: false }, useResolve: useResolveFile });
 openPane(filePane, { path }, { mode: "push", options: { compact: true } });  // partial override
 ```
 
@@ -195,7 +198,7 @@ It is absent on every route the browser rebuilt (deep link, reload,
 back/forward) and may be stale when present. **It is never a source of truth.**
 
 ```ts
-Pane.define({ …, hint: type<{ title: string }>(), title: { text: useSongTitle } });
+Pane.define({ …, hint: type<{ title: string }>(), title: { useText: useSongTitle } });
 
 openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title } });
 
@@ -318,32 +321,32 @@ the tab label, the browser document title and the header's title item.
 `PaneChrome` takes no title — and no header content of any kind.
 
 ```tsx
-Pane.define({ …, title: "Settings" });            // shorthand for { text: "Settings" }
+Pane.define({ …, title: "Settings" });            // shorthand for { useText: "Settings" }
 Pane.define({
   …,
   title: {
-    text: usePageTitle,          // string | (params, hint, options) => string | undefined
-    fallback: (p) => p.pageId,   // string | (params) => string — while `text` yields undefined
+    useText: usePageTitle,       // string | (params, hint, options) => string | undefined
+    fallback: (p) => p.pageId,   // string | (params) => string — while `useText` yields undefined
     component: PageTitleTrail,   // optional rich HEADER title (breadcrumb, editable field)
   },
 });
 <PaneChrome pane={pageDetailPane}>…</PaneChrome>    // no title prop
 ```
 
-- **`text`** is a literal or a React hook. The hook runs **outside** the owning
+- **`useText`** is a literal or a React hook (a `Hook<…>`-branded field). The hook runs **outside** the owning
   app's providers — at the tab surface, for background tabs too — so it may
   read only its arguments (the CHAINED params, ancestors included; the `hint`
   and `options` as values) and GLOBAL hooks (live-state resources), never
   app-local context. Return `undefined` while the entity is not known yet.
-- **`fallback`** is what shows while `text` yields `undefined`: the generic
+- **`fallback`** is what shows while `useText` yields `undefined`: the generic
   noun ("Task"), or something derived from the URL params. Never a fabricated
   entity name.
 - **`component`** is a rich title for the HEADER only. It is mounted **inside**
   the pane (the header's title cell, under `PaneChrome`), so it may call
   `pane.useParams()`, read app context, and be interactive. Tab and document
-  titles still come from `text` / `fallback`, so declare `text` beside it.
+  titles still come from `useText` / `fallback`, so declare `useText` beside it.
 
-Resolution is one function, `usePaneTitle` (`text` → `fallback` → nothing),
+Resolution is one function, `usePaneTitle` (`useText` → `fallback` → nothing),
 shared by the tab reporter, the collapsed Miller column and the header. The
 header's title item paints `component` when declared, else that string, else
 nothing (the yielding cell stays, empty).
@@ -377,7 +380,7 @@ conversation pane opened as a drill-in under a task stays subordinate to it.
 Routes with no title owner fall back to the leaf pane (then the app index pane,
 then the app name).
 
-Declaring `titleOwner` without a `title` that actually resolves (`text` or
+Declaring `titleOwner` without a `title` that actually resolves (`useText` or
 `fallback`) would pin the tab to the app name — give the owner a title source.
 
 #### Title typography is container-owned

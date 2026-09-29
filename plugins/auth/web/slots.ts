@@ -1,6 +1,7 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface AuthProviderRowProps {
   providerId: string;
@@ -33,7 +34,7 @@ export interface AuthScopeRequirement {
   providerId: string;
   scopes: string[];
   reason: string;
-  useEnabled?: () => boolean;
+  useEnabled?: Hook<() => boolean>;
 }
 
 export const Auth = {

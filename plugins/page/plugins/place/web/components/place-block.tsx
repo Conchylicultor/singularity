@@ -29,6 +29,7 @@ import { PlaceCard } from "./place-card";
 import { PlaceSearch } from "./place-search";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 const locationOnIcon = symbol("location-on");
 
@@ -227,7 +228,7 @@ function ProviderGate(props: GateProps) {
 function GatedSearch({
   useReady,
   ...props
-}: GateProps & { useReady: () => boolean }) {
+}: GateProps & { useReady: Hook<() => boolean> }) {
   const ready = useReady();
   if (ready) return <PlaceSearch {...props} />;
 

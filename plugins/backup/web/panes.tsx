@@ -24,11 +24,11 @@ export const backupRunPane = Pane.define({
   app: debugApp,
   component: BackupRunBody,
   width: 480,
-  resolve: useResolveBackupRun,
+  useResolve: useResolveBackupRun,
 });
 
 /**
- * Whether the URL's run exists — a real resolve, not a `resolve: false` opt-out.
+ * Whether the URL's run exists — a real resolve, not a `useResolve: false` opt-out.
  *
  * This is what a by-id read of the merged run space buys. `buildDetailPane`
  * opts out because it has no such read — it can only look for its row inside a

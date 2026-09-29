@@ -8,10 +8,11 @@ import type { Contribution } from "./types";
 import type { ComponentType } from "react";
 import type { SealContributions } from "./sealed-component";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface Slot<P> extends SlotHandle {
   (props: P): Contribution;
-  useContributions(): SealContributions<P>[];
+  useContributions: Hook<() => SealContributions<P>[]>;
 }
 
 const EMPTY: Contribution[] = [];
