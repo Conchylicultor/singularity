@@ -6,6 +6,11 @@ import {
   spawnExpectOk,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import {
+  describeAutoIdentity,
+  ensureCommitIdentity,
+  resolvePublishTarget,
+} from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { noUpstreamSentence } from "./internal/describe";
 
@@ -51,6 +56,16 @@ const run: CliAction<[], { continue?: boolean }> = async (opts) => {
       "Refusing to merge upstream into the main checkout. Main rebuilds itself the moment its ref moves, " +
         "so an update is merged in a worktree, built and looked at there, and lands on main through `./singularity push`.",
     );
+
+  // Both verbs may write a merge commit, so its signer is settled first —
+  // the same rule `push` applies (see ensureCommitIdentity).
+  const identity = await ensureCommitIdentity(
+    root,
+    await resolvePublishTarget(root),
+  );
+  if (identity.kind === "refuse") refuse(identity.message);
+  if (identity.kind === "auto" && identity.written)
+    console.log(describeAutoIdentity(identity));
 
   if (opts.continue === true) return await continueMerge(root);
   return await startMerge(root);

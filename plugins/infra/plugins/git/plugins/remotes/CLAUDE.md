@@ -1,12 +1,13 @@
 # remotes
 
 Two questions about this checkout's remotes, answered the same way by the CLI
-and by the server:
+and by the server — plus one that follows from the first:
 
 | You want | Use |
 |---|---|
 | May this checkout publish its work, and to which remote? | `resolvePublishTarget(root)` |
 | Which remote does it receive changes FROM? | `resolveUpstreamRemote(root)` |
+| Who signs the commit I am about to make? | `ensureCommitIdentity(root, target)` |
 
 It sits under the `git` umbrella — "has git state moved, and must I read it
 again?" — because that is the shape of the answer: a measurement, taken once and
@@ -125,6 +126,30 @@ fetches, not to a claim that there is no upstream at all.
 `CANONICAL_REPO_URL` is also in `CITATION.cff`; deduplicating the two belongs to
 whoever adds the README that reads both.
 
+## Commit identity is decided at commit time
+
+A fresh install sets no `user.name` / `user.email`, on purpose: in a clone the
+identity never leaves the machine, so asking for it at install would be a step
+with nothing to show for it. Left alone, git signs with `login@hostname` — junk
+that goes public the day the checkout publishes — or, on a hostname with no
+domain, refuses to commit at all.
+
+So the two commands that make commits (`push`, `upstream merge`) call
+`ensureCommitIdentity` with the publish target, before the commit:
+
+| identity \ target | `local` | `publish` |
+|---|---|---|
+| explicit (any config scope, or `EMAIL` / both `GIT_*_EMAIL` in the env) | use it | use it |
+| missing | write a `--local` placeholder: git's own derived name, `<login>@singularity.invalid` | **refuse**, with the `git config --global` commands |
+| ours (the placeholder, still unchanged) | use it | remove it, re-read; explicit ⇒ use it, else **refuse** |
+
+"Ours" is recorded as `singularity.autoIdentityEmail` and only counts while the
+local `user.email` still equals it, so a user who sets their own local email
+has taken it over. The `.invalid` TLD is reserved (RFC 2606): the placeholder
+can never route anywhere or leak the hostname. The refusal tells an agent to
+ask the user — an identity is the one value it must never invent. The rule
+itself is the pure `decideIdentity`, tested cell by cell.
+
 ## Boundaries
 
 `core/` here means **runtime-neutral Node, not web-safe** — every module behind
@@ -150,12 +175,13 @@ does reach, so for them the probe is the answer.
 
 ## Plugin reference
 
-- Description: May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, and the upstream resolution built from the same facts.
+- Description: May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
 - Core:
   - Uses:
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
   - Exports (types):
+    - `CommitIdentity`
     - `LocalReason`
     - `PublishTarget`
     - `RemoteCapture`
@@ -164,7 +190,9 @@ does reach, so for them the probe is the answer.
   - Exports (values):
     - `CANONICAL_REPO_URL`
     - `classifyRemoteFailure`
+    - `describeAutoIdentity`
     - `describePublishTarget`
+    - `ensureCommitIdentity`
     - `gitConfigGet`
     - `gitConfigSet`
     - `gitConfigUnset`

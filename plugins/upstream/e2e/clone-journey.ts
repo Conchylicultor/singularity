@@ -7,6 +7,10 @@
  * what proves the landing rule: an update must import upstream's own commits,
  * not copies of them, or every later update re-presents work already merged.
  *
+ * The clone is also given no commit identity of its own (no global or system
+ * git config, none in the environment), the state of a fresh install: it must
+ * still be able to sign a merge commit — with the local placeholder.
+ *
  * It also asserts the author's case on THIS checkout: a checkout that may write
  * to its remote publishes as it always did and has no upstream. That one makes
  * a network call (a `--dry-run` push, which sends no update); everything else
@@ -18,11 +22,13 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ensureCommitIdentity,
   resolvePublishTarget,
   resolveUpstreamRemote,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
 import {
   spawnCaptured,
+  spawnExpectOk,
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
@@ -88,6 +94,36 @@ async function commit(
   return await git(cwd, "rev-parse", "HEAD");
 }
 
+const IDENTITY_ENV = [
+  "GIT_CONFIG_GLOBAL",
+  "GIT_CONFIG_NOSYSTEM",
+  "EMAIL",
+  "GIT_AUTHOR_NAME",
+  "GIT_AUTHOR_EMAIL",
+  "GIT_COMMITTER_NAME",
+  "GIT_COMMITTER_EMAIL",
+] as const;
+
+/**
+ * Run `fn` as a fresh install would: no global or system git config and no
+ * identity in the environment. Scoped, because the author-side probe at the
+ * end needs the real global config (credential helpers live there).
+ */
+async function withNoAmbientIdentity<T>(fn: () => Promise<T>): Promise<T> {
+  const saved = IDENTITY_ENV.map((k) => [k, process.env[k]] as const);
+  for (const k of IDENTITY_ENV) delete process.env[k];
+  process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+  process.env.GIT_CONFIG_NOSYSTEM = "1";
+  try {
+    return await fn();
+  } finally {
+    for (const [k, v] of saved) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const tmp = mkdtempSync(join(tmpdir(), "singularity-clone-journey-"));
   try {
@@ -113,6 +149,52 @@ async function main(): Promise<void> {
       up.kind === "upstream" && up.remote === "upstream",
       JSON.stringify(up),
     );
+
+    console.log("\nA clone whose user never configured git:");
+    const signed = await withNoAmbientIdentity(async () => {
+      const identity = await ensureCommitIdentity(clone, target);
+      // A real merge commit, signed only by what ensureCommitIdentity left.
+      const scratch = await commit(upstream, "sig.txt", "sig", "upstream: sig");
+      await spawnExpectOk(["git", "fetch", "-q", "upstream"], {
+        cwd: clone,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      await spawnExpectOk(["git", "checkout", "-q", "-b", "signed", "main"], {
+        cwd: clone,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      await spawnExpectOk(["git", "merge", "--no-ff", "--no-edit", scratch], {
+        cwd: clone,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      const who = await spawnExpectOk(
+        ["git", "log", "-1", "--format=%ae|%ce"],
+        {
+          cwd: clone,
+          timeoutMs: GIT_TIMEOUT_MS,
+        },
+      );
+      await spawnExpectOk(["git", "checkout", "-q", "main"], {
+        cwd: clone,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      return { identity, who: who.stdout.trim() };
+    });
+    check(
+      "gets a local placeholder identity",
+      signed.identity.kind === "auto" && signed.identity.written,
+      JSON.stringify(signed.identity),
+    );
+    check(
+      "signs a merge commit with it, author and committer",
+      signed.identity.kind === "auto" &&
+        signed.who === `${signed.identity.email}|${signed.identity.email}`,
+      signed.who,
+    );
+    // Put upstream back where the rest of the journey expects it.
+    await git(upstream, "reset", "-q", "--hard", "HEAD~1");
+    await git(clone, "fetch", "-q", "--prune", "upstream");
+    await git(clone, "branch", "-q", "-D", "signed");
 
     console.log("\nBefore upstream moves:");
     const current = await fetchUpstreamStatus(clone);

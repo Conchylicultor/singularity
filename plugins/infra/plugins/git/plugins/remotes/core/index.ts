@@ -28,3 +28,10 @@ export {
   gitConfigUnset,
 } from "./internal/git-config";
 export { sameRepoUrl } from "./internal/remote-url";
+// Who signs the commits push and upstream merge make — decided per publish
+// target, at commit time, never at install.
+export {
+  describeAutoIdentity,
+  ensureCommitIdentity,
+} from "./internal/commit-identity";
+export type { CommitIdentity } from "./internal/commit-identity";

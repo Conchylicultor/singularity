@@ -32,7 +32,9 @@ import {
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
 import {
+  describeAutoIdentity,
   describePublishTarget,
+  ensureCommitIdentity,
   recordPushRejection,
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
@@ -371,6 +373,19 @@ const pushAction: CliAction<
     // difference is announced, so it is never silent.
     console.log(describePublishTarget(publish));
   }
+
+  // Who signs this push's commits — the one below and every commit the
+  // rebase's trailer `--exec` rewrites. Decided now, from the answer above:
+  // a clone that cannot publish gets a local placeholder silently, a checkout
+  // whose commits will be public must have a real identity. Refused here,
+  // before the mutex, the commit or any network step, so nothing is half-done.
+  const identity = await ensureCommitIdentity(root0, publish);
+  if (identity.kind === "refuse") {
+    console.error(identity.message);
+    process.exit(1);
+  }
+  if (identity.kind === "auto" && identity.written)
+    console.log(describeAutoIdentity(identity));
 
   // The op-marker slug (see markWorktreeOpStart below) is this checkout's own
   // namespace — `push` names the main composition, as `build` does. The

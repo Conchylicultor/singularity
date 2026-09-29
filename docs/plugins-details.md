@@ -19486,12 +19486,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
-        - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, and the upstream resolution built from the same facts.
+        - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
           - Core:
             - Uses:
               - `infra/spawn.spawnCaptured`
               - `infra/spawn.spawnExpectOk`
             - Exports (types):
+              - `CommitIdentity`
               - `LocalReason`
               - `PublishTarget`
               - `RemoteCapture`
@@ -19500,7 +19501,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `CANONICAL_REPO_URL`
               - `classifyRemoteFailure`
+              - `describeAutoIdentity`
               - `describePublishTarget`
+              - `ensureCommitIdentity`
               - `gitConfigGet`
               - `gitConfigSet`
               - `gitConfigUnset`
