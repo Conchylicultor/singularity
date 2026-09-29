@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { GUARDS } from "./index";
 import { HINTS } from "./hints";
 import { createContext } from "./context";
+import { withRefusalBanner } from "./refusal";
 import type { Guard, ToolMatcher } from "./types";
 
 export interface HookInput {
@@ -110,15 +111,16 @@ export async function runHook(
       continue;
     }
     if (verdict.kind === "deny") {
+      // Every denial leads with what did NOT happen — added here, at the one
+      // exit every guard's refusal passes through, so no guard can forget it.
+      const reason = withRefusalBanner(tool, current, verdict.reason);
       process.stdout.write(
         JSON.stringify({
-          ...(verdict.fatal
-            ? { continue: false, stopReason: verdict.reason }
-            : {}),
+          ...(verdict.fatal ? { continue: false, stopReason: reason } : {}),
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
             permissionDecision: "deny",
-            permissionDecisionReason: verdict.reason,
+            permissionDecisionReason: reason,
           },
         }),
       );
