@@ -148,20 +148,11 @@ useLiveRow(eventSources, sourceId);                                   // one row
   base `where` still applies — a row outside the collection is not found), so
   `found: false` means the row is not in the collection — never "outside the
   window".
-<<<<<<< .merge_file_W9fIjy
-  - **A `null` id** (nothing to look up yet) is `{ pending: false, found:
+  - **A `null` id** (nothing to look up yet) is `{ status: "ready", found:
     false }` from the FIRST render, and reads nothing: the substrate's skip
     (`useResource(desc, null)` — no subscription, no HTTP read or cold-start
-    prime, not a pending mount), the same one a value's `useLive(v, null)` uses.
-=======
-  - **A `null` id** (nothing to look up yet) is `{ status: "ready", found:
-    false }` from the FIRST render. It still reads a tuple — the empty id set
-    `{ ids: "" }`, one per collection, shared by every null reader, answered
-    with `[]` and no query — so it counts as a pending mount until that `[]`
-    lands. `useResource` has deliberately no skip option: a public skip would
-    skip values too, and would have to disarm the pending-mount count and the
-    cold-start prime.
->>>>>>> .merge_file_PZXzrC
+    prime, not a pending mount), the same one a value's `useLive(v, null)` uses
+    (which, having no row to be absent, reads `loading`).
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
@@ -222,8 +213,7 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
   `params` is a const tuple of names; `P` is derived from it (no phantom
   generic to restate). There is **no `initial`**: not known yet is `loading`,
   never a stand-in — the descriptor has no `initialData` (an optimistic read of
-<<<<<<< .merge_file_W9fIjy
-  a value is `useOptimisticResource(value, params?, options)`, pending until the
+  a value is `useOptimisticResource(value, params?, options)`, loading until the
   first value — see below). `live: "value"` is the discriminant `useLive`
   dispatches on.
   - **An optional param** is declared with a trailing `?` (`"scopeId?"` →
@@ -238,6 +228,10 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
     each mapped `recomputeOn` tuple), as does `preloadParams` — so
     `{ path }`, `{ path, scopeId: undefined }` and `{ path, scopeId: "" }` are
     ONE tuple, and a notify can never miss the tuple a read holds.
+  - **The params gate.** The descriptor's `validateParams` (run by the runtime
+    on the canonical tuple, before a sub registers) refuses an unknown name, a
+    non-string value, or a missing REQUIRED name as `contract-mismatch`; an
+    absent optional param is valid.
   - **The default tuple.** A param-less preloaded value sets
     `defaultParams: {}`, the tuple both the boot snapshot and `useLive(v)` use.
     A PARAMETERIZED value has none, so it is branded
@@ -245,14 +239,6 @@ useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, p
     must pass `preloadParams: () => P[] | Promise<P[]>` (tsc, and a throw at
     serve time for an untyped caller; any other value may not pass it) — see
     Preload below.
-=======
-  a value is `useOptimisticResource(value, params?, options)`, loading until the
-  first value — see below). `preload` is typed `never`
-  beside `params`: only a param-less value has a default tuple the server can
-  load before a tab names one. A preloaded value sets `defaultParams: {}`, the
-  tuple both the boot snapshot and `useLive(v)` use. `live: "value"` is the
-  discriminant `useLive` dispatches on.
->>>>>>> .merge_file_PZXzrC
 - **Load (delivery mode).** `load` defaults to `"push"` (the value is
   recomputed and pushed); `"on-demand"` is the runtime's `invalidate` — the
   server never ships the value over the socket, and each tab reads it over
@@ -472,11 +458,7 @@ grouped under the wave or item that removes it
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
-<<<<<<< .merge_file_W9fIjy
-=======
     - `packages/resource-protocol.ResourceContractError`
-    - `primitives/live-state.keyedResourceDescriptor`
->>>>>>> .merge_file_PZXzrC
     - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`

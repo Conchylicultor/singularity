@@ -13,7 +13,13 @@ import { PrototypeDetail, PrototypeTitle } from "./components/prototype-detail";
  */
 function usePrototypeTitle({ name }: { name: string }): string | undefined {
   const result = useLive(prototypesList);
-  if (result.pending) return undefined;
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return undefined;
+    case "ready":
+      break;
+  }
   return result.data.find((p) => p.name === name)?.title;
 }
 

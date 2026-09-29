@@ -1,5 +1,6 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { TRACK_META, type TaskTrack } from "../../core";
 import { useTaskTrack } from "../hooks";
@@ -18,9 +19,21 @@ const OTHER_TRACK: Record<TaskTrack, TaskTrack> = {
  */
 export function TaskTrackControl({ taskId }: { taskId: string }) {
   const result = useTaskTrack(taskId);
-  if (result.pending) return <Loading variant="block" className="h-5 w-16" />;
-  const meta = TRACK_META[result.track];
-  const next = OTHER_TRACK[result.track];
+  if (result.status === "loading") {
+    return <Loading variant="block" className="h-5 w-16" />;
+  }
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the track"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
+  const meta = TRACK_META[result.data];
+  const next = OTHER_TRACK[result.data];
   const onClick = () => {
     setTaskTrackRemote(taskId, next).catch((err: unknown) => {
       toast({

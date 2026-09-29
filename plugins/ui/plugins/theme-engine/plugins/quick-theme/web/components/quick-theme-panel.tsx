@@ -1,3 +1,7 @@
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -74,8 +78,23 @@ export function QuickThemePanel({
   // Which scope a pick lands in is what membership decides: nothing to pick
   // until it is known (preloaded: settled after a successful boot). Under a
   // transient error the last-known answer stands.
-  const forked = membership.pending ? membership.stale : membership.data;
-  if (forked === undefined) return <Loading />;
+  const forked = foldResource(membership, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (member) => member,
+  });
+  if (forked === undefined) {
+    return membership.status === "error" ? (
+      <ResourceErrorInline
+        variant="block"
+        subject="the theme scope"
+        error={membership.error}
+        refetch={membership.refetch}
+      />
+    ) : (
+      <Loading />
+    );
+  }
   const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
   return (

@@ -37,18 +37,11 @@ renders them automatically. Field types live under `plugins/fields/plugins/`; se
 surface asserts (which views/items exist, whether a mode is on): defaults are a legitimate
 answer, so a consumer cannot tell "the user configured nothing" from "we don't know yet".
 Those reads use **`useConfigResult(myConfig)`**, which returns live-state's
-<<<<<<< .merge_file_1tXYRr
-`{ pending: true } | { pending: false, data }` and makes the unknown window a state to
-render (`live-state/no-pending-data-collapse` lints the collapse). Both live values it reads
-(`configValues`, `configScopes`) are `preload: "boot-and-keep"`: every document a first
-paint can read rides the boot snapshot and is never evicted, so `pending` after a
-successful boot is unreachable rather than merely rare.
-=======
 `ResourceResult` (`status: "loading" | "error" | "ready"`) and makes the unknown window a
-state to render (`live-state/no-pending-data-collapse` lints the collapse). Both resources
-are `resident`, so the boot hydration is never evicted and `loading` after a successful boot
-is unreachable rather than merely rare.
->>>>>>> .merge_file_AJ7Gx2
+state to render (`live-state/no-pending-data-collapse` lints the collapse). Both live values it
+reads (`configValues`, `configScopes`) are `preload: "boot-and-keep"`: every document a first
+paint can read rides the boot snapshot and is never evicted, so `loading` after a successful
+boot is unreachable rather than merely rare.
 
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
 cache. `watchConfig(myConfig, cb)` notifies on changes.
@@ -338,14 +331,10 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
   - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.piano`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.conversations-view.data-view`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
   - Uses:
     - `infra/endpoints.useEndpointMutation`
-<<<<<<< .merge_file_1tXYRr
     - `network/live.useLive`
-    - `primitives/live-state.mapResource`
-=======
+    - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.hydrateResource`
-    - `primitives/live-state.useResource`
->>>>>>> .merge_file_AJ7Gx2
+    - `primitives/live-state.mapResource`
   - Exports (types): `ConfigRegistration`
   - Exports (values):
     - `ConfigV2`

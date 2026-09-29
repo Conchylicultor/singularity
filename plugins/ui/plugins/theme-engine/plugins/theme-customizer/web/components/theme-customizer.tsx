@@ -1,3 +1,7 @@
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useRef, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -162,11 +166,24 @@ export function ThemeCustomizerBody() {
   // is editable until it is known (preloaded: settled after a successful boot).
   // Under a transient error the last-known answer stands, so the panel (and its
   // search text) is not torn down.
-  const forked = membership.pending ? membership.stale : membership.data;
+  const forked = foldResource(membership, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (member) => member,
+  });
   if (forked === undefined) {
     return (
       <PaneChrome pane={themeCustomizerPane}>
-        <Loading />
+        {membership.status === "error" ? (
+          <ResourceErrorInline
+            variant="block"
+            subject="the theme scope"
+            error={membership.error}
+            refetch={membership.refetch}
+          />
+        ) : (
+          <Loading />
+        )}
       </PaneChrome>
     );
   }

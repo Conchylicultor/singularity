@@ -47,6 +47,8 @@ function useAgentLookup(id: string): AgentLookup {
     case "loading":
     case "error":
       return { status: "pending" };
+    case "ready":
+      break;
   }
   const agent = result.data.find((a: Agent) => a.id === id);
   return agent ? { status: "found", agent } : { status: "missing" };

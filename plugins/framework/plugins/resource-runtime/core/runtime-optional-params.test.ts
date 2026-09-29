@@ -17,7 +17,12 @@ describe("optional params", () => {
     const seen: Record<string, string>[] = [];
     let n = 0;
     const doc = h.runtime.defineExternalResource(
-      { key: "doc", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "doc",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         loader: (p: Record<string, string>) => {
@@ -55,7 +60,12 @@ describe("optional params", () => {
     const h = createHarness();
     const seen: Record<string, string>[] = [];
     h.runtime.defineExternalResource(
-      { key: "req", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "req",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         loader: (p: Record<string, string>) => {
@@ -72,7 +82,12 @@ describe("optional params", () => {
     const h = createHarness();
     const seen: Record<string, string>[] = [];
     h.runtime.defineExternalResource(
-      { key: "http", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "http",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         loader: (p: Record<string, string>) => {
@@ -99,7 +114,12 @@ describe("optional params", () => {
     });
     const seen: Record<string, string>[] = [];
     h.runtime.defineExternalResource(
-      { key: "down", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "down",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         dependsOn: [{ resource: up, map: () => [{ path: "a", scopeId: "" }] }],
@@ -125,7 +145,12 @@ describe("optional params", () => {
     let starts = 0;
     let loads = 0;
     h.runtime.defineExternalResource(
-      { key: "shared", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "shared",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         onFirstSubscribe: () => {
@@ -148,7 +173,12 @@ describe("optional params", () => {
     let starts = 0;
     let stops = 0;
     h.runtime.defineExternalResource(
-      { key: "batch", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "batch",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         onFirstSubscribe: () => {
@@ -173,7 +203,12 @@ describe("optional params", () => {
     const h = createHarness();
     const seen: Record<string, string>[] = [];
     h.runtime.defineExternalResource(
-      { key: "direct", schema: S, optionalParams: ["scopeId"] },
+      {
+        key: "direct",
+        schema: S,
+        optionalParams: ["scopeId"],
+        validateParams: () => {},
+      },
       {
         mode: "push",
         loader: (p: Record<string, string>) => {

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
@@ -65,8 +66,13 @@ function AppScope({ appId }: { appId: string }) {
   const scope = appThemeScope(appId);
   const ownsTheme = useScopeMembership(themeSelectionConfig, scope);
   // While membership is unknown the scope publishes nothing, like a scope
-  // whose theme is still loading.
-  if (ownsTheme.pending || !ownsTheme.data) return null;
+  // whose theme is still loading. A failed read keeps its last-known answer.
+  const owns = foldResource(ownsTheme, {
+    loading: () => false,
+    error: (_error, stale) => stale ?? false,
+    ready: (member) => member,
+  });
+  if (!owns) return null;
   return <SelectedScope themeScope={scope} publishAs={scope} />;
 }
 

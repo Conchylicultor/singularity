@@ -496,7 +496,8 @@ describe("useLiveRow", () => {
     );
     observe.mockRestore();
     expect(pendingMountSnapshot().pending).toBe(before);
-    for (const r of seen) expect(r).toMatchObject({ status: "ready", found: false });
+    for (const r of seen)
+      expect(r).toMatchObject({ status: "ready", found: false });
     unmount();
   });
 
@@ -903,7 +904,7 @@ describe("status arms", () => {
     const c = collection();
     const client = makeClient();
     client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
-    const { result, notifications } = mount(client, () => useLive(c));
+    const { result } = mount(client, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => {
@@ -913,16 +914,17 @@ describe("status arms", () => {
     });
     expect(result.current.status).toBe("ready"); // growing, on the old rows
 
-    const fetch = vi
-      .spyOn(notifications, "fetchOverHttp")
-      .mockRejectedValue(new Error("grow failed"));
+    // The grown window's read fails the way a failed sub heals: the fetch runs
+    // directly on the query (`fetchAfterSubError`'s `prefetchQuery`) — a
+    // placeholder-less window query is disabled until its first value, so
+    // `refetchQueries` would skip it.
     await act(async () => {
-      await client.refetchQueries({
+      await client.prefetchQuery({
         queryKey: queryKeyFor(c.key, { limit: "4" }),
-        exact: true,
+        queryFn: () => Promise.reject(new Error("grow failed")),
+        staleTime: 0,
       });
     });
-    fetch.mockRestore();
 
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;

@@ -52,16 +52,10 @@ result is `{ pending: true, error: null }`. Public spellings: `useLive(value, nu
 `useLiveRow(c, null)` (network/live).
 
 **`initialData` is optional.** It was only ever a typed placeholder seeded at
-<<<<<<< .merge_file_E4EHMP
-`dataUpdatedAt: 0` (always `pending`). A descriptor without one (a `liveValue`, and a
-`liveCollection`'s window, `:rows` and `:groups`) seeds nothing and is still `pending`
+`dataUpdatedAt: 0` (always `loading`). A descriptor without one (a `liveValue`, and a
+`liveCollection`'s window, `:rows` and `:groups`) seeds nothing and is still `loading`
 until the first value; its query stays disabled until a value lands, so it makes no
 HTTP fetch on mount (the WS sub-ack fills it). The
-=======
-`dataUpdatedAt: 0` (always `loading`). A descriptor without one (a `liveValue`) seeds
-nothing and is still `loading` until the first value; its query stays disabled until a
-value lands, so it makes no HTTP fetch on mount (the WS sub-ack fills it). The
->>>>>>> .merge_file_KNVbIM
 exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
 mode): its value never rides the socket, so HTTP is its read path and it fetches on
 mount. `load` sits on the shared descriptor so server and client cannot disagree.
@@ -216,30 +210,19 @@ report's Connection row). It resets to 0 on any socket status change, so a dead
 server's stall never outlives its connection; listeners fire only when it moves.
 Pinned by `notifications-heartbeat.test.ts`.
 
-<<<<<<< .merge_file_E4EHMP
 **`sub-error` frames carry `params` and heal through the HTTP read.** The
-frame is `{ kind, id?, key, params, reason }`; `params` exists so the
-shared-socket broadcast is gated on the local sub entry exactly like every other
-frame (a params-less legacy frame won't match a live sub → safe drop). When the
-entry exists the client calls `fetchAfterSubError`: the HTTP fallback read runs
-on that query — `prefetchQuery`, which, unlike `invalidateQueries`, also reaches
-a query disabled for lack of a placeholder — and **its own outcome** sets
-`q.error` (a 500 loader-failed / 404 unknown-key surfaces as `ResourceHttpError`)
-or heals a transient failure — reusing the single existing error channel rather
-than touching queryClient internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
-=======
-**`sub-error` frames carry `params` and heal through `applyInvalidate`.** The
 frame is `SubErrorFrame` (`packages/resource-protocol`): `{ kind, id?, key,
 params, reason, verdict? }`; `params` exists so the shared-socket broadcast is
 gated on the local sub entry exactly like every other frame (a params-less
 legacy frame won't match a live sub → safe drop). When the entry exists the
-client calls `applyInvalidate(key, params)`: the HTTP fallback refetch runs and
-**its own outcome** sets `q.error` (the failed read's typed JSON body — 500
-`loader-failed`, 404 `unknown-key`, 409 `contract-mismatch` — surfaces as
-`ResourceHttpError` with `reason` / `verdict`) or heals a transient failure —
-reusing the single existing error channel rather than touching queryClient
-internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
->>>>>>> .merge_file_KNVbIM
+client records a contract refusal (`noteContractRefusal`) and calls
+`fetchAfterSubError`: the HTTP fallback read runs on that query —
+`prefetchQuery`, which, unlike `invalidateQueries`, also reaches a query
+disabled for lack of a placeholder — and **its own outcome** sets `q.error` (the
+failed read's typed JSON body — 500 `loader-failed`, 404 `unknown-key`, 409
+`contract-mismatch` — surfaces as `ResourceHttpError` with `reason` /
+`verdict`) or heals a transient failure — reusing the single existing error
+channel rather than touching queryClient internals. (Known hole, out of scope: `handleResourceHttp` runs no `authorize`
 check — moot today with zero `authorize` resources.)
 
 **A contract refusal is version skew, surfaced app-wide.** `contract-mismatch`
@@ -938,8 +921,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`
     - `apps/studio/compositions/release`
-<<<<<<< .merge_file_E4EHMP
-=======
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/compositions/release/release-info`
     - `apps/studio/compositions/release/release-logs`
@@ -947,7 +928,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `auth/apple-signing/setup-wizard`
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
->>>>>>> .merge_file_KNVbIM
     - `build`
     - `build/build-info`
     - `build/deployment`
@@ -984,6 +964,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/running-agents`
     - `conversations/conversation-view/tasks-panel`
+    - `conversations/conversation-view/track`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
@@ -1053,10 +1034,13 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-list`
+    - `tasks/task-track`
     - `tasks/tasks-core`
     - `tasks/worktree-identity`
     - `ui/theme-engine`
+    - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/saved-themes`
+    - `ui/theme-engine/theme-customizer`
     - `ui/theme-engine/theme-gallery`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
@@ -1064,6 +1048,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/font-family`
+    - `ui/tokens/icons`
     - `ui/tokens/scrollbar`
     - `ui/tokens/shadow`
     - `ui/tokens/shape`

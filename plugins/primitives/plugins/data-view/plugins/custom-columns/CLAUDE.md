@@ -82,13 +82,10 @@ how the caller obtained it.
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
     - `primitives/latest-ref.useLatestRef`
-<<<<<<< .merge_file_QkttTv
-    - `ui/icons.Icon`
-=======
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
->>>>>>> .merge_file_BCvPVp
+    - `ui/icons.Icon`
   - Exports (types):
     - `CustomColumnDefsController`
     - `CustomColumnValueIndex`

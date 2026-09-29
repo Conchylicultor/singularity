@@ -41,7 +41,7 @@ function ShortTitleItem({ conv }: { conv: Conversation }): ReactElement {
       title={resolveListTitle(
         "short",
         conv,
-        !short.pending && short.found ? short.row : null,
+        short.status === "ready" && short.found ? short.row : null,
       )}
     />
   );

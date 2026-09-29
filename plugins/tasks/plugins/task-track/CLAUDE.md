@@ -27,7 +27,7 @@ change. `setTaskTrack(id, "main")` deletes the row.
 
 One `liveCollection` (`task-tracks`), read two ways:
 
-- `useTaskTrack(taskId)` — point read, exact; `pending` until known (never a
+- `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
 - The task list's `track` field reads the preloaded bounded window of stored
   rows and grows it while full; see `shared/resources.ts` for the bound.
@@ -44,9 +44,14 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
   - Contributes: `Tasks.Fields` "track" → `TrackField`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `shell/notifications.toast`
     - `tasks/task-list.Tasks`

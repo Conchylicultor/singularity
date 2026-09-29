@@ -4,6 +4,7 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { DEFAULT_TASK_TRACK, TASK_TRACKS, TRACK_META } from "../../core";
 import { useStoredTracks } from "../hooks";
@@ -28,8 +29,15 @@ const TRACK_OPTIONS = TASK_TRACKS.map((track) => ({
 export function TrackField({ render }: FieldExtensionProps<TaskListItem>) {
   const stored = useStoredTracks();
   const fields = useMemo<FieldDef<TaskListItem>[]>(() => {
+    // A failed read keeps its last-known map; with none, the cell stays the
+    // loading block rather than claiming "main".
+    const tracks = foldResource(stored, {
+      loading: () => null,
+      error: (_error, stale) => stale ?? null,
+      ready: (map) => map,
+    });
     const trackOf = (t: TaskListItem) =>
-      stored.pending ? null : (stored.tracks.get(t.id) ?? DEFAULT_TASK_TRACK);
+      tracks === null ? null : (tracks.get(t.id) ?? DEFAULT_TASK_TRACK);
     return [
       {
         id: "track",

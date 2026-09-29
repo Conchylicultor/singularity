@@ -20,6 +20,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/inline-text.InlineTextWalkerContext`
       - `primitives/inline-text.InlineTextWalkerSlot`
       - `primitives/inline-text.useInlineTextWalker`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceResult`
       - `primitives/markdown.InlineCode`
       - `primitives/markdown.MarkdownEnhancement`
       - `primitives/markdown.MarkdownEnhancementContext`
@@ -176,6 +178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree.useOpenBlockTarget`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
@@ -258,6 +261,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/launch.LaunchControl`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
@@ -341,6 +346,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/launch.LaunchControl`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -369,7 +376,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.matchResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
             - Exports (types): `BookmarkRow`
             - Exports (values):
               - `BookmarkRowSchema`
@@ -562,6 +571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
               - `ui/icons.Icon`
@@ -1437,6 +1447,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
               - Server:
@@ -1508,6 +1519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
         - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
@@ -1592,11 +1604,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.ResolveResult`
+              - `primitives/pane.resolveRow`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
@@ -1774,13 +1789,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers.Servers`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveRowResult`
+              - `network/live.mapRow`
               - `network/live.useLive`
               - `network/live.useLiveRow`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
@@ -1790,7 +1808,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `ServerHealthRow`
               - `ServerStatus`
-              - `ServerVerification`
               - `SshCheckResult`
             - Exports (values):
               - `checkServerSsh`
@@ -1866,6 +1883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
         - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
           - Web:
@@ -1894,7 +1912,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/log-channels.LiveLogChannel`
@@ -1954,10 +1975,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.resolveFrom`
+              - `primitives/pane.ResolveResult`
               - `primitives/pane.useOpenPane`
             - Exports (types):
               - `Server`
@@ -2070,6 +2094,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/setup-steps.Step`
@@ -2212,7 +2238,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useEndpointResource`
               - `primitives/live-state.useResource`
             - Exports (values):
               - `EventSources`
@@ -2508,6 +2536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.ResolveResult`
               - `primitives/pane.useOpenPane`
               - `ui/icons.Icon`
             - Exports (types):
@@ -2689,10 +2718,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/data-view.defineItemActions`
                       - `primitives/data-view.FieldDef`
                       - `primitives/detail-sections.defineDetailSections`
+                      - `primitives/live-state.foldResource`
                       - `primitives/loading.Loading`
                       - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
+                      - `primitives/pane.ResolveResult`
                       - `primitives/pane.useOpenPane`
                       - `primitives/relative-time.RelativeTime`
                       - `ui/icons.Icon`
@@ -2728,13 +2759,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                           - `apps/events/events-core.useEventSourceRun`
                           - `apps/events/events-core.useRunEvents`
                           - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
-                          - `infra/endpoints.getEndpointErrorMessage`
                           - `primitives/css/badge.Badge`
                           - `primitives/css/badge.BadgeVariant`
-                          - `primitives/css/placeholder.Placeholder`
                           - `primitives/data-view.DataView`
                           - `primitives/data-view.defineDataView`
                           - `primitives/data-view.FieldDef`
+                          - `primitives/live-state.foldResource`
                     - **`model-call`** — Model call section of the Events run pane: the prompt and output behind one run, reached through claude-cli's generic correlation API. Renders all three arms — the calls, 'never called' (the right answer for a cheap unchanged run), and 'the log no longer retains it'.
                       - Web:
                         - Contributes: `EventSourceRunDetail.Section` "Model call" → `ModelCallSection`
@@ -3108,6 +3138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -3205,6 +3236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -3295,6 +3327,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
               - `ui/icons.Icon`
         - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
           - Web:
@@ -3310,6 +3345,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/pane.defineRoute`
@@ -3373,6 +3409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/pages/page-tree.PageTree`
               - `network/live.useLive`
+              - `primitives/live-state.foldResource`
             - Exports (types): `AgentPageRow`
             - Exports (values): `AgentPageRowSchema`
           - Server:
@@ -3460,6 +3497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
           - Server:
             - Contributes:
@@ -3495,6 +3533,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
         - **`page-outline`** — The open page's headings as an outline rail pinned to the right edge of the pane: one dash per heading, the current section highlighted, hover to expand into a click-to-jump outline. Headings are identified generically from each block type's declared `semantics`, so it names no block type.
@@ -3506,6 +3545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.blockContentScope`
               - `page/editor.blockRowIn`
               - `page/editor.Editor`
+              - `primitives/live-state.foldResource`
               - `primitives/outline/rail.OutlineRail`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.
           - Web:
@@ -3572,12 +3612,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
               - `primitives/icon-picker.IconPicker`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.PaneIconAction`
+              - `primitives/pane.resolveFrom`
+              - `primitives/pane.ResolveResult`
               - `primitives/pane.useCurrentPane`
               - `primitives/pane.useOpenPane`
               - `primitives/pane.usePaneStore`
@@ -3666,6 +3710,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
             - Exports (types): `StarredPageRow`
             - Exports (values): `StarredPageRowSchema`
           - Server:
@@ -3710,6 +3758,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination.InfiniteScrollFooter`
               - `primitives/cursor-pagination.useInfiniteScroll`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
@@ -3759,6 +3808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
@@ -3834,6 +3884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/optimistic-mutation.OptimisticSettled`
@@ -4143,6 +4194,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.useCombinedResources`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -4521,13 +4573,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Hint`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.resolveFrom`
+              - `primitives/pane.ResolveResult`
               - `primitives/pane.type`
               - `primitives/pane.useOpenPane`
               - `primitives/pane.usePaneStore`
@@ -4660,6 +4717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/virtual-rows.useVirtualRows`
           - Server:
@@ -4743,6 +4801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/log-channels.clientLog`
               - `primitives/slot-render.renderIsolated`
@@ -4868,6 +4927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
+              - `primitives/live-state.foldResource`
               - `primitives/relative-time.formatRelativeTime`
             - Exports (values): `usePlaybackHistoryMap`
           - Server:
@@ -5106,6 +5166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/shell.chordModeSetting`
                   - `apps/sonata/shell.Sonata`
+                  - `apps/sonata/shell.useFailSongSetting`
                   - `apps/sonata/shell.useHasDerivedChord`
                   - `apps/sonata/shell.useMountedSongId`
                   - `apps/sonata/shell.useSonata`
@@ -5115,6 +5176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
                   - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                 - Exports (values): `useSaveChordMode`
               - Server:
@@ -5190,6 +5252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/shell.keyAutoDetectSetting`
                   - `apps/sonata/shell.Sonata`
+                  - `apps/sonata/shell.useFailSongSetting`
                   - `apps/sonata/shell.useMountedSongId`
                   - `apps/sonata/shell.useWriteSongSetting`
                   - `infra/endpoints.fetchEndpoint`
@@ -5227,6 +5290,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
             - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline as a per-song setting (Sonata.SongSetting) settled by a headless observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
               - Web:
@@ -5240,6 +5304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.grooveSetting`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorApi`
+                  - `apps/sonata/shell.useFailSongSetting`
                   - `apps/sonata/shell.useHasVoicedChords`
                   - `apps/sonata/shell.useMountedSongId`
                   - `apps/sonata/shell.useSonata`
@@ -5258,6 +5323,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.SelectTrigger`
                   - `primitives/css/ui-kit.SelectValue`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.GateInput`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/loading.Loading`
                 - Exports (types): `RhythmGroove`
                 - Exports (values): `useSaveRhythm`
@@ -5400,6 +5470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SonataContextValue`
               - `SonataSection`
               - `SongSetting`
+              - `SongSettingFailure`
               - `SongSettingKey`
               - `TransportClock`
             - Exports (values):
@@ -5418,6 +5489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useCursorApi`
               - `useCursorBeat`
               - `useCursorSelector`
+              - `useFailSongSetting`
               - `useHasChords`
               - `useHasDerivedChord`
               - `useHasVoicedChords`
@@ -5484,6 +5556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/scroll-reveal.revealElement`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
@@ -5537,6 +5610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.foldResource`
                   - `ui/icons.Icon`
                 - Exports (values):
                   - `MIDI_SOURCE_ID`
@@ -5727,6 +5801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.defineSongSetting`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.SongSetting`
+              - `apps/sonata/shell.useFailSongSetting`
               - `apps/sonata/shell.useMountedSongId`
               - `apps/sonata/shell.useSonata`
               - `apps/sonata/shell.useSongSetting`
@@ -5748,6 +5823,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/optimistic-mutation.enqueueResourceWrite`
               - `primitives/overlay/floating-action.FloatingAction`
@@ -5824,6 +5901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/toolbar-control.ToolbarControl`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.transposeSetting`
+              - `apps/sonata/shell.useFailSongSetting`
               - `apps/sonata/shell.useMountedSongId`
               - `apps/sonata/shell.useSonata`
               - `apps/sonata/shell.useSongSetting`
@@ -5834,6 +5912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
             - Exports (values): `saveTranspose`
@@ -5951,6 +6030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.ResolveResult`
               - `primitives/pane.useOpenPane`
               - `ui/icons.Icon`
             - Exports (values):
@@ -6113,6 +6193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                       - `ui/icons.Icon`
                 - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
@@ -6125,6 +6206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/status-dot.StatusDot`
                       - `primitives/css/text.Text`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                       - `primitives/relative-time.RelativeTime`
                 - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
@@ -6143,6 +6225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.textVariantClass`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/log-channels.LiveLogChannel`
                       - `shell/notifications.toast`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
@@ -7371,6 +7454,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.DialogDescription`
       - `primitives/css/ui-kit.DialogTitle`
       - `primitives/css/ui-kit.Input`
+      - `primitives/live-state.foldResource`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceErrorInline`
+      - `primitives/live-state.ResourceResult`
       - `primitives/loading.Loading`
       - `primitives/overlay/imperative-dialog.openDialog`
       - `primitives/pane.defineRoute`
@@ -7556,6 +7643,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
@@ -7605,6 +7695,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -7639,6 +7731,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -7706,6 +7800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
+      - `primitives/pane.ResolveResult`
       - `runs.RunsDataView`
       - `runs.useRun`
       - `ui/icons.Icon`
@@ -8008,7 +8103,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.ControlSizeProvider`
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/icon-button.IconButton`
+      - `primitives/live-state.foldResource`
+      - `primitives/live-state.ResourceErrorInline`
       - `primitives/live-state.useNotificationsChannelStatuses`
+      - `primitives/live-state.useResourceContractMismatches`
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
       - `primitives/log-channels.LiveLogChannel`
@@ -8155,6 +8253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
@@ -8306,6 +8405,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `ui/icons.Icon`
         - Exports (types): `DeploymentReading`
@@ -8408,6 +8510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/live-state.foldResource`
           - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
@@ -8447,7 +8550,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions`
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
-    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call. A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
         - Exports (values):
@@ -8598,6 +8701,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
+      - `primitives/live-state.combineResources`
+      - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
     - Exports (types): `ConfigRegistration`
     - Exports (values):
@@ -8999,7 +9104,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.HierarchyConfig`
           - `primitives/diff-view.TextDiff`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useCombinedResources`
+          - `primitives/live-state.useEndpointResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -9073,10 +9182,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `network/live.useLive`
+      - `primitives/live-state.combineResources`
+      - `primitives/live-state.foldResource`
+      - `primitives/live-state.mapResource`
       - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useCombinedResources`
       - `primitives/live-state.useResource`
-    - Exports (types): `ConversationsState`
     - Exports (values):
       - `GonePageSchema`
       - `useActiveConversations`
@@ -9085,6 +9196,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `useConversations`
       - `useHasActiveSiblingInWorktree`
       - `useHasActiveSiblings`
+      - `useLiveConversation`
   - Server:
     - Contributes:
       - `ConfigV2.Register` "auto-answer"
@@ -9386,6 +9498,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.defineItemActions`
           - `primitives/editable-field.useEditableField`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
@@ -9395,6 +9509,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.PaneIconAction`
+          - `primitives/pane.resolveFrom`
+          - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
@@ -9601,6 +9717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/avatar.Avatar`
           - `primitives/css/status-dot.statusDotPaintClass`
           - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceResult`
         - Exports (types):
           - `Category`
@@ -9685,6 +9802,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `useConversationPreprompt`
@@ -9733,6 +9851,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/inline.Inline`
+          - `primitives/live-state.ResourceErrorInline`
           - `ui/segmented-progress-bar.SegmentedProgressBar`
       - Server:
         - Contributes:
@@ -9881,6 +10000,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/slot-render.defineRenderSlot`
@@ -9991,6 +10111,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
           - Server:
@@ -10021,6 +10142,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
               - `primitives/slot-render.defineRenderSlot`
@@ -10198,6 +10322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+                  - `primitives/live-state.foldResource`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
@@ -10291,6 +10416,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Separator`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -10335,13 +10461,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ButtonGroup`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/search.SearchInput`
               - `primitives/search.useTextFilter`
               - `shell/notifications.toast`
-              - `tasks.useTask`
               - `ui/icons.Icon`
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
@@ -10349,17 +10476,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-ui/item.Item`
               - `primitives/css/badge.Badge`
+              - `primitives/live-state.ResourceErrorInline`
               - `tasks.useActiveDependentCount`
         - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
             - Uses:
-              - `conversations.useConversation`
               - `conversations.useHasActiveSiblings`
+              - `conversations.useLiveConversation`
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
               - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.useCombinedResources`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
@@ -10383,7 +10512,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ExitMenu.Item` "drop-dependents" → `DropDependentsItem`
             - Uses:
-              - `conversations.useConversation`
+              - `conversations.useLiveConversation`
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
@@ -10405,7 +10534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ExitMenu.Item` "exit" → `ExitItem`
             - Uses:
-              - `conversations.useConversation`
+              - `conversations.useLiveConversation`
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
@@ -10474,7 +10603,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
             - Uses:
-              - `conversations.useConversation`
+              - `conversations.useLiveConversation`
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
@@ -11002,6 +11131,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/action-bar.Conversation`
                   - `network/live.useLive`
                   - `primitives/css/text.Text`
+                  - `primitives/live-state.ResourceErrorInline`
             - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
               - Web:
                 - Uses:
@@ -11162,6 +11292,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.ResourceView`
                   - `primitives/loading.Loading`
@@ -11323,6 +11455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/live-state.foldResource`
                       - `primitives/live-state.useResource`
                       - `primitives/pane.useOpenPane`
                       - `tasks/task-detail.taskDetailPane`
@@ -11354,6 +11487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/icon-button.IconButton`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/markdown.Markdown`
                       - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
@@ -11408,6 +11542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/ui-kit.DropdownMenuItem`
                       - `primitives/css/ui-kit.DropdownMenuTrigger`
                       - `primitives/css/ui-kit.Input`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/persistent-draft.useDraft`
                       - `primitives/persistent-draft.writeDraft`
                       - `shell/notifications.toast`
@@ -11474,6 +11609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Inset`
                       - `primitives/css/text.Text`
+                      - `primitives/live-state.foldResource`
                       - `primitives/live-state.useResource`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
@@ -11612,6 +11748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/yield.yieldClass`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
                       - `primitives/pane.defineRoute`
@@ -11792,11 +11929,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-view.Conversation`
               - `infra/endpoints.fetchEndpoint`
+              - `network/live.LiveRowResult`
               - `network/live.useLiveRow`
               - `primitives/css/pin.Pin`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
           - Server:
             - Contributes: `resource.declare` "conversation-notes:rows"
             - Uses:
@@ -11837,6 +11976,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/relative-time.formatElapsed`
@@ -11906,7 +12049,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Conversation.PromptInput` → `PromptInput`
             - Uses:
-              - `conversations.useConversation`
+              - `conversations.useLiveConversation`
               - `conversations/conversation-view.Conversation`
               - `conversations/conversation-view.isDraftEmpty`
               - `conversations/conversation-view.usePromptInsert`
@@ -11932,7 +12075,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `config_v2/config-link.ConfigGearButton`
-              - `conversations.useConversation`
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
@@ -11964,7 +12106,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
-              - `conversations.useConversation`
               - `conversations.useConversationById`
               - `conversations.useHasActiveSiblingInWorktree`
               - `conversations/conversation-view.conversationPane`
@@ -12037,7 +12178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Web:
             - Uses:
-              - `conversations.useConversation`
+              - `conversations.useLiveConversation`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/icon-button.IconButton`
@@ -12115,6 +12256,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
@@ -12136,6 +12278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.foldResource`
               - `tasks.useActiveDependentCount`
               - `tasks.useTask`
               - `tasks/task-detail.taskDetailPane`
@@ -12168,6 +12311,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.HeaderChip`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `tasks/task-track.useTaskTrack`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
@@ -12186,6 +12330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
               - `ui/icons.Icon`
           - Server:
             - Contributes:
@@ -12334,6 +12479,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.ResourceReadiness`
                   - `primitives/live-state.useResource`
                   - `primitives/optimistic-mutation.useOptimisticResource`
         - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
@@ -12715,6 +12862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
@@ -13652,6 +13800,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-table.DataTable`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.useEndpointResource`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
@@ -13800,7 +13950,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -13810,6 +13959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/filter-chips.FilterChip`
           - `primitives/filter-chips.FilterGroup`
           - `primitives/filter-chips.useChipFilter`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
@@ -13839,6 +13989,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.useEndpointResource`
           - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
@@ -14646,7 +14798,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
@@ -14661,6 +14812,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/filter-chips.FilterChip`
           - `primitives/filter-chips.useChipFilter`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
@@ -14696,6 +14848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/loading.Loading`
           - `reports.Reports`
@@ -14944,11 +15097,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/launch.LaunchAgentPopover`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
@@ -14979,6 +15134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.useNow`
           - `reports.Reports`
@@ -16761,6 +16917,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
           - Server:
@@ -17467,6 +17624,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `packages/canonical-params.canonicalParams`
           - `packages/inflight.createInflight`
+          - `packages/resource-protocol.BUILD_GRAPH_HEADER`
+          - `packages/resource-protocol.contractVerdict`
+          - `packages/resource-protocol.ContractVerdict`
+          - `packages/resource-protocol.ResourceContractError`
+          - `packages/resource-protocol.ResourceHttpErrorBody`
+          - `packages/resource-protocol.SubErrorFrame`
           - `packages/semaphore.createSemaphore`
         - Exports (types):
           - `DefineResourceInput`
@@ -17573,6 +17736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `scopedResourceIdentities`
           - `seedPersistedSnapshot`
           - `serverCollectedDir`
+          - `setClientBuildIdentity`
           - `setErrorReporter`
           - `setFatalReporter`
           - `setFeedExemptTables`
@@ -18414,7 +18578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.latency-ledger`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.claude-cli.availability`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.resource-errors`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.icons.sprites`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `ui.tokens.icons`
           - `Core.Boot` ← `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
@@ -18779,6 +18943,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
               - `primitives/setup-steps.StepNote`
@@ -18903,7 +19069,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/caveats`
-          - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -20962,6 +21127,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
           - `primitives/css/ui-kit.Button`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceError`
+          - `primitives/live-state.ResourceErrorInline`
         - Exports (types):
           - `GmailAccess`
           - `GmailAccessBlocker`
@@ -20996,6 +21164,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth.useAuthState`
           - `auth/google-maps/setup-wizard.googleMapsSetupPane`
           - `primitives/css/ui-kit.Button`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceError`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/pane.openPane`
         - Exports (types):
           - `MapsAccess`
@@ -21220,10 +21391,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: pending, found, or determinately absent). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set) and useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
           - `primitives/live-state.ResourceDescriptor`
+          - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
         - Exports (types):
@@ -21232,6 +21404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LivePaging`
           - `LiveRowResult`
         - Exports (values):
+          - `mapRow`
           - `useLive`
           - `useLiveRow`
       - Server:
@@ -21272,6 +21445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live/filter.Filterable`
           - `network/live/filter.FilterScalar`
           - `network/live/filter.LIST_MAX`
+          - `packages/resource-protocol.ResourceContractError`
           - `primitives/live-state.PointParams`
           - `primitives/live-state.registerResourceDescriptor`
           - `primitives/live-state.ResourceDescriptor`
@@ -21428,6 +21602,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/attempt-work`
           - `tasks/auto-start`
+          - `tasks/auto-start/launch-option`
           - `tasks/task-description`
           - `tasks/task-effort`
           - `tasks/task-events`
@@ -21567,6 +21742,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
+    - **`resource-protocol`** — The live-resource wire protocol's failure vocabulary, shared by the resource runtime (server, central) and the live-state client: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the sub-error frame and HTTP error body, the client build-graph header, and ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/resource-runtime`
+          - `network/live`
+      - Core:
+        - Exports (types):
+          - `ContractVerdict`
+          - `ResourceHttpErrorBody`
+          - `SubErrorFrame`
+          - `SubErrorReason`
+        - Exports (values):
+          - `BUILD_GRAPH_HEADER`
+          - `contractVerdict`
+          - `DEV_BUILD`
+          - `parseResourceHttpErrorBody`
+          - `ResourceContractError`
     - **`retry`**
       - Core:
         - Exports (types): `DelayStrategy`
@@ -21719,6 +21911,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
+              - `primitives/live-state.foldResource`
             - Exports (values): `agentNotesBlock`
           - Server:
             - Contributes: `page.block-data` "agent-note"
@@ -21743,6 +21936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
             - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
               - Server:
@@ -21766,6 +21960,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `network/live.useLive`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/relative-time.RelativeTime`
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
@@ -21859,6 +22055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
                   - `primitives/css/badge.Badge`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
@@ -21898,6 +22095,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
               - `primitives/css/row.Row`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `ui/icons.Icon`
             - Exports (values): `todoBlock`
           - Server:
@@ -21949,6 +22148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-ui/row.ConversationRow`
                   - `infra/endpoints.fetchEndpoint`
                   - `network/live.LiveRowResult`
+                  - `network/live.mapRow`
                   - `network/live.useLiveRow`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
@@ -21956,7 +22156,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/launch.LaunchAgentForm`
+                  - `primitives/live-state.combineResources`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
                   - `tasks/task-status.StatusBadge`
                   - `tasks/tasks-core.useTaskConversations`
                 - Exports (types):
@@ -22285,6 +22490,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/announce.announce`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
@@ -22322,6 +22528,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.liveStateSocketKind`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/multi-select.MultiSelectProvider`
@@ -23145,6 +23354,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
@@ -23202,6 +23414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
+          - `primitives/live-state.ResourceErrorInline`
         - Exports (types): `BacklinksProps`
         - Exports (values): `Backlinks`
       - Core:
@@ -23412,6 +23625,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.ResourceError`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
@@ -23593,6 +23810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/launch.LaunchControl`
+              - `primitives/live-state.ResourceErrorInline`
               - `tasks/tasks-core.useTaskConversations`
               - `ui/icons.Icon`
             - Exports (values): `promptBlock`
@@ -23937,6 +24155,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
           - `infra/endpoints.useEndpoint`
+          - `primitives/live-state.ResourceError`
+          - `primitives/live-state.useEndpointResource`
         - Exports (types):
           - `AppExclusions`
           - `CompositionDataResult`
@@ -24489,6 +24709,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-view.PluginViewSlots`
           - `plugin-meta/plugin-view.SectionCount`
           - `primitives/css/scroll.Scroll`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceView`
           - `primitives/relative-time.RelativeTime`
       - Server:
@@ -25480,6 +25703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/optimistic-divergence`
               - `reports/page-undo-conflict`
               - `reports/render-loop`
+              - `reports/resource-errors`
               - `reports/theme-resolution`
               - `reports/viewport-escape`
               - `review/code-review`
@@ -25637,6 +25861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
+              - `primitives/live-state`
               - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/setup-steps`
@@ -26226,6 +26451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/table`
               - `primitives/data-view/tree`
               - `primitives/detail-sections`
+              - `primitives/live-state`
               - `primitives/overlay/tooltip`
               - `primitives/text-editor/inline-chip`
               - `reorder/editor`
@@ -26236,6 +26462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/optimistic-divergence`
               - `reports/page-undo-conflict`
               - `reports/render-loop`
+              - `reports/resource-errors`
               - `reports/theme-resolution`
               - `reports/turn-unconfirmed`
               - `reports/viewport-escape`
@@ -26571,7 +26798,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
-              - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -26600,13 +26826,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/commits-graph`
               - `conversations/recover`
               - `debug/boot-profile`
-              - `debug/claude-cli-calls`
               - `debug/health-monitor`
               - `debug/heap-snapshot`
               - `debug/live-state-churn/emit`
               - `debug/profiling/build`
               - `debug/profiling/ops`
-              - `debug/queue`
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/slow-ops/cluster`
@@ -26637,7 +26861,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `review/code-review`
               - `search/quick-find`
-              - `shell/notifications`
               - `stats/commits`
         - **`radio-group`** — Native radio-group control: <RadioGroup options value onChange> mints its own HTML `name` per mount (useId) so two groups on one page are structurally two groups, plus the no-adhoc-radio lint rule keeping raw <input type="radio"> out of feature code.
           - Web:
@@ -27274,6 +27497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
               - `primitives/launch`
+              - `primitives/live-state`
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
@@ -28351,6 +28575,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button`
               - `primitives/icon-picker`
               - `primitives/launch`
+              - `primitives/live-state`
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
@@ -28655,6 +28880,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/row-actions.RowActions`
@@ -28997,6 +29223,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useResolveValueCodec`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
               - `ui/icons.Icon`
             - Exports (types):
               - `CustomColumnDefsController`
@@ -29339,6 +29568,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceError`
               - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/sortable-list.SortableItem`
               - `primitives/sortable-list.SortableList`
@@ -29384,6 +29615,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `network/live.useLive`
               - `primitives/data-view.DataViewSlots`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
             - Exports (types): `RowOrderState`
             - Exports (values):
               - `useRowOrder`
@@ -30039,6 +30273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
+          - `primitives/live-state`
           - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
@@ -30304,7 +30539,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `infra/endpoints.endpointQueryKey`
+          - `infra/endpoints.useEndpoint`
+          - `primitives/css/center.Center`
+          - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
           - `primitives/log-channels.clientLog`
@@ -30319,6 +30562,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CombinedResources`
           - `DebugSnapshot`
           - `DebugSub`
+          - `FailingResource`
+          - `FoldResourceHandlers`
           - `GateDataOf`
           - `GateInput`
           - `HttpStaleDropReport`
@@ -30329,10 +30574,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PendingMountSnapshot`
           - `PointParams`
           - `PointResourceDescriptor`
+          - `ResourceContractMismatch`
           - `ResourceDescriptor`
+          - `ResourceErrorInfo`
+          - `ResourceErrorInlineProps`
+          - `ResourceErrorKind`
           - `ResourceKey`
           - `ResourceOrigin`
+          - `ResourceReadiness`
           - `ResourceResult`
+          - `ResourceStatus`
           - `ResourceViewProps`
           - `SlowResourceInfo`
           - `UpdateDelayInfo`
@@ -30342,6 +30593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `combineResources`
           - `ensureNotificationsClient`
+          - `foldResource`
           - `getNotificationsClient`
           - `getResourceWatermark`
           - `hasResourceTxAck`
@@ -30356,6 +30608,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pendingMountSnapshot`
           - `queryKeyFor`
           - `resourceDescriptorByKey`
+          - `ResourceError`
+          - `ResourceErrorInline`
+          - `resourceErrorReportSink`
           - `ResourceStaleReadError`
           - `ResourceView`
           - `slowResourceReportSink`
@@ -30363,44 +30618,82 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `subscribeResourceTxAcks`
           - `updateDelayReportSink`
           - `useCombinedResources`
+          - `useEndpointResource`
+          - `useFailingResources`
           - `useNotificationsChannelStatuses`
           - `useNotificationsClient`
           - `useNotificationsStatus`
           - `useResource`
           - `useResourceAcks`
+          - `useResourceContractMismatches`
       - Cross-plugin:
         - Imported by:
+          - `active-data`
           - `active-data/attempt`
           - `active-data/page-link`
           - `active-data/prototype`
           - `active-data/task`
           - `active-data/task-link`
+          - `apps/agent-manager/welcome`
           - `apps/browser/bookmarks`
           - `apps/browser/start-page`
           - `apps/chord/song-index`
           - `apps/chord/trainer`
+          - `apps/deploy/analytics/dashboard`
+          - `apps/deploy/composition`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
+          - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
+          - `apps/deploy/ssh-setup`
           - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/events/sources/source-field`
           - `apps/mail/mail-core`
+          - `apps/mail/reading-pane`
+          - `apps/mail/shell`
+          - `apps/mail/sync-status`
           - `apps/mail/threads`
+          - `apps/pages/agent-origin`
+          - `apps/pages/history`
           - `apps/pages/page-author`
+          - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
+          - `apps/pages/starred`
+          - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/canvas`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/library`
+          - `apps/sonata/notation`
+          - `apps/sonata/piano-roll`
+          - `apps/sonata/playback-history`
+          - `apps/sonata/rich/chord-mode`
+          - `apps/sonata/rich/key-readout`
+          - `apps/sonata/rich/rhythm-controls`
+          - `apps/sonata/songsheet`
+          - `apps/sonata/sources/midi`
+          - `apps/sonata/track-mixer`
+          - `apps/sonata/transpose`
           - `apps/studio/compositions/release`
+          - `apps/studio/compositions/release/release-artifact`
+          - `apps/studio/compositions/release/release-info`
+          - `apps/studio/compositions/release/release-logs`
+          - `auth`
+          - `auth/apple-signing/setup-wizard`
+          - `auth/google-maps/setup-wizard`
+          - `auth/google/setup-wizard`
           - `build`
+          - `build/build-info`
           - `build/deployment`
+          - `build/serve-composition`
           - `code-explorer/code-api`
           - `config_v2`
           - `config_v2/settings`
@@ -30408,62 +30701,123 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/agents`
           - `conversations/all-conversations`
           - `conversations/conversation-category`
+          - `conversations/conversation-preprompt`
+          - `conversations/conversation-progress`
           - `conversations/conversation-view`
+          - `conversations/conversation-view/allow-monitor`
+          - `conversations/conversation-view/artifacts`
           - `conversations/conversation-view/artifacts/prototype`
           - `conversations/conversation-view/code`
+          - `conversations/conversation-view/code/file-pane`
+          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
+          - `conversations/conversation-view/dependent-count`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/notes`
           - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-and-exit`
+          - `conversations/conversation-view/running-agents`
+          - `conversations/conversation-view/tasks-panel`
+          - `conversations/conversation-view/track`
+          - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/effort-provider`
           - `conversations/model-provider`
           - `conversations/recover`
           - `conversations/summary`
+          - `debug/boot-profile`
+          - `debug/claude-cli-calls`
+          - `debug/config-orphans`
           - `debug/latency-ledger`
           - `debug/live-state-health`
           - `debug/queue`
           - `debug/queue-health`
           - `debug/reports`
+          - `debug/sentinel`
           - `debug/slow-ops`
+          - `fields/secret/config`
           - `framework/web-core`
           - `infra/boot-snapshot`
+          - `infra/claude-cli/availability`
           - `infra/health`
           - `infra/query-resource`
+          - `integrations/gmail`
+          - `integrations/google-maps`
           - `network/live`
+          - `page/annotations/agent-notes`
+          - `page/annotations/agent-notes/agent-page`
+          - `page/annotations/agent-notes/authorship`
           - `page/annotations/instructions/instructions-page`
+          - `page/annotations/todo`
           - `page/annotations/todo/task-link`
           - `page/editor`
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
+          - `page/prompt/block`
+          - `plugin-meta/composition`
           - `plugin-meta/plugin-health`
+          - `primitives/data-view`
+          - `primitives/data-view/custom-columns`
+          - `primitives/data-view/view-core`
+          - `primitives/data-view/view-order`
           - `primitives/optimistic-mutation`
+          - `primitives/pane`
           - `release`
           - `reports`
           - `reports/live-state-stale-drop`
+          - `reports/resource-errors`
+          - `review`
           - `review/code-review`
+          - `review/plugin-changes`
           - `runs`
+          - `shell/notifications`
           - `stats/responsiveness`
           - `tasks`
           - `tasks/attempt-view`
           - `tasks/attempt-work`
+          - `tasks/auto-start`
           - `tasks/task-category`
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
           - `tasks/task-detail`
           - `tasks/task-draft-form`
+          - `tasks/task-events`
           - `tasks/task-graph`
+          - `tasks/task-header`
           - `tasks/task-list`
+          - `tasks/task-track`
           - `tasks/tasks-core`
           - `tasks/worktree-identity`
+          - `ui/theme-engine`
+          - `ui/theme-engine/quick-theme`
           - `ui/theme-engine/saved-themes`
+          - `ui/theme-engine/theme-customizer`
+          - `ui/theme-engine/theme-gallery`
+          - `ui/tokens/categorical`
+          - `ui/tokens/chart`
+          - `ui/tokens/color-adjust`
+          - `ui/tokens/color-palette`
+          - `ui/tokens/density`
+          - `ui/tokens/font-family`
+          - `ui/tokens/icons`
+          - `ui/tokens/scrollbar`
+          - `ui/tokens/shadow`
+          - `ui/tokens/shape`
+          - `ui/tokens/sidebar-metrics`
+          - `ui/tokens/sidebar-palette`
+          - `ui/tokens/type-scale`
+          - `ui/tweakcn/community-browser`
       - Core:
         - Exports (types):
           - `PointParams`
@@ -30471,8 +30825,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Resolvable`
           - `ResourceDescriptor`
           - `ResourceDescriptorOptions`
+          - `ResourceErrorKind`
           - `ResourceOrigin`
           - `ResourcePreload`
+          - `ResourceReadiness`
+          - `ResourceStatus`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -30484,13 +30841,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolved`
           - `resourceDescriptor`
           - `resourceDescriptorByKey`
+          - `ResourceError`
           - `tolerantEnum`
           - `unresolved`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/live-state/web/testing`
+          - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
           - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
           - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
           - `NotificationsClient`
+          - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:
@@ -30603,6 +30963,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/route-fallback`
           - `page/annotations/agent-notes/agent-page`
           - `page/annotations/instructions/instructions-page`
+          - `page/annotations/todo/task-link`
           - `page/bookmark`
           - `page/editor`
           - `page/inline-page-link`
@@ -31408,6 +31769,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/scope/install-sink.defineInstallSink`
@@ -31447,6 +31811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ParsedRoute`
           - `PromoteAction`
           - `ResolveHook`
+          - `ResolveResult`
           - `RouteState`
           - `SerializedSlot`
           - `SurfaceChrome`
@@ -31479,6 +31844,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `peekBasePath`
           - `peekRoute`
           - `reorderRoute`
+          - `resolveFrom`
+          - `resolveRow`
           - `restoreRoute`
           - `setBasePath`
           - `setHistoryAdapter`
@@ -33320,7 +33687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.check-thread-stall`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.check-thread-stall`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.resource-errors`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -33475,6 +33842,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/page-undo-conflict`
       - `reports/plugin-load-errors`
       - `reports/render-loop`
+      - `reports/resource-errors`
       - `reports/theme-resolution`
       - `reports/turn-unconfirmed`
       - `reports/viewport-escape`
@@ -33727,6 +34095,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RENDER_LOOP`
           - `renderLoopFingerprint`
           - `RenderLoopPayloadSchema`
+    - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the failures a developer must fix (loader-failed, not-found — never client-outdated or transport), the Debug → Reports summary view, and the health report's Live reads row (attention with 'N resources failing' while any read on the page is in error). Resource-error report kind: validates a failing live read's payload (key, params, the typed failure kind — loader-failed or not-found — and its message), fingerprints by key + kind (one failing resource = one row, whatever params or message), and renders an investigation task. Re-arms every 6h, since a standing failure re-fails on every retry.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ResourceErrorCollector`
+          - `Reports.KindView` → `ResourceErrorKindView`
+          - `HealthReport.Row` "Live reads"
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/live-state.resourceErrorReportSink`
+          - `primitives/live-state.useFailingResources`
+          - `reports.report`
+          - `reports.Reports`
+          - `shell/health-report.HealthReport`
+      - Server:
+        - Contributes: `report-kind` "resource-error"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `ResourceErrorPayload`
+        - Exports (values):
+          - `RESOURCE_ERROR_KIND`
+          - `resourceErrorFingerprint`
+          - `ResourceErrorPayloadSchema`
     - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme carries values the token groups no longer declare), plus the Debug → Reports summary view. Theme-resolution report kind: validates the theme painter's fault payloads (a scope selecting a theme that does not exist, so it paints Default; a stored theme carrying values for an unregistered token group or unknown tokens, which are skipped), fingerprints each by what it is about, and renders a task naming the stored data to fix.
       - Web:
         - Contributes:
@@ -33794,10 +34185,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/action-bar.Conversation`
       - `network/live.useLive`
       - `primitives/css/scroll.Scroll`
+      - `primitives/css/spacing.Inset`
       - `primitives/css/spacing.Stack`
       - `primitives/css/toggle-chip.ToggleChip`
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
+      - `primitives/live-state.ResourceErrorInline`
       - `primitives/loading.Loading`
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
@@ -33845,6 +34238,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
+          - `primitives/live-state.combineResources`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
           - `review.ReviewSlots`
@@ -33875,6 +34269,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `review.ReviewSlots`
@@ -34292,7 +34688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
-        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.claude-cli.availability`, `infra.health`, `tasks.worktree-identity`
+        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.claude-cli.availability`, `infra.health`, `reports.resource-errors`, `tasks.worktree-identity`
         - Uses:
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -34333,6 +34729,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/sentinel`
           - `infra/claude-cli/availability`
           - `infra/health`
+          - `reports/resource-errors`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`
       - Core:
@@ -34367,7 +34764,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
@@ -34377,6 +34773,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/cursor-pagination.InfiniteScrollFooter`
           - `primitives/cursor-pagination.useInfiniteScroll`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.useCombinedResources`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/relative-time.RelativeTime`
@@ -34761,10 +35159,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Uses:
       - `infra/endpoints.fetchEndpoint`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useResource`
     - Exports (types):
       - `AutoStartModel`
-      - `DependentCountResult`
       - `TaskPatch`
     - Exports (values):
       - `patchTask`
@@ -34885,13 +35284,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `UpdateTaskBodySchema`
   - Cross-plugin:
     - Imported by:
-      - `conversations/conversation-view/dependencies`
       - `conversations/conversation-view/dependent-count`
       - `conversations/conversation-view/drop-dependents`
       - `conversations/conversation-view/tasks-panel`
       - `tasks/auto-start`
       - `tasks/auto-start/launch-option`
-      - `tasks/task-dependencies`
       - `tasks/task-description`
       - `tasks/task-detail`
       - `tasks/task-graph`
@@ -34939,12 +35336,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/launch.LaunchControl`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.PaneInstanceContext`
+          - `primitives/pane.resolveFrom`
+          - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `ui/icons.Icon`
         - Exports (values): `attemptPane`
@@ -35014,6 +35414,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
+          - `primitives/live-state.ResourceErrorInline`
           - `tasks.setAutoStart`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskAutoStartRow`
@@ -35056,6 +35457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/model-provider.ModelChoiceLabel`
               - `conversations/model-provider.ModelSelect`
               - `conversations/model-provider.useVisibleModels`
+              - `network/live.mapRow`
               - `primitives/text-editor/composer/picker-pill.PickerPill`
               - `tasks.setAutoStart`
               - `tasks/auto-start.useTaskAutoStart`
@@ -35145,6 +35547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Tasks.Fields` "category" → `CategoryField`
         - Uses:
           - `infra/endpoints.useEndpoint`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskCategoryRow`
@@ -35207,10 +35610,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
-          - `tasks.useTask`
           - `tasks/task-category.useTaskCategoryMap`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
@@ -35239,6 +35642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.ItemActionProps`
           - `primitives/data-view.MergedDataView`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
@@ -35273,7 +35677,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/inline-text.InlineText`
           - `primitives/launch.LaunchControl`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceView`
+          - `primitives/live-state.useCombinedResources`
           - `primitives/loading.Loading`
           - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -35301,9 +35708,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/app-shell.opensPane`
           - `primitives/detail-sections.defineDetailSections`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `primitives/pane.resolveFrom`
+          - `primitives/pane.ResolveResult`
           - `primitives/pane.useOpenPane`
           - `shell.Shell`
           - `tasks.useTask`
@@ -35410,6 +35820,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.LiveRowResult`
+          - `network/live.mapRow`
           - `network/live.useLiveRow`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
@@ -35467,6 +35878,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.TaskDetailSlots`
@@ -35487,6 +35900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/graph-canvas.GraphCanvasEdge`
           - `primitives/graph-canvas.GraphCanvasGroup`
           - `primitives/graph-canvas.GraphCanvasNode`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
@@ -35506,6 +35920,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/editable-field.useEditableField`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
           - `tasks.patchTask`
@@ -35535,6 +35951,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.defineItemActions`
           - `primitives/icon-button.IconButton`
           - `primitives/launch.LaunchControl`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -35566,6 +35983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.LiveRowResult`
+          - `network/live.mapRow`
           - `network/live.useLiveRow`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.toast`
@@ -35716,9 +36134,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Tasks.Fields` "track" → `TrackField`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `shell/notifications.toast`
           - `tasks/task-list.Tasks`
@@ -36104,6 +36527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.navigate`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
           - `shell/health-report.HealthReport`
 
@@ -36877,6 +37301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.fixedThemeScope`
           - `primitives/css/ui-kit.subThemeScope`
           - `primitives/css/ui-kit.themeScopeSelectors`
+          - `primitives/live-state.foldResource`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
           - `ColorMode`
@@ -36887,6 +37312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ThemeSelectionsState`
           - `ThemeSourceContribution`
           - `ThemeSourceEntry`
+          - `ThemeSourceFailure`
           - `ThemesState`
           - `TokenGroupContribution`
           - `VariantGroupContribution`
@@ -36992,6 +37418,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/slot-render.defineRenderSlot`
               - `shell/action-bar.ActionBar`
@@ -37016,9 +37444,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.endpointQueryKey`
               - `infra/endpoints.fetchEndpoint`
-              - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/live-state.hydrateEndpoint`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useEndpointResource`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useThemes`
               - `ui/theme-engine.whenNoScopeSelects`
@@ -37092,6 +37521,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
               - `apps-core.useCurrentAppId`
+              - `config_v2.useConfigResult`
               - `config_v2.useScopeMembership`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.useEndpointMutation`
@@ -37111,6 +37541,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -37188,12 +37620,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ItemActionProps`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.GateInput`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeSourceContribution`
               - `ui/theme-engine.ThemeSourceEntry`
+              - `ui/theme-engine.ThemeSourceFailure`
               - `ui/theme-engine.transformValues`
               - `ui/theme-engine.useThemes`
               - `ui/theme-engine.useThemeScopeId`
@@ -37219,6 +37655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
             - Uses:
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37235,6 +37672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ThemeCustomizer.Section` "Chart" → `ChartSection`
             - Uses:
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37250,6 +37688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37264,6 +37703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.transformValues`
@@ -37284,6 +37724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.FillFromMenu`
@@ -37304,6 +37745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37338,6 +37780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.appThemeScope`
               - `primitives/css/ui-kit.fixedThemeScope`
               - `primitives/css/ui-kit.subThemeScope`
+              - `primitives/live-state.foldResource`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
               - `ui/icons.usePublishIconStyle`
@@ -37376,6 +37819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37406,6 +37850,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -37437,6 +37882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.FillFromMenu`
@@ -37457,6 +37903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37476,6 +37923,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.transformValues`
@@ -37496,6 +37944,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -37582,13 +38031,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useSetConfig`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
-              - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.GateInput`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useEndpointResource`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeSourceEntry`
               - `ui/theme-engine.useThemes`

@@ -52,7 +52,11 @@ async function fetchSprite(key: StyleKey, hash: string): Promise<string> {
 export function IconSpriteHost() {
   const resident = useLive(residentSprites);
   const saved = useLive(savedIconSprites);
-  if (resident.pending || saved.pending) return <IconSpriteSheet />;
+  // A failed read renders the empty sheet too (icons draw as empty boxes);
+  // live-state's resource-error sink reports the failure.
+  if (resident.status !== "ready" || saved.status !== "ready") {
+    return <IconSpriteSheet />;
+  }
   return <LoadedSprites resident={resident.data} saved={saved.data} />;
 }
 

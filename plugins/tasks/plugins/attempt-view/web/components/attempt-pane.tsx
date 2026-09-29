@@ -161,7 +161,13 @@ function taskAttemptsOf(
 export function AttemptsTitle() {
   const { attemptId } = attemptPane.useParams();
   const result = useResource(attemptsResource);
-  if (result.pending) return "Attempts";
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return "Attempts";
+    case "ready":
+      break;
+  }
   const totalConversations = taskAttemptsOf(result.data, attemptId).reduce(
     (sum, a) => sum + a.conversations.length,
     0,
@@ -189,7 +195,7 @@ export function AttemptPane() {
   if (result.status === "loading") return <Loading />;
   if (result.status === "error") {
     return (
-      <PaneChrome pane={attemptPane} title="Attempts">
+      <PaneChrome pane={attemptPane}>
         <ResourceErrorInline
           variant="block"
           subject="the attempts"

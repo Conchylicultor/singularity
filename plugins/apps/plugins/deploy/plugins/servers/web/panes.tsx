@@ -48,7 +48,13 @@ function useServerTitle({
 }): string | undefined {
   const result = useLive(servers);
   if (serverId === NEW_SERVER_ID) return "Add Server";
-  if (result.pending) return undefined;
+  switch (result.status) {
+    case "loading":
+    case "error":
+      return undefined;
+    case "ready":
+      break;
+  }
   return result.data.find((s) => s.id === serverId)?.name;
 }
 
@@ -100,7 +106,7 @@ function ServerDetailBody() {
   }
   if (serversResult.status === "error") {
     return (
-      <PaneChrome pane={serverDetailPane} title="Server">
+      <PaneChrome pane={serverDetailPane}>
         <ResourceErrorInline
           variant="block"
           subject="the servers"

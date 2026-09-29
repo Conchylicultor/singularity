@@ -17,6 +17,7 @@ not known yet (never a stand-in `Main`).
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.HeaderChip`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `tasks/task-track.useTaskTrack`
 

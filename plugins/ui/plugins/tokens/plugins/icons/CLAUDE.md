@@ -42,6 +42,7 @@ primitive.
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.fixedThemeScope`
     - `primitives/css/ui-kit.subThemeScope`
+    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/icons.usePublishIconStyle`

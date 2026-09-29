@@ -69,7 +69,7 @@ describe("assertPreloadedResourcesDeclared", () => {
 describe("Resource.Declare reads", () => {
   const key = "server-core-test.declare-reads";
   const served = defineResource(
-    { key, schema: z.number(), preload: "boot" },
+    { key, schema: z.number(), preload: "boot", validateParams: () => {} },
     { mode: "push", loader: () => 1 },
   );
   const plugins = [

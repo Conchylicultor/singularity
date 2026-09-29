@@ -42,11 +42,8 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-<<<<<<< .merge_file_k0uv8Q
-    - `ui/icons.Icon`
-=======
     - `primitives/live-state.ResourceErrorInline`
->>>>>>> .merge_file_92AkH7
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"

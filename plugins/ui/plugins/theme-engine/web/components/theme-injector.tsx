@@ -1,5 +1,6 @@
 import { useEffect, useInsertionEffect, useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useActiveApp, Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
@@ -357,9 +358,14 @@ export function ScopedAppTheme({
   // Hooks above run unconditionally (Rules of Hooks); only the emitted tree
   // branches — unmounting the blocks removes their <style> elements. No block
   // while membership is unknown (preloaded, so only a failed boot has that
-  // window): the app's surface wears the root theme until it is known.
-  if (ownsTheme.pending) return null;
-  if (!ownsTheme.data || scopeId === rootScopeId) return null;
+  // window): the app's surface wears the root theme until it is known. A
+  // failed read keeps its last-known answer, else wears the root theme too.
+  const owns = foldResource(ownsTheme, {
+    loading: () => false,
+    error: (_error, stale) => stale ?? false,
+    ready: (member) => member,
+  });
+  if (!owns || scopeId === rootScopeId) return null;
   return <ScopeStyles scopeId={scopeId} scopeToken={scopeId} />;
 }
 

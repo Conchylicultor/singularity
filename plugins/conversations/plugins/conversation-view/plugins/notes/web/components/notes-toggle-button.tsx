@@ -23,7 +23,7 @@ export function NotesToggleButton({
     return (
       <ResourceErrorInline
         variant="icon"
-        icon={MdStickyNote2}
+        icon={stickyNote2Icon}
         subject="the note"
         error={read.error}
         refetch={read.refetch}

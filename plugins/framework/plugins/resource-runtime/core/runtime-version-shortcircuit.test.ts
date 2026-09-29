@@ -242,7 +242,12 @@ describe("keyed: an evicted snapshot is never left behind a short-circuit", () =
       { id: "b", n: 1 },
     ]);
     h.runtime.defineResource(
-      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
       {
         identityTable: "row_table",
         fanOut: { reason: "one param-less tuple — nothing to narrow" },

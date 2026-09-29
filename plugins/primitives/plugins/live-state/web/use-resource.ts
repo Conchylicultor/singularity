@@ -471,8 +471,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const hasValue = !skipped && q.dataUpdatedAt !== 0;
   // The one typed failure (memoized per raw error, so every observer of the
   // query shares one `ResourceError` identity).
-  const error =
-    skipped || q.error === null ? null : toResourceError(q.error);
+  const error = skipped || q.error === null ? null : toResourceError(q.error);
   const settled = hasValue && error === null;
 
   // Cold-start accelerator: if this resource mounts before the live-state

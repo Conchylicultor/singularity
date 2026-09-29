@@ -1,5 +1,9 @@
 import { useEffect, useMemo } from "react";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   DEFAULT_TASK_TRACK,
   type StoredTaskTrack,
@@ -7,28 +11,24 @@ import {
 } from "../core";
 import { taskTracks } from "../shared/resources";
 
-/** One task's track: not known yet, or the track. */
-export type TaskTrackResult =
-  { pending: true } | { pending: false; track: TaskTrack };
+/** One task's track: a read — loading, failed, or the track. */
+export type TaskTrackResult = ResourceResult<TaskTrack>;
 
 /**
  * The task's track: its row of the `taskTracks` point sibling. `found: false`
  * is determinately the default track (main); "not loaded yet" stays the
- * pending arm, so a sidequest can never flash as main.
+ * loading arm, so a sidequest can never flash as main.
  */
 export function useTaskTrack(taskId: string): TaskTrackResult {
   const result = useLiveRow(taskTracks, taskId);
-  if (result.pending) return { pending: true };
-  return {
-    pending: false,
-    track: result.found ? result.row.track : DEFAULT_TASK_TRACK,
-  };
+  return useMemo(
+    () => mapRow(result, (row) => (row ? row.track : DEFAULT_TASK_TRACK)),
+    [result],
+  );
 }
 
-/** Every stored (non-main) track: not known yet, or taskId → track. */
-export type StoredTracks =
-  | { pending: true }
-  | { pending: false; tracks: ReadonlyMap<string, StoredTaskTrack> };
+/** Every stored (non-main) track: a read of taskId → track. */
+export type StoredTracks = ResourceResult<ReadonlyMap<string, StoredTaskTrack>>;
 
 /**
  * The stored tracks of the bounded `taskTracks` window, for a surface that
@@ -40,17 +40,18 @@ export type StoredTracks =
 export function useStoredTracks(): StoredTracks {
   const result = useLive(taskTracks);
   const grow =
-    !result.pending && result.canGrow && !result.growing
+    result.status === "ready" && result.canGrow && !result.growing
       ? result.loadMore
       : null;
   useEffect(() => {
     grow?.();
   }, [grow]);
-  return useMemo(() => {
-    if (result.pending) return { pending: true };
-    return {
-      pending: false,
-      tracks: new Map(result.data.map((r) => [r.taskId, r.track])),
-    };
-  }, [result]);
+  return useMemo(
+    () =>
+      mapResource(
+        result,
+        (rows) => new Map(rows.map((r) => [r.taskId, r.track])),
+      ),
+    [result],
+  );
 }

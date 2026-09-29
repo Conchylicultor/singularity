@@ -39,6 +39,8 @@ function useThreadTitle({
     case "loading":
     case "error":
       return undefined;
+    case "ready":
+      break;
   }
   // The subject is stable across a thread; the oldest LOADED message carries it
   // (in a thread longer than the window that is a reply, so its "Re:" form).
