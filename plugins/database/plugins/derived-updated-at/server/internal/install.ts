@@ -4,7 +4,6 @@ import { escapeLiteral } from "pg";
 import { z } from "zod";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { quoteIdent } from "./compile";
-import { registeredDerivedUpdatedAt } from "./registry";
 import type { DerivedUpdatedAtSpec } from "./types";
 
 // ── Installing the derived-`updatedAt` triggers ─────────────────────────────
@@ -23,8 +22,11 @@ import type { DerivedUpdatedAtSpec } from "./types";
 // `CREATE OR REPLACE TRIGGER` takes SHARE ROW EXCLUSIVE (blocking writers for
 // one statement), never ACCESS EXCLUSIVE.
 //
-// `db` is passed in (like `runMigrations` / `rebuildDerivedTables`) because the
-// database plugin calls this — importing its barrel here would cycle.
+// `db` is passed in (like `rebuildDerivedTables`) because the migrations
+// plugin's `applySchemaLayer` calls this inside its one schema-layer
+// transaction — importing the database barrel here would cycle. The specs are
+// passed in too, never read from the registry here: a process that never loaded
+// the schema files (the `migration-applies-clean` check) would read it empty.
 
 type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 type Exec = NodePgDatabase | Tx;
@@ -77,7 +79,7 @@ async function readState(
 }
 
 async function installOne(
-  db: NodePgDatabase,
+  db: Exec,
   spec: DerivedUpdatedAtSpec,
 ): Promise<"installed" | "unchanged"> {
   if ((await readState(db, spec)) === "up-to-date") return "unchanged";
@@ -104,16 +106,19 @@ export interface DerivedUpdatedAtInstall {
 
 /**
  * Install (or leave alone, when already current) the derived-`updatedAt`
- * trigger of every entity whose `meta.updatedAt` declares `touchedBy` — or of
- * exactly `specs`, when given (a test installing only its own entity's trigger
- * into a throwaway database). Must run after migrations: every table must exist.
+ * trigger of each of `specs` — at boot, every entity whose `meta.updatedAt`
+ * declares `touchedBy` (`registeredDerivedUpdatedAt()`); in a test, only its own
+ * entity's trigger in a throwaway database. Must run after migrations: every
+ * table must exist. `db` may be a transaction (boot's schema layer): each
+ * table's install is then a savepoint, and its advisory lock is held until the
+ * outer commit.
  *
  * Then asserts every trigger is present with its expected signature, and
  * throws if one is not — a boot never proceeds with an underived `updatedAt`.
  */
 export async function installDerivedUpdatedAt(
-  db: NodePgDatabase,
-  specs: readonly DerivedUpdatedAtSpec[] = registeredDerivedUpdatedAt(),
+  db: Exec,
+  specs: readonly DerivedUpdatedAtSpec[],
 ): Promise<readonly DerivedUpdatedAtInstall[]> {
   const results: DerivedUpdatedAtInstall[] = [];
   for (const spec of specs) {

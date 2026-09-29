@@ -9,18 +9,12 @@ import {
   type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { z } from "zod";
+import { derivedViewsLog as log } from "./log";
 import type { View } from "./contribution";
 
 // One declared view, as a `View` contribution carries it.
 export type DeclaredView = ReturnType<typeof View.getContributions>[number];
-
-const log = defineLogSink({
-  id: "derived-views",
-  description:
-    "Derived-views rebuild ops log: plain DB view drops/creates in dependency order on boot.",
-});
 
 // Rebuilds the entire plain-derived-view layer from source on every boot.
 //

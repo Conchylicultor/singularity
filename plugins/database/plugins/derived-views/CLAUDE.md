@@ -28,22 +28,32 @@ generates **no migration at all**.
   is no "view registered in a module nothing imported" footgun. (This replaced
   the old `defineView()` import-side-effect registry, whose registration
   silently depended on something importing `views.ts`.)
-- `rebuildDerivedViews(db, views)` (server) is called in the database plugin's
-  `onReadyBlocking`, right after `runMigrations(db)`, with
-  `View.getContributions()`. In one transaction it `DROP VIEW IF EXISTS`s every
-  view in **reverse** dependency order and `CREATE VIEW`s them in forward order.
-  Any failure throws and blocks boot.
+- `rebuildDerivedViews(db, views)` (server) is the last step of the migrations
+  plugin's **one boot schema-layer transaction** (`applySchemaLayer`, called from
+  the database plugin's `onReadyBlocking` with `View.getContributions()`), after
+  the migrations, the derived `updatedAt` triggers and the rollup tables. It
+  `DROP VIEW IF EXISTS`s every view in **reverse** dependency order and
+  `CREATE VIEW`s them in forward order (skipped when the compiled layer's
+  signature is unchanged and every view exists). Any failure throws, rolls the
+  whole layer back — migrations included — and blocks boot.
+
+### Views never block a migration
+
 - `dropDerivedViews(db)` (server) drops every view **live** in `public`, in one
-  statement, before pending migrations apply — the migrations runner calls it
-  in the first pending migration's transaction, and the `migration-applies-clean`
-  dry-run mirrors it. A live view would otherwise block any migration that drops
-  or retypes a column it reads, and neither drizzle-kit (which never sees views)
-  nor a hand edit (push regenerates schema migrations) can put a `DROP VIEW` in
-  front of it. The rebuild then finds views missing and recreates them. It drops
-  the live set, not the declared one, because the view in the way is the one the
-  previous code created. On a hot-swap restart this widens the window where the
-  previous backend has no views from "the rebuild" to "migrations + rebuild", only
-  on boots with pending migrations.
+  statement, at the start of that same transaction — **only when a migration is
+  pending**. A live view would otherwise block any migration that drops or
+  retypes a column it reads ("other objects depend on it"), and neither
+  drizzle-kit (which never sees views) nor a hand edit (push regenerates schema
+  migrations; the phaser rejects `CREATE/DROP VIEW`) can put a `DROP VIEW` in
+  front of it. The rebuild then finds views missing and recreates them.
+- It drops the live set, not the declared one, because the view in the way is
+  the one the previous code created, which current declarations may not name.
+- Because drop, migrations and rebuild commit together, the previous backend
+  never reads a missing view during a hot-swap: it waits on the transaction's
+  locks, then sees the new layer. A failure anywhere leaves the old views, the
+  old columns and the ledger untouched.
+- With nothing pending no view is dropped, and the rebuild takes its
+  skip-when-unchanged path — the steady-state restart opens no lock window.
 - The view set is an argument, not read inside the rebuild, because the
   `migration-applies-clean` check also rebuilds the views (in its rolled-back
   dry-run on main's DB) from a process that never boots. It gathers the same set

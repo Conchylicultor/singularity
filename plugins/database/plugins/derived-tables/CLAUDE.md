@@ -31,14 +31,21 @@ triggerDdl, reconcileDdl }` — opaque SQL strings) and adds
 - The rollup table's drizzle read handle lives in a **non-glob file**
   (e.g. `rollup-table.ts`, NOT `tables.ts`/`schema.ts`) so codegen never emits a
   migration for it — same reason plain views live in `views.ts`.
-- `rebuildDerivedTables(db)` (server) runs in the **`database` plugin's own
-  `onReadyBlocking`** (`plugins/database/server/index.ts`), sequenced explicitly
-  after `runMigrations` and before `rebuildDerivedViews` — the rollup-before-view
-  order matters because a derived view may reference a rollup table (e.g.
-  `attempts_v` LEFT JOINs the rollups), so the rollup must exist when `CREATE
-VIEW` runs. It takes its executor as a parameter so it never imports
-  `@plugins/database/server` (which would cycle); `database/server` passes the
-  pool-backed `db`. Feed-exemption is not a matter of _when_ it runs: the rollup
+- `rebuildDerivedTables(db, specs)` (server) runs inside the migrations plugin's
+  **one boot schema-layer transaction** (`applySchemaLayer`, called from the
+  `database` plugin's `onReadyBlocking`), after the migrations and
+  `installDerivedUpdatedAt` and before `rebuildDerivedViews` — the
+  rollup-before-view order matters because a derived view may reference a rollup
+  table (e.g. `attempts_v` LEFT JOINs the rollups), so the rollup must exist when
+  `CREATE VIEW` runs. It takes its executor as a parameter so it never imports
+  `@plugins/database/server` (which would cycle); at boot that executor is the
+  schema-layer transaction, so its definition transaction is a savepoint and its
+  trigger DDL holds its source-table locks until that one commit (only boots
+  with pending migrations or a changed definition take them at all). `specs` is
+  an argument, never read from `DerivedTable.getContributions()` inside: boot
+  passes the collected contributions, and the `migration-applies-clean` check
+  (a process that never boots) gathers them with `DerivedTable.from(definitions)`
+  over main's server barrels. Feed-exemption is not a matter of _when_ it runs: the rollup
   tables are named in `feedExemptTables()`, which the change-feed unions into its
   denylist, so `listPublicTables` filters them out and no NOTIFY trigger is ever
   installed on them regardless of creation order.
@@ -88,7 +95,7 @@ table, so leaving it unconditional costs startup time and blocks nothing.
 - `core/` — the `DerivedRollupSpec` type (opaque SQL strings). Pure, no DB
   import.
 - `server/` — the `DerivedTable` server contribution (the registration surface
-  consumers import), `rebuildDerivedTables(db)`, and `feedExemptTables()`.
+  consumers import), `rebuildDerivedTables(db, specs)`, and `feedExemptTables()`.
   `rebuildDerivedTables` takes `db` as a parameter so it never imports
   `@plugins/database/server`.
 
@@ -108,6 +115,7 @@ table, so leaving it unconditional costs startup time and blocks nothing.
     - `conversations/agents`
     - `database`
     - `database/change-feed`
+    - `database/migrations`
     - `tasks/tasks-core`
 - Core:
   - Exports (types): `DerivedRollupSpec`

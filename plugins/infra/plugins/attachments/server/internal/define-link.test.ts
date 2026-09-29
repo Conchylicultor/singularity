@@ -32,7 +32,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { applyLinkDiff, defineLink } from "./define-link";
 
 // A minimal drizzle mapping onto the REAL migrated `agents` table — the owner

@@ -24,7 +24,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import type { Blanks } from "@plugins/apps/plugins/chord/plugins/curriculum/core";
 import {

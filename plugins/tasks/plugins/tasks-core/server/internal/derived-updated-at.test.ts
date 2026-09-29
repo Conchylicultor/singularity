@@ -17,7 +17,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { _conversations, _tasks, tasksCoreDerivedUpdatedAt } from "./tables";
 import { unionTaskClusters } from "./mutations/clusters";

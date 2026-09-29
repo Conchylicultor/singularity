@@ -8,6 +8,16 @@ import {
   rebuildDerivedViews,
   type DeclaredView,
 } from "@plugins/database/plugins/derived-views/server";
+import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
+import type { DerivedRollupSpec } from "@plugins/database/plugins/derived-tables/core";
+import {
+  installDerivedUpdatedAt,
+  type DerivedUpdatedAtSpec,
+} from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  migrationClaimId,
+  parseMigration,
+} from "@plugins/database/plugins/migrations/core";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
@@ -15,7 +25,7 @@ import { z } from "zod";
 const log = defineLogSink({
   id: "migrations",
   description:
-    "DB migration runner ops log: DDL/data migrations applied in timestamp order on boot.",
+    "DB migration runner ops log: DDL/data migrations applied on boot — timestamp order, each phased schema migration as one expand → claimed data → contract group.",
 });
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
@@ -29,17 +39,20 @@ const MIGRATIONS_DIR =
   process.env.SINGULARITY_MIGRATIONS_DIR ??
   join(import.meta.dir, "..", "..", "data");
 
-interface Migration {
+export interface Migration {
   file: string;
   hash: string;
   sortKey: string;
   sqlText: string;
 }
 
-// Completion barrier for migrations. A parallel `onReadyBlocking` hook (e.g. the
-// boot-snapshot warm-up) can await this instead of relying on hook ordering —
-// `onReadyBlocking` hooks run in parallel. `runMigrations` settles it: resolves
-// when migrations complete, rejects if they throw. See
+type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
+
+// Completion barrier for the boot schema layer. A parallel `onReadyBlocking` hook
+// (e.g. the boot-snapshot warm-up) can await this instead of relying on hook
+// ordering — `onReadyBlocking` hooks run in parallel. A committing
+// `applySchemaLayer` settles it: resolves once the layer (migrations + derived
+// layer) has committed, rejects if it throws. See
 // research/2026-06-14-global-cold-load-instant-boot.md.
 let resolveMigrationsReady!: () => void;
 let rejectMigrationsReady!: (err: unknown) => void;
@@ -50,9 +63,9 @@ export const migrationsReady: Promise<void> = new Promise<void>(
   },
 );
 
-// Ordered list of every migration file on disk (timestamp order — the order the
-// runner applies them). Shared by `runMigrations` and `dryRunPendingMigrations`.
-function listMigrationFiles(dir: string): Migration[] {
+// Ordered list of every migration file on disk, in timestamp order — the order
+// `planSchemaSteps` walks them.
+export function listMigrationFiles(dir: string): Migration[] {
   const files = readdirSync(dir).filter((f) => MIGRATION_RE.test(f));
   const migrations: Migration[] = files.map((f) => {
     const m = MIGRATION_RE.exec(f)!;
@@ -70,7 +83,7 @@ function listMigrationFiles(dir: string): Migration[] {
 
 // Hashes already recorded in __singularity_migrations (the applied-state ledger).
 // Creates the ledger table if absent, so callers can use the result directly.
-async function getAppliedHashes(db: NodePgDatabase): Promise<Set<string>> {
+async function getAppliedHashes(db: NodePgDatabase | Tx): Promise<Set<string>> {
   await db.execute(drizzleSql`
     CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
       hash text PRIMARY KEY,
@@ -136,129 +149,355 @@ export function planMigrations(
   return { toApply, skippedDuplicates };
 }
 
-export async function runMigrations(db: NodePgDatabase): Promise<void> {
-  try {
-    const migrations = listMigrationFiles(MIGRATIONS_DIR);
-    const appliedHashes = await getAppliedHashes(db);
+// One unit of work in the boot schema layer, in the order it runs.
+//   - `apply` runs SQL: a legacy file whole, or one section of a phased schema
+//     migration. An empty section emits no step.
+//   - `record` inserts a file's ledger row, right after that file's LAST step —
+//     so a phased migration is recorded only at its contract, never after its
+//     expand alone, and a phased file with nothing to run still lands its row.
+export type SchemaStep =
+  | {
+      kind: "apply";
+      file: string;
+      phase: "whole" | "expand" | "contract";
+      sql: string;
+    }
+  | { kind: "record"; file: string; hash: string };
 
-    // Applied-but-no-file: a hash recorded as applied with no matching file on
-    // this branch. This is EXPECTED when the worktree branch predates a
-    // migration that landed on main — the DB was forked from main (or merged it)
-    // and already carries that migration's effects, but the branch checkout
-    // doesn't have the file yet. It is only real drift if you deleted a migration
-    // you authored (rebased it away after it ran here), in which case the DB
-    // keeps whatever that migration did. No rollback either way.
-    const onDiskHashes = new Set(migrations.map((m) => m.hash));
-    for (const h of appliedHashes) {
-      if (!onDiskHashes.has(h)) {
-        log.publish(
-          `[migrate] applied hash ${h} has no file on this branch — expected if this worktree predates a migration that landed on main (the DB already has its effects). Real drift only if you deleted a migration you authored.`,
-          "stderr",
+export interface SchemaPlan {
+  steps: SchemaStep[];
+  // Files with at least one step to run or a ledger row to land.
+  pendingFiles: string[];
+  skippedDuplicates: { file: string; original: string }[];
+}
+
+// PURE (exported for unit testing): the ordered steps that bring a database
+// whose ledger holds `appliedHashes` up to `migrations` (timestamp order).
+//
+// Walks the files in order:
+//   - a LEGACY file (no phase header: every schema migration written before the
+//     phase grammar, and every data migration) is one step at its own position,
+//     so historical replay order is unchanged;
+//   - a PHASED schema migration S is one group at its position:
+//     S.expand → the data migrations S claims (timestamp order) → S.contract;
+//   - a CLAIMED data migration is skipped at its own position (it runs in its
+//     claimer's group); an UNCLAIMED one (a data-only push) stays where it is.
+// Grouping is per push, never global: phasing every pending migration together
+// would break a from-scratch replay (a table one push's contract drops and a
+// later push's expand recreates).
+//
+// Files already in the ledger — and same-run duplicate-hash siblings, exactly as
+// `planMigrations` decides — contribute no step. Claims are validated over every
+// file on disk, applied or not: a claim naming no file, a file claimed twice,
+// and a claim that does not sort before its claimer all THROW, since each would
+// otherwise apply a contract before the data it was written to follow.
+export function planSchemaSteps(
+  migrations: Migration[],
+  appliedHashes: ReadonlySet<string>,
+): SchemaPlan {
+  const { toApply, skippedDuplicates } = planMigrations(
+    migrations,
+    appliedHashes,
+  );
+  const pending = new Set(toApply);
+
+  const parsed = new Map(
+    migrations.map((m) => {
+      try {
+        return [m, parseMigration(m.sqlText)] as const;
+      } catch (e) {
+        throw new Error(`migration ${m.file}: ${(e as Error).message}`);
+      }
+    }),
+  );
+
+  const byClaimId = new Map<string, { m: Migration; index: number }>();
+  for (const [index, m] of migrations.entries()) {
+    const id = migrationClaimId(m.file);
+    const prior = byClaimId.get(id);
+    if (prior) {
+      throw new Error(
+        `migrations ${prior.m.file} and ${m.file} share the claim id "${id}" (same timestamp and slug) — a claim could not tell them apart.`,
+      );
+    }
+    byClaimId.set(id, { m, index });
+  }
+
+  // claimed file → its claimer, with every claim validated.
+  const claimer = new Map<Migration, Migration>();
+  for (const [index, s] of migrations.entries()) {
+    const p = parsed.get(s)!;
+    if (p.kind !== "phased") continue;
+    for (const id of p.claims) {
+      const target = byClaimId.get(id);
+      if (!target) {
+        throw new Error(
+          `migration ${s.file} claims "${id}", but no migration file has that timestamp and slug.`,
         );
       }
+      if (parsed.get(target.m)!.kind === "phased") {
+        throw new Error(
+          `migration ${s.file} claims ${target.m.file}, which is a phased schema migration — only data migrations can be claimed.`,
+        );
+      }
+      if (target.index >= index) {
+        throw new Error(
+          `migration ${s.file} claims ${target.m.file}, which sorts after it — a claimed data migration must sort before its claimer.`,
+        );
+      }
+      const prior = claimer.get(target.m);
+      if (prior) {
+        throw new Error(
+          `migration ${target.m.file} is claimed by both ${prior.file} and ${s.file}.`,
+        );
+      }
+      claimer.set(target.m, s);
     }
+  }
 
-    const { toApply, skippedDuplicates } = planMigrations(
-      migrations,
-      appliedHashes,
-    );
+  const steps: SchemaStep[] = [];
+  const pendingFiles: string[] = [];
+  const emitWhole = (m: Migration) => {
+    if (!pending.has(m)) return;
+    steps.push({ kind: "apply", file: m.file, phase: "whole", sql: m.sqlText });
+    steps.push({ kind: "record", file: m.file, hash: m.hash });
+    pendingFiles.push(m.file);
+  };
 
-    // Loudly report every same-run duplicate-hash skip. Identical DDL, so this is
-    // a no-op for the DB, but it must never be silent ("fail loudly" rule): a
-    // surprise collision means two files share a sha8 and one is being ignored.
-    for (const { file, original } of skippedDuplicates) {
+  for (const m of migrations) {
+    if (claimer.has(m)) continue;
+    const p = parsed.get(m)!;
+    if (p.kind === "legacy") {
+      emitWhole(m);
+      continue;
+    }
+    const own = pending.has(m);
+    if (own && p.expand !== "") {
+      steps.push({
+        kind: "apply",
+        file: m.file,
+        phase: "expand",
+        sql: p.expand,
+      });
+    }
+    // Claims in timestamp order, whatever order the claims section lists them.
+    for (const d of migrations) {
+      if (claimer.get(d) === m) emitWhole(d);
+    }
+    if (own) {
+      if (p.contract !== "") {
+        steps.push({
+          kind: "apply",
+          file: m.file,
+          phase: "contract",
+          sql: p.contract,
+        });
+      }
+      steps.push({ kind: "record", file: m.file, hash: m.hash });
+      pendingFiles.push(m.file);
+    }
+  }
+
+  return { steps, pendingFiles, skippedDuplicates };
+}
+
+// Everything the boot schema layer derives from source besides the migration
+// files. REQUIRED arguments, never read from a registry in here: a process that
+// never booted (the `migration-applies-clean` check) would read those empty and
+// silently test nothing — the lesson of 1aacd12897. Boot passes the collected
+// contributions; the check gathers the same sets from main's server barrels.
+export interface SchemaLayerInputs {
+  views: readonly DeclaredView[];
+  derivedTables: readonly DerivedRollupSpec[];
+  updatedAtSpecs: readonly DerivedUpdatedAtSpec[];
+}
+
+// Force-rollback sentinel: thrown to abort a non-committing layer so it never
+// commits. Distinguished from a real error by identity.
+const ROLLBACK = Symbol("schema-layer-rollback");
+
+// Log what the plan says before running it: an applied hash with no file here,
+// and every same-run duplicate-hash skip. Both are loud, never silent.
+function reportPlan(
+  migrations: Migration[],
+  appliedHashes: ReadonlySet<string>,
+  plan: SchemaPlan,
+): void {
+  // Applied-but-no-file: a hash recorded as applied with no matching file on
+  // this branch. This is EXPECTED when the worktree branch predates a
+  // migration that landed on main — the DB was forked from main (or merged it)
+  // and already carries that migration's effects, but the branch checkout
+  // doesn't have the file yet. It is only real drift if you deleted a migration
+  // you authored (rebased it away after it ran here), in which case the DB
+  // keeps whatever that migration did. No rollback either way.
+  const onDiskHashes = new Set(migrations.map((m) => m.hash));
+  for (const h of appliedHashes) {
+    if (!onDiskHashes.has(h)) {
       log.publish(
-        `[migrate] skipping ${file}: its sha8 hash is byte-identical to ${original}, which is being applied in this run. The ledger PK is the sha8, so re-applying would duplicate-key; the identical DDL makes the skip a no-op.`,
+        `[migrate] applied hash ${h} has no file on this branch — expected if this worktree predates a migration that landed on main (the DB already has its effects). Real drift only if you deleted a migration you authored.`,
         "stderr",
       );
     }
+  }
+  // Identical DDL, so a duplicate skip is a no-op for the DB, but it must never
+  // be silent ("fail loudly" rule): a surprise collision means two files share
+  // a sha8 and one is being ignored.
+  for (const { file, original } of plan.skippedDuplicates) {
+    log.publish(
+      `[migrate] skipping ${file}: its sha8 hash is byte-identical to ${original}, which is being applied in this run. The ledger PK is the sha8, so re-applying would duplicate-key; the identical DDL makes the skip a no-op.`,
+      "stderr",
+    );
+  }
+}
 
-    for (const [i, m] of toApply.entries()) {
-      log.publish(`[migrate] applying ${m.file}`);
-      await db.transaction(async (tx) => {
-        // Live views would block a migration that drops or retypes a column
-        // they read; they are rebuilt from source right after migrations, so
-        // drop the whole layer first — atomically with the first migration, so
-        // a failure there leaves the views in place.
-        if (i === 0) await dropDerivedViews(tx);
-        await tx.execute(drizzleSql.raw(m.sqlText));
-        await tx.execute(
-          drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file) VALUES (${m.hash}, ${m.file})`,
-        );
-      });
+async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
+  for (const step of steps) {
+    if (step.kind === "record") {
+      await tx.execute(
+        drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file) VALUES (${step.hash}, ${step.file})`,
+      );
+      continue;
     }
+    const label =
+      step.phase === "whole" ? step.file : `${step.file} (${step.phase})`;
+    log.publish(`[migrate] applying ${label}`);
+    try {
+      await tx.execute(drizzleSql.raw(step.sql));
+    } catch (e) {
+      throw new Error(
+        `migration ${label} failed to apply: ${(e as Error).message}`,
+        {
+          cause: e,
+        },
+      );
+    }
+  }
+}
+
+// The boot schema layer over an explicit migration list — `applySchemaLayer`
+// with the files already read. Exported (not from the barrel) so a DB test can
+// apply a synthetic history.
+export async function applySchemaLayerFrom(
+  db: NodePgDatabase,
+  migrations: Migration[],
+  inputs: SchemaLayerInputs,
+  { commit }: { commit: boolean },
+): Promise<{ pending: number }> {
+  let pending = 0;
+  try {
+    await db.transaction(async (tx) => {
+      if (!commit) {
+        // The dry run replays against the LIVE main DB. statement_timeout is
+        // the load-bearing bound on how long it can hold locks there;
+        // lock_timeout bounds the wait to ACQUIRE one, so it never queues
+        // behind live traffic.
+        await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
+        await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
+      }
+      const applied = await getAppliedHashes(tx);
+      const plan = planSchemaSteps(migrations, applied);
+      reportPlan(migrations, applied, plan);
+      pending = plan.pendingFiles.length;
+
+      // Views never block a migration: a live view reading a column a pending
+      // migration drops or retypes would fail it. Drop the whole live layer
+      // first — only when something is pending, so a steady-state boot opens
+      // no lock window — and rebuild it below, in this same transaction.
+      if (pending > 0) await dropDerivedViews(tx);
+      await runSteps(tx, plan.steps);
+
+      // The derived layer, in dependency order: the updatedAt triggers and the
+      // rollup tables need the migrated columns; a view may read a rollup
+      // table. Each skips its DDL when unchanged.
+      await installDerivedUpdatedAt(tx, inputs.updatedAtSpecs);
+      await rebuildDerivedTables(tx, inputs.derivedTables);
+      await rebuildDerivedViews(tx, inputs.views);
+
+      if (!commit) throw ROLLBACK;
+    });
+  } catch (e) {
+    if (e !== ROLLBACK) throw e;
+  }
+  return { pending };
+}
+
+// The boot schema layer, in ONE transaction:
+//   1. if any migration is pending, drop every live public view;
+//   2. the pending migrations (`planSchemaSteps`: legacy files whole, each
+//      phased schema migration as expand → claimed data → contract), each
+//      file's ledger row right after its last step;
+//   3. `installDerivedUpdatedAt`, `rebuildDerivedTables`, `rebuildDerivedViews`.
+//
+// One transaction because the previous backend keeps serving during a hot-swap:
+// it waits on this transaction's locks instead of reading missing views, and a
+// failure at any step leaves the whole layer — ledger, columns, old views —
+// untouched. On a boot with nothing pending, no view is dropped and each derived
+// step takes its skip-when-unchanged path, so no new lock window opens.
+//
+// `commit: false` is the dry run (`dryRunPendingMigrations`): the same code
+// under the live-DB timeouts, always rolled back. Only a committing call settles
+// `migrationsReady`.
+export async function applySchemaLayer(
+  db: NodePgDatabase,
+  inputs: SchemaLayerInputs,
+  { commit }: { commit: boolean },
+): Promise<{ pending: number }> {
+  const run = () =>
+    applySchemaLayerFrom(db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
+      commit,
+    });
+  if (!commit) return run();
+  try {
+    const result = await run();
     resolveMigrationsReady();
+    return result;
   } catch (err) {
     rejectMigrationsReady(err);
     throw err;
   }
 }
 
-// Force-rollback sentinel: thrown to abort the dry-run transaction so it never
-// commits. Distinguished from a real error in the catch below.
-const ROLLBACK = Symbol("dry-run-rollback");
+// The migrations alone, with no derived layer, in one transaction — for DB test
+// suites that build a throwaway database's tables (`createTestDb` +
+// `runMigrations`) and install whatever derived objects they need themselves.
+// Boot never calls this: it runs `applySchemaLayer`. Settles nothing.
+export async function runMigrations(db: NodePgDatabase): Promise<void> {
+  const migrations = listMigrationFiles(MIGRATIONS_DIR);
+  await db.transaction(async (tx) => {
+    const applied = await getAppliedHashes(tx);
+    const plan = planSchemaSteps(migrations, applied);
+    reportPlan(migrations, applied, plan);
+    await runSteps(tx, plan.steps);
+  });
+}
 
-// Prove that the pending migrations apply cleanly on top of the connected DB's
-// current state, then ROLL BACK — leaving the DB byte-identical. Used by the
+// Prove that the pending migrations — and the derived layer main's next boot
+// rebuilds after them — apply cleanly on top of the connected DB's current
+// state, then ROLL BACK, leaving the DB byte-identical. Used by the
 // `migration-applies-clean` check against the live main DB: the only way a
-// migration "breaks main" is by erroring during boot's onReadyBlocking, so
-// replaying the pending delta against main's real schema + data reproduces that
-// exactly, while the rollback keeps it side-effect-free.
+// migration "breaks main" is by erroring during boot's schema layer, and this
+// IS that layer (`applySchemaLayer` with `commit: false`), so it cannot drift
+// from boot.
 //
-// All pending migrations run in ONE transaction so a later migration sees an
-// earlier one's DDL (e.g. ADD COLUMN then backfill). Boot applies them one
-// transaction each, but for "does the delta apply" the single-transaction net
-// effect is equivalent.
+// Nothing pending ⇒ nothing to verify: returns without opening a transaction,
+// so a branch whose migrations main already has never locks main's views.
 //
 // Note: a rolled-back INSERT still advances any serial/identity sequence
 // (nextval is non-transactional), so a dry-run can leave harmless ID gaps. No
 // data is changed; this is expected and ignorable.
 //
-// `views` is the derived-view set main's next boot would rebuild. The caller
-// supplies it because this runs in a process that never booted, where
-// `View.getContributions()` has nothing collected.
+// `inputs` is the derived set main's next boot would install. The caller
+// supplies it because this runs in a process that never booted, where no
+// contribution was collected and no schema file was loaded.
 export async function dryRunPendingMigrations(
   db: NodePgDatabase,
-  { views }: { views: readonly DeclaredView[] },
+  inputs: SchemaLayerInputs,
 ): Promise<{ pending: number }> {
   const applied = await getAppliedHashes(db);
-  // Same skip-by-hash logic as runMigrations: two pending files sharing a sha8
-  // are byte-identical, and applying both in this single transaction would
-  // attempt a duplicate-PK INSERT and abort the dry-run. planMigrations drops
-  // the same-run duplicate so the dry-run mirrors real boot behavior.
-  const pending = planMigrations(
+  const { pendingFiles } = planSchemaSteps(
     listMigrationFiles(MIGRATIONS_DIR),
     applied,
-  ).toApply;
-  if (pending.length === 0) return { pending: 0 };
-
-  try {
-    await db.transaction(async (tx) => {
-      // statement_timeout is the LOAD-BEARING safety bound: it caps how long the
-      // dry-run can hold locks on the live main DB. lock_timeout bounds the wait
-      // to ACQUIRE a lock so the dry-run can never queue behind live traffic.
-      await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
-      await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
-      // Mirror runMigrations: the live view layer is dropped before the pending
-      // migrations and rebuilt after them.
-      await dropDerivedViews(tx);
-      for (const m of pending) {
-        try {
-          await tx.execute(drizzleSql.raw(m.sqlText));
-        } catch (e) {
-          throw new Error(
-            `migration ${m.file} failed to apply: ${(e as Error).message}`,
-          );
-        }
-      }
-      // Mirror onReadyBlocking's next step (runMigrations → rebuildDerivedViews):
-      // a view referencing a column a migration drops would also crash boot. Also
-      // rolled back.
-      await rebuildDerivedViews(tx, views);
-      throw ROLLBACK; // force ROLLBACK; never commit
-    });
-  } catch (e) {
-    if (e !== ROLLBACK) throw e;
-  }
-  return { pending: pending.length };
+  );
+  if (pendingFiles.length === 0) return { pending: 0 };
+  return applySchemaLayer(db, inputs, { commit: false });
 }

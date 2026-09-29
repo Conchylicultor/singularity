@@ -3,7 +3,8 @@
 ## Two kinds of migration
 
 Migrations live in `data/` as `<ts>_<sha8>__<slug>.sql`. The runner
-(`server/internal/runner.ts`) applies them in timestamp order and tracks applied
+(`server/internal/runner.ts`) applies them in timestamp order (a phased schema migration pulls the data
+migrations it claims into its own group — see **Phased schema migrations**) and tracks applied
 state by the **filename `sha8` hash** — it never reads drizzle snapshots, nor
 `meta/_journal.json`. The `sha8` MUST equal the hash of the file's content, or
 the runner's identity drifts from what it executes.
@@ -41,79 +42,97 @@ touching it.
     smuggle schema changes past `schema.ts`. To change the schema, edit `schema.ts`
     and generate a schema migration instead.
 
-## Ordering a backfill against a schema change
+## Phased schema migrations
 
-> **A branch-local data migration may only depend on schema that is already on
-> `origin/main`.** It may be ordered *before* a branch-local schema migration; it
-> can never be ordered *after* one.
+A real change often needs **add schema → move data → remove schema** in one
+push. Filename timestamps cannot express that (a push re-stamps its schema
+migration to push time, after every data migration), so the ordering is
+declared in the schema migration itself. At generation — in `generateMigration`
+(`framework/cli/plugins/migrations/cli/migrations.ts`), before the content is
+hashed — every freshly generated schema migration is rewritten into marked
+sections (grammar: `core/internal/phases.ts`):
 
-`resetBranchLocalMigrations` (`cli/plugins/migrations/cli/migrations.ts`) deletes **every**
-branch-local schema migration (snapshot-carrying, absent from `origin/main`) and
-re-emits one consolidated migration stamped at push time, while **preserving**
-data migrations at their original timestamps. The runner applies in timestamp
-order, so after a reset every branch-local schema migration sorts *after* every
-branch-local data migration — whatever the order on disk right now.
+```sql
+-- singularity:phase expand
+ALTER TABLE "agents" ADD COLUMN "icon" text;
+-- singularity:phase contract
+ALTER TABLE "agents" ALTER COLUMN "icon" SET NOT NULL;
+ALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";
+-- singularity:claims
+-- 20260927_182347__remap_saved_icons_to_symbols
+```
 
-That reset fires on `--reset-migration` and on push's post-rebase
-`regen-migrations` normalize pass — the latter whenever main added a migration
-concurrently. So a violating order builds green locally and breaks at push **only
-on the pushes where main happened to move**, which is what makes it read as flaky
-rather than as an ordering error. Two guards catch it: the
-`data-migration-reset-stable` check (build-time, names the offending pair and the
-fix) and `migration-applies-clean` (push-time ground truth, see **Pre-push
-verification**).
+The runner applies one push as one group: **expand → the claimed data
+migrations (timestamp order) → contract**. So a data migration sees the schema
+**after expand and before contract**: every new table and column exists, and
+nothing the push drops or tightens has been dropped or tightened yet. Files
+without the markers (everything written before this, and every data migration)
+are legacy and apply whole at their own timestamp.
 
-### Case 1 — the backfill must precede a schema change
+### What is expand and what is contract
 
-A data migration that must run **before** a schema change — e.g. wiping rows so an
-`ADD COLUMN ... NOT NULL` (or any destructive reshape) can apply. This is the
-reset-stable direction, so it fits in one push. Don't hand-edit the schema
-migration to inject the DML (the push-time hand-edit detector aborts). Instead:
+The split is a closed statement table (`core/internal/classify.ts`), not a
+judgement per migration:
 
-1. Create the data migration FIRST, so it gets the earlier timestamp:
-   `./singularity build --custom-migration --migration-name <wipe_slug> --no-restart --skip-checks`,
-   then hand-edit it to add the `DELETE` / `UPDATE`.
-2. Regenerate the schema migration AFTER it:
-   `./singularity build --reset-migration --migration-name <schema_slug>`.
-   `--reset-migration` drops the branch-local SCHEMA migration and regenerates it
-   with a later timestamp, while **preserving** the snapshot-less data migration
-   from step 1.
+- **expand** — existing rows and the code already deployed stay valid:
+  `CREATE TABLE`, non-unique `CREATE INDEX`, `CREATE SEQUENCE` / `DOMAIN`,
+  `ADD COLUMN` that is nullable or has a `DEFAULT`, `SET DEFAULT` /
+  `DROP DEFAULT`, `DROP NOT NULL`, `DROP CONSTRAINT`, `DROP INDEX`,
+  `ENABLE` / `DISABLE ROW LEVEL SECURITY`, and **renames** (`RENAME COLUMN`,
+  `RENAME TO`) — so a data migration reads and writes the NEW names.
+- **contract** — restrictive or data-destroying: `DROP TABLE`, `DROP COLUMN`,
+  `DROP SEQUENCE` / `TYPE`, `SET NOT NULL`, `SET DATA TYPE`, `ADD CONSTRAINT`
+  (drizzle's `DO $$ … ADD CONSTRAINT … FOREIGN KEY … EXCEPTION … $$` form
+  included), `CREATE UNIQUE INDEX`.
+- **auto-split** — `ADD COLUMN c T NOT NULL` with no `DEFAULT` becomes expand
+  `ADD COLUMN c T` plus contract `ALTER COLUMN c SET NOT NULL`. A new required
+  column plus the backfill that fills it is therefore one push.
+- **rejected** — `CREATE` / `DROP VIEW` (views are derived code, see
+  `derived-views`), `ALTER TYPE … ADD VALUE` (a new enum value is unusable in
+  the transaction that adds it, and the boot schema layer is one transaction),
+  and DML (it belongs in a data migration).
 
-The runner then applies wipe → DDL. (`--reset-migration` is also the documented
-recovery for a snapshot-chain Y-fork after rebasing onto main.)
+Anything the table does not recognise **fails generation**, naming the
+statement, and the generated file is discarded. Extend the table when the
+statement is legitimate; never hand-edit the generated SQL.
 
-### Case 2 — the backfill needs schema this branch creates
+### Claims
 
-Moving data into a table or column the same branch adds (or out of one it drops)
-is **not expressible in one push**: the backfill would have to sit between two
-schema migrations, and the reset collapses those into one stamped after it. Split
-into two pushes — expand → migrate → contract:
+A new schema migration claims every **branch-local** data migration (snapshot-
+less, absent from `origin/main`) that no other branch-local schema migration
+already claims. A claim is `<timestamp>__<slug>` — the filename minus its hash,
+which re-hashing changes. After push's `regen-migrations` the single `merged_*`
+file claims all of the branch's data migrations, so a push is one explicit
+group. A data migration nothing claims (a data-only push) runs at its own
+timestamp, as before.
 
-- **Push 1 (expand).** Add the new table/column in `schema.ts`, leaving the old
-  shape in place. One ordinary schema migration; both shapes now coexist on main.
-- **Push 2 (migrate + contract).** Write the backfill with
-  `--custom-migration` — its dependencies are on main now, so it is free to read
-  them — then remove the old shape from `schema.ts`. The backfill is timestamped
-  before this branch's `DROP`, and a reset only moves the `DROP` later, so the
-  order holds.
+So the recipe for "move data into a new shape and drop the old one" is one
+push, in any order: change `schema.ts` (add the new shape, remove the old),
+write the backfill with `--custom-migration`, build. Make the backfill
+idempotent (`ON CONFLICT DO NOTHING`, guarded `UPDATE … WHERE`): it is re-hashed
+and re-applied whenever its content changes.
 
-Make the backfill idempotent (`ON CONFLICT DO NOTHING`, guarded `UPDATE … WHERE`):
-it is re-hashed and re-applied whenever its content changes. Worked example —
-`data/20260808_014745_0e6cb898__backfill_conversation_category_rows.sql`.
+The `migration-phases-valid` check (`check/migration-phases-valid.ts`) fails the
+build when a branch-local schema migration is not phased, when a statement no
+longer classifies into the section it sits in, or when the runner's own
+`planSchemaSteps` refuses the files on disk (a claim resolving to no data
+migration, to one sorting after its claimer, or to one already claimed) — so a
+claim error fails the build, not the boot.
 
 ## Views never block a migration
 
-Plain views are derived code (`database/derived-views`), rebuilt from source after
-migrations. Before the first pending migration applies, the runner drops every
-live `public` view (`dropDerivedViews`, in that migration's transaction), so a
-migration that drops or retypes a column a view reads just works. Never hand-add
+Plain views are derived code (`database/derived-views`), rebuilt from source at
+the end of the one boot schema-layer transaction. When any migration is pending,
+that transaction first drops every live `public` view (`dropDerivedViews`), so a
+migration that drops or retypes a column a view reads just works, and the
+previous backend never reads a missing view during a hot-swap. Never hand-add
 a `DROP VIEW` to a schema migration: push regenerates schema migrations and
 refuses hand-edited ones.
 
 ## Pre-push verification
 
 The only way a migration "breaks main" is by erroring during boot
-(`onReadyBlocking` → `runMigrations`), so the server never comes up. The
+(`onReadyBlocking` → `applySchemaLayer`), so the server never comes up. The
 `migration-applies-clean` check (`check/index.ts`) catches that automatically
 before push:
 
@@ -121,15 +140,16 @@ before push:
   there are no pending migrations, so it passes instantly with **no DB
   connection** (the ~99% case).
 - **Slow path** — otherwise it opens a direct connection to the live **main** DB
-  and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which replays
-  only the pending delta (`dropDerivedViews`, then every pending migration in
-  **one** transaction, so a later one sees an earlier one's DDL, then
-  `rebuildDerivedViews`) and **always
-  rolls back** via a sentinel throw. The check process never boots, so it hands
-  the dry-run the view set itself, read from main's server barrels
-  (`check/internal/declared-views.ts`) — `View.getContributions()` throws there. Applying against main's real schema + data
-  reproduces the boot failure exactly, while the rollback leaves main untouched. A
-  real apply error is surfaced with the offending filename + the pg error.
+  and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which is
+  `applySchemaLayer(…, { commit: false })`: the very function boot runs (drop the
+  live views, the phased steps, derived updatedAt, derived tables, rebuild the
+  views, all in one transaction) ending in a sentinel throw that **always rolls
+  back**. The check process never boots, so it hands the layer its inputs itself
+  — views, derived tables and updatedAt specs read from main's server barrels
+  (`check/internal/declared-schema-inputs.ts`); registry reads would come back
+  empty there. Applying against main's real schema + data reproduces the boot
+  failure exactly, while the rollback leaves main untouched. A real apply error
+  is surfaced with the offending filename + the pg error.
 - `SET LOCAL statement_timeout = '60s'` is the load-bearing bound on how long the
   dry-run can hold locks on live main; `lock_timeout = '1s'` bounds lock
   acquisition so it can never queue behind live traffic. Postgres DDL+DML are both
@@ -266,28 +286,54 @@ only agreement that matters.
 - Description: DDL lifecycle: migration runner and SQL files.
 - Server:
   - Uses:
+    - `database/derived-tables.rebuildDerivedTables`
+    - `database/derived-updated-at.DerivedUpdatedAtSpec`
+    - `database/derived-updated-at.installDerivedUpdatedAt`
     - `database/derived-views.DeclaredView`
     - `database/derived-views.dropDerivedViews`
     - `database/derived-views.rebuildDerivedViews`
     - `primitives/log-channels.defineLogSink`
+  - Exports (types):
+    - `Migration`
+    - `SchemaLayerInputs`
+    - `SchemaPlan`
+    - `SchemaStep`
   - Exports (values):
+    - `applySchemaLayer`
     - `dryRunPendingMigrations`
+    - `listMigrationFiles`
     - `migrationsReady`
-    - `runMigrations`
+    - `planSchemaSteps`
 - Cross-plugin:
   - Imported by: `database`
 - Core:
   - Exports (types):
-    - `DestructiveClassification`
-    - `DestructiveKind`
+    - `ContractOp`
     - `DrizzleGenerateOptions`
+    - `ExpandOp`
+    - `ParsedMigration`
+    - `PhasedMigration`
+    - `PhasedStatements`
+    - `RejectOp`
+    - `Statement`
+    - `StatementClass`
+    - `StatementOp`
   - Exports (values):
-    - `classifyMigrationSql`
+    - `classifyStatement`
     - `DRIZZLE_CONFIG_PATH`
     - `drizzleGenerateArgv`
+    - `migrationClaimId`
     - `MIGRATIONS_PLUGIN_DIR`
+    - `parseMigration`
+    - `phaseStatements`
+    - `renderPhasedMigration`
+    - `renderStatements`
     - `schemaGlobFiles`
+    - `splitStatements`
 - Structure:
   - Non-standard folders: `data/`
+- Test helpers:
+  - Server: `@plugins/database/plugins/migrations/server/testing`
+    - `runMigrations`
 
 <!-- AUTOGENERATED:END -->

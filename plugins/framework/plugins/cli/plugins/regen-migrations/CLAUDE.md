@@ -14,6 +14,13 @@ the same `generateMigration` pipeline (`plugins/migrations/cli`) with
 `resetMigration: true`. The default slug is `merged_YYYYMMDD_HHMM` in UTC;
 `--name` overrides it.
 
+The regenerated `merged_*` file is phased like any schema migration, and since
+the reset deleted every other branch-local schema migration, it **claims all of
+the branch's data migrations**: the runner applies the push as one group —
+expand, then those data migrations, then contract — so a backfill that reads a
+column this branch adds, or one it drops, keeps working however far main moved.
+See `database/migrations/CLAUDE.md` → **Phased schema migrations**.
+
 Two refusals come before the regeneration, both because "reset and regenerate"
 is destructive in exactly two ways:
 

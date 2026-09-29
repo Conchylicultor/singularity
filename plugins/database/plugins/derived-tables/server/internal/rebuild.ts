@@ -5,7 +5,11 @@ import { DERIVED_TABLE_STATE_TABLE } from "@plugins/database/plugins/derived-vie
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { z } from "zod";
+import type { DerivedRollupSpec } from "@plugins/database/plugins/derived-tables/core";
 import { DerivedTable } from "./contribution";
+
+type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
+type Exec = NodePgDatabase | Tx;
 
 const log = defineLogSink({
   id: "derived-tables",
@@ -52,13 +56,20 @@ const log = defineLogSink({
 // (`INSERT … SELECT` + `DELETE` against the rollup), not a lock on a hot source
 // table, so leaving it unconditional costs startup time and blocks nothing.
 //
-// `db` is passed in (like `runMigrations`) so this module never imports
-// `@plugins/database/server` — that would form a cycle (database/server calls us).
-export async function rebuildDerivedTables(db: NodePgDatabase): Promise<void> {
-  // Rollups are declared via the `DerivedTable` server contribution on each
-  // owning plugin's definition. The framework collects all contributions before
-  // any onReadyBlocking runs, so this list is complete regardless of import order.
-  const specs = DerivedTable.getContributions();
+// `db` is passed in so this module never imports `@plugins/database/server` —
+// that would form a cycle. At boot it is the migrations plugin's one schema-layer
+// transaction (`applySchemaLayer`), so the definition transaction below is a
+// savepoint in it and everything here commits — or rolls back — with the
+// migrations and the views.
+//
+// `specs` is passed in too, never read from `DerivedTable.getContributions()`
+// here: boot passes the collected contributions, and a process that never boots
+// (the `migration-applies-clean` check) gathers the same set from the server
+// barrels — the lesson `rebuildDerivedViews` documents for its `views`.
+export async function rebuildDerivedTables(
+  db: Exec,
+  specs: readonly DerivedRollupSpec[],
+): Promise<void> {
   if (specs.length === 0) return;
 
   // Content signature of the rollup layer's DEFINITION ONLY. `reconcileDdl` is
@@ -150,11 +161,13 @@ export async function rebuildDerivedTables(db: NodePgDatabase): Promise<void> {
     );
   });
 
-  // UNCONDITIONAL — see the header. Runs after the definition transaction has
-  // committed, so table + function + triggers exist (the order each spec's
-  // `reconcileDdl` documents). Each spec's reconcile is its own statement, and
-  // each is internally guarded (`to_regclass(...) IS NOT NULL`) so a
-  // pre-migration fresh-DB boot no-ops instead of erroring.
+  // UNCONDITIONAL — see the header. Runs after the definition transaction (a
+  // savepoint when `db` is itself a transaction, as at boot) has finished, so
+  // table + function + triggers exist in what this connection sees (the order
+  // each spec's `reconcileDdl` documents). Each spec's reconcile is its own
+  // statement, and each is internally guarded (`to_regclass(...) IS NOT NULL`)
+  // so a database whose source tables do not exist yet no-ops instead of
+  // erroring.
   for (const spec of specs) {
     await db.execute(drizzleSql.raw(spec.reconcileDdl));
   }
@@ -171,8 +184,7 @@ export async function rebuildDerivedTables(db: NodePgDatabase): Promise<void> {
 // read-cache fed by its source's change, never an independent write surface — a
 // trigger on it would double-route the source change through the rollup's id
 // space and defeat the correctly-scoped source-driven recompute). Complete at
-// boot for the same reason rebuildDerivedTables is — contributions are
-// collected before onReadyBlocking.
+// boot — contributions are collected before onReadyBlocking.
 export function feedExemptTables(): Set<string> {
   return new Set(DerivedTable.getContributions().map((s) => s.table));
 }

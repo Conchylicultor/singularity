@@ -2,8 +2,9 @@ import { readdirSync, readFileSync } from "fs";
 import { basename, join, resolve } from "path";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import {
-  classifyMigrationSql,
-  type DestructiveClassification,
+  classifyStatement,
+  splitStatements,
+  type StatementOp,
 } from "@plugins/database/plugins/migrations/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import {
@@ -28,8 +29,7 @@ type Check = {
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
 
 // Wedge-breaker for a metadata-only git read, not latency policing — same
-// reasoning as the sibling migration-applies-clean/data-migration-reset-stable
-// checks.
+// reasoning as the sibling migration-applies-clean check.
 const GIT_TIMEOUT_MS = 60_000;
 
 async function git(
@@ -56,14 +56,39 @@ function migrationFileSet(dir: string): Set<string> {
   return files;
 }
 
+// HARD-destructive ops: the old name is gone, so code still using it crashes a
+// read path. Deliberately OUT (soft reshapes that rarely crash a read — revisit
+// only if a real case appears): DROP CONSTRAINT, SET DATA TYPE, SET NOT NULL.
+// Read from the shared statement table, so an unrecognised statement (a legacy
+// file's view or DML) is simply not destructive here.
+const DESTRUCTIVE_OPS: ReadonlySet<StatementOp> = new Set([
+  "drop-table",
+  "drop-column",
+  "rename-table",
+  "rename-column",
+]);
+
+// The destructive statements of one migration file, as one-line snippets.
+function destructiveStatements(sql: string): string[] {
+  return splitStatements(sql)
+    .filter((stmt) => {
+      const cls = classifyStatement(stmt);
+      return "op" in cls && DESTRUCTIVE_OPS.has(cls.op);
+    })
+    .map((stmt) => {
+      const oneLine = stmt.raw.replace(/\s+/g, " ").trim();
+      return oneLine.length > 200 ? `${oneLine.slice(0, 197)}...` : oneLine;
+    });
+}
+
 // One migration per entry, each followed by its destructive statements.
 function formatDetails(
-  migrations: readonly { file: string; cls: DestructiveClassification }[],
+  migrations: readonly { file: string; statements: readonly string[] }[],
 ): string {
   return migrations
     .map(
       (c) =>
-        `  - ${c.file}\n${c.cls.statements.map((s) => `      ${s.text}`).join("\n")}`,
+        `  - ${c.file}\n${c.statements.map((s) => `      ${s}`).join("\n")}`,
     )
     .join("\n");
 }
@@ -109,11 +134,11 @@ const check: Check = {
     const candidates = missingOnBranch
       .map((file) => ({
         file,
-        cls: classifyMigrationSql(
+        statements: destructiveStatements(
           readFileSync(join(mainDataDir, file), "utf8"),
         ),
       }))
-      .filter((c) => c.cls.destructive);
+      .filter((c) => c.statements.length > 0);
     if (candidates.length === 0) return { ok: true };
 
     // A destructive migration on main is absent from this branch. Confirm the

@@ -15,6 +15,13 @@ naming a `MigrationAnswer` need not know which of the two files defines it. That
 is a same-plugin re-export and stays legal; the barrel surfaces no other
 plugin's names.
 
+A freshly generated schema migration is phased before `renameMigrations`
+hashes it (`phaseGeneratedMigrations`): its statements are split into expand /
+contract by the migrations plugin's statement table and it claims the branch's
+unclaimed data migrations. A statement the table rejects or does not know
+discards the generation and exits 1. See `database/migrations/CLAUDE.md` →
+**Phased schema migrations**.
+
 Never run `drizzle-kit generate` or the migration runner by hand — always go
 through `./singularity build`.
 
@@ -43,13 +50,12 @@ through `./singularity build`.
     - `journalEntriesForSqlFiles`
     - `listTrackedMigrationBasenames`
     - `parseMigrationAnswers`
+    - `phaseGeneratedMigrations`
     - `promptKey`
     - `readBranchLocalAnswers`
     - `regenerateJournal`
     - `removeGeneratedFiles`
     - `renameMigrations`
-    - `reorderViewStatements`
-    - `reorderViewStatementsInSql`
     - `resolveAnswer`
     - `resolveMainRef`
     - `runDrizzleKitWithPrompts`

@@ -21,12 +21,11 @@ export {
   journalEntriesForSqlFiles,
   listTrackedMigrationBasenames,
   parseMigrationAnswers,
+  phaseGeneratedMigrations,
   readBranchLocalAnswers,
   regenerateJournal,
   removeGeneratedFiles,
   renameMigrations,
-  reorderViewStatements,
-  reorderViewStatementsInSql,
   resolveMainRef,
   writeAnswersSidecar,
 } from "./migrations";

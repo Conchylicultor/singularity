@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { splitStatements } from "./index";
+import { splitStatements } from "./statements";
 
 /** The blanked code of each statement — what the allowlist reads. */
 const codes = (sql: string) => splitStatements(sql).map((s) => s.code);
@@ -41,16 +41,17 @@ describe("splitStatements — a `;` inside a literal is data, not a boundary", (
   });
 
   it("splits on drizzle's statement-breakpoint marker", () => {
-    expect(codes("UPDATE a SET x=1\n--> statement-breakpoint\nDELETE FROM b")).toEqual([
-      "UPDATE a SET x=1",
-      "DELETE FROM b",
-    ]);
+    expect(
+      codes("UPDATE a SET x=1\n--> statement-breakpoint\nDELETE FROM b"),
+    ).toEqual(["UPDATE a SET x=1", "DELETE FROM b"]);
   });
 });
 
 describe("splitStatements — comments are blanked, and cannot open a literal", () => {
   it("drops a leading line comment so the keyword leads", () => {
-    expect(codes("-- a note\nUPDATE t SET a = 1")).toEqual(["UPDATE t SET a = 1"]);
+    expect(codes("-- a note\nUPDATE t SET a = 1")).toEqual([
+      "UPDATE t SET a = 1",
+    ]);
   });
 
   it("drops a block comment", () => {
@@ -112,11 +113,50 @@ describe("splitStatements — the mask never hides real DDL", () => {
 
   it("SELECT … INTO is still visible as INTO (not hidden in a literal)", () => {
     const [stmt] = splitStatements("SELECT a INTO newtbl FROM t");
-    expect(/^SELECT\b/i.test(stmt!.code) && /\bINTO\b/i.test(stmt!.code)).toBe(true);
+    expect(/^SELECT\b/i.test(stmt!.code) && /\bINTO\b/i.test(stmt!.code)).toBe(
+      true,
+    );
   });
 
   it("but an INTO inside a literal does not trip the SELECT…INTO guard", () => {
     const [stmt] = splitStatements("SELECT 'INTO' AS a");
     expect(/\bINTO\b/i.test(stmt!.code)).toBe(false);
+  });
+});
+
+describe("splitStatements — migration file shapes", () => {
+  it("splits a merged file whose statements share one line with no breakpoint", () => {
+    const sql =
+      'ALTER TABLE "a" ALTER COLUMN "b" DROP DEFAULT;ALTER TABLE "c" DROP COLUMN "d";';
+    expect(splitStatements(sql).map((s) => s.raw)).toEqual([
+      'ALTER TABLE "a" ALTER COLUMN "b" DROP DEFAULT',
+      'ALTER TABLE "c" DROP COLUMN "d"',
+    ]);
+  });
+
+  it("keeps drizzle's DO $$ … $$ foreign-key block whole despite its inner `;`", () => {
+    const sql =
+      'DO $$ BEGIN\n ALTER TABLE "a" ADD CONSTRAINT "fk" FOREIGN KEY ("b") REFERENCES "public"."c"("id");\nEXCEPTION\n WHEN duplicate_object THEN null;\nEND $$;\n--> statement-breakpoint\nDROP INDEX IF EXISTS "i";';
+    const out = splitStatements(sql);
+    expect(out).toHaveLength(2);
+    expect(out[0]!.raw).toStartWith("DO $$ BEGIN");
+    expect(out[0]!.raw).toEndWith("END $$");
+    expect(out[1]!.raw).toBe('DROP INDEX IF EXISTS "i"');
+  });
+
+  it("drops leading and trailing comments from raw, so an appended `;` is never commented out", () => {
+    const [stmt] = splitStatements("-- note\nDROP INDEX i -- trailing\n");
+    expect(stmt!.raw).toBe("DROP INDEX i");
+  });
+
+  it("keeps a trailing literal and a quoted identifier's delimiters in both code and raw", () => {
+    const [stmt] = splitStatements(
+      `ALTER TABLE "t" ALTER COLUMN "m" SET DEFAULT 'opus-5'`,
+    );
+    expect(stmt!.raw).toEndWith("'opus-5'");
+    expect(stmt!.code).toBe(
+      `ALTER TABLE " " ALTER COLUMN " " SET DEFAULT '      '`,
+    );
+    expect(stmt!.code.length).toBe(stmt!.raw.length);
   });
 });

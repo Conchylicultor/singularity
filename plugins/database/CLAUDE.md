@@ -94,10 +94,11 @@ What the app pool (`server/internal/client.ts`) adds on top:
 - **`withQueryDeadline({ ms, reason }, fn)`** widens (or narrows) the bound for
   every call `fn` awaits, on any connection. Boot DDL uses
   `BOOT_DDL_QUERY_DEADLINE_MS` (15 min; it can wait on the previous backend's
-  locks during a hot-swap): migrations, derived-tables and derived-views
-  rebuilds in this plugin's `onReadyBlocking`, and change-feed's trigger rebuild.
-  The wraps sit at those call sites, not in the runners, which take `db` as a
-  parameter precisely so they never import this barrel.
+  locks during a hot-swap): the schema layer (`applySchemaLayer`: migrations,
+  derived `updatedAt`, derived-tables and derived-views, one transaction) in this
+  plugin's `onReadyBlocking`, and change-feed's trigger rebuild. The wraps sit at
+  those call sites, not in the runners, which take `db` as a parameter precisely
+  so they never import this barrel.
 
 `warmPool()` (called in `onReadyBlocking`, after `awaitDbReady` and before migrations)
 eagerly opens + validates connections up to the pool's `max` so the boot
@@ -209,7 +210,7 @@ environment. The throws stay loud in production; only test runs get the default.
 
 ## Bootstrap
 
-`awaitPgReady` + `runMigrations` are called in the database plugin's `onReadyBlocking` hook. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until migrations have landed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)
+`awaitDbReady` + `applySchemaLayer` (migrations and the derived layer — derived `updatedAt` triggers, rollup tables, views — in ONE transaction; see `plugins/database/plugins/derived-views/CLAUDE.md` and `research/2026-09-29-global-phased-migrations.md`) are called in the database plugin's `onReadyBlocking` hook. Derived inputs are read at that call site and passed in, never read inside the layer. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until the schema layer has committed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)
 
 ## Import paths
 
@@ -239,11 +240,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `database/connection.onClientLost`
     - `database/connection.queryText`
     - `database/connection.withQueryDeadline`
-    - `database/derived-tables.rebuildDerivedTables`
-    - `database/derived-updated-at.installDerivedUpdatedAt`
-    - `database/derived-views.rebuildDerivedViews`
+    - `database/derived-tables.DerivedTable`
+    - `database/derived-updated-at.registeredDerivedUpdatedAt`
     - `database/derived-views.View`
-    - `database/migrations.runMigrations`
+    - `database/migrations.applySchemaLayer`
     - `primitives/log-channels.defineLogSink`
   - Exports (types): `DbExecutor`
   - Exports (values):

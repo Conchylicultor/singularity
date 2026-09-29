@@ -63,16 +63,21 @@ the declaration site in the totality error.
 - `registerDerivedUpdatedAt(spec)` / `registeredDerivedUpdatedAt()` — the module
   registry both declaration sites fill at module eval; the same table declared
   twice with different rules throws.
-- `installDerivedUpdatedAt(db, specs?)` — called by `database/server`'s
-  `onReadyBlocking` right after `runMigrations`. Follows the
+- `installDerivedUpdatedAt(db, specs)` — called inside the migrations plugin's
+  one boot schema-layer transaction (`applySchemaLayer`, from `database/server`'s
+  `onReadyBlocking`) right after the migrations, with
+  `registeredDerivedUpdatedAt()`; each table's transaction is then a savepoint.
+  Follows the
   `jobs/superseded-trigger.ts` precedent: the DDL's sha256 is the trigger's
   COMMENT, so an up-to-date trigger is a catalog-only no-op; otherwise, per
   table, `pg_advisory_xact_lock` + re-check + `CREATE OR REPLACE FUNCTION` /
   `TRIGGER` + COMMENT in one transaction. Then it asserts every trigger is
   present with its signature, and throws if not. A missing table throws.
 
-  `specs` defaults to the whole registry. The registry is process-wide, so a DB
-  test on a throwaway database passes exactly its own table's spec
+  `specs` is required, never read from the registry inside: a process that
+  never loaded the schema files would read it empty. The registry is
+  process-wide, so a DB test on a throwaway database passes exactly its own
+  table's spec
   (`entity.derivedUpdatedAt`, or `compileFromTable(table, touchedBy)`) rather
   than the registry (which holds every other suite's tables too).
 
@@ -117,6 +122,7 @@ are in `infra/entities/server/internal/`
     - `conversations/conversation-category`
     - `conversations/conversations-view/grouped`
     - `database`
+    - `database/migrations`
     - `infra/entities`
     - `page/editor`
     - `page/editor-collab`

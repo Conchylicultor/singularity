@@ -21,7 +21,7 @@ outside the imperative allowlist). Apply the real migration chain instead — th
 runner is db-parametrized:
 
 ```ts
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 const t = await createTestDb({ prefix: "my_test" });
 await runMigrations(t.db); // the full real schema, exactly what production runs
 ```

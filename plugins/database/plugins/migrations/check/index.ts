@@ -9,9 +9,9 @@ import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-all
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
-import dataMigrationResetStableCheck from "./data-migration-reset-stable";
+import migrationPhasesValidCheck from "./migration-phases-valid";
 import { withDirectDb } from "./internal/direct-db";
-import { declaredViews } from "./internal/declared-views";
+import { declaredSchemaInputs } from "./internal/declared-schema-inputs";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -90,10 +90,11 @@ const check: Check = {
     ]);
     if (diff.code === 0) return { ok: true };
 
-    // SLOW PATH, first the derived views main's next boot rebuilds after the
-    // migrations. Read from the server barrels because this process never boots, so
-    // `View.getContributions()` has nothing collected (and throws).
-    const declared = await declaredViews(root);
+    // SLOW PATH, first the derived layer main's next boot installs after the
+    // migrations (views, rollup tables, derived-updatedAt triggers). Read from
+    // the server barrels because this process never boots, so no contribution
+    // is collected (`getContributions()` throws).
+    const declared = await declaredSchemaInputs(root);
     if (!declared.ok) return { ok: false, message: declared.message };
 
     // Then a migration differs from main → replay the pending delta against
@@ -106,15 +107,13 @@ const check: Check = {
       MAIN_DB_NAME,
       async (pool): Promise<CheckResult> => {
         try {
-          await dryRunPendingMigrations(drizzle(pool), {
-            views: declared.views,
-          });
+          await dryRunPendingMigrations(drizzle(pool), declared.inputs);
           return { ok: true };
         } catch (e) {
           return {
             ok: false,
             message: (e as Error).message,
-            hint: "This migration (or the derived-view rebuild after it) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the view in its plugin's views.ts.",
+            hint: "This migration (or the derived layer after it: updatedAt triggers, rollup tables, views) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the derived object in its owning plugin.",
           };
         }
       },
@@ -138,5 +137,5 @@ export default [
   schemaFilesLoadableCheck,
   forkSchemaDriftCheck,
   drizzleConfigSchemaGlobsCheck,
-  dataMigrationResetStableCheck,
+  migrationPhasesValidCheck,
 ];

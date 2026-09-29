@@ -36,7 +36,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { tokenExtension } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import { defineInlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";

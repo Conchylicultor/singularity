@@ -13018,11 +13018,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/connection.onClientLost`
       - `database/connection.queryText`
       - `database/connection.withQueryDeadline`
-      - `database/derived-tables.rebuildDerivedTables`
-      - `database/derived-updated-at.installDerivedUpdatedAt`
-      - `database/derived-views.rebuildDerivedViews`
+      - `database/derived-tables.DerivedTable`
+      - `database/derived-updated-at.registeredDerivedUpdatedAt`
       - `database/derived-views.View`
-      - `database/migrations.runMigrations`
+      - `database/migrations.applySchemaLayer`
       - `primitives/log-channels.defineLogSink`
     - Exports (types): `DbExecutor`
     - Exports (values):
@@ -13350,6 +13349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/agents`
           - `database`
           - `database/change-feed`
+          - `database/migrations`
           - `tasks/tasks-core`
       - Core:
         - Exports (types): `DerivedRollupSpec`
@@ -13365,6 +13365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-category`
           - `conversations/conversations-view/grouped`
           - `database`
+          - `database/migrations`
           - `infra/entities`
           - `page/editor`
           - `page/editor-collab`
@@ -13506,29 +13507,55 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Uses:
+          - `database/derived-tables.rebuildDerivedTables`
+          - `database/derived-updated-at.DerivedUpdatedAtSpec`
+          - `database/derived-updated-at.installDerivedUpdatedAt`
           - `database/derived-views.DeclaredView`
           - `database/derived-views.dropDerivedViews`
           - `database/derived-views.rebuildDerivedViews`
           - `primitives/log-channels.defineLogSink`
+        - Exports (types):
+          - `Migration`
+          - `SchemaLayerInputs`
+          - `SchemaPlan`
+          - `SchemaStep`
         - Exports (values):
+          - `applySchemaLayer`
           - `dryRunPendingMigrations`
+          - `listMigrationFiles`
           - `migrationsReady`
-          - `runMigrations`
+          - `planSchemaSteps`
       - Cross-plugin:
         - Imported by: `database`
       - Core:
         - Exports (types):
-          - `DestructiveClassification`
-          - `DestructiveKind`
+          - `ContractOp`
           - `DrizzleGenerateOptions`
+          - `ExpandOp`
+          - `ParsedMigration`
+          - `PhasedMigration`
+          - `PhasedStatements`
+          - `RejectOp`
+          - `Statement`
+          - `StatementClass`
+          - `StatementOp`
         - Exports (values):
-          - `classifyMigrationSql`
+          - `classifyStatement`
           - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
+          - `migrationClaimId`
           - `MIGRATIONS_PLUGIN_DIR`
+          - `parseMigration`
+          - `phaseStatements`
+          - `renderPhasedMigration`
+          - `renderStatements`
           - `schemaGlobFiles`
+          - `splitStatements`
       - Structure:
         - Non-standard folders: `data/`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/migrations/server/testing`
+          - `runMigrations`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
         - Imported by:
@@ -17437,13 +17464,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `journalEntriesForSqlFiles`
               - `listTrackedMigrationBasenames`
               - `parseMigrationAnswers`
+              - `phaseGeneratedMigrations`
               - `promptKey`
               - `readBranchLocalAnswers`
               - `regenerateJournal`
               - `removeGeneratedFiles`
               - `renameMigrations`
-              - `reorderViewStatements`
-              - `reorderViewStatementsInSql`
               - `resolveAnswer`
               - `resolveMainRef`
               - `runDrizzleKitWithPrompts`

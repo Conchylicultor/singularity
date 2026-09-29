@@ -48,7 +48,7 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { worktreeDbScenario } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
-import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { _tasks } from "../tables";
 import type { DbExecutor } from "../status-batch";
 import {

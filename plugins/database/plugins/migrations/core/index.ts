@@ -20,8 +20,31 @@ export {
   DRIZZLE_CONFIG_PATH,
 } from "./internal/drizzle-cli";
 export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
-export { classifyMigrationSql } from "./internal/destructive";
+// The phased-migration file grammar, shared by the generator (cli) and the
+// runner (server). See research/2026-09-29-global-phased-migrations.md.
+export {
+  migrationClaimId,
+  parseMigration,
+  renderPhasedMigration,
+} from "./internal/phases";
+export type { ParsedMigration, PhasedMigration } from "./internal/phases";
+// The one statement splitter for migration SQL (comment/literal/dollar-quote
+// aware), shared by the phaser and the data-migration-dml-only and
+// fork-schema-drift checks.
+export { splitStatements } from "./internal/statements";
+export type { Statement } from "./internal/statements";
+// The closed expand / contract / reject statement table the generator phases a
+// schema migration with, and the migration-phases-valid check re-runs.
+export {
+  classifyStatement,
+  phaseStatements,
+  renderStatements,
+} from "./internal/classify";
 export type {
-  DestructiveClassification,
-  DestructiveKind,
-} from "./internal/destructive";
+  ContractOp,
+  ExpandOp,
+  PhasedStatements,
+  RejectOp,
+  StatementClass,
+  StatementOp,
+} from "./internal/classify";
