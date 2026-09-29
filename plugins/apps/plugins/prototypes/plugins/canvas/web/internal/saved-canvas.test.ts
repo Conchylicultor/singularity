@@ -109,13 +109,44 @@ describe("saved canvas", () => {
       ],
       ["selection off the canvas", { ...ok, selected: 9 }],
       ["id at nextId", { ...ok, nextId: 2 }],
-      [
-        "swipe with one frame",
-        { ...ok, frames: [ok.frames[0]], layout: "swipe" },
-      ],
     ];
     for (const [label, raw] of cases) {
       expect([label, restoreCanvas(raw).kind]).toEqual([label, "rejected"]);
+    }
+  });
+
+  it("reopens a canvas that was swiping when a frame was added", () => {
+    // The lost-on-reload case: Swipe with two frames, then + Frame.
+    const state = apply(
+      initialCanvasState({
+        size: DEFAULT_PROTOTYPE_VIEWPORT,
+        source: "real-app",
+      }),
+      { type: "setLayout", layout: "swipe" },
+      { type: "addPrototype" },
+    );
+    expect(roundTrip(state)).toEqual({ kind: "restored", state });
+  });
+
+  it("reopens side by side a swipe canvas saved without two frames", () => {
+    const ok = serializeCanvas(
+      apply(initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }), {
+        type: "addPrototype",
+      }),
+    );
+    for (const frames of [
+      [ok.frames[0]],
+      [...ok.frames, { id: 3, kind: "source", source: "real-app" }],
+    ]) {
+      const back = restoreCanvas({
+        ...ok,
+        frames,
+        nextId: 4,
+        selected: 1,
+        layout: "swipe",
+      });
+      expect(back.kind).toBe("restored");
+      if (back.kind === "restored") expect(back.state.layout).toBe("side");
     }
   });
 });

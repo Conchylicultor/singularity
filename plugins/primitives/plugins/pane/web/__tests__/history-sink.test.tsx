@@ -109,6 +109,29 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
+describe("route listeners see the committed URL", () => {
+  // The tab set persists the address bar as a route's rawPath from a route
+  // listener; a reload gives panes back their instance ids only when that
+  // rawPath is the reloaded URL. So a listener must never see the new route
+  // beside the previous URL.
+  it("the address bar has moved when a listener hears of an open", () => {
+    const store = createPaneStore({ live: true });
+    setLiveStore(store);
+    store.setBasePath("");
+    store.restoreRoute([{ paneId: "hist-root", params: {} }]);
+    const seen: string[] = [];
+    const unsub = store.subscribeRoute(() => {
+      seen.push(window.location.pathname);
+    });
+
+    store.openPaneImpl(childPane._internal, { id: "7" });
+    store.navigatePending("nowhere/yet");
+    unsub();
+
+    expect(seen).toEqual(["/c/7", "/nowhere/yet"]);
+  });
+});
+
 describe("commit intents — mode + url + state per the push/replace matrix", () => {
   it("pane open emits a PUSH intent with the correct url and state.route", () => {
     const commit = vi.fn();

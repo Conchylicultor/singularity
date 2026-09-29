@@ -183,6 +183,29 @@ export function canvasReducer(
   action: CanvasAction,
   shared: StoredPicks,
 ): CanvasTransition {
+  const next = transition(state, action, shared);
+  const settled = settleLayout(next.state);
+  return settled === next.state ? next : { ...next, state: settled };
+}
+
+/**
+ * Swipe exists only with exactly two frames. Every rule-keeping transition
+ * ends here, so adding or closing a frame while swiping drops back to side by
+ * side — never a `swipe` canvas of one or three frames, which the canvas would
+ * draw side by side anyway and a saved copy of could not be told apart from a
+ * corrupt one. Also how a saved canvas written before this rule reopens.
+ */
+export function settleLayout(state: CanvasState): CanvasState {
+  return state.layout === "swipe" && state.frames.length !== 2
+    ? { ...state, layout: "side" }
+    : state;
+}
+
+function transition(
+  state: CanvasState,
+  action: CanvasAction,
+  shared: StoredPicks,
+): CanvasTransition {
   switch (action.type) {
     case "addPrototype": {
       const protos = prototypeFrames(state.frames);
@@ -290,6 +313,7 @@ export function canvasReducer(
         : unchanged(state);
 
     case "setVersion":
+      if (!has(state, action.id)) return unchanged(state);
       return unchanged({
         ...state,
         frames: state.frames.map((f) =>
@@ -301,6 +325,7 @@ export function canvasReducer(
       });
 
     case "setPick": {
+      if (!has(state, action.id)) return unchanged(state);
       const { option, value } = action;
       const targets = state.linked.has(option)
         ? prototypeFrames(state.frames).map((f) => f.id)

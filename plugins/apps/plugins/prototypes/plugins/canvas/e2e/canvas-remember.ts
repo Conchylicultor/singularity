@@ -2,7 +2,8 @@
 // fresh browser opens frame A alone; after adding the real app and a second
 // prototype frame, picking a size preset and a zoom, a RELOAD brings the same
 // canvas back — and the URL never changes (it names only the prototype).
-// Closing a frame is remembered too. Opening the prototype anew (a navigation
+// Closing a frame is remembered too, and so is a canvas opened in-app from the
+// gallery. Opening the prototype anew (a navigation
 // from the address bar, i.e. a new pane) starts fresh at frame A alone.
 // Needs a prototype that declares a `mocks` counterpart this deploy resolves.
 // Manual only — nothing runs this automatically.
@@ -13,6 +14,8 @@
 
 import {
   arg,
+  boot,
+  pathUrl,
   report,
   snap,
   waitFor,
@@ -91,6 +94,22 @@ await withBrowser(async (h) => {
   });
   r.ok("a closed frame stays closed after a reload", closed.ok, closed.value);
 
+  // Swiping, then adding a frame: the canvas goes side by side, and a reload
+  // still brings every frame back.
+  await page.getByText("Swipe", { exact: true }).click();
+  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  const swiped = await kinds();
+  r.eq(
+    "a frame added while swiping",
+    swiped,
+    "A:prototype B:real-app C:prototype",
+  );
+  await reload();
+  const swipedBack = await waitFor(kinds, (v) => v === swiped, {
+    timeoutMs: 20_000,
+  });
+  r.ok("…is still there after a reload", swipedBack.ok, swipedBack.value);
+
   // A new pane (opened from the address bar) is a new comparison: fresh.
   await openCanvas(page, meta.name);
   r.eq(
@@ -99,6 +118,27 @@ await withBrowser(async (h) => {
     `A:${PROTOTYPE_FRAME_KIND}`,
   );
   r.eq("…at the size it declares", await chip(), freshChip);
+
+  // Opened by an in-app navigation (the gallery card), not the address bar:
+  // the tab set must save the route under the URL it now has, or a reload
+  // gives the pane a new instance and the canvas is lost.
+  await boot(page, pathUrl("/prototypes"), { settleMs: 500 });
+  await page.getByText(meta.title, { exact: true }).first().click();
+  await page
+    .locator(canvasFrameSelector({ letter: "A", status: "found" }))
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await addSource(page, "Real app");
+  const opened = await kinds();
+  r.eq(
+    "opened from the gallery, with the real app",
+    opened,
+    "A:prototype B:real-app",
+  );
+  await reload();
+  const openedBack = await waitFor(kinds, (v) => v === opened, {
+    timeoutMs: 20_000,
+  });
+  r.ok("…is still there after a reload", openedBack.ok, openedBack.value);
 
   r.ok(
     "no page errors",

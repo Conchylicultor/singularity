@@ -302,6 +302,24 @@ describe("remove and keepOnly", () => {
   });
 });
 
+describe("swipe layout", () => {
+  const swiping = (): CanvasState =>
+    run(initialCanvasState({ source: "real-app" }), {
+      type: "setLayout",
+      layout: "swipe",
+    }).state;
+
+  it("drops back to side by side when a frame is added", () => {
+    const s = swiping();
+    expect(s.layout).toBe("swipe");
+    expect(run(s, { type: "addPrototype" }).state.layout).toBe("side");
+  });
+
+  it("drops back to side by side when a frame is closed", () => {
+    expect(run(swiping(), { type: "remove", id: 2 }).state.layout).toBe("side");
+  });
+});
+
 describe("canvas-wide settings", () => {
   it("clamps the swipe divider", () => {
     const s = run(initialCanvasState(), { type: "setSwipeAt", at: 3 }).state;

@@ -720,7 +720,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function setRoute(route: PaneSlot[], replace = false): void {
     currentState = { kind: "resolved", slots: route };
+    // The address bar moves BEFORE any listener hears of the change, so every
+    // listener sees one world: a route listener that reads the URL (the tab
+    // set persists the address bar as the route's rawPath — the key a reload
+    // matches to give panes back their instance ids) never pairs the new route
+    // with the previous URL.
+    commitRoute(route, replace);
     notifyRouteListeners();
+  }
+
+  function commitRoute(route: PaneSlot[], replace: boolean): void {
     // Background stores update in-memory route + notify their own listeners
     // only; they never touch the browser URL/history.
     if (!store.live) return;
@@ -792,14 +801,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function navigatePending(rawPath: string, replace = false): void {
     currentState = { kind: "unresolved", rawPath };
+    // URL first, listeners second — see `setRoute`.
+    if (store.live) {
+      historySink.peek().commit({
+        url: applyBasePath("/" + rawPath),
+        state: { pending: rawPath },
+        mode: replace ? "replace" : "push",
+      });
+    }
     notifyRouteListeners();
-    if (!store.live) return;
-    const fullUrl = applyBasePath("/" + rawPath);
-    historySink.peek().commit({
-      url: fullUrl,
-      state: { pending: rawPath },
-      mode: replace ? "replace" : "push",
-    });
   }
 
   function syncRouteFromUrl(pathname: string): void {

@@ -55,8 +55,10 @@ first paint is already the saved canvas.
 Frame A's picks are not in it: A holds `"shared"`, a pointer to the server
 record, which stays their only truth. `internal/saved-canvas.ts` validates what
 it reads back (a zod schema plus the reducer's invariants — one `"shared"`
-frame and it is A, ids below `nextId`, the selection on the canvas, Swipe with
-two frames); anything else opens a fresh canvas with a console warning.
+frame and it is A, ids below `nextId`, the selection on the canvas); anything
+else opens a fresh canvas with a console warning. Swipe with other than two
+frames is not a rejection: `settleLayout` (applied to every reducer output, and
+on restore to canvases saved before it was) puts such a canvas side by side.
 
 Remembering is opt-in (`remember={uuid}` on `PrototypeDetailProvider`): only
 the detail pane asks for it, never Present's one-frame page, and never inside an
@@ -199,7 +201,8 @@ only for this dynamic scaling geometry.
 
 ## Swipe, selection, keyboard
 
-With exactly two frames the header offers **Side by side | Swipe**. Swipe
+With exactly two frames the header offers **Side by side | Swipe**; adding
+or closing a frame while swiping goes back to side by side. Swipe
 paints the two frames in one box, B under A, A clipped at a divider you drag.
 
 Clicking a frame selects it (an accent ring; a new or changed frame becomes
@@ -276,7 +279,8 @@ manual, default to the first prototype declaring an option with 3+ values and a
   stay put;
 - `canvas-remember.ts` — a fresh browser opens A alone; frames, size and zoom
   come back on a reload, the URL never changes, a closed frame stays closed,
-  and opening the prototype anew starts at A alone.
+  a frame added while swiping survives a reload, and opening the prototype
+  anew starts at A alone.
 
 Each script's session is a fresh browser context and opens the canvas by a new
 navigation, so it starts from nothing remembered.

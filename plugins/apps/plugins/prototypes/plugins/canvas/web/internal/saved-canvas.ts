@@ -4,7 +4,7 @@ import {
   SIZE_PRESETS,
   StoredPicksSchema,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import type { CanvasState } from "./canvas-model";
+import { settleLayout, type CanvasState } from "./canvas-model";
 
 /**
  * The canvas as this browser saved it, one entry per prototype — so reloading
@@ -73,7 +73,7 @@ export function serializeCanvas(state: CanvasState): SavedCanvas {
  * written by an older shape of the canvas, or one that breaks a rule the
  * reducer keeps (exactly one frame holds the shared picks and it is the first
  * prototype frame; ids are unique and below `nextId`; the selection is on the
- * canvas; Swipe has exactly two frames).
+ * canvas). A Swipe layout without exactly two frames is settled, not rejected.
  */
 export type RestoredCanvas =
   | { kind: "restored"; state: CanvasState }
@@ -106,12 +106,11 @@ export function restoreCanvas(raw: unknown): RestoredCanvas {
       reason: "the shared picks are not held by frame A alone",
     };
   }
-  if (saved.layout === "swipe" && saved.frames.length !== 2) {
-    return { kind: "rejected", reason: "swipe needs exactly two frames" };
-  }
   return {
     kind: "restored",
-    state: { ...saved, linked: new Set(saved.linked) },
+    // A swipe canvas of one or three frames was written before the reducer
+    // settled the layout: it reopens side by side, as it was drawn.
+    state: settleLayout({ ...saved, linked: new Set(saved.linked) }),
   };
 }
 
