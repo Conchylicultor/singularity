@@ -231,10 +231,11 @@ function extractText(content: unknown): string {
  * in the forest and all survive.
  *
  * CAVEAT — this is the one place the merge can hide a line. A fork taken from a
- * *midpoint* leaves the ancestor's post-fork lines as a branch hanging off the
- * merged spine, and the `activeLineUuids` pass the callers run drops them as an
- * abandoned branch. Arguably correct (they are abandoned), but it is a loss the
- * per-file parse would not have had. Pinned by a test in `parse-jsonl.test.ts`.
+ * *midpoint* (just before a prompt) leaves the ancestor's post-fork prompt and
+ * the fork's own next prompt as siblings in ONE tree, and the `activeLineUuids`
+ * pass the callers run drops the ancestor's as a rewound branch. Arguably
+ * correct (it was abandoned), but it is a loss the per-file parse would not have
+ * had. Pinned by a test in `parse-jsonl.test.ts`.
  */
 export function mergeChainLines(
   files: readonly { path: string; raw: string }[],
@@ -294,16 +295,10 @@ async function buildEvents(
 ): Promise<JsonlEvent[]> {
   // The merged transcript is a forest (uuid / parentUuid); a rewind/edit leaves
   // the abandoned branch behind. Compute which lines belong to the live
-  // conversation and skip the rest, so the view shows the path the user kept
+  // conversation and skip the rest, so the view shows what the user kept
   // rather than abandoned attempts inline. Run once over the whole chain — a
-  // per-file pass would keep each file's own abandoned leaf.
+  // per-file pass would not see a fork's prompt superseding its ancestor's.
   const keptUuids = activeLineUuids(parsed);
-  // Attachments chain off one another (Claude threads `hook_additional_context`
-  // as a child of the `hook_success` it was extracted from), so a rescued
-  // attachment has to become an anchor in turn — otherwise every link past the
-  // first is dropped. File order is append order, so parents are always seen
-  // before their children and one forward pass closes the chain.
-  const rescuedAttachmentUuids = new Set<string>();
 
   const events: JsonlEvent[] = [];
   const assistantTextByMsgId = new Map<
@@ -374,22 +369,7 @@ async function buildEvents(
     // live conversation. Lines without a uuid (metadata markers) are not in
     // the tree and always pass through.
     const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
-    if (uuid && !keptUuids.has(uuid)) {
-      // Claude threads some attachments (e.g. a non-blocking hook error) as a
-      // dead-end side-leaf off the spine: the conversation continues from a
-      // sibling, so the attachment is never on the leaf→root path that
-      // activeLineUuids keeps. An attachment is an annotation of its parent
-      // node, so keep it when its parent IS live. The parent-on-spine guard
-      // still drops attachments belonging to abandoned rewind branches.
-      const parentUuid =
-        typeof obj.parentUuid === "string" ? obj.parentUuid : null;
-      const rescuable =
-        obj.type === "attachment" &&
-        parentUuid !== null &&
-        (keptUuids.has(parentUuid) || rescuedAttachmentUuids.has(parentUuid));
-      if (!rescuable) continue;
-      rescuedAttachmentUuids.add(uuid);
-    }
+    if (uuid && !keptUuids.has(uuid)) continue;
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
     // `JsonlEvent.at` must be a parseable instant for every consumer — a
     // string that fails Date.parse (NaN) would make comparisons against it

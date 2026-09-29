@@ -9,8 +9,8 @@ import {
 
 // readJsonlEvents only takes a file path (it reads via Bun.file), so each
 // fixture is written to a temp JSONL file and parsed end-to-end. This also
-// exercises the real activeLineUuids branch-filter, which is the point: the
-// rescue only matters because that filter would otherwise drop the line.
+// exercises the real activeLineUuids branch-filter, which is the point: side
+// leaves only survive because that filter keeps everything but rewinds.
 
 const TS = "2026-06-30T00:00:00.000Z";
 const tmpFiles: string[] = [];
@@ -90,12 +90,80 @@ afterAll(async () => {
   await Promise.all(tmpFiles.map((p) => Bun.file(p).delete()));
 });
 
-describe("readJsonlEvents — off-spine attachment rescue", () => {
-  test("rescues an off-spine dead-leaf hook-error whose parent is on the live spine", async () => {
-    // root → spine1 → spine2 is the live spine (spine2 is the highest-index
-    // leaf). `att` hangs off the live `root` but is itself a dead-end side-leaf
-    // appended before spine2, so activeLineUuids drops it — the exact shape
-    // Claude uses for hook_non_blocking_error.
+const toolUseLine = (uuid: string, parentUuid: string, name: string) => ({
+  type: "assistant",
+  uuid,
+  parentUuid,
+  timestamp: TS,
+  message: {
+    id: `msg-${uuid}`,
+    role: "assistant",
+    content: [{ type: "tool_use", id: `tu-${uuid}`, name, input: {} }],
+  },
+});
+
+const toolResultLine = (uuid: string, parentUuid: string, of: string) => ({
+  type: "user",
+  uuid,
+  parentUuid,
+  timestamp: TS,
+  message: {
+    role: "user",
+    content: [
+      { type: "tool_result", tool_use_id: `tu-${of}`, content: `result ${of}` },
+    ],
+  },
+});
+
+const toolCallsOf = (events: Awaited<ReturnType<typeof readJsonlEvents>>) =>
+  events.flatMap((e) =>
+    e.kind === "tool-call"
+      ? [{ id: e.toolUseId, result: e.result?.content }]
+      : [],
+  );
+
+describe("readJsonlEvents — side leaves off the live conversation", () => {
+  test("a parallel tool batch pairs every call with its result", async () => {
+    // The shape Claude Code writes: tool_use lines chained, each result parented
+    // on its OWN tool_use, the turn continuing from the last result. Only the
+    // last result is on the newest-leaf path; the rest are side leaves.
+    const path = await writeFixture([
+      userLine("root", null, "file three tasks"),
+      toolUseLine("t1", "root", "add_task"),
+      toolUseLine("t2", "t1", "add_task"),
+      toolUseLine("t3", "t2", "add_task"),
+      toolResultLine("r1", "t1", "t1"),
+      toolResultLine("r2", "t2", "t2"),
+      toolResultLine("r3", "t3", "t3"),
+      assistantLine("done", "r3", "filed"),
+    ]);
+
+    expect(toolCallsOf(await readJsonlEvents(path))).toEqual([
+      { id: "tu-t1", result: "result t1" },
+      { id: "tu-t2", result: "result t2" },
+      { id: "tu-t3", result: "result t3" },
+    ]);
+  });
+
+  test("results landing out of order still keep every call", async () => {
+    // Result 2 lands first and the turn continues from result 1, leaving the
+    // second tool_use itself off the newest-leaf path.
+    const path = await writeFixture([
+      userLine("root", null, "run two commands"),
+      toolUseLine("t1", "root", "Bash"),
+      toolUseLine("t2", "t1", "Bash"),
+      toolResultLine("r2", "t2", "t2"),
+      toolResultLine("r1", "t1", "t1"),
+      assistantLine("done", "r1", "both ran"),
+    ]);
+
+    expect(toolCallsOf(await readJsonlEvents(path))).toEqual([
+      { id: "tu-t1", result: "result t1" },
+      { id: "tu-t2", result: "result t2" },
+    ]);
+  });
+
+  test("a dead-end hook error off a live node is kept", async () => {
     const path = await writeFixture([
       userLine("root", null, "hello"),
       assistantLine("spine1", "root", "working"),
@@ -103,37 +171,18 @@ describe("readJsonlEvents — off-spine attachment rescue", () => {
       userLine("spine2", "spine1", "continue"),
     ]);
 
-    const events = await readJsonlEvents(path);
-    const attachments = events.filter((e) => e.kind === "attachment");
+    const attachments = (await readJsonlEvents(path)).filter(
+      (e) => e.kind === "attachment",
+    );
     expect(attachments).toHaveLength(1);
     expect(attachments[0]).toMatchObject({
-      kind: "attachment",
       subtype: "hook_non_blocking_error",
     });
   });
 
-  test("still drops an attachment whose parent is on an abandoned branch", async () => {
-    // root → spine1 → spine2 is live. `abandoned` is an abandoned rewind branch
-    // off root (lower index than spine2), and `att` hangs off `abandoned`.
-    // Since `abandoned` is NOT on the kept spine, the attachment must stay
-    // dropped — the rescue only readmits attachments anchored to live nodes.
-    const path = await writeFixture([
-      userLine("root", null, "hello"),
-      assistantLine("spine1", "root", "working"),
-      assistantLine("abandoned", "root", "abandoned attempt"),
-      hookErrorLine("att", "abandoned"),
-      userLine("spine2", "spine1", "continue"),
-    ]);
-
-    const events = await readJsonlEvents(path);
-    expect(events.filter((e) => e.kind === "attachment")).toHaveLength(0);
-  });
-
-  test("rescues an attachment chained off another rescued attachment", async () => {
+  test("a hook's context chained off its hook_success is kept", async () => {
     // Claude threads the context a hook injected as a CHILD of the hook_success
-    // it came from, and both hang off the spine as a dead-end branch. Rescuing
-    // only the first link would drop the context — the payload the card exists
-    // to show — while keeping the "exit 0" telemetry that announced it.
+    // it came from, both hanging off the live node as a dead-end branch.
     const path = await writeFixture([
       userLine("root", null, "hello"),
       assistantLine("spine1", "root", "working"),
@@ -142,45 +191,32 @@ describe("readJsonlEvents — off-spine attachment rescue", () => {
       userLine("spine2", "spine1", "continue"),
     ]);
 
-    const events = await readJsonlEvents(path);
-    const attachments = events.filter((e) => e.kind === "attachment");
-    expect(attachments).toHaveLength(2);
-    expect(attachments[0]).toMatchObject({ subtype: "hook_success" });
-    expect(attachments[1]).toMatchObject({
-      subtype: "hook_additional_context",
-    });
+    const attachments = (await readJsonlEvents(path)).filter(
+      (e) => e.kind === "attachment",
+    );
+    expect(
+      attachments.map((a) => a.kind === "attachment" && a.subtype),
+    ).toEqual(["hook_success", "hook_additional_context"]);
   });
 
-  test("a chained attachment off an abandoned branch stays dropped", async () => {
+  test("side leaves of a rewound branch are dropped with it", async () => {
+    // `old` was resubmitted as `new` (same parent): everything under `old`,
+    // its tool call, result and hook chain included, is gone.
     const path = await writeFixture([
       userLine("root", null, "hello"),
-      assistantLine("spine1", "root", "working"),
-      assistantLine("abandoned", "root", "abandoned attempt"),
-      hookSuccessLine("hook", "abandoned"),
+      assistantLine("a0", "root", "hi"),
+      userLine("old", "a0", "first try"),
+      toolUseLine("t1", "old", "Bash"),
+      hookSuccessLine("hook", "t1"),
       hookContextLine("ctx", "hook"),
-      userLine("spine2", "spine1", "continue"),
+      toolResultLine("r1", "t1", "t1"),
+      userLine("new", "a0", "second try"),
     ]);
 
     const events = await readJsonlEvents(path);
     expect(events.filter((e) => e.kind === "attachment")).toHaveLength(0);
-  });
-
-  test("a normal on-spine attachment is unchanged (regression)", async () => {
-    // Here the attachment is itself part of the live leaf→root chain
-    // (root → att → spine_next), so it was always kept by the branch-filter.
-    const path = await writeFixture([
-      userLine("root", null, "hello"),
-      hookErrorLine("att", "root"),
-      userLine("spine_next", "att", "continue"),
-    ]);
-
-    const events = await readJsonlEvents(path);
-    const attachments = events.filter((e) => e.kind === "attachment");
-    expect(attachments).toHaveLength(1);
-    expect(attachments[0]).toMatchObject({
-      kind: "attachment",
-      subtype: "hook_non_blocking_error",
-    });
+    expect(toolCallsOf(events)).toEqual([]);
+    expect(textsOf(events, "user-text")).toEqual(["hello", "second try"]);
   });
 });
 
@@ -339,9 +375,9 @@ describe("readJsonlEventsFromChain", () => {
   });
 
   test("midpoint fork — the ancestor's post-fork lines are dropped as an abandoned branch", async () => {
-    // Pins the documented caveat: after the merge, `a2` and `b1` are siblings
-    // under `u2` in ONE tree, and activeLineUuids keeps only the highest-index
-    // leaf's path. This is the one place the chain merge can hide a line.
+    // Pins the documented caveat: after the merge, the prompts `a2` and `b1`
+    // are siblings under `u2` in ONE tree, and activeLineUuids drops the
+    // earlier as rewound. This is the one place the chain merge can hide a line.
     const a = await writeFixture([
       userLine("u1", null, "hello", T1),
       assistantLine("u2", "u1", "hi", T2),
@@ -389,12 +425,12 @@ describe("readJsonlEventsFromChain", () => {
   });
 
   test("a length-1 chain is identical to readJsonlEvents", async () => {
-    // Same fixture shape as the abandoned-branch case above: the branch filter,
-    // the attachment rescue and the event order must all be untouched.
+    // A rewind plus a side leaf: the branch filter, the side-leaf handling and
+    // the event order must all be untouched.
     const path = await writeFixture([
       userLine("root", null, "hello", T1),
       assistantLine("spine1", "root", "working", T2),
-      assistantLine("abandoned", "root", "abandoned attempt", T2),
+      userLine("abandoned", "spine1", "abandoned attempt", T2),
       hookErrorLine("att", "root"),
       userLine("spine2", "spine1", "continue", T3),
     ]);

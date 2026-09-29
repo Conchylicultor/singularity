@@ -199,8 +199,9 @@ function cutAt(
 
   const dropped = new Set<number>();
 
-  // A native `/rewind` leaves the abandoned attempt in the file, and both the
-  // CLI and our viewer treat the file-order-latest leaf as the live one. An
+  // A native `/rewind` leaves the abandoned attempt in the file, and the CLI
+  // resumes from the file-order-latest leaf (our viewer instead drops a prompt
+  // superseded by a later sibling, but the CLI is what reads this file next). An
   // abandoned attempt written AFTER the last kept ancestor would therefore
   // become the conversation once everything behind it is cut away. Drop those
   // lines; side annotations (attachments, system notes) hanging off the kept

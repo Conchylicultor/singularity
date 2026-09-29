@@ -1,90 +1,77 @@
+import { userPromptText } from "./user-prompt";
+
 // Claude Code transcripts are a forest, not a flat log. Every line carries a
-// `uuid` and a `parentUuid`. Three things branch the tree:
+// `uuid` and a `parentUuid`, and a node branches for two unrelated reasons:
 //
-//   - **Rewind / edit-last-turn.** When the user rewinds and resubmits, Claude
-//     appends a *new* branch off an earlier node and leaves the abandoned
-//     attempt in the file. Both branches share a common ancestor.
-//   - **Resume / restart.** A resumed session appends a fresh root tree
-//     (`parentUuid: null`) to the same file — a disjoint segment.
-//   - **Compaction.** A compact boundary re-roots the post-compaction turns as
-//     a new tree; the pre-compaction history stays as its own tree.
+//   - **Rewind / edit-last-turn.** The user resubmits a turn: Claude appends
+//     the new prompt as a SIBLING of the old one (same parent) and leaves the
+//     abandoned attempt — the old prompt and everything under it — in the file.
+//   - **Side leaves.** A line hangs off a live node while the conversation
+//     carries on from a sibling: each result of a parallel tool batch is a
+//     child of its own `tool_use` line (the batch's lines chain one after the
+//     other, and the turn continues from whichever result landed last), hook
+//     attachments, an API-error text, a `turn_duration` after an interrupt.
+//     These are live content.
 //
-// Rendering lines in raw file order therefore shows abandoned rewind branches
-// as duplicate, contradictory content next to the path the user actually kept.
+// `activeLineUuids` returns every uuid-bearing line EXCEPT those on a rewound
+// branch. A branch counts as rewound only on proof: a user prompt (as
+// `userPromptText` — the rewind cut point's own predicate — defines it) with a
+// later prompt sibling under the same parent. The superseded prompt's whole
+// subtree is dropped; nothing else is.
 //
-// `activeLineUuids` returns the set of line uuids that belong to the live
-// conversation: for **every** root tree, the path from that tree's most-recent
-// leaf back to its root. This keeps all resume/compaction segments intact
-// (each contributes its own active path) while dropping only the abandoned
-// rewind branches *within* a tree. Lines without a uuid (metadata markers like
-// `permission-mode` / `ai-title`) are not part of the tree; the caller keeps
-// them untouched.
+// The default is deliberately "keep". An unknown side-leaf shape is shown
+// rather than silently lost; an unknown rewind shape (one not starting at a
+// prompt — none observed) would show as visibly duplicated content. The old
+// rule — keep each tree's newest-leaf→root path — dropped every side leaf,
+// which lost whole tool calls of every parallel batch.
+//
+// Disjoint trees (resume / compaction / a fresh session in a chain) need no
+// special case: they are simply kept. Lines without a uuid (metadata markers
+// like `permission-mode` / `ai-title`) are not in the forest and are not in the
+// returned set; the caller keeps them untouched.
 
-interface TreeLine {
-  uuid?: unknown;
-  parentUuid?: unknown;
-}
-
-export function activeLineUuids(lines: readonly TreeLine[]): Set<string> {
-  // Index every uuid-bearing line by its file-order position. File order is
-  // append order, so the highest index in a tree is its most-recent leaf.
-  const byUuid = new Map<string, { parentUuid: string | null; index: number }>();
-  lines.forEach((line, index) => {
+export function activeLineUuids(
+  lines: readonly Record<string, unknown>[],
+): Set<string> {
+  const uuids: string[] = [];
+  const children = new Map<string, string[]>();
+  const promptChildren = new Map<string, string[]>();
+  for (const line of lines) {
     const uuid = typeof line.uuid === "string" ? line.uuid : null;
-    if (!uuid) return;
-    const parentUuid = typeof line.parentUuid === "string" ? line.parentUuid : null;
-    byUuid.set(uuid, { parentUuid, index });
-  });
-  if (byUuid.size === 0) return new Set();
-
-  // Resolve each node to its tree root. A root is a node whose parent is null or
-  // dangling (a ref to a uuid not present in this file — e.g. a prior
-  // transcript). Memoized across calls; the local seen-set guards against a
-  // malformed cyclic chain so this can never loop forever.
-  const rootOf = new Map<string, string>();
-  const findRoot = (start: string): string => {
-    const seen: string[] = [];
-    let cur = start;
-    let root = start;
-    for (;;) {
-      const cached = rootOf.get(cur);
-      if (cached) {
-        root = cached;
-        break;
-      }
-      if (seen.includes(cur)) {
-        root = cur; // cycle guard — treat the entry node as the root
-        break;
-      }
-      seen.push(cur);
-      const parent = byUuid.get(cur)?.parentUuid ?? null;
-      if (!parent || !byUuid.has(parent)) {
-        root = cur;
-        break;
-      }
-      cur = parent;
+    if (!uuid) continue;
+    uuids.push(uuid);
+    const parent = typeof line.parentUuid === "string" ? line.parentUuid : null;
+    if (!parent) continue;
+    const siblings = children.get(parent);
+    if (siblings) siblings.push(uuid);
+    else children.set(parent, [uuid]);
+    if (userPromptText(line) !== null) {
+      const prompts = promptChildren.get(parent);
+      if (prompts) prompts.push(uuid);
+      else promptChildren.set(parent, [uuid]);
     }
-    for (const u of seen) rootOf.set(u, root);
-    return root;
-  };
-
-  // For each root, pick the active leaf = the member with the highest file index.
-  const leafOfRoot = new Map<string, { uuid: string; index: number }>();
-  for (const [uuid, node] of byUuid) {
-    const root = findRoot(uuid);
-    const best = leafOfRoot.get(root);
-    if (!best || node.index > best.index) leafOfRoot.set(root, { uuid, index: node.index });
   }
 
-  // Keep the leaf→root path of every tree.
+  // Every prompt but the file-order-latest under one parent was rewound away.
+  // Lines are pushed in file order, so the latest is the last entry.
+  const rewound: string[] = [];
+  for (const prompts of promptChildren.values()) {
+    rewound.push(...prompts.slice(0, -1));
+  }
+
+  // Drop each rewound prompt's subtree. The visited set is also the guard
+  // against a malformed cyclic chain.
+  const dropped = new Set<string>();
+  const stack = rewound;
+  while (stack.length > 0) {
+    const uuid = stack.pop()!;
+    if (dropped.has(uuid)) continue;
+    dropped.add(uuid);
+    const kids = children.get(uuid);
+    if (kids) stack.push(...kids);
+  }
+
   const kept = new Set<string>();
-  for (const { uuid } of leafOfRoot.values()) {
-    let cur: string | null = uuid;
-    while (cur && !kept.has(cur)) {
-      kept.add(cur);
-      const parent: string | null = byUuid.get(cur)?.parentUuid ?? null;
-      cur = parent && byUuid.has(parent) ? parent : null;
-    }
-  }
+  for (const uuid of uuids) if (!dropped.has(uuid)) kept.add(uuid);
   return kept;
 }

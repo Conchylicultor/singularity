@@ -50,8 +50,9 @@ export function readTurns(path: string, sinceIso?: string): Promise<Turn[]> {
  *
  * `readChainLines` concatenates the chain in order and drops duplicate uuids
  * (a forked session copies its ancestor's lines verbatim), then `activeLineUuids`
- * keeps only each root tree's live leaf→root path. Both passes are required over
- * a chain: without the branch filter, a fork's copied spine renders twice.
+ * drops the branches a rewind (or a midpoint fork) left behind. Both passes are
+ * required over a chain: the dedup keeps a fork's copied lines from rendering
+ * twice, the branch filter keeps the ancestor's abandoned remainder out.
  * `sinceIso` stays a post-parse filter — it must not narrow the forest the
  * branch filter reasons over.
  */
