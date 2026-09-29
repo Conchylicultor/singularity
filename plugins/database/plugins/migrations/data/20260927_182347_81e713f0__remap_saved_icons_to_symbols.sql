@@ -2200,6 +2200,12 @@ names AS (
   UNION
   SELECT new AS name, new FROM m
 ),
+-- One jsonb object (binary-searched per lookup) rather than a scalar subquery
+-- scanning `names` for every icon, which ran once per block of every history
+-- snapshot and timed out.
+lookup AS (
+  SELECT jsonb_object_agg(name, new) AS j FROM names
+),
 remapped_agents AS (
   UPDATE agents a
   SET icon = n.new
@@ -2217,14 +2223,14 @@ remapped_blocks AS (
   UPDATE page_blocks b
   SET data = CASE
       WHEN b.data ? 'icon' THEN (b.data - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = b.data ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> (b.data ->> 'icon'))))
       ELSE b.data - 'iconSvgNodes' - 'svgNodes'
     END
   WHERE b.type IN ('page', 'callout')
     AND jsonb_typeof(b.data) = 'object'
     AND b.data IS DISTINCT FROM CASE
       WHEN b.data ? 'icon' THEN (b.data - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = b.data ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> (b.data ->> 'icon'))))
       ELSE b.data - 'iconSvgNodes' - 'svgNodes'
     END
   RETURNING 1
@@ -2233,13 +2239,13 @@ remapped_preprompts AS (
   UPDATE conversations_ext_preprompt p
   SET icon = CASE
       WHEN p.icon ? 'icon' THEN (p.icon - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = p.icon ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> (p.icon ->> 'icon'))))
       ELSE p.icon - 'iconSvgNodes' - 'svgNodes'
     END
   WHERE jsonb_typeof(p.icon) = 'object'
     AND p.icon IS DISTINCT FROM CASE
       WHEN p.icon ? 'icon' THEN (p.icon - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = p.icon ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> (p.icon ->> 'icon'))))
       ELSE p.icon - 'iconSvgNodes' - 'svgNodes'
     END
   RETURNING 1
@@ -2249,7 +2255,7 @@ remapped_versions AS (
   SET snapshot = jsonb_set(
     jsonb_set(ev.snapshot, '{page}', CASE
       WHEN (ev.snapshot -> 'page') ? 'icon' THEN ((ev.snapshot -> 'page') - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = (ev.snapshot -> 'page') ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> ((ev.snapshot -> 'page') ->> 'icon'))))
       ELSE (ev.snapshot -> 'page') - 'iconSvgNodes' - 'svgNodes'
     END),
     '{blocks}',
@@ -2261,7 +2267,7 @@ remapped_versions AS (
               AND jsonb_typeof(t.b -> 'data') = 'object'
             THEN jsonb_set(t.b, '{data}', CASE
       WHEN (t.b -> 'data') ? 'icon' THEN ((t.b -> 'data') - 'iconSvgNodes' - 'svgNodes')
-        || jsonb_build_object('icon', to_jsonb((SELECT n.new FROM names n WHERE n.name = (t.b -> 'data') ->> 'icon')))
+        || jsonb_build_object('icon', to_jsonb(((SELECT j FROM lookup) ->> ((t.b -> 'data') ->> 'icon'))))
       ELSE (t.b -> 'data') - 'iconSvgNodes' - 'svgNodes'
     END)
             ELSE t.b
